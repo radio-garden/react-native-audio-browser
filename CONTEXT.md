@@ -31,7 +31,7 @@ A binding from a path pattern to a **BrowserSource**. Patterns support `{param}`
 _Avoid_: Endpoint, handler, mapping.
 
 **Tab**:
-A top-level navigation entry shown in the tab bar of the browser UI.
+A top-level navigation entry shown in the tab bar of the browser UI. A Tab is not a **Section** — Sections live inside pages.
 _Avoid_: Section, category.
 
 **Search**:
@@ -85,11 +85,19 @@ What makes two Tracks the same item: the Track's `id` when set (non-blank), fall
 _Avoid_: key, uid (a consumer-side concept).
 
 **Contextual Path**:
-The `path` the browse pipeline stamps onto a Playable Track: `{parentPath}?__trackId={identity}&__index={position}`. Carries the page the track was rendered on so a later tap or resumption can re-expand its queue (ADR 0006). `__trackId` is the **Identity** check; `__index` — the child's position on the page at stamp time (an image-row item carries its row's position) — is only a tie-breaker between surfaces carrying the same Identity, so a stale index can never select a different track (ADR 0009).
+The `path` the browse pipeline stamps onto a Playable Track: `{parentPath}?__trackId={identity}&__index={position}`. Carries the page the track was rendered on so a later tap or resumption can re-expand its queue (ADR 0006). `__trackId` is the **Identity** check; `__index` — the flat page position at stamp time (children concatenated in **Section** order) — is only a tie-breaker between surfaces carrying the same Identity, so a stale index can never select a different track (ADR 0009).
 _Avoid_: contextual URL in new prose (legacy alias in code comments), deep link.
 
+**Section**:
+A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010). A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Style names (`list`, `grid`, `grid-row`) declare the requested layout; each surface renders its nearest supported form.
+_Avoid_: group, category; Section for a **Tab** (Tabs are top-level navigation, Sections live inside pages).
+
+**Grid Row**:
+A Section rendered as a single line of artwork tiles (`style: 'grid-row'`): CarPlay shows the tiles that fit, Android Auto wraps (its grid can't express one line), app UIs typically render a horizontal scroller. The header/"view all" surface navigates to the Section's `path`.
+_Avoid_: image row (the retired platform-derived name — `CPListImageRowItem` leaking into the domain), carousel (implies scrolling no car surface has).
+
 **ResolvedTrack**:
-The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `children`. Media URLs are not part of resolution; they're transformed at playback time.
+The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `sections` (a page authored with plain `children` resolves to one untitled **Section**). Media URLs are not part of resolution; they're transformed at playback time.
 _Avoid_: ExpandedTrack, LoadedTrack.
 
 ### Requests

@@ -101,6 +101,8 @@ configureBrowser({
 
 A route value is a [`BrowserSource`](/api/types/browser/#browsersource): the static page object shown above, an **async callback** that returns one (`'/path': async ({ routeParams }) => ({ title, children })`), or an HTTP request config that fetches it from your API — handy for trees too large to declare upfront.
 
+A page can also group its tracks into titled, styled **sections** (`sections: [{ title, style, children }, …]`) — a flat `children` list like the ones above is shorthand for a single untitled section. See [Browser → How a path resolves](/guide/browser#how-a-path-resolves).
+
 ## Play a track
 
 On CarPlay and Android Auto, tapping a playable Track plays it for you. To drive playback from your own UI, set a queue and call `play`:

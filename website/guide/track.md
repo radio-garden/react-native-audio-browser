@@ -134,21 +134,18 @@ It carries only `userAgent`, `headers`, and `query` — deliberately **not** `ba
 
 Optional fields that change how a Track renders on CarPlay / Android Auto. They're no-ops where not applicable — set them where they help.
 
-| Field                             | Effect                                                                                                                                                                                              | Platform                   |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `style: 'list' \| 'grid'`         | how this item renders                                                                                                                                                                               | Android Auto / AAOS        |
-| `childrenStyle: 'list' \| 'grid'` | how this container's children render                                                                                                                                                                | Android Auto / AAOS        |
-| `groupTitle`                      | section header above contiguous same-group items (Android Auto / AAOS); also scopes the tap-to-play queue to the group on every surface (see [Playback behavior](/guide/browser#playback-behavior)) | all                        |
-| `favorited`                       | filled/empty heart (needs the `favorite` capability)                                                                                                                                                | Android Auto, notification |
-| `live`                            | a "live" indicator                                                                                                                                                                                  | iOS now-playing            |
-| `imageRow`                        | render as a horizontal thumbnail strip                                                                                                                                                              | CarPlay                    |
-| `albumPath`                       | make the now-playing album line tappable                                                                                                                                                            | CarPlay                    |
+| Field                             | Effect                                               | Platform                   |
+| --------------------------------- | ---------------------------------------------------- | -------------------------- |
+| `style: 'list' \| 'grid'`         | how this item renders                                | Android Auto / AAOS        |
+| `childrenStyle: 'list' \| 'grid'` | default layout for this container's children         | Android Auto / AAOS        |
+| `favorited`                       | filled/empty heart (needs the `favorite` capability) | Android Auto, notification |
+| `live`                            | a "live" indicator                                   | iOS now-playing            |
+| `albumPath`                       | make the now-playing album line tappable             | CarPlay                    |
 
 A couple of constraints worth knowing:
 
-- **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in.
+- **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in. It sets the drilled-into page's _default_; a [Section](#sections-grouping-and-tile-layouts)'s own `style` overrides it for that section where set.
 - **`albumPath` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumPath` in the [Browser config](/guide/browser).
-- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `path`. A track with `imageRow` but no `path` is a pure preview: on CarPlay its header isn't tappable. Tapping a playable item queues **the row's items** — the row is its own section (see [Playback behavior](/guide/browser#playback-behavior)).
 
 ```ts
 {
@@ -159,34 +156,42 @@ A couple of constraints worth knowing:
 }
 ```
 
-An `imageRow` is an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem)
-(`{ title, path?, src?, artwork?, … }`) — the track's own `title` is the row header,
-its `path` the header's tap-through target, and each item one tappable thumbnail. A
-thumbnail with `src` **plays immediately on tap** (same selection path as a playable
-list row — a station app can make thumbnails play their station directly); otherwise
-its `path` is navigated. Playable items can carry the now-playing fields a regular
-track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`):
+## Sections — grouping and tile layouts
+
+Headers and tile layouts aren't Track fields — they're declared on the **page**, as [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`). A section groups tracks under a header and picks their layout: `'list'` rows (the default), `'grid'` wrapping artwork tiles, or `'grid-row'` — a single line of tiles (formerly the image row). The section's `path` is the navigation target for its header / "view all" surface; a section without one is a pure preview, its header not tappable.
+
+A tile with `src` **plays immediately on tap** (same selection path as a playable list row — a station app can make tiles play their station directly); otherwise its `path` is navigated. Tiles are ordinary Tracks, so playable ones carry the now-playing fields any track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`). Tapping a playable child queues **its section** on every surface (see [Playback behavior](/guide/browser#playback-behavior)):
 
 ```ts
 {
-  title: 'Featured',
-  path: '/browse/featured', // header tap → the full list
-  imageRow: [
-    { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+  path: '/home',
+  title: 'Home',
+  sections: [
     {
-      title: 'Beacon FM',
-      src: 'https://audio.example.com/beacon.mp3', // tap plays it
-      artist: 'Springfield',
-      live: true,
-      artwork: 'https://…/beacon.jpg'
-    }
+      title: 'Featured',
+      style: 'grid-row',
+      path: '/browse/featured', // header tap → the full list
+      children: [
+        { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+        {
+          title: 'Beacon FM',
+          src: 'https://audio.example.com/beacon.mp3', // tap plays it
+          artist: 'Springfield',
+          live: true,
+          artwork: 'https://…/beacon.jpg'
+        }
+      ]
+    },
+    { title: 'All stations', children: [...] }
   ]
 }
 ```
 
-## ResolvedTrack — a track with children
+Each surface renders a style as its nearest supported form — CarPlay truncates a `grid-row` at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
 
-A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved `children` — the page the browser is currently showing. Its `path` is always present, and `children` is the `Track[]` to render (optional — a leaf page has none).
+## ResolvedTrack — a resolved page
+
+A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved content — the page the browser is currently showing. Its `path` is always present, and `sections` is the [`Section`](/api/types/browser-nodes/#section)`[]` to render (optional — a leaf page has none). A page authored with a plain `children` list resolves to a single untitled section: `children` is authoring sugar, never populated on resolved output — read `sections`.
 
 Navigation is **fire-and-forget**: `navigate(path)` returns `void`. Read the resolved page from `useContent()` (or `getContent()` / `onContentChanged`):
 
@@ -197,7 +202,8 @@ navigate('/browse/jazz') // moves the browser to this path
 
 function JazzPage() {
   const page = useContent() // ResolvedTrack | undefined
-  return <List data={page?.children ?? []} /> // children may be undefined
+  // each section: { title?, style?, path?, children: Track[] }
+  return <List sections={page?.sections ?? []} /> // sections may be undefined
 }
 ```
 

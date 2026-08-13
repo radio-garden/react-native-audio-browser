@@ -163,7 +163,6 @@ ios/
 │   ├── CarPlayImageLoader.swift      # @MainActor SF Symbols, artwork loading, adaptive tinting
 │   ├── CarPlayListItemFactory.swift  # @MainActor CPListItem / CPListSection builder
 │   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing, buttons, Up Next, NowPlayingObserver
-│   ├── ImageRowItem+CarPlay.swift    # ImageRowItem → Track adapter for CarPlay reuse
 │   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent → handlePlayMediaIntent
 │   ├── RNABMediaAddHandler.swift     # Siri INAddMediaIntent → setActiveTrackFavorited(true)
 │   ├── RNABMediaAffinityHandler.swift # Siri INUpdateMediaAffinityIntent → like/dislike favorite

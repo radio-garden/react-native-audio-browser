@@ -2,6 +2,7 @@ import type {
   BrowserSource,
   MediaRequestConfig,
   ResolvedTrack,
+  Section,
   Track
 } from 'react-native-audio-browser'
 import { Platform } from 'react-native'
@@ -137,10 +138,11 @@ export const radioGardenRoutes: Record<string, BrowserSource> = {
   '/playlist/{id}': async ({ routeParams }) => playlists[routeParams!.id]!
 }
 
-export const radioGardenLibraryEntry: Track = {
+export const radioGardenLibrarySection: Section = {
   title: 'Radio Playlists',
+  style: 'grid-row',
   path: '/library/playlists',
-  imageRow: Object.entries(playlists).map(([id, p]) => ({
+  children: Object.entries(playlists).map(([id, p]) => ({
     title: p.title!,
     path: `/playlist/${id}`,
     artwork: {

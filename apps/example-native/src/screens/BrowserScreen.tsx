@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +11,7 @@ import {
 import {
   hasSearch,
   navigate,
+  Section,
   Track,
   useActiveTrack,
   useContent,
@@ -22,12 +23,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { FullScreenPlayer } from '../components/FullScreenPlayer'
 import { MiniPlayer } from '../components/MiniPlayer'
 import { NavigationErrorView } from '../components/NavigationErrorView'
-import { TrackListItem } from '../components/TrackListItem'
+import { SectionTileRow, TrackListItem } from '../components/TrackListItem'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { SearchScreen } from './SearchScreen'
 
 type Screen = 'browser' | 'search'
+
+// Flatten sections into FlatList rows: a tile section renders as one
+// horizontal-scroller row; a list section renders a header (when titled)
+// followed by its tracks.
+type BrowseRow =
+  | { kind: 'header'; title: string; key: string }
+  | { kind: 'tiles'; section: Section; key: string }
+  | { kind: 'track'; track: Track; key: string }
 
 export function BrowserScreen() {
   const insets = useSafeAreaInsets()
@@ -72,12 +81,49 @@ export function BrowserScreen() {
     }
   }, [path, tabs])
 
-  const renderItem = ({ item }: { item: Track }) => (
-    <TrackListItem
-      track={item}
-      isActive={item.src != null && activeTrack?.src === item.src}
-      onPress={() => navigate(item)}
-    />
+  // Memoized so a keystroke or track change doesn't rebuild the row list
+  // and force FlatList to re-diff everything.
+  const rows: BrowseRow[] = useMemo(
+    () =>
+      (content?.sections ?? []).flatMap((section, si): BrowseRow[] => {
+        if (section.style === 'grid-row' || section.style === 'grid') {
+          return [{ kind: 'tiles', section, key: `tiles-${si}` }]
+        }
+        const trackRows: BrowseRow[] = section.children.map((track, i) => ({
+          kind: 'track',
+          track,
+          key: `track-${si}-${i}-${track.title}`
+        }))
+        return section.title
+          ? [
+              { kind: 'header', title: section.title, key: `head-${si}` },
+              ...trackRows
+            ]
+          : trackRows
+      }),
+    [content]
+  )
+
+  const renderItem = useCallback(
+    ({ item }: { item: BrowseRow }) => {
+      switch (item.kind) {
+        case 'header':
+          return <Text style={styles.sectionHeader}>{item.title}</Text>
+        case 'tiles':
+          return <SectionTileRow section={item.section} />
+        case 'track':
+          return (
+            <TrackListItem
+              track={item.track}
+              isActive={
+                item.track.src != null && activeTrack?.src === item.track.src
+              }
+              onPress={() => navigate(item.track)}
+            />
+          )
+      }
+    },
+    [activeTrack]
   )
 
   return (
@@ -148,9 +194,9 @@ export function BrowserScreen() {
         ) : content ? (
           <>
             <FlatList
-              data={content.children || []}
+              data={rows}
               renderItem={renderItem}
-              keyExtractor={(item, index) => `${item.title}-${index}`}
+              keyExtractor={(item) => item.key}
               style={styles.list}
               showsVerticalScrollIndicator={false}
             />
@@ -231,6 +277,16 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 6
   },
   centered: {
     flex: 1,

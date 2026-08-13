@@ -27,9 +27,9 @@ export function setupFavorites() {
     if (identity === undefined) return
     if (favorited) {
       if (!favorites.find((t) => getTrackIdentity(t) === identity)) {
-        // Strip path/groupTitle - the library regenerates contextual paths when browsing favorites
+        // Strip path - the library regenerates contextual paths when browsing favorites
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { path, groupTitle, ...rest } = track
+        const { path, ...rest } = track
         favorites.push(rest as Track)
       }
     } else {

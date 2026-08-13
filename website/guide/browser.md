@@ -47,19 +47,36 @@ Calling `configureBrowser` again **replaces** the entire configuration — see [
 
 ## How a path resolves
 
-Everything the Browser shows is the result of resolving a **path** (a string like `/browse/jazz`) to a **page** — a Track with `children`. The flow is always the same:
+Everything the Browser shows is the result of resolving a **path** (a string like `/browse/jazz`) to a **page** — a Track carrying its content. The flow is always the same:
 
 ```mermaid
 graph LR
     P["path<br/>/browse/jazz"] --> M["match a route<br/>(most specific wins)"]
     M --> S["resolve its source<br/>(static · callback · HTTP)"]
-    S --> Page["page<br/>ResolvedTrack { path, title, children }"]
+    S --> Page["page<br/>ResolvedTrack { path, title, sections }"]
 
     classDef step fill:#e3f2fd,stroke:#1976d2
     class P,M,S,Page step
 ```
 
-A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it requires a `path` and a `title`, and carries its `children` (a [`Track`](/api/types/browser-nodes/#track)`[]`). So configuring the Browser is really three decisions, covered in turn below: **what routes exist**, **what source each route resolves from**, and **how requests are shaped** along the way.
+A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it requires a `path` and a `title`, and carries its content as `sections` — an array of [`Section`](/api/types/browser-nodes/#section)s, each a titled, styled group of [`Track`](/api/types/browser-nodes/#track)s:
+
+```ts
+{
+  path: '/home',
+  title: 'Home',
+  sections: [
+    { title: 'Popular', style: 'grid-row', path: '/popular', children: [...] },
+    { title: 'All stations', children: [...] }
+  ]
+}
+```
+
+A Section is `{ title?, subtitle?, style?, path?, children }`: `title` renders as a header above its tracks, `style` picks their layout (`'list'` rows — the default — `'grid'` wrapping artwork tiles, or `'grid-row'`, a single line of tiles), and `path` is the navigation target for the header / "view all" surface. See [Presentation](#presentation) for how each surface renders the styles.
+
+A flat page doesn't have to spell that out: authoring a plain `children: Track[]` — as most examples in this guide do — is sugar for one untitled section. Resolved output always carries `sections`; `children` is never populated on a resolved page.
+
+So configuring the Browser is really three decisions, covered in turn below: **what routes exist**, **what source each route resolves from**, and **how requests are shaped** along the way.
 
 ## Source shapes
 
@@ -370,7 +387,7 @@ See [Now Playing](/guide/now-playing) for the metadata side of the now-playing s
 
 Two options control what happens when a playable Track is tapped.
 
-**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in: the contiguous `groupTitle` group the track sits in (a contiguous block of ungrouped items forms a section of its own), or — for an image-row thumbnail — the row's items. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its list (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay grid-row fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
 
 Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page. So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
 
@@ -412,19 +429,24 @@ import {
 function BrowseScreen() {
   const tabs = useTabs() // Track[] | undefined
   const path = usePath() // current path
-  const page = useContent() // resolved page (page.children to render)
+  const page = useContent() // resolved page (page.sections to render)
 
   return (
     <>
       {tabs?.map((tab) => (
         <Tab key={tab.path} tab={tab} onPress={() => navigate(tab.path!)} />
       ))}
-      {page?.children?.map((track) => (
-        <Row
-          key={track.path ?? track.src}
-          track={track}
-          onPress={() => navigate(track)}
-        />
+      {page?.sections?.map((section, i) => (
+        <React.Fragment key={i}>
+          {section.title && <Header title={section.title} />}
+          {section.children.map((track) => (
+            <Row
+              key={track.path ?? track.src}
+              track={track}
+              onPress={() => navigate(track)}
+            />
+          ))}
+        </React.Fragment>
       ))}
     </>
   )
@@ -480,26 +502,36 @@ The `code` values: `content-not-found`, `network-error`, `http-error`, `callback
 
 ## Presentation
 
-Optional Track fields and config options control how items render on the native surfaces. Set them where they help.
+Optional Section fields, Track fields, and config options control how items render on the native surfaces. Set them where they help.
 
 | Field                                      | On             | Effect                                   | Platform            |
 | ------------------------------------------ | -------------- | ---------------------------------------- | ------------------- |
+| `title`                                    | a section      | header above its tracks                  | all                 |
+| `style: 'grid'`                            | a section      | wrapping artwork-tile grid               | all\*               |
+| `style: 'grid-row'`                        | a section      | a single line of artwork tiles           | all\*               |
+| `path` (+ `subtitle`)                      | a section      | header / "view all" navigation target    | all                 |
 | `style: 'grid'`                            | an item        | render this item as a grid cell          | Android Auto / AAOS |
 | `childrenStyle: 'grid'`                    | a container    | lay its children out as a grid           | Android Auto / AAOS |
-| `groupTitle`                               | an item        | section header above it                  | Android Auto / AAOS |
 | `artwork: 'sf:heart.fill'`                 | any item       | SF Symbol icon (supports `?bg=…&fg=…`)   | iOS                 |
 | `live: true`                               | a track        | live indicator                           | iOS                 |
-| `imageRow`                                 | a track        | a horizontal artwork strip               | CarPlay only\*      |
 | `artworkCarPlayTinted`                     | a track        | tint artwork for CarPlay light/dark      | iOS                 |
 | `carPlaySiriListButton: 'top' \| 'bottom'` | a page         | place the Siri cell on the page          | iOS                 |
 | `albumPath` + `resolveAlbumPath`           | track + config | make the now-playing album line tappable | CarPlay             |
 
-::: info Two caveats from the table
-**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **`imageRow` is CarPlay-only** and CarPlay limits how many thumbnails are visible (extras are dropped); Android Auto ignores it.
+::: info Caveats from the table
+**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Tile styles render each platform's nearest supported form** — a `grid-row` on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a `grid` wraps to as many lines as needed on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it renders `grid` and `grid-row` identically — showing more, never less. No car surface scrolls horizontally; an app UI typically renders a `grid-row` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). A section's `style` overrides the container's `childrenStyle` where set; `childrenStyle` remains the drilled-into page's default.
 :::
 
 ```ts
 { path: '/genres', title: 'Genres', childrenStyle: 'grid', children: [...] }
+{
+  path: '/home',
+  title: 'Home',
+  sections: [
+    { title: 'Popular', style: 'grid-row', path: '/popular', children: [...] },
+    { title: 'All stations', children: [...] }
+  ]
+}
 {
   title: 'Favorites',
   path: '/favorites',
