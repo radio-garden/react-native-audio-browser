@@ -1006,6 +1006,17 @@ export type CarPlayNowPlayingButton =
   | 'playback-rate'
 
 /**
+ * Where the now-playing indicator draws on a CarPlay list row.
+ *
+ * - `'leading'`: in the artwork slot, replacing the row's artwork while it
+ *   plays (the system default, as Apple Music does)
+ * - `'trailing'`: at the end of the row, keeping the artwork visible
+ *
+ * @platform ios
+ */
+export type CarPlayPlayingIndicatorLocation = 'leading' | 'trailing'
+
+/**
  * Position of the "Ask Siri to Play Audio" assistant cell on a CarPlay list template.
  *
  * @platform ios

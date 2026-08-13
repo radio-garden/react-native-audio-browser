@@ -12,8 +12,10 @@
 
 #include "AppKilledPlaybackBehavior.hpp"
 #include "CarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "JCarPlayPlayingIndicatorLocation.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
 #include "JNitroIOSUpdateOptions.hpp"
 #include "JPlayerCapabilities.hpp"

@@ -18,7 +18,7 @@ public extension NitroIOSUpdateOptions {
   /**
    * Create a new instance of `NitroIOSUpdateOptions`.
    */
-  init(playbackRates: [Double]?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?) {
+  init(playbackRates: [Double]?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation?) {
     self.init({ () -> bridge.std__optional_std__vector_double__ in
       if let __unwrappedValue = playbackRates {
         return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
@@ -46,6 +46,12 @@ public extension NitroIOSUpdateOptions {
           }
           return __vector
         }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_CarPlayPlayingIndicatorLocation_ in
+      if let __unwrappedValue = carPlayPlayingIndicatorLocation {
+        return bridge.create_std__optional_CarPlayPlayingIndicatorLocation_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -86,5 +92,10 @@ public extension NitroIOSUpdateOptions {
         return nil
       }
     }()
+  }
+  
+  @inline(__always)
+  var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation? {
+    return self.__carPlayPlayingIndicatorLocation.value
   }
 }

@@ -11,7 +11,9 @@
 #include "IOSOptions.hpp"
 
 #include "CarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "JCarPlayPlayingIndicatorLocation.hpp"
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -39,6 +41,8 @@ namespace margelo::nitro::audiobrowser {
       jboolean carPlayUpNextButton = this->getFieldValue(fieldCarPlayUpNextButton);
       static const auto fieldCarPlayNowPlayingButtons = clazz->getField<jni::JArrayClass<JCarPlayNowPlayingButton>>("carPlayNowPlayingButtons");
       jni::local_ref<jni::JArrayClass<JCarPlayNowPlayingButton>> carPlayNowPlayingButtons = this->getFieldValue(fieldCarPlayNowPlayingButtons);
+      static const auto fieldCarPlayPlayingIndicatorLocation = clazz->getField<JCarPlayPlayingIndicatorLocation>("carPlayPlayingIndicatorLocation");
+      jni::local_ref<JCarPlayPlayingIndicatorLocation> carPlayPlayingIndicatorLocation = this->getFieldValue(fieldCarPlayPlayingIndicatorLocation);
       return IOSOptions(
         [&]() {
           size_t __size = playbackRates->size();
@@ -56,7 +60,8 @@ namespace margelo::nitro::audiobrowser {
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()
+        }(),
+        carPlayPlayingIndicatorLocation->toCpp()
       );
     }
 
@@ -66,7 +71,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JIOSOptions::javaobject> fromCpp(const IOSOptions& value) {
-      using JSignature = JIOSOptions(jni::alias_ref<jni::JArrayDouble>, jboolean, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>);
+      using JSignature = JIOSOptions(jni::alias_ref<jni::JArrayDouble>, jboolean, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JCarPlayPlayingIndicatorLocation>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -87,7 +92,8 @@ namespace margelo::nitro::audiobrowser {
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }()
+        }(),
+        JCarPlayPlayingIndicatorLocation::fromCpp(value.carPlayPlayingIndicatorLocation)
       );
     }
   };

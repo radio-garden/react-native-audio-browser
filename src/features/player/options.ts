@@ -1,4 +1,7 @@
-import type { CarPlayNowPlayingButton } from '../../types/browser'
+import type {
+  CarPlayNowPlayingButton,
+  CarPlayPlayingIndicatorLocation
+} from '../../types/browser'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -285,6 +288,13 @@ export interface IOSOptions {
    * @default []
    */
   carPlayNowPlayingButtons: CarPlayNowPlayingButton[]
+
+  /**
+   * Where the now-playing indicator draws on CarPlay list rows.
+   * See {@link CarPlayPlayingIndicatorLocation}.
+   * @default 'leading'
+   */
+  carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation
 }
 
 export interface AndroidOptions {
@@ -381,6 +391,13 @@ export interface IOSUpdateOptions {
    * @default []
    */
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+
+  /**
+   * Where the now-playing indicator draws on CarPlay list rows.
+   * See {@link CarPlayPlayingIndicatorLocation}.
+   * @default 'leading'
+   */
+  carPlayPlayingIndicatorLocation?: CarPlayPlayingIndicatorLocation
 }
 
 /**
@@ -391,6 +408,7 @@ export interface NitroIOSUpdateOptions {
   playbackRates?: number[]
   carPlayUpNextButton?: boolean
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+  carPlayPlayingIndicatorLocation?: CarPlayPlayingIndicatorLocation
 }
 
 /**

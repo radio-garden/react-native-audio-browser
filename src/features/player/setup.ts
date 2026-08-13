@@ -741,12 +741,14 @@ export async function setupPlayer(
     playbackRates,
     carPlayUpNextButton,
     carPlayNowPlayingButtons,
+    carPlayPlayingIndicatorLocation,
     ...iosSetup
   } = ios
   const iosUpdate = definedFields({
     playbackRates,
     carPlayUpNextButton,
-    carPlayNowPlayingButtons
+    carPlayNowPlayingButtons,
+    carPlayPlayingIndicatorLocation
   })
   validateIOSUpdateOptions(iosUpdate)
 

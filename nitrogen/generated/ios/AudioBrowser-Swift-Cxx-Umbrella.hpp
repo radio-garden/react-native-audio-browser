@@ -34,6 +34,8 @@ namespace margelo::nitro::audiobrowser { struct BrowseError; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `CarPlayPlayingIndicatorLocation` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayPlayingIndicatorLocation; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
@@ -207,6 +209,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"

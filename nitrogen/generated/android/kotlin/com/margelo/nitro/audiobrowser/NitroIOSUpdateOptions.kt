@@ -25,7 +25,10 @@ data class NitroIOSUpdateOptions(
   val carPlayUpNextButton: Boolean?,
   @DoNotStrip
   @Keep
-  val carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?
+  val carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?,
+  @DoNotStrip
+  @Keep
+  val carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation?
 ) {
   /* primary constructor */
 
@@ -37,8 +40,8 @@ data class NitroIOSUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(playbackRates: DoubleArray?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?): NitroIOSUpdateOptions {
-      return NitroIOSUpdateOptions(playbackRates, carPlayUpNextButton, carPlayNowPlayingButtons)
+    private fun fromCpp(playbackRates: DoubleArray?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation?): NitroIOSUpdateOptions {
+      return NitroIOSUpdateOptions(playbackRates, carPlayUpNextButton, carPlayNowPlayingButtons, carPlayPlayingIndicatorLocation)
     }
   }
 }

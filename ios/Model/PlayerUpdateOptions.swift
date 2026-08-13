@@ -32,6 +32,9 @@ class PlayerUpdateOptions {
   /// Custom buttons for the CarPlay Now Playing screen
   var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
 
+  /// Where the now-playing indicator draws on CarPlay list rows
+  var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation = .leading
+
   // MARK: - Initialization
 
   init() {}
@@ -74,6 +77,9 @@ class PlayerUpdateOptions {
       if let buttons = ios.carPlayNowPlayingButtons {
         carPlayNowPlayingButtons = buttons
       }
+      if let location = ios.carPlayPlayingIndicatorLocation {
+        carPlayPlayingIndicatorLocation = location
+      }
     }
   }
 
@@ -92,6 +98,7 @@ class PlayerUpdateOptions {
         playbackRates: playbackRates,
         carPlayUpNextButton: carPlayUpNextButton,
         carPlayNowPlayingButtons: carPlayNowPlayingButtons,
+        carPlayPlayingIndicatorLocation: carPlayPlayingIndicatorLocation,
       ),
     )
   }

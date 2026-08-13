@@ -30,6 +30,9 @@ final class CarPlayListItemFactory {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayListItemFactory")
 
   var imageLoader: CarPlayImageLoader?
+  /// Pushed by the controller (at creation and when options change), like
+  /// `imageLoader` — the factory never reads options itself.
+  var playingIndicatorLocation: CPListItemPlayingIndicatorLocation = .leading
   private let isActiveTrack: (_ identity: String?) -> Bool
   private let onItemSelected: (Track, @escaping () -> Void) -> Void
 
@@ -116,13 +119,13 @@ final class CarPlayListItemFactory {
     if let src = track.src {
       // Playable track - check if it's currently playing
       item.accessoryType = .none
-      // Leading (the system default, set explicitly to make the choice
-      // deliberate): the indicator draws in the artwork slot. Note the
+      // Consumer-configurable via `ios.carPlayPlayingIndicatorLocation`
+      // (default leading: the indicator draws in the artwork slot). Note the
       // indicator's rendering is owned by the phone's CarPlay service, and on
       // some iOS/CarPlay-Simulator combinations it isn't drawn at all — for
       // ANY third-party app. Verify on a real head unit before assuming a
       // logic bug here.
-      item.playingIndicatorLocation = .leading
+      item.playingIndicatorLocation = playingIndicatorLocation
       item.isPlaying = isActiveTrack(track.identity)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")

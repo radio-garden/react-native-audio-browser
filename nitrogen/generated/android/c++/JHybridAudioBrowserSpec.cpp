@@ -137,6 +137,8 @@ namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `CarPlayPlayingIndicatorLocation` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayPlayingIndicatorLocation; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
@@ -378,6 +380,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JIOSOptions.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
+#include "JCarPlayPlayingIndicatorLocation.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"

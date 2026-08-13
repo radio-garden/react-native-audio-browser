@@ -89,6 +89,14 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser?.browserManager.config ?? BrowserConfig()
   }
 
+  /// The configured list playing-indicator location, in CarPlay-framework terms.
+  private var playingIndicatorLocation: CPListItemPlayingIndicatorLocation {
+    switch audioBrowser?.carPlayPlayingIndicatorLocation {
+    case .trailing: .trailing
+    case .leading, nil: .leading
+    }
+  }
+
   /// Whether a list item identifies the currently active (loaded) track.
   ///
   /// Compares track identities (`id` when non-blank, else `src`): the active
@@ -179,6 +187,7 @@ public final class RNABCarPlayController: NSObject {
         },
       )
       factory.imageLoader = self.imageLoader
+      factory.playingIndicatorLocation = self.playingIndicatorLocation
       self.listItemFactory = factory
 
       self.setupContentSubscriptions()
@@ -264,13 +273,22 @@ public final class RNABCarPlayController: NSObject {
       }
     }
 
-    // Now-playing buttons + Up Next are runtime-updatable via updateOptions();
-    // refresh them when player options change (configureBrowser is no longer
-    // the only path that can change them).
+    // Now-playing buttons + Up Next + the list playing-indicator location are
+    // runtime-updatable via updateOptions(); refresh them when player options
+    // change (configureBrowser is no longer the only path that can change them).
     let optionsToken = audioBrowser.playerOptionsChangedEmitter.addListener { [weak self] in
       Task { @MainActor in
-        self?.nowPlayingManager.setupNowPlayingButtons()
-        self?.nowPlayingManager.updateNowPlayingButtonStates()
+        guard let self else { return }
+        self.nowPlayingManager.setupNowPlayingButtons()
+        self.nowPlayingManager.updateNowPlayingButtonStates()
+        // The factory's copy doubles as the last-applied value: sweep the
+        // templates only when the location actually changed, not on every
+        // updateOptions() call.
+        let location = self.playingIndicatorLocation
+        if let factory = self.listItemFactory, factory.playingIndicatorLocation != location {
+          factory.playingIndicatorLocation = location
+          self.updatePlayingIndicators()
+        }
       }
     }
     listenerRemovals.append { [weak audioBrowser] in
@@ -985,9 +1003,11 @@ public final class RNABCarPlayController: NSObject {
     nowPlayingManager.handleActiveTrackChanged()
   }
 
-  /// Updates the isPlaying state on all list items based on the current active track.
+  /// Updates the isPlaying state (and indicator location, which options can
+  /// change at runtime) on all list items based on the current active track.
   @MainActor
   fileprivate func updatePlayingIndicators() {
+    let location = playingIndicatorLocation
     var templates: [CPListTemplate] = []
 
     if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
@@ -1018,6 +1038,10 @@ public final class RNABCarPlayController: NSObject {
             logger.debug(
               "Updating isPlaying for \(info.identity ?? ""): \(listItem.isPlaying) → \(isPlaying)")
             listItem.isPlaying = isPlaying
+            templateChanged = true
+          }
+          if listItem.playingIndicatorLocation != location {
+            listItem.playingIndicatorLocation = location
             templateChanged = true
           }
         }

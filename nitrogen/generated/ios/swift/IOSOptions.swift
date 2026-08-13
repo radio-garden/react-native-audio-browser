@@ -18,7 +18,7 @@ public extension IOSOptions {
   /**
    * Create a new instance of `IOSOptions`.
    */
-  init(playbackRates: [Double], carPlayUpNextButton: Bool, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]) {
+  init(playbackRates: [Double], carPlayUpNextButton: Bool, carPlayNowPlayingButtons: [CarPlayNowPlayingButton], carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation) {
     self.init({ () -> bridge.std__vector_double_ in
       var __vector = bridge.create_std__vector_double_(playbackRates.count)
       for __item in playbackRates {
@@ -31,7 +31,7 @@ public extension IOSOptions {
         __vector.push_back(__item)
       }
       return __vector
-    }())
+    }(), carPlayPlayingIndicatorLocation)
   }
 
   @inline(__always)
@@ -47,5 +47,10 @@ public extension IOSOptions {
   @inline(__always)
   var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] {
     return self.__carPlayNowPlayingButtons.map({ __item in __item })
+  }
+  
+  @inline(__always)
+  var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation {
+    return self.__carPlayPlayingIndicatorLocation
   }
 }

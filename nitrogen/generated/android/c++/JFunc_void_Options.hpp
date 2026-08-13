@@ -35,6 +35,8 @@
 #include "JIOSOptions.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
+#include "JCarPlayPlayingIndicatorLocation.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

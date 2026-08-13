@@ -70,6 +70,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     playerOptions.carPlayNowPlayingButtons
   }
 
+  @MainActor var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation {
+    playerOptions.carPlayPlayingIndicatorLocation
+  }
+
   /// Written from the JS thread, the cooperative pool and MainActor, with a
   /// `didSet` that calls back into Nitro. MainActor-isolated so the compiler
   /// requires an `onMainActor` hop at every access.

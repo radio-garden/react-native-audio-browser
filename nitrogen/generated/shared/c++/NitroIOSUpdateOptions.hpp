@@ -30,10 +30,13 @@
 
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `CarPlayPlayingIndicatorLocation` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayPlayingIndicatorLocation; }
 
 #include <vector>
 #include <optional>
 #include "CarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -45,10 +48,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::vector<double>> playbackRates     SWIFT_PRIVATE;
     std::optional<bool> carPlayUpNextButton     SWIFT_PRIVATE;
     std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons     SWIFT_PRIVATE;
+    std::optional<CarPlayPlayingIndicatorLocation> carPlayPlayingIndicatorLocation     SWIFT_PRIVATE;
 
   public:
     NitroIOSUpdateOptions() = default;
-    explicit NitroIOSUpdateOptions(std::optional<std::vector<double>> playbackRates, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons): playbackRates(playbackRates), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons) {}
+    explicit NitroIOSUpdateOptions(std::optional<std::vector<double>> playbackRates, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons, std::optional<CarPlayPlayingIndicatorLocation> carPlayPlayingIndicatorLocation): playbackRates(playbackRates), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons), carPlayPlayingIndicatorLocation(carPlayPlayingIndicatorLocation) {}
 
   };
 
@@ -64,7 +68,8 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::NitroIOSUpdateOptions(
         JSIConverter<std::optional<std::vector<double>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playbackRates"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton"))),
-        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons")))
+        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::CarPlayPlayingIndicatorLocation>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayPlayingIndicatorLocation")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NitroIOSUpdateOptions& arg) {
@@ -72,6 +77,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "playbackRates"), JSIConverter<std::optional<std::vector<double>>>::toJSI(runtime, arg.playbackRates));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.carPlayUpNextButton));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons"), JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::toJSI(runtime, arg.carPlayNowPlayingButtons));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayPlayingIndicatorLocation"), JSIConverter<std::optional<margelo::nitro::audiobrowser::CarPlayPlayingIndicatorLocation>>::toJSI(runtime, arg.carPlayPlayingIndicatorLocation));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -85,6 +91,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::vector<double>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playbackRates")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton")))) return false;
       if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::CarPlayPlayingIndicatorLocation>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayPlayingIndicatorLocation")))) return false;
       return true;
     }
   };

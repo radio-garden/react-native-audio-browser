@@ -74,14 +74,23 @@ describe('setupPlayer wire regrouping', () => {
     })
   })
 
-  it('moves ios playbackRates into the runtime options', async () => {
+  it('moves ios runtime fields into the runtime options', async () => {
     await setupPlayer({
-      ios: { category: 'playback', playbackRates: [0.5, 1, 2] }
+      ios: {
+        category: 'playback',
+        playbackRates: [0.5, 1, 2],
+        carPlayPlayingIndicatorLocation: 'trailing'
+      }
     })
 
     const sent = payload()
     expect(sent.ios).toEqual({ category: 'playback' })
-    expect(sent.options).toEqual({ ios: { playbackRates: [0.5, 1, 2] } })
+    expect(sent.options).toEqual({
+      ios: {
+        playbackRates: [0.5, 1, 2],
+        carPlayPlayingIndicatorLocation: 'trailing'
+      }
+    })
   })
 
   it('omits a platform bag that only carried runtime fields', async () => {
