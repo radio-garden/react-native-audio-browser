@@ -65,10 +65,10 @@ const unsubscribe = onActiveTrackChanged.addListener((event) => {
 
 The event also carries `index`, `lastTrack`, and `lastIndex`; `addListener` returns an unsubscribe function.
 
-`id` is also passed to the per-track `resolve` hooks, so you can ship tracks carrying only an `id` and synthesise `src`/artwork from it at request time.
+`id` is also passed to the per-track `resolve` hooks, so you can set `src` to the same stable identifier and synthesise the real request/artwork from it at request time.
 
 ::: tip `id` is optional
-If you key identity off `path`/`src`, you can skip it. One caveat: an Android Auto item picked straight from the browse tree (one you never queued) is identified only by `path`/`src`, so its `id` may be `undefined` on that path.
+A track's identity is its `id`, falling back to `src` — so if the same item's `src` string is identical wherever it appears, you can skip `id` entirely. Set ids consistently across your content or not at all: identity is compared whole, and a row carrying an `id` never matches a track without one.
 :::
 
 ## Display fields

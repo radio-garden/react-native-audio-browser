@@ -11,11 +11,11 @@ The library models all content as one navigable tree of **Tracks**. A single Tra
 
 Three fields at a glance — each answers a different question about a Track:
 
-| Field  | Answers            | Meaning                                    |
-| ------ | ------------------ | ------------------------------------------ |
-| `path` | where does it go?  | the browse-tree address navigating opens   |
-| `src`  | what does it play? | the media identifier the player streams    |
-| `id`   | which item is it?  | stable identity across surfaces (optional) |
+| Field  | Answers            | Meaning                                                   |
+| ------ | ------------------ | --------------------------------------------------------- |
+| `path` | where does it go?  | the browse-tree address navigating opens                  |
+| `src`  | what does it play? | the media identifier the player streams                   |
+| `id`   | which item is it?  | identity across surfaces — falls back to `src` when unset |
 
 ```mermaid
 graph TD

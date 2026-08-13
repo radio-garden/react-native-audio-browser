@@ -42,10 +42,6 @@ namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
-// Forward declaration of `FavoriteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
-// Forward declaration of `FavoritesMatchMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
@@ -215,8 +211,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
-#include "FavoriteConfig.hpp"
-#include "FavoritesMatchMode.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"

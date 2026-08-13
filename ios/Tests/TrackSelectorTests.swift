@@ -126,14 +126,15 @@ struct ContextualPathQueueReuseTests {
     let trackSrc = "song.mp3"
     let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
+    // Id-less queue tracks: identity falls back to src.
     player.queueSourcePath = parentPath
     player.tracks = [
-      Track(id: "a", src: "other.mp3"),
-      Track(id: "b", src: "song.mp3"),
-      Track(id: "c", src: "another.mp3"),
+      Track(src: "other.mp3"),
+      Track(src: "song.mp3"),
+      Track(src: "another.mp3"),
     ]
 
-    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
+    let track = Track(path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
@@ -148,6 +149,35 @@ struct ContextualPathQueueReuseTests {
     #expect(browser.expandedPaths.isEmpty)
   }
 
+  // Skip-in-place matches by id when queue tracks carry ids: the contextual
+  // trackId is the row's identity (its id), and the queue row is found even
+  // though its src differs textually from the tapped track's.
+  @Test func matchingQueueSourcePath_skipsToTrackByIdWhenSrcDiffers() async {
+    let (selector, browser, player) = makeSelector()
+    let parentPath = "/library/radio"
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: "b")
+
+    player.queueSourcePath = parentPath
+    player.tracks = [
+      Track(id: "a", src: "other.mp3"),
+      Track(id: "b", src: "https://cdn.example/song.mp3?token=queue"),
+      Track(id: "c", src: "another.mp3"),
+    ]
+
+    let track = Track(id: "b", path: contextualPath, src: "song.mp3")
+    let result = await selector.select(track: track, player: player)
+    guard case let .play(intent) = result else {
+      Issue.record("expected .play, got \(result)")
+      return
+    }
+    guard case let .skipTo(index) = intent else {
+      Issue.record("expected .skipTo, got \(intent)")
+      return
+    }
+    #expect(index == 1)
+    #expect(browser.expandedPaths.isEmpty)
+  }
+
   @Test func handlerIntercepts_returnsIntercepted() async {
     let (selector, browser, player) = makeSelector()
     browser.trackLoadHandlerResult = true
@@ -157,15 +187,16 @@ struct ContextualPathQueueReuseTests {
 
     player.queueSourcePath = parentPath
     player.tracks = [
-      Track(id: "a", src: "song.mp3"),
+      Track(src: "song.mp3"),
     ]
 
-    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
+    let track = Track(path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case .intercepted = result else {
       Issue.record("expected .intercepted, got \(result)")
       return
     }
+    #expect(browser.expandedPaths.isEmpty)
   }
 }
 

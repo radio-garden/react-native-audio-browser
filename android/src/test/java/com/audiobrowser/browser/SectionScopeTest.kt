@@ -68,8 +68,37 @@ class SectionScopeTest {
     assertNull(SectionScope.section(listOf(track(src = "a")), "zz"))
   }
 
-  // Pins the documented precedence: sections are located by src, and an id
-  // present in both an image row and the flat list resolves to the row.
+  @Test
+  fun `locates a track by its id when it has one`() {
+    // Identity rule (ADR 0008): the id wins over the src, so a __trackId stamped
+    // from an id-bearing track must resolve — and its src must not.
+    val children =
+      listOf(
+        track(id = "stable-a", src = "https://s/a.mp3", groupTitle = "Recent"),
+        track(id = "stable-b", src = "https://s/b.mp3", groupTitle = "Recent"),
+        track(src = "https://s/c.mp3", groupTitle = "Popular"),
+      )
+
+    val section = SectionScope.section(children, "stable-b") as SectionScope.Section.Run
+    assertEquals(listOf("stable-a", "stable-b"), section.tracks.map { it.id })
+
+    // The src is shadowed by the id — it is not the track's identity.
+    assertNull(SectionScope.section(children, "https://s/b.mp3"))
+  }
+
+  @Test
+  fun `finds an id-bearing item inside an image row`() {
+    val items =
+      arrayOf(imageRowItem("https://s/1.mp3", id = "row-1"), imageRowItem("https://s/2.mp3"))
+    val row = track(title = "Most Played", src = null, imageRow = items)
+
+    val section = SectionScope.section(listOf(row), "row-1") as SectionScope.Section.ImageRow
+    assertEquals(items.toList(), section.items)
+  }
+
+  // Pins the documented precedence: sections are located by track identity (id
+  // when non-blank, else src), and an identity present in both an image row and
+  // the flat list resolves to the row.
   @Test
   fun `image row wins over a flat-list duplicate`() {
     val row = track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup")))

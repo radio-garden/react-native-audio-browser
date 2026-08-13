@@ -123,10 +123,13 @@ object TrackFactory {
       .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
-    // A playable track's mediaId is the consumer's stable `id` when it has one.
-    // Android Auto marks the "now playing" browse row by exact mediaId equality
-    // between the row and the player's current item (media3 announces
-    // `currentMediaItem.mediaId` in the legacy playback state), and a
+    // A playable track's mediaId is the consumer's stable `id` when it has one —
+    // the identity rule (id when non-blank, else src; see Track.identity /
+    // ADR 0008), except that an id-less playable track prefers its contextual
+    // `path` over `src` here, so this is deliberately NOT expressed via
+    // Track.identity. Android Auto marks the "now playing" browse row by exact
+    // mediaId equality between the row and the player's current item (media3
+    // announces `currentMediaItem.mediaId` in the legacy playback state), and a
     // consumer-loaded track's `src` can differ textually from the browse row's
     // for the same item (absolute vs relative, extra query params) — the id is
     // the one string both sides share. It is also context-free, so the same

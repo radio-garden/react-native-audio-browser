@@ -93,7 +93,7 @@ class TrackSelector {
     // Check if queue already came from this parent path — just skip to the track
     if let trackId,
        parentPath == player.queueSourcePath,
-       let index = player.tracks.firstIndex(where: { $0.src == trackId })
+       let index = player.tracks.firstIndex(where: { $0.identity == trackId })
     {
       logger.debug("Queue already from \(parentPath), skipping to index \(index)")
       let queue = player.tracks

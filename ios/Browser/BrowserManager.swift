@@ -77,12 +77,12 @@ final class BrowserManager {
   var resolvedRequestLayer: TransformableRequestConfig?
   private var resolvedBrowseLayer: TransformableRequestConfig?
 
-  // Set of favorited track identifiers (src)
+  // Set of favorited track identities (id when non-blank, else src).
   private var favoriteIds: Set<String> = []
 
-  // Favorite match mode, propagated from the player's `favorite` capability.
-  // nil = favoriting disabled (no row hearts). Set via setFavoriteMatch.
-  private var favoriteMatch: FavoritesMatchMode?
+  // Whether favoriting is enabled, propagated from the player's `favorite`
+  // capability. false = no row hearts. Set via setFavoriteEnabled.
+  private var favoriteEnabled = false
 
   // Navigation tracking to prevent race conditions
   private var currentNavigationId: Int = 0
@@ -162,55 +162,39 @@ final class BrowserManager {
     onFavoritesChanged?()
   }
 
-  /// Sets the favorite match mode (propagated from the `favorite` capability).
-  /// nil disables row-heart hydration.
-  func setFavoriteMatch(_ match: FavoritesMatchMode?) {
-    favoriteMatch = match
+  /// Enables/disables favoriting (propagated from the `favorite` capability).
+  /// false disables row-heart hydration.
+  func setFavoriteEnabled(_ enabled: Bool) {
+    favoriteEnabled = enabled
   }
 
-  /// Optimistically reflects a local favorite toggle for `src` in the match set,
-  /// needing no consumer-specific id extraction: favoriting inserts `src` (which
-  /// matches itself under either mode). Removal mirrors `isFavorite`'s match
-  /// semantics — partial drops every id that is a path segment of `src` (the
-  /// channel uid, and self-heals stray ids); exact (or disabled) drops only
-  /// `src`, so unrelated exact favorites that happen to be a segment of `src`
-  /// aren't collaterally lost. The consumer reconciles `favoriteIds` to its
-  /// canonical ids on the next `setFavorites`; `isFavorite(src:)` gives the same
-  /// answer before and after, so the now-playing heart stays responsive.
-  func setFavorited(src: String, favorited: Bool) {
+  /// Optimistically reflects a local favorite toggle in the favorite set, keyed
+  /// by the track's identity (id when non-blank, else src). The consumer
+  /// reconciles `favoriteIds` to its canonical set on the next `setFavorites`;
+  /// `isFavorite` gives the same answer before and after, so the now-playing
+  /// heart stays responsive.
+  func setFavorited(identity: String, favorited: Bool) {
     if favorited {
-      favoriteIds.insert(src)
-    } else if favoriteMatch == .partial {
-      favoriteIds = favoriteIds.filter { !BrowserPathHelper.containsSegment(src, $0) }
+      favoriteIds.insert(identity)
     } else {
-      favoriteIds.remove(src)
+      favoriteIds.remove(identity)
     }
   }
 
   /// Hydrates the favorited field on a track based on the favoriteIds set.
   /// No-op unless favoriting is enabled (the `favorite` capability). Only
-  /// playable (src-bearing) tracks are favoritable; the flag is set to true OR
-  /// false so non-favorited tracks still show an (empty) heart. Local
-  /// favoriteIds take precedence over API-provided values.
+  /// identity-bearing tracks (id or src) are favoritable; the flag is set to
+  /// true OR false so non-favorited tracks still show an (empty) heart. A
+  /// caller-set `favorited` wins — API/consumer-provided values are never
+  /// overwritten (matches Android and web).
   func hydrateFavorite(_ track: Track) -> Track {
-    guard let match = favoriteMatch, let src = track.src else { return track }
-
-    let isFavorited = isFavorite(src: src, match: match)
-
-    // Only create a new track if the favorited state differs
-    if track.favorited == isFavorited { return track }
-
-    return track.copying(favorited: isFavorited)
+    guard favoriteEnabled, track.favorited == nil, track.identity != nil else { return track }
+    return track.copying(favorited: isFavorite(track))
   }
 
-  /// Whether `src` is favorited under the given match mode.
-  private func isFavorite(src: String, match: FavoritesMatchMode) -> Bool {
-    switch match {
-    case .exact:
-      favoriteIds.contains(src)
-    case .partial:
-      favoriteIds.contains { BrowserPathHelper.containsSegment(src, $0) }
-    }
+  /// Whether the track's identity is in the favorite set.
+  private func isFavorite(_ track: Track) -> Bool {
+    track.identity.map(favoriteIds.contains) ?? false
   }
 
   /// Hydrates favorites on all children of a ResolvedTrack.
@@ -545,7 +529,8 @@ final class BrowserManager {
       var transformedTrack = track
 
       if track.src != nil, track.path == nil {
-        let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: track.src!)
+        // src != nil guarantees a non-nil identity (id when non-blank, else src).
+        let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: track.identity!)
         transformedTrack = track.copying(path: contextualPath)
       }
 
@@ -562,10 +547,11 @@ final class BrowserManager {
           let itemImageSource = await resolveArtworkUrl(track: item.toTrack(), perRouteConfig: artworkConfig)
           // Playable items get a contextual path like any list row, so a
           // thumbnail tap expands into its section's queue instead of a
-          // queue of one (ADR 0006).
-          let itemPath = item.path ?? item.src.map {
+          // queue of one (ADR 0006). Keyed by the item's identity (id when
+          // non-blank, else src) — non-nil whenever src is.
+          let itemPath = item.path ?? (item.src == nil ? nil : item.identity.map {
             BrowserPathHelper.build(parentPath: parentPath, trackId: $0)
-          }
+          })
           resolvedItems.append(ImageRowItem(
             id: item.id,
             path: itemPath,
@@ -765,7 +751,7 @@ final class BrowserManager {
     // Find selected track index
     // Unreachable in practice (the section was found BY this id), but a miss
     // must abort rather than silently start the queue at the wrong track.
-    guard let selectedIndex = playableTracks.firstIndex(where: { $0.src == trackId }) else {
+    guard let selectedIndex = playableTracks.firstIndex(where: { $0.identity == trackId }) else {
       return nil
     }
     logger.debug("Selected track index: \(selectedIndex)")

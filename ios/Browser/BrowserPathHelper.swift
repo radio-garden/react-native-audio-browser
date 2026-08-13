@@ -193,27 +193,4 @@ enum BrowserPathHelper {
 
     return "\(normalizedBase)/\(normalizedPath)"
   }
-
-  /// True if `segment` appears in `path` as a complete path segment — bounded on
-  /// the left by the string start or `/`, and on the right by the string end or
-  /// one of `/`, `?`, `#`.
-  static func containsSegment(_ path: String, _ segment: String) -> Bool {
-    guard !segment.isEmpty else { return false }
-    var searchStart = path.startIndex
-    while let range = path.range(of: segment, range: searchStart ..< path.endIndex) {
-      let beforeOk =
-        range.lowerBound == path.startIndex
-          || path[path.index(before: range.lowerBound)] == "/"
-      let afterOk: Bool
-      if range.upperBound == path.endIndex {
-        afterOk = true
-      } else {
-        let next = path[range.upperBound]
-        afterOk = next == "/" || next == "?" || next == "#"
-      }
-      if beforeOk, afterOk { return true }
-      searchStart = range.upperBound
-    }
-    return false
-  }
 }

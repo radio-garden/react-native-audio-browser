@@ -1,5 +1,6 @@
 package com.audiobrowser.player
 
+import com.audiobrowser.extension.identity
 import com.audiobrowser.util.url
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
@@ -293,7 +294,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     // the same fields are recomputed often; an unconditional stamp would churn the MediaSession
     // (and flicker Android Auto / now-playing) for no visible change. Keyed on the track identity
     // so a new track with a coincidentally identical line still publishes.
-    val published = Published(index, track.src ?: track.path, title, secondaryLine, album)
+    val published = Published(index, track.identity ?: track.path, title, secondaryLine, album)
     if (published == lastPublished) return
     lastPublished = published
 

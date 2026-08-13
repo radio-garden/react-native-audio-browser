@@ -3,6 +3,7 @@ package com.audiobrowser.browser
 import android.util.LruCache
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
+import com.audiobrowser.extension.identity
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
@@ -10,7 +11,6 @@ import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
-import com.margelo.nitro.audiobrowser.FavoritesMatchMode
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.MediaReference
@@ -94,12 +94,12 @@ class BrowserManager {
   // concurrent reader never sees one query matched with another query's results.
   @Volatile private var lastSearch: Pair<String, Array<Track>>? = null
 
-  // Set of favorited track identifiers (src)
+  // Set of favorited track identities (id when non-blank, else src — see Track.identity)
   private var favoriteIds = setOf<String>()
 
-  // Favorite match mode, propagated from the player's `favorite` capability.
-  // null = favoriting disabled (no row hearts). Set via setFavoriteMatch.
-  private var favoriteMatch: FavoritesMatchMode? = null
+  // Whether favoriting is enabled, propagated from the player's `favorite` capability.
+  // false = favoriting disabled (no row hearts). Set via setFavoriteEnabled.
+  private var favoriteEnabled: Boolean = false
 
   // Navigation tracking to prevent race conditions
   @Volatile private var currentNavigationId = 0
@@ -150,8 +150,8 @@ class BrowserManager {
   val artworkResolutions = ArtworkResolutionRegistry()
 
   /**
-   * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
-   * this list during browsing.
+   * Sets the favorited track identities (id when non-blank, else src). Tracks will have their
+   * favorited field hydrated based on this list during browsing.
    */
   fun setFavorites(favorites: List<String>) {
     favoriteIds = favorites.toSet()
@@ -159,51 +159,46 @@ class BrowserManager {
   }
 
   /**
-   * Sets the favorite match mode (propagated from the `favorite` capability). null disables
+   * Enables or disables favoriting (propagated from the `favorite` capability). false disables
    * row-heart hydration.
    */
-  fun setFavoriteMatch(match: FavoritesMatchMode?) {
-    favoriteMatch = match
+  fun setFavoriteEnabled(enabled: Boolean) {
+    favoriteEnabled = enabled
   }
 
   /**
-   * Updates the favorite state for a single track identifier. Called when the heart button is
-   * tapped in media controllers.
+   * Updates the favorite state for a single track identity (id when non-blank, else src). Called
+   * when the heart button is tapped in media controllers.
    */
-  fun updateFavorite(id: String, favorited: Boolean) {
+  fun updateFavorite(identity: String, favorited: Boolean) {
     favoriteIds =
       if (favorited) {
-        favoriteIds + id
+        favoriteIds + identity
       } else {
-        favoriteIds - id
+        favoriteIds - identity
       }
-    Timber.d("Updated favorite for '$id' to $favorited (total: ${favoriteIds.size})")
+    Timber.d("Updated favorite for '$identity' to $favorited (total: ${favoriteIds.size})")
   }
 
   /**
    * Hydrates the favorited field on a track based on the favoriteIds set. No-op unless favoriting
-   * is enabled (the `favorite` capability). Only playable (src-bearing) tracks are favoritable; the
-   * flag is set to true OR false so non-favorited tracks still show an (empty) heart. Doesn't
-   * overwrite API-provided values.
+   * is enabled (the `favorite` capability). Only tracks with an identity (id or src) are
+   * favoritable; the flag is set to true OR false so non-favorited tracks still show an (empty)
+   * heart. Doesn't overwrite API-provided values.
    */
   private fun hydrateFavorite(track: Track): Track {
-    val match = favoriteMatch ?: return track
+    if (!favoriteEnabled) return track
     // Don't overwrite API-provided favorites
     if (track.favorited != null) return track
-    // Only playable tracks are favoritable
-    val src = track.src ?: return track
+    // Only identity-bearing tracks are favoritable
+    if (track.identity == null) return track
 
-    val isFavorited = isFavorite(src, match)
-
-    return track.copy(favorited = isFavorited)
+    return track.copy(favorited = isFavorite(track))
   }
 
-  /** Whether [src] is favorited under the given match mode. */
-  private fun isFavorite(src: String, match: FavoritesMatchMode): Boolean =
-    when (match) {
-      FavoritesMatchMode.EXACT -> favoriteIds.contains(src)
-      FavoritesMatchMode.PARTIAL -> favoriteIds.any { BrowserPathHelper.containsSegment(src, it) }
-    }
+  /** Whether [track]'s identity is in the favorites set. */
+  private fun isFavorite(track: Track): Boolean =
+    track.identity?.let { favoriteIds.contains(it) } == true
 
   /** Hydrates favorites on all children of a ResolvedTrack. */
   private fun hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
@@ -244,12 +239,13 @@ class BrowserManager {
       return hydratedTrack
     }
 
-    // Try extracting src from contextual path
+    // Try extracting the track identity (id when non-blank, else src) from a contextual path —
+    // the cache is keyed by id AND src, so either identity form resolves.
     val trackId = BrowserPathHelper.extractTrackId(mediaId)
     if (trackId != null) {
       trackCache.get(trackId)?.let { track ->
         val hydratedTrack = hydrateFavorite(track)
-        Timber.d("Cache HIT (extracted src) for mediaId='$mediaId' → '${track.title}'")
+        Timber.d("Cache HIT (extracted identity) for mediaId='$mediaId' → '${track.title}'")
         return hydratedTrack
       }
     }
@@ -544,12 +540,13 @@ class BrowserManager {
                 // context
                 // (e.g., a track favorited from an album should use /favorites context when browsed
                 // there)
-                if (track.src != null) {
-                  val contextualPath = BrowserPathHelper.build(path, track.src)
+                val trackIdentity = track.identity
+                if (track.src != null && trackIdentity != null) {
+                  val contextualPath = BrowserPathHelper.build(path, trackIdentity)
                   transformedTrack = transformedTrack.copy(path = contextualPath)
 
                   Timber.d(
-                    "[$path] Child[$index] '${track.title}': Playable, contextualPath=$contextualPath (src=${track.src})"
+                    "[$path] Child[$index] '${track.title}': Playable, contextualPath=$contextualPath (identity=$trackIdentity)"
                   )
                 } else {
                   Timber.d(
@@ -566,8 +563,9 @@ class BrowserManager {
                       imageRow =
                         items
                           .map { item ->
-                            if (item.path == null && item.src != null) {
-                              item.copy(path = BrowserPathHelper.build(path, item.src))
+                            val itemIdentity = item.identity
+                            if (item.path == null && item.src != null && itemIdentity != null) {
+                              item.copy(path = BrowserPathHelper.build(path, itemIdentity))
                             } else {
                               item
                             }
@@ -702,10 +700,10 @@ class BrowserManager {
       }
 
       // Find the index of the selected track in the playable tracks array
-      val selectedIndex = playableTracks.indexOfFirst { track -> track.src == trackId }
+      val selectedIndex = playableTracks.indexOfFirst { track -> track.identity == trackId }
 
       if (selectedIndex < 0) {
-        Timber.w("Track with src='$trackId' not found in playable children")
+        Timber.w("Track with identity='$trackId' not found in playable children")
         return null
       }
 

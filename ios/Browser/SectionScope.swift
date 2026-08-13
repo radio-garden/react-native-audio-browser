@@ -10,15 +10,15 @@ enum SectionScope {
     case run([Track])
   }
 
-  /// The section of `children` containing the playable `trackId`, or nil
-  /// when the id is not found.
+  /// The section of `children` containing the playable `trackId` (a track
+  /// identity: id when non-blank, else src), or nil when not found.
   static func section(of children: [Track], containing trackId: String) -> Section? {
     for child in children {
-      if let items = child.imageRow, items.contains(where: { $0.src == trackId }) {
+      if let items = child.imageRow, items.contains(where: { $0.identity == trackId }) {
         return .imageRow(items)
       }
     }
-    guard let index = children.firstIndex(where: { $0.src == trackId }) else {
+    guard let index = children.firstIndex(where: { $0.identity == trackId }) else {
       return nil
     }
     let group = children[index].groupTitle

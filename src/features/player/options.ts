@@ -1,4 +1,3 @@
-import type { FavoriteConfig } from '../../types'
 import type { CarPlayNowPlayingButton } from '../../types/browser'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
@@ -75,31 +74,22 @@ export interface PlayerCapabilities {
    *   Android Auto and the Android 13+ system media controls — and an
    *   (empty or filled) heart on playable browse rows.
    *
-   * `match` controls how the ids from `setFavorites` are
-   * compared against a track's `src` to decide its `favorited` state
-   * (see `FavoritesMatchMode`); `true` is shorthand for `'exact'`.
-   *
-   * - `false` / omitted: favoriting off everywhere.
-   * - `true`: on, with `'exact'` id matching.
-   * - `{ match }`: on, with the given match mode.
+   * The ids passed to `setFavorites` are matched exactly against a track's
+   * *identity* — its `id` when set, falling back to `src`. Store favorites as
+   * the same stable identifier you put in `Track.id` (or as the full `src`
+   * for tracks without an id).
    *
    * @example
    * ```ts
-   * // 'exact': a favorite id must equal the track's src.
-   * favorite: { match: 'exact' }
-   * setFavorites(['https://cdn.example.com/audio/track-42.mp3'])
-   * // → favorited when src === 'https://cdn.example.com/audio/track-42.mp3'
-   *
-   * // 'partial': a favorite id matches when it is a full path segment of src.
-   * favorite: { match: 'partial' }
+   * favorite: true
    * setFavorites(['track-42'])
-   * // → favorited when src is '/library/track-42' or '/stream/track-42?hq=1',
-   * //   but NOT '/library/track-420'
+   * // → favorited when track.id === 'track-42'
+   * //   (or, for id-less tracks, when track.src === 'track-42')
    * ```
    *
    * @default false
    */
-  favorite?: boolean | FavoriteConfig
+  favorite?: boolean
   /**
    * Enable shuffle mode toggle.
    * @default true

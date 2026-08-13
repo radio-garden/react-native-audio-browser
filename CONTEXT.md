@@ -80,6 +80,10 @@ Example:
 A Track that has a `src` and can be streamed by the player. A _shape_ of Track, not a separate type. A Track _may carry_ both `path` and `src`, but current surfaces treat such a track as playable: `src` wins the rendering (CarPlay row style, Android Auto's mutually-exclusive isPlayable/isBrowsable flags), and the browse pipeline replaces a playable track's `path` with its contextual path anyway. Genuinely combined items — tap to play _or_ drill in — are a future item (see FUTURE.md, "Browsable + Playable Combined Items").
 _Avoid_: Leaf, Song, Media.
 
+**Identity**:
+What makes two Tracks the same item: the Track's `id` when set (non-blank), falling back to its `src`. The single comparison rule everywhere Tracks are compared — favorites matching, the CarPlay / Android Auto now-playing row indicator, section scoping and skip-in-place, and contextual queue re-expansion. Compared whole: never a substring, never parsed out of a URL. A Browsable-only Track has no Identity — it is addressed by its **Path**.
+_Avoid_: key, uid (a consumer-side concept).
+
 **ResolvedTrack**:
 The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `children`. Media URLs are not part of resolution; they're transformed at playback time.
 _Avoid_: ExpandedTrack, LoadedTrack.
@@ -187,7 +191,7 @@ _Avoid_: Notification buttons, slots (a Media3 implementation term — `back`/`f
 **Favorited**:
 A boolean on a Track marking it as a user favorite. Toggled programmatically or via the heart button on an External surface. The library's domain vocabulary has no Rating concept.
 
-A favorites collection is app-owned/user-owned content. The library tracks **Favorited** state on Tracks and keeps surfaces in sync; the app owns where the favorites collection is stored, how it is persisted, and how a favorites Path resolves to Tracks.
+A favorites collection is app-owned/user-owned content. The library tracks **Favorited** state on Tracks and keeps surfaces in sync; the app owns where the favorites collection is stored, how it is persisted, and how a favorites Path resolves to Tracks. Hydration matches the app's declared identifiers against each Track's **Identity**; a caller-set `favorited` on a Track wins over hydration for display but never fills the cache.
 _Avoid_: Rating, hearted, liked, starred.
 
 **Browse Gate**:
@@ -221,7 +225,7 @@ _Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a g
 
 - **`src` vs `path` on a Track.** Both are string fields and easy to mix up. `path` is the _navigation_ address in the BrowseTree — its presence makes the Track **Browsable**. `src` is a _media_ identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track may carry both, but surfaces currently treat that as playable — `src` wins; see **Playable**. When in doubt: ask "do I navigate into this or stream this?"
 
-- **`id` is the Playable Track's identity when present.** External surfaces mark the "now playing" browse row by comparing identities (CarPlay's playing indicator; Android Auto's, via the Media3 mediaId). A consumer-loaded Track's `src` can differ textually from the browse row's for the same item (absolute vs relative, extra query params), so when both sides carry an `id` it _is_ the identity, and `src`/`path` equality is only the fallback for consumers that don't assign ids.
+- **`id` is the Playable Track's Identity when present.** A Track's **Identity** is its `id` when set (non-blank), falling back to its `src` — one rule, applied at every comparison site (favorites, the now-playing row indicator, section scoping, skip-in-place, contextual queue re-expansion). The fallback is per-Track, not per-comparison: a Track carrying an `id` compares by that id alone, so a row with an `id` never matches a track that only has a `src` — mixed id-presence never matches. Assign ids consistently, everywhere or nowhere.
 
 - **"path" has two senses, and both are fields named `path`.** A tree address (`/albums/abbey-road`, the navigation primitive, `Track.path`) and an HTTP request path (`/api/v2/albums/123/tracks`, `RequestConfig.path`). The two never co-occur on the same object — a Track is not a RequestConfig — but the same string can appear in both roles when a Route forwards a tree path into an HTTP request. Sharing the name is deliberate: the tree-address field was previously called `url`, which this glossary itself flags as the word to avoid for a tree position. Disambiguate by the owning type, not by renaming.
 

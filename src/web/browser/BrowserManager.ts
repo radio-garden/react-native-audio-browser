@@ -8,6 +8,7 @@ import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
+import { trackIdentity } from '../../utils/trackIdentity'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
@@ -255,10 +256,11 @@ export class BrowserManager {
         content = {
           ...content,
           children: content.children.map((track) => {
-            // If track has src, always add/update the contextual path with current path context
-            // This matches Android's BrowserManager.kt:436-441
-            if (track.src) {
-              const contextualPath = `${path}?__trackId=${encodeURIComponent(track.src)}`
+            // A playable track gets a contextual path carrying its identity
+            // (id ?? src) so the queue can be re-expanded from it later.
+            const identity = trackIdentity(track)
+            if (track.src && identity) {
+              const contextualPath = `${path}?__trackId=${encodeURIComponent(identity)}`
               return { ...track, path: contextualPath }
             }
             // Return a shallow copy in attempt to avoid mutating original config objects
@@ -754,14 +756,14 @@ export class BrowserManager {
         return undefined
       }
 
-      // Find the index of the selected track in the playable tracks array
+      // Find the index of the selected track by identity (id ?? src)
       const selectedIndex = playableTracks.findIndex(
-        (track) => track.src === trackId
+        (track) => trackIdentity(track) === trackId
       )
 
       if (selectedIndex < 0) {
         console.warn(
-          `Track with src='${trackId}' not found in playable children`
+          `Track with identity='${trackId}' not found in playable children`
         )
         return undefined
       }
@@ -814,9 +816,13 @@ export class BrowserManager {
         const searchTracks = searchResults?.children
 
         if (searchTracks && searchTracks.length > 0) {
-          // Find the selected track in search results
+          // Find the selected track in search results by path or identity
+          // (matches Android's three-way mediaId match)
+          const identity = trackIdentity(track)
           const selectedIdx = searchTracks.findIndex(
-            (t) => t.path === trackPath || t.src === track.src
+            (t) =>
+              t.path === trackPath ||
+              (identity !== undefined && trackIdentity(t) === identity)
           )
 
           if (selectedIdx >= 0) {

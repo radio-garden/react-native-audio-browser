@@ -54,7 +54,7 @@ extension PlayerCapabilities {
     // Apple silently removed. On the iOS 16+ target it can never be invoked: CarPlay
     // uses its own CPNowPlayingButton heart, and Siri "I like this" routes through
     // INUpdateMediaAffinityIntent. The `favorite` capability still drives the
-    // favorites-match row indicators via setFavoriteMatch. See issues #67 / #71.
+    // favorite row indicators via setFavoriteEnabled. See issues #67 / #71.
 
     // Mode controls
     if shuffleMode != false {

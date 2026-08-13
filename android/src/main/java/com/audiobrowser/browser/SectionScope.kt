@@ -1,5 +1,6 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.extension.identity
 import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.Track
 
@@ -21,16 +22,17 @@ object SectionScope {
   }
 
   /**
-   * The section of [children] containing the playable [trackId], or null when the id is not found.
+   * The section of [children] containing the playable [trackId] (a track identity — id when
+   * non-blank, else src), or null when the id is not found.
    */
   fun section(children: List<Track>, trackId: String): Section? {
     for (child in children) {
       val items = child.imageRow
-      if (items != null && items.any { it.src == trackId }) {
+      if (items != null && items.any { it.identity == trackId }) {
         return Section.ImageRow(items.toList())
       }
     }
-    val index = children.indexOfFirst { it.src == trackId }
+    val index = children.indexOfFirst { it.identity == trackId }
     if (index < 0) return null
     val group = children[index].groupTitle
     var start = index

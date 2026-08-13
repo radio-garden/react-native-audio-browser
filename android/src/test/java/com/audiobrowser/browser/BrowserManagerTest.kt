@@ -209,6 +209,52 @@ class BrowserManagerTest {
   }
 
   @Test
+  fun `navigate stamps the identity, not the src, into id-bearing children's contextual urls`() =
+    runBlocking {
+      servePage(
+        "/home",
+        track(id = "stable-a", src = "https://s/a.mp3", title = "A"),
+        track(src = "https://s/b.mp3", title = "B"),
+      )
+
+      val resolved = browserManager.navigate("/home")
+
+      // id when non-blank, else src — Track.identity (ADR 0008).
+      assertEquals(
+        listOf(contextual("/home", "stable-a"), contextual("/home", "https://s/b.mp3")),
+        resolved.children?.map { it.path },
+      )
+    }
+
+  @Test
+  fun `expandQueueFromContextualPath finds the selected index by identity`() = runBlocking {
+    servePage(
+      "/home",
+      track(id = "stable-a", src = "https://s/a.mp3"),
+      track(id = "stable-b", src = "https://s/b.mp3"),
+      track(id = "stable-c", src = "https://s/c.mp3"),
+    )
+
+    val (queue, index) =
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "stable-c")))
+
+    assertEquals(listOf("stable-a", "stable-b", "stable-c"), queue.map { it.id })
+    assertEquals(2, index)
+  }
+
+  @Test
+  fun `getCachedTrack resolves an id-valued trackId through the cache`() = runBlocking {
+    servePage("/home", track(id = "stable-b", src = "https://s/b.mp3", title = "B"))
+    browserManager.navigate("/home")
+
+    // A contextual mediaId whose __trackId is the identity (the id), with a parent path that was
+    // never cached directly — the extract-then-lookup path must find it via the id key.
+    val mediaId = contextual("/elsewhere", "stable-b")
+
+    assertEquals("B", browserManager.getCachedTrack(mediaId)?.title)
+  }
+
+  @Test
   fun `expandQueueFromContextualPath honours singleTrack`() = runBlocking {
     servePage(
       "/home",

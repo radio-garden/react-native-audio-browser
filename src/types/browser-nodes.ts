@@ -103,30 +103,25 @@ export interface Track {
   /**
    * Opaque, stable identifier for this track.
    *
+   * A track's **identity** is `id` when set (non-blank), falling back to
+   * `src`. That single rule drives every comparison the library makes:
+   * favorites matching (`setFavorites`), the CarPlay / Android Auto
+   * "now playing" row indicator, section scoping and skip-in-place, and the
+   * contextual queue re-expansion. Two tracks refer to the same item iff
+   * their identities are equal — so set `id` consistently on every surface,
+   * or on none.
+   *
    * The library never parses or derives anything from this value — it is
-   * round-tripped verbatim through `setQueue`, `getActiveTrack`, the queue, and
-   * `onActiveTrackChanged`, so consumers can recognise which item became active
-   * after an external transport change (lock screen / CarPlay / Android Auto /
-   * Bluetooth next-previous) without parsing the playable `src`.
+   * round-tripped verbatim through `setQueue`, `getActiveTrack`, the queue,
+   * `onActiveTrackChanged`, and `onFavoriteChanged`, and handed to the
+   * per-track `MediaRequestConfig.resolve` / `ArtworkRequestConfig.resolve`
+   * hooks so requests can be built from the stable id.
    *
-   * When present on a playable track it is also the track's *identity* on car
-   * browse surfaces: CarPlay's and Android Auto's "now playing" row indicator
-   * match the active track to browse rows by `id` (falling back to exact `src`
-   * equality for tracks without one). Assign ids when your playable `src`
-   * strings for the same item can differ between browse rows and loaded tracks
-   * (absolute vs relative URLs, volatile query params) — otherwise the
-   * indicator never matches.
-   *
-   * It is also handed to the per-track `MediaRequestConfig.resolve` and
-   * `ArtworkRequestConfig.resolve` hooks, so requests can be built from a stable
-   * id (e.g. supply tracks with only an `id` and synthesise `src` in `resolve`).
-   *
-   * Optional: consumers whose `path`/`src` strings are already stable across
-   * surfaces can ignore it.
-   *
-   * Note: an Android Auto item selected directly from the browse tree that the
-   * consumer never queued is identified only by `path`/`src`, so `id` may be
-   * undefined on that specific path.
+   * Optional: consumers whose `src` strings are identical wherever the same
+   * item appears can ignore it — their identity is the `src`. Assign ids when
+   * `src` strings for the same item can differ between surfaces (absolute vs
+   * relative URLs, volatile query params), or when favorites are stored as an
+   * identifier that isn't the playable URL.
    */
   id?: string
 

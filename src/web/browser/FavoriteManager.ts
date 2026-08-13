@@ -1,14 +1,16 @@
 import type { Track, ResolvedTrack } from '../../types'
+import { trackIdentity } from '../../utils/trackIdentity'
 
 /**
- * Manages favorite state for tracks.
+ * Manages favorite state for tracks, keyed by track identity (`id` when set,
+ * falling back to `src` — see trackIdentity / ADR 0008).
  * Matches Android's favorite hydration behavior.
  */
 export class FavoriteManager {
   private favorites = new Set<string>()
 
   /**
-   * Sets the favorites cache from an array of track src values.
+   * Sets the favorites cache from an array of track identities.
    * This is typically called when favorites are loaded from storage.
    */
   setFavorites(favorites: string[]): void {
@@ -16,24 +18,27 @@ export class FavoriteManager {
   }
 
   /**
-   * Checks if a track is favorited based on its src.
+   * Checks if a track is favorited based on its identity.
    */
-  isFavorited(src: string): boolean {
-    return this.favorites.has(src)
+  isFavorited(track: Track): boolean {
+    const identity = trackIdentity(track)
+    return identity !== undefined && this.favorites.has(identity)
   }
 
   /**
-   * Adds a track src to the favorites cache.
+   * Adds a track to the favorites cache under its identity.
    */
-  addFavorite(src: string): void {
-    this.favorites.add(src)
+  addFavorite(track: Track): void {
+    const identity = trackIdentity(track)
+    if (identity !== undefined) this.favorites.add(identity)
   }
 
   /**
-   * Removes a track src from the favorites cache.
+   * Removes a track from the favorites cache under its identity.
    */
-  removeFavorite(src: string): void {
-    this.favorites.delete(src)
+  removeFavorite(track: Track): void {
+    const identity = trackIdentity(track)
+    if (identity !== undefined) this.favorites.delete(identity)
   }
 
   /**
@@ -48,8 +53,7 @@ export class FavoriteManager {
     if (track.favorited !== undefined && track.favorited !== null) return track
     if (this.favorites.size === 0) return track
 
-    const isFavorited = track.src ? this.favorites.has(track.src) : false
-    if (!isFavorited) return track
+    if (!this.isFavorited(track)) return track
 
     return {
       ...track,

@@ -20,6 +20,7 @@ import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.unattributedArtworkSource
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.CoilBitmapLoader
@@ -691,8 +692,11 @@ class Player(internal val context: Context) {
 
     // Persist to the native favorites cache regardless of player state — the
     // user's gesture is durable even when there's no active media item to
-    // update (queue tear-down, between-track gaps, etc.).
-    currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
+    // update (queue tear-down, between-track gaps, etc.). Keyed by the track
+    // identity (id when non-blank, else src).
+    currentTrack.identity?.let { identity ->
+      browser?.browserManager?.updateFavorite(identity, favorited)
+    }
 
     val index = exoPlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return
@@ -1249,8 +1253,8 @@ class Player(internal val context: Context) {
 
     if (capabilitiesChanged) {
       // The `favorite` capability is the single favoriting switch — propagate
-      // its match mode to the browser so it can hydrate row hearts.
-      browser?.browserManager?.setFavoriteMatch(options.capabilities.favoriteMatch)
+      // it to the browser so it can hydrate row hearts.
+      browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
     }
 
     if (progressUpdateEventIntervalChanged) {

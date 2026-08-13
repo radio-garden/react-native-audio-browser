@@ -53,9 +53,9 @@ object TestFixtures {
       imageRow = imageRow,
     )
 
-  fun imageRowItem(src: String, title: String = src) =
+  fun imageRowItem(src: String, title: String = src, id: String? = null) =
     ImageRowItem(
-      id = null,
+      id = id,
       path = null,
       src = src,
       artwork = null,

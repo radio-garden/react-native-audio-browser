@@ -133,10 +133,6 @@ namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
 namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
-// Forward declaration of `FavoriteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
-// Forward declaration of `FavoritesMatchMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
@@ -378,11 +374,6 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JVariant_NullType_Double.hpp"
 #include "PlayerCapabilities.hpp"
 #include "JPlayerCapabilities.hpp"
-#include "FavoriteConfig.hpp"
-#include "JVariant_Boolean_FavoriteConfig.hpp"
-#include "JFavoriteConfig.hpp"
-#include "FavoritesMatchMode.hpp"
-#include "JFavoritesMatchMode.hpp"
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
 #include "CarPlayNowPlayingButton.hpp"

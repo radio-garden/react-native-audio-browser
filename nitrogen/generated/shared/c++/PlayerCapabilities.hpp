@@ -28,12 +28,9 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `FavoriteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
+
 
 #include <optional>
-#include "FavoriteConfig.hpp"
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -50,14 +47,14 @@ namespace margelo::nitro::audiobrowser {
     std::optional<bool> skipToPrevious     SWIFT_PRIVATE;
     std::optional<bool> jumpForward     SWIFT_PRIVATE;
     std::optional<bool> jumpBackward     SWIFT_PRIVATE;
-    std::optional<std::variant<bool, FavoriteConfig>> favorite     SWIFT_PRIVATE;
+    std::optional<bool> favorite     SWIFT_PRIVATE;
     std::optional<bool> shuffleMode     SWIFT_PRIVATE;
     std::optional<bool> repeatMode     SWIFT_PRIVATE;
     std::optional<bool> playbackRate     SWIFT_PRIVATE;
 
   public:
     PlayerCapabilities() = default;
-    explicit PlayerCapabilities(std::optional<bool> play, std::optional<bool> pause, std::optional<bool> stop, std::optional<bool> seekTo, std::optional<bool> skipToNext, std::optional<bool> skipToPrevious, std::optional<bool> jumpForward, std::optional<bool> jumpBackward, std::optional<std::variant<bool, FavoriteConfig>> favorite, std::optional<bool> shuffleMode, std::optional<bool> repeatMode, std::optional<bool> playbackRate): play(play), pause(pause), stop(stop), seekTo(seekTo), skipToNext(skipToNext), skipToPrevious(skipToPrevious), jumpForward(jumpForward), jumpBackward(jumpBackward), favorite(favorite), shuffleMode(shuffleMode), repeatMode(repeatMode), playbackRate(playbackRate) {}
+    explicit PlayerCapabilities(std::optional<bool> play, std::optional<bool> pause, std::optional<bool> stop, std::optional<bool> seekTo, std::optional<bool> skipToNext, std::optional<bool> skipToPrevious, std::optional<bool> jumpForward, std::optional<bool> jumpBackward, std::optional<bool> favorite, std::optional<bool> shuffleMode, std::optional<bool> repeatMode, std::optional<bool> playbackRate): play(play), pause(pause), stop(stop), seekTo(seekTo), skipToNext(skipToNext), skipToPrevious(skipToPrevious), jumpForward(jumpForward), jumpBackward(jumpBackward), favorite(favorite), shuffleMode(shuffleMode), repeatMode(repeatMode), playbackRate(playbackRate) {}
 
   public:
     friend bool operator==(const PlayerCapabilities& lhs, const PlayerCapabilities& rhs) = default;
@@ -81,7 +78,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpForward"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward"))),
-        JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::FavoriteConfig>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "shuffleMode"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playbackRate")))
@@ -97,7 +94,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.skipToPrevious));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "jumpForward"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.jumpForward));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.jumpBackward));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "favorite"), JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::FavoriteConfig>>>::toJSI(runtime, arg.favorite));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "favorite"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.favorite));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "shuffleMode"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.shuffleMode));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "repeatMode"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.repeatMode));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "playbackRate"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.playbackRate));
@@ -119,7 +116,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpForward")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward")))) return false;
-      if (!JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::FavoriteConfig>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "shuffleMode")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playbackRate")))) return false;

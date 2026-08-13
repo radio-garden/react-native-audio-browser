@@ -3,7 +3,6 @@ package com.audiobrowser.player
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
-import com.margelo.nitro.audiobrowser.Variant_Boolean_FavoriteConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -36,7 +35,7 @@ class CapabilityControlsTest {
       skipToPrevious = skipToPrevious,
       jumpForward = jumpForward,
       jumpBackward = jumpBackward,
-      favorite = favorite?.let { Variant_Boolean_FavoriteConfig.First(it) },
+      favorite = favorite,
       shuffleMode = null,
       repeatMode = null,
       playbackRate = null,

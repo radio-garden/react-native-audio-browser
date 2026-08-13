@@ -91,19 +91,14 @@ public final class RNABCarPlayController: NSObject {
 
   /// Whether a list item identifies the currently active (loaded) track.
   ///
-  /// Identity is the stable `Track.id` when both sides carry one — the active
+  /// Compares track identities (`id` when non-blank, else `src`): the active
   /// track may have been loaded outside the browse tree (the consumer's own
   /// `load`/`setQueue`) with a `src` that differs textually from the browse
   /// row's (absolute vs relative, extra query params) while being the same
-  /// item. Exact `src` equality remains the fallback for consumers that don't
-  /// assign ids.
-  private func isActiveTrack(id: String?, src: String?) -> Bool {
-    guard let currentTrack = audioBrowser?.getPlayer()?.currentTrack else { return false }
-    if let id, !id.isEmpty, let currentId = currentTrack.id, !currentId.isEmpty {
-      return id == currentId
-    }
-    guard let src else { return false }
-    return currentTrack.src == src
+  /// item. A nil identity on either side never matches.
+  private func isActiveTrack(identity: String?) -> Bool {
+    guard let identity, let currentTrack = audioBrowser?.getPlayer()?.currentTrack else { return false }
+    return currentTrack.identity == identity
   }
 
   // MARK: - Initialization
@@ -178,7 +173,7 @@ public final class RNABCarPlayController: NSObject {
 
       // Create list item factory
       let factory = CarPlayListItemFactory(
-        isActiveTrack: { [weak self] id, src in self?.isActiveTrack(id: id, src: src) ?? false },
+        isActiveTrack: { [weak self] identity in self?.isActiveTrack(identity: identity) ?? false },
         onItemSelected: { [weak self] track, completion in
           self?.handleItemSelection(track: track, completion: completion)
         },
@@ -749,7 +744,7 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // If this track is already loaded, resume playback and show Now Playing.
-    if track.src != nil, isActiveTrack(id: track.id, src: track.src) {
+    if track.src != nil, isActiveTrack(identity: track.identity) {
       try? audioBrowser.play()
       nowPlayingManager.showNowPlaying()
       completion()
@@ -1015,13 +1010,13 @@ public final class RNABCarPlayController: NSObject {
         for item in section.items {
           guard let listItem = item as? CPListItem,
                 let info = listItem.carPlayItemInfo,
-                info.src != nil
+                info.identity != nil
           else { continue }
 
-          let isPlaying = isActiveTrack(id: info.id, src: info.src)
+          let isPlaying = isActiveTrack(identity: info.identity)
           if listItem.isPlaying != isPlaying {
             logger.debug(
-              "Updating isPlaying for \(info.id ?? info.src ?? ""): \(listItem.isPlaying) → \(isPlaying)")
+              "Updating isPlaying for \(info.identity ?? ""): \(listItem.isPlaying) → \(isPlaying)")
             listItem.isPlaying = isPlaying
             templateChanged = true
           }

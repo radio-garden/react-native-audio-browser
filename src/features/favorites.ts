@@ -37,26 +37,29 @@ export function toggleActiveTrackFavorited(): void {
 }
 
 /**
- * Sets the list of favorited track source identifiers.
+ * Sets the list of favorited track identifiers.
  *
  * This syncs your app's favorites with the native favorites cache, enabling
  * the heart button in media controllers (notification, Android Auto, CarPlay)
  * to show the correct state.
  *
- * Note: This is only needed if the tracks provided to AudioBrowser do not
- * include the `favorited` field. If your API already includes favorite state in
- * track responses, the native favorites cache is populated automatically during browsing.
+ * Each identifier is matched **exactly** against a track's *identity* — its
+ * `id` when set, falling back to `src`. Store favorites as the same stable
+ * identifier you put in `Track.id` (or as the full `src` for id-less tracks).
  *
- * When the heart button is tapped in media controllers or when you call
- * `setActiveTrackFavorited()`, the native favorites cache is automatically
- * updated. You only need to call this on app launch to hydrate the cache.
+ * A track whose response already carries `favorited` keeps that value on
+ * display surfaces — a caller-set flag wins over cache hydration. The cache
+ * itself is written only by this call and by heart toggles
+ * (`setActiveTrackFavorited()` / media-controller taps), so you only need to
+ * call this on app launch — and again whenever the collection changes outside
+ * the player (a sync from another device, say).
  *
- * @param favorites - Array of favorited track `src` values
+ * @param favorites - Array of favorited track identities (`id`, or `src` for id-less tracks)
  *
  * @example
  * ```ts
- * const favoriteSrcs = await loadFavoritesFromStorage()
- * setFavorites(favoriteSrcs)
+ * const favoriteIds = await loadFavoritesFromStorage()
+ * setFavorites(favoriteIds)
  * ```
  */
 export function setFavorites(favorites: string[]): void {

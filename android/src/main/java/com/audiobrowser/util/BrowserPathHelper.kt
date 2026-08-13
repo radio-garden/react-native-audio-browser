@@ -11,8 +11,8 @@ import java.net.URLEncoder
  * 1. System paths (prefixed with `/__`): Root, recent, and search paths
  * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
- * Contextual URL format: `{parentPath}?__trackId={trackSrc}` Example:
- * "/library/radio?__trackId=song.mp3"
+ * Contextual URL format: `{parentPath}?__trackId={trackIdentity}` (the identity is the track's `id`
+ * when non-blank, else its `src`) Example: "/library/radio?__trackId=song.mp3"
  *
  * This allows:
  * - Media3 to reference playable-only tracks (tracks with `src` but no `path`)
@@ -100,7 +100,7 @@ object BrowserPathHelper {
    * query parameters correctly.
    *
    * @param parentPath The parent container path
-   * @param trackId The track identifier (typically the `src` value)
+   * @param trackId The track identity (`id` when non-blank, else `src` — see Track.identity)
    * @return A contextual URL combining parent path and track ID
    *
    * Example: build("/library", "song.mp3") → "/library?__trackId=song.mp3" Example:
@@ -157,23 +157,5 @@ object BrowserPathHelper {
     val normalizedBase = "${baseUrl.trimEnd('/')}/"
     val normalizedPath = path.trimStart('/')
     return "$normalizedBase$normalizedPath"
-  }
-
-  /**
-   * True if [segment] appears in [path] as a complete path segment — bounded on the left by the
-   * string start or `/`, and on the right by the string end or one of `/`, `?`, `#`.
-   */
-  fun containsSegment(path: String, segment: String): Boolean {
-    if (segment.isEmpty()) return false
-    var from = 0
-    while (true) {
-      val idx = path.indexOf(segment, from)
-      if (idx < 0) return false
-      val beforeOk = idx == 0 || path[idx - 1] == '/'
-      val end = idx + segment.length
-      val afterOk = end == path.length || path[end] == '/' || path[end] == '?' || path[end] == '#'
-      if (beforeOk && afterOk) return true
-      from = idx + 1
-    }
   }
 }

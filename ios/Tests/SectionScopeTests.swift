@@ -79,4 +79,34 @@ struct SectionScopeTests {
     ]
     #expect(runSrcs(SectionScope.section(of: children, containing: "dup")) == ["dup"])
   }
+
+  // MARK: - Identity (id when non-blank, else src)
+
+  @Test func matchesChildByIdWhenSrcDiffers() {
+    let children = [
+      Track(id: "stable-a", src: "https://cdn.example/a?token=1"),
+      Track(id: "stable-b", src: "https://cdn.example/b?token=2"),
+    ]
+    #expect(
+      runSrcs(SectionScope.section(of: children, containing: "stable-b"))
+        == ["https://cdn.example/a?token=1", "https://cdn.example/b?token=2"])
+  }
+
+  @Test func blankIdFallsBackToSrc() {
+    let children = [Track(id: "", src: "s1"), Track(id: "", src: "s2")]
+    #expect(runSrcs(SectionScope.section(of: children, containing: "s2")) == ["s1", "s2"])
+  }
+
+  @Test func matchesImageRowItemByIdWhenSrcDiffers() {
+    let items = [
+      ImageRowItem(id: "item-1", src: "https://cdn.example/one", title: "One"),
+      ImageRowItem(id: "item-2", src: "https://cdn.example/two", title: "Two"),
+    ]
+    var row = Track(title: "Most Played")
+    row.imageRow = items
+    let children = [row, track("a")]
+    #expect(
+      imageRowSrcs(SectionScope.section(of: children, containing: "item-2"))
+        == ["https://cdn.example/one", "https://cdn.example/two"])
+  }
 }

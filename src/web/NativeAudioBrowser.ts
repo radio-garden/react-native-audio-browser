@@ -44,6 +44,7 @@ import type {
 } from '../specs/audio-browser.nitro'
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
+import { trackIdentity } from '../utils/trackIdentity'
 import { BrowserManager } from './browser/BrowserManager'
 import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
@@ -414,7 +415,7 @@ export class NativeAudioBrowser
    * Attempts to skip to a track already in the current queue.
    * Used as an optimization to avoid re-expanding the queue.
    *
-   * @param trackId The track's src identifier
+   * @param trackId The track's identity (id, falling back to src)
    * @param parentPath The parent path to check against queueSourcePath
    * @returns true if successfully skipped to existing track, false otherwise
    */
@@ -427,7 +428,7 @@ export class NativeAudioBrowser
     }
 
     const queue = this.getQueue()
-    const index = queue.findIndex((t) => t.src === trackId)
+    const index = queue.findIndex((t) => trackIdentity(t) === trackId)
 
     if (index < 0) {
       return false
@@ -941,13 +942,14 @@ export class NativeAudioBrowser
   setActiveTrackFavorited(favorited: boolean): void {
     const track = this.getActiveTrack()
     const index = this.getActiveTrackIndex()
-    if (!track || !track.src || index === undefined) return
+    if (!track || trackIdentity(track) === undefined || index === undefined)
+      return
 
-    // Update favorites set via manager
+    // Update favorites set via manager (keyed by track identity)
     if (favorited) {
-      this.favoriteManager.addFavorite(track.src)
+      this.favoriteManager.addFavorite(track)
     } else {
-      this.favoriteManager.removeFavorite(track.src)
+      this.favoriteManager.removeFavorite(track)
     }
 
     // Create updated track with new favorited state
@@ -977,9 +979,9 @@ export class NativeAudioBrowser
 
   toggleActiveTrackFavorited(): void {
     const track = this.getActiveTrack()
-    if (!track || !track.src) return
+    if (!track || trackIdentity(track) === undefined) return
 
-    const isFavorited = this.favoriteManager.isFavorited(track.src)
+    const isFavorited = this.favoriteManager.isFavorited(track)
     this.setActiveTrackFavorited(!isFavorited)
   }
 

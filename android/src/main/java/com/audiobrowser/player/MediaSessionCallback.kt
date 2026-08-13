@@ -12,6 +12,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
+import com.audiobrowser.extension.identity
 import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
@@ -756,7 +757,7 @@ class MediaSessionCallback(private val player: Player) :
         // Check if queue already came from this parent path - just skip to the track
         if (trackId != null && parentPath == player.queueSourcePath) {
           val queueTracks = withContext(Dispatchers.Main) { player.tracks }
-          val index = queueTracks.indexOfFirst { it.src == trackId }
+          val index = queueTracks.indexOfFirst { it.identity == trackId }
           if (index >= 0) {
             Timber.d("Queue already from $parentPath, skipping to index $index")
             val track = queueTracks[index]

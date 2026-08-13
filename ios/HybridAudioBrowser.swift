@@ -813,9 +813,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // Update stored options
       playerOptions.update(from: options)
 
-      // Propagate the favorite match mode to the browser so it can hydrate
+      // Propagate the favorite flag to the browser so it can hydrate
       // row hearts (the `favorite` capability is the single favoriting switch).
-      browserManager.setFavoriteMatch(playerOptions.capabilities.favoriteMatch)
+      browserManager.setFavoriteEnabled(playerOptions.capabilities.favoriteEnabled)
 
       // Apply remote commands to player
       applyRemoteCommands()
@@ -1064,12 +1064,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func setActiveTrackFavorited(favorited: Bool) throws {
     onMainActor {
-      guard let track = player?.currentTrack, let src = track.src else { return }
+      guard let track = player?.currentTrack, let identity = track.identity else { return }
       guard let index = player?.currentIndex, index >= 0 else { return }
-      // Optimistically reflect in the authoritative match set so the now-playing
-      // heart (hydrated from it in getActiveTrack) flips immediately; native
-      // reconciles to its canonical ids on the next setFavorites.
-      browserManager.setFavorited(src: src, favorited: favorited)
+      // Optimistically reflect in the authoritative favorite set so the
+      // now-playing heart (hydrated from it in getActiveTrack) flips
+      // immediately; the consumer reconciles to its canonical identities on
+      // the next setFavorites.
+      browserManager.setFavorited(identity: identity, favorited: favorited)
       let updatedTrack = track.copying(favorited: favorited)
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
       // Fire active track changed so the now-playing heart + useActiveTrack() refresh.

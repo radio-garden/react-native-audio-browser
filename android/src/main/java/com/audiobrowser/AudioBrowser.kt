@@ -23,6 +23,7 @@ import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.Player
@@ -631,7 +632,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
               // Check if queue already came from this parent path - just skip to the track
               if (trackId != null && parentPath == player.queueSourcePath) {
-                val index = player.tracks.indexOfFirst { it.src == trackId }
+                val index = player.tracks.indexOfFirst { it.identity == trackId }
                 if (index >= 0) {
                   Timber.d("Queue already from $parentPath, skipping to index $index")
                   handleTrackLoad(

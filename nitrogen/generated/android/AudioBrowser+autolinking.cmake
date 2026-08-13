@@ -42,7 +42,6 @@ target_sources(
   ../nitrogen/generated/android/c++/JSleepTimer.cpp
   ../nitrogen/generated/android/c++/JVariant_NullType_RemoteButtonLayout.cpp
   ../nitrogen/generated/android/c++/JVariant_NullType_Double.cpp
-  ../nitrogen/generated/android/c++/JVariant_Boolean_FavoriteConfig.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_RetryConfig.cpp
 )
