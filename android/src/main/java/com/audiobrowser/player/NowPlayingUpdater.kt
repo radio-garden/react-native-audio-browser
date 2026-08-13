@@ -106,10 +106,11 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   private var lastPublished: Published? = null
 
   /**
-   * The track id whose now-playing artwork has been resolved (or is being resolved), so a
-   * `nowPlayingArtwork` resolve runs once per track instead of on every render.
+   * The track identity (id-or-src, falling back to path — same key as [Published]) whose
+   * now-playing artwork has been resolved (or is being resolved), so a `nowPlayingArtwork` resolve
+   * runs once per track — id-less tracks included — instead of on every render.
    */
-  private var artworkResolvedForTrackId: String? = null
+  private var artworkResolvedForTrack: String? = null
 
   /** Size hint (px, square) for now-playing artwork. Mirrors iOS (screen-width-capped to 1200). */
   private val artworkSizePx = 1200.0
@@ -308,28 +309,23 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
   /**
    * Resolves the playing track's now-playing artwork and stamps it onto the playing media item.
-   * Guarded exactly like iOS: only when `nowPlayingArtwork` is configured AND the track has a
-   * non-empty id (so the `{id}` token never resolves to an empty string). Otherwise the existing
-   * artworkUri — which came from `artwork` (browse list path) — is left in place.
+   * Runs for EVERY playing track when `nowPlayingArtwork` is configured — id or not, exactly like
+   * iOS (an id-less track leaves any `{id}` token unfilled; the resolver warns and the request
+   * visibly 404s). Without a config, the existing artworkUri — which came from `artwork` (browse
+   * list path) — is left in place.
    */
   private fun maybeResolveArtwork(track: Track) {
-    val trackId =
-      track.id?.takeIf { it.isNotEmpty() }
-        ?: run {
-          // No id → skip nowPlayingArtwork entirely; keep the existing (browse) artworkUri.
-          artworkResolvedForTrackId = null
-          return
-        }
-
     if (!surface.hasNowPlayingArtworkConfig) {
       // No now-playing artwork config (or no browser) → fall back to the existing artworkUri.
-      artworkResolvedForTrackId = null
+      artworkResolvedForTrack = null
       return
     }
 
-    // Already resolved (or resolving) for this track id — avoid a redundant resolve per render.
-    if (artworkResolvedForTrackId == trackId) return
-    artworkResolvedForTrackId = trackId
+    // Already resolved (or resolving) for this track — avoid a redundant resolve per render.
+    // Keyed on track identity (id-or-src, falling back to path) so id-less tracks dedupe too.
+    val trackKey = track.identity ?: track.path
+    if (trackKey != null && artworkResolvedForTrack == trackKey) return
+    artworkResolvedForTrack = trackKey
 
     scope.launch {
       val uri =
@@ -337,10 +333,10 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
           ?: return@launch
 
       // Apply only if still the same track (a fast skip must not be overwritten by a stale
-      // result).
+      // result), compared on the same identity key the resolve was launched under.
       val currentIdx = surface.currentIndex ?: return@launch
       val current = surface.currentTrack ?: return@launch
-      if (current.id != trackId) return@launch
+      if ((current.identity ?: current.path) != trackKey) return@launch
 
       surface.stampArtwork(currentIdx, current, uri)
     }

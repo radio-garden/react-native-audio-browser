@@ -377,7 +377,7 @@ class NowPlayingUpdaterTest {
   }
 
   @Test
-  fun `artwork re-resolves for a new track id and skips without an id`() = runTest {
+  fun `artwork re-resolves for a new track identity including id-less tracks`() = runTest {
     val surface =
       FakeSurface().apply {
         currentTrack = track("A", id = "a")
@@ -393,10 +393,31 @@ class NowPlayingUpdaterTest {
     runCurrent()
     assertEquals(2, surface.artworkResolveCount)
 
+    // The config runs for id-less tracks too — no blanket skip.
     surface.currentTrack = track("C", id = null, src = "https://s/c.mp3")
     updater.render()
     runCurrent()
-    assertEquals(2, surface.artworkResolveCount) // no id → no resolve
+    assertEquals(3, surface.artworkResolveCount)
+    assertEquals(0 to "https://img/a.png", surface.artworkStamps.last())
+  }
+
+  @Test
+  fun `artwork for an id-less track resolves once keyed on src identity`() = runTest {
+    val surface =
+      FakeSurface().apply {
+        currentTrack = track("C", id = null, src = "https://s/c.mp3")
+        hasNowPlayingArtworkConfig = true
+        artworkResult = "https://img/c.png"
+      }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+
+    updater.render()
+    runCurrent()
+    updater.updateNowPlaying(update(title = "Song")) // re-render, same track
+    runCurrent()
+
+    assertEquals(1, surface.artworkResolveCount)
+    assertEquals(listOf(0 to "https://img/c.png"), surface.artworkStamps)
   }
 
   @Test
@@ -439,4 +460,23 @@ class NowPlayingUpdaterTest {
 
     assertTrue(surface.artworkStamps.isEmpty())
   }
+
+  @Test
+  fun `a stale artwork result for an id-less track is not stamped after a track change`() =
+    runTest {
+      val surface =
+        FakeSurface().apply {
+          currentTrack = track("A", id = null, src = "https://s/a.mp3")
+          hasNowPlayingArtworkConfig = true
+          artworkResult = "https://img/a.png"
+        }
+      val updater = NowPlayingUpdater(surface, backgroundScope)
+
+      updater.render() // schedules the artwork resolve
+      // Skip to another id-less track before it lands: identity (src) keying must catch it.
+      surface.currentTrack = track("B", id = null, src = "https://s/b.mp3")
+      runCurrent()
+
+      assertTrue(surface.artworkStamps.isEmpty())
+    }
 }

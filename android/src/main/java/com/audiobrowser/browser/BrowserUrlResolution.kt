@@ -176,14 +176,21 @@ suspend fun BrowserManager.resolveArtworkUrl(
         )
     }
 
-    // `{id}` token substitution, only for a non-empty id. Mirrors iOS substituteTrackId.
+    // `{id}` token substitution. A track without a non-blank id leaves the token LITERALLY in
+    // place — the request then visibly 404s, which is intended (self-describing error trail) —
+    // with a single warning logged below once the URL is built. Mirrors iOS substituteTrackId.
     track.id
       ?.takeIf { it.isNotEmpty() }
       ?.let { transformedConfig = substituteTrackId(transformedConfig, it) }
+    val hasUnfilledIdToken = configContainsIdToken(transformedConfig)
 
     val uri = RequestConfigBuilder.buildUrl(transformedConfig)
     // If URI is empty, there's no valid artwork path
     if (uri.isEmpty()) return null
+
+    if (hasUnfilledIdToken) {
+      Timber.w("nowPlayingArtwork: track has no id — '{id}' left unfilled in %s", uri)
+    }
 
     ImageSource(
       uri = uri,
@@ -265,21 +272,34 @@ private fun applyImageQueryParams(
   return config.copy(query = (config.query ?: emptyMap()) + contextQuery)
 }
 
+/** The `{id}` template token — see [substituteTrackId] / [configContainsIdToken]. */
+private const val ID_TOKEN = "{id}"
+
 /**
  * Replaces the `{id}` token with the track id in a request config's path, query values, and header
  * values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves. Configs without
  * the token are returned unchanged. Mirrors the iOS `substituteTrackId` helper.
  */
 private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig {
-  fun sub(s: String?): String? = s?.replace("{id}", id)
+  fun sub(s: String?): String? = s?.replace(ID_TOKEN, id)
   fun subMap(m: Map<String, String>?): Map<String, String>? =
-    m?.mapValues { (_, value) -> value.replace("{id}", id) }
+    m?.mapValues { (_, value) -> value.replace(ID_TOKEN, id) }
   return config.copy(
     path = sub(config.path),
     headers = subMap(config.headers),
     query = subMap(config.query),
   )
 }
+
+/**
+ * Whether the config still carries an unfilled `{id}` token in its path, query values, or header
+ * values (checked AFTER substitution, so it matches exactly when the track had no non-blank id and
+ * the config uses the token). Mirrors iOS `TrackIdTemplate.containsToken`.
+ */
+private fun configContainsIdToken(config: RequestConfig): Boolean =
+  config.path?.contains(ID_TOKEN) == true ||
+    config.query?.values?.any { it.contains(ID_TOKEN) } == true ||
+    config.headers?.values?.any { it.contains(ID_TOKEN) } == true
 
 /** Builds a headers map, merging explicit headers with userAgent and contentType. */
 private fun buildHeadersMap(

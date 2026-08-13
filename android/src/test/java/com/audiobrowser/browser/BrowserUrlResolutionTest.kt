@@ -92,6 +92,44 @@ class BrowserUrlResolutionTest {
   }
 
   @Test
+  fun `resolveArtworkUrl leaves the id token literal for a track without an id`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(path = "/artwork/{id}"),
+      )
+    // The config still runs (no blanket skip); the token stays literal so the resulting request
+    // 404s with a self-describing URL.
+    val source = bm.resolveArtworkUrl(track(artwork = null, id = null))
+    assertEquals("https://api.example.com/artwork/{id}", source?.uri)
+  }
+
+  @Test
+  fun `resolveArtworkUrl treats a blank id like a missing one`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(path = "/artwork/{id}"),
+      )
+    val source = bm.resolveArtworkUrl(track(artwork = null, id = ""))
+    assertEquals("https://api.example.com/artwork/{id}", source?.uri)
+  }
+
+  @Test
+  fun `resolveArtworkUrl leaves the id token literal in header values without an id`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(path = "/artwork", headers = mapOf("x-track" to "{id}")),
+      )
+    val source = bm.resolveArtworkUrl(track(artwork = null, id = null))
+    assertEquals("{id}", source?.headers?.get("x-track"))
+
+    val substituted = bm.resolveArtworkUrl(track(artwork = null, id = "abc"))
+    assertEquals("abc", substituted?.headers?.get("x-track"))
+  }
+
+  @Test
   fun `resolveArtworkUrl applies image query params from the image context`() = runTest {
     bm.config =
       BrowserConfig(

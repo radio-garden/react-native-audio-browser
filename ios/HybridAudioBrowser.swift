@@ -739,11 +739,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           return await browserManager.resolveMediaUrl(src, track: track)
         }
 
-        // Configure artwork URL resolver for Now Playing (with size context)
+        // Configure artwork URL resolver for Now Playing (with size context). The
+        // `nowPlayingArtwork` config runs for EVERY playing track, id or not — an id-less track
+        // leaves any `{id}` token unfilled (resolveArtworkUrl warns and the request visibly
+        // 404s) rather than skipping the config.
         player?.nowPlayingUpdater.artworkUrlResolver = { [weak self] track, imageContext in
           guard let self else { return nil }
-          let perRoute = (track.id?.isEmpty == false) ? browserManager.config.nowPlayingArtwork : nil
-          return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: perRoute, imageContext: imageContext)
+          return await browserManager.resolveArtworkUrl(
+            track: track, perRouteConfig: browserManager.config.nowPlayingArtwork,
+            imageContext: imageContext,
+          )
         }
 
         // Emit the JS `onNowPlayingChanged` event when the rendered text lines change. The updater

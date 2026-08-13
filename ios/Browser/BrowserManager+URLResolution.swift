@@ -262,10 +262,14 @@ extension BrowserManager {
       }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.
-      // (Configs without the token are unaffected — e.g. browse artwork.) Only when the track has an id.
-      if let id = track.id, !id.isEmpty {
-        mergedConfig = substituteTrackId(in: mergedConfig, id: id)
-      }
+      // (Configs without the token are unaffected — e.g. browse artwork.) A track without a
+      // non-blank id leaves the token LITERALLY in place — the request then visibly 404s, which
+      // is intended (self-describing error trail) — with a single warning logged below once the
+      // URL is built.
+      mergedConfig = substituteTrackId(in: mergedConfig, id: track.id)
+      let hasUnfilledIdToken = TrackIdTemplate.containsToken(mergedConfig.path)
+        || TrackIdTemplate.containsToken(mergedConfig.query)
+        || TrackIdTemplate.containsToken(mergedConfig.headers)
 
       // Build final URL - if no path after merging, no artwork to transform
       guard mergedConfig.path != nil else {
@@ -278,6 +282,10 @@ extension BrowserManager {
       var headers = mergedConfig.headers ?? [:]
       if let userAgent = mergedConfig.userAgent, headers["User-Agent"] == nil {
         headers["User-Agent"] = userAgent
+      }
+
+      if hasUnfilledIdToken {
+        logger.warning("nowPlayingArtwork: track has no id — '{id}' left unfilled in \(uri)")
       }
 
       logger.debug("Artwork URL transformed: \(track.artwork?.url ?? "nil") -> \(uri)")
@@ -315,18 +323,14 @@ extension BrowserManager {
 
   /// Replaces the `{id}` token with the track id in a request config's path, query values, and
   /// header values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves.
-  private func substituteTrackId(in config: RequestConfig, id: String) -> RequestConfig {
-    func sub(_ s: String?) -> String? { s?.replacingOccurrences(of: "{id}", with: id) }
-    func subDict(_ d: [String: String]?) -> [String: String]? {
-      guard let d else { return nil }
-      return d.mapValues { $0.replacingOccurrences(of: "{id}", with: id) }
-    }
-    return RequestConfig(
+  /// A nil/blank id leaves the values unchanged (token left literal — see TrackIdTemplate).
+  private func substituteTrackId(in config: RequestConfig, id: String?) -> RequestConfig {
+    RequestConfig(
       method: config.method,
-      path: sub(config.path),
+      path: TrackIdTemplate.substitute(config.path, id: id),
       baseUrl: config.baseUrl,
-      headers: subDict(config.headers),
-      query: subDict(config.query),
+      headers: TrackIdTemplate.substitute(config.headers, id: id),
+      query: TrackIdTemplate.substitute(config.query, id: id),
       body: config.body,
       contentType: config.contentType,
       userAgent: config.userAgent,

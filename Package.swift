@@ -16,6 +16,7 @@ let package = Package(
         "Browser/MediaResolveComposer.swift",
         "Browser/JsonModels.swift",
         "Browser/SimpleRouter.swift",
+        "Browser/TrackIdTemplate.swift",
         "Player/QueueManager.swift",
         "Player/ShuffleOrder.swift",
         "Player/LoadSeekCoordinator.swift",
