@@ -89,16 +89,34 @@ The `path` the browse pipeline stamps onto a Playable Track: `{parentPath}?__tra
 _Avoid_: contextual URL in new prose (legacy alias in code comments), deep link.
 
 **Section**:
-A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010). A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Style names (`list`, `grid`, `rail`) declare the requested layout; each surface renders its nearest supported form.
+A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010). A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Its **Style** block declares the requested presentation; each surface renders its nearest supported form.
 _Avoid_: group, category; Section for a **Tab** (Tabs are top-level navigation, Sections live inside pages).
-
-**Rail**:
-A Section rendered as a single line of artwork tiles (`style: 'rail'`) — the teaser shelf: CarPlay shows the tiles that fit, Android Auto wraps (its grid can't express one line), app UIs typically render a horizontal scroller. The header/"view all" surface navigates to the Section's `path`.
-_Avoid_: image row (the retired platform-derived name — `CPListImageRowItem` leaking into the domain), grid-row (an earlier name — a Rail is its own intent, not a Grid variant, and `grid-row` is a CSS property), row (that's a list line), carousel (implies scrolling no car surface has).
 
 **ResolvedTrack**:
 The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `sections` (a page authored with plain `children` resolves to one untitled **Section**). Media URLs are not part of resolution; they're transformed at playback time.
 _Avoid_: ExpandedTrack, LoadedTrack.
+
+**Page**:
+The resolved form of a Browsable Track — what `navigate()` returns for it (**ResolvedTrack**). A Page is the Track, now open, acting as the container of its **Sections**: its **Style** block is a container's block, declaring for everything on the page. Not a separate kind of thing — a Track in its container role, which begins at resolution; before that, the Track is a handle whose block styles only the handle.
+_Avoid_: screen, folder, level, "defaults tier" (a Page is a container, not special styling machinery).
+
+### Style
+
+**Style**:
+The declaration block of presentation properties carried by a **Track**, a **Section**, or a **Page** (`style`). Declarations are aspirational: each surface renders the properties it understands and ignores the rest — inert, never an error. Presentation-only: no style property affects queue scope, playback, or navigation. Facts with behavioral weight (**Disabled**, **Favorited**) are Track fields, not style.
+_Avoid_: hint (the retired platform-prefix era), flag, option.
+
+**Inherited property**:
+A style property whose value flows to the items within a **Page** — track ?? section ?? page — unless a closer block declares its own (`imageShape`, `artworkRendering`, `accessorySymbol`, `cardTint`, `cardImage`). Admission test for any future one: "if set on a browsable parent, should its resolved descendants inherit it unless overridden?" Inheritance never crosses resolution.
+_Avoid_: cascading (CSS's cascade resolves competing declarations for one element — this model has no competing declarations, only inheritance and scope).
+
+**Container property**:
+A style property stating a fact about a container rather than its items (`display`, `gridWrap`, `gridTile`). Resolved by scope override, not inheritance: the **Page** declares for its whole scope, a **Section** overrides for its own children — two declarations about the same rendering decision at different widths, the narrower winning. `display` is positional: each holder describes its own children, never its descendants.
+_Avoid_: fallback (the section isn't missing anything), inherited (container properties never flow to items).
+
+**Disabled**:
+A content fact on a **Track**: the item is unavailable. A Disabled Track never plays from any surface — tap, auto-advance, voice selection, and queue expansion all skip it. Where a surface can draw unavailability it renders grayed and inert; where it can't, the Track is hidden — never a normal-looking dead control. A fact, not a **Style**: it travels on the Track.
+_Avoid_: grayed-out, hidden (renderings of the fact, not the fact), isEnabled (the platform knob it maps onto).
 
 ### Requests
 
@@ -179,7 +197,7 @@ Metadata streamed mid-playback — ICY frames from Shoutcast/Icecast or in-band 
 _Avoid_: StreamMetadata, ID3Event.
 
 **Artwork**:
-The image that _represents_ a **Track** or **Section** — album art, a station logo, a tab's symbol standing in for the tab's content. Iconography that _annotates_ an item rather than represents it — accessory badges, button glyphs, playing indicators — is a **symbol** (an SF Symbol name). "Image" is the generic word, not a banned one: an Artwork is an image, and layers that handle any picture (`ImageSource`, a platform `UIImage`) rightly say so. Library-defined names prefer the most specific applicable role (`artwork`, `artworkSource`, `artworkCarPlayTinted`); platform-scoped hints that pass a platform property through keep that platform's own term (an image-shape hint mirrors CarPlay's `imageShape`) — the hint's meaning is the platform's rendering contract, so the platform's word is the honest one.
+The image that _represents_ a **Track** or **Section** — album art, a station logo, a tab's symbol standing in for the tab's content. Iconography that _annotates_ an item rather than represents it — accessory badges, button glyphs, playing indicators — is a **symbol** (an SF Symbol name). "Image" is the generic word, not a banned one: an Artwork is an image, and layers that handle any picture (`ImageSource`, a platform `UIImage`) rightly say so. Library-defined names prefer the most specific applicable role (`artwork`, `artworkSource`, `artworkRendering`); passthrough properties that mirror a platform knob keep that platform's own term (`imageShape` is CarPlay's word) — the property's meaning is the platform's rendering contract, so the platform's word is the honest one.
 _Avoid_: icon (say Artwork or symbol, by role), thumbnail, cover.
 
 ### External surfaces
@@ -226,6 +244,7 @@ _Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a g
 - A **Browse Gate** blocks the **BrowseTree** and **Search** on External surfaces, but never the **Player**, the **Queue**, or **Now Playing**.
 - A Track is **Favorited** independently of being the Active Track — favoriting is set on the Track, not on the Queue.
 - A favorites collection belongs to the app/user; **Favorited** is the per-Track state the library keeps synchronized across surfaces.
+- A **Page** is a Browsable **Track** in its container role; its **Style** declares for the whole page, a **Section**'s overrides it for that section's children, and a Track's styles the Track itself.
 
 ## Example dialogue
 

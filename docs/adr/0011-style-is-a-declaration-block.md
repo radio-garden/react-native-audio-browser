@@ -15,21 +15,21 @@ Presentation becomes one CSS-adjacent **declaration block** instead:
 
 ```ts
 interface TrackStyle {
-  display?: 'list' | 'grid'          // positional: MY children (never cascades)
-  accessorySymbol?: string           // ┐ cascading item properties:
+  display?: 'list' | 'grid'          // positional: MY children (never inherited)
+  accessorySymbol?: string           // ┐ inherited item properties:
   artworkRendering?: 'original' | 'stencil'  // │ track ?? section ?? page ?? default
   imageShape?: 'circular' | 'rounded-rectangle' // │
   cardTint?: string                  // │
   cardImage?: 'normal' | 'background' // ┘
 }
 interface SectionStyle extends TrackStyle {
-  gridWrap?: boolean                 // ┐ container properties:
+  gridWrap?: boolean                 // ┐ container properties (scope override):
   gridTile?: 'plain' | 'card' | 'condensed' // ┘ section ?? page ?? default
 }
 
 Section.style?: SectionStyle
 Track.style?: TrackStyle
-ResolvedTrack.style?: SectionStyle   // the page tier — a page is a container
+ResolvedTrack.style?: SectionStyle   // a page is a Track that is also the container
 ```
 
 The rules, once:
@@ -38,16 +38,18 @@ The rules, once:
   understands and ignores the rest — inert, never an error. A dev-mode
   diagnostic recovers what compile-time gating would have caught.
 - **Placement is mechanical.** An Apple element _parameter_ (a knob on one
-  tile) is a cascading item property; an element _class_ or item-level knob
+  tile) is an inherited item property; an element _class_ or item-level knob
   (a fact about the container) is a container property.
 - **`display` is positional** — CSS's non-inherited inner display type:
-  each holder describes its own children (section → its tracks; page → its
-  sections' default; a browsable handle → the page-layout _promise_ that
-  feeds Android Auto's parent-level hint, the only below-root hint
-  AOSP-derived AAOS media UIs honor). Declared or it doesn't exist; the
-  resolved page is the truth.
+  each holder declares its own children's layout. The page declares for
+  its whole scope and a section overrides it for its own children — a
+  scope override between two declarations about the same decision, never
+  inheritance or fallback. A browsable handle's `display` is the
+  page-layout _promise_ that feeds Android Auto's parent-level hint, the
+  only below-root hint AOSP-derived AAOS media UIs honor. Declared or it
+  doesn't exist; the resolved page is the truth.
 - **The inheritance boundary**: a handle's block styles the handle; a
-  page's block defaults its descendants; nothing inherits across
+  page's block is inherited by its descendants; nothing inherits across
   resolution. Admission test for any future property: _"if set on a
   browsable parent, do I want its resolved descendants to inherit it
   unless overridden?"_ — within a page yes, across resolution never.
@@ -70,9 +72,9 @@ Consequences:
   nested structs; no string shorthand survives). The `carPlay*` prefix
   remains only for platform feature config that isn't styling
   (`carPlaySiriListButton`, the now-playing actions).
-- Nitro flattens `extends`, so the cascade-completeness guarantee is a
-  spec-level test (every cascading key read by every resolver; positional
-  keys provably excluded), not a type.
+- Nitro flattens `extends`, so the inheritance-completeness guarantee is
+  a spec-level test (every inherited key read by every resolver;
+  positional keys provably excluded), not a type.
 - Amends ADR 0010: its `Section.style` string vocabulary is superseded by
   the block; sections themselves, queue scoping, and the flat-wire model
   are unchanged.

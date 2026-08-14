@@ -467,7 +467,7 @@
         <a href="section-styling-design.html">Section Styling design</a> — style
         declaration blocks (<code>TrackStyle</code> /
         <code>SectionStyle extends TrackStyle</code>) with unprefixed,
-        family-scoped properties and a cascade. This audit remains the record of
+        family-scoped, inherited properties. This audit remains the record of
         the SDK evidence, per-feature applicability, and the decision history;
         field names below are translated where practical and the design doc is
         authoritative where they disagree. Linked issues #125, #126 and #131
@@ -624,7 +624,7 @@
             <code>style</code> blocks (<code>TrackStyle</code>, inheritable /
             <code>SectionStyle extends TrackStyle</code>, container) —
             unprefixed, family-scoped (<code>grid*</code>, <code>card*</code>)
-            by today's rendering scope, cascading
+            by today's rendering scope, inherited
             <code>track ?? section ?? default</code>.
           </li>
           <li>
@@ -1135,13 +1135,13 @@
               Circular is the standard presentation for people — artists, hosts,
               DJs — and shape ultimately encodes the <em>kind</em> of item
               (mixed grids legitimately render artists circular next to rounded
-              albums), so the property cascades (<code
+              albums), so the property is inherited (<code
                 >track ?? section ?? page</code
               >) with the library’s established precedence (<code
                 >track ?? section</code
               >, as per-track <code>style</code> already beats section style on
               Android Auto). Under the block model both levels are the same
-              inheritable property (<code>style.imageShape</code>, cascade
+              inheritable property (<code>style.imageShape</code>, inherited
               <code>track ?? section</code>) — shape-follows-kind means a track
               rightly carries its shape wherever it travels. Named without
               “Grid”: Apple’s condensed element takes the same

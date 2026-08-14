@@ -141,9 +141,9 @@
       <div class="sub">
         react-native-audio-browser · August 2026 · companion to
         <a href="carplay-sdk-audit.html">the CarPlay SDK audit</a>. How sections
-        and tracks declare presentation: style declaration blocks with a cascade
-        — the CSS-adjacent model — plus the full property set and the
-        alternatives that were tried and rejected on the way here.
+        and tracks declare presentation: style declaration blocks with
+        inheritance — the CSS-adjacent model — plus the full property set and
+        the alternatives that were tried and rejected on the way here.
       </div>
 
       <div class="status">
@@ -151,24 +151,24 @@
         currently ships <code>style: 'list' | 'grid' | 'rail'</code> (string) on
         Section and <code>style: 'list' | 'grid'</code> on Track. This document
         specifies the successor: <code>style</code> becomes a
-        <em>declaration block</em> on both, with per-property cascade. The audit
-        report's decisions panel has been amended to match; where any residual
-        wording disagrees, this document is the later word. Revised after a
-        three-review pass (API design, implementation feasibility, coherence) —
-        see §7/§8 for what the reviews changed.
+        <em>declaration block</em> on both, with per-property inheritance. The
+        audit report's decisions panel has been amended to match; where any
+        residual wording disagrees, this document is the later word. Revised
+        after a three-review pass (API design, implementation feasibility,
+        coherence) — see §7/§8 for what the reviews changed.
       </div>
 
       <h2>1. The model: style is a declaration block</h2>
 
       <pre><code>/**
- * The properties a Track may carry: the *cascading item properties*
+ * The properties a Track may carry: the *inherited item properties*
  * (resolved `track ?? section ?? page ?? default`, per property —
  * they travel with the track: a favorited artist keeps its circular
  * shape in whatever grid renders it next) plus the *positional*
- * `display` (each holder's own children; never cascaded).
+ * `display` (each holder's own children; never inherited).
  *
  * **The inheritance boundary**: a handle's block styles the handle;
- * a page's block defaults the page's descendants; nothing inherits
+ * a page's block is inherited by the page's descendants; nothing inherits
  * across resolution (a circular artist handle must not make the
  * albums inside its page circular). The only thing that crosses is
  * `display`'s pre-resolution promise — a hint emission, not
@@ -183,13 +183,14 @@
  *   properties it understands and ignores the rest. A property a
  *   surface can't render and a property the current `display` doesn't
  *   use are ignored identically — inert, never an error.
- * - **Inheritance.** The item properties (Apple element
- *   *parameters* — knobs on one tile/row) cascade
+ * - **Inheritance vs. scope.** The item properties (Apple element
+ *   *parameters* — knobs on one tile/row) are inherited:
  *   `track ?? section ?? page ?? default`. Container properties
- *   (element *classes* and item-level knobs) resolve
- *   `section ?? page ?? default`. `display` is positional — each
- *   holder describes its own children — and never cascades
- *   item-to-container.
+ *   (element *classes* and item-level knobs) resolve by scope
+ *   override — the page declares for its whole scope, a section
+ *   overrides for its own children (`section ?? page ?? default`) —
+ *   never by inheritance to items. `display` is positional — each
+ *   holder describes its own children.
  * - **Presentation only.** No style property ever affects queue
  *   scope, playback, or navigation (ADR 0006/0010): rendering may
  *   truncate what is visible, it never changes what plays. (This is
@@ -218,8 +219,9 @@ interface TrackStyle {
    * position; only the children differ:
    *
    * - On a **Section** (via `extends`): the section's children.
-   * - On a **resolved page** (`ResolvedTrack.style`): the page-wide
-   *   default its sections fall back to.
+   * - On a **resolved page** (`ResolvedTrack.style`): the declaration
+   *   for the whole page — a section overrides it for its own
+   *   children.
    * - On a **browsable Track** (the handle): the layout *promise*
    *   for the page it opens — consumed by Android Auto's
    *   parent-level content-style hint, the one reader that acts
@@ -229,9 +231,10 @@ interface TrackStyle {
    * - On a track rendered *playable* (src wins the rendering):
    *   inert — playables open no page.
    *
-   * **Not part of the item cascade** — each holder speaks only for
-   * its own children. A section's layout resolves
-   * `section.display ?? page.style.display ?? 'list'`. The handle's
+   * **Never inherited** — each holder speaks only for its own
+   * children; the page's declaration is scope-overridden, not
+   * inherited (`section.display ?? page.style.display ?? 'list'`).
+   * The handle's
    * value is the pre-resolution promise: **declared or it doesn't
    * exist** (no value → no parent-level hint emitted — the library
    * never derives a promise from pages it hasn't resolved, and never
@@ -256,8 +259,8 @@ interface TrackStyle {
    * rows, leading the title on grid tiles (placement is the
    * platform's, per surface; there is no API to choose it). An
    * explicit symbol replaces the derived disclosure chevron on
-   * browsable rows. `'none'` clears an inherited section value (the
-   * cascade has no other escape: absent means inherit; no SF Symbol
+   * browsable rows. `'none'` clears an inherited section value
+   * (inheritance has no other escape: absent means inherit; no SF Symbol
    * is named bare `none`, so the sentinel is collision-free).
    *
    * Values are Apple's SF Symbol names — platform vocabulary no
@@ -385,10 +388,10 @@ interface TrackStyle {
 
 /**
  * A section's presentation: the *container* properties below, plus —
- * via `extends` — a section-wide default for every cascading item
- * property (and the section's own positional `display`). That a section can default anything a track
+ * via `extends` — a section-wide value for every inherited item
+ * property (and the section's own positional `display`). That a section can set anything a track
  * can declare is structural in TypeScript; Nitro flattens `extends`
- * into independent structs, so a cascade-completeness test (every
+ * into independent structs, so an inheritance-completeness test (every
  * TrackStyle key read by every platform resolver) is part of the
  * spec, not an implementation detail.
  */
@@ -423,9 +426,9 @@ interface SectionStyle extends TrackStyle {
    * Tile treatment — which cell the tiles render as.
    *
    * - `'plain'` (default) — plain artwork tiles. Exists as a value
-   *   (not just absence) so a section can escape a page-level
-   *   treatment — the cascade's only escape is an expressible
-   *   default.
+   *   (not just absence) so a section can override a page-level
+   *   treatment — the override's only escape hatch is an
+   *   expressible default.
    * - `'card'` — large editorial cards: artwork with a text overlay
    *   or footer, colored via `cardTint` (inheritable — section-wide
    *   or per child), with `cardImage: 'background'` for full-bleed
@@ -470,8 +473,8 @@ interface Section {
 interface Track {
   // …content fields…
   // (ResolvedTrack extends Track and narrows `style` to SectionStyle —
-  // the page tier: a resolved page is a container, so it may default
-  // everything its sections can declare. Legal covariant override;
+  // a page is a Track that is also the container of its sections, so
+  // it may declare everything they can. Legal covariant override;
   // Nitro flattens it.)
 
   /**
@@ -494,12 +497,12 @@ interface Track {
    */
   disabled?: boolean
 
-  /** Item properties (cascading) + the page-layout promise (display). */
+  /** Item properties (inherited) + the page-layout promise (display). */
   style?: TrackStyle
 }
 
 interface ResolvedTrack extends Track {
-  /** The page tier: page-wide defaults for sections. */
+  /** A page is also a container: its block declares for the whole page. */
   style?: SectionStyle
 }</code></pre>
 
@@ -516,7 +519,7 @@ interface ResolvedTrack extends Track {
   ]
 }</code></pre>
 
-      <p>A mixed search-results grid — shape cascading per item:</p>
+      <p>A mixed search-results grid — shape inherited, overridden per item:</p>
 
       <pre><code>{
   "title": "Results",
@@ -556,28 +559,29 @@ interface ResolvedTrack extends Track {
           </td>
         </tr>
         <tr>
-          <td><strong>The cascade</strong></td>
+          <td><strong>Inheritance and scope</strong></td>
           <td>
-            Per-property resolution — item properties
-            <code>track ?? section ?? page ?? default</code>, container
-            properties <code>section ?? page ?? default</code> (the page tier is
-            <code>ResolvedTrack.style</code>: a resolved page is a container).
-            <code>display</code> is positional — each holder describes its own
-            children (CSS's inner display type) — and never cascades
-            item-to-container. The typed sets: <code>TrackStyle</code> holds the
-            cascading item properties plus the positional <code>display</code>,
+            Per-property resolution — item properties are inherited,
+            <code>track ?? section ?? page ?? default</code>; container
+            properties resolve by scope override,
+            <code>section ?? page ?? default</code> (the page slot is
+            <code>ResolvedTrack.style</code>: a page is a Track that is also the
+            container). <code>display</code> is positional — each holder
+            describes its own children (CSS's inner display type) — and is never
+            inherited. The typed sets: <code>TrackStyle</code> holds the
+            inherited item properties plus the positional <code>display</code>,
             and <code>SectionStyle extends TrackStyle</code> makes every one
-            defaultable at section level by construction (a missing section
-            default is unrepresentable — how the <code>cardTint</code> and
+            settable section-wide by construction (a missing section value is
+            unrepresentable — how the <code>cardTint</code> and
             <code>cardImage</code> omissions were caught). Container properties
             (element class, item-level knobs) live only on SectionStyle and
-            don't cascade. One capability is deliberately removed rather than
-            generalized: the shipped per-track <em>outer</em> display hint (a
-            single grid tile inside a list section, expressible on projected
+            never flow to items. One capability is deliberately removed rather
+            than generalized: the shipped per-track <em>outer</em> display hint
+            (a single grid tile inside a list section, expressible on projected
             Android Auto today) has no home in this model — CarPlay's containers
             are homogeneous anyway; recorded in the rejected-shapes log. Alias
             promotion collapses alias→canonical <em>within a level</em>, then
-            cascades — canonical never beats a lower level's alias.
+            resolves — canonical never beats a closer level's alias.
           </td>
         </tr>
         <tr>
@@ -648,7 +652,7 @@ interface ResolvedTrack extends Track {
         </tr>
         <tr>
           <td><code>display: 'list' | 'grid'</code></td>
-          <td>positional — every holder (its own children); never cascaded</td>
+          <td>positional — every holder (its own children); never inherited</td>
           <td>—</td>
           <td>
             all surfaces (section/page); as the handle's declared promise it
@@ -658,10 +662,10 @@ interface ResolvedTrack extends Track {
           <td>
             The layout-mode axis — CSS's inner display type, honored literally:
             every holder describes its own children (section → its tracks; page
-            → its sections' default; browsable handle → the page-layout promise
-            that feeds Android Auto's parent-level hint, the only below-root
-            hint AOSP-derived AAOS media UIs honor). Replaces both the dropped
-            outer-hint track display and the never-born
+            → the whole page, section-overridable; browsable handle → the
+            page-layout promise that feeds Android Auto's parent-level hint, the
+            only below-root hint AOSP-derived AAOS media UIs honor). Replaces
+            both the dropped outer-hint track display and the never-born
             <code>childrenDisplay</code>.
           </td>
         </tr>
@@ -756,7 +760,7 @@ interface ResolvedTrack extends Track {
             CarPlay iOS 26+ (plain + condensed tiles; cards have no shape)
           </td>
           <td>
-            Per-element in the API → per-item legal → cascades. Tracked:
+            Per-element in the API → per-item legal → inherited. Tracked:
             <a
               href="https://github.com/radio-garden/react-native-audio-browser/issues/131"
               >#131</a
@@ -789,7 +793,7 @@ interface ResolvedTrack extends Track {
             (CSS's <code>border-*</code>/<code>grid-*</code> pattern), stating
             the inertness condition in the name — and keeping bare
             <code>tint</code> from reading as artwork tinting (<code
-              >artworkCarPlayTinted</code
+              >artworkRendering: 'stencil'</code
             >
             is a different mechanism).
           </td>
@@ -810,7 +814,7 @@ interface ResolvedTrack extends Track {
         <code>artworkRendering</code>). If a prefixed property's scope genuinely
         broadens, it promotes to the bare name with the prefixed name kept as a
         read-only alias — canonical wins when both are declared, and the alias
-        never cascades at a different level; the clauses are ordered —
+        never resolves at a different level; the clauses are ordered —
         passthrough wins first (<code>imageShape</code> mirrors Apple's term
         exactly), then mode-spanning keeps bare names; library-defined names
         take role words (<code>artworkRendering</code>, <code>cardImage</code> —
@@ -943,8 +947,8 @@ interface ResolvedTrack extends Track {
           <code>imageShape</code> etc. as loose Section fields. Mixes
           presentation into the content object, needs tagged-union authoring
           types for co-location, and leaves per-field precedence rules instead
-          of one cascade. The block groups presentation where CSS puts it, and
-          the cascade states the override rule once.
+          of one inheritance model. The block groups presentation where CSS puts
+          it, and the resolution rules are stated once.
         </div>
       </div>
 
@@ -980,8 +984,9 @@ interface ResolvedTrack extends Track {
           The tagged-union reading of the nested sketches: per-variant structs,
           discriminator decoding, per-variant duplication of shared options,
           homeless per-track overrides. The declaration-block model keeps the
-          nesting and discards the union: one struct, all-optional, cascade for
-          overrides — which is what the sketches were reaching for all along.
+          nesting and discards the union: one struct, all-optional, inheritance
+          for overrides — which is what the sketches were reaching for all
+          along.
         </div>
       </div>
 
@@ -1019,7 +1024,7 @@ interface ResolvedTrack extends Track {
           A track hinting its own tile shape inside a differently-styled section
           — expressible on projected Android Auto today, removed here: CarPlay
           containers are homogeneous (unrenderable there), it made
-          <code>display</code>'s cascade surface-conditional, and it collided
+          <code>display</code>'s resolution surface-conditional, and it collided
           with inner-display semantics. The per-item AA hint now derives from
           the section resolution.
         </div>
@@ -1029,7 +1034,7 @@ interface ResolvedTrack extends Track {
         <h3>13. Imperative setters where declarative fields suffice</h3>
         <div class="why">
           General pattern, decided per-field elsewhere (tab badges); recorded
-          here because it recurs. Declarative blocks + cascade is the same
+          here because it recurs. Declarative blocks + inheritance is the same
           stance applied to styling.
         </div>
       </div>
@@ -1047,13 +1052,15 @@ interface ResolvedTrack extends Track {
           <code>'rail'</code> is gone. Codegen + stub mirrors.
         </li>
         <li>
-          <strong>Cascade</strong>: one resolver per platform — item properties
-          <code>track ?? section ?? page ?? default</code>, container properties
-          <code>section ?? page ?? default</code>, with <code>display</code> on
-          an explicit positional deny-list (never item-cascaded). The
-          completeness test splits accordingly: every cascading key read by
-          every resolver; every positional key provably excluded (Nitro erases
-          <code>extends</code>; nothing else catches either omission).
+          <strong>Resolution</strong>: one resolver per platform — item
+          properties inherited,
+          <code>track ?? section ?? page ?? default</code>; container properties
+          by scope override, <code>section ?? page ?? default</code>;
+          <code>display</code> on an explicit positional deny-list (never
+          inherited). The completeness test splits accordingly: every inherited
+          key read by every resolver; every positional key provably excluded
+          (Nitro erases <code>extends</code>; nothing else catches either
+          omission).
         </li>
         <li>
           <strong>iOS</strong>: <code>SectionPresentation</code> keys off
@@ -1061,7 +1068,7 @@ interface ResolvedTrack extends Track {
           <code>gridTile</code>: 26+ picks the element family (plain / card /
           condensed) and line mode; pre-26 drops the treatment and keeps the
           layout — <code>gridWrap: false</code> → legacy image row (whatever the
-          treatment), wrapping → list. The cascade resolver threads the resolved
+          treatment), wrapping → list. The style resolver threads the resolved
           TrackStyle into <code>createListItem</code> (which today never
           receives the section, and has one legitimately section-less caller to
           tolerate). The artwork loader reads <code>cardImage</code> for the
@@ -1070,7 +1077,7 @@ interface ResolvedTrack extends Track {
         <li>
           <strong>Android</strong>:
           <code>isTileSection = style?.display == GRID</code>;
-          <code>MediaExtrasBuilder</code> reads the cascade.
+          <code>MediaExtrasBuilder</code> reads the resolved style.
           <strong
             ><code>Track.childrenStyle</code>: resolved — replaced by
             <code>TrackStyle.display</code> (inner semantics)</strong
@@ -1109,18 +1116,16 @@ interface ResolvedTrack extends Track {
           <code>gridWrap: false</code> as the scroller — intended usage).
         </li>
         <li>
-          <strong>Docs</strong>: CONTEXT.md — Section entry's style sentence,
-          Rail entry retired (Avoid list migrates); a
-          <strong>Style</strong> glossary entry (declaration block, cascade,
-          inert-when-inapplicable); verify the <strong>Artwork</strong> entry
-          still holds (it does after the <code>artworkRendering</code>/<code
-            >imageShape</code
-          >
-          renames — role word for library-defined, passthrough keeps Apple's
-          term); ADR 0010 amendment (this is a real model change — possibly ADR
-          0011); guides; audit report decisions panel: amended (done); issues
-          #56, #131 (and the naming discussions in #125/#126) updated to point
-          here.
+          <strong>Docs</strong>: CONTEXT.md — done: <strong>Style</strong>,
+          <strong>Page</strong>, <strong>Inherited property</strong>,
+          <strong>Container property</strong>, and
+          <strong>Disabled</strong> entries landed; the Section entry points at
+          the block; the Rail entry is deleted; the
+          <strong>Artwork</strong> entry names
+          <code>artworkRendering</code> (role word for library-defined,
+          passthrough keeps Apple's term). ADR 0010 amendment + ADR 0011: done.
+          Remaining: guides; issues #56, #131 (and the naming discussions in
+          #125/#126) updated to point here.
         </li>
         <li>
           <strong>Wire note</strong>: string styles never shipped in a release —
@@ -1137,11 +1142,11 @@ interface ResolvedTrack extends Track {
           fidelity across process death beats a smaller blob).
         </li>
         <li>
-          <strong>Spec-level tests</strong>: a cascade-completeness test (every
-          <code>TrackStyle</code> key read by every platform resolver — Nitro
-          erases <code>extends</code>, so TS can't enforce this) and a dev-mode
-          inert-declaration diagnostic (warn when a declaration can never
-          render: <code>cardTint</code> with no card treatment in scope,
+          <strong>Spec-level tests</strong>: an inheritance-completeness test
+          (every <code>TrackStyle</code> key read by every platform resolver —
+          Nitro erases <code>extends</code>, so TS can't enforce this) and a
+          dev-mode inert-declaration diagnostic (warn when a declaration can
+          never render: <code>cardTint</code> with no card treatment in scope,
           <code>gridWrap</code> on a list section) — the recovery for the
           compile-time gating the block model deliberately gave up.
         </li>
@@ -1177,11 +1182,12 @@ interface ResolvedTrack extends Track {
         </li>
 
         <li>
-          The page tier (<code>ResolvedTrack.style?: SectionStyle</code>) is now
-          in the design; the app tier (<code>BrowserConfiguration.style?</code>)
-          remains deferred — it is also the natural source of Android Auto's
-          root-level default hints (one bundle, maximum compatibility), which is
-          its promotion trigger.
+          The page slot (<code>ResolvedTrack.style?: SectionStyle</code> — a
+          page is a Track that is also the container) is now in the design; the
+          app tier (<code>BrowserConfiguration.style?</code>) remains deferred —
+          it is also the natural source of Android Auto's root-level default
+          hints (one bundle, maximum compatibility), which is its promotion
+          trigger.
         </li>
         <li>
           <code>Section.subtitle</code> has two pending meanings (today's
