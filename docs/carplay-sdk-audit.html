@@ -1,0 +1,2290 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CarPlay SDK Audit — react-native-audio-browser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #f5f5f7;
+        --card: #ffffff;
+        --ink: #1d1d1f;
+        --muted: #6e6e73;
+        --line: #e5e5ea;
+        --accent: #0071e3;
+        --cp-bg: #1c1c1e;
+        --cp-row: #2c2c2e;
+        --cp-ink: #f2f2f7;
+        --cp-muted: #98989d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: var(--muted);
+        margin-bottom: 28px;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 44px 0 6px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      h2 .n {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .groupnote {
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+      .feature {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 20px;
+        margin: 14px 0;
+      }
+      .feature h3 {
+        margin: 0 0 2px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .feature h3 code {
+        font-size: 14px;
+      }
+      code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 13px;
+        background: #f0f0f2;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      pre {
+        background: #f6f8fa;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+      }
+      .badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .b-ios {
+        background: #e8f0fe;
+        color: #1a56db;
+      }
+      .b-expose {
+        background: #def7e4;
+        color: #0f7b32;
+      }
+      .b-maybe {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .b-internal {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+      .b-skip {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+      .b-tracked {
+        background: #e0f2fe;
+        color: #0369a1;
+      }
+      .b-status {
+        background: #f0f0f2;
+        color: var(--muted);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 2px 0 10px;
+      }
+      .scope {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+        flex-wrap: wrap;
+        margin: 0 0 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .scope .lbl {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .chip {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 1px 7px;
+        border-radius: 5px;
+        border: 1px solid var(--line);
+        background: #f0f0f2;
+        color: #6e6e73;
+      }
+      .chip.on {
+        background: #def7e4;
+        color: #0f7b32;
+        border-color: #bfe8c8;
+      }
+      .chip.off {
+        opacity: 0.5;
+        text-decoration: line-through;
+      }
+      .chip.neutral {
+        background: #e8f0fe;
+        color: #1a56db;
+        border-color: #cfdcf8;
+      }
+      .scope .note {
+        font-size: 12px;
+      }
+      .doclinks {
+        font-size: 12px;
+        color: var(--muted);
+        margin: -2px 0 14px;
+      }
+      .doclinks a {
+        color: var(--accent);
+        text-decoration: none;
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 11.5px;
+      }
+      .doclinks a:hover {
+        text-decoration: underline;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+      @media (max-width: 760px) {
+        .cols {
+          grid-template-columns: 1fr;
+        }
+      }
+      .cols h4,
+      .feature h4 {
+        margin: 10px 0 4px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .verdict {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--line);
+        font-size: 14px;
+      }
+      ul {
+        margin: 6px 0;
+        padding-left: 20px;
+      }
+      /* ---------- CarPlay mockups ---------- */
+      .screen {
+        background: var(--cp-bg);
+        border-radius: 14px;
+        padding: 14px;
+        color: var(--cp-ink);
+        font-size: 13px;
+        box-shadow: inset 0 0 0 1px #000;
+      }
+      .screen .hdr {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--cp-muted);
+        margin: 2px 4px 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .cp-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--cp-row);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin: 6px 0;
+        position: relative;
+      }
+      .cp-art {
+        width: 38px;
+        height: 38px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #5856d6, #af52de);
+      }
+      .cp-art.g2 {
+        background: linear-gradient(135deg, #ff9500, #ff2d55);
+      }
+      .cp-art.g3 {
+        background: linear-gradient(135deg, #34c759, #007aff);
+      }
+      .cp-art.circle {
+        border-radius: 50%;
+      }
+      .cp-t {
+        min-width: 0;
+        flex: 1;
+      }
+      .cp-t .t {
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-t .d {
+        color: var(--cp-muted);
+        font-size: 12px;
+      }
+      .cp-chev {
+        color: var(--cp-muted);
+      }
+      .cp-progress {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 3px;
+        height: 3px;
+        background: #48484a;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .cp-progress i {
+        display: block;
+        height: 100%;
+        width: 62%;
+        background: #0a84ff;
+      }
+      .cp-e {
+        font-size: 9px;
+        font-weight: 700;
+        background: #98989d;
+        color: #1c1c1e;
+        border-radius: 3px;
+        padding: 0 4px;
+        margin-left: 6px;
+        vertical-align: 1px;
+      }
+      .tiles {
+        display: flex;
+        gap: 10px;
+        padding: 4px;
+        flex-wrap: wrap;
+      }
+      .tile {
+        width: 74px;
+      }
+      .tile .cp-art {
+        width: 74px;
+        height: 74px;
+      }
+      .tile .t {
+        font-size: 11px;
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tile .d {
+        font-size: 10px;
+        color: var(--cp-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tile .t .sym {
+        font-size: 10px;
+        margin-right: 3px;
+      }
+      .cards {
+        display: flex;
+        gap: 10px;
+        padding: 4px;
+      }
+      .cp-card {
+        flex: 1;
+        height: 110px;
+        border-radius: 10px;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(160deg, #5856d6 0%, #2c2c54 100%);
+      }
+      .cp-card.c2 {
+        background: linear-gradient(160deg, #ff9500 0%, #7a2d00 100%);
+      }
+      .cp-card .txt {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 8px;
+      }
+      .cp-card .t {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .cp-card .d {
+        font-size: 11px;
+        color: #ffffffcc;
+      }
+      .cp-btn {
+        font-size: 11px;
+        color: #0a84ff;
+        font-weight: 600;
+      }
+      .cp-tabs {
+        display: flex;
+        gap: 18px;
+        justify-content: center;
+        border-top: 1px solid #3a3a3c;
+        margin-top: 10px;
+        padding-top: 8px;
+        color: var(--cp-muted);
+        font-size: 11px;
+      }
+      .cp-tab {
+        position: relative;
+      }
+      .cp-tab.active {
+        color: #0a84ff;
+      }
+      .cp-tab .dot {
+        position: absolute;
+        top: -3px;
+        right: -8px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ff3b30;
+      }
+      .cp-npbtns {
+        display: flex;
+        justify-content: space-evenly;
+        font-size: 18px;
+        margin-top: 10px;
+        color: var(--cp-ink);
+      }
+      .caption {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      table.summary {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 18px 0;
+        font-size: 14px;
+      }
+      table.summary th,
+      table.summary td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      table.summary th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .toc {
+        columns: 2;
+        font-size: 14px;
+      }
+      .toc a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>CarPlay SDK capability audit</h1>
+      <div class="sub">
+        react-native-audio-browser · August 2026 · audited against the
+        iPhoneSimulator 26.2 SDK (runtime verifications on the 26.3 simulator)
+        SDK headers · what the library doesn’t use yet, how consumers might use
+        it, and what it would look like on screen.
+      </div>
+
+      <div
+        class="status"
+        style="
+          background: #e8f0fe;
+          border: 1px solid #cfdcf8;
+          color: #1a56db;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 14px;
+          margin: 16px 0;
+        "
+      >
+        <strong>API-shape note:</strong> the per-field naming in this audit
+        (prefixed <code>carPlay*</code> hints, style values like
+        <code>rail</code>) has been superseded by the
+        <a href="section-styling-design.html">Section Styling design</a> — style
+        declaration blocks (<code>TrackStyle</code> /
+        <code>SectionStyle extends TrackStyle</code>) with unprefixed,
+        family-scoped properties and a cascade. This audit remains the record of
+        the SDK evidence, per-feature applicability, and the decision history;
+        field names below are translated where practical and the design doc is
+        authoritative where they disagree. Linked issues #125, #126 and #131
+        still carry their pre-block titles (<code>carPlay*</code> names) — they
+        update at implementation.
+      </div>
+
+      <h2 style="border: none; margin-top: 0; padding-top: 0">
+        Top candidates at a glance
+      </h2>
+      <table class="summary">
+        <tr>
+          <th>#</th>
+          <th>Feature</th>
+          <th>Shape of the API</th>
+          <th>Verdict</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>
+            <a href="#progress">playbackProgress</a> &amp;
+            <a href="#explicit">explicit badge</a>
+          </td>
+          <td>Core <code>Track</code> fields (cross-platform)</td>
+          <td><span class="badge b-expose">EXPOSE</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><a href="#cards">Card elements (featured rows)</a></td>
+          <td>
+            <code>gridTile: 'card'</code> + inheritable <code>cardTint</code> /
+            <code>cardImage</code>
+          </td>
+          <td><span class="badge b-expose">EXPOSE</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><a href="#shape">Circular tile shape</a></td>
+          <td>
+            <code>style.imageShape</code>: section default + per-track override
+          </td>
+          <td>
+            <span class="badge b-tracked"
+              >TRACKED —
+              <a
+                href="https://github.com/radio-garden/react-native-audio-browser/issues/131"
+                >#131</a
+              ></span
+            >
+          </td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><a href="#upnext">upNextTitle</a></td>
+          <td>
+            <code>carPlayUpNextTitle</code> (<a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/57"
+              >#57</a
+            >)
+          </td>
+          <td><span class="badge b-expose">EXPOSE</span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><a href="#headers">Enhanced section headers</a></td>
+          <td>
+            Subtitle + action button (play-the-section); view-all as an appended
+            row
+          </td>
+          <td><span class="badge b-expose">EXPOSE</span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>
+            <a href="#listtpl">Page header Play/Shuffle buttons</a>
+            (headerGridButtons)
+          </td>
+          <td>Largely library-internal, derived from page shape (iOS 26)</td>
+          <td><span class="badge b-maybe">HYPOTHESIS</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>
+            <a href="#tabselect">Tab selection</a> &amp;
+            <a href="#tabbadge">tab badge</a>
+          </td>
+          <td>
+            Badge tracked:
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/130"
+              >#130</a
+            >
+            +
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/129"
+              >#129</a
+            >
+            (notifyTabsChanged); tab-select unfiled
+          </td>
+          <td><span class="badge b-expose">EXPOSE</span></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><a href="#limitedui">Driving-restriction state</a></td>
+          <td>Read-only property + event</td>
+          <td><span class="badge b-maybe">MAYBE</span></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><a href="#morebtn">Now-playing track actions (⋯ sheet)</a></td>
+          <td>
+            Design settled: <code>carPlayNowPlayingActions</code>,
+            presence-conjured trailing ⋯, click-and-close, path/onSelect union
+          </td>
+          <td>
+            <span class="badge b-tracked"
+              >TRACKED —
+              <a
+                href="https://github.com/radio-garden/react-native-audio-browser/issues/128"
+                >#128</a
+              ></span
+            >
+          </td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><a href="#sports">Sports now-playing mode</a></td>
+          <td>Large schema, no consumer in sight</td>
+          <td><span class="badge b-skip">SKIP</span></td>
+        </tr>
+      </table>
+
+      <h2 style="border: none; padding-top: 6px">
+        How additions land in the TS API
+        <span class="n">· decided — block-model revision</span>
+      </h2>
+      <div class="feature">
+        <p class="muted" style="margin-top: 0">
+          This panel originally recorded the prefixed-hint doctrine (<code
+            >carPlay*</code
+          >
+          flat fields, promotion policy, per-field type-gating). That
+          architecture was superseded by the
+          <a href="section-styling-design.html">Section Styling design</a>; the
+          surviving rules and their block-model forms:
+        </p>
+        <ul>
+          <li>
+            <strong>Facts vs renderings.</strong> Cross-platform content and
+            state facts are core <code>Track</code> fields
+            (<code>progress</code>, <code>explicit</code>,
+            <code>favorited</code>, <code>live</code>) — the library chooses
+            their glyphs. Rendering declarations live in the
+            <code>style</code> blocks (<code>TrackStyle</code>, inheritable /
+            <code>SectionStyle extends TrackStyle</code>, container) —
+            unprefixed, family-scoped (<code>grid*</code>, <code>card*</code>)
+            by today's rendering scope, cascading
+            <code>track ?? section ?? default</code>.
+          </li>
+          <li>
+            <strong>Placement is mechanical:</strong> Apple element
+            <em>parameter</em> ⇒ inheritable; element <em>class</em> or
+            item-level knob ⇒ container. Style kinds are mutually exclusive
+            (<code>display</code>); orthogonal axes are properties.
+          </li>
+          <li>
+            <strong>Vendor prefixes are retired for style properties</strong>
+            (the CSS <code>-webkit-</code> lesson); per-property
+            <code>@platform</code>/<code>@default</code>/<code>@see</code> docs
+            carry the support contract instead, and scope-broadening is the
+            <code>grid-gap</code> → <code>gap</code> alias path.
+            <code>carPlay*</code> naming remains for platform
+            <em>feature config</em> that isn't styling
+            (<code>carPlaySiriListButton</code>,
+            <code>carPlayNowPlayingActions</code> #128,
+            <code>carPlayTabBadge</code> #130, <code>carPlayUpNextTitle</code>
+            #57) — affordances, not rendering declarations.
+          </li>
+          <li>
+            <strong>Version degradation:</strong> decorations drop before
+            layout, where the layout is renderable at all; degradation is never
+            an inversion of intent. <code>Track.disabled</code> — now a content
+            fact with full behavioral weight (never plays anywhere) — renders
+            grayed+inert where the surface can draw it and is hidden where it
+            can't: never a normal-looking dead control. Style properties remain
+            presentation-only and degrade to no-op.
+          </li>
+          <li>
+            <strong>Restraint is the pressure valve:</strong> the issues below
+            are proposals, not commitments — a field lands when a consumer
+            actually needs it.
+          </li>
+        </ul>
+      </div>
+
+      <p class="groupnote">
+        Each card carries an <strong>Applies&nbsp;to</strong> row showing which
+        presentation the knob can affect, in the library's style vocabulary:
+        <span class="chip on">list</span> means it works there,
+        <span class="chip off">grid</span> means that presentation cannot show
+        it, <span class="chip neutral">tab bar</span> marks a surface outside
+        the section styles.
+      </p>
+
+      <p class="groupnote">
+        Already tracked elsewhere, so only summarized here: the per-track
+        accessory symbol, rendered on list rows and grid tiles alike (<a
+          href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+          >#125, <code>style.accessorySymbol</code></a
+        >), row-element subtitles (just shipped), the Siri assistant cell
+        (<code>carPlaySiriListButton</code>), the playing-indicator location,
+        and the now-playing button row — all already exposed or in flight.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="rows">1. List rows <span class="n">· CPListItem</span></h2>
+      <p class="doclinks">
+        Docs:
+        <a href="https://developer.apple.com/documentation/carplay/cplistitem"
+          >CPListItem</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistitem/playbackprogress"
+          >playbackProgress</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistitem/isexplicitcontent"
+          >isExplicitContent</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistitemaccessorytype"
+          >CPListItemAccessoryType</a
+        >
+      </p>
+
+      <div class="feature" id="progress">
+        <h3>
+          <code>playbackProgress</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">never set</span>
+          <span class="badge b-expose"
+            >EXPOSE — core field, tracked:
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/52"
+              >#52</a
+            ></span
+          >
+        </h3>
+        <div class="meta">
+          Header: “a fractional value between 0 and 1 to display a progress bar
+          on this list item.”
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip off">grid</span
+          ><span class="chip off">single-line</span>
+          <span class="note"
+            >CarPlay puts the bar on <code>CPListItem</code> rows only — no tile
+            element carries progress. (Android Auto's completion extras are
+            per-item and not style-limited.)</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>{
+  title: 'Ep. armchair-42',
+  src: 'https://cdn.example/ep42.mp3',
+  progress: 0.62   // resume state from your backend
+}</code></pre>
+            <p>
+              Podcast and audiobook apps show how far the listener got, straight
+              in the browse list. Android Auto has the same concept
+              (completion-status/percentage extras), so this belongs in the core
+              <code>Track</code> vocabulary rather than a
+              <code>carPlay*</code> hint — one field lights up both car
+              surfaces.
+            </p>
+            <p>
+              <strong>Simulator caveat:</strong> in the demo lab the bar renders
+              in none of the variants (bare, +<code>isPlaying</code>, +trailing
+              indicator) — but the playing-row treatment is known not to draw on
+              some iOS/CarPlay-Simulator combos for any third-party app, so this
+              is inconclusive. Whether the bar requires <code>isPlaying</code>
+              (which would shrink the resume-bar use case to the active row on
+              CarPlay, while Android Auto renders on any row) is a
+              <em>head-unit</em> question.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="hdr">Episodes</div>
+              <div class="cp-row">
+                <div class="cp-art"></div>
+                <div class="cp-t">
+                  <div class="t">42 — The Long Interview</div>
+                  <div class="d">1 h 12 min</div>
+                </div>
+                <div class="cp-progress"><i></i></div>
+              </div>
+              <div class="cp-row">
+                <div class="cp-art g2"></div>
+                <div class="cp-t">
+                  <div class="t">43 — Listener Mail</div>
+                  <div class="d">48 min</div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">
+              A thin progress bar along the bottom edge of the row (first row,
+              62%).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature" id="explicit">
+        <h3>
+          <code>isExplicitContent</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">never set</span>
+          <span class="badge b-expose">EXPOSE — core field</span>
+        </h3>
+        <div class="meta">
+          Header: “render with an explicit indicator to the trailing edge of the
+          text.”
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip off">grid</span
+          ><span class="chip off">single-line</span>
+          <span class="note"
+            >Rows only — tiles have no explicit badge slot.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>{ title: 'Uncut Session', src: ..., explicit: true }</code></pre>
+            <p>
+              Same reasoning as progress: Android Auto has
+              <code>EXTRA_IS_EXPLICIT</code>, so a single core
+              <code>explicit</code> field covers both. Music catalogs and
+              podcast feeds carry this flag already.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="cp-row">
+                <div class="cp-art g3"></div>
+                <div class="cp-t">
+                  <div class="t">Uncut Session<span class="cp-e">E</span></div>
+                  <div class="d">The Band</div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">System 🅴 glyph trailing the title.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>isEnabled</code> (rows &amp; tile elements)
+          <span class="badge b-ios">iOS 15 / 26</span>
+          <span class="badge b-status">never set</span>
+          <span class="badge b-expose"
+            >IMPLEMENT —
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/126"
+              >#126</a
+            >
+            (Track.disabled)</span
+          >
+        </h3>
+        <div class="meta">Grays out and deadens a row or tile.</div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip on">grid</span
+          ><span class="chip on">single-line</span>
+          <span class="note"
+            >Rows since iOS 15; every iOS 26 tile element has an
+            <code>enabled</code> flag too.</span
+          >
+        </div>
+        <p>
+          Decided (review + design doc): <code>Track.disabled</code> — a
+          content-state fact, not a style property (it swallows taps, which is
+          interaction). Degradation is atomic: gray + inert together, or neither
+          — a surface that can't draw the gray leaves the item fully enabled,
+          never a normal-looking dead control. Use when the title carries the
+          reason ("Available at 9 PM"); hard unavailability belongs in data (no
+          <code>src</code>). Absorbs #126.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>accessoryImage</code> / <code>accessoryType = .cloud</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status"
+            >accessoryType hardcoded none/disclosure</span
+          >
+          <span class="badge b-tracked"
+            >FOLDED INTO
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+              >#125</a
+            ></span
+          >
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip on">grid</span
+          ><span class="chip off">single-line</span>
+          <span class="note"
+            >Unified in
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+              >#125</a
+            >
+            as <code>style.accessorySymbol</code>: rows render it via
+            <code>accessoryImage</code> (trailing), grid tiles via
+            <code>accessorySymbolName</code> (leading the title);
+            <code>gridWrap: false</code> has no accessory slot.</span
+          >
+        </div>
+        <p>
+          The library derives none vs. disclosure-chevron from
+          <code>src</code>/<code>path</code> — that stays internal; an explicit
+          consumer symbol wins over the derived chevron (row
+          <code>accessoryImage</code> takes precedence over
+          <code>accessoryType</code>).
+          <strong
+            >Decided: <code>accessoryType</code> itself is never
+            surfaced.</strong
+          >
+          Its three cases split into “already derived correctly”
+          (<code>.none</code>/<code>.disclosureIndicator</code>), “meaningless
+          without a download feature” (<code>.cloud</code>), and “everything a
+          consumer could want”, which is <code>accessoryImage</code>’s job via
+          <a
+            href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+            >#125</a
+          >
+          — exposing the enum would add API for zero expressible intent.
+        </p>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="tiles">
+        2. Tile elements <span class="n">· iOS 26 element family</span>
+      </h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitem"
+          >CPListImageRowItem</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemelement"
+          >Element</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemrowelement"
+          >RowElement</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemimagegridelement"
+          >ImageGridElement</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemcardelement"
+          >CardElement</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemcondensedelement"
+          >CondensedElement</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistimagerowitemgridelement"
+          >GridElement</a
+        >
+      </p>
+
+      <div class="feature" id="cards">
+        <h3>
+          <code>CPListImageRowItemCardElement</code> — featured cards
+          <span class="badge b-ios">iOS 26+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-expose"
+            >EXPOSE — <code>style.gridTile: 'card'</code></span
+          >
+        </h3>
+        <div class="meta">
+          Card with image (optionally full-height), title, subtitle, and a tint
+          color that becomes the background or the gradient behind the text.
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip on">grid</span><span class="chip off">list</span>
+          <span class="note"
+            >A tile <em>treatment</em>, not a style kind (see the design doc's
+            rejected shapes #9): the container property
+            <code>gridTile: 'card'</code> on a grid section, with the
+            inheritable <code>cardTint</code> (per card or section-wide) and
+            <code>cardImage: 'normal' | 'background'</code>.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you'd use it</h4>
+            <pre><code>{
+  "title": "Featured",
+  "path": "/featured",
+  "style": { "display": "grid", "gridTile": "card",
+             "gridWrap": false },
+  "children": [
+    { "title": "Station of the Day", "subtitle": "Jazz FM",
+      "path": "/featured/1", "artwork": "…",
+      "style": { "cardTint": "#1e3a8a" } }
+  ]
+}</code></pre>
+            <p>
+              The classic editorial hero row — <code>gridTile: 'card'</code> +
+              <code>gridWrap: false</code>, a composition the old styles-only
+              model could not express. Pre-26 the treatment drops and the layout
+              survives (legacy image row); Android Auto renders its grid. Full
+              property semantics live in the
+              <a href="section-styling-design.html">design doc's ledger</a>.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="hdr">Featured</div>
+              <div class="cards">
+                <div class="cp-card">
+                  <div class="txt">
+                    <div class="t">Station of the Day</div>
+                    <div class="d">Jazz FM</div>
+                  </div>
+                </div>
+                <div class="cp-card c2">
+                  <div class="txt">
+                    <div class="t">New for You</div>
+                    <div class="d">Morning Mix</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">
+              Large edge-to-edge cards; artwork can fill the card (<code
+                >cardImage: 'background'</code
+              >) with text over a gradient, or sit above a tinted footer.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature" id="condensed">
+        <h3>
+          <code>CPListImageRowItemCondensedElement</code> — condensed tiles
+          <span class="badge b-ios">iOS 26+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-expose"
+            >EXPOSE — <code>style.gridTile: 'condensed'</code></span
+          >
+        </h3>
+        <div class="meta">
+          Compact element: image + shape + title + subtitle + accessory symbol.
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip on">single-line</span
+          ><span class="chip on">grid</span><span class="chip off">list</span>
+          <span class="note"
+            >A container property (<code>style.gridTile: 'condensed'</code>) —
+            not a style kind: density is an axis of the grid, with no
+            cross-surface meaning. In the block model it is one value of the
+            <code>gridTile</code> enum, mutually exclusive with
+            <code>'card'</code>. And <em>not</em> per-track: the item
+            initializers are homogeneous per element family (<code
+              >imageGridElements:</code
+            >
+            <em>or</em> <code>condensedElements:</code>) — one condensed cell
+            inside a regular grid cannot render. Shape is an element
+            <em>parameter</em> (per-item legal); condensed is an element
+            <em>class</em> (container-wide).</span
+          >
+        </div>
+        <p>
+          <code>style.gridTile: 'condensed'</code> on a
+          <code>gridWrap: false</code> or <code>grid</code> section renders its
+          tiles with condensed elements on iOS 26+; everywhere else (pre-26,
+          Android Auto, app UI) the hint is a full no-op — purely visual, so
+          degradation is trivially safe. Composes with the other tile hints:
+          condensed elements take <code>imageShape</code> (the predicted
+          widening of <code>style.imageShape</code>, arriving as a hint combo
+          instead of a new style) and <code>accessorySymbolName</code> — and
+          they carry a <strong>subtitle</strong> slot, which regular
+          <code>grid</code> tiles lack, making this currently the only way a
+          wrapping grid can show subtitles. Note Apple documents
+          <em>only</em> the word “condensed”: no layout, density, or row count
+          is specified anywhere; wrapping is governed by the item-level
+          <code>allowsMultipleLines</code>. What it actually looks like is an
+          empirical lab question (the demo passes
+          <code>allowsMultipleLines: true</code>).
+        </p>
+      </div>
+
+      <div class="feature" id="shape">
+        <h3>
+          <code>imageShape: .circular</code>
+          <span class="badge b-ios">iOS 26+</span>
+          <span class="badge b-status">hardcoded .roundedRectangle</span>
+          <span class="badge b-tracked"
+            >TRACKED —
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/131"
+              >#131</a
+            ></span
+          >
+        </h3>
+        <div class="meta">
+          Mask applied to grid/condensed tile images: rounded rectangle or
+          circle.
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">grid</span
+          ><span class="chip off">single-line</span
+          ><span class="chip off">list</span>
+          <span class="note"
+            >iOS 26 <code>grid</code> tiles (and
+            <code>gridTile: 'condensed'</code> tiles, whose elements also take a
+            shape) only — the <code>gridWrap: false</code> row element and the
+            pre-26 legacy image row have no shape parameter.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>{
+  title: 'Results',
+  style: 'grid',
+  style.imageShape: 'circular',  // section default
+  children: [
+    { title: 'Miles Davis', ... },  // circular (inherits)
+    { title: 'Kind of Blue',        // per-item override wins
+      style.imageShape: 'rounded-rectangle', ... }
+  ]
+}</code></pre>
+            <p>
+              Circular is the standard presentation for people — artists, hosts,
+              DJs — and shape ultimately encodes the <em>kind</em> of item
+              (mixed grids legitimately render artists circular next to rounded
+              albums), so the property cascades (<code
+                >track ?? section ?? page</code
+              >) with the library’s established precedence (<code
+                >track ?? section</code
+              >, as per-track <code>style</code> already beats section style on
+              Android Auto). Under the block model both levels are the same
+              inheritable property (<code>style.imageShape</code>, cascade
+              <code>track ?? section</code>) — shape-follows-kind means a track
+              rightly carries its shape wherever it travels. Named without
+              “Grid”: Apple’s condensed element takes the same
+              <code>imageShape</code>, so
+              <code>gridTile: 'condensed'</code> tiles inherit the property and
+              the name stays honest. “Image”, mirroring Apple’s
+              <code>imageShape</code> — platform-passthrough hints keep the
+              platform’s own term (like <code>style.accessorySymbol</code> ←
+              <code>accessorySymbolName</code>, <code>style.cardTint</code> ←
+              <code>tintColor</code>); the library’s Artwork vocabulary governs
+              library-defined names, not passthroughs.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="hdr">Results</div>
+              <div class="tiles">
+                <div class="tile">
+                  <div class="cp-art circle"></div>
+                  <div class="t">Miles Davis</div>
+                </div>
+                <div class="tile">
+                  <div class="cp-art g2"></div>
+                  <div class="t">Kind of Blue</div>
+                </div>
+                <div class="tile">
+                  <div class="cp-art circle g3"></div>
+                  <div class="t">Nina Simone</div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">
+              Shape follows the kind of item: artists circular (section
+              default), the album overridden to rounded — in one grid.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <h3>
+          Deliberately unused element knobs
+          <span class="badge b-internal">CORRECT AS-IS</span>
+        </h3>
+        <ul>
+          <li>
+            <code>allowsMultipleLines</code> — now exposed as the block's
+            <code>gridWrap</code> (a 1:1 mapping); no longer deliberately unused
+            — see the design doc.
+          </li>
+          <li>
+            <code>CPListImageRowItemGridElement</code> (title-less tiles) —
+            rejected by ADR 0010: an artwork-less track must keep its name on
+            screen.
+          </li>
+          <li>
+            Post-init <code>elements</code> swap — artwork updates already
+            mutate elements in place (verified to live-render).
+          </li>
+        </ul>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="listtpl">
+        3. List template &amp; sections
+        <span class="n">· CPListTemplate / CPListSection</span>
+      </h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplisttemplate"
+          >CPListTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cplistsection"
+          >CPListSection</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpassistantcellconfiguration"
+          >CPAssistantCellConfiguration</a
+        >
+        ·
+        <a href="https://developer.apple.com/documentation/carplay/cpbutton"
+          >CPButton</a
+        >
+        ·
+        <a href="https://developer.apple.com/documentation/carplay/cpgridbutton"
+          >CPGridButton</a
+        >
+      </p>
+
+      <div class="feature" id="headers">
+        <h3>
+          Enhanced section headers — <code>headerSubtitle</code>,
+          <code>headerImage</code>, <code>headerButton</code>
+          <span class="badge b-ios">iOS 15+</span>
+          <span class="badge b-status">only plain header string used</span>
+          <span class="badge b-expose">EXPOSE — mostly internal</span>
+        </h3>
+        <div class="meta">
+          A section header can carry a subtitle, an image, and a real button.
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip on">grid</span
+          ><span class="chip on">single-line</span>
+          <span class="note"
+            >The header lives on <code>CPListSection</code> and is item-agnostic
+            — the current "tile sections are headerless" rule is the library's
+            choice (title lives in the image-row item), not a platform limit. On
+            iOS 26+ the row item's <code>text</code> may be nil, so tile
+            sections can adopt the enhanced header too; pre-26 the legacy item
+            requires its text, so tile sections keep title-in-item as the
+            fallback.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <p>
+              Little new API needed: sections already have
+              <code>title</code> and <code>subtitle</code> (→
+              <code>header</code>/<code>headerSubtitle</code>). The
+              <strong>button is an action slot</strong>, not navigation: the
+              header docs are semantically silent, but <code>CPButton</code>’s
+              lineage is the Contact template’s action buttons, and Apple’s
+              canonical enhanced header is the Music-style collection header —
+              art, title/artist, and a <em>play/shuffle</em> button. The
+              library’s best-aligned use:
+              <strong>play-the-section</strong> (queue scope already
+              <em>is</em> the section, ADR&nbsp;0006) — or a favorite/add action
+              for followable collections. On iOS 26+ tile sections can adopt the
+              same header (the image-row item going <code>text: nil</code>);
+              pre-26 tile sections keep title-in-item.
+            </p>
+            <p>
+              <strong>View-all belongs elsewhere:</strong> with the button slot
+              reserved for actions, the idiomatic view-all affordance for a list
+              section is an appended “View all” <em>row</em> — exactly what the
+              Android Auto boundary already does for tile sections with a
+              <code>path</code>, so it’s the cross-platform-consistent answer
+              too. Tile sections keep the header tap as a bonus.
+            </p>
+            <p>
+              <strong>Button-text caveat:</strong> <code>headerButton</code> is
+              a <code>CPButton</code> (not <code>CPTextButton</code>), whose
+              designated initializer <em>requires an image</em> — the guaranteed
+              affordance is a glyph (e.g. <code>play.fill</code>). Its settable
+              <code>title</code> is documented as “displayed only in templates
+              that allow for custom titles”, with no word on the list-section
+              header — whether a label renders is an empirical simulator
+              question. Icon for certain, title optimistically.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="hdr">
+                <span
+                  >Popular<br /><span
+                    style="text-transform: none; letter-spacing: 0"
+                  >
+                    <span style="color: #98989d">Updated hourly</span></span
+                  ></span
+                >
+                <span class="cp-btn" style="font-size: 16px">▶</span>
+              </div>
+              <div class="cp-row">
+                <div class="cp-art"></div>
+                <div class="cp-t">
+                  <div class="t">Radio Alpha</div>
+                  <div class="d">Lisbon</div>
+                </div>
+              </div>
+              <div class="cp-row">
+                <div class="cp-art g2"></div>
+                <div class="cp-t">
+                  <div class="t">Beta FM</div>
+                  <div class="d">Kyoto</div>
+                </div>
+              </div>
+              <div class="cp-row">
+                <div class="cp-t">
+                  <div class="t" style="color: #0a84ff">View All</div>
+                </div>
+                <div class="cp-chev">›</div>
+              </div>
+            </div>
+            <div class="caption">
+              Header gains a subtitle and an <em>action</em> button
+              (play-the-section); view-all is an appended row, as on Android
+              Auto.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>sectionIndexTitle</code>
+          <span class="badge b-ios">iOS 12+</span>
+          <span class="badge b-status">hardcoded nil</span>
+          <span class="badge b-tracked"
+            >TRACKED —
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/56"
+              >#56</a
+            ></span
+          >
+        </h3>
+        <div class="meta">
+          One-character titles enabling the alphabetical fast-scrubber on long
+          lists.
+        </div>
+        <div class="scope">
+          <span class="lbl">Applies to</span> <span class="chip on">list</span
+          ><span class="chip off">grid</span
+          ><span class="chip off">single-line</span>
+          <span class="note"
+            >Technically any <code>CPListSection</code>, but only meaningful on
+            list-presented sections — a tile section is one item, so there's
+            nothing to scrub.</span
+          >
+        </div>
+        <p>
+          Valuable for A–Z catalogs (stations, podcasts by name). Natural as an
+          optional section field (<code>indexTitle: 'A'</code>); harmless on
+          other surfaces. Medium priority — needs consumers with genuinely long
+          alphabetical pages.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>headerGridButtons</code>
+          <span class="n">(CPGridButton strip in a list header)</span>
+          <span class="badge b-ios">iOS 26+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-expose">EXPOSE — likely canonical use</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">whole list page</span>
+          <span class="note"
+            >Template-level (above all sections) — independent of section
+            styles. Dynamically updatable (<code>headerGridButtons</code> is a
+            settable property); the system trims to
+            <code>maximumHeaderGridButtonCount</code>.</span
+          >
+        </div>
+        <p>
+          <strong>Hypothesis — unproven:</strong> Apple Music’s CarPlay album
+          page (iOS 26 simulator) shows “▶ Play” and shuffle buttons above the
+          track list, and this API is the plausible public mechanism for that
+          strip — <em>but Apple’s own apps may use private chrome</em>, so
+          placement, labels, and the surrounding art header are all unconfirmed
+          until we hardcode buttons in the example app and look (the same test
+          that settled the accessory symbol). Taking the hypothesis:
+          collection-page action buttons, not the genre-shortcut strip
+          originally guessed. Maps onto the library with no new browse
+          vocabulary: a page whose children are playable (album, playlist,
+          station list) gets Play / Shuffle header buttons meaning “queue this
+          page’s children from the top” — the page-level sibling of the
+          per-section header play button, and the first real “play the whole
+          album” affordance for browse pages. Could be largely library-internal
+          (derived from the page shape), with a hint only to opt out or reorder.
+          Unlike the per-section <code>CPButton</code>,
+          <code>CPGridButton</code> takes <code>titleVariants</code> — the label
+          is at least first-class in the API, though whether the header renders
+          it is part of the same empirical check.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>
+          Assistant cell <code>visibility</code>
+          <span class="badge b-ios">iOS 15+</span>
+          <span class="badge b-status">hardcoded .always</span>
+          <span class="badge b-maybe">MAYBE</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">whole list page</span>
+          <span class="note"
+            >The assistant cell sits at the top/bottom of the template, outside
+            the sections — independent of section styles.</span
+          >
+        </div>
+        <p>
+          <code>.whileLimitedUIActive</code> shows the “Ask Siri” cell only
+          while driving restrictions are limiting the UI — a sensible option to
+          add to the existing <code>carPlaySiriListButton</code> hint (<code
+            >{ position, visibility }</code
+          >). Pairs with the
+          <a href="#limitedui">driving-restriction state</a> below. (<code
+            >assistantAction</code
+          >
+          stays fixed at <code>.playMedia</code> — <code>.startCall</code> is
+          for communication apps.)
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>
+          Covered adequately today
+          <span class="badge b-internal">NO ACTION</span>
+        </h3>
+        <ul>
+          <li>
+            <code>emptyViewTitleVariants</code>/<code>SubtitleVariants</code> —
+            driven internally by <code>carPlayLoadingTitle</code>, error
+            formatting, and gate pages (ADR 0001).
+          </li>
+          <li>
+            <code>showsSpinnerWhileEmpty</code> (18.4) — on for loading, off for
+            errors. Correct.
+          </li>
+          <li>
+            <code>maximumItemCount</code>/<code>maximumSectionCount</code> —
+            used for budget clamping.
+          </li>
+        </ul>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="tabs">
+        4. Tab bar <span class="n">· CPTabBarTemplate / CPBarButton</span>
+      </h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cptabbartemplate"
+          >CPTabBarTemplate</a
+        >
+        ·
+        <a href="https://developer.apple.com/documentation/carplay/cptemplate"
+          >CPTemplate</a
+        >
+        (tab title/image/badge) ·
+        <a href="https://developer.apple.com/documentation/carplay/cpbarbutton"
+          >CPBarButton</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpbarbuttonproviding"
+          >CPBarButtonProviding</a
+        >
+      </p>
+
+      <div class="feature" id="tabselect">
+        <h3>
+          <code>selectTemplate(at:)</code> — programmatic tab selection
+          <span class="badge b-ios">iOS 17+</span>
+          <span class="badge b-status">never used</span>
+          <span class="badge b-expose">EXPOSE — method</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">tab bar</span>
+          <span class="note"
+            >Root tabs only — pushed pages and section styles are
+            unaffected.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>selectCarPlayTab('/favorites')</code></pre>
+            <p>
+              Deep-linking: jump the car UI to a tab after an app-side action.
+              Bonus: the library can use it internally to
+              <em>preserve the selected tab</em> across template rebuilds —
+              today an unequal-count rebuild resets to the first tab.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="cp-row">
+                <div class="cp-art g3"></div>
+                <div class="cp-t">
+                  <div class="t">Favorites</div>
+                  <div class="d">12 stations</div>
+                </div>
+              </div>
+              <div class="cp-tabs">
+                <div class="cp-tab">Library</div>
+                <div class="cp-tab active">Favorites</div>
+                <div class="cp-tab">Search</div>
+              </div>
+            </div>
+            <div class="caption">
+              No new chrome — the selected tab just changes without a user tap.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature" id="tabbadge">
+        <h3>
+          <code>showsTabBadge</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">never set</span>
+          <span class="badge b-tracked"
+            >TRACKED —
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/130"
+              >#130</a
+            >
+            (needs
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/129"
+              >#129</a
+            >)</span
+          >
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">tab bar</span>
+          <span class="note"
+            >Per-tab, on the tab's icon — not on rows or tiles.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>tabs: [{
+  title: 'New',
+  path: '/new',
+  carPlayTabBadge: true
+}]</code></pre>
+            <p>
+              “Something new here” dot on a tab — new episodes, fresh
+              recommendations. A boolean hint on the tab track, toggled by
+              re-serving the tabs.
+            </p>
+            <p>
+              <strong>Verified (iOS 26.3 simulator, demo lab):</strong>
+              mutating <code>showsTabBadge</code> on a presented template does
+              <em>not</em> redraw the tab; <code>updateTemplates:</code>
+              applies it — as the header silence predicted (contrast
+              <code>headerGridButtons</code>, which documents dynamic update).
+              So the hint must ride the tab-rebuild path. A badge-only toggle
+              keeps the tab count equal, so it dodges the known
+              selected-tab-reset wart of unequal-count rebuilds.
+            </p>
+            <p>
+              <strong>API (decided):</strong> declarative —
+              <code>carPlayTabBadge?: boolean | 'until-opened'</code> on the tab
+              track, applied whenever tabs (re)build. <code>true</code> is
+              content-controlled (lit until the data clears it — the "live now"
+              case); <code>'until-opened'</code> declares unseen semantics,
+              licensing the library to clear on tab open with session-scoped
+              memory so tab re-serves don't resurrect the dot. Cross-session
+              seen-ness is the server's job: the tab-content fetch as a free
+              (but prefetch-confounded — Android Auto eagerly loads tabs)
+              heuristic, or a tab-visit event (which promotes the previously
+              low-priority <code>didSelectTemplate</code> exposure). Worst case
+              with neither: the dot relights once per session — annoying, never
+              wrong-direction.
+            </p>
+            <p>
+              <strong>Prerequisite — <code>notifyTabsChanged()</code>:</strong>
+              today the only tabs re-serve trigger is
+              <code>invalidateAllContent()</code> (drops every cache and
+              refreshes every template — absurd for a dot flip);
+              <code>notifyContentChanged</code> addresses paths, and tabs aren't
+              one (<code>'__tabs__'</code> is an authoring sentinel, and the
+              path machinery — cache invalidation, current-path re-navigation —
+              doesn't apply). A dedicated no-arg
+              <code>notifyTabsChanged()</code> in the notify family re-queries
+              the tabs source and updates each surface. A favorites-style
+              imperative overlay (<code>setCarPlayTabBadges(paths)</code>) was
+              considered and deferred: legitimate under the client-owned-state
+              precedent (<code>setFavorites</code>), but the declarative field
+              covers server-tab consumers first; the overlay waits for a
+              consumer with local seen-state.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div
+                class="cp-tabs"
+                style="border: none; margin: 0; padding: 2px 0"
+              >
+                <div class="cp-tab active">Library</div>
+                <div class="cp-tab">New<span class="dot"></span></div>
+                <div class="cp-tab">Favorites</div>
+              </div>
+            </div>
+            <div class="caption">Red badge dot on the tab icon.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <h3>
+          Navigation-bar buttons <span class="n">(CPBarButtonProviding)</span>
+          <span class="badge b-ios">iOS 12+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-maybe">DEFER</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">pushed pages</span>
+          <span class="note"
+            >Nav-bar chrome on pushed templates only — CarPlay hides these
+            buttons on tab-root templates; independent of section styles.</span
+          >
+        </div>
+        <p>
+          Up to two buttons per side of the nav bar on <em>pushed</em> templates
+          (tab roots don’t show them). A trailing “Shuffle All” or “Sort” on a
+          pushed list is plausible, but it needs a page-level hint plus a JS
+          handler round-trip — wait for demand. Custom back button: skip. (<code
+            >CPTabBarTemplateDelegate.didSelectTemplate</code
+          >
+          could someday back an <code>onCarPlayTabSelected</code> analytics
+          event; low priority.)
+        </p>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="np">
+        5. Now playing <span class="n">· CPNowPlayingTemplate</span>
+      </h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpnowplayingtemplate"
+          >CPNowPlayingTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpnowplayingbutton"
+          >CPNowPlayingButton</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpnowplayingmorebutton"
+          >MoreButton</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpnowplayingaddtolibrarybutton"
+          >AddToLibraryButton</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpnowplayingmodesports"
+          >CPNowPlayingModeSports</a
+        >
+      </p>
+
+      <div class="feature" id="upnext">
+        <h3>
+          <code>upNextTitle</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">read, never set</span>
+          <span class="badge b-expose"
+            >EXPOSE — tracked:
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/57"
+              >#57</a
+            ></span
+          >
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">now playing</span>
+          <span class="note"
+            >Only visible when <code>carPlayUpNextButton</code> is on; also
+            titles the pushed queue list.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>ios: {
+  carPlayUpNextButton: true,
+  carPlayUpNextTitle: 'Queue'  // or 'Episodes', localized
+}</code></pre>
+            <p>
+              Trivial to wire: the code already reads the property back as the
+              pushed queue-list title, so a consumer-set title flows through
+              automatically.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="hdr">
+                <span>Now Playing</span><span class="cp-btn">Queue ›</span>
+              </div>
+              <div class="cp-row">
+                <div class="cp-art"></div>
+                <div class="cp-t">
+                  <div class="t">The Long Interview</div>
+                  <div class="d">Armchair Radio</div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">
+              The button label in the now-playing top bar (default is
+              system-provided “Up Next”).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature" id="morebtn">
+        <h3>
+          <code>CPNowPlayingMoreButton</code> + consumer action sheets
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">unused; no sheet API exists</span>
+          <span class="badge b-tracked"
+            >TRACKED —
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/128"
+              >#128</a
+            ></span
+          >
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">now playing</span>
+          <span class="note"
+            >Button row of the now-playing screen; the sheet it presents is
+            modal over the whole CarPlay UI (one modal at a time).</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>ios: {
+  carPlayNowPlayingButtons: ['favorite', 'repeat'],
+  // presence conjures the system ⋯ button, always trailing
+  carPlayNowPlayingActions: (track) => [
+    // declarative: dismiss, then navigate(path)
+    { title: 'Go to the Artist', path: track.albumPath },
+    { title: 'More Like This',  path: `/similar/${track.id}` },
+    // imperative escape hatch
+    { title: 'Report Problem',  onSelect: () => report(track) }
+  ]
+}</code></pre>
+            <p>
+              <strong>Shape (decided):</strong> the field declares
+              <em>the actions available for the playing track</em>; the system
+              <code>CPNowPlayingMoreButton</code> (⋯, Apple-drawn glyph) is
+              merely how CarPlay surfaces them — so there is no
+              <code>'more'</code> entry in the buttons array, no button/handler
+              split, and the buttons enum stays plain strings in the spec. The
+              button renders <em>last</em> by library policy (Apple documents no
+              ordering; keeping it non-configurable preserves the freedom to
+              follow the platform convention). No provider → no button; the
+              provider returning <code>[]</code> for a track hides it for that
+              track. Actions are derived at tap time, per active track — never
+              static config. Each is <code>{ title, path }</code> (declarative
+              navigation — pure data, handled natively, serializable so a server
+              could one day supply a track's contexts over the wire) or
+              <code>{ title, onSelect }</code> (imperative) — the library's
+              established static-or-callback duality. Generalizes the
+              now-playing screen's single built-in navigation affordance (the
+              <code>albumPath</code> album/artist line) to N destinations.
+            </p>
+            <p>
+              <strong>Interaction contract (decided):</strong> click-and-close,
+              never modal chaining — one sheet, one selection, the library
+              auto-dismisses <em>before</em> invoking the action (a consumer can
+              never wedge the single modal slot). Sequencing composes from
+              existing primitives after the close (play, favorite,
+              <code>navigate</code> — which pushes onto the browse stack the
+              same way the Up&nbsp;Next button does). If an action wants a
+              submenu, it isn't a quick action — depth belongs in the tree, at a
+              <strong>Path</strong>. Tracked as
+              <a
+                href="https://github.com/radio-garden/react-native-audio-browser/issues/128"
+                >#128</a
+              >
+              (design settled, not scheduled).
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div class="cp-row">
+                <div class="cp-art g2"></div>
+                <div class="cp-t">
+                  <div class="t">The Long Interview</div>
+                  <div class="d">Armchair Radio</div>
+                </div>
+              </div>
+              <div class="cp-npbtns">
+                <span>♡</span><span>⏮</span><span>⏸</span><span>⏭</span
+                ><span>⋯</span>
+              </div>
+            </div>
+            <div class="caption">
+              “⋯” joins the button row; tapping presents a modal action sheet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>CPNowPlayingAddToLibraryButton</code>
+          <span class="badge b-ios">iOS 14+</span>
+          <span class="badge b-status">unused (custom heart instead)</span>
+          <span class="badge b-maybe">MAYBE</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">now playing</span>
+          <span class="note"
+            >Button row only — browse-row hearts are a separate mechanism.</span
+          >
+        </div>
+        <p>
+          The system “add to library” button has canonical iconography but no
+          “already added” state — the library’s custom heart/heart.fill toggle
+          is strictly more capable. Could be offered as an extra
+          <code>carPlayNowPlayingButtons</code> member
+          (<code>addToLibrary</code>) for add-once semantics. Low priority.
+          (<code>CPNowPlayingButton.isEnabled</code>: skip — omitting buttons,
+          as the gate flow does, is the better pattern.)
+        </p>
+      </div>
+
+      <div class="feature" id="sports">
+        <h3>
+          <code>CPNowPlayingModeSports</code>
+          <span class="badge b-ios">iOS 18.4+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-skip">SKIP — out of scope</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">now playing</span>
+          <span class="note"
+            >Replaces the standard now-playing layout while active — browse
+            surfaces are untouched.</span
+          >
+        </div>
+        <div class="cols">
+          <div>
+            <h4>How you’d use it</h4>
+            <pre><code>setCarPlaySportsMode({
+  leftTeam:  { name: 'POR', logo: ..., score: '2' },
+  rightTeam: { name: 'AJX', logo: ..., score: '1' },
+  eventStatus: "78'", eventClock: ...
+})</code></pre>
+            <p>
+              For live-sports radio: a two-team scoreboard layout replacing the
+              standard now-playing art. Uniquely CarPlay (no Android Auto
+              analogue) → would be a clean platform-scoped API, but the schema
+              is large (teams, logos, scores, clock, possession, background
+              art). <strong>Decided: skipped — out of scope</strong> for this
+              library's consumers; revisit only if a live-sports consumer
+              materializes. The demo lab's Sports page remains for the curious.
+            </p>
+          </div>
+          <div>
+            <h4>Presentation effect</h4>
+            <div class="screen">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-evenly;
+                  align-items: center;
+                  padding: 12px 0;
+                "
+              >
+                <div style="text-align: center">
+                  <div class="cp-art circle" style="margin: 0 auto"></div>
+                  <div style="font-weight: 700; margin-top: 4px">
+                    POR&nbsp;&nbsp;2
+                  </div>
+                </div>
+                <div style="color: var(--cp-muted)">78′</div>
+                <div style="text-align: center">
+                  <div class="cp-art circle g2" style="margin: 0 auto"></div>
+                  <div style="font-weight: 700; margin-top: 4px">
+                    AJX&nbsp;&nbsp;1
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="caption">
+              Scoreboard replaces album art on the now-playing screen.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="session">
+        6. Session &amp; scene
+        <span class="n">· CPSessionConfiguration / CPInterfaceController</span>
+      </h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpsessionconfiguration"
+          >CPSessionConfiguration</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cptemplateapplicationscene"
+          >CPTemplateApplicationScene</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpinterfacecontroller"
+          >CPInterfaceController</a
+        >
+      </p>
+
+      <div class="feature" id="limitedui">
+        <h3>
+          <code>limitedUserInterfaces</code> — driving-restriction state
+          <span class="badge b-ios">iOS 12+</span>
+          <span class="badge b-status">entirely unused</span>
+          <span class="badge b-maybe">MAYBE — expose read/event</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">session-wide</span>
+          <span class="note"
+            >A state signal, not tied to any surface; its effects show up on
+            lists (truncation) and keyboards.</span
+          >
+        </div>
+        <p>
+          A bitmask (<code>.keyboard</code>, <code>.lists</code>) reporting when
+          the car is limiting the UI (long lists truncate, keyboards disable).
+          No visual of its own — it’s a signal. Exposing
+          <code>isCarPlayUILimited</code> plus a change event lets consumers
+          serve shorter pages or flip the Siri cell to
+          <code>.whileLimitedUIActive</code>. Best introduced together with that
+          visibility option.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>
+          <code>contentStyle</code> (light/dark suggestion)
+          <span class="badge b-ios">iOS 13 / 15.4</span>
+          <span class="badge b-status"
+            >unused; trait-based artwork instead</span
+          >
+          <span class="badge b-maybe">LOW</span>
+        </h3>
+        <div class="scope">
+          <span class="lbl">Applies to</span>
+          <span class="chip neutral">session-wide</span>
+          <span class="note"
+            >Affects artwork/appearance everywhere at once — not per style or
+            surface.</span
+          >
+        </div>
+        <p>
+          Day/night artwork already adapts via trait collections,
+          <code>artworkCarPlayTinted</code> (becoming
+          <code>style.artworkRendering: 'stencil'</code> in the block design),
+          and declared <code>{ light, dark }</code> artwork variants. The
+          remaining use — artwork <em>resolvers</em> building style-dependent
+          URLs (e.g. a CDN <code>?bg=dark</code> param) — is
+          <strong>decided: skipped for now</strong>. If it ever gets built, it
+          belongs in the request-context-params family with the surface param
+          (<a
+            href="https://github.com/radio-garden/react-native-audio-browser/issues/122"
+            >#122</a
+          >): same cache-partitioning obligation, plus re-resolution on
+          mid-drive style changes. (<code>prefersDarkUserInterfaceStyle</code>:
+          skip — overriding the head unit’s day/night from a general-purpose
+          library is an anti-pattern.)
+        </p>
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="rest">7. Ruled out <span class="n">· with reasons</span></h2>
+      <p class="doclinks">
+        Docs:
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpsearchtemplate"
+          >CPSearchTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpvoicecontroltemplate"
+          >CPVoiceControlTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpalerttemplate"
+          >CPAlertTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/cpactionsheettemplate"
+          >CPActionSheetTemplate</a
+        >
+        ·
+        <a
+          href="https://developer.apple.com/documentation/carplay/requesting-carplay-entitlements"
+          >Requesting CarPlay entitlements</a
+        >
+      </p>
+
+      <div class="feature">
+        <h3>
+          Search &amp; voice templates
+          <span class="badge b-skip">ENTITLEMENT-BLOCKED</span>
+        </h3>
+        <p>
+          <code>CPSearchTemplate</code> and
+          <code>CPVoiceControlTemplate</code> are outside the
+          <code>carplay-audio</code> entitlement (navigation apps only) —
+          presenting them throws. Siri via the assistant cell +
+          <code>INPlayMediaIntent</code> (already implemented) is Apple’s
+          sanctioned search path for audio apps.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>Everything else assessed and passed over</h3>
+        <ul>
+          <li>
+            <code>tabSystemItem</code> — SF-symbol tab artwork already covers
+            iconography with more control.
+          </li>
+          <li>
+            <code>CPAlertTemplate</code> / <code>CPAlertAction</code> colors —
+            subsumed by the action-sheet proposal (<a href="#morebtn">above</a
+            >); the library’s error surface already uses
+            <code>CPActionSheetTemplate</code> internally.
+          </li>
+          <li>
+            <code>templateWillAppear/WillDisappear</code> — internal lifecycle
+            detail, no consumer value.
+          </li>
+          <li>
+            <code>carTraitCollection</code>, image-size constants, display-ready
+            init images — already used correctly throughout.
+          </li>
+        </ul>
+      </div>
+
+      <h2 id="lab">8. Reproducing in the demo lab</h2>
+      <p class="groupnote">
+        Apple's <em>Integrating CarPlay with Your Music App</em> sample, with
+        <code>TemplateManager.swift</code> rewritten as a static feature lab (no
+        Apple Music API, no tokens; Siri entitlement stripped for team-less
+        simulator builds). Root is a tab bar: <strong>Lab</strong> (the demo
+        launcher) + <strong>Badge</strong> (exists to show the tab badge and
+        receive the tab-select demo). Every tap logs to the sample's on-phone
+        logger window.
+      </p>
+
+      <table class="summary">
+        <tr>
+          <th>Report feature</th>
+          <th>Demo location (Lab tab unless noted)</th>
+        </tr>
+        <tr>
+          <td><code>playbackProgress</code></td>
+          <td>
+            <strong>List row knobs</strong> → top three rows: bare /
+            +&nbsp;<code>isPlaying</code> / +&nbsp;trailing indicator.
+            <em>Inconclusive on the simulator:</em> none of the three render
+            there, but the playing-row treatment is known not to draw on some
+            iOS/CarPlay-Simulator combos for any third-party app (the library
+            documents this for <code>isPlaying</code>) — a head-unit check is
+            required before reading anything into it
+          </td>
+        </tr>
+        <tr>
+          <td><code>isExplicitContent</code></td>
+          <td>
+            <strong>List row knobs</strong> → "isExplicitContent" row; "progress
+            + explicit together"
+          </td>
+        </tr>
+        <tr>
+          <td><code>isEnabled</code> (rows)</td>
+          <td>
+            <strong>List row knobs</strong> → "isEnabled = false" row; the
+            launcher also grays out demos the running iOS can't show
+          </td>
+        </tr>
+        <tr>
+          <td><code>accessoryImage</code> / <code>.cloud</code></td>
+          <td>
+            <strong>List row knobs</strong> → ".cloud" and "accessoryImage
+            (heart)" rows — the rows half of
+            <a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+              >#125</a
+            >
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Tile accessory symbol (<a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/125"
+              >#125</a
+            >)
+          </td>
+          <td>
+            <strong>Wrapping image grid</strong> → tile 3 carries
+            <code>speaker.wave.2.fill</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>style.imageShape</code></td>
+          <td>
+            <strong>Wrapping image grid</strong> → "Toggle shape" flips circular
+            ↔ rounded live
+          </td>
+        </tr>
+        <tr>
+          <td>Cards + <code>style.cardTint</code></td>
+          <td>
+            <strong>Cards</strong> → tinted cards; "Toggle showsImageFullHeight"
+            compares tint-as-gradient vs tint-as-background
+          </td>
+        </tr>
+        <tr>
+          <td>Condensed elements</td>
+          <td><strong>Condensed elements</strong></td>
+        </tr>
+        <tr>
+          <td>Enhanced section header</td>
+          <td>
+            <strong>Enhanced section header</strong> → "Popular" (subtitle +
+            image + play <code>CPButton</code> with
+            <code>title = "Play"</code> — the label test) vs plain-header
+            contrast section
+          </td>
+        </tr>
+        <tr>
+          <td>Tile section + header (<code>text: nil</code>)</td>
+          <td>
+            <strong>Single-line row elements</strong> → second, title-less
+            section
+          </td>
+        </tr>
+        <tr>
+          <td><code>headerGridButtons</code></td>
+          <td>
+            <strong>Header grid buttons</strong> → titled Play + Shuffle (the
+            Apple-Music-strip hypothesis)
+          </td>
+        </tr>
+        <tr>
+          <td><code>sectionIndexTitle</code></td>
+          <td><strong>Section index A–Z</strong></td>
+        </tr>
+        <tr>
+          <td>Assistant cell</td>
+          <td>
+            <strong>Assistant cell</strong>
+            (<code>.top</code>/<code>.always</code>; Siri entitlement stripped —
+            non-rendering is inconclusive here)
+          </td>
+        </tr>
+        <tr>
+          <td><code>selectTemplate(at:)</code></td>
+          <td><strong>"Select the Badge tab in 1.5 s"</strong> row</td>
+        </tr>
+        <tr>
+          <td><code>showsTabBadge</code></td>
+          <td>
+            The <strong>Badge</strong> tab's dot on the tab bar — plus the two
+            launcher rows that produced the Verified finding: "Toggle Badge
+            tab's badge (mutate in place)" and "Force tab refresh
+            (updateTemplates)"
+          </td>
+        </tr>
+        <tr>
+          <td>Nav-bar buttons</td>
+          <td>
+            <strong>Nav-bar buttons</strong> → leading heart, trailing "Shuffle"
+            on the pushed page
+          </td>
+        </tr>
+        <tr>
+          <td><code>upNextTitle</code></td>
+          <td>
+            <strong>Now Playing buttons</strong> → top-bar button reads "Queue"
+          </td>
+        </tr>
+        <tr>
+          <td>More button + action sheet</td>
+          <td>
+            <strong>Now Playing buttons</strong> → ⋯ → "Start Station / Report
+            Problem" sheet
+          </td>
+        </tr>
+        <tr>
+          <td><code>AddToLibraryButton</code></td>
+          <td>
+            <strong>Now Playing buttons</strong> → system add button beside the
+            custom heart
+          </td>
+        </tr>
+        <tr>
+          <td>Sports mode</td>
+          <td><strong>Sports mode</strong> → POR 2–1 AJX at 78′</td>
+        </tr>
+        <tr>
+          <td><code>limitedUserInterfaces</code></td>
+          <td>
+            <strong>Session info</strong> → first row (delegate-driven; the
+            simulator rarely triggers restrictions)
+          </td>
+        </tr>
+        <tr>
+          <td><code>contentStyle</code></td>
+          <td>
+            <strong>Session info</strong> → second row (flip the Simulator's
+            appearance)
+          </td>
+        </tr>
+      </table>
+      <p class="groupnote">
+        Not demoed, deliberately: title-less <code>GridElement</code> (rejected
+        by ADR 0010), <code>artworkCarPlayTinted</code> (shipped library
+        behavior, not an SDK gap), and the search/voice templates
+        (entitlement-blocked — presenting them throws). Known gap:
+        per-tile-element <code>isEnabled</code>.
+      </p>
+
+      <p class="sub" style="margin-top: 40px">
+        Audited August 2026 — SDK-header audit of iPhoneSimulator 26.2 vs
+        <code>ios/CarPlay/*.swift</code>. Mockups are schematic approximations,
+        not pixel-accurate CarPlay renderings.
+      </p>
+    </div>
+  </body>
+</html>

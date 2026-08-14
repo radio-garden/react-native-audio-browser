@@ -1,0 +1,680 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0A96581F22B1AC800055F1CD /* LoggerWindowSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A96581E22B1AC800055F1CD /* LoggerWindowSceneDelegate.swift */; };
+		0A96582122B1AF660055F1CD /* TemplateApplicationSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A96582022B1AF660055F1CD /* TemplateApplicationSceneDelegate.swift */; };
+		1F4AF45224EB39B700BA4EF6 /* MusicIntents.intentdefinition in Sources */ = {isa = PBXBuildFile; fileRef = 1F4AF45124EB39B700BA4EF6 /* MusicIntents.intentdefinition */; };
+		1F4AF45324EB39B700BA4EF6 /* MusicIntents.intentdefinition in Sources */ = {isa = PBXBuildFile; fileRef = 1F4AF45124EB39B700BA4EF6 /* MusicIntents.intentdefinition */; };
+		1F4D1D1D2510469300043038 /* DateDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4D1D1C2510469300043038 /* DateDecoder.swift */; };
+		1F4D1D1E2510469300043038 /* DateDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4D1D1C2510469300043038 /* DateDecoder.swift */; };
+		1F5A6F07249B6D1F00F5BBA4 /* TokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5A6F06249B6D1F00F5BBA4 /* TokenStorage.swift */; };
+		1FA2C05224DDD4F100ECB202 /* PlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2C05124DDD4F100ECB202 /* PlayerController.swift */; };
+		1FA808CD24DD22F70086B777 /* MediaPlayerUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA808CC24DD22F70086B777 /* MediaPlayerUtilities.swift */; };
+		1FA808D524DD27320086B777 /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA808D424DD27320086B777 /* IntentHandler.swift */; };
+		1FA808D924DD27330086B777 /* CarPlayLabIntent.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 1FA808D224DD27320086B777 /* CarPlayLabIntent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1FA808DF24DD276E0086B777 /* IntentsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FA808DD24DD276E0086B777 /* IntentsUI.framework */; };
+		1FA808E024DD276E0086B777 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FA808DE24DD276E0086B777 /* Intents.framework */; };
+		1FA808E124DD27F00086B777 /* MediaPlayerUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA808CC24DD22F70086B777 /* MediaPlayerUtilities.swift */; };
+		1FA808E224DD27FC0086B777 /* AppleMusicAPIStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8734924AD269900447C38 /* AppleMusicAPIStructures.swift */; };
+		1FA808E324DD28170086B777 /* AppleMusicAPIController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8734824AD269900447C38 /* AppleMusicAPIController.swift */; };
+		1FA808E424DD29570086B777 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E96B979520EAE597008EE7FA /* Logger.swift */; };
+		1FA808E524DD29570086B777 /* TokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5A6F06249B6D1F00F5BBA4 /* TokenStorage.swift */; };
+		1FD8734A24AD269900447C38 /* AppleMusicAPIController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8734824AD269900447C38 /* AppleMusicAPIController.swift */; };
+		1FD8734B24AD269900447C38 /* AppleMusicAPIStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8734924AD269900447C38 /* AppleMusicAPIStructures.swift */; };
+		57894E2B2127929100B3321A /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 57894E2A2127929100B3321A /* README.md */; };
+		57BE160A22908978001B81D6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57BE160922908978001B81D6 /* AppDelegate.swift */; };
+		57C883672290E44700AB7A4E /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 57C883662290E44700AB7A4E /* Launch Screen.storyboard */; };
+		D9ECAB3520BE3F0500ECEF43 /* CarPlay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9ECAB3420BE3F0500ECEF43 /* CarPlay.framework */; };
+		D9ECAB3720BE3F1C00ECEF43 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9ECAB3620BE3F1C00ECEF43 /* UIKit.framework */; };
+		D9ECAB5720BE423D00ECEF43 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D9ECAB5620BE423D00ECEF43 /* Assets.xcassets */; };
+		E96B978C20EAE44E008EE7FA /* LoggerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E96B978820EAE44E008EE7FA /* LoggerViewController.swift */; };
+		E96B978D20EAE44E008EE7FA /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E96B978920EAE44E008EE7FA /* TemplateManager.swift */; };
+		E96B979620EAE597008EE7FA /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E96B979520EAE597008EE7FA /* Logger.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1FA808D724DD27330086B777 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D9ECAB0520BE3ED300ECEF43 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1FA808D124DD27320086B777;
+			remoteInfo = CarPlayLabIntent;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1F5077EF24AD4CB20050CABC /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1FA808D924DD27330086B777 /* CarPlayLabIntent.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0A96581E22B1AC800055F1CD /* LoggerWindowSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerWindowSceneDelegate.swift; sourceTree = "<group>"; };
+		0A96582022B1AF660055F1CD /* TemplateApplicationSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateApplicationSceneDelegate.swift; sourceTree = "<group>"; };
+		0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
+		1F4AF45124EB39B700BA4EF6 /* MusicIntents.intentdefinition */ = {isa = PBXFileReference; lastKnownFileType = file.intentdefinition; path = MusicIntents.intentdefinition; sourceTree = "<group>"; };
+		1F4D1D1C2510469300043038 /* DateDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateDecoder.swift; sourceTree = "<group>"; };
+		1F5A6F06249B6D1F00F5BBA4 /* TokenStorage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TokenStorage.swift; sourceTree = "<group>"; };
+		1FA2C05124DDD4F100ECB202 /* PlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerController.swift; sourceTree = "<group>"; };
+		1FA808CC24DD22F70086B777 /* MediaPlayerUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerUtilities.swift; sourceTree = "<group>"; };
+		1FA808D224DD27320086B777 /* CarPlayLabIntent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CarPlayLabIntent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1FA808D424DD27320086B777 /* IntentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHandler.swift; sourceTree = "<group>"; };
+		1FA808D624DD27330086B777 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1FA808DD24DD276E0086B777 /* IntentsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IntentsUI.framework; path = System/Library/Frameworks/IntentsUI.framework; sourceTree = SDKROOT; };
+		1FA808DE24DD276E0086B777 /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
+		1FA808E624DDC8320086B777 /* AppIntentVocabulary.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		1FD8734824AD269900447C38 /* AppleMusicAPIController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAPIController.swift; sourceTree = "<group>"; };
+		1FD8734924AD269900447C38 /* AppleMusicAPIStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAPIStructures.swift; sourceTree = "<group>"; };
+		2879FB2B4854A714587F77C5 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
+		57894E2A2127929100B3321A /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		57BE160922908978001B81D6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		57C883662290E44700AB7A4E /* Launch Screen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		D9ECAB0D20BE3ED300ECEF43 /* CarPlayLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CarPlayLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9ECAB3420BE3F0500ECEF43 /* CarPlay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CarPlay.framework; path = System/Library/Frameworks/CarPlay.framework; sourceTree = SDKROOT; };
+		D9ECAB3620BE3F1C00ECEF43 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D9ECAB5620BE423D00ECEF43 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E96B978820EAE44E008EE7FA /* LoggerViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoggerViewController.swift; sourceTree = "<group>"; };
+		E96B978920EAE44E008EE7FA /* TemplateManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
+		E96B979120EAE476008EE7FA /* Entitlements.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
+		E96B979220EAE476008EE7FA /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E96B979520EAE597008EE7FA /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1FA808CF24DD27320086B777 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1FA808E024DD276E0086B777 /* Intents.framework in Frameworks */,
+				1FA808DF24DD276E0086B777 /* IntentsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9ECAB0A20BE3ED300ECEF43 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D9ECAB3720BE3F1C00ECEF43 /* UIKit.framework in Frameworks */,
+				D9ECAB3520BE3F0500ECEF43 /* CarPlay.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1FA808D324DD27320086B777 /* CarPlayLabIntent */ = {
+			isa = PBXGroup;
+			children = (
+				1FA808D424DD27320086B777 /* IntentHandler.swift */,
+				1FA808D624DD27330086B777 /* Info.plist */,
+			);
+			path = CarPlayLabIntent;
+			sourceTree = "<group>";
+		};
+		1FD6252924D0D5BE005B8904 /* Template Manager */ = {
+			isa = PBXGroup;
+			children = (
+				E96B978920EAE44E008EE7FA /* TemplateManager.swift */,
+			);
+			path = "Template Manager";
+			sourceTree = "<group>";
+		};
+		1FD8734C24AD303500447C38 /* Apple Music */ = {
+			isa = PBXGroup;
+			children = (
+				1FD8734824AD269900447C38 /* AppleMusicAPIController.swift */,
+				1FD8734924AD269900447C38 /* AppleMusicAPIStructures.swift */,
+				1FA808CC24DD22F70086B777 /* MediaPlayerUtilities.swift */,
+				1F4D1D1C2510469300043038 /* DateDecoder.swift */,
+			);
+			path = "Apple Music";
+			sourceTree = "<group>";
+		};
+		1FD8734D24AD31D600447C38 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				E96B979520EAE597008EE7FA /* Logger.swift */,
+				1F5A6F06249B6D1F00F5BBA4 /* TokenStorage.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		57E014D12127815300E147AF /* App Lifecycle */ = {
+			isa = PBXGroup;
+			children = (
+				57BE160922908978001B81D6 /* AppDelegate.swift */,
+				0A96582022B1AF660055F1CD /* TemplateApplicationSceneDelegate.swift */,
+				0A96581E22B1AC800055F1CD /* LoggerWindowSceneDelegate.swift */,
+				E96B978820EAE44E008EE7FA /* LoggerViewController.swift */,
+				1FA2C05124DDD4F100ECB202 /* PlayerController.swift */,
+			);
+			path = "App Lifecycle";
+			sourceTree = "<group>";
+		};
+		D9ECAB0420BE3ED300ECEF43 = {
+			isa = PBXGroup;
+			children = (
+				57894E2A2127929100B3321A /* README.md */,
+				1F4AF45124EB39B700BA4EF6 /* MusicIntents.intentdefinition */,
+				D9ECAB0F20BE3ED300ECEF43 /* CarPlayLab */,
+				1FA808D324DD27320086B777 /* CarPlayLabIntent */,
+				D9ECAB0E20BE3ED300ECEF43 /* Products */,
+				D9ECAB3320BE3F0500ECEF43 /* Frameworks */,
+				E5160AE53D7260E73F36C7BF /* Configuration */,
+				EB84969E996C5C67B113CB66 /* LICENSE */,
+			);
+			sourceTree = "<group>";
+		};
+		D9ECAB0E20BE3ED300ECEF43 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D9ECAB0D20BE3ED300ECEF43 /* CarPlayLab.app */,
+				1FA808D224DD27320086B777 /* CarPlayLabIntent.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D9ECAB0F20BE3ED300ECEF43 /* CarPlayLab */ = {
+			isa = PBXGroup;
+			children = (
+				57E014D12127815300E147AF /* App Lifecycle */,
+				1FD6252924D0D5BE005B8904 /* Template Manager */,
+				1FD8734C24AD303500447C38 /* Apple Music */,
+				1FD8734D24AD31D600447C38 /* Helpers */,
+				E96B978F20EAE476008EE7FA /* Supporting Files */,
+				D9ECAB5620BE423D00ECEF43 /* Assets.xcassets */,
+			);
+			path = CarPlayLab;
+			sourceTree = "<group>";
+		};
+		D9ECAB3320BE3F0500ECEF43 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1FA808DE24DD276E0086B777 /* Intents.framework */,
+				1FA808DD24DD276E0086B777 /* IntentsUI.framework */,
+				D9ECAB3620BE3F1C00ECEF43 /* UIKit.framework */,
+				D9ECAB3420BE3F0500ECEF43 /* CarPlay.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E5160AE53D7260E73F36C7BF /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */,
+			);
+			name = Configuration;
+			sourceTree = "<group>";
+		};
+		E96B978F20EAE476008EE7FA /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				1FA808E624DDC8320086B777 /* AppIntentVocabulary.plist */,
+				57C883662290E44700AB7A4E /* Launch Screen.storyboard */,
+				E96B979120EAE476008EE7FA /* Entitlements.plist */,
+				E96B979220EAE476008EE7FA /* Info.plist */,
+			);
+			path = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		EB84969E996C5C67B113CB66 /* LICENSE */ = {
+			isa = PBXGroup;
+			children = (
+				2879FB2B4854A714587F77C5 /* LICENSE.txt */,
+			);
+			name = LICENSE;
+			path = .;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1FA808D124DD27320086B777 /* CarPlayLabIntent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1FA808DA24DD27330086B777 /* Build configuration list for PBXNativeTarget "CarPlayLabIntent" */;
+			buildPhases = (
+				1FA808CE24DD27320086B777 /* Sources */,
+				1FA808CF24DD27320086B777 /* Frameworks */,
+				1FA808D024DD27320086B777 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CarPlayLabIntent;
+			productName = CarPlayLabIntent;
+			productReference = 1FA808D224DD27320086B777 /* CarPlayLabIntent.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		D9ECAB0C20BE3ED300ECEF43 /* CarPlayLab */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9ECAB1F20BE3ED500ECEF43 /* Build configuration list for PBXNativeTarget "CarPlayLab" */;
+			buildPhases = (
+				D9ECAB0920BE3ED300ECEF43 /* Sources */,
+				D9ECAB0A20BE3ED300ECEF43 /* Frameworks */,
+				D9ECAB0B20BE3ED300ECEF43 /* Resources */,
+				1F5077EF24AD4CB20050CABC /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1FA808D824DD27330086B777 /* PBXTargetDependency */,
+			);
+			name = CarPlayLab;
+			productName = CoastalRoads;
+			productReference = D9ECAB0D20BE3ED300ECEF43 /* CarPlayLab.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D9ECAB0520BE3ED300ECEF43 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastSwiftUpdateCheck = 1200;
+				LastUpgradeCheck = 1200;
+				ORGANIZATIONNAME = Apple;
+				TargetAttributes = {
+					1FA808D124DD27320086B777 = {
+						CreatedOnToolsVersion = 12.0;
+					};
+					D9ECAB0C20BE3ED300ECEF43 = {
+						CreatedOnToolsVersion = 10.0;
+						LastSwiftMigration = 1200;
+					};
+				};
+			};
+			buildConfigurationList = D9ECAB0820BE3ED300ECEF43 /* Build configuration list for PBXProject "CarPlayLab" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D9ECAB0420BE3ED300ECEF43;
+			productRefGroup = D9ECAB0E20BE3ED300ECEF43 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D9ECAB0C20BE3ED300ECEF43 /* CarPlayLab */,
+				1FA808D124DD27320086B777 /* CarPlayLabIntent */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1FA808D024DD27320086B777 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9ECAB0B20BE3ED300ECEF43 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				57894E2B2127929100B3321A /* README.md in Resources */,
+				57C883672290E44700AB7A4E /* Launch Screen.storyboard in Resources */,
+				D9ECAB5720BE423D00ECEF43 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1FA808CE24DD27320086B777 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1F4D1D1E2510469300043038 /* DateDecoder.swift in Sources */,
+				1FA808E424DD29570086B777 /* Logger.swift in Sources */,
+				1FA808E524DD29570086B777 /* TokenStorage.swift in Sources */,
+				1F4AF45324EB39B700BA4EF6 /* MusicIntents.intentdefinition in Sources */,
+				1FA808E124DD27F00086B777 /* MediaPlayerUtilities.swift in Sources */,
+				1FA808E324DD28170086B777 /* AppleMusicAPIController.swift in Sources */,
+				1FA808E224DD27FC0086B777 /* AppleMusicAPIStructures.swift in Sources */,
+				1FA808D524DD27320086B777 /* IntentHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9ECAB0920BE3ED300ECEF43 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1F4AF45224EB39B700BA4EF6 /* MusicIntents.intentdefinition in Sources */,
+				E96B978D20EAE44E008EE7FA /* TemplateManager.swift in Sources */,
+				1FD8734B24AD269900447C38 /* AppleMusicAPIStructures.swift in Sources */,
+				1F5A6F07249B6D1F00F5BBA4 /* TokenStorage.swift in Sources */,
+				E96B979620EAE597008EE7FA /* Logger.swift in Sources */,
+				1FD8734A24AD269900447C38 /* AppleMusicAPIController.swift in Sources */,
+				0A96582122B1AF660055F1CD /* TemplateApplicationSceneDelegate.swift in Sources */,
+				1FA808CD24DD22F70086B777 /* MediaPlayerUtilities.swift in Sources */,
+				1F4D1D1D2510469300043038 /* DateDecoder.swift in Sources */,
+				0A96581F22B1AC800055F1CD /* LoggerWindowSceneDelegate.swift in Sources */,
+				57BE160A22908978001B81D6 /* AppDelegate.swift in Sources */,
+				1FA2C05224DDD4F100ECB202 /* PlayerController.swift in Sources */,
+				E96B978C20EAE44E008EE7FA /* LoggerViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1FA808D824DD27330086B777 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1FA808D124DD27320086B777 /* CarPlayLabIntent */;
+			targetProxy = 1FA808D724DD27330086B777 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1FA808DB24DD27330086B777 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
+				INFOPLIST_FILE = CarPlayLabIntent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.CarPlay${SAMPLE_CODE_DISAMBIGUATOR}.music.CarPlayLabIntent";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		1FA808DC24DD27330086B777 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
+				INFOPLIST_FILE = CarPlayLabIntent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.CarPlay${SAMPLE_CODE_DISAMBIGUATOR}.music.CarPlayLabIntent";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		D9ECAB1D20BE3ED500ECEF43 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_FLOAT_CONVERSION = YES_ERROR;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES_ERROR;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SEMICOLON_BEFORE_METHOD_BODY = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS = YES;
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_SHADOW = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = YES;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+			};
+			name = Debug;
+		};
+		D9ECAB1E20BE3ED500ECEF43 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_FLOAT_CONVERSION = YES_ERROR;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES_ERROR;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SEMICOLON_BEFORE_METHOD_BODY = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS = YES;
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_SHADOW = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = YES;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D9ECAB2020BE3ED500ECEF43 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "$(SOURCE_ROOT)/CarPlayLab/Supporting Files/Entitlements.plist";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
+				INFOPLIST_FILE = "$(SOURCE_ROOT)/CarPlayLab/Supporting Files/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.CarPlay${SAMPLE_CODE_DISAMBIGUATOR}.music";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D9ECAB2120BE3ED500ECEF43 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0ABD50DA7984664812BB0740 /* SampleCode.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "$(SOURCE_ROOT)/CarPlayLab/Supporting Files/Entitlements.plist";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
+				INFOPLIST_FILE = "$(SOURCE_ROOT)/CarPlayLab/Supporting Files/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.CarPlay${SAMPLE_CODE_DISAMBIGUATOR}.music";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1FA808DA24DD27330086B777 /* Build configuration list for PBXNativeTarget "CarPlayLabIntent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FA808DB24DD27330086B777 /* Debug */,
+				1FA808DC24DD27330086B777 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9ECAB0820BE3ED300ECEF43 /* Build configuration list for PBXProject "CarPlayLab" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9ECAB1D20BE3ED500ECEF43 /* Debug */,
+				D9ECAB1E20BE3ED500ECEF43 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9ECAB1F20BE3ED500ECEF43 /* Build configuration list for PBXNativeTarget "CarPlayLab" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9ECAB2020BE3ED500ECEF43 /* Debug */,
+				D9ECAB2120BE3ED500ECEF43 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D9ECAB0520BE3ED300ECEF43 /* Project object */;
+}
