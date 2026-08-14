@@ -41,19 +41,34 @@ Android sends a subset of what iOS does: the query plus music focuses (genre / a
 
 ## Browse display
 
-Two declarations control how Android Auto renders a browsable's children — the parent's `childrenStyle` and the page's sections:
+Two declarations control how Android Auto renders a browsable's children — the browsable handle's `display` promise and the page's sections (ADR 0011). They belong together: the handle promises, the page delivers.
 
 ```ts
+// The HANDLE — how the page's parent (a tab, or a row on another page)
+// declares it. Tabs are handles too: a tab opening a grid page needs this.
+{
+  title: 'Stations',
+  path: '/browse/stations',
+  // the layout PROMISE for the page this handle opens ('list' is the default):
+  // Android Auto reads it from the parent item, before the page resolves
+  style: { display: 'grid' },
+}
+
+// The PAGE it opens — the ResolvedTrack served for '/browse/stations':
 {
   path: '/browse/stations',
   title: 'Stations',
-  // render this list's children as grid tiles ('list' is the default)
-  childrenStyle: 'grid',
+  style: { display: 'grid' },   // the page-wide declaration
+  children: [ /* the tiles */ ]
 }
 ```
 
-- **`childrenStyle`** — `'list'` (rows) or `'grid'` (tiles), set on the **parent** to choose the default layout for its children.
-- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section's `style` overrides `childrenStyle` for that section: a `'grid'` or `'rail'` section renders as wrapping grid tiles (Android Auto's grid always wraps, so the two tile styles render identically), plus a "view all" link built from the section's `path` and `subtitle`.
+- **The handle's `style.display`** — `'list'` (rows) or `'grid'` (tiles), declared on the **browsable track** to promise the layout of the page it opens. Android Auto honors only this parent-level hint below the root, and the library emits it only when declared — an undeclared promise means the page renders as a list, and a dev-mode warning fires when a served all-grid page sits under a promise-less handle. (A section's "view all" link needs no handle of your own: the library projects the section's declared block onto it.)
+- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children, plus a "view all" link built from the section's `path` and `subtitle`.
+
+::: warning AAOS lays out the whole page from the one parent-level promise
+On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent hint is the **only** below-root layout signal honored: the whole page renders as list or grid, uniformly. Per-section `display` differences (a teaser shelf above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the promised single layout. There is no correct promise for a mixed page — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
+:::
 
 ```ts
 sections: [

@@ -17,7 +17,8 @@ struct PlaybackStateStoreTests {
       id: "abc", path: nil, title: "Test FM", subtitle: nil, artwork: nil,
       artist: "City, Country", albumPath: nil, album: nil, description: nil,
       genre: nil, duration: nil, src: "/listen/abc/channel.mp3", request: nil,
-      style: nil, childrenStyle: nil, live: true,
+      style: JsonStyle(display: "grid", artworkRendering: "stencil"),
+      disabled: false, live: true,
     )
   }
 

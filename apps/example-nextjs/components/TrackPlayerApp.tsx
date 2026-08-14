@@ -135,8 +135,7 @@ const configuration: BrowserConfiguration = {
       children: [
         {
           path: '/library/playlists',
-          title: 'Radio Playlists',
-          style: 'list'
+          title: 'Radio Playlists'
         },
         {
           src: 'https://rntp.dev/example/Soul%20Searching.mp3',

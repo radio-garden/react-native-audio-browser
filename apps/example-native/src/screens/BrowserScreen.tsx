@@ -86,7 +86,10 @@ export function BrowserScreen() {
   const rows: BrowseRow[] = useMemo(
     () =>
       (content?.sections ?? []).flatMap((section, si): BrowseRow[] => {
-        if (section.style === 'rail' || section.style === 'grid') {
+        // The page block declares for its whole scope; a section overrides it
+        // for its own children (ADR 0011's scope override, folded here since
+        // the phone UI renders from the raw resolved page).
+        if ((section.style?.display ?? content?.style?.display) === 'grid') {
           return [{ kind: 'tiles', section, key: `tiles-${si}` }]
         }
         const trackRows: BrowseRow[] = section.children.map((track, i) => ({

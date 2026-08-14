@@ -15,6 +15,8 @@ let package = Package(
         "Browser/TabBarEntries.swift",
         "Browser/MediaResolveComposer.swift",
         "Browser/JsonModels.swift",
+        "Browser/StyleResolver.swift",
+        "Browser/SectionPresentation.swift",
         "Browser/SimpleRouter.swift",
         "Browser/TrackIdTemplate.swift",
         "Player/QueueManager.swift",

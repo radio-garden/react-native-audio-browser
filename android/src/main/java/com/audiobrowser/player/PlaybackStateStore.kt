@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.common.C
 import com.audiobrowser.util.artworkOf
+import com.audiobrowser.util.toArtworkRendering
+import com.audiobrowser.util.toStyleDisplay
+import com.audiobrowser.util.toWireString
 import com.audiobrowser.util.url
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RepeatMode
@@ -148,70 +151,6 @@ class PlaybackStateStore(private val player: Player) {
     Timber.d("Saved position: positionMs=0 (queue ended)")
   }
 
-  private fun trackToJson(track: Track): String =
-    JSONObject()
-      .apply {
-        put("id", track.id)
-        put("path", track.path)
-        put("src", track.src)
-        put("title", track.title)
-        put("subtitle", track.subtitle)
-        put("artist", track.artist)
-        put("albumPath", track.albumPath)
-        put("album", track.album)
-        put("artwork", track.artwork?.url)
-        put("description", track.description)
-        put("genre", track.genre)
-        put("duration", track.duration)
-        put("style", track.style?.name)
-        put("childrenStyle", track.childrenStyle?.name)
-        put("favorited", track.favorited)
-        put("live", track.live)
-      }
-      .toString()
-
-  private fun trackFromJson(json: String): Track? =
-    runCatching {
-        val obj = JSONObject(json)
-        Track(
-          id = obj.optString("id").takeIf { it.isNotEmpty() },
-          path = obj.optString("path").takeIf { it.isNotEmpty() },
-          src = obj.optString("src").takeIf { it.isNotEmpty() },
-          title = obj.getString("title"),
-          subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
-          artist = obj.optString("artist").takeIf { it.isNotEmpty() },
-          albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
-          album = obj.optString("album").takeIf { it.isNotEmpty() },
-          artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
-          artworkSource = null, // Not persisted - will be re-transformed on browse
-          artworkCarPlayTinted = null, // iOS-only, not persisted
-          description = obj.optString("description").takeIf { it.isNotEmpty() },
-          genre = obj.optString("genre").takeIf { it.isNotEmpty() },
-          duration =
-            if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration") else null,
-          style =
-            obj
-              .optString("style")
-              .takeIf { it.isNotEmpty() }
-              ?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
-          childrenStyle =
-            obj
-              .optString("childrenStyle")
-              .takeIf { it.isNotEmpty() }
-              ?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
-          favorited =
-            if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
-            else null,
-          live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
-          // Not persisted: on resumption the contextual path is re-browsed
-          // (expandQueueFromContextualPath), which re-parses each track's request
-          // from the API's current response and re-caches it.
-          request = null,
-        )
-      }
-      .onFailure { e -> Timber.w(e, "Failed to parse persisted track JSON") }
-      .getOrNull()
-
   /**
    * Restores player settings from persisted state and returns the state for queue setup.
    *
@@ -252,6 +191,90 @@ class PlaybackStateStore(private val player: Player) {
   }
 
   companion object {
+    // Internal (not private) so the round-trip is testable without a Player.
+    internal fun trackToJson(track: Track): String =
+      JSONObject()
+        .apply {
+          put("id", track.id)
+          put("path", track.path)
+          put("src", track.src)
+          put("title", track.title)
+          put("subtitle", track.subtitle)
+          put("artist", track.artist)
+          put("albumPath", track.albumPath)
+          put("album", track.album)
+          put("artwork", track.artwork?.url)
+          put("description", track.description)
+          put("genre", track.genre)
+          put("duration", track.duration)
+          // The style block persists as its wire shape (nested object, wire
+          // strings) and `disabled` beside it: a restored queue keeps its
+          // visible fidelity across process death (ADR 0011).
+          put(
+            "style",
+            track.style?.let { style ->
+              JSONObject().apply {
+                put("display", style.display?.toWireString())
+                put("artworkRendering", style.artworkRendering?.toWireString())
+              }
+            },
+          )
+          put("disabled", track.disabled)
+          put("favorited", track.favorited)
+          put("live", track.live)
+        }
+        .toString()
+
+    internal fun trackFromJson(json: String): Track? =
+      runCatching {
+          val obj = JSONObject(json)
+          Track(
+            id = obj.optString("id").takeIf { it.isNotEmpty() },
+            path = obj.optString("path").takeIf { it.isNotEmpty() },
+            src = obj.optString("src").takeIf { it.isNotEmpty() },
+            title = obj.getString("title"),
+            subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
+            artist = obj.optString("artist").takeIf { it.isNotEmpty() },
+            albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
+            album = obj.optString("album").takeIf { it.isNotEmpty() },
+            artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
+            artworkSource = null, // Not persisted - will be re-transformed on browse
+            description = obj.optString("description").takeIf { it.isNotEmpty() },
+            genre = obj.optString("genre").takeIf { it.isNotEmpty() },
+            duration =
+              if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration")
+              else null,
+            // Tolerant (ADR 0011): a snapshot written before the block model —
+            // `style` as an enum-name string — is not an object, so optJSONObject
+            // yields null and the track restores without a declaration.
+            style =
+              obj
+                .optJSONObject("style")
+                ?.let { style ->
+                  TrackStyle(
+                    display = style.optString("display").toStyleDisplay(),
+                    artworkRendering = style.optString("artworkRendering").toArtworkRendering(),
+                  )
+                }
+                // An empty block collapses to "no declaration" — one shape on
+                // every platform, matching the browse decoders.
+                ?.takeIf { it.display != null || it.artworkRendering != null },
+            disabled =
+              if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled")
+              else null,
+            favorited =
+              if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
+              else null,
+            live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
+            // Not persisted: on resumption the contextual path is re-browsed
+            // (expandQueueFromContextualPath), which re-parses each track's request
+            // from the API's current response and re-caches it.
+            request = null,
+          )
+        }
+        .onFailure { e -> Timber.w(e, "Failed to parse persisted track JSON") }
+        .getOrNull()
+
     private const val PREFS_NAME = "audio_browser_playback_state_v3"
     private const val KEY_POSITION_MS = "position_ms"
     private const val KEY_REPEAT_MODE = "repeat_mode"

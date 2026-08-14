@@ -5,40 +5,60 @@
 /// Copyright © Marc Rousavy @ Margelo
 ///
 
+import NitroModules
+
 /**
- * Represents the JS union `SectionStyle`, backed by a C++ enum.
+ * Represents an instance of `SectionStyle`, backed by a C++ struct.
  */
 public typealias SectionStyle = margelo.nitro.audiobrowser.SectionStyle
 
 public extension SectionStyle {
-  /**
-   * Get a SectionStyle for the given String value, or
-   * return `nil` if the given value was invalid/unknown.
-   */
-  init?(fromString string: String) {
-    switch string {
-      case "list":
-        self = .list
-      case "grid":
-        self = .grid
-      case "rail":
-        self = .rail
-      default:
-        return nil
-    }
-  }
+  private typealias bridge = margelo.nitro.audiobrowser.bridge.swift
 
   /**
-   * Get the String value this SectionStyle represents.
+   * Create a new instance of `SectionStyle`.
    */
-  var stringValue: String {
-    switch self {
-      case .list:
-        return "list"
-      case .grid:
-        return "grid"
-      case .rail:
-        return "rail"
-    }
+  init(gridWrap: Bool?, display: StyleDisplay?, artworkRendering: ArtworkRendering?) {
+    self.init({ () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = gridWrap {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_StyleDisplay_ in
+      if let __unwrappedValue = display {
+        return bridge.create_std__optional_StyleDisplay_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ArtworkRendering_ in
+      if let __unwrappedValue = artworkRendering {
+        return bridge.create_std__optional_ArtworkRendering_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
+  }
+
+  @inline(__always)
+  var gridWrap: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__gridWrap) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__gridWrap)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var display: StyleDisplay? {
+    return self.__display.value
+  }
+  
+  @inline(__always)
+  var artworkRendering: ArtworkRendering? {
+    return self.__artworkRendering.value
   }
 }

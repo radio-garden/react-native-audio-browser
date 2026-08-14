@@ -59,6 +59,12 @@ class TrackSelector {
     track: Track,
     player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
+    // A disabled track is unavailable — it never plays, whichever surface or
+    // stale resume path delivered the selection (Track.disabled).
+    if track.disabled == true {
+      return .none
+    }
+
     let path = track.path
 
     // 1. Contextual path (playable-only track with queue context)

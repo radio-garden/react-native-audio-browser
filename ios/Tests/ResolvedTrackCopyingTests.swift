@@ -8,13 +8,13 @@ private func makeResolvedTrack(
 ) -> ResolvedTrack {
   ResolvedTrack(
     path: path,
+    style: nil,
     sections: nil,
     children: nil,
     carPlaySiriListButton: nil,
     src: nil,
     artwork: nil,
     artworkSource: nil,
-    artworkCarPlayTinted: nil,
     title: title,
     subtitle: nil,
     artist: nil,
@@ -22,8 +22,7 @@ private func makeResolvedTrack(
     description: nil,
     genre: nil,
     duration: nil,
-    style: nil,
-    childrenStyle: nil,
+    disabled: nil,
     favorited: nil,
     live: nil,
   )
@@ -32,6 +31,7 @@ private func makeResolvedTrack(
 private func makeFullResolvedTrack() -> ResolvedTrack {
   ResolvedTrack(
     path: "/original",
+    style: SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil),
     sections: [Section(title: "Group A", subtitle: nil, style: nil, path: nil, children: [])],
     children: [Track(id: "t1", path: "/t1")],
     carPlaySiriListButton: .top,
@@ -39,7 +39,6 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     src: "src.mp3",
     artwork: .first("art.jpg"),
     artworkSource: ImageSource(uri: "resolved-art.jpg"),
-    artworkCarPlayTinted: true,
     title: "Original Title",
     subtitle: "Original Subtitle",
     artist: "Original Artist",
@@ -47,8 +46,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     description: "Original Description",
     genre: "Rock",
     duration: 180.0,
-    style: .list,
-    childrenStyle: .grid,
+    disabled: false,
     favorited: true,
     live: false,
   )
@@ -133,8 +131,14 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 
 @Test func copyingOverridesStyle() {
   let original = makeResolvedTrack()
-  let copy = original.copying(style: .grid)
-  #expect(copy.style == .grid)
+  let copy = original.copying(style: SectionStyle(gridWrap: nil, display: .grid, artworkRendering: nil))
+  #expect(copy.style?.display == .grid)
+}
+
+@Test func copyingOverridesDisabled() {
+  let original = makeResolvedTrack()
+  let copy = original.copying(disabled: true)
+  #expect(copy.disabled == true)
 }
 
 @Test func copyingOverridesFavorited() {
@@ -236,15 +240,14 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.src == "src.mp3")
   #expect(copy.artwork?.url == "art.jpg")
   #expect(copy.artworkSource == ImageSource(uri: "resolved-art.jpg"))
-  #expect(copy.artworkCarPlayTinted == true)
   #expect(copy.subtitle == "Original Subtitle")
   #expect(copy.artist == "Original Artist")
   #expect(copy.album == "Original Album")
   #expect(copy.description == "Original Description")
   #expect(copy.genre == "Rock")
   #expect(copy.duration == 180.0)
-  #expect(copy.style == .list)
-  #expect(copy.childrenStyle == .grid)
+  #expect(copy.style == SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil))
+  #expect(copy.disabled == false)
   #expect(copy.favorited == true)
   #expect(copy.sections?.first?.title == "Group A")
   #expect(copy.live == false)

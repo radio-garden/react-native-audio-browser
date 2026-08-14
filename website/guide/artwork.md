@@ -31,14 +31,14 @@ function Cover() {
 
 The library publishes art to several surfaces; each gets its image from a field/config and (where the surface knows its display size) a size hint:
 
-| Surface                                         | Image from                                    | Size hint | Tinting                                                      |
-| ----------------------------------------------- | --------------------------------------------- | --------- | ------------------------------------------------------------ |
-| **Browse rows / tabs** (CarPlay / Android Auto) | `artwork` (per-route override allowed)        | no        | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
-| **In-app `<Image>`**                            | `artworkSource` (output)                      | no        | your UI                                                      |
-| **iOS lock screen / Control Center**            | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                            |
-| **CarPlay Now Playing**                         | `nowPlayingArtwork` → `artwork`               | yes       | —                                                            |
-| **Android notification / Android Auto**         | `nowPlayingArtwork` → `artwork`               | yes       | — (Android Auto is dark-only)                                |
-| **CarPlay tile sections** (`grid` / `rail`)     | `artwork` (each tile is a Track)              | yes       | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
+| Surface                                         | Image from                                    | Size hint | Tinting                                                                        |
+| ----------------------------------------------- | --------------------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| **Browse rows / tabs** (CarPlay / Android Auto) | `artwork` (per-route override allowed)        | no        | CarPlay: `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair |
+| **In-app `<Image>`**                            | `artworkSource` (output)                      | no        | your UI                                                                        |
+| **iOS lock screen / Control Center**            | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                                              |
+| **CarPlay Now Playing**                         | `nowPlayingArtwork` → `artwork`               | yes       | —                                                                              |
+| **Android notification / Android Auto**         | `nowPlayingArtwork` → `artwork`               | yes       | — (Android Auto is dark-only)                                                  |
+| **CarPlay tile sections** (`display: 'grid'`)   | `artwork` (each tile is a Track)              | yes       | CarPlay: `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair |
 
 **Size hint** = the surface tells the library the pixels it needs, delivered as an [`ImageContext`](/api/types/browser/#imagecontext) to your `transform` / `imageQueryParams`. Browse-time resolution has none.
 
@@ -46,7 +46,7 @@ Two things to take from the table:
 
 - **One image by default.** With only `artwork` set, the same source feeds browse rows _and_ every now-playing surface. Set `nowPlayingArtwork` only when the now-playing image should differ (a larger, lock-screen-quality cover without bloating list thumbnails).
 - **Size hints exist only where the surface knows its size.** Browse-time resolution has no size, so `imageQueryParams` and `context` (below) do nothing there; they kick in at load time on CarPlay / Android Auto / now-playing.
-- **Tinting is for browse icons only.** `artworkCarPlayTinted` is applied when CarPlay renders browse content — list rows, tabs, and tiles — not to now-playing cover art.
+- **Tinting is for browse icons only.** `artworkRendering: 'stencil'` is applied when CarPlay renders browse content — list rows, tabs, and tiles — not to now-playing cover art.
 
 ## The transform pipeline
 
@@ -134,15 +134,15 @@ On CarPlay, an SF Symbol with **no explicit colors** is handed to CarPlay untint
 
 For monochrome **icons** (not full-color album art), let the system tint them to stay legible on either appearance:
 
-- **iOS CarPlay** — set [`artworkCarPlayTinted: true`](/api/types/browser-nodes/#track) on the track. CarPlay tints it per appearance: black in light mode, white in dark.
-- **Android Auto** is dark-only, so there's no per-appearance tinting — ship an appropriately colored (e.g. white) icon. An `android.resource://…/drawable/…` artwork URI is auto-detected and opted into Android Auto's **category** content style (which adds icon margins and lets Android Auto render it as an icon). The library only sets the category style; the visual treatment is Android Auto's — see [Browse display](/guide/android-auto#browse-display).
+- **iOS CarPlay** — declare [`style: { artworkRendering: 'stencil' }`](/api/types/browser-nodes/#trackstyle) on the track. Inside a page it's an inherited style property (a section- or page-wide value covers every item); tabs render without a section context, so a tab icon needs the declaration on the tab track itself. CarPlay tints the glyph per appearance: black in light mode, white in dark.
+- **Android Auto** is dark-only, so there's no per-appearance tinting — ship an appropriately colored (e.g. white) icon. Wherever a display hint is emitted (a declared section/page/promise `display`), an `android.resource://…/drawable/…` artwork URI selects Android Auto's **category** variant of that hint (which adds icon margins and lets Android Auto render it as an icon). The library only sets the category style; the visual treatment is Android Auto's — see [Browse display](/guide/android-auto#browse-display).
 
 ```ts
 {
   title: 'Settings',
   path: '/settings',
   artwork: 'sf:gear',
-  artworkCarPlayTinted: true
+  style: { artworkRendering: 'stencil' }
 }
 ```
 
@@ -177,7 +177,7 @@ Everywhere a single image is required, a pair resolves to its `dark` URL:
 | **`artworkSource`** (your own `<Image>`) | `dark`                        |
 
 ::: tip Pair or tint?
-Prefer [`artworkCarPlayTinted`](#tinting-and-platform-icons) when recoloring the same shape gives the right result: it's one fetch instead of two, the variants can't drift apart, and it works from the image's alpha so the source color is irrelevant. Reach for a pair only when the appearances need different artwork.
+Prefer [`artworkRendering: 'stencil'`](#tinting-and-platform-icons) when recoloring the same shape gives the right result: it's one fetch instead of two, the variants can't drift apart, and it works from the image's alpha so the source color is irrelevant. Reach for a pair only when the appearances need different artwork.
 :::
 
 ::: warning Android Auto fetches only `http(s)` artwork
@@ -214,7 +214,7 @@ Now-playing artwork is resolved **once per active track**, keyed on its `id` —
 
 ## Tile sections
 
-A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by setting `style: 'grid'` (wrapping) or `style: 'rail'` (a single line — formerly the image row):
+A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by declaring `style: { display: 'grid' }` (wrapping; add `gridWrap: false` for a single line — the teaser shelf):
 
 ```ts
 {
@@ -223,7 +223,7 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
   sections: [
     {
       title: 'Featured',
-      style: 'rail',
+      style: { display: 'grid', gridWrap: false },
       path: '/browse/featured', // header / "view all" target
       children: [
         { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
@@ -234,18 +234,18 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
 }
 ```
 
-Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a `rail` shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a `grid` wraps on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both tile styles identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
+Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a single-line grid (`gridWrap: false`) shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a wrapping grid takes as many lines as it needs on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
 
 ## API summary
 
-| Symbol                                                          | Purpose                                                                               |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [`Track.artwork`](/api/types/browser-nodes/#track)              | The image you set — `https` URL, `sf:` symbol (iOS), or platform URI.                 |
-| [`Track.artworkSource`](/api/types/browser-nodes/#track)        | Output-only resolved `ImageSource` for your own `<Image>`.                            |
-| [`Track.artworkCarPlayTinted`](/api/types/browser-nodes/#track) | Tint a monochrome icon per CarPlay light/dark (iOS only).                             |
-| [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants)  | A `{ light, dark }` pair set on `artwork` when the appearances need different images. |
-| [`artwork`](/api/types/browser/#artworkrequestconfig)           | Config for browse-row image requests (and the default everywhere).                    |
-| `nowPlayingArtwork`                                             | Separate config for now-playing art; supports `{id}`; native-only.                    |
-| [`imageQueryParams`](/api/types/browser/#imagequeryparams)      | Map the surface's requested size to your CDN's query params.                          |
-| [`ImageContext`](/api/types/browser/#imagecontext)              | Requested `width`/`height` in pixels, passed to `transform`.                          |
-| [`Section.style`](/api/types/browser-nodes/#sectionstyle)       | `'grid'` / `'rail'` render a section's tracks as artwork tiles.                       |
+| Symbol                                                                | Purpose                                                                               |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [`Track.artwork`](/api/types/browser-nodes/#track)                    | The image you set — `https` URL, `sf:` symbol (iOS), or platform URI.                 |
+| [`Track.artworkSource`](/api/types/browser-nodes/#track)              | Output-only resolved `ImageSource` for your own `<Image>`.                            |
+| [`TrackStyle.artworkRendering`](/api/types/browser-nodes/#trackstyle) | `'stencil'` tints a monochrome icon per CarPlay light/dark (iOS only).                |
+| [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants)        | A `{ light, dark }` pair set on `artwork` when the appearances need different images. |
+| [`artwork`](/api/types/browser/#artworkrequestconfig)                 | Config for browse-row image requests (and the default everywhere).                    |
+| `nowPlayingArtwork`                                                   | Separate config for now-playing art; supports `{id}`; native-only.                    |
+| [`imageQueryParams`](/api/types/browser/#imagequeryparams)            | Map the surface's requested size to your CDN's query params.                          |
+| [`ImageContext`](/api/types/browser/#imagecontext)                    | Requested `width`/`height` in pixels, passed to `transform`.                          |
+| [`Section.style`](/api/types/browser-nodes/#sectionstyle)             | `display: 'grid'` (± `gridWrap: false`) renders a section's tracks as artwork tiles.  |

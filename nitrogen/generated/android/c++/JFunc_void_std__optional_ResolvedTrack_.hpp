@@ -16,11 +16,15 @@
 #include <NitroModules/JNICallable.hpp>
 #include "JResolvedTrack.hpp"
 #include <string>
+#include "SectionStyle.hpp"
+#include "JSectionStyle.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
 #include "Section.hpp"
 #include <vector>
 #include "JSection.hpp"
-#include "SectionStyle.hpp"
-#include "JSectionStyle.hpp"
 #include "Track.hpp"
 #include "JTrack.hpp"
 #include "ArtworkVariants.hpp"

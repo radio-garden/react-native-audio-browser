@@ -32,14 +32,16 @@
     var id: String?
     var path: String?
     var src: String?
+    var artwork: Variant_String_ArtworkVariants?
+    var artworkSource: ImageSource?
     var request: TrackRequest?
     var title: String = ""
     var artist: String?
     var albumPath: String?
     var album: String?
+    var style: TrackStyle?
+    var disabled: Bool?
     var live: Bool?
-    var artwork: Variant_String_ArtworkVariants?
-    var artworkSource: ImageSource?
   }
 
   struct TrackLoadEvent {
@@ -84,7 +86,7 @@
     var body: String?
   }
 
-  enum TrackStyle {
+  enum StyleDisplay: Equatable {
     case list
     case grid
 
@@ -97,19 +99,32 @@
     }
   }
 
-  enum SectionStyle {
-    case list
-    case grid
-    case rail
+  enum ArtworkRendering: Equatable {
+    case original
+    case stencil
 
     init?(fromString string: String) {
       switch string {
-      case "list": self = .list
-      case "grid": self = .grid
-      case "rail": self = .rail
+      case "original": self = .original
+      case "stencil": self = .stencil
       default: return nil
       }
     }
+  }
+
+  struct TrackStyle: Equatable {
+    var display: StyleDisplay?
+    var artworkRendering: ArtworkRendering?
+  }
+
+  // Member order matches the generated init (own properties before inherited
+  // ones — Nitro flattens `extends` own-props-first): the memberwise init this
+  // produces must accept the same argument order as the real type, or
+  // `swift test` passes while the app build breaks on argument order.
+  struct SectionStyle: Equatable {
+    var gridWrap: Bool?
+    var display: StyleDisplay?
+    var artworkRendering: ArtworkRendering?
   }
 
   struct Section: Equatable {
@@ -122,6 +137,7 @@
 
   struct ResolvedTrack: Equatable {
     var path: String
+    var style: SectionStyle?
     var sections: [Section]?
     var children: [Track]?
     var carPlaySiriListButton: CarPlaySiriListButtonPosition?
@@ -130,7 +146,6 @@
     var artwork: Variant_String_ArtworkVariants?
     var artworkSource: ImageSource?
     var request: TrackRequest?
-    var artworkCarPlayTinted: Bool?
     var title: String
     var subtitle: String?
     var artist: String?
@@ -139,8 +154,7 @@
     var description: String?
     var genre: String?
     var duration: Double?
-    var style: TrackStyle?
-    var childrenStyle: TrackStyle?
+    var disabled: Bool?
     var favorited: Bool?
     var live: Bool?
   }

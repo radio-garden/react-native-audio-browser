@@ -27,6 +27,7 @@ object TestFixtures {
     artist: String? = null,
     album: String? = null,
     favorited: Boolean? = null,
+    disabled: Boolean? = null,
   ) =
     Track(
       id = id,
@@ -35,7 +36,6 @@ object TestFixtures {
       artwork = artworkOf(artwork),
       artworkSource = null,
       request = null,
-      artworkCarPlayTinted = null,
       title = title,
       subtitle = null,
       artist = artist,
@@ -45,7 +45,7 @@ object TestFixtures {
       genre = null,
       duration = null,
       style = null,
-      childrenStyle = null,
+      disabled = disabled,
       favorited = favorited,
       live = null,
     )
@@ -117,7 +117,6 @@ object TestFixtures {
       artwork = artworkOf(artwork),
       artworkSource = artworkSource,
       request = null,
-      artworkCarPlayTinted = null,
       title = title,
       subtitle = null,
       artist = null,
@@ -127,7 +126,7 @@ object TestFixtures {
       genre = null,
       duration = null,
       style = null,
-      childrenStyle = null,
+      disabled = null,
       favorited = null,
       live = null,
     )
@@ -138,9 +137,11 @@ object TestFixtures {
     title: String = "Container",
     children: Array<Track>? = null,
     sections: Array<Section>? = null,
+    style: SectionStyle? = null,
   ) =
     ResolvedTrack(
       path = path,
+      style = style,
       sections = sections,
       children = children,
       carPlaySiriListButton = null,
@@ -149,7 +150,6 @@ object TestFixtures {
       artwork = null,
       artworkSource = null,
       request = null,
-      artworkCarPlayTinted = null,
       title = title,
       subtitle = null,
       artist = null,
@@ -158,8 +158,7 @@ object TestFixtures {
       description = null,
       genre = null,
       duration = null,
-      style = null,
-      childrenStyle = null,
+      disabled = null,
       favorited = null,
       live = null,
     )

@@ -121,18 +121,21 @@ export function fetchCollections(prefix = '/archive'): ResolvedTrack {
   return {
     path: prefix,
     title: 'Archive.org Media',
+    // The page block declares the layout for the whole page. A child's own
+    // `display` would be the promise for the page IT opens (ADR 0011), so
+    // only Folksoundomy — a genuinely grid page — declares one.
+    style: { display: 'grid' },
     children: [
       {
         title: 'LibriVox Audiobooks',
         path: `${prefix}/collection/librivoxaudio`,
-        artwork: `${BASE}/services/img/librivoxaudio`,
-        style: 'grid' as const
+        artwork: `${BASE}/services/img/librivoxaudio`
       },
       {
         title: 'Folksoundomy',
         path: `${prefix}/folksoundomy`,
         artwork: `${BASE}/services/img/folksoundomy`,
-        style: 'grid' as const
+        style: { display: 'grid' as const }
       }
     ]
   }
@@ -179,11 +182,11 @@ export async function fetchFolksoundomy(
   return {
     path: `${prefix}/folksoundomy`,
     title: 'Folksoundomy',
+    style: { display: 'grid' },
     children: sorted.map((doc) => ({
       title: doc.title ?? doc.identifier,
       path: `${prefix}/collection/${doc.identifier}`,
-      artwork: `${BASE}/services/img/${doc.identifier}`,
-      style: 'grid' as const
+      artwork: `${BASE}/services/img/${doc.identifier}`
     }))
   }
 }
@@ -260,7 +263,7 @@ export async function fetchItem(
   }
 }
 
-// Curated landing page: one rail section per collection, each filled
+// Curated landing page: one teaser-shelf section per collection, each filled
 // with that collection's top items (tap a tile → that item's tracks).
 const HOME_ROWS: { title: string; id: string }[] = [
   { title: 'LibriVox', id: 'librivoxaudio' },
@@ -311,7 +314,7 @@ export async function fetchHome(prefix = '/archive'): Promise<ResolvedTrack> {
       if (children.length === 0) return null
       return {
         title: row.title,
-        style: 'rail',
+        style: { display: 'grid', gridWrap: false },
         path: `${prefix}/collection/${row.id}`,
         children
       }
@@ -335,7 +338,7 @@ export const archiveRoutes: Record<string, BrowserSource> = {
 
 export const archiveLibrarySection: Section = {
   title: 'Archive.org',
-  style: 'rail',
+  style: { display: 'grid', gridWrap: false },
   path: '/archive',
   children: [
     {

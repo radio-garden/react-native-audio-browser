@@ -71,9 +71,9 @@ export function TrackListItem({
 }
 
 /**
- * A tile-styled section (`rail` / `grid`): header (tap → section.path)
- * above a horizontal scroller of artwork tiles — the app-UI rendering of the
- * section styles CarPlay maps to image rows.
+ * A grid-displayed section (`style: { display: 'grid' }`): header (tap →
+ * section.path) above a horizontal scroller of artwork tiles — the app-UI
+ * rendering of the layouts CarPlay maps to image rows.
  */
 export function SectionTileRow({ section }: { section: Section }) {
   return (

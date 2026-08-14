@@ -121,18 +121,22 @@ export function fetchCollections(prefix = '/archive'): ResolvedTrack {
   return {
     path: prefix,
     title: 'Archive',
+    // The page block declares the layout for the whole page. A child's own
+    // `display` is the promise for the page IT opens (ADR 0011) — declared
+    // only where that page really is a grid: Folksoundomy resolves to grid
+    // sections, the LibriVox collection to a plain episode list.
+    style: { display: 'grid' },
     children: [
       {
         title: 'LibriVox Audiobooks',
         path: `${prefix}/collection/librivoxaudio`,
-        artwork: `${BASE}/services/img/librivoxaudio`,
-        style: 'grid' as const
+        artwork: `${BASE}/services/img/librivoxaudio`
       },
       {
         title: 'Folksoundomy',
         path: `${prefix}/folksoundomy`,
         artwork: `${BASE}/services/img/folksoundomy`,
-        style: 'grid' as const
+        style: { display: 'grid' as const }
       }
     ]
   }
@@ -184,7 +188,7 @@ export async function fetchFolksoundomy(
     sections: [
       {
         title: 'Collections',
-        style: 'grid',
+        style: { display: 'grid' },
         children: sorted.map((doc) => ({
           title: doc.title ?? doc.identifier,
           path: `${prefix}/collection/${doc.identifier}`,
@@ -276,7 +280,7 @@ export const archiveRoutes: Record<string, BrowserSource> = {
 
 export const archiveLibrarySection: Section = {
   title: 'Archive.org',
-  style: 'rail',
+  style: { display: 'grid', gridWrap: false },
   path: '/archive',
   children: [
     {

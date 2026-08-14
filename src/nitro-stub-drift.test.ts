@@ -234,4 +234,44 @@ describe('NitroTypeStubs mirror the generated Nitro types', () => {
         drift.join('\n')
     ).toEqual([])
   })
+
+  it('declares struct members in the generated initializer order', () => {
+    // Name/type parity is not enough: the stub struct's memberwise init must
+    // accept the same ARGUMENT ORDER as the generated labelled init, or shared
+    // sources compile under `swift test` and fail in the app build with
+    // "argument 'x' must precede argument 'y'" (nitrogen flattens `extends`
+    // own-properties-first, which is easy to get backwards — SectionStyle did).
+    // A stub may omit members; the ones it declares must be a subsequence of
+    // the generated order.
+    const misordered: string[] = []
+
+    for (const [name, stub] of stubs) {
+      if (name in NOT_GENERATED || stub.kind !== 'struct') continue
+      const real = parseGenerated(name)
+      if (real == null || real.kind !== 'struct') continue
+
+      const realOrder = [...real.members.keys()]
+      const stubOrder = [...stub.members.keys()].filter((member) =>
+        real.members.has(member)
+      )
+      let cursor = -1
+      for (const member of stubOrder) {
+        const index = realOrder.indexOf(member)
+        if (index < cursor) {
+          misordered.push(
+            `${name}: stub declares [${stubOrder.join(', ')}], ` +
+              `generated init order is [${realOrder.join(', ')}]`
+          )
+          break
+        }
+        cursor = index
+      }
+    }
+
+    expect(
+      misordered,
+      `Stub struct members are out of order relative to the generated init:\n` +
+        misordered.join('\n')
+    ).toEqual([])
+  })
 })

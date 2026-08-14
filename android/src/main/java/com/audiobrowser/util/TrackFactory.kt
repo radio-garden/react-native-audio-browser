@@ -9,6 +9,7 @@ import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackStyle
 
 /**
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
@@ -25,7 +26,10 @@ object TrackFactory {
 
   /**
    * A synthetic browsable Track for a section's "view all" surface — the section has a path, title,
-   * and label, but no Track (ADR 0010).
+   * and label, but no Track (ADR 0010). It carries the section's declared item block as its own,
+   * `display` included: the section's declaration about this content's layout is the only declared
+   * promise the "view all" page can ever have (there is no consumer-authored handle to declare one
+   * on), and without it Android Auto would always render that page as a list.
    */
   fun navigationTrack(section: Section): Track =
     Track(
@@ -35,7 +39,6 @@ object TrackFactory {
       artwork = null,
       artworkSource = null,
       request = null,
-      artworkCarPlayTinted = null,
       title = section.title ?: "",
       subtitle = section.subtitle,
       artist = null,
@@ -44,8 +47,11 @@ object TrackFactory {
       description = null,
       genre = null,
       duration = null,
-      style = null,
-      childrenStyle = null,
+      style =
+        section.style?.let {
+          TrackStyle(display = it.display, artworkRendering = it.artworkRendering)
+        },
+      disabled = null,
       favorited = null,
       live = null,
     )

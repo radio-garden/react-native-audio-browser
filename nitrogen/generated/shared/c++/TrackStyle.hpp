@@ -7,11 +7,6 @@
 
 #pragma once
 
-#if __has_include(<NitroModules/NitroHash.hpp>)
-#include <NitroModules/NitroHash.hpp>
-#else
-#error NitroModules cannot be found! Are you sure you installed NitroModules properly?
-#endif
 #if __has_include(<NitroModules/JSIConverter.hpp>)
 #include <NitroModules/JSIConverter.hpp>
 #else
@@ -22,54 +17,75 @@
 #else
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
+#if __has_include(<NitroModules/JSIHelpers.hpp>)
+#include <NitroModules/JSIHelpers.hpp>
+#else
+#error NitroModules cannot be found! Are you sure you installed NitroModules properly?
+#endif
+#if __has_include(<NitroModules/PropNameIDCache.hpp>)
+#include <NitroModules/PropNameIDCache.hpp>
+#else
+#error NitroModules cannot be found! Are you sure you installed NitroModules properly?
+#endif
+
+// Forward declaration of `StyleDisplay` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
+// Forward declaration of `ArtworkRendering` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
+
+#include "StyleDisplay.hpp"
+#include <optional>
+#include "ArtworkRendering.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
   /**
-   * An enum which can be represented as a JavaScript union (TrackStyle).
+   * A struct which can be represented as a JavaScript object (TrackStyle).
    */
-  enum class TrackStyle {
-    LIST      SWIFT_NAME(list) = 0,
-    GRID      SWIFT_NAME(grid) = 1,
-  } CLOSED_ENUM;
+  struct TrackStyle final {
+  public:
+    std::optional<StyleDisplay> display     SWIFT_PRIVATE;
+    std::optional<ArtworkRendering> artworkRendering     SWIFT_PRIVATE;
+
+  public:
+    TrackStyle() = default;
+    explicit TrackStyle(std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering): display(display), artworkRendering(artworkRendering) {}
+
+  public:
+    friend bool operator==(const TrackStyle& lhs, const TrackStyle& rhs) = default;
+  };
 
 } // namespace margelo::nitro::audiobrowser
 
 namespace margelo::nitro {
 
-  // C++ TrackStyle <> JS TrackStyle (union)
+  // C++ TrackStyle <> JS TrackStyle (object)
   template <>
   struct JSIConverter<margelo::nitro::audiobrowser::TrackStyle> final {
     static inline margelo::nitro::audiobrowser::TrackStyle fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
-      std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
-      switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("list"): return margelo::nitro::audiobrowser::TrackStyle::LIST;
-        case hashString("grid"): return margelo::nitro::audiobrowser::TrackStyle::GRID;
-        default: [[unlikely]]
-          throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum TrackStyle - invalid value!");
-      }
+      jsi::Object obj = arg.asObject(runtime);
+      return margelo::nitro::audiobrowser::TrackStyle(
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))
+      );
     }
-    static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::TrackStyle arg) {
-      switch (arg) {
-        case margelo::nitro::audiobrowser::TrackStyle::LIST: return JSIConverter<std::string>::toJSI(runtime, "list");
-        case margelo::nitro::audiobrowser::TrackStyle::GRID: return JSIConverter<std::string>::toJSI(runtime, "grid");
-        default: [[unlikely]]
-          throw std::invalid_argument("Cannot convert TrackStyle to JS - invalid value: "
-                                    + std::to_string(static_cast<int>(arg)) + "!");
-      }
+    static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::TrackStyle& arg) {
+      jsi::Object obj(runtime);
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "display"), JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::toJSI(runtime, arg.display));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::toJSI(runtime, arg.artworkRendering));
+      return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
-      if (!value.isString()) {
+      if (!value.isObject()) {
         return false;
       }
-      std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
-      switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("list"):
-        case hashString("grid"):
-          return true;
-        default:
-          return false;
+      jsi::Object obj = value.getObject(runtime);
+      if (!nitro::isPlainObject(runtime, obj)) {
+        return false;
       }
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))) return false;
+      return true;
     }
   };
 

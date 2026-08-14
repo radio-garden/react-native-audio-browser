@@ -18,6 +18,8 @@ namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `ArtworkRendering` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
 // Forward declaration of `ArtworkVariants` to properly resolve imports.
@@ -173,7 +175,7 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
+namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 // Forward declaration of `Section` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Section; }
 // Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
@@ -182,6 +184,8 @@ namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `StyleDisplay` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 // Forward declaration of `TimedMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
@@ -191,7 +195,7 @@ namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
 // Forward declaration of `TrackRequest` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
+namespace margelo::nitro::audiobrowser { struct TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
@@ -203,6 +207,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "AndroidOptions.hpp"
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
+#include "ArtworkRendering.hpp"
 #include "ArtworkRequestConfig.hpp"
 #include "ArtworkVariants.hpp"
 #include "BatteryOptimizationStatus.hpp"
@@ -285,6 +290,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
 #include "StallReason.hpp"
+#include "StyleDisplay.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"

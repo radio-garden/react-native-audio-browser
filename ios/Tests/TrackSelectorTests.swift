@@ -357,3 +357,47 @@ struct ContextualPathExpansionTests {
     #expect(loaded.src == trackSrc)
   }
 }
+
+// MARK: - Disabled Track
+
+@Suite("disabled track")
+@MainActor
+struct DisabledTrackTests {
+  @Test func disabledPlayable_returnsNone() async {
+    let (selector, browser, player) = makeSelector()
+    let track = Track(id: "t1", src: "https://example.com/a.mp3", disabled: true)
+    let result = await selector.select(track: track, player: player)
+    guard case .none = result else {
+      Issue.record("Expected .none for a disabled track, got \(result)")
+      return
+    }
+    // Refused outright: not even the JS load handler hears about it.
+    #expect(browser.trackLoadEvents.isEmpty)
+  }
+
+  @Test func disabledBrowsable_returnsNone() async {
+    // Unavailable means unavailable — a disabled browsable doesn't navigate
+    // either (the ladder grays or hides it; a delivered tap stays inert).
+    let (selector, _, player) = makeSelector()
+    let track = Track(id: "t1", path: "/gone", disabled: true)
+    let result = await selector.select(track: track, player: player)
+    guard case .none = result else {
+      Issue.record("Expected .none for a disabled browsable, got \(result)")
+      return
+    }
+  }
+
+  @Test func disabledContextual_neverExpands() async {
+    let (selector, browser, player) = makeSelector()
+    browser.expandQueueResult = (tracks: [Track(id: "a", src: "a")], selectedIndex: 0)
+    let track = Track(
+      id: "t1", path: "/home?__trackId=t1", src: "https://example.com/a.mp3", disabled: true,
+    )
+    let result = await selector.select(track: track, player: player)
+    guard case .none = result else {
+      Issue.record("Expected .none, got \(result)")
+      return
+    }
+    #expect(browser.expandedPaths.isEmpty)
+  }
+}

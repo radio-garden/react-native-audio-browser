@@ -3,6 +3,8 @@ package com.audiobrowser.browser
 import com.audiobrowser.TestFixtures.resolvedTrack
 import com.audiobrowser.TestFixtures.section
 import com.audiobrowser.TestFixtures.track
+import com.margelo.nitro.audiobrowser.SectionStyle
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -124,5 +126,44 @@ class SectionScopeTest {
   @Test
   fun `childless page has no sections`() {
     assertNull(resolvedTrack().normalizedSections)
+  }
+
+  // --- styleResolvedSections: the page->section fold (ADR 0011) ---
+
+  @Test
+  fun `an unstyled section reaches the surface with the page's block folded in`() {
+    // The end-to-end wire for ResolvedTrack.style: without this fold, the
+    // page tier is a dead field — every existing unit test would stay green
+    // while a whole tier of ADR 0011 went dark in production.
+    val page =
+      resolvedTrack(
+        style =
+          SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
+        sections = arrayOf(section(children = arrayOf(track(src = "a")))),
+      )
+
+    val folded = page.styleResolvedSections()!!.single()
+    assertEquals(StyleDisplay.GRID, folded.style?.display)
+    assertEquals(false, folded.style?.gridWrap)
+    // The extras leg of this wire — folded section → per-item grid hint — is
+    // asserted in MediaExtrasBuilderTest (it needs Robolectric for Bundle).
+  }
+
+  @Test
+  fun `a section's own block overrides the page's in the fold`() {
+    val page =
+      resolvedTrack(
+        style = SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
+        sections =
+          arrayOf(
+            section(
+              style =
+                SectionStyle(display = StyleDisplay.LIST, artworkRendering = null, gridWrap = null),
+              children = arrayOf(track(src = "a")),
+            )
+          ),
+      )
+
+    assertEquals(StyleDisplay.LIST, page.styleResolvedSections()!!.single().style?.display)
   }
 }

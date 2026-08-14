@@ -107,15 +107,15 @@ The declaration block of presentation properties carried by a **Track**, a **Sec
 _Avoid_: hint (the retired platform-prefix era), flag, option.
 
 **Inherited property**:
-A style property whose value flows to the items within a **Page** — track ?? section ?? page — unless a closer block declares its own (`imageShape`, `artworkRendering`, `accessorySymbol`, `cardTint`, `cardImage`). Admission test for any future one: "if set on a browsable parent, should its resolved descendants inherit it unless overridden?" Inheritance never crosses resolution.
+A style property whose value flows to the items within a **Page** — track ?? section ?? page — unless a closer block declares its own (`artworkRendering` today; `imageShape`, `accessorySymbol`, `cardTint`, `cardImage` are designed and land with their features). Admission test for any future one: "if set on a browsable parent, should its resolved descendants inherit it unless overridden?" Inheritance never crosses resolution.
 _Avoid_: cascading (CSS's cascade resolves competing declarations for one element — this model has no competing declarations, only inheritance and scope).
 
 **Container property**:
-A style property stating a fact about a container rather than its items (`display`, `gridWrap`, `gridTile`). Resolved by scope override, not inheritance: the **Page** declares for its whole scope, a **Section** overrides for its own children — two declarations about the same rendering decision at different widths, the narrower winning. `display` is positional: each holder describes its own children, never its descendants.
+A style property stating a fact about a container rather than its items (`gridWrap` today; `gridTile` is designed and lands with its feature). Resolved by scope override, not inheritance: the **Page** declares for its whole scope, a **Section** overrides for its own children — two declarations about the same rendering decision at different widths, the narrower winning. The positional `display` is its own third category — each holder describes its own children, never its descendants — but resolves between containers by the same scope override.
 _Avoid_: fallback (the section isn't missing anything), inherited (container properties never flow to items).
 
 **Disabled**:
-A content fact on a **Track**: the item is unavailable. A Disabled Track never plays from any surface — tap, auto-advance, voice selection, and queue expansion all skip it. Where a surface can draw unavailability it renders grayed and inert; where it can't, the Track is hidden — never a normal-looking dead control. A fact, not a **Style**: it travels on the Track.
+A content fact on a **Track**: the item is unavailable. A Disabled Track never plays through anything the library builds or refuses on its behalf — tap and voice selection are refused, queue expansion and search-built queues exclude it, resumption refuses it. A queue the consumer builds themselves (`setQueue`) is the consumer's own list — the library does not filter it. Where a surface can draw unavailability it renders grayed and inert; where it can't, the Track is hidden — never a normal-looking dead control. (App UIs render from the raw page and must honor the fact themselves.) A fact, not a **Style**: it travels on the Track.
 _Avoid_: grayed-out, hidden (renderings of the fact, not the fact), isEnabled (the platform knob it maps onto).
 
 ### Requests

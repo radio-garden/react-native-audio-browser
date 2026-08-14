@@ -56,3 +56,77 @@ struct JsonTrackArtworkTests {
     }
   }
 }
+
+// MARK: - Style blocks (ADR 0011)
+
+@Suite("JsonTrack.style")
+struct JsonStyleTests {
+  @Test func decodesABlockOntoTrackStyle() throws {
+    let json = Data(
+      """
+      {"title":"X","style":{"display":"grid","artworkRendering":"stencil"}}
+      """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    #expect(track.style?.display == .grid)
+    #expect(track.style?.artworkRendering == .stencil)
+  }
+
+  @Test func decodesABlockOntoSectionStyle() throws {
+    let json = Data(
+      """
+      {"path":"/home","title":"Home","sections":[
+        {"style":{"display":"grid","gridWrap":false},"children":[{"title":"C","src":"s"}]}
+      ]}
+      """.utf8)
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let style = resolved.sections?.first?.style
+    #expect(style?.display == .grid)
+    #expect(style?.gridWrap == false)
+  }
+
+  @Test func staleStringStyleDecodesAsNoDeclaration() throws {
+    // The retired string vocabulary must never kill the page (tolerant
+    // decoding, ADR 0011) — it decodes as an empty block.
+    let json = Data(
+      """
+      {"path":"/home","title":"Home","style":"rail","children":[
+        {"title":"C","src":"s","style":"grid"}
+      ]}
+      """.utf8)
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    #expect(resolved.style == nil)
+    #expect(resolved.children?.first?.style == nil)
+  }
+
+  @Test func unknownEnumValuesDecodeAsNoDeclaration() throws {
+    let json = Data(
+      """
+      {"title":"X","style":{"display":"carousel","artworkRendering":"embossed","gridWrap":"yes"}}
+      """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    // All-unknown declarations collapse to "no block" — one shape for "no
+    // declaration" on every platform.
+    #expect(track.style == nil)
+  }
+
+  @Test func decodesDisabled() throws {
+    let json = Data("""
+    {"title":"X","src":"s","disabled":true}
+    """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    #expect(track.disabled == true)
+  }
+
+  @Test func styleAndDisabledSurviveThePersistenceRoundTrip() throws {
+    // Restored queues keep their visible fidelity across process death.
+    let original = JsonTrack(
+      title: "X", src: "s",
+      style: JsonStyle(display: "grid", artworkRendering: "stencil"),
+      disabled: true,
+    )
+    let encoded = try JSONEncoder().encode(original)
+    let decoded = try JSONDecoder().decode(JsonTrack.self, from: encoded)
+    #expect(decoded.style == original.style)
+    #expect(decoded.disabled == true)
+  }
+}

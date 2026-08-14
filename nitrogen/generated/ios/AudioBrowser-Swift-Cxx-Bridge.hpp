@@ -18,6 +18,8 @@ namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `ArtworkRendering` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
 // Forward declaration of `ArtworkVariants` to properly resolve imports.
@@ -169,7 +171,7 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
+namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 // Forward declaration of `Section` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Section; }
 // Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
@@ -178,6 +180,8 @@ namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `StyleDisplay` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 // Forward declaration of `TimedMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
@@ -187,7 +191,7 @@ namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
 // Forward declaration of `TrackRequest` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
+namespace margelo::nitro::audiobrowser { struct TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
@@ -203,6 +207,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidOptions.hpp"
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
+#include "ArtworkRendering.hpp"
 #include "ArtworkRequestConfig.hpp"
 #include "ArtworkVariants.hpp"
 #include "BatteryOptimizationStatus.hpp"
@@ -283,6 +288,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
 #include "StallReason.hpp"
+#include "StyleDisplay.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
@@ -453,21 +459,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<bool>
-  /**
-   * Specialized version of `std::optional<bool>`.
-   */
-  using std__optional_bool_ = std::optional<bool>;
-  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
-    return std::optional<bool>(value);
-  }
-  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return optional.value();
-  }
-  
   // pragma MARK: std::optional<double>
   /**
    * Specialized version of `std::optional<double>`.
@@ -495,6 +486,51 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline TrackStyle get_std__optional_TrackStyle_(const std::optional<TrackStyle>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<StyleDisplay>
+  /**
+   * Specialized version of `std::optional<StyleDisplay>`.
+   */
+  using std__optional_StyleDisplay_ = std::optional<StyleDisplay>;
+  inline std::optional<StyleDisplay> create_std__optional_StyleDisplay_(const StyleDisplay& value) noexcept {
+    return std::optional<StyleDisplay>(value);
+  }
+  inline bool has_value_std__optional_StyleDisplay_(const std::optional<StyleDisplay>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline StyleDisplay get_std__optional_StyleDisplay_(const std::optional<StyleDisplay>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<ArtworkRendering>
+  /**
+   * Specialized version of `std::optional<ArtworkRendering>`.
+   */
+  using std__optional_ArtworkRendering_ = std::optional<ArtworkRendering>;
+  inline std::optional<ArtworkRendering> create_std__optional_ArtworkRendering_(const ArtworkRendering& value) noexcept {
+    return std::optional<ArtworkRendering>(value);
+  }
+  inline bool has_value_std__optional_ArtworkRendering_(const std::optional<ArtworkRendering>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ArtworkRendering get_std__optional_ArtworkRendering_(const std::optional<ArtworkRendering>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<bool>
+  /**
+   * Specialized version of `std::optional<bool>`.
+   */
+  using std__optional_bool_ = std::optional<bool>;
+  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
+    return std::optional<bool>(value);
+  }
+  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
     return optional.value();
   }
   
@@ -580,6 +616,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_std__exception_ptr_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<SectionStyle>
+  /**
+   * Specialized version of `std::optional<SectionStyle>`.
+   */
+  using std__optional_SectionStyle_ = std::optional<SectionStyle>;
+  inline std::optional<SectionStyle> create_std__optional_SectionStyle_(const SectionStyle& value) noexcept {
+    return std::optional<SectionStyle>(value);
+  }
+  inline bool has_value_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline SectionStyle get_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::optional<std::vector<Section>>
   /**
    * Specialized version of `std::optional<std::vector<Section>>`.
@@ -604,21 +655,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     std::vector<Section> vector;
     vector.reserve(size);
     return vector;
-  }
-  
-  // pragma MARK: std::optional<SectionStyle>
-  /**
-   * Specialized version of `std::optional<SectionStyle>`.
-   */
-  using std__optional_SectionStyle_ = std::optional<SectionStyle>;
-  inline std::optional<SectionStyle> create_std__optional_SectionStyle_(const SectionStyle& value) noexcept {
-    return std::optional<SectionStyle>(value);
-  }
-  inline bool has_value_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline SectionStyle get_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
-    return optional.value();
   }
   
   // pragma MARK: std::optional<CarPlaySiriListButtonPosition>

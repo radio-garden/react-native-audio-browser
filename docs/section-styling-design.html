@@ -147,15 +147,19 @@
       </div>
 
       <div class="status">
-        <strong>Status: decided design, not implemented.</strong> The branch
-        currently ships <code>style: 'list' | 'grid' | 'rail'</code> (string) on
-        Section and <code>style: 'list' | 'grid'</code> on Track. This document
-        specifies the successor: <code>style</code> becomes a
-        <em>declaration block</em> on both, with per-property inheritance. The
-        audit report's decisions panel has been amended to match; where any
-        residual wording disagrees, this document is the later word. Revised
-        after a three-review pass (API design, implementation feasibility,
-        coherence) — see §7/§8 for what the reviews changed.
+        <strong>Status: implemented (August 2026).</strong> The block model
+        ships: <code>style</code> is a <em>declaration block</em> on Track,
+        Section, and the resolved page, with per-property inheritance —
+        <code>display</code>, <code>gridWrap</code>, and
+        <code>artworkRendering</code> live; the remaining properties land with
+        their features (#125, #131, the card/condensed designs). The string
+        vocabulary, <code>'rail'</code>, <code>childrenStyle</code>, and
+        <code>artworkCarPlayTinted</code> are gone. Tracked in
+        <a
+          href="https://github.com/radio-garden/react-native-audio-browser/issues/132"
+          >#132</a
+        >. Where any residual wording disagrees, the shipped spec
+        (<code>src/types/browser-nodes.ts</code>) is the later word.
       </div>
 
       <h2>1. The model: style is a declaration block</h2>
@@ -1116,16 +1120,15 @@ interface ResolvedTrack extends Track {
           <code>gridWrap: false</code> as the scroller — intended usage).
         </li>
         <li>
-          <strong>Docs</strong>: CONTEXT.md — done: <strong>Style</strong>,
+          <strong>Docs</strong>: done — CONTEXT.md (<strong>Style</strong>,
           <strong>Page</strong>, <strong>Inherited property</strong>,
-          <strong>Container property</strong>, and
-          <strong>Disabled</strong> entries landed; the Section entry points at
-          the block; the Rail entry is deleted; the
-          <strong>Artwork</strong> entry names
-          <code>artworkRendering</code> (role word for library-defined,
-          passthrough keeps Apple's term). ADR 0010 amendment + ADR 0011: done.
-          Remaining: guides; issues #56, #131 (and the naming discussions in
-          #125/#126) updated to point here.
+          <strong>Container property</strong>, <strong>Disabled</strong>; the
+          Section entry points at the block; the Rail entry is deleted; the
+          <strong>Artwork</strong> entry names <code>artworkRendering</code>),
+          ADR 0010 amendment + ADR 0011, the guides (browser / android-auto /
+          artwork / track — including the handle-vs-page promise examples and
+          the AAOS whole-page caveat), and the tracker (#56, #125, #126, #131
+          reshaped to block names, #132 as the umbrella).
         </li>
         <li>
           <strong>Wire note</strong>: string styles never shipped in a release —
@@ -1142,13 +1145,16 @@ interface ResolvedTrack extends Track {
           fidelity across process death beats a smaller blob).
         </li>
         <li>
-          <strong>Spec-level tests</strong>: an inheritance-completeness test
+          <strong>Spec-level tests</strong>: the inheritance-completeness test
           (every <code>TrackStyle</code> key read by every platform resolver —
-          Nitro erases <code>extends</code>, so TS can't enforce this) and a
-          dev-mode inert-declaration diagnostic (warn when a declaration can
-          never render: <code>cardTint</code> with no card treatment in scope,
+          Nitro erases <code>extends</code>, so TS can't enforce this) shipped
+          as <code>src/style-resolution.test.ts</code>. The dev-mode
+          inert-declaration diagnostic (warn when a declaration can never
+          render: <code>cardTint</code> with no card treatment in scope,
           <code>gridWrap</code> on a list section) — the recovery for the
-          compile-time gating the block model deliberately gave up.
+          compile-time gating the block model deliberately gave up — is
+          <em>deferred</em>, tracked as an unchecked item on #132; what shipped
+          instead is the narrower promise-less all-grid page warning on Android.
         </li>
       </ol>
 
@@ -1175,10 +1181,10 @@ interface ResolvedTrack extends Track {
           render in that mode is part of the same lab check.
         </li>
         <li>
-          Nitrogen <code>extends</code>-flattening: verified conceptually (<code
-            >ResolvedTrack extends Track</code
-          >
-          ships), but confirm on the new structs at implementation.
+          Nitrogen <code>extends</code>-flattening: confirmed at implementation
+          — the flattened structs and the covariant
+          <code>ResolvedTrack.style: SectionStyle</code> override both generate
+          cleanly.
         </li>
 
         <li>

@@ -56,16 +56,19 @@ final class CarPlayImageLoader {
   /// Loads artwork for a track with size context, using the artwork transform if configured.
   /// - Parameters:
   ///   - track: The track to load artwork for
+  ///   - style: The track's resolved style block (inherited values folded in).
+  ///     nil = the track's own declaration — callers without a section context
+  ///     (tabs, now-playing) have no inheritance to resolve.
   ///   - size: The target size in points (will be multiplied by CarPlay display scale)
   ///   - completion: Called with the loaded image, or nil on failure
-  func loadArtwork(for track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
+  func loadArtwork(for track: Track, style: TrackStyle? = nil, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
     // A track that ships one image per appearance is loaded as two ordinary
     // single-URL loads and combined below. Recursing rather than branching
     // inside the loader means each variant still goes through the whole
     // pipeline — route config, headers, SVG rasterising, the resolve transform
     // — instead of a second, thinner fetch path that would drift from it.
     if let variants = track.artwork?.variants {
-      loadVariants(for: track, variants: variants, size: size, completion: completion)
+      loadVariants(for: track, style: style, variants: variants, size: size, completion: completion)
       return
     }
 
@@ -83,7 +86,7 @@ final class CarPlayImageLoader {
       let action = await CarPlayArtworkResolver.resolve(
         artwork: track.artwork?.url,
         artworkSourceUri: track.artworkSource?.uri,
-        artworkCarPlayTinted: track.artworkCarPlayTinted,
+        stencil: (style ?? track.style)?.artworkRendering == .stencil,
         targetWidth: Double(size.width),
         targetHeight: Double(size.height),
         displayScale: Double(self.carTraitCollection.displayScale),
@@ -121,13 +124,18 @@ final class CarPlayImageLoader {
   /// beats an empty slot, and this is usually a transient fetch failure.
   private func loadVariants(
     for track: Track,
+    style: TrackStyle?,
     variants: ArtworkVariants,
     size: CGSize,
     completion: @escaping @Sendable (UIImage?) -> Void,
   ) {
     Task {
-      async let light = self.loadArtworkAsync(for: track.copying(artwork: .some(.first(variants.light))), size: size)
-      async let dark = self.loadArtworkAsync(for: track.copying(artwork: .some(.first(variants.dark))), size: size)
+      async let light = self.loadArtworkAsync(
+        for: track.copying(artwork: .some(.first(variants.light))), style: style, size: size,
+      )
+      async let dark = self.loadArtworkAsync(
+        for: track.copying(artwork: .some(.first(variants.dark))), style: style, size: size,
+      )
       let (lightImage, darkImage) = await (light, dark)
 
       guard let lightImage, let darkImage else {
@@ -143,9 +151,9 @@ final class CarPlayImageLoader {
   }
 
   /// `loadArtwork` as an awaitable, so the two variants can load concurrently.
-  private func loadArtworkAsync(for track: Track, size: CGSize) async -> UIImage? {
+  private func loadArtworkAsync(for track: Track, style: TrackStyle?, size: CGSize) async -> UIImage? {
     await withCheckedContinuation { continuation in
-      self.loadArtwork(for: track, size: size) { image in
+      self.loadArtwork(for: track, style: style, size: size) { image in
         continuation.resume(returning: image)
       }
     }

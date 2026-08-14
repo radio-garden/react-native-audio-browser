@@ -1,6 +1,119 @@
 import type { CarPlaySiriListButtonPosition, HttpMethod } from './browser'
 
-export type TrackStyle = 'list' | 'grid'
+/**
+ * How a holder's *children* lay out — CSS's inner display type, honored
+ * literally (`display: 'grid'` in CSS describes the children, not the
+ * element).
+ *
+ * - `'list'` (default) — full-width rows on every surface.
+ * - `'grid'` — artwork tiles; wraps unless {@link SectionStyle.gridWrap}
+ *   is `false`. Tiles presume artwork: an artwork-less child renders a
+ *   placeholder tile plus its title. On CarPlay a *wrapping* grid needs
+ *   iOS 26+ and renders a list before that; a single-line grid renders
+ *   on every OS.
+ */
+export type StyleDisplay = 'list' | 'grid'
+
+/**
+ * How a track's artwork is rendered.
+ *
+ * - `'original'` (default) — drawn as-is.
+ * - `'stencil'` — treated as a monochrome glyph and tinted to the
+ *   surface's appearance (black in light mode, white in dark). For
+ *   monochrome logos and icons; full-color artwork should stay
+ *   `'original'`.
+ */
+export type ArtworkRendering = 'original' | 'stencil'
+
+/**
+ * The style declaration block a {@link Track} may carry: *inherited item
+ * properties* (resolved `track ?? section ?? page ?? default`, per
+ * property — they travel with the track) plus the *positional*
+ * {@link TrackStyle.display} (each holder's own children; never
+ * inherited).
+ *
+ * Rules governing every property:
+ *
+ * - **Declarations are aspirational.** Each surface renders the
+ *   properties it understands and ignores the rest — inert, never an
+ *   error.
+ * - **Presentation only.** No style property affects queue scope,
+ *   playback, or navigation: rendering may truncate what is visible, it
+ *   never changes what plays. (This is why {@link Track.disabled} is NOT
+ *   here — it carries behavior, so it lives on Track as a content fact.)
+ * - **The inheritance boundary**: a handle's block styles the handle; a
+ *   page's block is inherited by the page's descendants; nothing
+ *   inherits across resolution.
+ */
+export interface TrackStyle {
+  /**
+   * How this entity's *children* lay out. The meaning is uniform at
+   * every position; only the children differ:
+   *
+   * - On a {@link Section}: the section's children.
+   * - On a resolved page ({@link ResolvedTrack.style}): the declaration
+   *   for the whole page — a section overrides it for its own children.
+   * - On a browsable {@link Track} (the handle): the layout *promise*
+   *   for the page it opens — consumed by Android Auto's parent-level
+   *   content-style hint, the one reader that acts before the page
+   *   resolves. Declared or it doesn't exist: no value → no parent-level
+   *   hint emitted. The resolved page is the truth.
+   * - On a track rendered *playable* (`src` wins the rendering): inert —
+   *   playables open no page.
+   *
+   * Never *item*-inherited — each holder speaks only for its own
+   * children. Between containers it resolves by scope override, not
+   * inheritance: the page declares for its whole scope, a section
+   * overrides for its own children.
+   *
+   * @default 'list'
+   *
+   * @see https://developer.android.com/training/cars/media/create-media-browser/content-styles
+   */
+  display?: StyleDisplay
+
+  /**
+   * Inherited (`track ?? section ?? page`): how this item's artwork is
+   * rendered — `'stencil'` tints a monochrome glyph to the surface's
+   * light/dark appearance.
+   *
+   * @default 'original'
+   *
+   * @platform carplay
+   */
+  artworkRendering?: ArtworkRendering
+}
+
+/**
+ * A {@link Section}'s (or resolved page's) style declaration block: the
+ * *container* properties below, plus — via `extends` — a section-wide
+ * value for every inherited {@link TrackStyle} item property (and the
+ * section's own positional `display`).
+ *
+ * Container properties resolve by scope override, not inheritance: the
+ * page declares for its whole scope, a section overrides for its own
+ * children (`section ?? page ?? default`) — they never flow to items.
+ */
+export interface SectionStyle extends TrackStyle {
+  /**
+   * Whether grid tiles wrap to multiple lines. `false` renders exactly
+   * one line — the teaser shelf: a preview of a larger collection,
+   * typically paired with {@link Section.path} as the "view all" target.
+   *
+   * Rendered by CarPlay (a single line of tiles). Android Auto has no
+   * single-line tile container — its grid wraps, showing more, never
+   * less. Phone UIs typically honor `false` as a horizontal scroller.
+   *
+   * Inert unless {@link TrackStyle.display} is `'grid'`.
+   *
+   * @default true
+   *
+   * @platform carplay
+   *
+   * @see https://developer.apple.com/documentation/carplay/cplistimagerowitem
+   */
+  gridWrap?: boolean
+}
 
 /**
  * Image source for React Native's `<Image>` component.
@@ -62,27 +175,6 @@ export interface ArtworkVariants {
 export type TrackArtwork = string | ArtworkVariants
 
 /**
- * How a {@link Section}'s children render.
- *
- * Style names declare the *requested* layout; each platform renders its
- * nearest supported form (ADR 0010):
- * - `'list'` — full-width rows (the default).
- * - `'grid'` — artwork tiles, wrapping to as many lines as needed. On
- *   CarPlay this requires iOS 26+; earlier versions render a list, since
- *   CarPlay's only tile container truncates at a width the system doesn't
- *   report.
- * - `'rail'` — exactly one line of artwork tiles. CarPlay shows the
- *   tiles that fit (~up to 8, width-dependent); Android Auto has no
- *   single-line tile container and renders it as `'grid'` — showing more,
- *   never less; app UIs typically render a horizontal scroller.
- *
- * Tile styles presume artwork: an artwork-less child renders a placeholder
- * tile plus its title. Use the artwork `resolve` hook to supply fallback
- * art.
- */
-export type SectionStyle = 'list' | 'grid' | 'rail'
-
-/**
  * A titled, styled group of Tracks within a resolved page — the unit of
  * queue scope. Tapping a playable child queues the section it sits in
  * (ADR 0006), identically on every platform and screen width: rendering
@@ -93,14 +185,21 @@ export interface Section {
   title?: string
   /**
    * Secondary line for the section's navigation surface — e.g. the label
-   * of the "view all" link a `rail` section gets on Android Auto.
+   * of the "view all" link a tile section gets on Android Auto.
    */
   subtitle?: string
-  /** How children render. Defaults to `'list'`. */
+  /**
+   * Presentation, separated from content. Each surface renders the
+   * declared layout's nearest supported form (ADR 0010/0011); on CarPlay
+   * a wrapping grid requires iOS 26+ and renders a list before that,
+   * since CarPlay's only earlier tile container truncates at a width the
+   * system doesn't report. Use the artwork `resolve` hook to supply
+   * fallback art for tile layouts.
+   */
   style?: SectionStyle
   /**
    * Navigation target for the section header / "view all" surface. A
-   * `rail` section's header tap (CarPlay) and appended "view all" link
+   * tile section's header tap (CarPlay) and appended "view all" link
    * (Android Auto) navigate here. Absent = a pure preview; the header is
    * not tappable.
    */
@@ -168,7 +267,8 @@ export interface Track {
    * Pass an {@link ArtworkVariants} pair to supply genuinely different images
    * per appearance — a logo that changes colour, say. For a monochrome glyph
    * that only needs recolouring, prefer a single URL plus
-   * {@link Track.artworkCarPlayTinted}, which is one fetch instead of two.
+   * `style: { artworkRendering: 'stencil' }`, which is one fetch instead
+   * of two.
    *
    * **iOS:** supports {@link https://developer.apple.com/sf-symbols/ | SF Symbols}
    * with the `sf:` prefix and optional color params:
@@ -197,23 +297,6 @@ export interface Track {
 
   /** Per-track media-request override; merged last (request → media → track.request). */
   request?: TrackRequest
-
-  /**
-   * Whether this artwork should be tinted based on CarPlay's current appearance (light/dark mode).
-   *
-   * When `true`, the artwork is treated as a monochrome icon and tinted:
-   * - Light mode: tinted black for visibility on light backgrounds
-   * - Dark mode: tinted white for visibility on dark backgrounds
-   *
-   * This is useful for SVG or PNG icons that need to adapt to CarPlay's light/dark themes.
-   * Full-color artwork (album covers, logos) should not use this.
-   *
-   * **iOS CarPlay only** - Android Auto is dark-only, so content providers should
-   * provide appropriately colored icons directly (e.g., white icons).
-   *
-   * @default false
-   */
-  artworkCarPlayTinted?: boolean
 
   // type?: TrackType
   /** Primary line shown for this item, in both browse lists and now-playing. */
@@ -264,30 +347,31 @@ export interface Track {
   duration?: number
 
   /**
-   * Display style for this item in Android Auto/AAOS.
-   * - 'list': Display as a list row
-   * - 'grid': Display as a grid tile
-   *
-   * On Android: when `artwork` is an `android.resource://` URI
-   * (e.g., `android.resource://com.myapp/drawable/ic_folder`), the library
-   * automatically uses 'category' styling which adds margins around the icon
-   * and enables system tinting for vector drawables.
-   *
-   * @see https://developer.android.com/training/cars/media#default-content-style
+   * The track's style declaration block: inherited item properties (a
+   * per-item override of section/page values — they travel with the
+   * track), plus the positional {@link TrackStyle.display} — on a
+   * browsable track, the layout promise for the page it opens (Android
+   * Auto's parent-level hint).
    */
   style?: TrackStyle
 
   /**
-   * Display style for this item's children in Android Auto/AAOS.
-   * Only applies to browsable items (containers/folders).
-   * - 'list': Display children as list rows
-   * - 'grid': Display children as grid tiles
+   * Unavailable — a content-state fact beside `favorited` and `live`,
+   * with full behavioral weight (content facts may carry behavior; style
+   * never does): a disabled track never plays — tap refused, queue
+   * expansion excludes it, voice search won't match it.
    *
-   * Must be set on the item when it appears as a child in a parent's list.
-   * Android Auto reads the extras at that point to determine how to display
-   * the folder's contents when navigated into.
+   * Rendering ladder, never a trap: **grayed + inert** where the surface
+   * can draw it (CarPlay) → **hidden** where it can't (Android Auto) —
+   * never a normal-looking dead control. Hiding is behavior-safe because
+   * the track is inert everywhere regardless; the cost is losing the
+   * "Available at 9 PM" tease on surfaces that hide, so put the reason
+   * in the title for the ones that gray. Applied at page (re-)serve,
+   * like style.
+   *
+   * @default false
    */
-  childrenStyle?: TrackStyle
+  disabled?: boolean
 
   /**
    * Whether this track is favorited. When the `favorite` capability is enabled,
@@ -326,6 +410,16 @@ export interface ResolvedTrack extends Track {
   path: string
 
   /**
+   * A page is a Track that is also the container of its sections, so its
+   * block widens to {@link SectionStyle}: the declaration for the whole
+   * page. Item properties set here are inherited by every item on the
+   * page unless a section or track declares its own; the container
+   * property (`gridWrap`) and the positional `display` are the page-wide
+   * values a section overrides for its own children.
+   */
+  style?: SectionStyle
+
+  /**
    * The page's sections — the canonical resolved shape. Every resolved page
    * with content carries `sections`; a page authored with plain `children`
    * resolves to a single untitled section.
@@ -333,10 +427,12 @@ export interface ResolvedTrack extends Track {
   sections?: Section[]
 
   /**
-   * Authoring sugar for a flat page: equivalent to declaring one untitled
-   * `'list'` section holding these tracks. Accepted anywhere a page is
-   * authored (static routes, browse callbacks, JSON payloads); never
-   * populated on a *resolved* page — read `sections` instead.
+   * Authoring sugar for a flat page: equivalent to declaring one untitled,
+   * style-less section holding these tracks (which therefore takes the
+   * page block's scope-wide values, like any undeclared section). Accepted
+   * anywhere a page is authored (static routes, browse callbacks, JSON
+   * payloads); never populated on a *resolved* page — read `sections`
+   * instead.
    */
   children?: Track[]
 

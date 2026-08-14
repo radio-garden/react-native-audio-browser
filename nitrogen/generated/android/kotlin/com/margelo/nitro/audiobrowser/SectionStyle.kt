@@ -10,15 +10,35 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 
+
 /**
- * Represents the JavaScript enum/union "SectionStyle".
+ * Represents the JavaScript object/struct "SectionStyle".
  */
 @DoNotStrip
 @Keep
-enum class SectionStyle(@DoNotStrip @Keep val value: Int) {
-  LIST(0),
-  GRID(1),
-  RAIL(2);
+data class SectionStyle(
+  @DoNotStrip
+  @Keep
+  val gridWrap: Boolean?,
+  @DoNotStrip
+  @Keep
+  val display: StyleDisplay?,
+  @DoNotStrip
+  @Keep
+  val artworkRendering: ArtworkRendering?
+) {
+  /* primary constructor */
 
-  companion object
+  companion object {
+    /**
+     * Constructor called from C++
+     */
+    @DoNotStrip
+    @Keep
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(gridWrap: Boolean?, display: StyleDisplay?, artworkRendering: ArtworkRendering?): SectionStyle {
+      return SectionStyle(gridWrap, display, artworkRendering)
+    }
+  }
 }

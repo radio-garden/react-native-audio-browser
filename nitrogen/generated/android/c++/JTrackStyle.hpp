@@ -10,12 +10,18 @@
 #include <fbjni/fbjni.h>
 #include "TrackStyle.hpp"
 
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "JStyleDisplay.hpp"
+#include "StyleDisplay.hpp"
+#include <optional>
+
 namespace margelo::nitro::audiobrowser {
 
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "TrackStyle" and the the Kotlin enum "TrackStyle".
+   * The C++ JNI bridge between the C++ struct "TrackStyle" and the the Kotlin data class "TrackStyle".
    */
   struct JTrackStyle final: public jni::JavaClass<JTrackStyle> {
   public:
@@ -23,35 +29,36 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     /**
-     * Convert this Java/Kotlin-based enum to the C++ enum TrackStyle.
+     * Convert this Java/Kotlin-based struct to the C++ struct TrackStyle by copying all values to C++.
      */
     [[maybe_unused]]
     [[nodiscard]]
     TrackStyle toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldOrdinal = clazz->getField<int>("value");
-      int ordinal = this->getFieldValue(fieldOrdinal);
-      return static_cast<TrackStyle>(ordinal);
+      static const auto fieldDisplay = clazz->getField<JStyleDisplay>("display");
+      jni::local_ref<JStyleDisplay> display = this->getFieldValue(fieldDisplay);
+      static const auto fieldArtworkRendering = clazz->getField<JArtworkRendering>("artworkRendering");
+      jni::local_ref<JArtworkRendering> artworkRendering = this->getFieldValue(fieldArtworkRendering);
+      return TrackStyle(
+        display != nullptr ? std::make_optional(display->toCpp()) : std::nullopt,
+        artworkRendering != nullptr ? std::make_optional(artworkRendering->toCpp()) : std::nullopt
+      );
     }
 
   public:
     /**
-     * Create a Java/Kotlin-based enum with the given C++ enum's value.
+     * Create a Java/Kotlin-based struct by copying all values from the given C++ struct to Java.
      */
     [[maybe_unused]]
-    static jni::alias_ref<JTrackStyle> fromCpp(TrackStyle value) {
+    static jni::local_ref<JTrackStyle::javaobject> fromCpp(const TrackStyle& value) {
+      using JSignature = JTrackStyle(jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>);
       static const auto clazz = javaClassStatic();
-      switch (value) {
-        case TrackStyle::LIST:
-          static const auto fieldLIST = clazz->getStaticField<JTrackStyle>("LIST");
-          return clazz->getStaticFieldValue(fieldLIST);
-        case TrackStyle::GRID:
-          static const auto fieldGRID = clazz->getStaticField<JTrackStyle>("GRID");
-          return clazz->getStaticFieldValue(fieldGRID);
-        default:
-          std::string stringValue = std::to_string(static_cast<int>(value));
-          throw std::invalid_argument("Invalid enum value (" + stringValue + "!");
-      }
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
+        value.display.has_value() ? JStyleDisplay::fromCpp(value.display.value()) : nullptr,
+        value.artworkRendering.has_value() ? JArtworkRendering::fromCpp(value.artworkRendering.value()) : nullptr
+      );
     }
   };
 

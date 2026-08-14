@@ -1,6 +1,7 @@
 package com.audiobrowser.browser
 
 import android.util.LruCache
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
 import com.audiobrowser.extension.identity
@@ -19,6 +20,8 @@ import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SearchParams
+import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
@@ -227,6 +230,37 @@ class BrowserManager {
     resolvedTrack.flattenedChildren?.forEach { cacheTrack(it) }
   }
 
+  // Pages already warned about by warnIfGridPageLacksPromise — the mismatch
+  // re-observes on every onGetChildren serve, and once is a diagnostic while
+  // every-scroll is noise. Concurrent: onGetChildren serves run on the IO
+  // pool, several in flight at once.
+  private val promiseWarnedPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+  /**
+   * Dev diagnostic (ADR 0011): a page serving grid sections under a browsable handle that declared
+   * no `style.display` promise still renders its parent-level layout as a list on Android Auto —
+   * the parent hint is emitted only when declared, never derived from resolved pages and never
+   * back-filled. Warns at the one site where the mismatch is observable; a cache miss for the
+   * handle (cold start straight into the page) just skips the check.
+   *
+   * Only an all-grid page warns: the parent-level hint lays out the WHOLE page, so on a mixed page
+   * (a teaser shelf above list sections) there is no correct promise to advise — grid would tile
+   * the list sections too.
+   */
+  fun warnIfGridPageLacksPromise(path: String, sections: List<Section>) {
+    if (sections.isEmpty() || !sections.all { it.style?.display == StyleDisplay.GRID }) return
+    val handle = trackCache.get(path) ?: return
+    if (handle.src != null) return // rendered playable — opens no page, promises nothing
+    if (handle.style?.display == null && promiseWarnedPaths.add(path)) {
+      Timber.w(
+        "Page '%s' serves grid sections, but its browsable handle declares no style.display — " +
+          "Android Auto's parent-level hint was not emitted, so this page renders as a list " +
+          "there. Declare `style: { display: 'grid' }` on the handle track.",
+        path,
+      )
+    }
+  }
+
   /**
    * Get a cached Track by mediaId (stable id, path, or src), or null if not cached. Used by Media3
    * to rehydrate MediaItem shells with full track metadata. Re-hydrates favorites in case
@@ -306,7 +340,6 @@ class BrowserManager {
           artwork = artworkOf(metadata.artworkUri?.toString()),
           artworkSource = null,
           request = null,
-          artworkCarPlayTinted = null,
           title = metadata.title?.toString() ?: mediaId,
           subtitle = metadata.artist?.toString(),
           artist = null,
@@ -316,7 +349,7 @@ class BrowserManager {
           genre = metadata.genre?.toString(),
           duration = null,
           style = null,
-          childrenStyle = null,
+          disabled = null,
           favorited = null,
           live = null,
         )
@@ -356,9 +389,11 @@ class BrowserManager {
       if (searchQuery != null) {
         Timber.d("Handling search playback request for query: $searchQuery")
 
-        // Execute search (will hit cache if already performed)
+        // Execute search (will hit cache if already performed). Disabled
+        // tracks never play, so they never enter a search-built queue.
         val searchResults = search(searchQuery)
-        val searchTracks = searchResults.flattenedChildren?.toTypedArray()
+        val searchTracks =
+          searchResults.flattenedChildren?.filterNot { it.disabled == true }?.toTypedArray()
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           // Find the selected track in search results (mediaId is the stable id
@@ -418,10 +453,46 @@ class BrowserManager {
     // No expansion - resolve from cache (with a minimal-track fallback for replayed mediaIds)
     val resolvedTracks = mediaItems.map { resolveMediaItemToTrack(it) }
 
-    // Convert to Media3 MediaItems
-    val resolvedMediaItems = resolvedTracks.map { track -> TrackFactory.toMedia3(track) }
+    // A disabled track is unavailable — it never plays, even by a stale or
+    // replayed mediaId (Track.disabled). Refusal fails the future: Media3
+    // surfaces an error to the controller and the current playback stays
+    // untouched (an empty item list would clear the live timeline instead).
+    //
+    // Media3's legacy path — how Android Auto and Assistant actually request
+    // playback (onPlayFromMediaId et al.) — passes C.INDEX_UNSET, meaning
+    // "the default item", i.e. the first. Normalize before the guard, or the
+    // refusal is dead on exactly the path that serves cars.
+    val effectiveStartIndex = if (startIndex == C.INDEX_UNSET) 0 else startIndex
+    val startTrack = resolvedTracks.getOrNull(effectiveStartIndex)
+    if (startTrack != null && startTrack.disabled == true) {
+      Timber.w("Refusing playback of disabled track: ${startTrack.title}")
+      throw IllegalStateException("Refusing playback of disabled track: ${startTrack.title}")
+    }
+    val playableTracks = resolvedTracks.filterNot { it.disabled == true }
+    if (playableTracks.isEmpty()) {
+      // Belt over the start-item guard: never hand Media3 an empty timeline.
+      Timber.w("Refusing playback: every requested track is disabled")
+      throw IllegalStateException("Refusing playback: every requested track is disabled")
+    }
+    // Positional, not indexOf: value equality would alias a duplicated track
+    // (the same station twice in a queue) to its first copy. An unset index
+    // stays unset — Media3's "default item" semantics pass through as they
+    // did before the filter existed.
+    val adjustedStartIndex =
+      when {
+        startIndex == C.INDEX_UNSET -> C.INDEX_UNSET
+        startTrack == null -> 0
+        else -> resolvedTracks.take(effectiveStartIndex).count { it.disabled != true }
+      }
 
-    return MediaSession.MediaItemsWithStartPosition(resolvedMediaItems, startIndex, startPositionMs)
+    // Convert to Media3 MediaItems
+    val resolvedMediaItems = playableTracks.map { track -> TrackFactory.toMedia3(track) }
+
+    return MediaSession.MediaItemsWithStartPosition(
+      resolvedMediaItems,
+      adjustedStartIndex,
+      startPositionMs,
+    )
   }
 
   /**
@@ -674,8 +745,11 @@ class BrowserManager {
       val sectionTracks = scoped.section.children.toList()
       val tappedOffset = scoped.tappedOffset
 
-      // Filter to only playable tracks (tracks with src)
-      val playableTracks = sectionTracks.filter { track -> track.src != null }
+      // Filter to only playable tracks (tracks with src). A disabled track is
+      // unavailable — queue expansion excludes it, so auto-advance never meets
+      // one.
+      val playableTracks =
+        sectionTracks.filter { track -> track.src != null && track.disabled != true }
 
       if (playableTracks.isEmpty()) {
         Timber.w("Parent has no playable tracks, cannot expand queue")
@@ -685,8 +759,12 @@ class BrowserManager {
       // Find the index of the selected track in the playable tracks array:
       // the pinned copy when the stamp survived, else the first identity match
       val selectedIndex =
-        if (tappedOffset != null && sectionTracks[tappedOffset].src != null) {
-          sectionTracks.take(tappedOffset + 1).count { it.src != null } - 1
+        if (
+          tappedOffset != null &&
+            sectionTracks[tappedOffset].src != null &&
+            sectionTracks[tappedOffset].disabled != true
+        ) {
+          sectionTracks.take(tappedOffset + 1).count { it.src != null && it.disabled != true } - 1
         } else {
           playableTracks.indexOfFirst { track -> track.identity == trackId }
         }
@@ -809,7 +887,10 @@ class BrowserManager {
    */
   suspend fun searchPlayable(params: SearchParams): Array<Track>? {
     val searchResults = search(params)
-    val tracks = searchResults.flattenedChildren?.toTypedArray()
+    // Voice search never matches a disabled track (Track.disabled) — filtered
+    // before the first result is picked, so an unavailable one can't capture
+    // the play.
+    val tracks = searchResults.flattenedChildren?.filter { it.disabled != true }?.toTypedArray()
 
     if (tracks.isNullOrEmpty()) {
       return null
@@ -825,7 +906,7 @@ class BrowserManager {
         Timber.d("First search result is browsable-only, resolving: $firstResultPath")
         val resolvedTrack = resolve(firstResultPath)
         resolvedTrack.flattenedChildren
-          ?.filter { it.src != null }
+          ?.filter { it.src != null && it.disabled != true }
           ?.takeIf { it.isNotEmpty() }
           ?.toTypedArray() ?: tracks
       } else {
@@ -897,7 +978,6 @@ class BrowserManager {
           artwork = null,
           artworkSource = null,
           request = null,
-          artworkCarPlayTinted = null,
           artist = null,
           albumPath = null,
           description = null,
@@ -907,7 +987,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
-          childrenStyle = null,
+          disabled = null,
           favorited = null,
           live = null,
         )
@@ -937,7 +1017,6 @@ class BrowserManager {
           artwork = null,
           artworkSource = null,
           request = null,
-          artworkCarPlayTinted = null,
           artist = null,
           albumPath = null,
           description = null,
@@ -947,7 +1026,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
-          childrenStyle = null,
+          disabled = null,
           favorited = null,
           live = null,
         )

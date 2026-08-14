@@ -227,7 +227,7 @@ export default function App() {
             onAnimationEnd={settle}
           >
             {layer.panel.sections.map((section, si) => {
-              if (section.style === 'rail' || section.style === 'grid') {
+              if (section.style?.display === 'grid') {
                 return (
                   <li key={`${section.title}-${si}`} className="section">
                     <div

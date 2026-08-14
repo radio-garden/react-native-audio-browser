@@ -18,7 +18,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, live: Bool?) {
+  init(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, disabled: Bool?, favorited: Bool?, live: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = id {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -59,12 +59,6 @@ public extension Track {
     }(), { () -> bridge.std__optional_TrackRequest_ in
       if let __unwrappedValue = request {
         return bridge.create_std__optional_TrackRequest_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = artworkCarPlayTinted {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -116,9 +110,9 @@ public extension Track {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_TrackStyle_ in
-      if let __unwrappedValue = childrenStyle {
-        return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = disabled {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -205,18 +199,6 @@ public extension Track {
   @inline(__always)
   var request: TrackRequest? {
     return self.__request.value
-  }
-  
-  @inline(__always)
-  var artworkCarPlayTinted: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__artworkCarPlayTinted) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__artworkCarPlayTinted)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
   }
   
   @inline(__always)
@@ -314,8 +296,15 @@ public extension Track {
   }
   
   @inline(__always)
-  var childrenStyle: TrackStyle? {
-    return self.__childrenStyle.value
+  var disabled: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__disabled) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__disabled)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)

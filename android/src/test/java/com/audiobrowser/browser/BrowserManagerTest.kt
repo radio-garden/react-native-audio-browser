@@ -1,5 +1,7 @@
 package com.audiobrowser.browser
 
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import com.audiobrowser.TestFixtures.resolvedTrack
 import com.audiobrowser.TestFixtures.section
 import com.audiobrowser.TestFixtures.staticRoute
@@ -180,7 +182,12 @@ class BrowserManagerTest {
         "/home",
         section(
           title = "Row",
-          style = com.margelo.nitro.audiobrowser.SectionStyle.RAIL,
+          style =
+            com.margelo.nitro.audiobrowser.SectionStyle(
+              display = com.margelo.nitro.audiobrowser.StyleDisplay.GRID,
+              artworkRendering = null,
+              gridWrap = false,
+            ),
           children = arrayOf(track(src = "dup")),
         ),
         section(title = "Stations", children = arrayOf(track(src = "dup"), track(src = "b"))),
@@ -244,7 +251,12 @@ class BrowserManagerTest {
       "/home",
       section(
         title = "Most Played",
-        style = com.margelo.nitro.audiobrowser.SectionStyle.RAIL,
+        style =
+          com.margelo.nitro.audiobrowser.SectionStyle(
+            display = com.margelo.nitro.audiobrowser.StyleDisplay.GRID,
+            artworkRendering = null,
+            gridWrap = false,
+          ),
         children = arrayOf(track(src = "r1"), track(src = "r2")),
       ),
       section(children = arrayOf(track(src = "a"))),
@@ -340,4 +352,53 @@ class BrowserManagerTest {
     assertEquals(listOf("b"), queue.map { it.src })
     assertEquals(0, index)
   }
+
+  // --- Track.disabled: queue expansion excludes unavailable tracks ---
+
+  @Test
+  fun `expandQueueFromContextualPath excludes disabled tracks`() = runBlocking {
+    servePage(
+      "/home",
+      track(src = "a"),
+      track(src = "unavailable", disabled = true),
+      track(src = "b"),
+    )
+
+    val (queue, index) =
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "b")))
+
+    assertEquals(listOf("a", "b"), queue.map { it.src })
+    assertEquals(1, index)
+  }
+
+  @Test
+  fun `expandQueueFromContextualPath aborts when the tapped track is disabled`() = runBlocking {
+    // A disabled track never plays: with the tapped identity excluded from the
+    // playable list, expansion aborts, and every caller's fallback refuses the
+    // disabled track itself — navigateTrack's guard on tap,
+    // onPlaybackResumption's refusal on resume.
+    servePage("/home", track(src = "a"), track(src = "unavailable", disabled = true))
+
+    assertNull(browserManager.expandQueueFromContextualPath(contextual("/home", "unavailable")))
+  }
+
+  @Test
+  fun `resolveMediaItemsForPlayback refuses a disabled track on the legacy INDEX_UNSET path`() =
+    runBlocking {
+      // Android Auto and Assistant request playback through Media3's legacy
+      // path, which passes C.INDEX_UNSET ("the default item") — the refusal
+      // must cover it, or a stale browse row for a now-disabled track plays.
+      servePage("/home", track(src = "unavailable", disabled = true))
+      browserManager.resolve("/home")
+
+      val item = MediaItem.Builder().setMediaId("unavailable").build()
+
+      try {
+        browserManager.resolveMediaItemsForPlayback(listOf(item), C.INDEX_UNSET, 0)
+        fail("Expected refusal of a disabled track")
+      } catch (expected: IllegalStateException) {
+        // Refused by failing the future: Media3 surfaces an error to the
+        // controller and live playback stays untouched.
+      }
+    }
 }

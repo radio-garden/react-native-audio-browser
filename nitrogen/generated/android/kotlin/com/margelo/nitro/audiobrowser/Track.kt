@@ -37,9 +37,6 @@ data class Track(
   val request: TrackRequest?,
   @DoNotStrip
   @Keep
-  val artworkCarPlayTinted: Boolean?,
-  @DoNotStrip
-  @Keep
   val title: String,
   @DoNotStrip
   @Keep
@@ -67,7 +64,7 @@ data class Track(
   val style: TrackStyle?,
   @DoNotStrip
   @Keep
-  val childrenStyle: TrackStyle?,
+  val disabled: Boolean?,
   @DoNotStrip
   @Keep
   val favorited: Boolean?,
@@ -85,8 +82,8 @@ data class Track(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, live: Boolean?): Track {
-      return Track(id, path, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumPath, album, description, genre, duration, style, childrenStyle, favorited, live)
+    private fun fromCpp(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, disabled: Boolean?, favorited: Boolean?, live: Boolean?): Track {
+      return Track(id, path, src, artwork, artworkSource, request, title, subtitle, artist, albumPath, album, description, genre, duration, style, disabled, favorited, live)
     }
   }
 }

@@ -10,14 +10,32 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 
+
 /**
- * Represents the JavaScript enum/union "TrackStyle".
+ * Represents the JavaScript object/struct "TrackStyle".
  */
 @DoNotStrip
 @Keep
-enum class TrackStyle(@DoNotStrip @Keep val value: Int) {
-  LIST(0),
-  GRID(1);
+data class TrackStyle(
+  @DoNotStrip
+  @Keep
+  val display: StyleDisplay?,
+  @DoNotStrip
+  @Keep
+  val artworkRendering: ArtworkRendering?
+) {
+  /* primary constructor */
 
-  companion object
+  companion object {
+    /**
+     * Constructor called from C++
+     */
+    @DoNotStrip
+    @Keep
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(display: StyleDisplay?, artworkRendering: ArtworkRendering?): TrackStyle {
+      return TrackStyle(display, artworkRendering)
+    }
+  }
 }

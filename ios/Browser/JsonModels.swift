@@ -62,20 +62,117 @@ extension JsonArtwork {
   }
 }
 
+/// A style declaration block on the wire (ADR 0011):
+/// `{ display?, gridWrap?, artworkRendering? }`.
+///
+/// One JSON model serves both the `TrackStyle` and `SectionStyle` positions —
+/// keys that don't exist at the narrower position simply don't map.
+///
+/// Decoding is tolerant by design: a stale payload — the retired string
+/// styles, a wrong-typed field, an unknown enum value — must degrade to "no
+/// declaration", never fail the page or the persisted playback state (the
+/// decoders above this are strict, so a throw here would kill the whole
+/// payload). `init(from:)` therefore never throws, and unknown enum values
+/// map to nil at `toNitro` time.
+struct JsonStyle: Codable, Equatable {
+  let display: String?
+  let gridWrap: Bool?
+  let artworkRendering: String?
+
+  init(
+    display: String? = nil,
+    gridWrap: Bool? = nil,
+    artworkRendering: String? = nil,
+  ) {
+    self.display = display
+    self.gridWrap = gridWrap
+    self.artworkRendering = artworkRendering
+  }
+
+  init(from decoder: Decoder) throws {
+    // A non-object value (the retired `style: 'grid'` string) decodes as an
+    // empty block rather than failing the parent.
+    guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
+      display = nil
+      gridWrap = nil
+      artworkRendering = nil
+      return
+    }
+    display = (try? container.decodeIfPresent(String.self, forKey: .display)) ?? nil
+    gridWrap = (try? container.decodeIfPresent(Bool.self, forKey: .gridWrap)) ?? nil
+    artworkRendering = (try? container.decodeIfPresent(String.self, forKey: .artworkRendering)) ?? nil
+  }
+}
+
+extension JsonStyle {
+  /// The wire strings map to Nitro enums here, tolerantly: an unknown value
+  /// (a future `display` mode, say) is no declaration, not an error. A block
+  /// that resolves to no declarations at all — `{}`, the tolerant decoder's
+  /// empty result for the retired string vocabulary, or all-unknown values —
+  /// maps to nil, so "no declaration" has one shape on every platform
+  /// (Android's lenient mapper makes the same collapse).
+  func toTrackStyle() -> TrackStyle? {
+    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
+    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
+    guard display != nil || artworkRendering != nil else { return nil }
+    return TrackStyle(display: display, artworkRendering: artworkRendering)
+  }
+
+  func toSectionStyle() -> SectionStyle? {
+    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
+    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
+    guard display != nil || artworkRendering != nil || gridWrap != nil else { return nil }
+    // Argument order is the generated init's (own properties before
+    // inherited ones — Nitro flattens `extends` own-props-first).
+    return SectionStyle(
+      gridWrap: gridWrap,
+      display: display,
+      artworkRendering: artworkRendering,
+    )
+  }
+
+  /// Snapshot a live track block back to its JSON model (for persistence).
+  /// An all-nil block snapshots as no block — the decoders collapse it to
+  /// "no declaration" anyway, so never persist the distinction.
+  init?(_ style: TrackStyle?) {
+    guard let style, style.display != nil || style.artworkRendering != nil else { return nil }
+    self.init(
+      display: Self.string(style.display),
+      artworkRendering: Self.string(style.artworkRendering),
+    )
+  }
+
+  private static func string(_ display: StyleDisplay?) -> String? {
+    switch display {
+    case .list: "list"
+    case .grid: "grid"
+    case nil: nil
+    }
+  }
+
+  private static func string(_ rendering: ArtworkRendering?) -> String? {
+    switch rendering {
+    case .original: "original"
+    case .stencil: "stencil"
+    case nil: nil
+    }
+  }
+}
+
 /// JSON model for a page section (ADR 0010). Legacy `groupTitle`/`imageRow`
 /// keys in payloads are simply unknown to these models and decode as
 /// ignored dead weight.
 struct JsonSection: Codable {
   let title: String?
   let subtitle: String?
-  let style: String?
+  let style: JsonStyle?
   let path: String?
   let children: [JsonTrack]
 
   init(
     title: String? = nil,
     subtitle: String? = nil,
-    style: String? = nil,
+    style: JsonStyle? = nil,
     path: String? = nil,
     children: [JsonTrack],
   ) {
@@ -116,8 +213,8 @@ struct JsonResolvedTrack: Codable {
   let sections: [JsonSection]?
   let children: [JsonTrack]?
   let src: String?
-  let style: String?
-  let childrenStyle: String?
+  let style: JsonStyle?
+  let disabled: Bool?
   let live: Bool?
   let carPlaySiriListButton: String?
 
@@ -136,8 +233,8 @@ struct JsonResolvedTrack: Codable {
     sections: [JsonSection]? = nil,
     children: [JsonTrack]? = nil,
     src: String? = nil,
-    style: String? = nil,
-    childrenStyle: String? = nil,
+    style: JsonStyle? = nil,
+    disabled: Bool? = nil,
     live: Bool? = nil,
     carPlaySiriListButton: String? = nil,
   ) {
@@ -155,7 +252,7 @@ struct JsonResolvedTrack: Codable {
     self.children = children
     self.src = src
     self.style = style
-    self.childrenStyle = childrenStyle
+    self.disabled = disabled
     self.live = live
     self.carPlaySiriListButton = carPlaySiriListButton
     self.id = id
@@ -177,8 +274,8 @@ struct JsonTrack: Codable {
   let duration: Double?
   let src: String?
   let request: JsonTrackRequest?
-  let style: String?
-  let childrenStyle: String?
+  let style: JsonStyle?
+  let disabled: Bool?
   let live: Bool?
 
   init(
@@ -195,8 +292,8 @@ struct JsonTrack: Codable {
     duration: Double? = nil,
     src: String? = nil,
     request: JsonTrackRequest? = nil,
-    style: String? = nil,
-    childrenStyle: String? = nil,
+    style: JsonStyle? = nil,
+    disabled: Bool? = nil,
     live: Bool? = nil,
   ) {
     self.path = path
@@ -212,7 +309,7 @@ struct JsonTrack: Codable {
     self.src = src
     self.request = request
     self.style = style
-    self.childrenStyle = childrenStyle
+    self.disabled = disabled
     self.live = live
     self.id = id
   }
@@ -231,6 +328,9 @@ struct JsonTrack: Codable {
 
   extension JsonTrack {
     /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
+    /// The track's own declared style block and `disabled` persist (ADR 0011);
+    /// section/page-inherited values are never stamped onto tracks and
+    /// re-resolve at render, exactly as they do live.
     init(from track: Track) {
       self.init(
         id: track.id,
@@ -246,8 +346,8 @@ struct JsonTrack: Codable {
         duration: track.duration,
         src: track.src,
         request: track.request.map(JsonTrackRequest.init(from:)),
-        style: nil,
-        childrenStyle: nil,
+        style: JsonStyle(track.style),
+        disabled: track.disabled,
         live: track.live,
       )
     }
@@ -276,6 +376,8 @@ struct JsonTrack: Codable {
         album: track.album,
         src: track.src,
         request: track.request.map(JsonTrackRequest.init(from:)),
+        style: JsonStyle(track.style),
+        disabled: track.disabled,
         live: track.live,
       )
     }
@@ -287,18 +389,12 @@ struct JsonTrack: Codable {
 
 #if canImport(NitroModules)
 
-  private extension String {
-    func toTrackStyle() -> TrackStyle? {
-      TrackStyle(fromString: lowercased())
-    }
-  }
-
   extension JsonSection {
     func toNitro() -> Section {
       Section(
         title: title,
         subtitle: subtitle,
-        style: style.flatMap { SectionStyle(fromString: $0.lowercased()) },
+        style: style?.toSectionStyle(),
         path: path,
         children: children.map { $0.toNitro() },
       )
@@ -309,6 +405,7 @@ struct JsonTrack: Codable {
     func toNitro() -> ResolvedTrack {
       ResolvedTrack(
         path: path,
+        style: style?.toSectionStyle(),
         sections: sections?.map { $0.toNitro() },
         children: children?.map { $0.toNitro() },
         carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
@@ -316,7 +413,6 @@ struct JsonTrack: Codable {
         src: src,
         artwork: artwork?.toNitro(),
         artworkSource: nil, request: nil,
-        artworkCarPlayTinted: nil,
         title: title,
         subtitle: subtitle,
         artist: artist,
@@ -325,8 +421,7 @@ struct JsonTrack: Codable {
         description: description,
         genre: genre,
         duration: duration,
-        style: style?.toTrackStyle(),
-        childrenStyle: childrenStyle?.toTrackStyle(),
+        disabled: disabled,
         favorited: nil,
         live: live,
       )
@@ -342,7 +437,6 @@ struct JsonTrack: Codable {
         artwork: artwork?.toNitro(),
         artworkSource: nil,
         request: request?.toNitro(),
-        artworkCarPlayTinted: nil,
         title: title,
         subtitle: subtitle,
         artist: artist,
@@ -352,7 +446,7 @@ struct JsonTrack: Codable {
         genre: genre,
         duration: duration,
         style: style?.toTrackStyle(),
-        childrenStyle: childrenStyle?.toTrackStyle(),
+        disabled: disabled,
         favorited: nil,
         live: live,
       )
@@ -368,13 +462,27 @@ struct JsonTrack: Codable {
         id: id ?? "",
         path: path,
         src: src,
+        artwork: artwork?.toNitro(),
         request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
         title: title,
         artist: artist,
         albumPath: albumPath,
         album: album,
+        style: style?.toTrackStyle(),
+        disabled: disabled,
         live: live,
-        artwork: artwork?.toNitro(),
+      )
+    }
+  }
+
+  extension JsonSection {
+    func toNitro() -> Section {
+      Section(
+        title: title,
+        subtitle: subtitle,
+        style: style?.toSectionStyle(),
+        path: path,
+        children: children.map { $0.toNitro() },
       )
     }
   }
@@ -383,9 +491,12 @@ struct JsonTrack: Codable {
     func toNitro() -> ResolvedTrack {
       ResolvedTrack(
         path: path,
+        style: style?.toSectionStyle(),
+        sections: sections?.map { $0.toNitro() },
         children: children?.map { $0.toNitro() },
         artwork: artwork?.toNitro(),
         title: title,
+        disabled: disabled,
       )
     }
   }

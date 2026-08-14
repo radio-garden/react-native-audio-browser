@@ -10,7 +10,7 @@ struct SFSymbolTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:heart.fill",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -22,7 +22,7 @@ struct SFSymbolTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:play.circle?bg=#000&fg=#fff",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 24, targetHeight: 24,
       displayScale: 3.0,
       urlResolver: nil,
@@ -35,7 +35,7 @@ struct SFSymbolTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:music.note",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in
@@ -51,7 +51,7 @@ struct SFSymbolTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
       artworkSourceUri: "sf:star.fill",
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 20, targetHeight: 20,
       displayScale: 2.0,
       urlResolver: nil,
@@ -68,7 +68,7 @@ struct NoArtworkTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -80,7 +80,7 @@ struct NoArtworkTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in nil },
@@ -97,7 +97,7 @@ struct URLResolutionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: false,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { pixelWidth, pixelHeight in
@@ -121,7 +121,7 @@ struct URLResolutionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 24, targetHeight: 24,
       displayScale: 3.0,
       urlResolver: { _, _ in
@@ -140,7 +140,7 @@ struct URLResolutionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in nil },
@@ -157,7 +157,7 @@ struct URLResolutionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/fallback.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in
@@ -180,7 +180,7 @@ struct URLResolutionTests {
     _ = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 50, targetHeight: 30,
       displayScale: 2.5,
       urlResolver: { w, h in
@@ -202,7 +202,7 @@ struct DirectFallbackTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/artwork.png",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -219,7 +219,7 @@ struct DirectFallbackTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
       artworkSourceUri: "https://example.com/source.jpg",
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -236,7 +236,7 @@ struct DirectFallbackTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/artwork.jpg",
       artworkSourceUri: "https://example.com/source.jpg",
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -253,7 +253,7 @@ struct DirectFallbackTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -270,7 +270,7 @@ struct SVGDetectionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.svg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -287,7 +287,7 @@ struct SVGDetectionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.SVG",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -304,7 +304,7 @@ struct SVGDetectionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in
@@ -323,7 +323,7 @@ struct SVGDetectionTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/photo.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -341,11 +341,11 @@ struct SVGDetectionTests {
 
 @Suite("tinting")
 struct TintingTests {
-  @Test func artworkCarPlayTintedTrue_setsShouldTint() async {
+  @Test func stencilTrue_setsShouldTint() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.png",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: true,
+      stencil: true,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -358,28 +358,11 @@ struct TintingTests {
     ))
   }
 
-  @Test func artworkCarPlayTintedFalse_doesNotTint() async {
+  @Test func stencilFalse_doesNotTint() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/photo.jpg",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/photo.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
-  }
-
-  @Test func artworkCarPlayTintedNil_defaultsToFalse() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/photo.jpg",
-      artworkSourceUri: nil,
-      artworkCarPlayTinted: nil,
+      stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: nil,
@@ -396,7 +379,7 @@ struct TintingTests {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.png",
       artworkSourceUri: nil,
-      artworkCarPlayTinted: true,
+      stencil: true,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
       urlResolver: { _, _ in

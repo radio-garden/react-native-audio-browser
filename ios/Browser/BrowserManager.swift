@@ -643,10 +643,13 @@ final class BrowserManager {
   /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
   /// `searchPlayable`.
   func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
-    let children = try await (search(params).flattenedChildren) ?? []
+    // Voice search never matches a disabled track (Track.disabled) — filtered
+    // before drill-in so an unavailable first result can't capture the play.
+    let children = try await ((search(params).flattenedChildren) ?? [])
+      .filter { $0.disabled != true }
     return try await SearchDrillIn.playable(from: children) { [self] path in
       logger.debug("First search result is browsable-only, resolving: \(path)")
-      return try await (resolve(path).flattenedChildren) ?? []
+      return try await ((resolve(path).flattenedChildren) ?? []).filter { $0.disabled != true }
     }
   }
 
@@ -655,6 +658,7 @@ final class BrowserManager {
     // untitled section (ADR 0010).
     ResolvedTrack(
       path: BrowserPathHelper.createSearchPath(query),
+      style: nil,
       sections: [.untitled(results)],
       children: nil,
       carPlaySiriListButton: nil,
@@ -662,7 +666,6 @@ final class BrowserManager {
       src: nil,
       artwork: nil,
       artworkSource: nil, request: nil,
-      artworkCarPlayTinted: nil,
       title: "Search: \(query)",
       subtitle: nil,
       artist: nil,
@@ -671,8 +674,7 @@ final class BrowserManager {
       description: nil,
       genre: nil,
       duration: nil,
-      style: nil,
-      childrenStyle: nil,
+      disabled: nil,
       favorited: nil,
       live: nil,
     )
@@ -730,8 +732,9 @@ final class BrowserManager {
     let sectionTracks = scoped.section.children
     let tappedOffset = scoped.tappedOffset
 
-    // Filter to playable tracks (have src)
-    let playableTracks = sectionTracks.filter { $0.src != nil }
+    // Filter to playable tracks (have src). A disabled track is unavailable —
+    // queue expansion excludes it, so auto-advance never meets one.
+    let playableTracks = sectionTracks.filter { $0.src != nil && $0.disabled != true }
     guard !playableTracks.isEmpty else { return nil }
 
     logger.debug("Found \(playableTracks.count) playable tracks")
@@ -744,8 +747,10 @@ final class BrowserManager {
     // start the queue at the wrong track (unreachable in practice — the
     // section was found BY this id).
     let selectedIndex: Int
-    if let tappedOffset, sectionTracks[tappedOffset].src != nil {
-      selectedIndex = sectionTracks.prefix(through: tappedOffset).count(where: { $0.src != nil }) - 1
+    if let tappedOffset, sectionTracks[tappedOffset].src != nil, sectionTracks[tappedOffset].disabled != true {
+      selectedIndex =
+        sectionTracks.prefix(through: tappedOffset)
+          .count(where: { $0.src != nil && $0.disabled != true }) - 1
     } else if let index = playableTracks.firstIndex(where: { $0.identity == trackId }) {
       selectedIndex = index
     } else {

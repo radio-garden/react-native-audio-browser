@@ -229,62 +229,39 @@ type Track = {
 
 - https://androidx.de/androidx/media/utils/MediaConstants.html
 
-## Separate Styles for Browsable vs Playable Children
+## Separate Browsable vs Playable Layouts in a Page Promise
 
-Currently `childrenStyle` applies the same style to both browsable and playable children. Some containers might benefit from different styles (e.g., grid for album folders, list for individual tracks).
+Android Auto's parent-level content-style hint is emitted from a browsable
+track's declared `style.display` (ADR 0011: the page promise), and the library
+sends the same value for the page's browsable and playable children. The
+underlying `MediaConstants` keys are separate (`CONTENT_STYLE_BROWSABLE` /
+`CONTENT_STYLE_PLAYABLE`), so a page could promise different layouts per kind
+— grid for album folders, list for the songs beside them.
 
-**Potential API:**
-
-```typescript
-type ChildrenStyle = {
-  playable?: TrackStyle
-  browsable?: TrackStyle
-}
-
-type Track = {
-  // ... existing fields
-  childrenStyle?: ChildrenStyle
-}
-```
-
-**Usage:**
+**Potential API:** a per-kind object value for the positional `display`:
 
 ```typescript
-// Different styles for browsable vs playable children
-childrenStyle: { playable: 'list', browsable: 'grid' }
-
-// Same style for both (more verbose than current)
-childrenStyle: { playable: 'grid', browsable: 'grid' }
+style: {
+  display: { playable: 'list', browsable: 'grid' }
+}
 ```
 
 **Use cases:**
 
-- Library section with album folders (browsable → grid) and individual songs (playable → list)
+- Library page with album folders (browsable → grid) and individual songs (playable → list)
 - "Recently Played" mixing playlists (browsable) and tracks (playable)
-
-**Alternative - union type for ergonomics:**
-
-```typescript
-childrenStyle?: TrackStyle | {
-  playable?: TrackStyle
-  browsable?: TrackStyle
-}
-
-// Simple (same for both)
-childrenStyle: 'grid'
-
-// Explicit (different styles)
-childrenStyle: { playable: 'list', browsable: 'grid' }
-```
 
 **Trade-offs:**
 
-- Object-only form is more verbose for the common case
-- Union form is more ergonomic but slightly more complex to handle on native side
-- Most containers have homogeneous children anyway
-- Current simple `childrenStyle: TrackStyle` covers ~90% of use cases
+- Widens `display`'s type from a plain union to a union-with-object on every
+  platform decoder, for a hint only Android Auto reads below the root
+- Most pages have homogeneous children anyway; sections already give a page
+  mixed layouts wherever the surface can render them
+- The promise stays declared-only either way (never derived, never
+  back-filled)
 
-**Decision:** Keep simple `childrenStyle: TrackStyle` for now. Add nested object (or union) if real-world use cases emerge.
+**Decision:** keep `display` a plain `'list' | 'grid'`. Revisit if real-world
+pages need per-kind parent hints.
 
 ## Tesla Artwork Bitmap Fallback
 

@@ -803,8 +803,12 @@ export class BrowserManager {
         return undefined
       }
 
-      // Filter to only playable tracks (tracks with src)
-      const playableTracks = scoped.tracks.filter((track) => track.src != null)
+      // Filter to only playable tracks (tracks with src). A disabled track is
+      // unavailable — queue expansion excludes it, so auto-advance never
+      // meets one (Track.disabled).
+      const isQueueable = (track: Track) =>
+        track.src != null && track.disabled !== true
+      const playableTracks = scoped.tracks.filter(isQueueable)
 
       if (playableTracks.length === 0) {
         console.warn('Section has no playable tracks, cannot expand queue')
@@ -816,11 +820,10 @@ export class BrowserManager {
       let selectedIndex = -1
       if (scoped.tappedOffset !== undefined) {
         const tapped = scoped.tracks[scoped.tappedOffset]
-        if (tapped?.src != null) {
+        if (tapped != null && isQueueable(tapped)) {
           selectedIndex =
-            scoped.tracks
-              .slice(0, scoped.tappedOffset + 1)
-              .filter((track) => track.src != null).length - 1
+            scoped.tracks.slice(0, scoped.tappedOffset + 1).filter(isQueueable)
+              .length - 1
         }
       }
       if (selectedIndex < 0) {
@@ -877,11 +880,15 @@ export class BrowserManager {
 
       // If search query present, expand search results
       if (searchQuery) {
-        // Execute search (will hit cache if already performed)
+        // Execute search (will hit cache if already performed). Disabled
+        // tracks never play, so they never enter a search-built queue
+        // (Track.disabled — mirrors both native platforms).
         const searchResults = await this.resolveSearchContent(
           BrowserPathHelper.createSearchPath(searchQuery)
         )
-        const searchTracks = flattenSections(searchResults?.sections)
+        const searchTracks = flattenSections(searchResults?.sections).filter(
+          (t) => t.disabled !== true
+        )
 
         if (searchTracks.length > 0) {
           // Find the selected track in search results by path or identity

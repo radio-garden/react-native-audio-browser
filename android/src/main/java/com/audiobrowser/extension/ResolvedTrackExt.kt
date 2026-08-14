@@ -2,6 +2,7 @@ package com.audiobrowser.extension
 
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackStyle
 
 /**
  * The Track view of a ResolvedTrack: every display/playback field carried over, the browse-only
@@ -17,7 +18,6 @@ fun ResolvedTrack.toTrack(): Track =
     artwork = artwork,
     artworkSource = artworkSource,
     request = request,
-    artworkCarPlayTinted = artworkCarPlayTinted,
     title = title,
     subtitle = subtitle,
     artist = artist,
@@ -26,8 +26,12 @@ fun ResolvedTrack.toTrack(): Track =
     description = description,
     genre = genre,
     duration = duration,
-    style = style,
-    childrenStyle = childrenStyle,
+    // An explicit SectionStyle → TrackStyle projection: the page's container
+    // properties (gridWrap) have no meaning on a plain Track, so they drop —
+    // Nitro flattens the spec's `extends`, making this narrowing a hand-written
+    // field list rather than an upcast (ADR 0011).
+    style = style?.let { TrackStyle(display = it.display, artworkRendering = it.artworkRendering) },
+    disabled = disabled,
     favorited = favorited,
     live = live,
   )

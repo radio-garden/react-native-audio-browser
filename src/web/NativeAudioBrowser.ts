@@ -491,6 +491,11 @@ export class NativeAudioBrowser
    */
   private async navigateTrackAsync(track: Track): Promise<void> {
     try {
+      // A disabled track is unavailable — it never plays, whichever surface
+      // or stale resume path delivered the selection (Track.disabled; mirrors
+      // iOS TrackSelector.select and Android navigateTrack).
+      if (track.disabled === true) return
+
       const nav = classifyTrackNavigation(track)
       switch (nav.kind) {
         case 'contextual':

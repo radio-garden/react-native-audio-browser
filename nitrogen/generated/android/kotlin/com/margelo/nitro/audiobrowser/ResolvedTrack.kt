@@ -22,6 +22,9 @@ data class ResolvedTrack(
   val path: String,
   @DoNotStrip
   @Keep
+  val style: SectionStyle?,
+  @DoNotStrip
+  @Keep
   val sections: Array<Section>?,
   @DoNotStrip
   @Keep
@@ -44,9 +47,6 @@ data class ResolvedTrack(
   @DoNotStrip
   @Keep
   val request: TrackRequest?,
-  @DoNotStrip
-  @Keep
-  val artworkCarPlayTinted: Boolean?,
   @DoNotStrip
   @Keep
   val title: String,
@@ -73,10 +73,7 @@ data class ResolvedTrack(
   val duration: Double?,
   @DoNotStrip
   @Keep
-  val style: TrackStyle?,
-  @DoNotStrip
-  @Keep
-  val childrenStyle: TrackStyle?,
+  val disabled: Boolean?,
   @DoNotStrip
   @Keep
   val favorited: Boolean?,
@@ -94,8 +91,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String, sections: Array<Section>?, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, live: Boolean?): ResolvedTrack {
-      return ResolvedTrack(path, sections, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumPath, album, description, genre, duration, style, childrenStyle, favorited, live)
+    private fun fromCpp(path: String, style: SectionStyle?, sections: Array<Section>?, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, disabled: Boolean?, favorited: Boolean?, live: Boolean?): ResolvedTrack {
+      return ResolvedTrack(path, style, sections, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, title, subtitle, artist, albumPath, album, description, genre, duration, disabled, favorited, live)
     }
   }
 }

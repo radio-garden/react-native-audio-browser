@@ -16,7 +16,6 @@ extension Track {
     artwork: Variant_String_ArtworkVariants?? = nil,
     artworkSource: ImageSource?? = nil,
     request: TrackRequest?? = nil,
-    artworkCarPlayTinted: Bool?? = nil,
     title: String? = nil,
     subtitle: String?? = nil,
     artist: String?? = nil,
@@ -26,7 +25,7 @@ extension Track {
     genre: String?? = nil,
     duration: Double?? = nil,
     style: TrackStyle?? = nil,
-    childrenStyle: TrackStyle?? = nil,
+    disabled: Bool?? = nil,
     favorited: Bool?? = nil,
     live: Bool?? = nil,
   ) -> Track {
@@ -37,7 +36,6 @@ extension Track {
       artwork: artwork ?? self.artwork,
       artworkSource: artworkSource ?? self.artworkSource,
       request: request ?? self.request,
-      artworkCarPlayTinted: artworkCarPlayTinted ?? self.artworkCarPlayTinted,
       title: title ?? self.title,
       subtitle: subtitle ?? self.subtitle,
       artist: artist ?? self.artist,
@@ -47,7 +45,7 @@ extension Track {
       genre: genre ?? self.genre,
       duration: duration ?? self.duration,
       style: style ?? self.style,
-      childrenStyle: childrenStyle ?? self.childrenStyle,
+      disabled: disabled ?? self.disabled,
       favorited: favorited ?? self.favorited,
       live: live ?? self.live,
     )

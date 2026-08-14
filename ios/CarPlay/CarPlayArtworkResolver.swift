@@ -29,7 +29,8 @@ enum CarPlayArtworkResolver {
   /// - Parameters:
   ///   - artwork: The track's `artwork` field (may be an SF Symbol string or URL)
   ///   - artworkSourceUri: The track's `artworkSource?.uri` field
-  ///   - artworkCarPlayTinted: Whether to apply light/dark tinting
+  ///   - stencil: Whether the artwork renders as a monochrome glyph tinted to
+  ///     the surface appearance (`style.artworkRendering: 'stencil'`)
   ///   - targetWidth: Target width in points
   ///   - targetHeight: Target height in points
   ///   - displayScale: The CarPlay display scale factor
@@ -37,7 +38,7 @@ enum CarPlayArtworkResolver {
   static func resolve(
     artwork: String?,
     artworkSourceUri: String?,
-    artworkCarPlayTinted: Bool?,
+    stencil: Bool,
     targetWidth: Double,
     targetHeight: Double,
     displayScale: Double,
@@ -57,7 +58,7 @@ enum CarPlayArtworkResolver {
           return resolveDirectFallback(
             artwork: artwork,
             artworkSourceUri: artworkSourceUri,
-            artworkCarPlayTinted: artworkCarPlayTinted,
+            stencil: stencil,
             targetWidth: targetWidth,
             targetHeight: targetHeight,
           )
@@ -66,7 +67,7 @@ enum CarPlayArtworkResolver {
         return .fetch(
           uri: resolved.uri,
           headers: resolved.headers,
-          shouldTint: artworkCarPlayTinted ?? false,
+          shouldTint: stencil,
           isSvg: isSvg,
         )
       }
@@ -76,7 +77,7 @@ enum CarPlayArtworkResolver {
     return resolveDirectFallback(
       artwork: artwork,
       artworkSourceUri: artworkSourceUri,
-      artworkCarPlayTinted: artworkCarPlayTinted,
+      stencil: stencil,
       targetWidth: targetWidth,
       targetHeight: targetHeight,
     )
@@ -85,7 +86,7 @@ enum CarPlayArtworkResolver {
   private static func resolveDirectFallback(
     artwork: String?,
     artworkSourceUri: String?,
-    artworkCarPlayTinted: Bool?,
+    stencil: Bool,
     targetWidth: Double,
     targetHeight: Double,
   ) -> ArtworkLoadAction {
@@ -100,7 +101,7 @@ enum CarPlayArtworkResolver {
     return .fetch(
       uri: directUri,
       headers: nil,
-      shouldTint: artworkCarPlayTinted ?? false,
+      shouldTint: stencil,
       isSvg: isSvg,
     )
   }

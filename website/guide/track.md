@@ -112,7 +112,7 @@ Don't set `artworkSource` yourself — the library populates it.
 
 On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode automatically.
 
-**Tinting (`artworkCarPlayTinted`).** For monochrome icons, set this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there. On Android, an `android.resource://…` artwork URI automatically gets category styling (icon margins + system tinting for vector drawables).
+**Tinting (`style: { artworkRendering: 'stencil' }`).** For monochrome icons, declare this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there. On Android, an `android.resource://…` artwork URI selects the category variant of any emitted display hint (icon margins + system tinting for vector drawables).
 
 **Light and dark images.** When the appearances need genuinely different artwork rather than the same shape recolored, set `artwork` to an [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) pair — `{ light, dark }`. CarPlay adapts between them in place; everywhere that needs a single image uses `dark`. See [Artwork → Light and dark](/guide/artwork#light-and-dark-artwork).
 
@@ -132,33 +132,35 @@ It carries only `userAgent`, `headers`, and `query` — deliberately **not** `ba
 
 ## Presentation on native surfaces
 
-Optional fields that change how a Track renders on CarPlay / Android Auto. They're no-ops where not applicable — set them where they help.
+Optional fields that change how a Track renders on CarPlay / Android Auto. Declarations are aspirational — inert where not applicable, never an error.
 
-| Field                             | Effect                                               | Platform                   |
-| --------------------------------- | ---------------------------------------------------- | -------------------------- |
-| `style: 'list' \| 'grid'`         | how this item renders                                | Android Auto / AAOS        |
-| `childrenStyle: 'list' \| 'grid'` | default layout for this container's children         | Android Auto / AAOS        |
-| `favorited`                       | filled/empty heart (needs the `favorite` capability) | Android Auto, notification |
-| `live`                            | a "live" indicator                                   | iOS now-playing            |
-| `albumPath`                       | make the now-playing album line tappable             | CarPlay                    |
+| Field                                    | Effect                                                            | Platform                   |
+| ---------------------------------------- | ----------------------------------------------------------------- | -------------------------- |
+| `style: { display: 'list' \| 'grid' }`   | on a browsable track: the layout _promise_ for the page it opens  | Android Auto / AAOS        |
+| `style: { artworkRendering: 'stencil' }` | tint monochrome artwork to the surface appearance                 | CarPlay                    |
+| `disabled`                               | unavailable: never plays; grayed where drawable, hidden elsewhere | all                        |
+| `favorited`                              | filled/empty heart (needs the `favorite` capability)              | Android Auto, notification |
+| `live`                                   | a "live" indicator                                                | iOS now-playing            |
+| `albumPath`                              | make the now-playing album line tappable                          | CarPlay                    |
 
 A couple of constraints worth knowing:
 
-- **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in. It sets the drilled-into page's _default_; a [Section](#sections-grouping-and-tile-layouts)'s own `style` overrides it for that section where set.
+- **`display` goes on the browsable track as it appears in its parent's list** — Android Auto reads it there, before the page resolves, to decide how to lay out the folder once you navigate in (ADR 0011: the promise is emitted only when declared — never derived). The drilled-into page's own sections override it per section via their `style`.
 - **`albumPath` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumPath` in the [Browser config](/guide/browser).
 
 ```ts
+// The handle, as it appears in its PARENT's list (no children here — that's
+// the page's job): the promise for the page it opens.
 {
   path: '/genres',
   title: 'Genres',
-  childrenStyle: 'grid', // children laid out as tiles in Android Auto
-  children: [...]
+  style: { display: 'grid' } // the page this opens lays out as tiles in Android Auto
 }
 ```
 
 ## Sections — grouping and tile layouts
 
-Headers and tile layouts aren't Track fields — they're declared on the **page**, as [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`). A section groups tracks under a header and picks their layout: `'list'` rows (the default), `'grid'` wrapping artwork tiles, or `'rail'` — a single line of tiles (formerly the image row). The section's `path` is the navigation target for its header / "view all" surface; a section without one is a pure preview, its header not tappable.
+Headers and tile layouts aren't Track fields — they're declared on the **page**, as [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`). A section groups tracks under a header, and its `style` block's `display` picks their layout: `'list'` rows (the default) or `'grid'` artwork tiles — wrapping unless `gridWrap: false` keeps them to a single line (the teaser shelf). The section's `path` is the navigation target for its header / "view all" surface; a section without one is a pure preview, its header not tappable.
 
 A tile with `src` **plays immediately on tap** (same selection path as a playable list row — a station app can make tiles play their station directly); otherwise its `path` is navigated. Tiles are ordinary Tracks, so playable ones carry the now-playing fields any track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`). Tapping a playable child queues **its section** on every surface (see [Playback behavior](/guide/browser#playback-behavior)):
 
@@ -169,7 +171,7 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
   sections: [
     {
       title: 'Featured',
-      style: 'rail',
+      style: { display: 'grid', gridWrap: false },
       path: '/browse/featured', // header tap → the full list
       children: [
         { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
@@ -187,7 +189,7 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
 }
 ```
 
-Each surface renders a style as its nearest supported form — CarPlay truncates a `rail` at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
+Each surface renders a declaration as its nearest supported form — CarPlay truncates a single-line grid (`gridWrap: false`) at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
 
 ## ResolvedTrack — a resolved page
 

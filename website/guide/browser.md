@@ -66,13 +66,13 @@ A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it r
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: 'rail', path: '/popular', children: [...] },
+    { title: 'Popular', style: { display: 'grid', gridWrap: false }, path: '/popular', children: [...] },
     { title: 'All stations', children: [...] }
   ]
 }
 ```
 
-A Section is `{ title?, subtitle?, style?, path?, children }`: `title` renders as a header above its tracks, `style` picks their layout (`'list'` rows — the default — `'grid'` wrapping artwork tiles, or `'rail'`, a single line of tiles), and `path` is the navigation target for the header / "view all" surface. See [Presentation](#presentation) for how each surface renders the styles.
+A Section is `{ title?, subtitle?, style?, path?, children }`: `title` renders as a header above its tracks, `style` is a declaration block whose `display` picks the children's layout (`'list'` rows — the default — or `'grid'` artwork tiles; `gridWrap: false` keeps the grid to a single line, the teaser shelf), and `path` is the navigation target for the header / "view all" surface. See [Presentation](#presentation) for how each surface renders the declarations.
 
 A flat page doesn't have to spell that out: authoring a plain `children: Track[]` — as most examples in this guide do — is sugar for one untitled section. Resolved output always carries `sections`; `children` is never populated on a resolved page.
 
@@ -387,7 +387,7 @@ See [Now Playing](/guide/now-playing) for the metadata side of the now-playing s
 
 Two options control what happens when a playable Track is tapped.
 
-**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay rail fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay single-line grid fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
 
 Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page. So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
 
@@ -502,33 +502,36 @@ The `code` values: `content-not-found`, `network-error`, `http-error`, `callback
 
 ## Presentation
 
-Optional Section fields, Track fields, and config options control how items render on the native surfaces. Set them where they help.
+Presentation is declared in `style` blocks (plus a few content facts and config options), separated from content. Declarations are aspirational: each surface renders the properties it understands and ignores the rest — inert, never an error.
 
-| Field                                      | On             | Effect                                   | Platform            |
-| ------------------------------------------ | -------------- | ---------------------------------------- | ------------------- |
-| `title`                                    | a section      | header above its tracks                  | all                 |
-| `style: 'grid'`                            | a section      | wrapping artwork-tile grid               | all\*               |
-| `style: 'rail'`                            | a section      | a single line of artwork tiles           | all\*               |
-| `path` (+ `subtitle`)                      | a section      | header / "view all" navigation target    | all                 |
-| `style: 'grid'`                            | an item        | render this item as a grid cell          | Android Auto / AAOS |
-| `childrenStyle: 'grid'`                    | a container    | lay its children out as a grid           | Android Auto / AAOS |
-| `artwork: 'sf:heart.fill'`                 | any item       | SF Symbol icon (supports `?bg=…&fg=…`)   | iOS                 |
-| `live: true`                               | a track        | live indicator                           | iOS                 |
-| `artworkCarPlayTinted`                     | a track        | tint artwork for CarPlay light/dark      | iOS                 |
-| `carPlaySiriListButton: 'top' \| 'bottom'` | a page         | place the Siri cell on the page          | iOS                 |
-| `albumPath` + `resolveAlbumPath`           | track + config | make the now-playing album line tappable | CarPlay             |
+| Field                                         | On                       | Effect                                                                        | Platform            |
+| --------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- | ------------------- |
+| `title`                                       | a section                | header above its tracks                                                       | all                 |
+| `style: { display: 'grid' }`                  | a section                | wrapping artwork-tile grid                                                    | all\*               |
+| `style: { display: 'grid', gridWrap: false }` | a section                | a single line of artwork tiles                                                | all\*               |
+| `path` (+ `subtitle`)                         | a section                | header / "view all" navigation target                                         | all                 |
+| `style` (same block)                          | a page                   | declaration for the whole page — a section overrides it for its own children  | all                 |
+| `style: { display: 'grid' }`                  | a browsable track        | the layout _promise_ for the page it opens (Android Auto's parent-level hint) | Android Auto / AAOS |
+| `style: { artworkRendering: 'stencil' }`      | a track / section / page | tint monochrome artwork to the surface appearance                             | CarPlay             |
+| `disabled: true`                              | a track                  | unavailable: never plays; grayed where drawable, hidden elsewhere             | all                 |
+| `artwork: 'sf:heart.fill'`                    | any item                 | SF Symbol icon (supports `?bg=…&fg=…`)                                        | iOS                 |
+| `live: true`                                  | a track                  | live indicator                                                                | iOS                 |
+| `carPlaySiriListButton: 'top' \| 'bottom'`    | a page                   | place the Siri cell on the page                                               | iOS                 |
+| `albumPath` + `resolveAlbumPath`              | track + config           | make the now-playing album line tappable                                      | CarPlay             |
 
 ::: info Caveats from the table
-**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Tile styles render each platform's nearest supported form** — a `rail` on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a `grid` wraps to as many lines as needed on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it renders `grid` and `rail` identically — showing more, never less. No car surface scrolls horizontally; an app UI typically renders a `rail` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). A section's `style` overrides the container's `childrenStyle` where set; `childrenStyle` remains the drilled-into page's default.
+**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Layouts render each platform's nearest supported form** — a single-line grid (`gridWrap: false`) on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a wrapping grid takes as many lines as it needs on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it shows more, never less. No car surface scrolls horizontally; an app UI typically renders `gridWrap: false` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). Item properties like `artworkRendering` are inherited — `track ?? section ?? page`, per property — so a section-wide value can be overridden per item. `display` is positional, never inherited: each holder describes its own children, and a browsable track's `display` promises the layout of the page it opens (declare it on the handle, or Android Auto renders that page as a list). `gridWrap` is inert unless `display` is `'grid'`. One AAOS caveat: AOSP-based Automotive units honor only the parent-level promise, so a page mixing grid and list sections renders uniformly there — see [Android Auto → Browse display](/guide/android-auto#browse-display).
 :::
 
 ```ts
-{ path: '/genres', title: 'Genres', childrenStyle: 'grid', children: [...] }
+// A page whose block declares grid for its whole scope (the matching AA
+// promise goes on the handle that OPENS this page — see Android Auto guide):
+{ path: '/genres', title: 'Genres', style: { display: 'grid' }, children: [...] }
 {
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: 'rail', path: '/popular', children: [...] },
+    { title: 'Popular', style: { display: 'grid', gridWrap: false }, path: '/popular', children: [...] },
     { title: 'All stations', children: [...] }
   ]
 }

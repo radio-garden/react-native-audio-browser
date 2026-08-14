@@ -140,7 +140,7 @@ export const radioGardenRoutes: Record<string, BrowserSource> = {
 
 export const radioGardenLibrarySection: Section = {
   title: 'Radio Playlists',
-  style: 'rail',
+  style: { display: 'grid', gridWrap: false },
   path: '/library/playlists',
   children: Object.entries(playlists).map(([id, p]) => ({
     title: p.title!,

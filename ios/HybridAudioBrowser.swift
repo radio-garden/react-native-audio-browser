@@ -1879,8 +1879,16 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           browser.showNowPlayingRequestedEmitter.emit(())
           completion(true)
         } else if let state = browser.playbackStateStore.load() {
-          browser.logger.info("resume: cold — restoring persisted track")
           let track = state.track.toNitro()
+          // The persisted track can carry `disabled` — it became unavailable
+          // after it was saved. A disabled track never plays, resumption
+          // included (Track.disabled).
+          if track.disabled == true {
+            browser.logger.info("resume: persisted track is disabled — refusing")
+            completion(false)
+            return
+          }
+          browser.logger.info("resume: cold — restoring persisted track")
           let startMs = (track.live == true) ? nil : state.positionMs
           // Match Android resume: re-expand the full queue from the track's contextual
           // path (parent container → siblings + selected index). Fall back to the single

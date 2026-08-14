@@ -18,8 +18,14 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(path: String, sections: [Section]?, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, live: Bool?) {
-    self.init(std.string(path), { () -> bridge.std__optional_std__vector_Section__ in
+  init(path: String, style: SectionStyle?, sections: [Section]?, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, disabled: Bool?, favorited: Bool?, live: Bool?) {
+    self.init(std.string(path), { () -> bridge.std__optional_SectionStyle_ in
+      if let __unwrappedValue = style {
+        return bridge.create_std__optional_SectionStyle_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_Section__ in
       if let __unwrappedValue = sections {
         return bridge.create_std__optional_std__vector_Section__({ () -> bridge.std__vector_Section_ in
           var __vector = bridge.create_std__vector_Section_(__unwrappedValue.count)
@@ -86,12 +92,6 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = artworkCarPlayTinted {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
     }(), std.string(title), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = subtitle {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -134,15 +134,9 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_TrackStyle_ in
-      if let __unwrappedValue = style {
-        return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_TrackStyle_ in
-      if let __unwrappedValue = childrenStyle {
-        return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = disabled {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -164,6 +158,11 @@ public extension ResolvedTrack {
   @inline(__always)
   var path: String {
     return String(self.__path)
+  }
+  
+  @inline(__always)
+  var style: SectionStyle? {
+    return self.__style.value
   }
   
   @inline(__always)
@@ -251,18 +250,6 @@ public extension ResolvedTrack {
   @inline(__always)
   var request: TrackRequest? {
     return self.__request.value
-  }
-  
-  @inline(__always)
-  var artworkCarPlayTinted: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__artworkCarPlayTinted) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__artworkCarPlayTinted)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
   }
   
   @inline(__always)
@@ -355,13 +342,15 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var style: TrackStyle? {
-    return self.__style.value
-  }
-  
-  @inline(__always)
-  var childrenStyle: TrackStyle? {
-    return self.__childrenStyle.value
+  var disabled: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__disabled) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__disabled)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)

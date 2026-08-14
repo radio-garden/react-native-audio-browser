@@ -32,6 +32,11 @@ Track.style?: TrackStyle
 ResolvedTrack.style?: SectionStyle   // a page is a Track that is also the container
 ```
 
+Of these, `display`, `gridWrap`, and `artworkRendering` ship with the
+flip; `accessorySymbol`, `imageShape`, `cardTint`, `cardImage`, and
+`gridTile` are decided-but-unshipped — they land with their features
+(#125, #131, the card/condensed designs), the no-dead-fields rule.
+
 The rules, once:
 
 - **Declarations are aspirational.** Each surface renders the properties it

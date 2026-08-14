@@ -10,12 +10,18 @@
 #include <fbjni/fbjni.h>
 #include "SectionStyle.hpp"
 
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "JStyleDisplay.hpp"
+#include "StyleDisplay.hpp"
+#include <optional>
+
 namespace margelo::nitro::audiobrowser {
 
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "SectionStyle" and the the Kotlin enum "SectionStyle".
+   * The C++ JNI bridge between the C++ struct "SectionStyle" and the the Kotlin data class "SectionStyle".
    */
   struct JSectionStyle final: public jni::JavaClass<JSectionStyle> {
   public:
@@ -23,38 +29,40 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     /**
-     * Convert this Java/Kotlin-based enum to the C++ enum SectionStyle.
+     * Convert this Java/Kotlin-based struct to the C++ struct SectionStyle by copying all values to C++.
      */
     [[maybe_unused]]
     [[nodiscard]]
     SectionStyle toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldOrdinal = clazz->getField<int>("value");
-      int ordinal = this->getFieldValue(fieldOrdinal);
-      return static_cast<SectionStyle>(ordinal);
+      static const auto fieldGridWrap = clazz->getField<jni::JBoolean>("gridWrap");
+      jni::local_ref<jni::JBoolean> gridWrap = this->getFieldValue(fieldGridWrap);
+      static const auto fieldDisplay = clazz->getField<JStyleDisplay>("display");
+      jni::local_ref<JStyleDisplay> display = this->getFieldValue(fieldDisplay);
+      static const auto fieldArtworkRendering = clazz->getField<JArtworkRendering>("artworkRendering");
+      jni::local_ref<JArtworkRendering> artworkRendering = this->getFieldValue(fieldArtworkRendering);
+      return SectionStyle(
+        gridWrap != nullptr ? std::make_optional(static_cast<bool>(gridWrap->value())) : std::nullopt,
+        display != nullptr ? std::make_optional(display->toCpp()) : std::nullopt,
+        artworkRendering != nullptr ? std::make_optional(artworkRendering->toCpp()) : std::nullopt
+      );
     }
 
   public:
     /**
-     * Create a Java/Kotlin-based enum with the given C++ enum's value.
+     * Create a Java/Kotlin-based struct by copying all values from the given C++ struct to Java.
      */
     [[maybe_unused]]
-    static jni::alias_ref<JSectionStyle> fromCpp(SectionStyle value) {
+    static jni::local_ref<JSectionStyle::javaobject> fromCpp(const SectionStyle& value) {
+      using JSignature = JSectionStyle(jni::alias_ref<jni::JBoolean>, jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>);
       static const auto clazz = javaClassStatic();
-      switch (value) {
-        case SectionStyle::LIST:
-          static const auto fieldLIST = clazz->getStaticField<JSectionStyle>("LIST");
-          return clazz->getStaticFieldValue(fieldLIST);
-        case SectionStyle::GRID:
-          static const auto fieldGRID = clazz->getStaticField<JSectionStyle>("GRID");
-          return clazz->getStaticFieldValue(fieldGRID);
-        case SectionStyle::RAIL:
-          static const auto fieldRAIL = clazz->getStaticField<JSectionStyle>("RAIL");
-          return clazz->getStaticFieldValue(fieldRAIL);
-        default:
-          std::string stringValue = std::to_string(static_cast<int>(value));
-          throw std::invalid_argument("Invalid enum value (" + stringValue + "!");
-      }
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
+        value.gridWrap.has_value() ? jni::JBoolean::valueOf(value.gridWrap.value()) : nullptr,
+        value.display.has_value() ? JStyleDisplay::fromCpp(value.display.value()) : nullptr,
+        value.artworkRendering.has_value() ? JArtworkRendering::fromCpp(value.artworkRendering.value()) : nullptr
+      );
     }
   };
 

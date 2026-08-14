@@ -464,7 +464,13 @@ public final class RNABCarPlayController: NSObject {
   // MARK: - Tab Bar
 
   @MainActor
-  private func showTabBar(tabs: [Track]) async {
+  private func showTabBar(tabs allTabs: [Track]) async {
+    // A disabled tab hides — CPTabBarTemplate has no gray affordance, so per
+    // Track.disabled's rendering ladder an unavailable tab must not render as
+    // a normal-looking control (matches Android Auto, which filters before
+    // its 4-tab cap).
+    let tabs = allTabs.filter { $0.disabled != true }
+
     // Serialize concurrent tab-bar builds across BOTH the gated and non-gated
     // paths with one shared generation token: bump at entry, capture, and bail
     // before any template mutation once a newer build supersedes us. Both paths

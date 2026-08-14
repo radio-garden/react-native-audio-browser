@@ -13,6 +13,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
+import com.audiobrowser.browser.styleResolvedSections
 import com.audiobrowser.browser.untitledSection
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toTrack
@@ -31,7 +32,7 @@ import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Section
-import com.margelo.nitro.audiobrowser.SectionStyle
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -349,7 +350,9 @@ class MediaSessionCallback(private val player: Player) :
           } else if (parentId == BrowserPathHelper.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
-            val tabs = browserManager.queryTabs()
+            // Disabled tabs hide (Track.disabled) — filtered before the cap so
+            // an unavailable tab never costs an available one its slot.
+            val tabs = browserManager.queryTabs().filterNot { it.disabled == true }
             if (tabs.size > 4) {
               Timber.w(
                 "Root has ${tabs.size} tabs; dropping ${tabs.size - 4} (Android Auto root limit)"
@@ -358,11 +361,13 @@ class MediaSessionCallback(private val player: Player) :
             toFlatMediaItems(tabs.take(4))
           } else {
             // Resolve the specific path and flatten its sections to MediaItems
-            // (paths are already set to contextual paths)
+            // (paths are already set to contextual paths). Section styles come
+            // page-folded (`section ?? page`, ADR 0011).
             val resolvedTrack = browserManager.resolve(parentId)
             val sections =
-              resolvedTrack.normalizedSections
+              resolvedTrack.styleResolvedSections()
                 ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
+            browserManager.warnIfGridPageLacksPromise(parentId, sections)
             toMediaItems(sections)
           }
 
@@ -419,20 +424,23 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Flattens a page's sections to MediaItems for browse delivery — the Media3 boundary where
    * sections die (ADR 0010): the MediaBrowser protocol has no section node, so each child is
-   * stamped with its owning section's title/style hints. A tile-styled section (`grid`/`rail`) with
-   * a `path` gains a browsable "view all" link under the same header. Http(s) artwork routes
-   * through the content:// provider so Android Auto can load it via the ArtworkContentProvider.
+   * stamped with its owning section's title/style hints. A grid-displayed section with a `path`
+   * gains a browsable "view all" link under the same header. Http(s) artwork routes through the
+   * content:// provider so Android Auto can load it via the ArtworkContentProvider.
    */
   private fun toMediaItems(sections: List<Section>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
     val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
     return sections.flatMap { section ->
+      // Android Auto has no disabled affordance, so an unavailable track hides
+      // — never a normal-looking dead row (Track.disabled's rendering ladder).
+      val visibleChildren = section.children.filter { it.disabled != true }
       val items =
-        section.children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
-      val isTileSection = section.style == SectionStyle.GRID || section.style == SectionStyle.RAIL
+        visibleChildren.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
+      val isTileSection = section.style?.display == StyleDisplay.GRID
       // No "view all" under an empty section — CarPlay skips empty sections
       // outright, and a lone navigation tile under a header is a dead end.
-      if (isTileSection && section.path != null && section.children.isNotEmpty()) {
+      if (isTileSection && section.path != null && visibleChildren.isNotEmpty()) {
         items +
           TrackFactory.toBrowseMediaItem(
             TrackFactory.navigationTrack(section),
@@ -666,7 +674,12 @@ class MediaSessionCallback(private val player: Player) :
       try {
         // Execute search (automatically caches results at /__search?q=query)
         val searchResults = browserManager.search(query)
-        val resultCount = searchResults.normalizedSections?.sumOf { it.children.size } ?: 0
+        // Count what onGetSearchResult will actually serve: disabled tracks
+        // hide on Android Auto, so they must not inflate the announced count.
+        val resultCount =
+          searchResults.normalizedSections?.sumOf { section ->
+            section.children.count { it.disabled != true }
+          } ?: 0
 
         Timber.d("Search completed: $resultCount results for query '$query'")
 
@@ -864,6 +877,15 @@ class MediaSessionCallback(private val player: Player) :
             Timber.w("No persisted playback state found")
             throw IllegalStateException("No playback state to resume")
           }
+
+      // The persisted track can carry `disabled` — it became unavailable after
+      // it was saved. A disabled track never plays, resumption included
+      // (Track.disabled); failing the future refuses without touching the
+      // player.
+      if (state.track.disabled == true) {
+        Timber.w("Refusing resumption of disabled track: ${state.track.title}")
+        throw IllegalStateException("Persisted track is disabled")
+      }
 
       // isForPlayback == false is the device-boot-time notification case: network may be
       // unavailable and we must not start playback. Return just the locally-stored track with its

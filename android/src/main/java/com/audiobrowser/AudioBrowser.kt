@@ -640,6 +640,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun navigateTrack(track: Track) {
+    // A disabled track is unavailable — it never plays, whichever surface or
+    // stale resume path delivered the selection (Track.disabled; mirrors iOS
+    // TrackSelector.select). Refused before any state changes: an inert tap
+    // must not clear an unrelated navigation error or cancel an in-flight
+    // navigation.
+    if (track.disabled == true) {
+      Timber.d("Ignoring selection of disabled track: ${track.title}")
+      return
+    }
+
     clearNavigationError()
 
     // Cancel previous navigation to avoid race conditions

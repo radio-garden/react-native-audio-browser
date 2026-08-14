@@ -69,6 +69,14 @@ val ResolvedTrack.normalizedSections: List<Section>?
   get() = sections?.toList() ?: children?.let { listOf(untitledSection(it)) }
 
 /**
+ * [normalizedSections] with the page block folded in: each section's style resolves `section ??
+ * page` per property ([StyleResolver], ADR 0011), so everything downstream sees only effective
+ * section blocks — a page is a Track that is also the container of its sections.
+ */
+fun ResolvedTrack.styleResolvedSections(): List<Section>? =
+  normalizedSections?.map { it.copy(style = StyleResolver.sectionStyle(it.style, style)) }
+
+/**
  * The page's children concatenated in section order — the flattening that defines contextual
  * `__index` positions and the flat views (tabs, search) of a sectioned page.
  */

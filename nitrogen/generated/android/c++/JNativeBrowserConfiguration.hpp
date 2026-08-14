@@ -10,6 +10,7 @@
 #include <fbjni/fbjni.h>
 #include "NativeBrowserConfiguration.hpp"
 
+#include "ArtworkRendering.hpp"
 #include "ArtworkRequestConfig.hpp"
 #include "ArtworkVariants.hpp"
 #include "BrowseError.hpp"
@@ -21,6 +22,7 @@
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkRendering.hpp"
 #include "JArtworkRequestConfig.hpp"
 #include "JArtworkVariants.hpp"
 #include "JBrowseError.hpp"
@@ -57,6 +59,7 @@
 #include "JSearchParams.hpp"
 #include "JSection.hpp"
 #include "JSectionStyle.hpp"
+#include "JStyleDisplay.hpp"
 #include "JTrack.hpp"
 #include "JTrackLoadEvent.hpp"
 #include "JTrackRequest.hpp"
@@ -76,6 +79,7 @@
 #include "SearchParams.hpp"
 #include "Section.hpp"
 #include "SectionStyle.hpp"
+#include "StyleDisplay.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
 #include "TrackRequest.hpp"

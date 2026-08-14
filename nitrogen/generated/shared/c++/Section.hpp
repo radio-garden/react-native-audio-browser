@@ -29,7 +29,7 @@
 #endif
 
 // Forward declaration of `SectionStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
+namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 
