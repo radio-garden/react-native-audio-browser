@@ -178,6 +178,10 @@ _Avoid_: TrackInfo, MediaMetadata.
 Metadata streamed mid-playback — ICY frames from Shoutcast/Icecast or in-band ID3 frames from HLS. The library does not auto-apply it to **Now Playing**; the app forwards selected fields via `updateNowPlaying()`. This is the live-radio data flow.
 _Avoid_: StreamMetadata, ID3Event.
 
+**Artwork**:
+The image that _represents_ a **Track** or **Section** — album art, a station logo, a tab's symbol standing in for the tab's content. Iconography that _annotates_ an item rather than represents it — accessory badges, button glyphs, playing indicators — is a **symbol** (an SF Symbol name). "Image" is the generic word, not a banned one: an Artwork is an image, and layers that handle any picture (`ImageSource`, a platform `UIImage`) rightly say so. Library-defined names prefer the most specific applicable role (`artwork`, `artworkSource`, `artworkCarPlayTinted`); platform-scoped hints that pass a platform property through keep that platform's own term (an image-shape hint mirrors CarPlay's `imageShape`) — the hint's meaning is the platform's rendering contract, so the platform's word is the honest one.
+_Avoid_: icon (say Artwork or symbol, by role), thumbnail, cover.
+
 ### External surfaces
 
 **External surface**:
