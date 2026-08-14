@@ -71,7 +71,7 @@ export type TrackArtwork = string | ArtworkVariants
  *   CarPlay this requires iOS 26+; earlier versions render a list, since
  *   CarPlay's only tile container truncates at a width the system doesn't
  *   report.
- * - `'grid-row'` — exactly one line of artwork tiles. CarPlay shows the
+ * - `'rail'` — exactly one line of artwork tiles. CarPlay shows the
  *   tiles that fit (~up to 8, width-dependent); Android Auto has no
  *   single-line tile container and renders it as `'grid'` — showing more,
  *   never less; app UIs typically render a horizontal scroller.
@@ -80,7 +80,7 @@ export type TrackArtwork = string | ArtworkVariants
  * tile plus its title. Use the artwork `resolve` hook to supply fallback
  * art.
  */
-export type SectionStyle = 'list' | 'grid' | 'grid-row'
+export type SectionStyle = 'list' | 'grid' | 'rail'
 
 /**
  * A titled, styled group of Tracks within a resolved page — the unit of
@@ -93,14 +93,14 @@ export interface Section {
   title?: string
   /**
    * Secondary line for the section's navigation surface — e.g. the label
-   * of the "view all" link a `grid-row` section gets on Android Auto.
+   * of the "view all" link a `rail` section gets on Android Auto.
    */
   subtitle?: string
   /** How children render. Defaults to `'list'`. */
   style?: SectionStyle
   /**
    * Navigation target for the section header / "view all" surface. A
-   * `grid-row` section's header tap (CarPlay) and appended "view all" link
+   * `rail` section's header tap (CarPlay) and appended "view all" link
    * (Android Auto) navigate here. Absent = a pure preview; the header is
    * not tappable.
    */

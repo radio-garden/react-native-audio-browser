@@ -419,8 +419,8 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Flattens a page's sections to MediaItems for browse delivery — the Media3 boundary where
    * sections die (ADR 0010): the MediaBrowser protocol has no section node, so each child is
-   * stamped with its owning section's title/style hints. A tile-styled section (`grid`/`grid-row`)
-   * with a `path` gains a browsable "view all" link under the same header. Http(s) artwork routes
+   * stamped with its owning section's title/style hints. A tile-styled section (`grid`/`rail`) with
+   * a `path` gains a browsable "view all" link under the same header. Http(s) artwork routes
    * through the content:// provider so Android Auto can load it via the ArtworkContentProvider.
    */
   private fun toMediaItems(sections: List<Section>): List<MediaItem> {
@@ -429,8 +429,7 @@ class MediaSessionCallback(private val player: Player) :
     return sections.flatMap { section ->
       val items =
         section.children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
-      val isTileSection =
-        section.style == SectionStyle.GRID || section.style == SectionStyle.GRID_ROW
+      val isTileSection = section.style == SectionStyle.GRID || section.style == SectionStyle.RAIL
       // No "view all" under an empty section — CarPlay skips empty sections
       // outright, and a lone navigation tile under a header is a dead end.
       if (isTileSection && section.path != null && section.children.isNotEmpty()) {

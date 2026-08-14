@@ -31,7 +31,7 @@ namespace margelo::nitro::audiobrowser {
   enum class SectionStyle {
     LIST      SWIFT_NAME(list) = 0,
     GRID      SWIFT_NAME(grid) = 1,
-    GRID_ROW      SWIFT_NAME(gridRow) = 2,
+    RAIL      SWIFT_NAME(rail) = 2,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -46,7 +46,7 @@ namespace margelo::nitro {
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("list"): return margelo::nitro::audiobrowser::SectionStyle::LIST;
         case hashString("grid"): return margelo::nitro::audiobrowser::SectionStyle::GRID;
-        case hashString("grid-row"): return margelo::nitro::audiobrowser::SectionStyle::GRID_ROW;
+        case hashString("rail"): return margelo::nitro::audiobrowser::SectionStyle::RAIL;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum SectionStyle - invalid value!");
       }
@@ -55,7 +55,7 @@ namespace margelo::nitro {
       switch (arg) {
         case margelo::nitro::audiobrowser::SectionStyle::LIST: return JSIConverter<std::string>::toJSI(runtime, "list");
         case margelo::nitro::audiobrowser::SectionStyle::GRID: return JSIConverter<std::string>::toJSI(runtime, "grid");
-        case margelo::nitro::audiobrowser::SectionStyle::GRID_ROW: return JSIConverter<std::string>::toJSI(runtime, "grid-row");
+        case margelo::nitro::audiobrowser::SectionStyle::RAIL: return JSIConverter<std::string>::toJSI(runtime, "rail");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert SectionStyle to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -69,7 +69,7 @@ namespace margelo::nitro {
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("list"):
         case hashString("grid"):
-        case hashString("grid-row"):
+        case hashString("rail"):
           return true;
         default:
           return false;

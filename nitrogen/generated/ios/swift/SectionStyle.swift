@@ -21,8 +21,8 @@ public extension SectionStyle {
         self = .list
       case "grid":
         self = .grid
-      case "grid-row":
-        self = .gridRow
+      case "rail":
+        self = .rail
       default:
         return nil
     }
@@ -37,8 +37,8 @@ public extension SectionStyle {
         return "list"
       case .grid:
         return "grid"
-      case .gridRow:
-        return "grid-row"
+      case .rail:
+        return "rail"
     }
   }
 }

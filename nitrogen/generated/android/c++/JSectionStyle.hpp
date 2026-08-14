@@ -48,9 +48,9 @@ namespace margelo::nitro::audiobrowser {
         case SectionStyle::GRID:
           static const auto fieldGRID = clazz->getStaticField<JSectionStyle>("GRID");
           return clazz->getStaticFieldValue(fieldGRID);
-        case SectionStyle::GRID_ROW:
-          static const auto fieldGRID_ROW = clazz->getStaticField<JSectionStyle>("GRID_ROW");
-          return clazz->getStaticFieldValue(fieldGRID_ROW);
+        case SectionStyle::RAIL:
+          static const auto fieldRAIL = clazz->getStaticField<JSectionStyle>("RAIL");
+          return clazz->getStaticFieldValue(fieldRAIL);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

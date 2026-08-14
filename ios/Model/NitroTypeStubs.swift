@@ -100,13 +100,13 @@
   enum SectionStyle {
     case list
     case grid
-    case gridRow
+    case rail
 
     init?(fromString string: String) {
       switch string {
       case "list": self = .list
       case "grid": self = .grid
-      case "grid-row": self = .gridRow
+      case "rail": self = .rail
       default: return nil
       }
     }

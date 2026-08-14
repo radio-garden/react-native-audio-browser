@@ -18,7 +18,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 enum class SectionStyle(@DoNotStrip @Keep val value: Int) {
   LIST(0),
   GRID(1),
-  GRID_ROW(2);
+  RAIL(2);
 
   companion object
 }

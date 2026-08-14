@@ -92,7 +92,7 @@ private fun String?.toSectionStyle(): SectionStyle? {
   return when (this?.lowercase()) {
     "list" -> SectionStyle.LIST
     "grid" -> SectionStyle.GRID
-    "grid-row" -> SectionStyle.GRID_ROW
+    "rail" -> SectionStyle.RAIL
     else -> null
   }
 }

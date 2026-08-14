@@ -66,13 +66,13 @@ A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it r
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: 'grid-row', path: '/popular', children: [...] },
+    { title: 'Popular', style: 'rail', path: '/popular', children: [...] },
     { title: 'All stations', children: [...] }
   ]
 }
 ```
 
-A Section is `{ title?, subtitle?, style?, path?, children }`: `title` renders as a header above its tracks, `style` picks their layout (`'list'` rows — the default — `'grid'` wrapping artwork tiles, or `'grid-row'`, a single line of tiles), and `path` is the navigation target for the header / "view all" surface. See [Presentation](#presentation) for how each surface renders the styles.
+A Section is `{ title?, subtitle?, style?, path?, children }`: `title` renders as a header above its tracks, `style` picks their layout (`'list'` rows — the default — `'grid'` wrapping artwork tiles, or `'rail'`, a single line of tiles), and `path` is the navigation target for the header / "view all" surface. See [Presentation](#presentation) for how each surface renders the styles.
 
 A flat page doesn't have to spell that out: authoring a plain `children: Track[]` — as most examples in this guide do — is sugar for one untitled section. Resolved output always carries `sections`; `children` is never populated on a resolved page.
 
@@ -387,7 +387,7 @@ See [Now Playing](/guide/now-playing) for the metadata side of the now-playing s
 
 Two options control what happens when a playable Track is tapped.
 
-**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay grid-row fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay rail fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
 
 Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page. So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
 
@@ -508,7 +508,7 @@ Optional Section fields, Track fields, and config options control how items rend
 | ------------------------------------------ | -------------- | ---------------------------------------- | ------------------- |
 | `title`                                    | a section      | header above its tracks                  | all                 |
 | `style: 'grid'`                            | a section      | wrapping artwork-tile grid               | all\*               |
-| `style: 'grid-row'`                        | a section      | a single line of artwork tiles           | all\*               |
+| `style: 'rail'`                            | a section      | a single line of artwork tiles           | all\*               |
 | `path` (+ `subtitle`)                      | a section      | header / "view all" navigation target    | all                 |
 | `style: 'grid'`                            | an item        | render this item as a grid cell          | Android Auto / AAOS |
 | `childrenStyle: 'grid'`                    | a container    | lay its children out as a grid           | Android Auto / AAOS |
@@ -519,7 +519,7 @@ Optional Section fields, Track fields, and config options control how items rend
 | `albumPath` + `resolveAlbumPath`           | track + config | make the now-playing album line tappable | CarPlay             |
 
 ::: info Caveats from the table
-**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Tile styles render each platform's nearest supported form** — a `grid-row` on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a `grid` wraps to as many lines as needed on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it renders `grid` and `grid-row` identically — showing more, never less. No car surface scrolls horizontally; an app UI typically renders a `grid-row` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). A section's `style` overrides the container's `childrenStyle` where set; `childrenStyle` remains the drilled-into page's default.
+**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Tile styles render each platform's nearest supported form** — a `rail` on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a `grid` wraps to as many lines as needed on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it renders `grid` and `rail` identically — showing more, never less. No car surface scrolls horizontally; an app UI typically renders a `rail` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). A section's `style` overrides the container's `childrenStyle` where set; `childrenStyle` remains the drilled-into page's default.
 :::
 
 ```ts
@@ -528,7 +528,7 @@ Optional Section fields, Track fields, and config options control how items rend
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: 'grid-row', path: '/popular', children: [...] },
+    { title: 'Popular', style: 'rail', path: '/popular', children: [...] },
     { title: 'All stations', children: [...] }
   ]
 }

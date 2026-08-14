@@ -86,7 +86,7 @@ export function BrowserScreen() {
   const rows: BrowseRow[] = useMemo(
     () =>
       (content?.sections ?? []).flatMap((section, si): BrowseRow[] => {
-        if (section.style === 'grid-row' || section.style === 'grid') {
+        if (section.style === 'rail' || section.style === 'grid') {
           return [{ kind: 'tiles', section, key: `tiles-${si}` }]
         }
         const trackRows: BrowseRow[] = section.children.map((track, i) => ({

@@ -53,7 +53,7 @@ Two declarations control how Android Auto renders a browsable's children — the
 ```
 
 - **`childrenStyle`** — `'list'` (rows) or `'grid'` (tiles), set on the **parent** to choose the default layout for its children.
-- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section's `style` overrides `childrenStyle` for that section: a `'grid'` or `'grid-row'` section renders as wrapping grid tiles (Android Auto's grid always wraps, so the two tile styles render identically), plus a "view all" link built from the section's `path` and `subtitle`.
+- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section's `style` overrides `childrenStyle` for that section: a `'grid'` or `'rail'` section renders as wrapping grid tiles (Android Auto's grid always wraps, so the two tile styles render identically), plus a "view all" link built from the section's `path` and `subtitle`.
 
 ```ts
 sections: [

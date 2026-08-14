@@ -21,7 +21,7 @@ interface Section {
   /** Secondary line for the section's navigation surface ("view all"). */
   subtitle?: string
   /** How children render: list rows (default), wrapping tiles, or one line of tiles. */
-  style?: 'list' | 'grid' | 'grid-row'
+  style?: 'list' | 'grid' | 'rail'
   /** Navigation target for the section header / "view all" surface. */
   path?: string
   children: Track[]
@@ -47,12 +47,12 @@ Decisions, each with its reason:
   ignored dead weight — silently; the consumer migration is lockstep, so
   there is no one left to warn.
 - **The tile styles are named for layout, not for a platform class.**
-  `'grid'` wraps to as many lines as needed; `'grid-row'` is exactly one
+  `'grid'` wraps to as many lines as needed; `'rail'` is exactly one
   line of tiles (what the flat model called an image row — a name that was
   `CPListImageRowItem` leaking into the domain, the same mistake this ADR
   retires `groupTitle` for). Style names declare the _requested_ layout; a
   platform renders its nearest supported form. Android Auto has no
-  single-line tile container, so `grid-row` renders there as `grid` —
+  single-line tile container, so `rail` renders there as `grid` —
   showing more, never less. If styles could only name what every surface
   guarantees, the vocabulary would be exactly `'list'`.
 - **A `style` value must earn entry** by rendering sanely on all three
@@ -91,7 +91,7 @@ Decisions, each with its reason:
   The wire behavior car clients see is unchanged.
 - **CarPlay maps sections 1:1 to `CPListSection`.** The run-accumulation
   scan is deleted; the section/item budget-truncation logic survives as-is.
-  A `grid-row` section renders as a _headerless_ `CPListSection` holding
+  A `rail` section renders as a _headerless_ `CPListSection` holding
   one image-row item whose text is `section.title` (today's exact look). A
   `grid` section renders as a wrapping, titled tile grid on iOS 26+
   (`imageGridElements` + `allowsMultipleLines` — never the title-less
@@ -143,10 +143,10 @@ Decisions, each with its reason:
   migration, not an incident.
 - Persisted playback state is track-level and unaffected.
 - ADR 0006's queue scoping becomes declared rather than derived; ADR 0009's
-  index tie-breaker survives unchanged and loses its grid-row residual.
+  index tie-breaker survives unchanged and loses its rail residual.
 - Reordering a page can no longer split or merge groups, and section
   identity is structural rather than a localized display string.
-- A `grid-row` that can be swiped sideways exists on no car surface —
+- A `rail` that can be swiped sideways exists on no car surface —
   CarPlay templates have no horizontal scrolling and Android Auto wraps;
   only app UIs may render it as a scroller. Authoring guidance: keep
-  grid-rows small and give them a `path` escape hatch.
+  rails small and give them a `path` escape hatch.

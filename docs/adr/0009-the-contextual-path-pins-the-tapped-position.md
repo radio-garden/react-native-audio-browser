@@ -75,6 +75,6 @@ state), which degrade to the old behavior, once.
 
 _Amended by ADR 0010: with structural sections, `__index` is the flat
 position over the page's flattened sections (children concatenated in
-section order), grid-row items carry their own positions (removing the
+section order), rail items carry their own positions (removing the
 within-row residual below), and the old image-row/run precedence survives
 only as the index-less fallback (first section containing the identity)._

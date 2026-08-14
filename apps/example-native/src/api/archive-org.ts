@@ -276,7 +276,7 @@ export const archiveRoutes: Record<string, BrowserSource> = {
 
 export const archiveLibrarySection: Section = {
   title: 'Archive.org',
-  style: 'grid-row',
+  style: 'rail',
   path: '/archive',
   children: [
     {

@@ -260,7 +260,7 @@ export async function fetchItem(
   }
 }
 
-// Curated landing page: one grid-row section per collection, each filled
+// Curated landing page: one rail section per collection, each filled
 // with that collection's top items (tap a tile → that item's tracks).
 const HOME_ROWS: { title: string; id: string }[] = [
   { title: 'LibriVox', id: 'librivoxaudio' },
@@ -311,7 +311,7 @@ export async function fetchHome(prefix = '/archive'): Promise<ResolvedTrack> {
       if (children.length === 0) return null
       return {
         title: row.title,
-        style: 'grid-row',
+        style: 'rail',
         path: `${prefix}/collection/${row.id}`,
         children
       }
@@ -335,7 +335,7 @@ export const archiveRoutes: Record<string, BrowserSource> = {
 
 export const archiveLibrarySection: Section = {
   title: 'Archive.org',
-  style: 'grid-row',
+  style: 'rail',
   path: '/archive',
   children: [
     {

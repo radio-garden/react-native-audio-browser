@@ -37,7 +37,7 @@ class MediaExtrasBuilderTest {
 
   @Test
   fun `tile section styles coerce to the grid item hint`() {
-    for (style in listOf(SectionStyle.GRID, SectionStyle.GRID_ROW)) {
+    for (style in listOf(SectionStyle.GRID, SectionStyle.RAIL)) {
       val section = TestFixtures.section(arrayOf(track), style = style)
       val extras = MediaExtrasBuilder.build(track, section)
       assertEquals(

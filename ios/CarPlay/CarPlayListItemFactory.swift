@@ -58,7 +58,7 @@ final class CarPlayListItemFactory {
 
     init(for style: SectionStyle?) {
       switch style {
-      case .gridRow:
+      case .rail:
         self = .singleLineRow
       case .grid:
         if #available(iOS 26.0, *) {
@@ -77,7 +77,7 @@ final class CarPlayListItemFactory {
   /// requested layout; this renders CarPlay's nearest supported form
   /// (`SectionPresentation`):
   /// - `list` (default): a titled/headerless section of list rows.
-  /// - `gridRow`: a headerless section holding one single-line image-row
+  /// - `rail`: a headerless section holding one single-line image-row
   ///   item whose text is the section title — the tiles that fit render,
   ///   the rest truncate (the platform doesn't report the fit).
   /// - `grid`: a wrapping, titled tile grid on iOS 26+; a plain list before

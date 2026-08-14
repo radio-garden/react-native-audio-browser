@@ -89,12 +89,12 @@ The `path` the browse pipeline stamps onto a Playable Track: `{parentPath}?__tra
 _Avoid_: contextual URL in new prose (legacy alias in code comments), deep link.
 
 **Section**:
-A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010). A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Style names (`list`, `grid`, `grid-row`) declare the requested layout; each surface renders its nearest supported form.
+A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010). A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Style names (`list`, `grid`, `rail`) declare the requested layout; each surface renders its nearest supported form.
 _Avoid_: group, category; Section for a **Tab** (Tabs are top-level navigation, Sections live inside pages).
 
-**Grid Row**:
-A Section rendered as a single line of artwork tiles (`style: 'grid-row'`): CarPlay shows the tiles that fit, Android Auto wraps (its grid can't express one line), app UIs typically render a horizontal scroller. The header/"view all" surface navigates to the Section's `path`.
-_Avoid_: image row (the retired platform-derived name — `CPListImageRowItem` leaking into the domain), carousel (implies scrolling no car surface has).
+**Rail**:
+A Section rendered as a single line of artwork tiles (`style: 'rail'`) — the teaser shelf: CarPlay shows the tiles that fit, Android Auto wraps (its grid can't express one line), app UIs typically render a horizontal scroller. The header/"view all" surface navigates to the Section's `path`.
+_Avoid_: image row (the retired platform-derived name — `CPListImageRowItem` leaking into the domain), grid-row (an earlier name — a Rail is its own intent, not a Grid variant, and `grid-row` is a CSS property), row (that's a list line), carousel (implies scrolling no car surface has).
 
 **ResolvedTrack**:
 The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `sections` (a page authored with plain `children` resolves to one untitled **Section**). Media URLs are not part of resolution; they're transformed at playback time.

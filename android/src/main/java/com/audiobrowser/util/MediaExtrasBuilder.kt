@@ -37,15 +37,14 @@ object MediaExtrasBuilder {
 
   /**
    * The per-item style hint a section pushes down onto its children (ADR 0010): tile sections
-   * render as grid items (Android Auto's grid always wraps, so `grid` and `grid-row` are the same
-   * hint here); `list` renders as list rows. An explicit per-track `style` is more specific and
-   * wins.
+   * render as grid items (Android Auto's grid always wraps, so `grid` and `rail` are the same hint
+   * here); `list` renders as list rows. An explicit per-track `style` is more specific and wins.
    */
   private fun SectionStyle.toTrackStyle(): TrackStyle =
     when (this) {
       SectionStyle.LIST -> TrackStyle.LIST
       SectionStyle.GRID,
-      SectionStyle.GRID_ROW -> TrackStyle.GRID
+      SectionStyle.RAIL -> TrackStyle.GRID
     }
 
   /**

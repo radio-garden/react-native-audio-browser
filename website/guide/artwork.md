@@ -38,7 +38,7 @@ The library publishes art to several surfaces; each gets its image from a field/
 | **iOS lock screen / Control Center**            | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                            |
 | **CarPlay Now Playing**                         | `nowPlayingArtwork` → `artwork`               | yes       | —                                                            |
 | **Android notification / Android Auto**         | `nowPlayingArtwork` → `artwork`               | yes       | — (Android Auto is dark-only)                                |
-| **CarPlay tile sections** (`grid` / `grid-row`) | `artwork` (each tile is a Track)              | yes       | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
+| **CarPlay tile sections** (`grid` / `rail`)     | `artwork` (each tile is a Track)              | yes       | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
 
 **Size hint** = the surface tells the library the pixels it needs, delivered as an [`ImageContext`](/api/types/browser/#imagecontext) to your `transform` / `imageQueryParams`. Browse-time resolution has none.
 
@@ -214,7 +214,7 @@ Now-playing artwork is resolved **once per active track**, keyed on its `id` —
 
 ## Tile sections
 
-A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by setting `style: 'grid'` (wrapping) or `style: 'grid-row'` (a single line — formerly the image row):
+A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by setting `style: 'grid'` (wrapping) or `style: 'rail'` (a single line — formerly the image row):
 
 ```ts
 {
@@ -223,7 +223,7 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
   sections: [
     {
       title: 'Featured',
-      style: 'grid-row',
+      style: 'rail',
       path: '/browse/featured', // header / "view all" target
       children: [
         { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
@@ -234,7 +234,7 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
 }
 ```
 
-Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a `grid-row` shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a `grid` wraps on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both tile styles identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
+Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a `rail` shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a `grid` wraps on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both tile styles identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
 
 ## API summary
 
@@ -248,4 +248,4 @@ Each tile is an ordinary Track, so its `artwork` runs through the same pipeline 
 | `nowPlayingArtwork`                                             | Separate config for now-playing art; supports `{id}`; native-only.                    |
 | [`imageQueryParams`](/api/types/browser/#imagequeryparams)      | Map the surface's requested size to your CDN's query params.                          |
 | [`ImageContext`](/api/types/browser/#imagecontext)              | Requested `width`/`height` in pixels, passed to `transform`.                          |
-| [`Section.style`](/api/types/browser-nodes/#sectionstyle)       | `'grid'` / `'grid-row'` render a section's tracks as artwork tiles.                   |
+| [`Section.style`](/api/types/browser-nodes/#sectionstyle)       | `'grid'` / `'rail'` render a section's tracks as artwork tiles.                       |

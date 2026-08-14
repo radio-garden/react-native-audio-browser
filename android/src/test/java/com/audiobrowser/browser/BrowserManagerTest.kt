@@ -174,13 +174,13 @@ class BrowserManagerTest {
   @Test
   fun `expandQueueFromContextualPath scopes a cross-section duplicate to the tapped section`() =
     runBlocking {
-      // The same identity in a grid-row section AND the list section below it:
+      // The same identity in a rail section AND the list section below it:
       // the stamped flat index resolves the tap to the list section.
       serveSections(
         "/home",
         section(
           title = "Row",
-          style = com.margelo.nitro.audiobrowser.SectionStyle.GRID_ROW,
+          style = com.margelo.nitro.audiobrowser.SectionStyle.RAIL,
           children = arrayOf(track(src = "dup")),
         ),
         section(title = "Stations", children = arrayOf(track(src = "dup"), track(src = "b"))),
@@ -239,12 +239,12 @@ class BrowserManagerTest {
   }
 
   @Test
-  fun `expandQueueFromContextualPath scopes a grid-row section to its own tiles`() = runBlocking {
+  fun `expandQueueFromContextualPath scopes a rail section to its own tiles`() = runBlocking {
     serveSections(
       "/home",
       section(
         title = "Most Played",
-        style = com.margelo.nitro.audiobrowser.SectionStyle.GRID_ROW,
+        style = com.margelo.nitro.audiobrowser.SectionStyle.RAIL,
         children = arrayOf(track(src = "r1"), track(src = "r2")),
       ),
       section(children = arrayOf(track(src = "a"))),

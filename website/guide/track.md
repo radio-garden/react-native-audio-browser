@@ -158,7 +158,7 @@ A couple of constraints worth knowing:
 
 ## Sections — grouping and tile layouts
 
-Headers and tile layouts aren't Track fields — they're declared on the **page**, as [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`). A section groups tracks under a header and picks their layout: `'list'` rows (the default), `'grid'` wrapping artwork tiles, or `'grid-row'` — a single line of tiles (formerly the image row). The section's `path` is the navigation target for its header / "view all" surface; a section without one is a pure preview, its header not tappable.
+Headers and tile layouts aren't Track fields — they're declared on the **page**, as [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`). A section groups tracks under a header and picks their layout: `'list'` rows (the default), `'grid'` wrapping artwork tiles, or `'rail'` — a single line of tiles (formerly the image row). The section's `path` is the navigation target for its header / "view all" surface; a section without one is a pure preview, its header not tappable.
 
 A tile with `src` **plays immediately on tap** (same selection path as a playable list row — a station app can make tiles play their station directly); otherwise its `path` is navigated. Tiles are ordinary Tracks, so playable ones carry the now-playing fields any track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`). Tapping a playable child queues **its section** on every surface (see [Playback behavior](/guide/browser#playback-behavior)):
 
@@ -169,7 +169,7 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
   sections: [
     {
       title: 'Featured',
-      style: 'grid-row',
+      style: 'rail',
       path: '/browse/featured', // header tap → the full list
       children: [
         { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
@@ -187,7 +187,7 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
 }
 ```
 
-Each surface renders a style as its nearest supported form — CarPlay truncates a `grid-row` at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
+Each surface renders a style as its nearest supported form — CarPlay truncates a `rail` at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
 
 ## ResolvedTrack — a resolved page
 

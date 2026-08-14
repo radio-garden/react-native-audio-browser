@@ -780,7 +780,7 @@ interface Section {
 - `'track'` — the tapped track alone (per-section version of the global `singleTrack`;
   if the enum lands at config level too, it can subsume that boolean)
 - `'path'` — the content of the section's linked `path` page. Makes a preview
-  section (a grid-row capped to N items) queue the _full_ collection it
+  section (a rail capped to N items) queue the _full_ collection it
   previews, and unifies the two tap surfaces: tapping a track in the preview
   and tapping it inside the view-all page produce the same queue and the same
   `queueSourcePath`, so skip-in-place treats them as one source.
@@ -796,14 +796,14 @@ instead of the current page — and the existing expansion/resumption/skip
 machinery works unchanged.
 
 The default stays `'section'` for every style: uniform, offline-safe, no added
-tap latency. A per-style default (grid-rows defaulting to `'path'`) was
+tap latency. A per-style default (rails defaulting to `'path'`) was
 considered and rejected — it would couple `queue`'s meaning to `style`.
 
 ## Surface Request Param (server-tailored pages per surface)
 
 An opt-in request-layer option stamping the requesting surface onto browse
 requests (`surface=carplay|android-auto|app`), so a server can tailor the
-_same collection_ per surface — e.g. cap a grid-row's children where CarPlay
+_same collection_ per surface — e.g. cap a rail's children where CarPlay
 truncates rows, uncap where Android Auto wraps. A surface-tailored variant
 changes the _declared_ page, which composes cleanly with "queue scope is
 declared, never rendered" (ADR 0010). Additive.
