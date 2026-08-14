@@ -150,3 +150,13 @@ Decisions, each with its reason:
   CarPlay templates have no horizontal scrolling and Android Auto wraps;
   only app UIs may render it as a scroller. Authoring guidance: keep
   rails small and give them a `path` escape hatch.
+
+---
+
+**Amendment (August 2026, ADR 0011):** the `style` string vocabulary above
+(`'list' | 'grid' | 'rail'`) is superseded — `Section.style` is now a
+declaration block (`SectionStyle`), `'rail'` became `display: 'grid'` +
+`gridWrap: false`, and the rail authoring guidance moves to the block's
+docs. Sections as first-class structure, declared queue scoping, and the
+flat wire are unchanged. See
+[ADR 0011](0011-style-is-a-declaration-block.md).
