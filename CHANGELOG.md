@@ -1,3 +1,87 @@
+## [0.2.0-next.12](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.11...v0.2.0-next.12) (2026-08-15)
+
+### ⚠ BREAKING CHANGES
+
+* Section.style and Track.style are declaration blocks
+(objects), not strings — 'rail' is now display: 'grid' with
+gridWrap: false, and there is no string shorthand. Track.childrenStyle
+is replaced by style.display on the browsable track.
+Track.artworkCarPlayTinted is replaced by
+style.artworkRendering: 'stencil'.
+* `groupTitle` and `imageRow`/`ImageRowItem` are removed
+from the Track model. Group tracks with `sections` on a resolved page
+(`Section { title?, subtitle?, style?: 'list' | 'grid' | 'grid-row',
+path?, children }`); a flat `children` list is still accepted as sugar
+for one untitled section. Pages that used `imageRow` become sections
+with `style: 'grid-row'`.
+* onPlaybackActiveTrackChanged and onPlaybackQueueChanged
+no longer fire when a track's favorited state changes in place. Consumers
+reacting to favorite toggles must subscribe to onFavoriteChanged (or use
+the useActiveTrack/useQueue hooks, which handle both).
+* `FavoritesMatchMode` and `FavoriteConfig` are
+removed — the `favorite` capability is `boolean` and `setFavorites`
+ids are matched exactly against a track's identity (`id` when set,
+falling back to `src`). Store favorites as the value you put in
+`Track.id`. Set ids consistently across surfaces: a row carrying an
+`id` no longer src-matches a track without one.
+* the Track/ResolvedTrack/ImageRowItem field `url` is
+now `path`, and `albumUrl`/`resolveAlbumUrl` are
+`albumPath`/`resolveAlbumPath` — in both the TS API and the browse
+JSON wire format. Update your types and rename the keys your browse
+endpoints emit.
+
+### Features
+
+* **android:** flatten sections at the Media3 boundary ([ddd3e77](https://github.com/radio-garden/react-native-audio-browser/commit/ddd3e77616bd0bdbfaec73e6c496a1831c5655a4)), closes [#93](https://github.com/radio-garden/react-native-audio-browser/issues/93)
+* **carplay:** configurable list playing-indicator location ([8efd51c](https://github.com/radio-garden/react-native-audio-browser/commit/8efd51c084082e6c93e6573776ae26c35738d08c)), closes [#92](https://github.com/radio-garden/react-native-audio-browser/issues/92)
+* export getTrackIdentity ([407533e](https://github.com/radio-garden/react-native-audio-browser/commit/407533e15a903704c58c6c790e668f30a28c8680))
+* **ios:** render and scope pages from first-class sections ([15e116b](https://github.com/radio-garden/react-native-audio-browser/commit/15e116b32fa38c5d286764c63af9fddc332eeb2a)), closes [#93](https://github.com/radio-garden/react-native-audio-browser/issues/93)
+* onPlaybackActiveTrackChanged fires on transitions only ([a5e5c7d](https://github.com/radio-garden/react-native-audio-browser/commit/a5e5c7d02a2d293add63d35755d10ae2814912b2)), closes [#38](https://github.com/radio-garden/react-native-audio-browser/issues/38) [#42](https://github.com/radio-garden/react-native-audio-browser/issues/42) [#43](https://github.com/radio-garden/react-native-audio-browser/issues/43) [#44](https://github.com/radio-garden/react-native-audio-browser/issues/44)
+* rename the grid-row section style to rail ([17b688f](https://github.com/radio-garden/react-native-audio-browser/commit/17b688f40b7a3dc672378907ff83344c14f74bc7))
+* rename Track.url to Track.path, albumUrl to albumPath ([5b7bbf3](https://github.com/radio-garden/react-native-audio-browser/commit/5b7bbf3dbe00e2f01e4dbe3aa0575244cec44a51))
+* Section replaces groupTitle adjacency and imageRow in the spec ([c73f91f](https://github.com/radio-garden/react-native-audio-browser/commit/c73f91fbb103d2cb0b46b8dc2bdc96e8e0d8bd73)), closes [#93](https://github.com/radio-garden/react-native-audio-browser/issues/93)
+* style is a declaration block (TrackStyle / SectionStyle) ([ac9480c](https://github.com/radio-garden/react-native-audio-browser/commit/ac9480c89dc702d11e81677bb6f66115645d0f84)), closes [#132](https://github.com/radio-garden/react-native-audio-browser/issues/132)
+* track identity is id, falling back to src ([4889ca6](https://github.com/radio-garden/react-native-audio-browser/commit/4889ca60bbcd77aacbed9b09829eeb945d62ad43)), closes [#42](https://github.com/radio-garden/react-native-audio-browser/issues/42)
+* **web:** resolve pages to sections and scope the queue to the tapped section ([192950f](https://github.com/radio-garden/react-native-audio-browser/commit/192950fad0776c0796705376602d00847fc6ee97))
+
+### Bug Fixes
+
+* **android:** expand image rows in search results ([b856d78](https://github.com/radio-garden/react-native-audio-browser/commit/b856d78ab81b7e23e51975536dc9402332149eca))
+* **android:** report INVALID_STATE when a heart tap applies to nothing ([7d7af6e](https://github.com/radio-garden/react-native-audio-browser/commit/7d7af6ec9cb5088ba8305e1bf6244a52414c5b55))
+* **android:** run the artwork transform on image-row items ([2d0f464](https://github.com/radio-garden/react-native-audio-browser/commit/2d0f4648a7affbccd7a988de3a3c6728a2ee227e))
+* **carplay:** downsample list artwork to the car display scale ([855ee9d](https://github.com/radio-garden/react-native-audio-browser/commit/855ee9d653598855cd6cddadabec7e94169b0883)), closes [#91](https://github.com/radio-garden/react-native-audio-browser/issues/91)
+* **carplay:** render placeholders and the favorite glyph at car sizes ([f970ebd](https://github.com/radio-garden/react-native-audio-browser/commit/f970ebd18e20a9c38a911296492ac9754de6ebf2)), closes [#91](https://github.com/radio-garden/react-native-audio-browser/issues/91)
+* **carplay:** show the empty-content page when tabs empty out at runtime ([a029336](https://github.com/radio-garden/react-native-audio-browser/commit/a029336dc8f08fee25077ae522df5f61ec766426)), closes [#91](https://github.com/radio-garden/react-native-audio-browser/issues/91)
+* drop stale JS callbacks when the runtime reloads ([d841d55](https://github.com/radio-garden/react-native-audio-browser/commit/d841d558d02b8f96a01d3e9fc505515668f9b06e)), closes [mrousavy/nitro#1481](https://github.com/mrousavy/nitro/issues/1481)
+* **ios:** escape query delimiters when building contextual URLs ([70b35f6](https://github.com/radio-garden/react-native-audio-browser/commit/70b35f626383c55fa437a494586f36578ac14ac2))
+* **ios:** store the toggled favorited on the queued track ([c63f34d](https://github.com/radio-garden/react-native-audio-browser/commit/c63f34d60a8451cb988f38698c6d48d6b7c62924))
+* nowPlayingArtwork runs for id-less tracks — unfilled {id} left literal ([0e202c4](https://github.com/radio-garden/react-native-audio-browser/commit/0e202c4534e451896cd519a88ef7ab6762c22aa0))
+* pin queue expansion to the tapped copy of a duplicate identity ([8afeb79](https://github.com/radio-garden/react-native-audio-browser/commit/8afeb79379c67a97856fdd32c1992b48056643f0)), closes [#94](https://github.com/radio-garden/react-native-audio-browser/issues/94)
+
+### Code Refactors
+
+* **carplay:** a code-only NavigationError gets a shorthand ([ceff50f](https://github.com/radio-garden/react-native-audio-browser/commit/ceff50fd7deb78bed6da014df37ef2dcaede8751))
+
+### Documentation
+
+* a Track carrying both path and src is treated as playable ([f170b65](https://github.com/radio-garden/react-native-audio-browser/commit/f170b657f9cf884e9283f99a016cad84bf9c9b4a))
+* ADR 0007 — the browse-address field is named path ([1a18907](https://github.com/radio-garden/react-native-audio-browser/commit/1a189073ec615e479963fd83e7345505f99d0742))
+* ADR 0010 — sections are first-class (proposed) ([1d4f7e8](https://github.com/radio-garden/react-native-audio-browser/commit/1d4f7e89db27a06b46c9cbda8cce920b4d4e67de)), closes [#93](https://github.com/radio-garden/react-native-audio-browser/issues/93) [#122](https://github.com/radio-garden/react-native-audio-browser/issues/122)
+* CarPlay SDK capability audit + runnable feature lab ([2a79dac](https://github.com/radio-garden/react-native-audio-browser/commit/2a79dac1e34386ee15d556da79d71a38eaab8398))
+* cover in-app search — search(), hasSearch(), navigate-on-tap ([57e65e2](https://github.com/radio-garden/react-native-audio-browser/commit/57e65e2b8c93eb1254ce48e66d2f6c4071605a66))
+* define Artwork vs image in the glossary ([411d4fb](https://github.com/radio-garden/react-native-audio-browser/commit/411d4fb7e127a234ec1c215b4d3faf5f6865f0ad))
+* fix five guide contradictions found in a fresh-reader review ([3745f85](https://github.com/radio-garden/react-native-audio-browser/commit/3745f85a9e52828f0408ff055e26e4d0265e7781))
+* live streams guide — formats, dropouts, fresh URLs, live edge ([98b7365](https://github.com/radio-garden/react-native-audio-browser/commit/98b7365bc244eaa14d4f7cd01bb115765cc12c79)), closes [#133](https://github.com/radio-garden/react-native-audio-browser/issues/133)
+* make the API reference navigable — types in the sidebar, real titles ([ed74511](https://github.com/radio-garden/react-native-audio-browser/commit/ed74511e9640ff889a2e729376d495f779b76ad6))
+* plainer style vocabulary — roles, advertised layout, parent item ([7b0d553](https://github.com/radio-garden/react-native-audio-browser/commit/7b0d553f9d9b8b55bbb6edaf08f9ac66d343bfd6))
+* section styling design — style as a declaration block (ADR 0011) ([15baab4](https://github.com/radio-garden/react-native-audio-browser/commit/15baab43b93b48df3f7e4087857ee56d670bc98b))
+* sections vocabulary, guides, examples; ADR 0010 accepted ([7eb74c3](https://github.com/radio-garden/react-native-audio-browser/commit/7eb74c3575412a60db694a2f6f2920d5636e3a48))
+* style mechanics named — inherited properties, scope override ([71aea0c](https://github.com/radio-garden/react-native-audio-browser/commit/71aea0c2c3ebb1511c912354118edbb7d0491e55))
+
+### Other changes
+
+* drop spent superpowers plans and review reports ([90d2cc2](https://github.com/radio-garden/react-native-audio-browser/commit/90d2cc2a7d37ebfc9e1cc5bb101dd3e706cd8f23))
+
 ## [0.2.0-next.11](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.10...v0.2.0-next.11) (2026-08-12)
 
 ### Bug Fixes
