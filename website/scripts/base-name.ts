@@ -27,7 +27,7 @@ export function getBaseName(name: string): string {
 
 /**
  * Prefix order for sorting and anchor selection.
- * Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > is > (no prefix, uppercase)
+ * Priority: (no prefix, lowercase) > use > get > set > update > toggle > clear > handle > on > has > is > (no prefix, uppercase)
  */
 export const prefixOrder = [
   'use',
@@ -35,6 +35,7 @@ export const prefixOrder = [
   'set',
   'update',
   'toggle',
+  'clear',
   'handle',
   'on',
   'has',

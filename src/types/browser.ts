@@ -15,9 +15,10 @@ export interface TrackLoadEvent {
 
 /**
  * Callback for handling track load events.
- * When set on BrowserConfiguration, navigateTrack() will call this handler
- * instead of auto-loading/playing the track. The native side awaits completion
- * before proceeding (e.g., showing Now Playing in CarPlay).
+ * When set on BrowserConfiguration, loading a playable track — a browse-row
+ * tap or a `navigate(track)` call — invokes this handler instead of the
+ * library auto-loading/playing it. The native side awaits the returned
+ * promise before proceeding (e.g., showing Now Playing in CarPlay).
  */
 export type HandleTrackLoadCallback = (event: TrackLoadEvent) => Promise<void>
 
@@ -351,7 +352,7 @@ export type RequestConfigResolver = () =>
 /**
  * Configuration for artwork image requests
  *
- * ## Configuration Hierarchy
+ * ### Configuration Hierarchy
  *
  * When a request is made, configs are merged in this order (later overrides earlier):
  * 1. `request` (base config) - shared settings like user agent, common headers
@@ -360,7 +361,7 @@ export type RequestConfigResolver = () =>
  * 4. `imageQueryParams` - automatic size query param injection (if configured)
  * 5. `transform(request, context)` result - final modifications (if provided)
  *
- * ## Usage Patterns
+ * ### Usage Patterns
  *
  * **Simple CDN configuration:**
  * ```typescript
@@ -426,7 +427,7 @@ export interface ImageQueryParams {
  * Used for both `media` (audio streaming) and `artwork` (image loading) configuration
  * in BrowserConfiguration.
  *
- * ## Configuration Hierarchy
+ * ### Configuration Hierarchy
  *
  * When a request is made, configs are merged in this order (later overrides earlier):
  * 1. `request` (base config) - shared settings like user agent, common headers
@@ -434,7 +435,7 @@ export interface ImageQueryParams {
  * 3. `resolve(track)` result - per-track overrides (if provided)
  * 4. `transform(request)` result - final modifications (if provided)
  *
- * ## Usage Patterns
+ * ### Usage Patterns
  *
  * **Simple CDN configuration:**
  * ```typescript
@@ -853,7 +854,7 @@ export type BrowserConfiguration = {
   /**
    * Route-specific configurations. Maps path patterns to browse sources.
    *
-   * ## Matching
+   * ### Matching
    *
    * Patterns match on **exact segment count** — `/artists` does NOT match
    * `/artists/123`. Segments may be:
@@ -867,7 +868,7 @@ export type BrowserConfiguration = {
    * When several patterns match, the most specific wins
    * (constants > parameters > wildcards > tail wildcard).
    *
-   * ## Defaults and reserved keys
+   * ### Defaults and reserved keys
    *
    * A path matching no route is fetched over HTTP via the `request` →
    * `browse` layers with the path applied — most APIs only need explicit

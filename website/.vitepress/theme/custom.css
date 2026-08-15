@@ -105,3 +105,11 @@
     height: auto;
   }
 }
+
+/* Shield badges (README copied onto the API index) sit on one line —
+   VitePress's base reset makes every img display:block, which stacks them. */
+.vp-doc img[src*='img.shields.io'] {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+}

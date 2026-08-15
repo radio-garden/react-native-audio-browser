@@ -7,6 +7,8 @@ const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
  * Shared by `updateOptions` and `setupPlayer` (both can carry `ios` options).
  * Kept out of `options.ts`, which the barrel re-exports — see
  * public-surface.test.ts.
+ *
+ * @internal
  */
 export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
   const buttons = ios?.carPlayNowPlayingButtons

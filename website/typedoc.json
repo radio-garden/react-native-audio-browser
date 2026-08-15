@@ -5,19 +5,23 @@
     "../src/features/*/index.ts",
     "../src/types/*.ts",
     "../src/utils/getTrackIdentity.ts",
-    "../src/utils/useDebug.ts"
+    "../src/utils/useDebug.ts",
+    "../src/utils/NativeUpdatedValue.ts",
+    "../src/utils/LazyNativeEmitter.ts"
   ],
   "entryPointStrategy": "expand",
   "exclude": [
     "**/features/index.ts",
     "**/features/browser-config.ts",
+    "**/types/index.ts",
     "**/*.test.ts",
     "**/browser-native.ts"
   ],
   "intentionallyNotExported": [
-    "LazyNativeEmitter",
-    "NativeUpdatedValue",
-    "NativeRequestConfigResolver"
+    "Callback",
+    "DebugOptions",
+    "DebugState",
+    "DebugLogEntry"
   ],
   "out": "./api",
   "plugin": [

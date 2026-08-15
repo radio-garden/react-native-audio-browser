@@ -1,28 +1,31 @@
 type Callback<T> = (arg: T) => void
 
 /**
- * A lightweight event emitter that lazily bridges native callbacks to multiple JavaScript listeners.
+ * The subscription object behind the library's **discrete** events — the
+ * remote-control exports (`onRemotePlay`, `onRemoteSeek`, …) and other
+ * one-shot signals with no "current value" to cache. Subscribe with
+ * {@link addListener}; the returned function unsubscribes. The emitter is
+ * not callable itself.
  *
- * The native callback is only assigned when the first listener is added, making the emitter
- * creation lightweight with no side effects until actually used.
- *
- * Use this for optional/rare events like remote controls where most apps won't need to listen.
- * For critical state changes (playback, progress, etc.), use NativeEmitter instead to ensure
- * no events are missed.
+ * "Lazy" is an implementation detail you may notice in timing: the native
+ * side only starts delivering the event once the first listener is added.
+ * State that always has a current reading uses `NativeUpdatedValue`
+ * instead.
  *
  * @example
  * ```typescript
- * export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
- *   (cb) => (nativeBrowser.onRemotePlay = cb)
- * )
+ * import { onRemotePlay } from 'react-native-audio-browser'
  *
  * const unsubscribe = onRemotePlay.addListener(() => console.log('play'))
+ * // later:
+ * unsubscribe()
  * ```
  */
 export class LazyNativeEmitter<T> {
   private setter: (callback: (data: T) => void) => void
   private listeners: Set<(arg: T) => void> | undefined
 
+  /** @internal */
   constructor(setter: (callback: (data: T) => void) => void) {
     this.setter = setter
   }
@@ -38,6 +41,12 @@ export class LazyNativeEmitter<T> {
     return listeners
   }
 
+  /**
+   * Subscribes to the event.
+   *
+   * @param callback - Invoked with each event
+   * @returns A function that removes the listener
+   */
   addListener(callback: Callback<T>): () => void {
     const listeners = this.getListeners()
     listeners.add(callback)
@@ -50,6 +59,7 @@ export class LazyNativeEmitter<T> {
    * @param setter - Function that sets the native callback property
    * @returns The emitter instance — subscribe with `addListener`, which returns
    * an unsubscribe function
+   * @internal
    */
   static emitterize<T>(
     setter: (callback: (data: T) => void) => void

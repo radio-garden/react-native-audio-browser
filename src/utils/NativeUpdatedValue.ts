@@ -1,30 +1,39 @@
 type Callback<T> = (arg: T) => void
 
 /**
- * Bridges native value changes to JavaScript, storing the latest value for immediate access.
+ * The subscription object behind the library's **state** events — every
+ * `on<Thing>Changed`-style export (`onPlaybackChanged`, `onQueueChanged`, …)
+ * is one of these. Subscribe with {@link addListener}; the returned function
+ * unsubscribes. The emitter is not callable itself.
  *
- * Subscribes to native changes immediately at module load to ensure no updates are missed.
- * The `lastValue` property caches the most recent value, allowing hooks to read the current
- * state synchronously without calling a separate getter function.
- *
- * Use this for state-based values that have a "current value" (playback state, options, progress).
- * For discrete events without a current value (remote controls), use LazyNativeEmitter instead.
+ * It tracks a value that always has a *current* reading (playback state,
+ * progress, options): {@link lastValue} caches the most recent one so hooks —
+ * and you — can read it synchronously without a getter round-trip. Discrete
+ * events with no current value (remote-control presses) use
+ * `LazyNativeEmitter` instead.
  *
  * @example
  * ```typescript
- * export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
- *   (cb) => (nativeBrowser.onPlaybackChanged = cb)
- * )
+ * import { onPlaybackChanged } from 'react-native-audio-browser'
  *
- * export function usePlayback(): Playback {
- *   return useUpdatedNativeValue(getPlayback, onPlaybackChanged)
- * }
+ * const unsubscribe = onPlaybackChanged.addListener((p) => {
+ *   console.log(p.state)
+ * })
+ * // later:
+ * unsubscribe()
  * ```
  */
 export class NativeUpdatedValue<T> {
   private listeners = new Set<Callback<T>>()
+
+  /**
+   * The most recent value delivered by native, or `undefined` before the
+   * first update. Subscription starts at module load, so this is safe to
+   * read synchronously at any time.
+   */
   lastValue: T | undefined = undefined
 
+  /** @internal */
   constructor(setter: (callback: (data: T) => void) => void) {
     // Install native callback immediately at module load
     setter((data: T) => {
@@ -35,6 +44,12 @@ export class NativeUpdatedValue<T> {
     })
   }
 
+  /**
+   * Subscribes to value changes.
+   *
+   * @param callback - Invoked with each new value
+   * @returns A function that removes the listener
+   */
   addListener(callback: Callback<T>): () => void {
     this.listeners.add(callback)
     return () => this.listeners.delete(callback)
@@ -45,6 +60,7 @@ export class NativeUpdatedValue<T> {
    *
    * @param setter - Function that sets the native callback property
    * @returns The subscription instance with lastValue and addListener
+   * @internal
    */
   static emitterize<T>(
     setter: (callback: (data: T) => void) => void

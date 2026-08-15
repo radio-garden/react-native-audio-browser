@@ -15,7 +15,15 @@ interface SidebarEntry {
   subpath?: string // For folder-based modules: the file name (e.g., 'progress' for playback/progress.ts)
 }
 
+// Display-name overrides for module groups; everything else is the
+// camelCase-spaced module name.
+const moduleDisplayNames: Record<string, string> = {
+  carConnection: 'Car'
+}
+
 function formatModuleName(str: string): string {
+  const override = moduleDisplayNames[str]
+  if (override) return override
   // "playbackState" -> "Playback State"
   return str.charAt(0).toUpperCase() + str.slice(1).replace(/([A-Z])/g, ' $1')
 }
@@ -55,8 +63,10 @@ function parseSourceForNames(
 
   // Match exported functions with their preceding JSDoc (if any)
   // Only match implementations (with { or =), not overload signatures
+  // The JSDoc group is tempered ((?!\*\/)) so it can't span across an earlier
+  // comment's close and swallow another declaration's @internal.
   const regex =
-    /(\/\*\*[\s\S]*?\*\/\s*)?export\s+(?:(?:async\s+)?function\s+(\w+)[^{]*\{|const\s+(\w+)\s*=)/g
+    /(\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*)?export\s+(?:(?:async\s+)?function\s+(\w+)[^{]*\{|const\s+(\w+)\s*=)/g
   let match
 
   while ((match = regex.exec(content)) !== null) {
@@ -107,13 +117,26 @@ function getBestFunction(
   )
   if (exactMatch) return exactMatch
 
-  // Then: prefixed lowercase matches (methods)
+  // Then: prefixed lowercase matches (methods). Event names had their
+  // Changed/Updated/… suffix stripped from the base, so reconstruct those
+  // variants at the 'on' position — otherwise onFavoriteChanged is
+  // unreachable and the substring fallback picks an unrelated function.
   for (const prefix of prefixOrder) {
-    const candidate = prefix + normalized
-    const match = allFuncs.find(
-      (f) => f.name.toLowerCase() === candidate && /^[a-z]/.test(f.name)
-    )
-    if (match) return match
+    const candidates =
+      prefix === 'on'
+        ? [
+            prefix + normalized,
+            ...['changed', 'updated', 'received', 'ended'].map(
+              (suffix) => prefix + normalized + suffix
+            )
+          ]
+        : [prefix + normalized]
+    for (const candidate of candidates) {
+      const match = allFuncs.find(
+        (f) => f.name.toLowerCase() === candidate && /^[a-z]/.test(f.name)
+      )
+      if (match) return match
+    }
   }
 
   // Last: uppercase matches (types)
@@ -138,23 +161,121 @@ function funcsToSidebarEntries(allFuncs: ParsedFunction[]): SidebarEntry[] {
     seen.add(base)
 
     const bestFunc = getBestFunction(base, allFuncs)
+    // A base whose only function is an on* event keeps its suffix in the
+    // label ("Favorite Changed", not a bare "Favorite" that reads like an
+    // action and collides with sibling entries). Likewise a base whose only
+    // function is a clear* action keeps its verb ("Clear Now Playing Flash",
+    // not "Now Playing Flash" beside "Flash Now Playing").
+    let name = base
+    if (bestFunc && /^on[A-Z]/.test(bestFunc.name)) {
+      name = bestFunc.name
+        .slice(2)
+        .replace(/([A-Z])/g, ' $1')
+        .trim()
+    } else if (bestFunc && /^clear[A-Z]/.test(bestFunc.name)) {
+      name = 'Clear ' + base
+    }
     entries.push({
-      name: base,
+      name,
       anchor: bestFunc?.name.toLowerCase() || func.name.toLowerCase(),
       subpath: bestFunc?.subpath
     })
   }
 
-  // Sort alphabetically by base name
-  entries.sort((a, b) => a.name.localeCompare(b.name))
-
   return entries
+}
+
+// Feature-module types (PlaybackErrorEvent, RetryConfig, …) join their group
+// verbatim, like the Types section. A type whose name collides with a
+// function entry's base ("PlaybackError" vs the "Playback Error" hook entry)
+// is skipped — its section sits adjacent on the same page.
+function typesToSidebarEntries(
+  typeNames: string[],
+  existing: SidebarEntry[]
+): SidebarEntry[] {
+  const taken = new Set(
+    existing.map((e) => e.name.replace(/ /g, '').toLowerCase())
+  )
+  const entries: SidebarEntry[] = []
+  for (const name of typeNames) {
+    if (taken.has(name.toLowerCase())) continue
+    taken.add(name.toLowerCase())
+    entries.push({ name, anchor: name.toLowerCase() })
+  }
+  return entries
+}
+
+interface ModuleEntries {
+  funcs: SidebarEntry[]
+  types: SidebarEntry[]
+}
+
+function moduleEntries(
+  allFuncs: ParsedFunction[],
+  typeNames: string[]
+): ModuleEntries {
+  const funcs = funcsToSidebarEntries(allFuncs)
+  const types = typesToSidebarEntries(typeNames, funcs)
+  funcs.sort((a, b) => a.name.localeCompare(b.name))
+  types.sort((a, b) => a.name.localeCompare(b.name))
+  return { funcs, types }
 }
 
 // Files in features/ that are internal helpers, not public API. They are not
 // re-exported from features/index.ts and are excluded from the generated docs
 // pages too (see `exclude` in typedoc.json) — keep the two lists in sync.
 const internalFeatureFiles = new Set(['browser-config.ts'])
+
+// Type / utility entry points documented under /api/types/<base>/ and
+// /api/utils/<base>/ — keep in sync with `entryPoints` in typedoc.json.
+const typeFiles = ['browser-nodes.ts', 'browser.ts']
+const utilFiles = [
+  'getTrackIdentity.ts',
+  'useDebug.ts',
+  'NativeUpdatedValue.ts',
+  'LazyNativeEmitter.ts'
+]
+
+// Exported type/interface/class names, shown verbatim (they're what a reader
+// searches for), skipping @internal.
+function parseSourceForTypeNames(content: string): string[] {
+  const names: string[] = []
+  const regex =
+    /(\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*)?export\s+(?:interface|type|class|enum)\s+(\w+)/g
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    const jsdoc = match[1] || ''
+    if (jsdoc.includes('@internal')) continue
+    names.push(match[2])
+  }
+  return names
+}
+
+// One flat, alphabetical group per section: every exported name linking to its
+// anchor on the module's page.
+function buildReferenceGroup(
+  text: string,
+  dir: string,
+  files: string[],
+  linkRoot: string
+): SidebarItem {
+  const items: SidebarItem[] = []
+  for (const file of files) {
+    const base = file.replace('.ts', '')
+    const content = readFileSync(join(dir, file), 'utf-8')
+    for (const name of [
+      ...parseSourceForTypeNames(content),
+      ...parseSourceForNames(content).map((f) => f.name)
+    ]) {
+      items.push({
+        text: name,
+        link: `${linkRoot}/${base}/#${name.toLowerCase()}`
+      })
+    }
+  }
+  items.sort((a, b) => a.text.localeCompare(b.text))
+  return { text, collapsed: true, items }
+}
 
 function scanSourceFiles(srcDir: string): Map<string, SidebarEntry[]> {
   const modules = new Map<string, SidebarEntry[]>()
@@ -169,20 +290,25 @@ function scanSourceFiles(srcDir: string): Map<string, SidebarEntry[]> {
       // Folder-based module (e.g., playback/, queue/)
       // Collect all functions from all .ts files (no subpaths - flattened into single page)
       const allFuncs: ParsedFunction[] = []
+      const typeNames: string[] = []
       for (const file of readdirSync(itemPath)) {
         if (!file.endsWith('.ts') || file === 'index.ts') continue
         const content = readFileSync(join(itemPath, file), 'utf-8')
         allFuncs.push(...parseSourceForNames(content))
+        typeNames.push(...parseSourceForTypeNames(content))
       }
       if (allFuncs.length > 0) {
-        modules.set(item, funcsToSidebarEntries(allFuncs))
+        modules.set(item, moduleEntries(allFuncs, typeNames))
       }
     } else if (item.endsWith('.ts') && item !== 'index.ts') {
       // Single-file module (no subpath needed)
       const content = readFileSync(itemPath, 'utf-8')
       const funcs = parseSourceForNames(content)
       if (funcs.length > 0) {
-        modules.set(item.replace('.ts', ''), funcsToSidebarEntries(funcs))
+        modules.set(
+          item.replace('.ts', ''),
+          moduleEntries(funcs, parseSourceForTypeNames(content))
+        )
       }
     }
   }
@@ -190,7 +316,7 @@ function scanSourceFiles(srcDir: string): Map<string, SidebarEntry[]> {
   return modules
 }
 
-function buildSidebar(modules: Map<string, SidebarEntry[]>): SidebarItem[] {
+function buildSidebar(modules: Map<string, ModuleEntries>): SidebarItem[] {
   const result: SidebarItem[] = []
 
   // Sort: priority modules first (in order), then rest alphabetically
@@ -204,19 +330,30 @@ function buildSidebar(modules: Map<string, SidebarEntry[]>): SidebarItem[] {
   })
 
   for (const [moduleName, entries] of sortedModules) {
+    const toItem = (entry: SidebarEntry): SidebarItem => {
+      if (entry.name === '---') {
+        return { text: '', link: '' } // separator
+      }
+      // Build link: /api/features/moduleName/#anchor
+      const path = entry.subpath
+        ? `/api/features/${moduleName}/${entry.subpath}/#${entry.anchor}`
+        : `/api/features/${moduleName}/#${entry.anchor}`
+      return { text: entry.name, link: path }
+    }
+    const items = entries.funcs.map(toItem)
+    // The module's types live in a collapsed sub-group so they're reachable
+    // without crowding the function entries.
+    if (entries.types.length > 0) {
+      items.push({
+        text: `${formatModuleName(moduleName)} Types`,
+        collapsed: true,
+        items: entries.types.map(toItem)
+      })
+    }
     result.push({
       text: formatModuleName(moduleName),
       collapsed: collapsedByDefault.has(moduleName),
-      items: entries.map((entry) => {
-        if (entry.name === '---') {
-          return { text: '', link: '' } // separator
-        }
-        // Build link: /api/features/moduleName/#anchor
-        const path = entry.subpath
-          ? `/api/features/${moduleName}/${entry.subpath}/#${entry.anchor}`
-          : `/api/features/${moduleName}/#${entry.anchor}`
-        return { text: entry.name, link: path }
-      })
+      items
     })
   }
 
@@ -226,5 +363,9 @@ function buildSidebar(modules: Map<string, SidebarEntry[]>): SidebarItem[] {
 // Main - parse source files, include all functions except @nosidebar
 const modules = scanSourceFiles('../src')
 const sidebar = buildSidebar(modules)
+sidebar.push(
+  buildReferenceGroup('Types', '../src/types', typeFiles, '/api/types'),
+  buildReferenceGroup('Utils', '../src/utils', utilFiles, '/api/utils')
+)
 writeFileSync('./api/typedoc-sidebar.json', JSON.stringify(sidebar, null, 2))
 console.log(`Sidebar generated with ${modules.size} modules`)

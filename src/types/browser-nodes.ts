@@ -176,9 +176,9 @@ export type TrackArtwork = string | ArtworkVariants
 
 /**
  * A titled, styled group of Tracks within a resolved page — the unit of
- * queue scope. Tapping a playable child queues the section it sits in
- * (ADR 0006), identically on every platform and screen width: rendering
- * may truncate what is visible, it never changes what plays.
+ * queue scope. Tapping a playable child queues the section it sits in,
+ * identically on every platform and screen width: rendering may truncate
+ * what is visible, it never changes what plays.
  */
 export interface Section {
   /** Header text. Absent = headerless group. */
@@ -190,7 +190,7 @@ export interface Section {
   subtitle?: string
   /**
    * Presentation, separated from content. Each surface renders the
-   * declared layout's nearest supported form (ADR 0010/0011); on CarPlay
+   * declared layout's nearest supported form; on CarPlay
    * a wrapping grid requires iOS 26+ and renders a list before that,
    * since CarPlay's only earlier tile container truncates at a width the
    * system doesn't report. Use the artwork `resolve` hook to supply
@@ -208,6 +208,15 @@ export interface Section {
   children: Track[]
 }
 
+/**
+ * The one node type of the browse tree — every tab, folder, station,
+ * episode, and queue item is a Track. What a Track *is* follows from which
+ * address fields it carries: a {@link path} makes it **browsable** (it opens
+ * as a page), a {@link src} makes it **playable** (it can be loaded into the
+ * player); at least one of the two is required. The remaining fields are
+ * display metadata ({@link title}, {@link artist}, {@link artwork}, …) and
+ * content state ({@link favorited}, {@link live}, {@link disabled}).
+ */
 export interface Track {
   /**
    * Opaque, stable identifier for this track.
@@ -335,8 +344,26 @@ export interface Track {
    */
   albumPath?: string
 
+  /**
+   * Album name, shown on now-playing surfaces that have an album slot
+   * (CarPlay, Android Auto, Bluetooth metadata — the iOS lock screen has
+   * none). With {@link albumPath} set, CarPlay renders it as a tappable
+   * line that navigates there.
+   */
   album?: string
+
+  /**
+   * Longer free-form text about the item, passed to the platform's
+   * description metadata slot where one exists. Not shown on browse rows
+   * (those render {@link title} / {@link subtitle}) or the lock screen.
+   */
   description?: string
+
+  /**
+   * Genre name, passed to the platform's genre metadata slot where one
+   * exists. Catalog metadata only — the library never matches search or
+   * browse against it.
+   */
   genre?: string
 
   /**
@@ -396,11 +423,11 @@ export interface Track {
  * ```ts
  * // navigate() is fire-and-forget (returns void); read the resolved page
  * // from getContent() / useContent() / onContentChanged.
- * navigate('albums/abbey-road');
+ * navigate('/albums/abbey-road');
  * const resolved = getContent();
- * console.log(resolved?.path); // "albums/abbey-road"
+ * console.log(resolved?.path); // "/albums/abbey-road"
  * console.log(resolved?.title); // "Abbey Road"
- * console.log(resolved?.children); // Array of tracks in this album
+ * console.log(resolved?.sections); // the album's tracks, as sections
  * ```
  */
 export interface ResolvedTrack extends Track {
