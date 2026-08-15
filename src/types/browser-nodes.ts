@@ -53,11 +53,11 @@ export interface TrackStyle {
    * - On a {@link Section}: the section's children.
    * - On a resolved page ({@link ResolvedTrack.style}): the declaration
    *   for the whole page — a section overrides it for its own children.
-   * - On a browsable {@link Track} (the handle): the layout *promise*
-   *   for the page it opens — consumed by Android Auto's parent-level
-   *   content-style hint, the one reader that acts before the page
-   *   resolves. Declared or it doesn't exist: no value → no parent-level
-   *   hint emitted. The resolved page is the truth.
+   * - On a browsable {@link Track} (the handle): the *advertised*
+   *   layout of the page it opens. Android Auto decides a page's
+   *   layout before resolving it, so it is the one reader that acts
+   *   on the handle's declaration. Declared or it doesn't exist: no
+   *   value → nothing advertised. The resolved page is the truth.
    * - On a track rendered *playable* (`src` wins the rendering): inert —
    *   playables open no page.
    *
@@ -350,8 +350,8 @@ export interface Track {
    * The track's style declaration block: inherited item properties (a
    * per-item override of section/page values — they travel with the
    * track), plus the positional {@link TrackStyle.display} — on a
-   * browsable track, the layout promise for the page it opens (Android
-   * Auto's parent-level hint).
+   * browsable track, the advertised layout of the page it opens, read
+   * by Android Auto, which picks a page's layout before resolving it.
    */
   style?: TrackStyle
 

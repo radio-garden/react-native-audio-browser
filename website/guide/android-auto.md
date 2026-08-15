@@ -41,20 +41,18 @@ Android sends a subset of what iOS does: the query plus music focuses (genre / a
 
 ## Browse display
 
-Two declarations control how Android Auto renders a browsable's children — the browsable handle's `display` promise and the page's sections (ADR 0011). They belong together: the handle promises, the page delivers.
+Android Auto reads a page's layout from the **parent item** that opens it — before the page resolves. So the layout is declared in two places: on the parent item (a tab, or a row on another page) and on the page itself.
 
 ```ts
-// The HANDLE — how the page's parent (a tab, or a row on another page)
-// declares it. Tabs are handles too: a tab opening a grid page needs this.
+// The parent item — a tab, or a row on another page. Android Auto
+// reads the layout from here, before the page resolves.
 {
   title: 'Stations',
   path: '/browse/stations',
-  // the layout PROMISE for the page this handle opens ('list' is the default):
-  // Android Auto reads it from the parent item, before the page resolves
-  style: { display: 'grid' },
+  style: { display: 'grid' }, // layout of the page this opens ('list' is the default)
 }
 
-// The PAGE it opens — the ResolvedTrack served for '/browse/stations':
+// The page it opens — the ResolvedTrack served for '/browse/stations':
 {
   path: '/browse/stations',
   title: 'Stations',
@@ -63,11 +61,11 @@ Two declarations control how Android Auto renders a browsable's children — the
 }
 ```
 
-- **The handle's `style.display`** — `'list'` (rows) or `'grid'` (tiles), declared on the **browsable track** to promise the layout of the page it opens. Android Auto honors only this parent-level hint below the root, and the library emits it only when declared — an undeclared promise means the page renders as a list, and a dev-mode warning fires when a served all-grid page sits under a promise-less handle. (A section's "view all" link needs no handle of your own: the library projects the section's declared block onto it.)
+- **`style.display` on the parent item** — `'list'` (rows) or `'grid'` (tiles). Below the root this is the only layout signal Android Auto honors, and it is only sent when you declare it — leave it off and the page renders as a list. In dev mode the library warns when an all-grid page is opened from a parent item with no declared `display`. (A section's "view all" page needs no declaration of its own: it reuses the section's `style`.)
 - **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children, plus a "view all" link built from the section's `path` and `subtitle`.
 
-::: warning AAOS lays out the whole page from the one parent-level promise
-On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent hint is the **only** below-root layout signal honored: the whole page renders as list or grid, uniformly. Per-section `display` differences (a teaser shelf above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the promised single layout. There is no correct promise for a mixed page — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
+::: warning AAOS lays out the whole page from the parent item's `display`
+On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent item's `display` is the **only** below-root layout signal honored: the whole page renders as list or grid, uniformly. Per-section `display` differences (a single-line grid above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the single declared layout. There is no way to describe a mixed page there — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
 :::
 
 ```ts

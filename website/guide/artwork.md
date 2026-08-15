@@ -135,7 +135,7 @@ On CarPlay, an SF Symbol with **no explicit colors** is handed to CarPlay untint
 For monochrome **icons** (not full-color album art), let the system tint them to stay legible on either appearance:
 
 - **iOS CarPlay** — declare [`style: { artworkRendering: 'stencil' }`](/api/types/browser-nodes/#trackstyle) on the track. Inside a page it's an inherited style property (a section- or page-wide value covers every item); tabs render without a section context, so a tab icon needs the declaration on the tab track itself. CarPlay tints the glyph per appearance: black in light mode, white in dark.
-- **Android Auto** is dark-only, so there's no per-appearance tinting — ship an appropriately colored (e.g. white) icon. Wherever a display hint is emitted (a declared section/page/promise `display`), an `android.resource://…/drawable/…` artwork URI selects Android Auto's **category** variant of that hint (which adds icon margins and lets Android Auto render it as an icon). The library only sets the category style; the visual treatment is Android Auto's — see [Browse display](/guide/android-auto#browse-display).
+- **Android Auto** is dark-only, so there's no per-appearance tinting — ship an appropriately colored (e.g. white) icon. When a layout is declared (`display` on the section, page, or parent item), an `android.resource://…/drawable/…` artwork URI switches Android Auto to the **category** variant of that layout (which adds icon margins and lets Android Auto render it as an icon). The library only sets the category style; the visual treatment is Android Auto's — see [Browse display](/guide/android-auto#browse-display).
 
 ```ts
 {
@@ -214,7 +214,7 @@ Now-playing artwork is resolved **once per active track**, keyed on its `id` —
 
 ## Tile sections
 
-A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by declaring `style: { display: 'grid' }` (wrapping; add `gridWrap: false` for a single line — the teaser shelf):
+A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by declaring `style: { display: 'grid' }` (wrapping; add `gridWrap: false` for a single line of tiles):
 
 ```ts
 {
