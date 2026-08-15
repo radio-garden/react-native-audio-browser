@@ -39,6 +39,8 @@
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
 #include "TimedMetadata.hpp"
 #include "JTimedMetadata.hpp"
 #include "StallReason.hpp"

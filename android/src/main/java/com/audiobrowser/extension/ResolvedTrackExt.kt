@@ -30,7 +30,15 @@ fun ResolvedTrack.toTrack(): Track =
     // properties (gridWrap) have no meaning on a plain Track, so they drop —
     // Nitro flattens the spec's `extends`, making this narrowing a hand-written
     // field list rather than an upcast (ADR 0011).
-    style = style?.let { TrackStyle(display = it.display, artworkRendering = it.artworkRendering) },
+    style =
+      style?.let {
+        TrackStyle(
+          display = it.display,
+          artworkRendering = it.artworkRendering,
+          imageShape = it.imageShape,
+          accessorySymbol = it.accessorySymbol,
+        )
+      },
     disabled = disabled,
     favorited = favorited,
     live = live,

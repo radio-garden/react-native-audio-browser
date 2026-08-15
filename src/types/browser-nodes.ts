@@ -26,6 +26,20 @@ export type StyleDisplay = 'list' | 'grid'
 export type ArtworkRendering = 'original' | 'stencil'
 
 /**
+ * The shape a grid tile's artwork is cropped to.
+ *
+ * - `'rounded-rectangle'` (default) — the standard tile crop.
+ * - `'circular'` — the standard presentation for *people* (artists, hosts,
+ *   DJs). Shape encodes the kind of item, so mixed grids legitimately
+ *   render circular artists next to rounded albums.
+ *
+ * Named after Apple's `imageShape` parameter (a platform passthrough), and
+ * deliberately without a grid prefix: every tile presentation that takes a
+ * shape reads the same property.
+ */
+export type ImageShape = 'circular' | 'rounded-rectangle'
+
+/**
  * The style declaration block a {@link Track} may carry: *inherited item
  * properties* (resolved `track ?? section ?? page ?? default`, per
  * property — they travel with the track) plus the *positional*
@@ -82,6 +96,35 @@ export interface TrackStyle {
    * @platform carplay
    */
   artworkRendering?: ArtworkRendering
+
+  /**
+   * Inherited (`track ?? section ?? page`): the shape a grid tile's
+   * artwork is cropped to — `'circular'` for people, the default
+   * `'rounded-rectangle'` for everything else. Shape follows the item
+   * wherever it travels: a circular artist stays circular in whatever
+   * grid renders it next. Inert where the presentation has no shape
+   * (list rows, pre-26 CarPlay, Android Auto).
+   *
+   * @default 'rounded-rectangle'
+   *
+   * @platform carplay
+   */
+  imageShape?: ImageShape
+
+  /**
+   * Inherited (`track ?? section ?? page`): an SF Symbol name drawn as
+   * the item's accessory wherever the current presentation supports one —
+   * the trailing edge of a list row, leading the title on an iOS 26 grid
+   * tile (placement is the platform's choice per surface). A resolved
+   * symbol replaces the derived accessory (the disclosure chevron a
+   * browsable row gets); `'none'` clears an inherited value, restoring
+   * the derived behavior — inheritance has no other escape, and no SF
+   * Symbol is named `none`, so the sentinel is collision-free. Inert off
+   * CarPlay.
+   *
+   * @platform carplay
+   */
+  accessorySymbol?: string
 }
 
 /**

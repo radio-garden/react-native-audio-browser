@@ -11,10 +11,13 @@
 #include "TrackStyle.hpp"
 
 #include "ArtworkRendering.hpp"
+#include "ImageShape.hpp"
 #include "JArtworkRendering.hpp"
+#include "JImageShape.hpp"
 #include "JStyleDisplay.hpp"
 #include "StyleDisplay.hpp"
 #include <optional>
+#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -39,9 +42,15 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JStyleDisplay> display = this->getFieldValue(fieldDisplay);
       static const auto fieldArtworkRendering = clazz->getField<JArtworkRendering>("artworkRendering");
       jni::local_ref<JArtworkRendering> artworkRendering = this->getFieldValue(fieldArtworkRendering);
+      static const auto fieldImageShape = clazz->getField<JImageShape>("imageShape");
+      jni::local_ref<JImageShape> imageShape = this->getFieldValue(fieldImageShape);
+      static const auto fieldAccessorySymbol = clazz->getField<jni::JString>("accessorySymbol");
+      jni::local_ref<jni::JString> accessorySymbol = this->getFieldValue(fieldAccessorySymbol);
       return TrackStyle(
         display != nullptr ? std::make_optional(display->toCpp()) : std::nullopt,
-        artworkRendering != nullptr ? std::make_optional(artworkRendering->toCpp()) : std::nullopt
+        artworkRendering != nullptr ? std::make_optional(artworkRendering->toCpp()) : std::nullopt,
+        imageShape != nullptr ? std::make_optional(imageShape->toCpp()) : std::nullopt,
+        accessorySymbol != nullptr ? std::make_optional(accessorySymbol->toStdString()) : std::nullopt
       );
     }
 
@@ -51,13 +60,15 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrackStyle::javaobject> fromCpp(const TrackStyle& value) {
-      using JSignature = JTrackStyle(jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>);
+      using JSignature = JTrackStyle(jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>, jni::alias_ref<JImageShape>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.display.has_value() ? JStyleDisplay::fromCpp(value.display.value()) : nullptr,
-        value.artworkRendering.has_value() ? JArtworkRendering::fromCpp(value.artworkRendering.value()) : nullptr
+        value.artworkRendering.has_value() ? JArtworkRendering::fromCpp(value.artworkRendering.value()) : nullptr,
+        value.imageShape.has_value() ? JImageShape::fromCpp(value.imageShape.value()) : nullptr,
+        value.accessorySymbol.has_value() ? jni::make_jstring(value.accessorySymbol.value()) : nullptr
       );
     }
   };

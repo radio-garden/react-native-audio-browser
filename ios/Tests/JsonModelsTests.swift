@@ -117,16 +117,62 @@ struct JsonStyleTests {
     #expect(track.disabled == true)
   }
 
+  @Test func decodesImageShapeAndAccessorySymbol() throws {
+    let json = Data(
+      """
+      {"title":"X","style":{"imageShape":"circular","accessorySymbol":"lock.fill"}}
+      """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    #expect(track.style?.imageShape == .circular)
+    #expect(track.style?.accessorySymbol == "lock.fill")
+  }
+
+  @Test func accessorySymbolNoneIsAValueNotEmptiness() throws {
+    // The inheritance-escape sentinel must survive the wire — collapsing it
+    // to "no declaration" would let the section value flow back in.
+    let json = Data(
+      """
+      {"title":"X","style":{"accessorySymbol":"none"}}
+      """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    #expect(track.style?.accessorySymbol == "none")
+  }
+
+  @Test func unknownImageShapeDecodesAsNoDeclaration() throws {
+    let json = Data(
+      """
+      {"title":"X","style":{"imageShape":"hexagonal"}}
+      """.utf8)
+    let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
+    #expect(track.style == nil)
+  }
+
   @Test func styleAndDisabledSurviveThePersistenceRoundTrip() throws {
     // Restored queues keep their visible fidelity across process death.
     let original = JsonTrack(
       title: "X", src: "s",
-      style: JsonStyle(display: "grid", artworkRendering: "stencil"),
+      style: JsonStyle(
+        display: "grid", artworkRendering: "stencil",
+        imageShape: "circular", accessorySymbol: "lock.fill",
+      ),
       disabled: true,
     )
     let encoded = try JSONEncoder().encode(original)
     let decoded = try JSONDecoder().decode(JsonTrack.self, from: encoded)
     #expect(decoded.style == original.style)
     #expect(decoded.disabled == true)
+  }
+
+  @Test func liveBlockSnapshotsAllItemProperties() throws {
+    // The persistence snapshot (JsonStyle from a live TrackStyle) must not
+    // drop the newer item properties.
+    let snapshot = JsonStyle(
+      TrackStyle(
+        display: nil, artworkRendering: .stencil,
+        imageShape: .circular, accessorySymbol: "none",
+      ))
+    #expect(snapshot?.artworkRendering == "stencil")
+    #expect(snapshot?.imageShape == "circular")
+    #expect(snapshot?.accessorySymbol == "none")
   }
 }

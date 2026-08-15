@@ -78,6 +78,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
 // Forward declaration of `ImageQueryParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
+// Forward declaration of `ImageShape` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ImageShape; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaReference` to properly resolve imports.
@@ -237,6 +239,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSOptions.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
+#include "ImageShape.hpp"
 #include "ImageSource.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
@@ -516,6 +519,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline ArtworkRendering get_std__optional_ArtworkRendering_(const std::optional<ArtworkRendering>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<ImageShape>
+  /**
+   * Specialized version of `std::optional<ImageShape>`.
+   */
+  using std__optional_ImageShape_ = std::optional<ImageShape>;
+  inline std::optional<ImageShape> create_std__optional_ImageShape_(const ImageShape& value) noexcept {
+    return std::optional<ImageShape>(value);
+  }
+  inline bool has_value_std__optional_ImageShape_(const std::optional<ImageShape>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ImageShape get_std__optional_ImageShape_(const std::optional<ImageShape>& optional) noexcept {
     return optional.value();
   }
   

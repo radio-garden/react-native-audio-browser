@@ -22,6 +22,8 @@
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
 #include "Section.hpp"
 #include <vector>
 #include "JSection.hpp"

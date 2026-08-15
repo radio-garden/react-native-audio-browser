@@ -64,4 +64,33 @@ struct TrackStyleResolutionTests {
     )
     #expect(resolved.display == nil)
   }
+
+  @Test func imageShapeInheritsAndOverridesPerItem() {
+    // Section-wide circular (an artists shelf); one album overrides.
+    let inherited = StyleResolver.trackStyle(
+      track: nil,
+      section: SectionStyle(imageShape: .circular),
+    )
+    #expect(inherited.imageShape == .circular)
+    let overridden = StyleResolver.trackStyle(
+      track: TrackStyle(imageShape: .roundedRectangle),
+      section: SectionStyle(imageShape: .circular),
+    )
+    #expect(overridden.imageShape == .roundedRectangle)
+  }
+
+  @Test func accessorySymbolInheritsAndNoneResolvesAsAValue() {
+    let inherited = StyleResolver.trackStyle(
+      track: nil,
+      section: SectionStyle(accessorySymbol: "lock.fill"),
+    )
+    #expect(inherited.accessorySymbol == "lock.fill")
+    // 'none' is the inheritance escape — it must survive resolution intact
+    // (the renderer, not the resolver, maps it to "no accessory").
+    let escaped = StyleResolver.trackStyle(
+      track: TrackStyle(accessorySymbol: "none"),
+      section: SectionStyle(accessorySymbol: "lock.fill"),
+    )
+    #expect(escaped.accessorySymbol == "none")
+  }
 }

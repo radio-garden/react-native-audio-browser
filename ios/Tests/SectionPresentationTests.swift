@@ -58,4 +58,16 @@ struct SectionPresentationTests {
       SectionPresentation(for: style(display: nil, gridWrap: false), supportsWrappingGrid: true)
         == .list)
   }
+
+  @Test func effectiveAccessorySymbol_noneAndAbsenceDrawNothing() {
+    // A declared symbol draws; 'none' (the inheritance escape) and absence
+    // both fall back to the derived accessory.
+    #expect(
+      SectionPresentation.effectiveAccessorySymbol(TrackStyle(accessorySymbol: "lock.fill"))
+        == "lock.fill")
+    #expect(
+      SectionPresentation.effectiveAccessorySymbol(TrackStyle(accessorySymbol: "none")) == nil)
+    #expect(SectionPresentation.effectiveAccessorySymbol(TrackStyle()) == nil)
+    #expect(SectionPresentation.effectiveAccessorySymbol(nil) == nil)
+  }
 }

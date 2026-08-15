@@ -1,15 +1,19 @@
 package com.audiobrowser
 
 import com.audiobrowser.util.artworkOf
+import com.margelo.nitro.audiobrowser.ArtworkRendering
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.SectionStyle
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackStyle
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 
 /**
@@ -200,5 +204,33 @@ object TestFixtures {
       body = null,
       contentType = null,
       userAgent = null,
+    )
+
+  fun trackStyle(
+    display: StyleDisplay? = null,
+    artworkRendering: ArtworkRendering? = null,
+    imageShape: ImageShape? = null,
+    accessorySymbol: String? = null,
+  ) =
+    TrackStyle(
+      display = display,
+      artworkRendering = artworkRendering,
+      imageShape = imageShape,
+      accessorySymbol = accessorySymbol,
+    )
+
+  fun sectionStyle(
+    display: StyleDisplay? = null,
+    artworkRendering: ArtworkRendering? = null,
+    imageShape: ImageShape? = null,
+    accessorySymbol: String? = null,
+    gridWrap: Boolean? = null,
+  ) =
+    SectionStyle(
+      gridWrap = gridWrap,
+      display = display,
+      artworkRendering = artworkRendering,
+      imageShape = imageShape,
+      accessorySymbol = accessorySymbol,
     )
 }

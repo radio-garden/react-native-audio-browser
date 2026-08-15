@@ -138,6 +138,8 @@ Optional fields that change how a Track renders on CarPlay / Android Auto. Each 
 | ---------------------------------------- | ----------------------------------------------------------------- | -------------------------- |
 | `style: { display: 'list' \| 'grid' }`   | on a browsable track: the layout of the page it opens             | Android Auto / AAOS        |
 | `style: { artworkRendering: 'stencil' }` | tint monochrome artwork to the surface appearance                 | CarPlay                    |
+| `style: { imageShape: 'circular' }`      | crop grid-tile artwork circular (people) instead of rounded       | CarPlay (iOS 26+)          |
+| `style: { accessorySymbol: '…' }`        | SF Symbol accessory; `'none'` restores the derived accessory      | CarPlay                    |
 | `disabled`                               | unavailable: never plays; grayed where drawable, hidden elsewhere | all                        |
 | `favorited`                              | filled/empty heart (needs the `favorite` capability)              | Android Auto, notification |
 | `live`                                   | a "live" indicator                                                | iOS now-playing            |

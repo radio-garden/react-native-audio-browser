@@ -32,10 +32,14 @@
 namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 // Forward declaration of `ArtworkRendering` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
+// Forward declaration of `ImageShape` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ImageShape; }
 
 #include "StyleDisplay.hpp"
 #include <optional>
 #include "ArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -46,10 +50,12 @@ namespace margelo::nitro::audiobrowser {
   public:
     std::optional<StyleDisplay> display     SWIFT_PRIVATE;
     std::optional<ArtworkRendering> artworkRendering     SWIFT_PRIVATE;
+    std::optional<ImageShape> imageShape     SWIFT_PRIVATE;
+    std::optional<std::string> accessorySymbol     SWIFT_PRIVATE;
 
   public:
     TrackStyle() = default;
-    explicit TrackStyle(std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering): display(display), artworkRendering(artworkRendering) {}
+    explicit TrackStyle(std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering, std::optional<ImageShape> imageShape, std::optional<std::string> accessorySymbol): display(display), artworkRendering(artworkRendering), imageShape(imageShape), accessorySymbol(accessorySymbol) {}
 
   public:
     friend bool operator==(const TrackStyle& lhs, const TrackStyle& rhs) = default;
@@ -66,13 +72,17 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::TrackStyle(
         JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display"))),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::TrackStyle& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "display"), JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::toJSI(runtime, arg.display));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::toJSI(runtime, arg.artworkRendering));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "imageShape"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::toJSI(runtime, arg.imageShape));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.accessorySymbol));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -85,6 +95,8 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))) return false;
       return true;
     }
   };

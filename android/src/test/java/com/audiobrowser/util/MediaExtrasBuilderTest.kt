@@ -2,10 +2,10 @@ package com.audiobrowser.util
 
 import androidx.media.utils.MediaConstants
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.TestFixtures.sectionStyle
+import com.audiobrowser.TestFixtures.trackStyle
 import com.audiobrowser.browser.styleResolvedSections
-import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.StyleDisplay
-import com.margelo.nitro.audiobrowser.TrackStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -23,7 +23,7 @@ class MediaExtrasBuilderTest {
   private val track = TestFixtures.track()
 
   private fun sectionStyle(display: StyleDisplay?) =
-    SectionStyle(display = display, artworkRendering = null, gridWrap = null)
+    sectionStyle(display = display, artworkRendering = null, gridWrap = null)
 
   @Test
   fun `owning section title stamps the group-title hint`() {
@@ -65,7 +65,7 @@ class MediaExtrasBuilderTest {
   @Test
   fun `a track's own display never sets its item hint - display is positional`() {
     val gridPromiseTrack =
-      track.copy(style = TrackStyle(display = StyleDisplay.GRID, artworkRendering = null))
+      track.copy(style = trackStyle(display = StyleDisplay.GRID, artworkRendering = null))
     val section = TestFixtures.section(arrayOf(gridPromiseTrack), style = null)
     val extras = MediaExtrasBuilder.build(gridPromiseTrack, section)
     assertFalse(extras.containsKey(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM))
@@ -75,7 +75,7 @@ class MediaExtrasBuilderTest {
   fun `a browsable track's declared display emits the parent-level promise`() {
     val handle =
       TestFixtures.browseTrack()
-        .copy(style = TrackStyle(display = StyleDisplay.GRID, artworkRendering = null))
+        .copy(style = trackStyle(display = StyleDisplay.GRID, artworkRendering = null))
     val extras = MediaExtrasBuilder.build(handle)
     val expected = MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM
     assertEquals(
@@ -99,7 +99,7 @@ class MediaExtrasBuilderTest {
   @Test
   fun `a playable track's display is inert - playables open no page`() {
     val playable =
-      track.copy(style = TrackStyle(display = StyleDisplay.GRID, artworkRendering = null))
+      track.copy(style = trackStyle(display = StyleDisplay.GRID, artworkRendering = null))
     val extras = MediaExtrasBuilder.build(playable)
     assertFalse(extras.containsKey(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
     assertFalse(extras.containsKey(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_PLAYABLE))
@@ -128,7 +128,7 @@ class MediaExtrasBuilderTest {
         arrayOf(track),
         title = "Popular",
         path = "/popular",
-        style = SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
+        style = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
       )
     val navigation = TrackFactory.navigationTrack(section)
     assertEquals(StyleDisplay.GRID, navigation.style?.display)
@@ -147,7 +147,7 @@ class MediaExtrasBuilderTest {
     // narrower unit test stays green while the page tier goes dark.
     val page =
       TestFixtures.resolvedTrack(
-        style = SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
+        style = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
         sections = arrayOf(TestFixtures.section(arrayOf(track))),
       )
 

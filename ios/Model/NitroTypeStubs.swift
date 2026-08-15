@@ -112,9 +112,24 @@
     }
   }
 
+  enum ImageShape: Equatable {
+    case circular
+    case roundedRectangle
+
+    init?(fromString string: String) {
+      switch string {
+      case "circular": self = .circular
+      case "rounded-rectangle": self = .roundedRectangle
+      default: return nil
+      }
+    }
+  }
+
   struct TrackStyle: Equatable {
     var display: StyleDisplay?
     var artworkRendering: ArtworkRendering?
+    var imageShape: ImageShape?
+    var accessorySymbol: String?
   }
 
   // Member order matches the generated init (own properties before inherited
@@ -125,6 +140,8 @@
     var gridWrap: Bool?
     var display: StyleDisplay?
     var artworkRendering: ArtworkRendering?
+    var imageShape: ImageShape?
+    var accessorySymbol: String?
   }
 
   struct Section: Equatable {

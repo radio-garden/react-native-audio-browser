@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.media3.common.C
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.toArtworkRendering
+import com.audiobrowser.util.toImageShape
 import com.audiobrowser.util.toStyleDisplay
 import com.audiobrowser.util.toWireString
 import com.audiobrowser.util.url
@@ -216,6 +217,8 @@ class PlaybackStateStore(private val player: Player) {
               JSONObject().apply {
                 put("display", style.display?.toWireString())
                 put("artworkRendering", style.artworkRendering?.toWireString())
+                put("imageShape", style.imageShape?.toWireString())
+                put("accessorySymbol", style.accessorySymbol)
               }
             },
           )
@@ -254,11 +257,18 @@ class PlaybackStateStore(private val player: Player) {
                   TrackStyle(
                     display = style.optString("display").toStyleDisplay(),
                     artworkRendering = style.optString("artworkRendering").toArtworkRendering(),
+                    imageShape = style.optString("imageShape").toImageShape(),
+                    accessorySymbol = style.optString("accessorySymbol").takeIf { it.isNotEmpty() },
                   )
                 }
                 // An empty block collapses to "no declaration" — one shape on
                 // every platform, matching the browse decoders.
-                ?.takeIf { it.display != null || it.artworkRendering != null },
+                ?.takeIf {
+                  it.display != null ||
+                    it.artworkRendering != null ||
+                    it.imageShape != null ||
+                    it.accessorySymbol != null
+                },
             disabled =
               if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled")
               else null,

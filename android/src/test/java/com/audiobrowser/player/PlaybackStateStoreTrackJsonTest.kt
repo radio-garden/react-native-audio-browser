@@ -1,9 +1,9 @@
 package com.audiobrowser.player
 
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.TestFixtures.trackStyle
 import com.margelo.nitro.audiobrowser.ArtworkRendering
 import com.margelo.nitro.audiobrowser.StyleDisplay
-import com.margelo.nitro.audiobrowser.TrackStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -25,7 +25,7 @@ class PlaybackStateStoreTrackJsonTest {
       TestFixtures.track(title = "Night Mix", src = "https://s/a.mp3", disabled = true)
         .copy(
           style =
-            TrackStyle(display = StyleDisplay.GRID, artworkRendering = ArtworkRendering.STENCIL)
+            trackStyle(display = StyleDisplay.GRID, artworkRendering = ArtworkRendering.STENCIL)
         )
 
     val restored = PlaybackStateStore.trackFromJson(PlaybackStateStore.trackToJson(track))

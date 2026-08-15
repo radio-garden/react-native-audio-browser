@@ -154,6 +154,15 @@ final class CarPlayListItemFactory {
       item.accessoryType = .disclosureIndicator
     }
 
+    // A resolved accessorySymbol replaces the derived accessory above
+    // (accessoryImage outranks accessoryType in the SDK). 'none' — the
+    // inheritance escape — keeps the derived behavior instead.
+    if let symbol = SectionPresentation.effectiveAccessorySymbol(style ?? track.style),
+       let accessory = UIImage(systemName: symbol)
+    {
+      item.accessoryImage = accessory
+    }
+
     // An unavailable track grays out and goes inert — list rows are the
     // surface that CAN draw the fact, so it shows rather than hides
     // (Track.disabled's rendering ladder).
@@ -259,9 +268,12 @@ final class CarPlayListItemFactory {
         // imageGridElements, never the title-less gridElements: an
         // artwork-less track must keep its name on screen (ADR 0010).
         let gridElements = tracks.map { track in
+          let resolved = StyleResolver.trackStyle(track: track.style, section: style)
           let element = CPListImageRowItemImageGridElement(
-            image: placeholder(), imageShape: .roundedRectangle, title: track.title,
-            accessorySymbolName: nil,
+            image: placeholder(),
+            imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
+            title: track.title,
+            accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
           )
           if track.disabled == true {
             element.isEnabled = false

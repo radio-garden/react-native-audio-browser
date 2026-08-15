@@ -49,7 +49,12 @@ object TrackFactory {
       duration = null,
       style =
         section.style?.let {
-          TrackStyle(display = it.display, artworkRendering = it.artworkRendering)
+          TrackStyle(
+            display = it.display,
+            artworkRendering = it.artworkRendering,
+            imageShape = it.imageShape,
+            accessorySymbol = it.accessorySymbol,
+          )
         },
       disabled = null,
       favorited = null,

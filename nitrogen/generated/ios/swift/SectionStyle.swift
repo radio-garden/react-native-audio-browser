@@ -18,7 +18,7 @@ public extension SectionStyle {
   /**
    * Create a new instance of `SectionStyle`.
    */
-  init(gridWrap: Bool?, display: StyleDisplay?, artworkRendering: ArtworkRendering?) {
+  init(gridWrap: Bool?, display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?) {
     self.init({ () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = gridWrap {
         return bridge.create_std__optional_bool_(__unwrappedValue)
@@ -34,6 +34,18 @@ public extension SectionStyle {
     }(), { () -> bridge.std__optional_ArtworkRendering_ in
       if let __unwrappedValue = artworkRendering {
         return bridge.create_std__optional_ArtworkRendering_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ImageShape_ in
+      if let __unwrappedValue = imageShape {
+        return bridge.create_std__optional_ImageShape_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = accessorySymbol {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -60,5 +72,22 @@ public extension SectionStyle {
   @inline(__always)
   var artworkRendering: ArtworkRendering? {
     return self.__artworkRendering.value
+  }
+  
+  @inline(__always)
+  var imageShape: ImageShape? {
+    return self.__imageShape.value
+  }
+  
+  @inline(__always)
+  var accessorySymbol: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__accessorySymbol) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__accessorySymbol)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
   }
 }

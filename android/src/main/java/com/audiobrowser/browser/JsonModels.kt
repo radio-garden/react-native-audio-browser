@@ -1,6 +1,7 @@
 package com.audiobrowser.browser
 
 import com.audiobrowser.util.toArtworkRendering
+import com.audiobrowser.util.toImageShape
 import com.audiobrowser.util.toStyleDisplay
 import com.margelo.nitro.audiobrowser.CarPlaySiriListButtonPosition
 import com.margelo.nitro.audiobrowser.ResolvedTrack
@@ -108,17 +109,46 @@ private fun JsonElement?.toTrackStyle(): TrackStyle? =
   (this as? JsonObject)?.let { obj ->
     val display = obj.stringField("display").toStyleDisplay()
     val artworkRendering = obj.stringField("artworkRendering").toArtworkRendering()
-    if (display == null && artworkRendering == null) null
-    else TrackStyle(display = display, artworkRendering = artworkRendering)
+    val imageShape = obj.stringField("imageShape").toImageShape()
+    // 'none' is a legitimate accessory value (the inheritance escape); only
+    // emptiness collapses.
+    val accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() }
+    if (
+      display == null && artworkRendering == null && imageShape == null && accessorySymbol == null
+    )
+      null
+    else
+      TrackStyle(
+        display = display,
+        artworkRendering = artworkRendering,
+        imageShape = imageShape,
+        accessorySymbol = accessorySymbol,
+      )
   }
 
 private fun JsonElement?.toSectionStyle(): SectionStyle? =
   (this as? JsonObject)?.let { obj ->
     val display = obj.stringField("display").toStyleDisplay()
     val artworkRendering = obj.stringField("artworkRendering").toArtworkRendering()
+    val imageShape = obj.stringField("imageShape").toImageShape()
+    val accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() }
     val gridWrap = obj.booleanField("gridWrap")
-    if (display == null && artworkRendering == null && gridWrap == null) null
-    else SectionStyle(display = display, artworkRendering = artworkRendering, gridWrap = gridWrap)
+    if (
+      display == null &&
+        artworkRendering == null &&
+        imageShape == null &&
+        accessorySymbol == null &&
+        gridWrap == null
+    )
+      null
+    else
+      SectionStyle(
+        display = display,
+        artworkRendering = artworkRendering,
+        imageShape = imageShape,
+        accessorySymbol = accessorySymbol,
+        gridWrap = gridWrap,
+      )
   }
 
 private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosition? {

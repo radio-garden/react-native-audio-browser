@@ -53,11 +53,46 @@ const configuration: BrowserConfiguration = {
         archiveLibrarySection,
         radioGardenLibrarySection,
         {
+          // Lab shelf for the inherited item properties (#125, #131): a
+          // wrapping grid — the iOS 26 tile path that renders imageShape
+          // and tile accessories.
+          title: 'Style Lab',
+          style: {
+            display: 'grid',
+            imageShape: 'circular',
+            accessorySymbol: 'star.fill'
+          },
+          children: [
+            {
+              // Inherits both: circular tile, star accessory.
+              title: 'Inherits circular + star',
+              path: '/playlist/independent-sounds',
+              artwork: 'sf:person.fill?bg=#FF0090'
+            },
+            {
+              // Per-item override: rounded tile in a circular shelf.
+              title: 'Rounded override',
+              path: '/playlist/energetic-rhythms',
+              artwork: 'sf:opticaldisc?bg=#8AC926',
+              style: { imageShape: 'rounded-rectangle' }
+            },
+            {
+              // 'none' escapes the inherited accessory; shape still inherits.
+              title: 'No badge (none)',
+              path: '/archive',
+              artwork: 'sf:person.2.fill?bg=#1982C4',
+              style: { accessorySymbol: 'none' }
+            }
+          ]
+        },
+        {
           title: 'Other',
           children: [
             {
               src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-              title: 'Chapters'
+              title: 'Chapters',
+              // List-row accessory: replaces the derived (playable → none).
+              style: { accessorySymbol: 'waveform' }
             }
           ]
         }

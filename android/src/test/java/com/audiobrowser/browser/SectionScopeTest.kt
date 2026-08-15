@@ -2,8 +2,8 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.TestFixtures.resolvedTrack
 import com.audiobrowser.TestFixtures.section
+import com.audiobrowser.TestFixtures.sectionStyle
 import com.audiobrowser.TestFixtures.track
-import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -138,7 +138,7 @@ class SectionScopeTest {
     val page =
       resolvedTrack(
         style =
-          SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
+          sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
         sections = arrayOf(section(children = arrayOf(track(src = "a")))),
       )
 
@@ -153,12 +153,12 @@ class SectionScopeTest {
   fun `a section's own block overrides the page's in the fold`() {
     val page =
       resolvedTrack(
-        style = SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
+        style = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
         sections =
           arrayOf(
             section(
               style =
-                SectionStyle(display = StyleDisplay.LIST, artworkRendering = null, gridWrap = null),
+                sectionStyle(display = StyleDisplay.LIST, artworkRendering = null, gridWrap = null),
               children = arrayOf(track(src = "a")),
             )
           ),

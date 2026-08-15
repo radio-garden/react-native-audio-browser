@@ -25,7 +25,13 @@ data class SectionStyle(
   val display: StyleDisplay?,
   @DoNotStrip
   @Keep
-  val artworkRendering: ArtworkRendering?
+  val artworkRendering: ArtworkRendering?,
+  @DoNotStrip
+  @Keep
+  val imageShape: ImageShape?,
+  @DoNotStrip
+  @Keep
+  val accessorySymbol: String?
 ) {
   /* primary constructor */
 
@@ -37,8 +43,8 @@ data class SectionStyle(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(gridWrap: Boolean?, display: StyleDisplay?, artworkRendering: ArtworkRendering?): SectionStyle {
-      return SectionStyle(gridWrap, display, artworkRendering)
+    private fun fromCpp(gridWrap: Boolean?, display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?): SectionStyle {
+      return SectionStyle(gridWrap, display, artworkRendering, imageShape, accessorySymbol)
     }
   }
 }

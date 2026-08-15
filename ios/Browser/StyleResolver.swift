@@ -30,6 +30,8 @@ enum StyleResolver {
       gridWrap: section?.gridWrap ?? page?.gridWrap,
       display: section?.display ?? page?.display,
       artworkRendering: section?.artworkRendering ?? page?.artworkRendering,
+      imageShape: section?.imageShape ?? page?.imageShape,
+      accessorySymbol: section?.accessorySymbol ?? page?.accessorySymbol,
     )
   }
 
@@ -42,6 +44,10 @@ enum StyleResolver {
       // for this item's own layout.
       display: nil,
       artworkRendering: track?.artworkRendering ?? section?.artworkRendering,
+      imageShape: track?.imageShape ?? section?.imageShape,
+      // `'none'` resolves like any value — it is the renderer that treats it
+      // as "no accessory, derived behavior" (the inheritance escape).
+      accessorySymbol: track?.accessorySymbol ?? section?.accessorySymbol,
     )
   }
 }

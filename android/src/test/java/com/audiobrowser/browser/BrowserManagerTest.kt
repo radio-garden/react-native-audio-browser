@@ -4,6 +4,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import com.audiobrowser.TestFixtures.resolvedTrack
 import com.audiobrowser.TestFixtures.section
+import com.audiobrowser.TestFixtures.sectionStyle
 import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.util.BrowserPathHelper
@@ -183,7 +184,7 @@ class BrowserManagerTest {
         section(
           title = "Row",
           style =
-            com.margelo.nitro.audiobrowser.SectionStyle(
+            sectionStyle(
               display = com.margelo.nitro.audiobrowser.StyleDisplay.GRID,
               artworkRendering = null,
               gridWrap = false,
@@ -252,7 +253,7 @@ class BrowserManagerTest {
       section(
         title = "Most Played",
         style =
-          com.margelo.nitro.audiobrowser.SectionStyle(
+          sectionStyle(
             display = com.margelo.nitro.audiobrowser.StyleDisplay.GRID,
             artworkRendering = null,
             gridWrap = false,

@@ -31,4 +31,13 @@ enum SectionPresentation: Equatable {
       self = .list
     }
   }
+
+  /// The accessory symbol a resolved block actually draws: nil when
+  /// undeclared, and nil for the `'none'` sentinel — the inheritance escape
+  /// that restores the derived accessory (a browsable row's chevron). Here,
+  /// not in the CarPlay factory, so the sentinel rule is testable off-device.
+  static func effectiveAccessorySymbol(_ style: TrackStyle?) -> String? {
+    guard let symbol = style?.accessorySymbol, symbol != "none" else { return nil }
+    return symbol
+  }
 }

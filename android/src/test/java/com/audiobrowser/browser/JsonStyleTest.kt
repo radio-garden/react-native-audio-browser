@@ -1,6 +1,7 @@
 package com.audiobrowser.browser
 
 import com.margelo.nitro.audiobrowser.ArtworkRendering
+import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -87,5 +88,32 @@ class JsonStyleTest {
   fun `decodes disabled`() {
     val track = json.decodeFromString<JsonTrack>("""{"title":"X","src":"s","disabled":true}""")
     assertEquals(true, track.toNitro().disabled)
+  }
+
+  @Test
+  fun `decodes imageShape and accessorySymbol`() {
+    val track =
+      json.decodeFromString<JsonTrack>(
+        """{"title":"X","style":{"imageShape":"circular","accessorySymbol":"lock.fill"}}"""
+      )
+    val style = track.toNitro().style
+    assertEquals(ImageShape.CIRCULAR, style?.imageShape)
+    assertEquals("lock.fill", style?.accessorySymbol)
+  }
+
+  @Test
+  fun `accessorySymbol 'none' is a value - not emptiness`() {
+    // The inheritance-escape sentinel must survive the wire — collapsing it
+    // to "no declaration" would let the section value flow back in.
+    val track =
+      json.decodeFromString<JsonTrack>("""{"title":"X","style":{"accessorySymbol":"none"}}""")
+    assertEquals("none", track.toNitro().style?.accessorySymbol)
+  }
+
+  @Test
+  fun `unknown imageShape decodes as no declaration`() {
+    val track =
+      json.decodeFromString<JsonTrack>("""{"title":"X","style":{"imageShape":"hexagonal"}}""")
+    assertNull(track.toNitro().style)
   }
 }

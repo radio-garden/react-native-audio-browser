@@ -22,7 +22,13 @@ data class TrackStyle(
   val display: StyleDisplay?,
   @DoNotStrip
   @Keep
-  val artworkRendering: ArtworkRendering?
+  val artworkRendering: ArtworkRendering?,
+  @DoNotStrip
+  @Keep
+  val imageShape: ImageShape?,
+  @DoNotStrip
+  @Keep
+  val accessorySymbol: String?
 ) {
   /* primary constructor */
 
@@ -34,8 +40,8 @@ data class TrackStyle(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(display: StyleDisplay?, artworkRendering: ArtworkRendering?): TrackStyle {
-      return TrackStyle(display, artworkRendering)
+    private fun fromCpp(display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?): TrackStyle {
+      return TrackStyle(display, artworkRendering, imageShape, accessorySymbol)
     }
   }
 }

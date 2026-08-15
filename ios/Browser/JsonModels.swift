@@ -78,15 +78,21 @@ struct JsonStyle: Codable, Equatable {
   let display: String?
   let gridWrap: Bool?
   let artworkRendering: String?
+  let imageShape: String?
+  let accessorySymbol: String?
 
   init(
     display: String? = nil,
     gridWrap: Bool? = nil,
     artworkRendering: String? = nil,
+    imageShape: String? = nil,
+    accessorySymbol: String? = nil,
   ) {
     self.display = display
     self.gridWrap = gridWrap
     self.artworkRendering = artworkRendering
+    self.imageShape = imageShape
+    self.accessorySymbol = accessorySymbol
   }
 
   init(from decoder: Decoder) throws {
@@ -96,11 +102,15 @@ struct JsonStyle: Codable, Equatable {
       display = nil
       gridWrap = nil
       artworkRendering = nil
+      imageShape = nil
+      accessorySymbol = nil
       return
     }
     display = (try? container.decodeIfPresent(String.self, forKey: .display)) ?? nil
     gridWrap = (try? container.decodeIfPresent(Bool.self, forKey: .gridWrap)) ?? nil
     artworkRendering = (try? container.decodeIfPresent(String.self, forKey: .artworkRendering)) ?? nil
+    imageShape = (try? container.decodeIfPresent(String.self, forKey: .imageShape)) ?? nil
+    accessorySymbol = (try? container.decodeIfPresent(String.self, forKey: .accessorySymbol)) ?? nil
   }
 }
 
@@ -114,20 +124,36 @@ extension JsonStyle {
   func toTrackStyle() -> TrackStyle? {
     let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
     let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil else { return nil }
-    return TrackStyle(display: display, artworkRendering: artworkRendering)
+    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
+    // The 'none' sentinel is a legitimate value; only emptiness collapses.
+    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
+    guard display != nil || artworkRendering != nil || imageShape != nil
+      || accessorySymbol != nil
+    else { return nil }
+    return TrackStyle(
+      display: display,
+      artworkRendering: artworkRendering,
+      imageShape: imageShape,
+      accessorySymbol: accessorySymbol,
+    )
   }
 
   func toSectionStyle() -> SectionStyle? {
     let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
     let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil || gridWrap != nil else { return nil }
+    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
+    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
+    guard display != nil || artworkRendering != nil || gridWrap != nil
+      || imageShape != nil || accessorySymbol != nil
+    else { return nil }
     // Argument order is the generated init's (own properties before
     // inherited ones — Nitro flattens `extends` own-props-first).
     return SectionStyle(
       gridWrap: gridWrap,
       display: display,
       artworkRendering: artworkRendering,
+      imageShape: imageShape,
+      accessorySymbol: accessorySymbol,
     )
   }
 
@@ -135,10 +161,15 @@ extension JsonStyle {
   /// An all-nil block snapshots as no block — the decoders collapse it to
   /// "no declaration" anyway, so never persist the distinction.
   init?(_ style: TrackStyle?) {
-    guard let style, style.display != nil || style.artworkRendering != nil else { return nil }
+    guard let style,
+          style.display != nil || style.artworkRendering != nil
+          || style.imageShape != nil || style.accessorySymbol != nil
+    else { return nil }
     self.init(
       display: Self.string(style.display),
       artworkRendering: Self.string(style.artworkRendering),
+      imageShape: Self.string(style.imageShape),
+      accessorySymbol: style.accessorySymbol,
     )
   }
 
@@ -154,6 +185,14 @@ extension JsonStyle {
     switch rendering {
     case .original: "original"
     case .stencil: "stencil"
+    case nil: nil
+    }
+  }
+
+  private static func string(_ shape: ImageShape?) -> String? {
+    switch shape {
+    case .circular: "circular"
+    case .roundedRectangle: "rounded-rectangle"
     case nil: nil
     }
   }

@@ -1,9 +1,10 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.TestFixtures.sectionStyle
+import com.audiobrowser.TestFixtures.trackStyle
 import com.margelo.nitro.audiobrowser.ArtworkRendering
-import com.margelo.nitro.audiobrowser.SectionStyle
+import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.StyleDisplay
-import com.margelo.nitro.audiobrowser.TrackStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -20,9 +21,9 @@ class StyleResolverTest {
     val resolved =
       StyleResolver.sectionStyle(
         section =
-          SectionStyle(display = StyleDisplay.LIST, artworkRendering = null, gridWrap = null),
+          sectionStyle(display = StyleDisplay.LIST, artworkRendering = null, gridWrap = null),
         page =
-          SectionStyle(
+          sectionStyle(
             display = StyleDisplay.GRID,
             artworkRendering = ArtworkRendering.STENCIL,
             gridWrap = false,
@@ -39,7 +40,7 @@ class StyleResolverTest {
     val resolved =
       StyleResolver.sectionStyle(
         section = null,
-        page = SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = true),
+        page = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = true),
       )
     assertEquals(StyleDisplay.GRID, resolved.display)
     assertEquals(true, resolved.gridWrap)
@@ -49,9 +50,9 @@ class StyleResolverTest {
   fun `track overrides the section per property`() {
     val resolved =
       StyleResolver.trackStyle(
-        track = TrackStyle(display = null, artworkRendering = ArtworkRendering.ORIGINAL),
+        track = trackStyle(display = null, artworkRendering = ArtworkRendering.ORIGINAL),
         section =
-          SectionStyle(
+          sectionStyle(
             display = StyleDisplay.GRID,
             artworkRendering = ArtworkRendering.STENCIL,
             gridWrap = null,
@@ -66,7 +67,7 @@ class StyleResolverTest {
       StyleResolver.trackStyle(
         track = null,
         section =
-          SectionStyle(display = null, artworkRendering = ArtworkRendering.STENCIL, gridWrap = null),
+          sectionStyle(display = null, artworkRendering = ArtworkRendering.STENCIL, gridWrap = null),
       )
     assertEquals(ArtworkRendering.STENCIL, resolved.artworkRendering)
   }
@@ -78,10 +79,42 @@ class StyleResolverTest {
     // item's resolved display.
     val resolved =
       StyleResolver.trackStyle(
-        track = TrackStyle(display = StyleDisplay.GRID, artworkRendering = null),
+        track = trackStyle(display = StyleDisplay.GRID, artworkRendering = null),
         section =
-          SectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
+          sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),
       )
     assertNull(resolved.display)
+  }
+
+  @Test
+  fun `imageShape inherits and overrides per item`() {
+    // Section-wide circular (an artists shelf); one album overrides.
+    val inherited =
+      StyleResolver.trackStyle(
+        track = null,
+        section = sectionStyle(imageShape = ImageShape.CIRCULAR),
+      )
+    assertEquals(ImageShape.CIRCULAR, inherited.imageShape)
+    val overridden =
+      StyleResolver.trackStyle(
+        track = trackStyle(imageShape = ImageShape.ROUNDED_RECTANGLE),
+        section = sectionStyle(imageShape = ImageShape.CIRCULAR),
+      )
+    assertEquals(ImageShape.ROUNDED_RECTANGLE, overridden.imageShape)
+  }
+
+  @Test
+  fun `accessorySymbol inherits and 'none' resolves as a value`() {
+    val inherited =
+      StyleResolver.trackStyle(track = null, section = sectionStyle(accessorySymbol = "lock.fill"))
+    assertEquals("lock.fill", inherited.accessorySymbol)
+    // 'none' is the inheritance escape — it must survive resolution intact
+    // (the renderer, not the resolver, maps it to "no accessory").
+    val escaped =
+      StyleResolver.trackStyle(
+        track = trackStyle(accessorySymbol = "none"),
+        section = sectionStyle(accessorySymbol = "lock.fill"),
+      )
+    assertEquals("none", escaped.accessorySymbol)
   }
 }

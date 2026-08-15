@@ -37,6 +37,8 @@
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

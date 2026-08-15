@@ -1,6 +1,7 @@
 package com.audiobrowser.util
 
 import com.margelo.nitro.audiobrowser.ArtworkRendering
+import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.StyleDisplay
 
 /**
@@ -31,5 +32,18 @@ internal fun String?.toArtworkRendering(): ArtworkRendering? =
   when (this?.takeIf { it.isNotEmpty() }?.lowercase()) {
     "original" -> ArtworkRendering.ORIGINAL
     "stencil" -> ArtworkRendering.STENCIL
+    else -> null
+  }
+
+internal fun ImageShape.toWireString(): String =
+  when (this) {
+    ImageShape.CIRCULAR -> "circular"
+    ImageShape.ROUNDED_RECTANGLE -> "rounded-rectangle"
+  }
+
+internal fun String?.toImageShape(): ImageShape? =
+  when (this?.takeIf { it.isNotEmpty() }?.lowercase()) {
+    "circular" -> ImageShape.CIRCULAR
+    "rounded-rectangle" -> ImageShape.ROUNDED_RECTANGLE
     else -> null
   }

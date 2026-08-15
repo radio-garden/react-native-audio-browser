@@ -37,6 +37,8 @@
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
 #include "JSearchParams.hpp"
 #include "SearchMode.hpp"
 #include "JSearchMode.hpp"

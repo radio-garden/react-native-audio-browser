@@ -23,6 +23,8 @@ namespace margelo::nitro::audiobrowser { struct TrackStyle; }
 namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 // Forward declaration of `ArtworkRendering` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
+// Forward declaration of `ImageShape` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ImageShape; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
@@ -220,6 +222,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
 #include <functional>
 #include "JFunc_void_std__string.hpp"
 #include <NitroModules/JNICallable.hpp>

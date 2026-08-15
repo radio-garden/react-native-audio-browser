@@ -78,6 +78,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
 // Forward declaration of `ImageQueryParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
+// Forward declaration of `ImageShape` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ImageShape; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaReference` to properly resolve imports.
@@ -237,6 +239,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "IOSOptions.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
+#include "ImageShape.hpp"
 #include "ImageSource.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
