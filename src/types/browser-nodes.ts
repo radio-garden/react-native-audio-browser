@@ -310,8 +310,8 @@ export interface Section {
   /**
    * Navigation target for the section header / "view all" surface. A
    * tile section's header tap (CarPlay) and appended "view all" link
-   * (Android Auto) navigate here. Absent = a pure preview; the header is
-   * not tappable.
+   * (Android Auto) navigate here. Absent = a self-contained section:
+   * the header is a plain label, not a link.
    */
   path?: string
   /** The section's tracks. */

@@ -83,8 +83,8 @@ class TemplateManager: NSObject {
         demo("Condensed elements", "condensed cells", minimum: 26.0) { [weak self] in
             if #available(iOS 26.0, *) { return self?.condensedTemplate() } else { return nil }
         }
-        demo("Enhanced section header", "subtitle · image · CPButton", minimum: 15.0) { [weak self] in
-            if #available(iOS 15.0, *) { return self?.enhancedHeaderTemplate() } else { return nil }
+        demo("Full section header", "subtitle · image · CPButton", minimum: 15.0) { [weak self] in
+            if #available(iOS 15.0, *) { return self?.fullHeaderTemplate() } else { return nil }
         }
         demo("Header grid buttons", "Play / Shuffle strip", minimum: 26.0) { [weak self] in
             if #available(iOS 26.0, *) { return self?.headerGridButtonsTemplate() } else { return nil }
@@ -188,10 +188,26 @@ class TemplateManager: NSObject {
             MemoryLogger.shared.appendEvent("Row element tapped: \(index)")
             completion()
         }
+        // Answered (26.3 sim): the inline "Title ›" chevron is TEXT-driven —
+        // it renders on any titled image row, handlers or not (see the
+        // no-handlers control below). Only text: nil escapes it. The handler
+        // here just makes the title tap do something.
+        row.handler = { _, completion in
+            MemoryLogger.shared.appendEvent("Image-row TITLE tapped (item.handler)")
+            completion()
+        }
         let titleless = CPListImageRowItem(text: nil, elements: elements, allowsMultipleLines: false)
+
+        // Control for the inline-chevron question — verified: this row shows
+        // the chevron too, so "Title ›" is text-driven (unconditional), NOT a
+        // tappability marker. A titled-but-inert row advertises navigation it
+        // doesn't have; only text: nil (26+) avoids the chevron.
+        let inert = CPListImageRowItem(text: "No handlers (chevron control)", elements: elements, allowsMultipleLines: false)
+
         return CPListTemplate(title: "Row elements", sections: [
             CPListSection(items: [row]),
-            CPListSection(items: [titleless], header: "text: nil — enhanced-header candidate", sectionIndexTitle: nil),
+            CPListSection(items: [inert]),
+            CPListSection(items: [titleless], header: "text: nil — full-header candidate", sectionIndexTitle: nil),
         ])
     }
 
@@ -280,10 +296,10 @@ class TemplateManager: NSObject {
         return CPListTemplate(title: "Condensed", sections: [CPListSection(items: [row])])
     }
 
-    // MARK: - 6. Enhanced section header
+    // MARK: - 6. Full section header
 
     @available(iOS 15.0, *)
-    private func enhancedHeaderTemplate() -> CPTemplate {
+    private func fullHeaderTemplate() -> CPTemplate {
         let button = CPButton(image: UIImage(systemName: "play.fill")!) { _ in
             MemoryLogger.shared.appendEvent("Header button tapped")
         }
@@ -298,7 +314,53 @@ class TemplateManager: NSObject {
         let plain = CPListSection(items: [infoItem("Plain-header section for contrast", detail: nil)],
                                   header: "Plain",
                                   sectionIndexTitle: nil)
-        return CPListTemplate(title: "Enhanced header", sections: [section, plain])
+        var sections = [section, plain]
+
+        // The Section.subtitle reconciliation case: a curated shelf carrying
+        // BOTH texts — the descriptive line as headerSubtitle, the view-all
+        // action on the header button — over a single-line tile row whose own
+        // text is nil (26+: the title moves up into the full header).
+        if #available(iOS 26.0, *) {
+            // Probed (26.3 sim): the header button is strictly image-driven.
+            // With an image, the title never draws beside it; with an EMPTY
+            // UIImage(), the button disappears entirely. Title-only header
+            // buttons are unrepresentable — glyph or nothing.
+            let viewAll = CPButton(image: UIImage(systemName: "chevron.right")!) { _ in
+                MemoryLogger.shared.appendEvent("Shelf view-all header button tapped")
+            }
+            viewAll.title = "View all"  // never renders; kept to document the probe
+            let tiles = (1...6).map { i in
+                CPListImageRowItemImageGridElement(image: art("\(i)", palette[i % palette.count]),
+                                                   imageShape: .roundedRectangle,
+                                                   title: "Station \(i)",
+                                                   accessorySymbolName: nil)
+            }
+            let shelfRow = CPListImageRowItem(text: nil, imageGridElements: tiles, allowsMultipleLines: false)
+            shelfRow.listImageRowHandler = { _, index, completion in
+                MemoryLogger.shared.appendEvent("Shelf tile tapped: \(index)")
+                completion()
+            }
+            // Answered (26.3 sim): with text nil the row has NO tap region —
+            // this handler never fires — and the header title is not tappable
+            // either. With a full header, navigation lives solely in
+            // the header button chip. (Why Music keeps title-in-item for its
+            // navigable shelves.)
+            shelfRow.handler = { _, completion in
+                MemoryLogger.shared.appendEvent("Shelf ROW background tapped (item.handler, text: nil)")
+                completion()
+            }
+            // First, so its absence on screen is unambiguous; the log line
+            // separates "old build" from "SDK dropped the section".
+            sections.insert(CPListSection(items: [shelfRow],
+                                          header: "New This Week",
+                                          headerSubtitle: "Recently added stations",
+                                          headerImage: nil,
+                                          headerButton: viewAll,
+                                          sectionIndexTitle: nil),
+                            at: 0)
+            MemoryLogger.shared.appendEvent("Full header: shelf section built (26+ path)")
+        }
+        return CPListTemplate(title: "Full header", sections: sections)
     }
 
     // MARK: - 7. Header grid buttons

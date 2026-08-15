@@ -532,7 +532,7 @@
         </tr>
         <tr>
           <td>5</td>
-          <td><a href="#headers">Enhanced section headers</a></td>
+          <td><a href="#headers">Full section headers</a></td>
           <td>
             Subtitle + action button (play-the-section); view-all as an appended
             row
@@ -1238,8 +1238,9 @@
 
       <div class="feature" id="headers">
         <h3>
-          Enhanced section headers — <code>headerSubtitle</code>,
-          <code>headerImage</code>, <code>headerButton</code>
+          Full section headers (Apple: "enhanced") —
+          <code>headerSubtitle</code>, <code>headerImage</code>,
+          <code>headerButton</code>
           <span class="badge b-ios">iOS 15+</span>
           <span class="badge b-status">only plain header string used</span>
           <span class="badge b-expose">EXPOSE — mostly internal</span>
@@ -1256,7 +1257,7 @@
             — the current "tile sections are headerless" rule is the library's
             choice (title lives in the image-row item), not a platform limit. On
             iOS 26+ the row item's <code>text</code> may be nil, so tile
-            sections can adopt the enhanced header too; pre-26 the legacy item
+            sections can adopt the full header too; pre-26 the legacy item
             requires its text, so tile sections keep title-in-item as the
             fallback.</span
           >
@@ -1265,20 +1266,39 @@
           <div>
             <h4>How you’d use it</h4>
             <p>
-              Little new API needed: sections already have
-              <code>title</code> and <code>subtitle</code> (→
-              <code>header</code>/<code>headerSubtitle</code>). The
+              Little new API needed — but not the mapping first sketched here:
+              <code>Section.subtitle</code> today carries the Android view-all
+              label (a slot fossil of the imageRow world), so the reconciliation
+              is <code>title → header</code>,
+              <code>subtitle → headerSubtitle</code>
+              <i>with subtitle restored to its natural secondary-line meaning</i
+              >, and a new <code>pathLabel</code> for the view-all copy (pending
+              the Android render proof — no-dead-fields). Verified meanwhile
+              (26.3 simulator): a tile section adopts the full header — the
+              image-row item with <code>text: nil</code>
+              renders its tiles under the headed section, and
+              <code>headerSubtitle</code> draws beneath the title. The header
+              button is strictly image-driven: <code>CPButton.title</code> never
+              draws next to an image, and an empty <code>UIImage()</code> makes
+              the button disappear entirely — title-only header buttons are
+              unrepresentable. Glyph or nothing. Also verified: a titled image
+              row renders an inline "Title ›" disclosure chevron
+              <i>unconditionally</i> (text-driven, not handler-driven); the full
+              header's title is not tappable and a nil-text row has no tap
+              region, so with a full header navigation is only the button chip.
+              Conclusion: pathed shelves keep title-in-item (Music's pattern);
+              full headers serve path-less sections — where they fix the dead
+              chevron — and future explicitly-declared cases. The
               <strong>button is an action slot</strong>, not navigation: the
               header docs are semantically silent, but <code>CPButton</code>’s
               lineage is the Contact template’s action buttons, and Apple’s
-              canonical enhanced header is the Music-style collection header —
-              art, title/artist, and a <em>play/shuffle</em> button. The
-              library’s best-aligned use:
-              <strong>play-the-section</strong> (queue scope already
-              <em>is</em> the section, ADR&nbsp;0006) — or a favorite/add action
-              for followable collections. On iOS 26+ tile sections can adopt the
-              same header (the image-row item going <code>text: nil</code>);
-              pre-26 tile sections keep title-in-item.
+              canonical full header is the Music-style collection header — art,
+              title/artist, and a <em>play/shuffle</em> button. The library’s
+              best-aligned use: <strong>play-the-section</strong> (queue scope
+              already <em>is</em> the section, ADR&nbsp;0006) — or a
+              favorite/add action for followable collections. On iOS 26+ tile
+              sections can adopt the same header (the image-row item going
+              <code>text: nil</code>); pre-26 tile sections keep title-in-item.
             </p>
             <p>
               <strong>View-all belongs elsewhere:</strong> with the button slot
@@ -2179,12 +2199,11 @@
           <td><strong>Condensed elements</strong></td>
         </tr>
         <tr>
-          <td>Enhanced section header</td>
+          <td>Full section header</td>
           <td>
-            <strong>Enhanced section header</strong> → "Popular" (subtitle +
-            image + play <code>CPButton</code> with
-            <code>title = "Play"</code> — the label test) vs plain-header
-            contrast section
+            <strong>Full section header</strong> → "Popular" (subtitle + image +
+            play <code>CPButton</code> with <code>title = "Play"</code> — the
+            label test) vs plain-header contrast section
           </td>
         </tr>
         <tr>
