@@ -52,15 +52,17 @@ function parseDuration(length: string | undefined): number | undefined {
   // HH:MM:SS or MM:SS
   const parts = length.split(':').map(Number)
   if (parts.some(isNaN)) return undefined
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  if (parts.length === 2) return parts[0] * 60 + parts[1]
+  // Defaults are never hit (length-checked); they satisfy noUncheckedIndexedAccess.
+  const [a = 0, b = 0, c = 0] = parts
+  if (parts.length === 3) return a * 3600 + b * 60 + c
+  if (parts.length === 2) return a * 60 + b
   return undefined
 }
 
 function parseTrackNumber(track: string | undefined): number {
   if (!track) return Infinity
   // "01/12" → 1, "01" → 1
-  const n = parseInt(track.split('/')[0], 10)
+  const n = parseInt(track.split('/')[0] ?? track, 10)
   return isNaN(n) ? Infinity : n
 }
 
@@ -274,8 +276,8 @@ export const archiveRoutes: Record<string, BrowserSource> = {
   '/archive': () => Promise.resolve(fetchCollections()),
   '/archive/folksoundomy': () => fetchFolksoundomy(),
   '/archive/collection/{id}': ({ routeParams }) =>
-    searchCollection(routeParams!.id),
-  '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id)
+    searchCollection(routeParams!.id!),
+  '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id!)
 }
 
 export const archiveLibrarySection: Section = {

@@ -6,7 +6,8 @@ import AudioBrowser, {
   onFavoriteChanged,
   notifyContentChanged,
   setFavorites,
-  Track,
+  updateOptions,
+  type Track,
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -127,51 +128,60 @@ const configuration: BrowserConfiguration = {
             { title: 'datafruits', src: '/rg/nED7EFV4', live: true }
           ]
         }
-      }[routeParams!.id]!
+      }[routeParams!.id!]!
     },
     '/library': {
       path: '/library',
       title: 'Library',
-      children: [
+      sections: [
         {
-          path: '/library/playlists',
-          title: 'Radio Playlists'
+          children: [
+            {
+              path: '/library/playlists',
+              title: 'Radio Playlists'
+            }
+          ]
         },
         {
-          src: 'https://rntp.dev/example/Soul%20Searching.mp3',
-          title: 'Soul Searching (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
-          duration: 77,
-          groupTitle: 'David Chavez'
+          title: 'David Chavez',
+          children: [
+            {
+              src: 'https://rntp.dev/example/Soul%20Searching.mp3',
+              title: 'Soul Searching (Demo)',
+              artist: 'David Chavez',
+              artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
+              duration: 77
+            },
+            {
+              src: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
+              title: 'Lullaby (Demo)',
+              artist: 'David Chavez',
+              artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
+              duration: 71
+            },
+            {
+              src: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
+              title: 'Rhythm City (Demo)',
+              artist: 'David Chavez',
+              artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
+              duration: 106
+            }
+          ]
         },
         {
-          src: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
-          title: 'Lullaby (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
-          duration: 71,
-          groupTitle: 'David Chavez'
-        },
-        {
-          src: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
-          title: 'Rhythm City (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
-          duration: 106,
-          groupTitle: 'David Chavez'
-        },
-        {
-          src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
-          title: 'Whip (m3u8 HLS Stream)',
-          artist: 'prazkhanal',
-          artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
-          groupTitle: 'Other'
-        },
-        {
-          src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-          title: 'Chapters',
-          groupTitle: 'Other'
+          title: 'Other',
+          children: [
+            {
+              src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
+              title: 'Whip (m3u8 HLS Stream)',
+              artist: 'prazkhanal',
+              artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg'
+            },
+            {
+              src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+              title: 'Chapters'
+            }
+          ]
         }
       ]
     }
@@ -186,14 +196,21 @@ const configuration: BrowserConfiguration = {
     query = query.toLowerCase()
     const results = Object.values(configuration.routes ?? {}).reduce<Track[]>(
       (results, source) => {
-        if ('children' in source) {
+        if ('children' in source || 'sections' in source) {
+          // A static page holds its tracks as plain children or in sections
+          const children = [
+            ...('children' in source ? (source.children ?? []) : []),
+            ...('sections' in source
+              ? (source.sections?.flatMap((section) => section.children) ?? [])
+              : [])
+          ]
           results.push(
-            ...(source.children?.filter(
+            ...children.filter(
               (track) =>
                 !!(['title', 'artist', 'album'] as const).find(
                   (field) => !!track[field]?.toLowerCase().includes(query)
                 )
-            ) ?? [])
+            )
           )
           if (source.title?.toLowerCase().includes(query)) {
             results.push({
@@ -219,8 +236,6 @@ const configuration: BrowserConfiguration = {
       return true
     })
   },
-  carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate'],
-
   // Customize navigation error messages (used by CarPlay and available via useFormattedNavigationError)
   formatNavigationError({ error, defaultFormatted, path }) {
     // Custom message for local server routes when server isn't running
@@ -242,6 +257,12 @@ export default function TrackPlayerApp() {
   useEffect(() => {
     const setup = async () => {
       await AudioBrowser.setupPlayer({})
+      // Now-playing buttons are a player option (iOS), not browser config
+      updateOptions({
+        ios: {
+          carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate']
+        }
+      })
       AudioBrowser.setPlayWhenReady(true)
       AudioBrowser.configureBrowser(configuration)
 
@@ -253,7 +274,7 @@ export default function TrackPlayerApp() {
             // Strip path - it contains the original context (e.g., /library/radio?__trackId=...)
             // The library will regenerate the correct contextual path when browsing favorites
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { path, groupTitle, ...trackWithoutPath } = track
+            const { path, ...trackWithoutPath } = track
             favorites.push(trackWithoutPath as Track)
           }
         } else {

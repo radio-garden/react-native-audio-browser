@@ -12,7 +12,7 @@ import {
 import {
   navigate,
   search,
-  Track,
+  type Track,
   useActiveTrack
 } from 'react-native-audio-browser'
 import { TrackListItem } from '../components/TrackListItem'

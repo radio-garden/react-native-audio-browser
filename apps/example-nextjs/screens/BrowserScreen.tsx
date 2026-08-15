@@ -11,7 +11,7 @@ import {
 import {
   hasSearch,
   navigate,
-  Track,
+  type Track,
   useActiveTrack,
   useContent,
   useFormattedNavigationError,

@@ -1,7 +1,7 @@
+import type { Track } from 'react-native-audio-browser'
 import Icon from '@react-native-vector-icons/fontawesome6'
 import React from 'react'
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Track } from 'react-native-audio-browser'
 
 type TrackListItemProps = {
   track: Track

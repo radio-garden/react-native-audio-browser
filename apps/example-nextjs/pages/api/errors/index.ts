@@ -46,7 +46,7 @@ export const errors = [
   ]
 ] as const
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default function handler(_req: NextApiRequest, res: NextApiResponse) {
   res.status(200).json({
     path: '/api/errors',
     title: 'Errors',

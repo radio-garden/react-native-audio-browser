@@ -118,7 +118,8 @@ export function usePolledProgress(updateInterval = 1000): Progress {
     }
 
     const stop = () => {
-      clearTimeout(timer)
+      // Guarded: React Native types clearTimeout(handle: number) — no undefined.
+      if (timer !== undefined) clearTimeout(timer)
       timer = undefined
       unsubscribeState?.()
       unsubscribeState = undefined
