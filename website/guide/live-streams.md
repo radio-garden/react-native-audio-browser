@@ -24,7 +24,7 @@ no format field; each platform's player detects the container:
   AVPlayer doesn't support them.
 
 Mark the track itself with [`live: true`](/api/types/browser-nodes/#track):
-it shows the live indicator on iOS now-playing and, on iOS, arms
+it shows the live indicator on iOS now-playing and arms
 [`seekToLiveEdge()`](#the-live-edge) — declare it on every live track.
 To hear it, put the track in the queue (or serve it from a
 [browse tree](/guide/basic-usage)) after
@@ -102,29 +102,20 @@ A relative `path` is joined to your configured `baseUrl` — see
 ## The live edge
 
 [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) jumps a live
-track back to the newest available audio. The gating and the mechanics
-currently differ per platform:
-
-- **iOS** — armed by the track's `live: true` (a no-op without it). On a
-  seekable live stream (HLS with a sliding window) it seeks to the end of
-  the seekable range; on a non-seekable one (typical ICY radio) it
-  reconnects instead — a fresh connection _is_ the live edge, resolved
-  through `media.resolve` like any other (re)load.
-- **Android** — armed by ExoPlayer's own stream-derived liveness
-  (`live: true` is not consulted) and seeks to the stream's default (live)
-  position; there is no reconnect path. ExoPlayer often doesn't mark a
-  progressive ICY stream as live, so on plain HTTP radio the call can be a
-  no-op there today.
-
-General seeking is in [Playback](/guide/playback).
+track back to the newest available audio — a no-op unless the current track
+declares `live: true`. On a stream with a seekable live window (HLS with a
+sliding window) it seeks to the window's edge; on a non-seekable one
+(typical ICY radio) it reconnects instead — a fresh connection _is_ the
+live edge, and an expired URL re-resolves through `media.resolve`. General
+seeking is in [Playback](/guide/playback).
 
 ## API summary
 
-| API                                                          | Purpose                                                              |
-| ------------------------------------------------------------ | -------------------------------------------------------------------- |
-| [`Track.live`](/api/types/browser-nodes/#track)              | Declare a live track: iOS live indicator, arms the live edge on iOS. |
-| [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) | Jump to the newest audio ([per-platform notes](#the-live-edge)).     |
-| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)    | Automatic retry: 12 s first-connect / 2 min recovery budgets.        |
-| [`retry()`](/guide/errors#manual-retry)                      | Restart from `'error'` with fresh budgets.                           |
-| [`media.resolve`](/guide/browser#media-and-artwork)          | Build each (re)load's stream request — signed / short-lived URLs.    |
-| [`useOnline()`](/guide/network)                              | Connectivity for your own UI; playback reacts on its own.            |
+| API                                                          | Purpose                                                           |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| [`Track.live`](/api/types/browser-nodes/#track)              | Declare a live track: iOS live indicator, arms the live edge.     |
+| [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) | Jump to the newest audio (no-op for non-live tracks).             |
+| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)    | Automatic retry: 12 s first-connect / 2 min recovery budgets.     |
+| [`retry()`](/guide/errors#manual-retry)                      | Restart from `'error'` with fresh budgets.                        |
+| [`media.resolve`](/guide/browser#media-and-artwork)          | Build each (re)load's stream request — signed / short-lived URLs. |
+| [`useOnline()`](/guide/network)                              | Connectivity for your own UI; playback reacts on its own.         |

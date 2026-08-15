@@ -229,15 +229,10 @@ export interface AudioBrowser extends HybridObject<{
   seekTo(position: number): void
   seekBy(offset: number): void
   /**
-   * Jump to the live edge of the current track; no-op when it isn't live.
-   *
-   * **iOS** — armed by the track's `live: true`. A seekable window (HLS)
-   * seeks to the window end; a non-seekable stream (e.g. ICY) reconnects to
-   * rejoin live.
-   *
-   * **Android** — armed by ExoPlayer's stream-derived liveness (`live` is
-   * not consulted) and seeks to the default (live) position; no reconnect.
-   * Progressive ICY streams are often not marked live there.
+   * Jump to the live edge of the current track; no-op unless the track
+   * declares `live: true`. A stream with a seekable live window (HLS) seeks
+   * to the window's edge; a non-seekable stream (e.g. ICY radio) reconnects
+   * to rejoin live — an expired URL re-resolves through `media.resolve`.
    */
   seekToLiveEdge(): void
   setVolume(level: number): void

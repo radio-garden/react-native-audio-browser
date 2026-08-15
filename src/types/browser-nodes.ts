@@ -407,8 +407,29 @@ export interface Track {
   favorited?: boolean
 
   /**
-   * Whether this track is a live stream. When true, displays a "live" indicator
-   * in iOS now playing interfaces.
+   * Declares this track a live broadcast rather than a file. The players
+   * detect *transport* liveness (sliding windows, buffering) themselves;
+   * this declaration drives the semantic decisions they can't infer:
+   *
+   * - **End of stream** (iOS): a live track "ending" is judged a dropped
+   *   broadcast and recovered by rejoining the edge, never a queue advance.
+   * - **Stall recovery** (iOS): a live track that runs dry reconnects at
+   *   the edge; a non-live one resumes its existing connection.
+   * - **`seekToLiveEdge()`** (all platforms): the call only acts on a
+   *   track declared live — without the declaration it is a no-op.
+   * - **Persistence** (iOS): no position is stored, so a cold-start resume
+   *   rejoins the current broadcast instead of seeking a stale timestamp.
+   * - **Now-playing** (iOS): the live indicator and live-style
+   *   (non-scrubbing) progress UI.
+   *
+   * The iOS-heavy list is deliberate, not a gap: on Android, ExoPlayer's
+   * own classification already covers these — a dropped live connection
+   * surfaces as a load error (never end-of-stream), and persistence keys
+   * off its detected liveness — so the declaration's only Android reader
+   * is the `seekToLiveEdge()` gate. Android Auto has no live badge.
+   *
+   * Omitting it never breaks playback — it silently breaks these judgment
+   * calls. Declare it on every live track.
    */
   live?: boolean
 }

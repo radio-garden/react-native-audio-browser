@@ -931,10 +931,23 @@ class Player(internal val context: Context) {
     }
   }
 
-  /** Jump to the live edge (default position) of a live item; no-op otherwise. */
+  /**
+   * Jump to the live edge of the current track; no-op unless it declares `live` — the track's own
+   * declaration is the gate (matching iOS and the spec), not ExoPlayer's stream-derived liveness,
+   * which never marks progressive ICY radio live. A stream with a live window seeks to its edge;
+   * anything else reconnects — for a non-seekable stream a fresh connection IS the live edge. A
+   * stale URL recovers through the failure-armed re-resolve in [TransformingDataSource].
+   */
   fun seekToLiveEdge() {
+    if (currentTrack?.live != true) return
     if (exoPlayer.isCurrentMediaItemLive) {
       exoPlayer.seekToDefaultPosition()
+    } else {
+      // ExoPlayer.prepare() only re-prepares from STATE_IDLE, hence the raw stop() — not
+      // Player.stop(), which would drop the play intent this reconnect must preserve.
+      exoPlayer.stop()
+      exoPlayer.seekToDefaultPosition()
+      exoPlayer.prepare()
     }
   }
 
