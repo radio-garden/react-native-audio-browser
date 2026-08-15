@@ -59,8 +59,13 @@ these up for playback:
 - When the connection drops mid-stream, the now-playing formatter receives
   `stalled: 'offline'` (vs `'buffering'` when online) — see
   [Now Playing → the formatter](/guide/now-playing#the-formatter-derived-continuous).
-- When the connection returns, the player retries the stalled stream
-  automatically — you don't need to listen for reconnect and re-`play()`.
+- When the connection returns while the stream sits **stalled** (state
+  `'buffering'` with play intent), the player re-establishes it automatically —
+  you don't need to listen for reconnect and re-`play()`. If the drop instead
+  surfaced as a playback **error**, recovery belongs to
+  [automatic retry](/guide/errors#automatic-retry) (`setupPlayer({ retry })`,
+  off by default); once retry gives up — or without it — the player stays in
+  `'error'` until the listener (or your code) calls `retry()` / `play()`.
 
 Reach for `useOnline` / `onOnlineChanged` for **your own** UI and data — an
 offline banner, disabling a control, refetching a list on reconnect.

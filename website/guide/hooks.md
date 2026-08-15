@@ -20,11 +20,11 @@ function NowPlaying() {
 
 Most state comes in three forms, so you can read it whichever way fits:
 
-| Form       | Shape    | Use it                                           |
-| ---------- | -------- | ------------------------------------------------ |
-| **Hook**   | `useX()` | inside a component — re-renders on change        |
-| **Getter** | `getX()` | a one-off synchronous read, anywhere             |
-| **Event**  | `on…`    | subscribe outside React (returns an unsubscribe) |
+| Form       | Shape    | Use it                                                       |
+| ---------- | -------- | ------------------------------------------------------------ |
+| **Hook**   | `useX()` | inside a component — re-renders on change                    |
+| **Getter** | `getX()` | a one-off synchronous read, anywhere                         |
+| **Event**  | `on…`    | `onX.addListener(cb)` outside React — returns an unsubscribe |
 
 Most events are named `on<Thing>Changed`, but several aren't — `onProgressUpdated`, `onPlayingState`, `onPlaybackError`, `onNavigationError`. The exact event for each hook is in the [reference table](#all-hooks-at-a-glance), so don't guess the name.
 
@@ -32,7 +32,7 @@ Most events are named `on<Thing>Changed`, but several aren't — `onProgressUpda
 import { getPlayback, onPlaybackChanged } from 'react-native-audio-browser'
 
 const now = getPlayback() // read once
-const stop = onPlaybackChanged((p) => console.log(p.state)) // subscribe
+const stop = onPlaybackChanged.addListener((p) => console.log(p.state)) // subscribe
 // stop() to unsubscribe
 ```
 

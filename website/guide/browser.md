@@ -412,7 +412,7 @@ configureBrowser({
 })
 ```
 
-In the video branch, returning without calling the player tells the library "handled — leave audio alone." In the audio branch you take over, so you must explicitly `setQueue` + `play`. Both are **synchronous** (they return `void`), so there's no promise to await — native resumes as soon as your handler returns. (The handler stays `async` because its type is `=> Promise<void>` and _your_ work — an auth check, opening a video player — may be awaited; `setQueue`/`play` are covered in [Basic Usage](/guide/basic-usage).)
+In the video branch, returning without calling the player tells the library "handled — leave audio alone." In the audio branch you take over, so you must explicitly `setQueue` + `play` — both are fire-and-forget calls returning `void`, so there's nothing to await _on them_. The handler itself is a different story: native **awaits the promise your handler returns**, so anything you `await` inside — an auth check, a fetch — delays the tap being treated as handled. Keep slow work out of the handler, or kick it off without awaiting it. (`setQueue`/`play` are covered in [Basic Usage](/guide/basic-usage).)
 
 ## Reading and driving browse state
 

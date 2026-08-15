@@ -7,7 +7,9 @@
 Favoriting is off until you enable the `favorite` capability in `setupPlayer` (or `updateOptions`):
 
 ```ts
-await AudioBrowser.setupPlayer({
+import { setupPlayer } from 'react-native-audio-browser'
+
+await setupPlayer({
   capabilities: { favorite: true }
 })
 ```
@@ -15,11 +17,13 @@ await AudioBrowser.setupPlayer({
 The identifiers you pass to [`setFavorites`](#hydrating-favorite-state) are compared against each track's **identity**: its `id` when set, falling back to its `src`. Store the same stable identifier you put in `Track.id` — or, for tracks without ids, the full `src`:
 
 ```ts
+import { setFavorites } from 'react-native-audio-browser'
+
 // track = { id: 'abc123', src: 'https://stream.example.com/jazz.mp3' }
-AudioBrowser.setFavorites(['abc123']) // matches by id
+setFavorites(['abc123']) // matches by id
 
 // id-less track = { src: 'https://stream.example.com/jazz.mp3' }
-AudioBrowser.setFavorites(['https://stream.example.com/jazz.mp3']) // matches by src
+setFavorites(['https://stream.example.com/jazz.mp3']) // matches by src
 ```
 
 ## Hydrating favorite state
@@ -27,9 +31,11 @@ AudioBrowser.setFavorites(['https://stream.example.com/jazz.mp3']) // matches by
 The library keeps a native cache of which tracks are favorited, so it paints hearts across browse rows and the Now Playing heart without a round-trip to JS — and **without your content API having to know which tracks are favorites**. Declare your favorites once with `setFavorites`; the library stamps `favorited` on any track whose [identity](#enabling-favorites) matches, wherever that track appears. Your content endpoints stay favorites-agnostic — they return the same tracks for everyone, and favorite state lives entirely in your app/user storage.
 
 ```ts
+import { setFavorites } from 'react-native-audio-browser'
+
 // string[] of track identities: ids, or src URLs for id-less tracks
 const favorites = await loadFavoritesFromStorage()
-AudioBrowser.setFavorites(favorites)
+setFavorites(favorites)
 ```
 
 You only need `setFavorites` for the initial hydrate. After that, taps on the system heart and calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) update the cache for you.
@@ -41,7 +47,9 @@ Your API can also return `favorited: true` on a track directly. A caller-set fla
 With the capability enabled, a heart appears on the now-playing surfaces. Add it to the Android notification and the CarPlay now-playing screen explicitly:
 
 ```ts
-await AudioBrowser.setupPlayer({
+import { setupPlayer } from 'react-native-audio-browser'
+
+await setupPlayer({
   capabilities: { favorite: true },
   android: {
     remoteButtonLayout: {
@@ -57,12 +65,12 @@ await AudioBrowser.setupPlayer({
 When the listener taps a system heart, the library updates its cache and the UI, then emits `onFavoriteChanged` so **you can persist the change** to your storage or backend:
 
 ```ts
-const unsubscribe = AudioBrowser.onFavoriteChanged.addListener(
-  ({ track, favorited }) => {
-    if (favorited) addToFavorites(track)
-    else removeFromFavorites(track)
-  }
-)
+import { onFavoriteChanged } from 'react-native-audio-browser'
+
+const unsubscribe = onFavoriteChanged.addListener(({ track, favorited }) => {
+  if (favorited) addToFavorites(track)
+  else removeFromFavorites(track)
+})
 ```
 
 The native side has already updated the now-playing heart by the time this fires, so your handler just persists the change — then refreshes the rest (see [Keep it in sync](#keep-it-in-sync)).
@@ -72,8 +80,13 @@ The native side has already updated the now-playing heart by the time this fires
 To drive favoriting from an in-app button (rather than a system control), set or toggle the active track's state directly. These update the same cache and system hearts:
 
 ```ts
-AudioBrowser.setActiveTrackFavorited(true)
-AudioBrowser.toggleActiveTrackFavorited()
+import {
+  setActiveTrackFavorited,
+  toggleActiveTrackFavorited
+} from 'react-native-audio-browser'
+
+setActiveTrackFavorited(true)
+toggleActiveTrackFavorited()
 ```
 
 These are the programmatic counterpart to a system heart tap — persist the result yourself, the same way you would in `onFavoriteChanged`.
@@ -83,7 +96,9 @@ These are the programmatic counterpart to a system heart tap — persist the res
 How you surface favorites in your [browse tree](/guide/basic-usage) is up to you — a top-level tab, a nested entry, or a group within a larger list. Whatever the placement, point its route at the listener's favorited tracks:
 
 ```ts
-AudioBrowser.configureBrowser({
+import { configureBrowser } from 'react-native-audio-browser'
+
+configureBrowser({
   tabs: [
     { title: 'Browse', path: '/browse' },
     { title: 'Favorites', path: '/favorites' }
@@ -106,10 +121,12 @@ Resolve it however your collection lives — from local storage, or from your AP
 The library caches each browse route, so the `/favorites` route keeps showing its old contents until you tell it to re-fetch. **Whenever the favorites collection changes** — a system heart tap, your own UI, or a sync from another device — do two things:
 
 ```ts
+import { setFavorites, notifyContentChanged } from 'react-native-audio-browser'
+
 // refresh the hearts (favorited flag)
-AudioBrowser.setFavorites(updatedIds)
+setFavorites(updatedIds)
 // re-fetch the /favorites content
-AudioBrowser.notifyContentChanged('/favorites')
+notifyContentChanged('/favorites')
 ```
 
 These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when _everything_ should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.

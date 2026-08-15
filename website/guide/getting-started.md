@@ -2,6 +2,8 @@
 
 ## Installation
 
+The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+. `react-native-nitro-modules` is a required peer dependency — install it alongside:
+
 ::: code-group
 
 ```bash [npm]

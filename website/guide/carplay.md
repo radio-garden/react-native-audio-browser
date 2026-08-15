@@ -73,7 +73,7 @@ This section is **required for any CarPlay integration** — browse-only or Siri
 ::: warning Two prerequisites
 **UIScene lifecycle** — CarPlay requires a `UIWindowSceneDelegate` for the phone window. The default `npx react-native init` app isn't scene-based; if yours still sets up its window directly in `AppDelegate`, migrate to scenes first (the sections below build all the pieces).
 
-**New Architecture host, Swift** — these snippets assume `RCTReactNativeFactory` (RN 0.74+; example app on 0.83) and a Swift `AppDelegate`. If yours is still Objective-C (`.mm`), migrating it to Swift first is simpler than translating this wiring by hand — scaffold a throwaway app (`npx @react-native-community/cli init Tmp`) and copy its `AppDelegate.swift` as a reference. ObjC works too (the bridging header is then unnecessary, see [Siri step 3](#_3-bridging-header-swift-appdelegate-only)) but isn't shown here.
+**New Architecture host, Swift** — these snippets assume `RCTReactNativeFactory` (present on every React Native version the library supports) and a Swift `AppDelegate`. If yours is still Objective-C (`.mm`), migrating it to Swift first is simpler than translating this wiring by hand — scaffold a throwaway app (`npx @react-native-community/cli init Tmp`) and copy its `AppDelegate.swift` as a reference. ObjC works too (the bridging header is then unnecessary, see [Siri step 3](#_3-bridging-header-swift-appdelegate-only)) but isn't shown here.
 :::
 
 ### The factory

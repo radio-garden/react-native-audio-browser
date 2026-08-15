@@ -62,8 +62,9 @@ asleep. Since this library is already a Nitro module, it's a natural fit.
 npm install react-native-nitro-fetch react-native-nitro-modules
 ```
 
-`react-native-nitro-modules` needs React Native 0.75+, and you'll need a native
-rebuild (`pod install` + rebuild) after installing.
+You already have `react-native-nitro-modules` (it's a peer dependency of this
+library); you'll need a native rebuild (`pod install` + rebuild) after
+installing.
 
 Then add one import at the top of any module with a native-invoked callback — it
 shadows the global `fetch`, so the call sites don't change:
