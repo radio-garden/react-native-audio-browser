@@ -257,13 +257,11 @@ class MediaSessionCallback(private val player: Player) :
     }
 
     if (params?.isRecent == true) {
-      // TODO: support recent queries through something like onRecent and return a MediaItem with
-      // .setMediaId("__RECENT__") here - when onRecent is not configured we can keep returning an
-      // error here:
-
-      // The service currently does not support playback resumption. Tell System UI by returning
-      // an error of type 'RESULT_ERROR_NOT_SUPPORTED' for a `params.isRecent` request. See
-      // https://github.com/androidx/media/issues/355
+      // Playback resumption is served by media3 itself: it intercepts System UI's EXTRA_RECENT
+      // root request internally and answers through onPlaybackResumption, so that request never
+      // reaches this callback. Any other browser asking for a recent root gets
+      // ERROR_NOT_SUPPORTED — there is no browsable recents tree; recents are ordinary consumer
+      // content (a tab or route).
       return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED))
     }
 
@@ -290,7 +288,7 @@ class MediaSessionCallback(private val player: Player) :
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
     Timber.d(
-      "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
+      "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSpecialPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
     return scope.future {
       // Wait for browser to be registered if it's not available yet
@@ -344,10 +342,7 @@ class MediaSessionCallback(private val player: Player) :
 
       try {
         val children =
-          if (parentId == BrowserPathHelper.RECENT_PATH) {
-            // TODO: implement recent media items
-            emptyList<MediaItem>()
-          } else if (parentId == BrowserPathHelper.ROOT_PATH) {
+          if (parentId == BrowserPathHelper.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
             // Disabled tabs hide (Track.disabled) — filtered before the cap so
@@ -497,7 +492,7 @@ class MediaSessionCallback(private val player: Player) :
         return@future LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
       }
 
-      if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
+      if (mediaId == BrowserPathHelper.ROOT_PATH) {
         return@future LibraryResult.ofItem(
           MediaItem.Builder()
             .setMediaId(mediaId)

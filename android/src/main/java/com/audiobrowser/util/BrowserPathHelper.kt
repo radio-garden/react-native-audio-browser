@@ -8,7 +8,7 @@ import java.net.URLEncoder
  * Utility for handling browser paths and contextual URLs in the media browser system.
  *
  * Handles two types of special paths:
- * 1. System paths (prefixed with `/__`): Root, recent, and search paths
+ * 1. System paths (prefixed with `/__`): root, search, offline, error, and gate paths
  * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
  * Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}` (the
@@ -27,9 +27,6 @@ import java.net.URLEncoder
 object BrowserPathHelper {
   /** Root path for media browsing */
   const val ROOT_PATH = "/__root"
-
-  /** Recent media path for playback resumption */
-  const val RECENT_PATH = "/__recent"
 
   /** Search path prefix (full path is /__search?q=query) */
   const val SEARCH_PATH_PREFIX = "/__search"
@@ -51,7 +48,7 @@ object BrowserPathHelper {
 
   /** Check if a path is a special system path (not a regular navigation path) */
   fun isSpecialPath(path: String): Boolean {
-    return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
+    return path == ROOT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
   }
 
   /** Create a search path for a given query */

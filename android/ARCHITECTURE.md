@@ -458,7 +458,7 @@ Two distinct artwork paths share `CoilArtworkLoader` as the URL→Bitmap core:
 - **RatingFavorites.kt**: `HeartRating → Boolean?` favorite intent.
 - **RepeatModeFactory.kt** / **AndroidAudioContentTypeFactory.kt**: Nitro ↔ Media3 enum conversions.
 - **MediaExtrasBuilder.kt**: Android Auto/AAOS content-style extras (list vs grid, category icons).
-- **BrowserPathHelper.kt**: Special system paths (`/__root`, `/__recent`, `/__search`, `/__offline`),
+- **BrowserPathHelper.kt**: Special system paths (`/__root`, `/__search`, `/__offline`, `/__error`, `/__gate`),
   contextual-URL build/parse (`{parentPath}?__trackId={src}`), and base-URL construction.
 
 ### Extensions
