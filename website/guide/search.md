@@ -52,6 +52,36 @@ configureBrowser({
 
 With the HTTP form the library appends to `request.query`: `q` (always, even when empty), then `mode`, `reference` (only when it is `'my'` — see below), and the filter fields, each included only when the intent carried it. Query-param order doesn't matter to a server, but that is the order the library writes them in. Note the spoken text is the `query` field in a **callback** (`SearchParams.query`) but is sent as the **`q`** wire param on the **HTTP** form — same value, named `query` in JS and `q` on the URL.
 
+## Searching from your own UI
+
+The same source powers your in-app search box. [`search(query)`](/api/features/browser/#search) runs it and resolves to a `Track[]` — it only _returns_ results, it never queues or plays anything. [`hasSearch()`](/api/features/browser/#hassearch) tells you (synchronously) whether a search source is configured at all, so you can hide the search UI when it isn't:
+
+```tsx
+import { search, hasSearch, navigate } from 'react-native-audio-browser'
+import type { Track } from 'react-native-audio-browser'
+
+function SearchScreen() {
+  const [results, setResults] = useState<Track[]>([])
+  if (!hasSearch()) return null // no search source configured
+
+  return (
+    <>
+      <SearchInput onSubmit={async (text) => setResults(await search(text))} />
+      <List
+        sections={[{ children: results }]}
+        onSelect={(track) => navigate(track)} // load & play via the library
+      />
+    </>
+  )
+}
+```
+
+Three things to know about the in-app call:
+
+- **Your resolver sees a plain query.** An in-app `search('jazz')` arrives as `{ query: 'jazz', reference: 'unknown' }` — no `mode`, no filter fields. Those are extracted by the voice assistants; a text box has nothing to extract. (On the HTTP form, only `q` is appended.) A resolver written against _the fields that are present_ handles both callers with the same code.
+- **You get the flat list, untouched.** The [browsable-first-result drill-in](#voice-playback-siri-google-assistant) is voice-only — in-app results are handed to you as returned (minus any result lacking both a `path` and a `src`, which is dropped as unrenderable), and the user picks.
+- **Route taps through `navigate(track)`** rather than `setQueue` + `play` — that gives a tapped result the library's load path ([`handleTrackLoad`](#mixed-audio-video), [Gate](/guide/gate) checks, favorite hearts) just like a tap on a browse row.
+
 ## SearchParams
 
 Both forms receive the same structured `SearchParams`:
