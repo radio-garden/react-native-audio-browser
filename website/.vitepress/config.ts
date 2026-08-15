@@ -116,6 +116,7 @@ export default withMermaid(
             items: [
               { text: 'Artwork', link: '/guide/artwork' },
               { text: 'Errors', link: '/guide/errors' },
+              { text: 'Live Streams', link: '/guide/live-streams' },
               { text: 'Metadata', link: '/guide/metadata' },
               { text: 'Now Playing', link: '/guide/now-playing' },
               { text: 'Playback', link: '/guide/playback' },

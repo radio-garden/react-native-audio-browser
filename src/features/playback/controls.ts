@@ -58,8 +58,15 @@ export function seekTo(position: number): void {
 }
 
 /**
- * Jump to the live edge of the current track. No-op for non-live tracks; for
- * live, seeks to the window end (HLS) or reconnects (non-seekable streams).
+ * Jump to the live edge of the current track; no-op when it isn't live.
+ *
+ * **iOS** — armed by the track's `live: true`. A seekable window (HLS) seeks
+ * to the window end; a non-seekable stream (e.g. ICY) reconnects to rejoin
+ * live.
+ *
+ * **Android** — armed by ExoPlayer's stream-derived liveness (`live` is not
+ * consulted) and seeks to the default (live) position; no reconnect.
+ * Progressive ICY streams are often not marked live there.
  */
 export function seekToLiveEdge(): void {
   nativeBrowser.seekToLiveEdge()

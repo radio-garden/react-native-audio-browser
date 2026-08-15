@@ -141,9 +141,10 @@ await setupPlayer({
 })
 ```
 
-Which failures qualify is the same on iOS and Android: HTTP 408, 429 and 5xx;
-transport failures (DNS, timeouts, a dropped connection); and anything the
-platform couldn't classify, which is assumed transient rather than fatal.
+Which failures qualify is nearly the same on iOS and Android: HTTP 408 and
+429, plus server errors — every 5xx on iOS, the common four (500, 502, 503, 504) on Android; transport failures (DNS, timeouts, a dropped connection);
+and anything the platform couldn't classify, which is assumed transient
+rather than fatal.
 Permanent failures are never retried — 403 / 404, and media that can't be
 parsed or decoded.
 

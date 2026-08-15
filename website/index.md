@@ -47,8 +47,8 @@ features:
     linkText: Now Playing guide
   - title: Live-stream ready
     details: HLS, ICY/Icecast, and progressive streams with stall recovery, reconnects, fresh URL resolution, and live-edge seeking.
-    link: /guide/network
-    linkText: Network guide
+    link: /guide/live-streams
+    linkText: Live Streams guide
   - title: React hooks
     details: Reactive playback, queue, browse, progress, sleep-timer, and car-connection state for your own app screens.
     link: /guide/hooks

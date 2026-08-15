@@ -123,9 +123,10 @@ class RetryManager {
 
   // MARK: - Error Classification
 
-  /// HTTP statuses worth another attempt. Same set as Android's
-  /// `RetryLoadErrorHandlingPolicy.RETRYABLE_HTTP_STATUS_CODES`, so a flaky
-  /// server behaves the same on both platforms.
+  /// HTTP statuses worth another attempt, beyond the 500–599 range checked in
+  /// `isRetryable`. Android's `RetryLoadErrorHandlingPolicy` shares 408/429 but
+  /// enumerates only 500/502/503/504 of the 5xx range, so uncommon 5xx codes
+  /// (501, 505…) retry here and not there.
   private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
 
   /// AVFoundation failures a retry cannot fix: the media is unusable rather
