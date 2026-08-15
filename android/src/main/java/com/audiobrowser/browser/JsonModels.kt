@@ -1,6 +1,10 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.EMPTY_SECTION_STYLE
+import com.audiobrowser.util.EMPTY_TRACK_STYLE
 import com.audiobrowser.util.toArtworkRendering
+import com.audiobrowser.util.toCardImage
+import com.audiobrowser.util.toGridTile
 import com.audiobrowser.util.toImageShape
 import com.audiobrowser.util.toStyleDisplay
 import com.margelo.nitro.audiobrowser.CarPlaySiriListButtonPosition
@@ -107,48 +111,32 @@ private fun JsonObject.booleanField(key: String): Boolean? =
  */
 private fun JsonElement?.toTrackStyle(): TrackStyle? =
   (this as? JsonObject)?.let { obj ->
-    val display = obj.stringField("display").toStyleDisplay()
-    val artworkRendering = obj.stringField("artworkRendering").toArtworkRendering()
-    val imageShape = obj.stringField("imageShape").toImageShape()
-    // 'none' is a legitimate accessory value (the inheritance escape); only
-    // emptiness collapses.
-    val accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() }
-    if (
-      display == null && artworkRendering == null && imageShape == null && accessorySymbol == null
-    )
-      null
-    else
-      TrackStyle(
-        display = display,
-        artworkRendering = artworkRendering,
-        imageShape = imageShape,
-        accessorySymbol = accessorySymbol,
+    TrackStyle(
+        display = obj.stringField("display").toStyleDisplay(),
+        artworkRendering = obj.stringField("artworkRendering").toArtworkRendering(),
+        imageShape = obj.stringField("imageShape").toImageShape(),
+        // 'none' is a legitimate accessory value (the inheritance escape);
+        // only emptiness collapses.
+        accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() },
+        cardTint = obj.stringField("cardTint")?.takeIf { it.isNotEmpty() },
+        cardImage = obj.stringField("cardImage").toCardImage(),
       )
+      .takeIf { it != EMPTY_TRACK_STYLE }
   }
 
 private fun JsonElement?.toSectionStyle(): SectionStyle? =
   (this as? JsonObject)?.let { obj ->
-    val display = obj.stringField("display").toStyleDisplay()
-    val artworkRendering = obj.stringField("artworkRendering").toArtworkRendering()
-    val imageShape = obj.stringField("imageShape").toImageShape()
-    val accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() }
-    val gridWrap = obj.booleanField("gridWrap")
-    if (
-      display == null &&
-        artworkRendering == null &&
-        imageShape == null &&
-        accessorySymbol == null &&
-        gridWrap == null
-    )
-      null
-    else
-      SectionStyle(
-        display = display,
-        artworkRendering = artworkRendering,
-        imageShape = imageShape,
-        accessorySymbol = accessorySymbol,
-        gridWrap = gridWrap,
+    SectionStyle(
+        display = obj.stringField("display").toStyleDisplay(),
+        artworkRendering = obj.stringField("artworkRendering").toArtworkRendering(),
+        imageShape = obj.stringField("imageShape").toImageShape(),
+        accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() },
+        cardTint = obj.stringField("cardTint")?.takeIf { it.isNotEmpty() },
+        cardImage = obj.stringField("cardImage").toCardImage(),
+        gridWrap = obj.booleanField("gridWrap"),
+        gridTile = obj.stringField("gridTile").toGridTile(),
       )
+      .takeIf { it != EMPTY_SECTION_STYLE }
   }
 
 private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosition? {

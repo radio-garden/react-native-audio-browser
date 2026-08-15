@@ -86,6 +86,52 @@ const configuration: BrowserConfiguration = {
           ]
         },
         {
+          // Card treatment (iOS 26 grid): tinted cards, one opting into the
+          // full-height 'background' image mode.
+          title: 'Card Lab',
+          style: { display: 'grid', gridTile: 'card', cardTint: '#1e3a8a' },
+          children: [
+            {
+              title: 'Tinted card',
+              subtitle: 'cardImage: normal',
+              path: '/playlist/independent-sounds',
+              artwork: 'sf:music.note?bg=#1e3a8a'
+            },
+            {
+              title: 'Background card',
+              subtitle: 'cardImage: background',
+              path: '/playlist/energetic-rhythms',
+              artwork: 'sf:bolt.fill?bg=#8AC926',
+              style: { cardImage: 'background' }
+            }
+          ]
+        },
+        {
+          // Condensed tiles: denser cells with title + subtitle; take
+          // imageShape and accessorySymbol like plain tiles.
+          title: 'Condensed Lab',
+          style: {
+            display: 'grid',
+            gridTile: 'condensed',
+            imageShape: 'circular'
+          },
+          children: [
+            {
+              title: 'Condensed circular',
+              subtitle: 'inherits circular',
+              path: '/archive',
+              artwork: 'sf:person.fill?bg=#FF0090'
+            },
+            {
+              title: 'Condensed badged',
+              subtitle: 'accessorySymbol',
+              path: '/library/playlists',
+              artwork: 'sf:opticaldisc?bg=#1982C4',
+              style: { accessorySymbol: 'star.fill' }
+            }
+          ]
+        },
+        {
           title: 'Other',
           children: [
             {

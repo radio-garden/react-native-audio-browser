@@ -12,6 +12,7 @@
 
 #include "ArtworkRendering.hpp"
 #include "ArtworkVariants.hpp"
+#include "CardImage.hpp"
 #include "HttpMethod.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
@@ -19,6 +20,7 @@
 #include "ImageSource.hpp"
 #include "JArtworkRendering.hpp"
 #include "JArtworkVariants.hpp"
+#include "JCardImage.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___MediaTransformParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams.hpp"

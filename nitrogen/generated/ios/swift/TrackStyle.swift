@@ -18,7 +18,7 @@ public extension TrackStyle {
   /**
    * Create a new instance of `TrackStyle`.
    */
-  init(display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?) {
+  init(display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?, cardTint: String?, cardImage: CardImage?) {
     self.init({ () -> bridge.std__optional_StyleDisplay_ in
       if let __unwrappedValue = display {
         return bridge.create_std__optional_StyleDisplay_(__unwrappedValue)
@@ -40,6 +40,18 @@ public extension TrackStyle {
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = accessorySymbol {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = cardTint {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_CardImage_ in
+      if let __unwrappedValue = cardImage {
+        return bridge.create_std__optional_CardImage_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -71,5 +83,22 @@ public extension TrackStyle {
         return nil
       }
     }()
+  }
+  
+  @inline(__always)
+  var cardTint: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__cardTint) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__cardTint)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var cardImage: CardImage? {
+    return self.__cardImage.value
   }
 }

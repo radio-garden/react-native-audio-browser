@@ -3,6 +3,8 @@ package com.audiobrowser
 import com.audiobrowser.util.artworkOf
 import com.margelo.nitro.audiobrowser.ArtworkRendering
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
+import com.margelo.nitro.audiobrowser.CardImage
+import com.margelo.nitro.audiobrowser.GridTile
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.ImageSource
@@ -211,12 +213,16 @@ object TestFixtures {
     artworkRendering: ArtworkRendering? = null,
     imageShape: ImageShape? = null,
     accessorySymbol: String? = null,
+    cardTint: String? = null,
+    cardImage: CardImage? = null,
   ) =
     TrackStyle(
       display = display,
       artworkRendering = artworkRendering,
       imageShape = imageShape,
       accessorySymbol = accessorySymbol,
+      cardTint = cardTint,
+      cardImage = cardImage,
     )
 
   fun sectionStyle(
@@ -224,13 +230,19 @@ object TestFixtures {
     artworkRendering: ArtworkRendering? = null,
     imageShape: ImageShape? = null,
     accessorySymbol: String? = null,
+    cardTint: String? = null,
+    cardImage: CardImage? = null,
     gridWrap: Boolean? = null,
+    gridTile: GridTile? = null,
   ) =
     SectionStyle(
       gridWrap = gridWrap,
+      gridTile = gridTile,
       display = display,
       artworkRendering = artworkRendering,
       imageShape = imageShape,
       accessorySymbol = accessorySymbol,
+      cardTint = cardTint,
+      cardImage = cardImage,
     )
 }

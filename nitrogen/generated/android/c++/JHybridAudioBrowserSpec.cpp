@@ -25,10 +25,14 @@ namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ImageShape` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ImageShape; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SectionStyle; }
+// Forward declaration of `GridTile` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `Section` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Section; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
@@ -224,6 +228,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 #include <functional>
 #include "JFunc_void_std__string.hpp"
 #include <NitroModules/JNICallable.hpp>
@@ -232,6 +238,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JResolvedTrack.hpp"
 #include "SectionStyle.hpp"
 #include "JSectionStyle.hpp"
+#include "GridTile.hpp"
+#include "JGridTile.hpp"
 #include "Section.hpp"
 #include "JSection.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"

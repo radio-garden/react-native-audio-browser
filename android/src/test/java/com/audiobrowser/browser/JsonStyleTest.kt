@@ -1,6 +1,8 @@
 package com.audiobrowser.browser
 
 import com.margelo.nitro.audiobrowser.ArtworkRendering
+import com.margelo.nitro.audiobrowser.CardImage
+import com.margelo.nitro.audiobrowser.GridTile
 import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import kotlinx.serialization.json.Json
@@ -115,5 +117,31 @@ class JsonStyleTest {
     val track =
       json.decodeFromString<JsonTrack>("""{"title":"X","style":{"imageShape":"hexagonal"}}""")
     assertNull(track.toNitro().style)
+  }
+
+  @Test
+  fun `decodes the card family`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridTile":"card","cardTint":"#1e3a8a","cardImage":"background"},
+           "children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(GridTile.CARD, style?.gridTile)
+    assertEquals("#1e3a8a", style?.cardTint)
+    assertEquals(CardImage.BACKGROUND, style?.cardImage)
+  }
+
+  @Test
+  fun `unknown gridTile decodes as no declaration`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"gridTile":"hexagon"},"children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    assertNull(resolved.toNitro().sections?.first()?.style)
   }
 }

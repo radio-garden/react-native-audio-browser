@@ -28,10 +28,13 @@ enum StyleResolver {
     // ones — Nitro flattens `extends` own-props-first); the stub mirrors it.
     SectionStyle(
       gridWrap: section?.gridWrap ?? page?.gridWrap,
+      gridTile: section?.gridTile ?? page?.gridTile,
       display: section?.display ?? page?.display,
       artworkRendering: section?.artworkRendering ?? page?.artworkRendering,
       imageShape: section?.imageShape ?? page?.imageShape,
       accessorySymbol: section?.accessorySymbol ?? page?.accessorySymbol,
+      cardTint: section?.cardTint ?? page?.cardTint,
+      cardImage: section?.cardImage ?? page?.cardImage,
     )
   }
 
@@ -48,6 +51,8 @@ enum StyleResolver {
       // `'none'` resolves like any value — it is the renderer that treats it
       // as "no accessory, derived behavior" (the inheritance escape).
       accessorySymbol: track?.accessorySymbol ?? section?.accessorySymbol,
+      cardTint: track?.cardTint ?? section?.cardTint,
+      cardImage: track?.cardImage ?? section?.cardImage,
     )
   }
 }

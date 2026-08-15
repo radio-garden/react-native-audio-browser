@@ -28,18 +28,24 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `GridTile` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `StyleDisplay` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 // Forward declaration of `ArtworkRendering` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ImageShape` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ImageShape; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 
 #include <optional>
+#include "GridTile.hpp"
 #include "StyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include <string>
+#include "CardImage.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -49,14 +55,17 @@ namespace margelo::nitro::audiobrowser {
   struct SectionStyle final {
   public:
     std::optional<bool> gridWrap     SWIFT_PRIVATE;
+    std::optional<GridTile> gridTile     SWIFT_PRIVATE;
     std::optional<StyleDisplay> display     SWIFT_PRIVATE;
     std::optional<ArtworkRendering> artworkRendering     SWIFT_PRIVATE;
     std::optional<ImageShape> imageShape     SWIFT_PRIVATE;
     std::optional<std::string> accessorySymbol     SWIFT_PRIVATE;
+    std::optional<std::string> cardTint     SWIFT_PRIVATE;
+    std::optional<CardImage> cardImage     SWIFT_PRIVATE;
 
   public:
     SectionStyle() = default;
-    explicit SectionStyle(std::optional<bool> gridWrap, std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering, std::optional<ImageShape> imageShape, std::optional<std::string> accessorySymbol): gridWrap(gridWrap), display(display), artworkRendering(artworkRendering), imageShape(imageShape), accessorySymbol(accessorySymbol) {}
+    explicit SectionStyle(std::optional<bool> gridWrap, std::optional<GridTile> gridTile, std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering, std::optional<ImageShape> imageShape, std::optional<std::string> accessorySymbol, std::optional<std::string> cardTint, std::optional<CardImage> cardImage): gridWrap(gridWrap), gridTile(gridTile), display(display), artworkRendering(artworkRendering), imageShape(imageShape), accessorySymbol(accessorySymbol), cardTint(cardTint), cardImage(cardImage) {}
 
   public:
     friend bool operator==(const SectionStyle& lhs, const SectionStyle& rhs) = default;
@@ -73,19 +82,25 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::SectionStyle(
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gridWrap"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::GridTile>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gridTile"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardTint"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardImage")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::SectionStyle& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "gridWrap"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.gridWrap));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "gridTile"), JSIConverter<std::optional<margelo::nitro::audiobrowser::GridTile>>::toJSI(runtime, arg.gridTile));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "display"), JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::toJSI(runtime, arg.display));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::toJSI(runtime, arg.artworkRendering));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "imageShape"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::toJSI(runtime, arg.imageShape));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.accessorySymbol));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "cardTint"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.cardTint));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "cardImage"), JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::toJSI(runtime, arg.cardImage));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -97,10 +112,13 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gridWrap")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::GridTile>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gridTile")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardTint")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardImage")))) return false;
       return true;
     }
   };

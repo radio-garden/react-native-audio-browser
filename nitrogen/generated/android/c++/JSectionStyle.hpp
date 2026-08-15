@@ -11,8 +11,12 @@
 #include "SectionStyle.hpp"
 
 #include "ArtworkRendering.hpp"
+#include "CardImage.hpp"
+#include "GridTile.hpp"
 #include "ImageShape.hpp"
 #include "JArtworkRendering.hpp"
+#include "JCardImage.hpp"
+#include "JGridTile.hpp"
 #include "JImageShape.hpp"
 #include "JStyleDisplay.hpp"
 #include "StyleDisplay.hpp"
@@ -40,6 +44,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldGridWrap = clazz->getField<jni::JBoolean>("gridWrap");
       jni::local_ref<jni::JBoolean> gridWrap = this->getFieldValue(fieldGridWrap);
+      static const auto fieldGridTile = clazz->getField<JGridTile>("gridTile");
+      jni::local_ref<JGridTile> gridTile = this->getFieldValue(fieldGridTile);
       static const auto fieldDisplay = clazz->getField<JStyleDisplay>("display");
       jni::local_ref<JStyleDisplay> display = this->getFieldValue(fieldDisplay);
       static const auto fieldArtworkRendering = clazz->getField<JArtworkRendering>("artworkRendering");
@@ -48,12 +54,19 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JImageShape> imageShape = this->getFieldValue(fieldImageShape);
       static const auto fieldAccessorySymbol = clazz->getField<jni::JString>("accessorySymbol");
       jni::local_ref<jni::JString> accessorySymbol = this->getFieldValue(fieldAccessorySymbol);
+      static const auto fieldCardTint = clazz->getField<jni::JString>("cardTint");
+      jni::local_ref<jni::JString> cardTint = this->getFieldValue(fieldCardTint);
+      static const auto fieldCardImage = clazz->getField<JCardImage>("cardImage");
+      jni::local_ref<JCardImage> cardImage = this->getFieldValue(fieldCardImage);
       return SectionStyle(
         gridWrap != nullptr ? std::make_optional(static_cast<bool>(gridWrap->value())) : std::nullopt,
+        gridTile != nullptr ? std::make_optional(gridTile->toCpp()) : std::nullopt,
         display != nullptr ? std::make_optional(display->toCpp()) : std::nullopt,
         artworkRendering != nullptr ? std::make_optional(artworkRendering->toCpp()) : std::nullopt,
         imageShape != nullptr ? std::make_optional(imageShape->toCpp()) : std::nullopt,
-        accessorySymbol != nullptr ? std::make_optional(accessorySymbol->toStdString()) : std::nullopt
+        accessorySymbol != nullptr ? std::make_optional(accessorySymbol->toStdString()) : std::nullopt,
+        cardTint != nullptr ? std::make_optional(cardTint->toStdString()) : std::nullopt,
+        cardImage != nullptr ? std::make_optional(cardImage->toCpp()) : std::nullopt
       );
     }
 
@@ -63,16 +76,19 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JSectionStyle::javaobject> fromCpp(const SectionStyle& value) {
-      using JSignature = JSectionStyle(jni::alias_ref<jni::JBoolean>, jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>, jni::alias_ref<JImageShape>, jni::alias_ref<jni::JString>);
+      using JSignature = JSectionStyle(jni::alias_ref<jni::JBoolean>, jni::alias_ref<JGridTile>, jni::alias_ref<JStyleDisplay>, jni::alias_ref<JArtworkRendering>, jni::alias_ref<JImageShape>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JCardImage>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.gridWrap.has_value() ? jni::JBoolean::valueOf(value.gridWrap.value()) : nullptr,
+        value.gridTile.has_value() ? JGridTile::fromCpp(value.gridTile.value()) : nullptr,
         value.display.has_value() ? JStyleDisplay::fromCpp(value.display.value()) : nullptr,
         value.artworkRendering.has_value() ? JArtworkRendering::fromCpp(value.artworkRendering.value()) : nullptr,
         value.imageShape.has_value() ? JImageShape::fromCpp(value.imageShape.value()) : nullptr,
-        value.accessorySymbol.has_value() ? jni::make_jstring(value.accessorySymbol.value()) : nullptr
+        value.accessorySymbol.has_value() ? jni::make_jstring(value.accessorySymbol.value()) : nullptr,
+        value.cardTint.has_value() ? jni::make_jstring(value.cardTint.value()) : nullptr,
+        value.cardImage.has_value() ? JCardImage::fromCpp(value.cardImage.value()) : nullptr
       );
     }
   };

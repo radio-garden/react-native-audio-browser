@@ -12,11 +12,13 @@
 
 #include "ArtworkRendering.hpp"
 #include "ArtworkVariants.hpp"
+#include "CardImage.hpp"
 #include "HttpMethod.hpp"
 #include "ImageShape.hpp"
 #include "ImageSource.hpp"
 #include "JArtworkRendering.hpp"
 #include "JArtworkVariants.hpp"
+#include "JCardImage.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"

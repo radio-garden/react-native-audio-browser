@@ -41,6 +41,8 @@
 #include "JArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 #include "TimedMetadata.hpp"
 #include "JTimedMetadata.hpp"
 #include "StallReason.hpp"

@@ -34,12 +34,15 @@ namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ImageShape` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ImageShape; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 
 #include "StyleDisplay.hpp"
 #include <optional>
 #include "ArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include <string>
+#include "CardImage.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -52,10 +55,12 @@ namespace margelo::nitro::audiobrowser {
     std::optional<ArtworkRendering> artworkRendering     SWIFT_PRIVATE;
     std::optional<ImageShape> imageShape     SWIFT_PRIVATE;
     std::optional<std::string> accessorySymbol     SWIFT_PRIVATE;
+    std::optional<std::string> cardTint     SWIFT_PRIVATE;
+    std::optional<CardImage> cardImage     SWIFT_PRIVATE;
 
   public:
     TrackStyle() = default;
-    explicit TrackStyle(std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering, std::optional<ImageShape> imageShape, std::optional<std::string> accessorySymbol): display(display), artworkRendering(artworkRendering), imageShape(imageShape), accessorySymbol(accessorySymbol) {}
+    explicit TrackStyle(std::optional<StyleDisplay> display, std::optional<ArtworkRendering> artworkRendering, std::optional<ImageShape> imageShape, std::optional<std::string> accessorySymbol, std::optional<std::string> cardTint, std::optional<CardImage> cardImage): display(display), artworkRendering(artworkRendering), imageShape(imageShape), accessorySymbol(accessorySymbol), cardTint(cardTint), cardImage(cardImage) {}
 
   public:
     friend bool operator==(const TrackStyle& lhs, const TrackStyle& rhs) = default;
@@ -74,7 +79,9 @@ namespace margelo::nitro {
         JSIConverter<std::optional<margelo::nitro::audiobrowser::StyleDisplay>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "display"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardTint"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardImage")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::TrackStyle& arg) {
@@ -83,6 +90,8 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::toJSI(runtime, arg.artworkRendering));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "imageShape"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::toJSI(runtime, arg.imageShape));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.accessorySymbol));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "cardTint"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.cardTint));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "cardImage"), JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::toJSI(runtime, arg.cardImage));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -97,6 +106,8 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ArtworkRendering>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkRendering")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageShape>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageShape")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "accessorySymbol")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardTint")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::CardImage>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cardImage")))) return false;
       return true;
     }
   };

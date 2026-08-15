@@ -40,6 +40,36 @@ export type ArtworkRendering = 'original' | 'stencil'
 export type ImageShape = 'circular' | 'rounded-rectangle'
 
 /**
+ * The kind of tile a grid renders.
+ *
+ * - `'plain'` (default) — artwork tiles with a title.
+ * - `'card'` — a larger card with title/subtitle and a
+ *   {@link TrackStyle.cardTint} color; its image mode is
+ *   {@link TrackStyle.cardImage}. Cards have no shape.
+ * - `'condensed'` — a denser cell carrying title + subtitle; takes
+ *   {@link TrackStyle.imageShape} and {@link TrackStyle.accessorySymbol}
+ *   like a plain tile.
+ *
+ * Element families are mutually exclusive within a container, so this is
+ * a container property — hence the enum, and the `grid` prefix.
+ */
+export type GridTile = 'plain' | 'card' | 'condensed'
+
+/**
+ * How a card tile uses its image.
+ *
+ * - `'normal'` (default) — image above the labels;
+ *   {@link TrackStyle.cardTint} colors a gradient behind the labels.
+ * - `'background'` — the image fills the card full-height with the labels
+ *   overlaid; `cardTint` becomes the color behind them. Selects the larger
+ *   artwork target size.
+ *
+ * An enum rather than a boolean: it names the card's image mode and
+ * leaves room for future modes.
+ */
+export type CardImage = 'normal' | 'background'
+
+/**
  * The style declaration block a {@link Track} may carry: *inherited item
  * properties* (resolved `track ?? section ?? page ?? default`, per
  * property — they travel with the track) plus the *positional*
@@ -125,6 +155,29 @@ export interface TrackStyle {
    * @platform carplay
    */
   accessorySymbol?: string
+
+  /**
+   * Inherited (`track ?? section ?? page`): the card treatment's tint
+   * color (hex, e.g. `'#1e3a8a'`) — a gradient behind the labels, or the
+   * color behind them when {@link TrackStyle.cardImage} is
+   * `'background'`. Card-prefixed: inert unless the container renders
+   * `gridTile: 'card'`.
+   *
+   * @platform carplay
+   */
+  cardTint?: string
+
+  /**
+   * Inherited (`track ?? section ?? page`): how a card tile uses its
+   * image — see {@link CardImage}. Uniform via the section value,
+   * mixable per card. Inert unless the container renders
+   * `gridTile: 'card'`.
+   *
+   * @default 'normal'
+   *
+   * @platform carplay
+   */
+  cardImage?: CardImage
 }
 
 /**
@@ -156,6 +209,20 @@ export interface SectionStyle extends TrackStyle {
    * @see https://developer.apple.com/documentation/carplay/cplistimagerowitem
    */
   gridWrap?: boolean
+
+  /**
+   * The kind of tile this container's grid renders — see
+   * {@link GridTile}. A container property (element families are
+   * container-homogeneous), resolved by scope override
+   * (`section ?? page`), never per item. Inert unless
+   * {@link TrackStyle.display} is `'grid'`, and on CarPlay before
+   * iOS 26 (where the treatment drops and the layout survives).
+   *
+   * @default 'plain'
+   *
+   * @platform carplay
+   */
+  gridTile?: GridTile
 }
 
 /**

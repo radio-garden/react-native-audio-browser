@@ -125,11 +125,41 @@
     }
   }
 
+  enum GridTile: Equatable {
+    case plain
+    case card
+    case condensed
+
+    init?(fromString string: String) {
+      switch string {
+      case "plain": self = .plain
+      case "card": self = .card
+      case "condensed": self = .condensed
+      default: return nil
+      }
+    }
+  }
+
+  enum CardImage: Equatable {
+    case normal
+    case background
+
+    init?(fromString string: String) {
+      switch string {
+      case "normal": self = .normal
+      case "background": self = .background
+      default: return nil
+      }
+    }
+  }
+
   struct TrackStyle: Equatable {
     var display: StyleDisplay?
     var artworkRendering: ArtworkRendering?
     var imageShape: ImageShape?
     var accessorySymbol: String?
+    var cardTint: String?
+    var cardImage: CardImage?
   }
 
   // Member order matches the generated init (own properties before inherited
@@ -138,10 +168,13 @@
   // `swift test` passes while the app build breaks on argument order.
   struct SectionStyle: Equatable {
     var gridWrap: Bool?
+    var gridTile: GridTile?
     var display: StyleDisplay?
     var artworkRendering: ArtworkRendering?
     var imageShape: ImageShape?
     var accessorySymbol: String?
+    var cardTint: String?
+    var cardImage: CardImage?
   }
 
   struct Section: Equatable {

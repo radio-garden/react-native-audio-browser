@@ -77,40 +77,50 @@ extension JsonArtwork {
 struct JsonStyle: Codable, Equatable {
   let display: String?
   let gridWrap: Bool?
+  let gridTile: String?
   let artworkRendering: String?
   let imageShape: String?
   let accessorySymbol: String?
+  let cardTint: String?
+  let cardImage: String?
 
   init(
     display: String? = nil,
     gridWrap: Bool? = nil,
+    gridTile: String? = nil,
     artworkRendering: String? = nil,
     imageShape: String? = nil,
     accessorySymbol: String? = nil,
+    cardTint: String? = nil,
+    cardImage: String? = nil,
   ) {
     self.display = display
     self.gridWrap = gridWrap
+    self.gridTile = gridTile
     self.artworkRendering = artworkRendering
     self.imageShape = imageShape
     self.accessorySymbol = accessorySymbol
+    self.cardTint = cardTint
+    self.cardImage = cardImage
   }
 
   init(from decoder: Decoder) throws {
     // A non-object value (the retired `style: 'grid'` string) decodes as an
     // empty block rather than failing the parent.
     guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
-      display = nil
-      gridWrap = nil
-      artworkRendering = nil
-      imageShape = nil
-      accessorySymbol = nil
+      self.init()
       return
     }
-    display = (try? container.decodeIfPresent(String.self, forKey: .display)) ?? nil
-    gridWrap = (try? container.decodeIfPresent(Bool.self, forKey: .gridWrap)) ?? nil
-    artworkRendering = (try? container.decodeIfPresent(String.self, forKey: .artworkRendering)) ?? nil
-    imageShape = (try? container.decodeIfPresent(String.self, forKey: .imageShape)) ?? nil
-    accessorySymbol = (try? container.decodeIfPresent(String.self, forKey: .accessorySymbol)) ?? nil
+    self.init(
+      display: (try? container.decodeIfPresent(String.self, forKey: .display)) ?? nil,
+      gridWrap: (try? container.decodeIfPresent(Bool.self, forKey: .gridWrap)) ?? nil,
+      gridTile: (try? container.decodeIfPresent(String.self, forKey: .gridTile)) ?? nil,
+      artworkRendering: (try? container.decodeIfPresent(String.self, forKey: .artworkRendering)) ?? nil,
+      imageShape: (try? container.decodeIfPresent(String.self, forKey: .imageShape)) ?? nil,
+      accessorySymbol: (try? container.decodeIfPresent(String.self, forKey: .accessorySymbol)) ?? nil,
+      cardTint: (try? container.decodeIfPresent(String.self, forKey: .cardTint)) ?? nil,
+      cardImage: (try? container.decodeIfPresent(String.self, forKey: .cardImage)) ?? nil,
+    )
   }
 }
 
@@ -127,33 +137,44 @@ extension JsonStyle {
     let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
     // The 'none' sentinel is a legitimate value; only emptiness collapses.
     let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
+    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
+    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
     guard display != nil || artworkRendering != nil || imageShape != nil
-      || accessorySymbol != nil
+      || accessorySymbol != nil || cardTint != nil || cardImage != nil
     else { return nil }
     return TrackStyle(
       display: display,
       artworkRendering: artworkRendering,
       imageShape: imageShape,
       accessorySymbol: accessorySymbol,
+      cardTint: cardTint,
+      cardImage: cardImage,
     )
   }
 
   func toSectionStyle() -> SectionStyle? {
     let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
+    let gridTile = gridTile.flatMap { GridTile(fromString: $0.lowercased()) }
     let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
     let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
     let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
+    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
+    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
     guard display != nil || artworkRendering != nil || gridWrap != nil
-      || imageShape != nil || accessorySymbol != nil
+      || gridTile != nil || imageShape != nil || accessorySymbol != nil
+      || cardTint != nil || cardImage != nil
     else { return nil }
     // Argument order is the generated init's (own properties before
     // inherited ones — Nitro flattens `extends` own-props-first).
     return SectionStyle(
       gridWrap: gridWrap,
+      gridTile: gridTile,
       display: display,
       artworkRendering: artworkRendering,
       imageShape: imageShape,
       accessorySymbol: accessorySymbol,
+      cardTint: cardTint,
+      cardImage: cardImage,
     )
   }
 
@@ -164,12 +185,15 @@ extension JsonStyle {
     guard let style,
           style.display != nil || style.artworkRendering != nil
           || style.imageShape != nil || style.accessorySymbol != nil
+          || style.cardTint != nil || style.cardImage != nil
     else { return nil }
     self.init(
       display: Self.string(style.display),
       artworkRendering: Self.string(style.artworkRendering),
       imageShape: Self.string(style.imageShape),
       accessorySymbol: style.accessorySymbol,
+      cardTint: style.cardTint,
+      cardImage: Self.string(style.cardImage),
     )
   }
 
@@ -193,6 +217,14 @@ extension JsonStyle {
     switch shape {
     case .circular: "circular"
     case .roundedRectangle: "rounded-rectangle"
+    case nil: nil
+    }
+  }
+
+  private static func string(_ mode: CardImage?) -> String? {
+    switch mode {
+    case .normal: "normal"
+    case .background: "background"
     case nil: nil
     }
   }

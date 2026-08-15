@@ -37,6 +37,8 @@ fun ResolvedTrack.toTrack(): Track =
           artworkRendering = it.artworkRendering,
           imageShape = it.imageShape,
           accessorySymbol = it.accessorySymbol,
+          cardTint = it.cardTint,
+          cardImage = it.cardImage,
         )
       },
     disabled = disabled,

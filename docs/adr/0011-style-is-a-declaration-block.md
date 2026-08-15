@@ -33,10 +33,9 @@ ResolvedTrack.style?: SectionStyle   // a page is a Track that is also the conta
 ```
 
 Of these, `display`, `gridWrap`, and `artworkRendering` ship with the
-flip; `imageShape` and `accessorySymbol` landed with their features
-(#131, #125). `cardTint`, `cardImage`, and `gridTile` remain
-decided-but-unshipped — they land with the card/condensed designs, the
-no-dead-fields rule.
+flip; the rest landed with their features (`imageShape` #131,
+`accessorySymbol` #125, and the `gridTile`/`cardTint`/`cardImage`
+card-and-condensed family) — the no-dead-fields rule held throughout.
 
 The rules, once:
 

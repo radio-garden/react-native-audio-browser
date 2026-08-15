@@ -33,6 +33,21 @@ struct SectionStyleResolutionTests {
     #expect(resolved.display == nil)
     #expect(resolved.artworkRendering == nil)
     #expect(resolved.gridWrap == nil)
+    #expect(resolved.gridTile == nil)
+  }
+
+  @Test func gridTileResolvesByScopeOverride() {
+    // A page-wide card treatment; one section opts back to plain tiles.
+    let inherited = StyleResolver.sectionStyle(
+      section: nil,
+      page: SectionStyle(gridTile: .card),
+    )
+    #expect(inherited.gridTile == .card)
+    let overridden = StyleResolver.sectionStyle(
+      section: SectionStyle(gridTile: .plain),
+      page: SectionStyle(gridTile: .card),
+    )
+    #expect(overridden.gridTile == .plain)
   }
 }
 
@@ -92,5 +107,21 @@ struct TrackStyleResolutionTests {
       section: SectionStyle(accessorySymbol: "lock.fill"),
     )
     #expect(escaped.accessorySymbol == "none")
+  }
+
+  @Test func cardPropertiesInheritAndOverridePerItem() {
+    // Section-wide tint/mode; one card overrides its image mode.
+    let inherited = StyleResolver.trackStyle(
+      track: nil,
+      section: SectionStyle(accessorySymbol: nil, cardTint: "#1e3a8a", cardImage: .background),
+    )
+    #expect(inherited.cardTint == "#1e3a8a")
+    #expect(inherited.cardImage == .background)
+    let overridden = StyleResolver.trackStyle(
+      track: TrackStyle(cardImage: .normal),
+      section: SectionStyle(cardTint: "#1e3a8a", cardImage: .background),
+    )
+    #expect(overridden.cardImage == .normal)
+    #expect(overridden.cardTint == "#1e3a8a")
   }
 }

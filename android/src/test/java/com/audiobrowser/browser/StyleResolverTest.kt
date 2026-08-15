@@ -3,6 +3,8 @@ package com.audiobrowser.browser
 import com.audiobrowser.TestFixtures.sectionStyle
 import com.audiobrowser.TestFixtures.trackStyle
 import com.margelo.nitro.audiobrowser.ArtworkRendering
+import com.margelo.nitro.audiobrowser.CardImage
+import com.margelo.nitro.audiobrowser.GridTile
 import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import org.junit.Assert.assertEquals
@@ -116,5 +118,37 @@ class StyleResolverTest {
         section = sectionStyle(accessorySymbol = "lock.fill"),
       )
     assertEquals("none", escaped.accessorySymbol)
+  }
+
+  @Test
+  fun `gridTile resolves by scope override`() {
+    // A page-wide card treatment; one section opts back to plain tiles.
+    val inherited =
+      StyleResolver.sectionStyle(section = null, page = sectionStyle(gridTile = GridTile.CARD))
+    assertEquals(GridTile.CARD, inherited.gridTile)
+    val overridden =
+      StyleResolver.sectionStyle(
+        section = sectionStyle(gridTile = GridTile.PLAIN),
+        page = sectionStyle(gridTile = GridTile.CARD),
+      )
+    assertEquals(GridTile.PLAIN, overridden.gridTile)
+  }
+
+  @Test
+  fun `card properties inherit and override per item`() {
+    val inherited =
+      StyleResolver.trackStyle(
+        track = null,
+        section = sectionStyle(cardTint = "#1e3a8a", cardImage = CardImage.BACKGROUND),
+      )
+    assertEquals("#1e3a8a", inherited.cardTint)
+    assertEquals(CardImage.BACKGROUND, inherited.cardImage)
+    val overridden =
+      StyleResolver.trackStyle(
+        track = trackStyle(cardImage = CardImage.NORMAL),
+        section = sectionStyle(cardTint = "#1e3a8a", cardImage = CardImage.BACKGROUND),
+      )
+    assertEquals(CardImage.NORMAL, overridden.cardImage)
+    assertEquals("#1e3a8a", overridden.cardTint)
   }
 }

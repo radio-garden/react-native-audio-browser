@@ -211,6 +211,18 @@ final class CarPlayListItemFactory {
     return CPListImageRowItem.maximumImageSize
   }
 
+  /// Target artwork size for one tile. Cards read their own class maximums
+  /// ('background' selects the larger full-height target); every other
+  /// family uses the shared element size.
+  private static func tileImageSize(gridTile: GridTile?, cardImage: CardImage?) -> CGSize {
+    if #available(iOS 26.0, *), gridTile == .card {
+      return cardImage == .background
+        ? CPListImageRowItemCardElement.maximumFullHeightImageSize
+        : CPListImageRowItemCardElement.maximumImageSize
+    }
+    return rowImageSize
+  }
+
   /// Creates the image-row item rendering a tile-presented section: a single
   /// truncating line (`.singleLineRow`) or a wrapping multi-line grid
   /// (`.wrappingGrid` — constructed on iOS 26+ only, by `SectionPresentation`).
@@ -246,45 +258,90 @@ final class CarPlayListItemFactory {
     // doesn't exist before iOS 26). nil = the legacy gridImages path.
     // @MainActor makes the closure Sendable for the artwork completion hop.
     var applyImage: (@MainActor (Int, UIImage) -> Void)?
+    // Resolved once per track, shared by element construction and the
+    // artwork loads below.
+    let resolvedStyles = tracks.map { StyleResolver.trackStyle(track: $0.style, section: style) }
     if #available(iOS 26.0, *) {
-      if singleLine {
-        // Row elements are the only tile element with a subtitle slot — the
-        // imageGridElements branch below has no equivalent, by SDK design.
-        let rowElements = tracks.map { track in
-          let element = CPListImageRowItemRowElement(
-            image: placeholder(), title: track.title, subtitle: track.subtitle,
-          )
+      // Builds a family's elements with the shared per-element tail: the
+      // disabled fact (isEnabled lives on the element base class) applied
+      // once, not per family.
+      func makeElements<Element: CPListImageRowItemElement>(
+        _ make: (Track, TrackStyle) -> Element,
+      ) -> [Element] {
+        zip(tracks, resolvedStyles).map { track, resolved in
+          let element = make(track, resolved)
           if track.disabled == true {
             element.isEnabled = false
           }
           return element
         }
-        item = CPListImageRowItem(text: section.title, elements: rowElements, allowsMultipleLines: false)
-        applyImage = { index, image in
-          guard index < rowElements.count else { return }
-          rowElements[index].image = image
+      }
+      // The image setter every element family shares (`image` is on the base
+      // class); bounds-checked against the elements the row was built with.
+      func imageApplier(_ elements: [some CPListImageRowItemElement]) -> @MainActor (Int, UIImage) -> Void {
+        { index, image in
+          guard index < elements.count else { return }
+          elements[index].image = image
         }
-      } else {
+      }
+      // The family is style-driven (`SectionPresentation.tileFamily`); both
+      // non-plain families take either wrap mode. Pre-26 the treatment drops
+      // and the layout survives (the legacy branch below).
+      switch SectionPresentation.tileFamily(for: style, singleLine: singleLine) {
+      case .cardElements:
+        // Cards have no shape and no accessory slot; their knobs are the
+        // tint and the image mode ('background' fills the card full-height
+        // and turns the tint into the color behind the labels).
+        let elements = makeElements { track, resolved in
+          CPListImageRowItemCardElement(
+            image: placeholder(),
+            showsImageFullHeight: resolved.cardImage == .background,
+            title: track.title,
+            subtitle: track.subtitle,
+            tintColor: resolved.cardTint.flatMap { UIColor(declaredHex: $0) },
+          )
+        }
+        item = CPListImageRowItem(
+          text: section.title, cardElements: elements, allowsMultipleLines: !singleLine,
+        )
+        applyImage = imageApplier(elements)
+      case .condensedElements:
+        let elements = makeElements { track, resolved in
+          CPListImageRowItemCondensedElement(
+            image: placeholder(),
+            imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
+            title: track.title,
+            subtitle: track.subtitle,
+            accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
+          )
+        }
+        item = CPListImageRowItem(
+          text: section.title, condensedElements: elements, allowsMultipleLines: !singleLine,
+        )
+        applyImage = imageApplier(elements)
+      case .rowElements:
+        // The only plain tile with a subtitle slot — the imageGridElements
+        // family has no equivalent, by SDK design.
+        let elements = makeElements { track, _ in
+          CPListImageRowItemRowElement(
+            image: placeholder(), title: track.title, subtitle: track.subtitle,
+          )
+        }
+        item = CPListImageRowItem(text: section.title, elements: elements, allowsMultipleLines: false)
+        applyImage = imageApplier(elements)
+      case .imageGridElements:
         // imageGridElements, never the title-less gridElements: an
         // artwork-less track must keep its name on screen (ADR 0010).
-        let gridElements = tracks.map { track in
-          let resolved = StyleResolver.trackStyle(track: track.style, section: style)
-          let element = CPListImageRowItemImageGridElement(
+        let elements = makeElements { track, resolved in
+          CPListImageRowItemImageGridElement(
             image: placeholder(),
             imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
             title: track.title,
             accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
           )
-          if track.disabled == true {
-            element.isEnabled = false
-          }
-          return element
         }
-        item = CPListImageRowItem(text: section.title, imageGridElements: gridElements, allowsMultipleLines: true)
-        applyImage = { index, image in
-          guard index < gridElements.count else { return }
-          gridElements[index].image = image
-        }
+        item = CPListImageRowItem(text: section.title, imageGridElements: elements, allowsMultipleLines: true)
+        applyImage = imageApplier(elements)
       }
     } else {
       let placeholders = tracks.map { _ in placeholder() }
@@ -322,10 +379,11 @@ final class CarPlayListItemFactory {
     for (index, track) in tracks.enumerated() {
       guard track.artwork != nil || track.artworkSource != nil else { continue }
 
+      let resolved = resolvedStyles[index]
       imageLoader?.loadArtwork(
         for: track,
-        style: StyleResolver.trackStyle(track: track.style, section: style),
-        size: Self.rowImageSize,
+        style: resolved,
+        size: Self.tileImageSize(gridTile: style?.gridTile, cardImage: resolved.cardImage),
       ) { [weak item] image in
         Task { @MainActor in
           guard let item, let image else { return }

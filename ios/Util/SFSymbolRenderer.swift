@@ -139,4 +139,17 @@ extension UIColor {
       self.init(white: 0, alpha: 1)
     }
   }
+
+  /// Failable form for *declared* colors (`style.cardTint`): anything but a
+  /// 3- or 6-digit hex value is nil, so an unparseable declaration degrades
+  /// to "no declaration" (the system default) instead of rendering black —
+  /// matching how unknown enum values decode. `init(hex:)` keeps its lenient
+  /// black fallback for the `sf:` artwork params it has always served.
+  convenience init?(declaredHex hex: String) {
+    let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+    guard [3, 6].contains(digits.count),
+          digits.allSatisfy(\.isHexDigit)
+    else { return nil }
+    self.init(hex: hex)
+  }
 }

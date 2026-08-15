@@ -31,7 +31,10 @@ object StyleResolver {
       artworkRendering = section?.artworkRendering ?: page?.artworkRendering,
       imageShape = section?.imageShape ?: page?.imageShape,
       accessorySymbol = section?.accessorySymbol ?: page?.accessorySymbol,
+      cardTint = section?.cardTint ?: page?.cardTint,
+      cardImage = section?.cardImage ?: page?.cardImage,
       gridWrap = section?.gridWrap ?: page?.gridWrap,
+      gridTile = section?.gridTile ?: page?.gridTile,
     )
 
   /**
@@ -49,7 +52,9 @@ object StyleResolver {
       artworkRendering = track?.artworkRendering ?: section?.artworkRendering,
       imageShape = track?.imageShape ?: section?.imageShape,
       // 'none' resolves like any value — a renderer treats it as "no accessory, derived
-      // behavior" (the inheritance escape). No Android surface draws either property today.
+      // behavior" (the inheritance escape). No Android surface draws these properties today.
       accessorySymbol = track?.accessorySymbol ?: section?.accessorySymbol,
+      cardTint = track?.cardTint ?: section?.cardTint,
+      cardImage = track?.cardImage ?: section?.cardImage,
     )
 }

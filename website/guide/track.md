@@ -134,16 +134,17 @@ It carries only `userAgent`, `headers`, and `query` — deliberately **not** `ba
 
 Optional fields that change how a Track renders on CarPlay / Android Auto. Each surface applies the ones it supports; an unsupported field is a no-op, never an error.
 
-| Field                                    | Effect                                                            | Platform                   |
-| ---------------------------------------- | ----------------------------------------------------------------- | -------------------------- |
-| `style: { display: 'list' \| 'grid' }`   | on a browsable track: the layout of the page it opens             | Android Auto / AAOS        |
-| `style: { artworkRendering: 'stencil' }` | tint monochrome artwork to the surface appearance                 | CarPlay                    |
-| `style: { imageShape: 'circular' }`      | crop grid-tile artwork circular (people) instead of rounded       | CarPlay (iOS 26+)          |
-| `style: { accessorySymbol: '…' }`        | SF Symbol accessory; `'none'` restores the derived accessory      | CarPlay                    |
-| `disabled`                               | unavailable: never plays; grayed where drawable, hidden elsewhere | all                        |
-| `favorited`                              | filled/empty heart (needs the `favorite` capability)              | Android Auto, notification |
-| `live`                                   | a "live" indicator                                                | iOS now-playing            |
-| `albumPath`                              | make the now-playing album line tappable                          | CarPlay                    |
+| Field                                      | Effect                                                                 | Platform                   |
+| ------------------------------------------ | ---------------------------------------------------------------------- | -------------------------- |
+| `style: { display: 'list' \| 'grid' }`     | on a browsable track: the layout of the page it opens                  | Android Auto / AAOS        |
+| `style: { artworkRendering: 'stencil' }`   | tint monochrome artwork to the surface appearance                      | CarPlay                    |
+| `style: { imageShape: 'circular' }`        | crop grid-tile artwork circular (people) instead of rounded            | CarPlay (iOS 26+)          |
+| `style: { accessorySymbol: '…' }`          | SF Symbol accessory; `'none'` restores the derived accessory           | CarPlay                    |
+| `style: { cardTint: '…', cardImage: '…' }` | card color and image mode, when the section renders `gridTile: 'card'` | CarPlay (iOS 26+)          |
+| `disabled`                                 | unavailable: never plays; grayed where drawable, hidden elsewhere      | all                        |
+| `favorited`                                | filled/empty heart (needs the `favorite` capability)                   | Android Auto, notification |
+| `live`                                     | a "live" indicator                                                     | iOS now-playing            |
+| `albumPath`                                | make the now-playing album line tappable                               | CarPlay                    |
 
 A couple of constraints worth knowing:
 

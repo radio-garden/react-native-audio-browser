@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.common.C
+import com.audiobrowser.util.EMPTY_TRACK_STYLE
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.toArtworkRendering
+import com.audiobrowser.util.toCardImage
 import com.audiobrowser.util.toImageShape
 import com.audiobrowser.util.toStyleDisplay
 import com.audiobrowser.util.toWireString
@@ -219,6 +221,8 @@ class PlaybackStateStore(private val player: Player) {
                 put("artworkRendering", style.artworkRendering?.toWireString())
                 put("imageShape", style.imageShape?.toWireString())
                 put("accessorySymbol", style.accessorySymbol)
+                put("cardTint", style.cardTint)
+                put("cardImage", style.cardImage?.toWireString())
               }
             },
           )
@@ -259,16 +263,13 @@ class PlaybackStateStore(private val player: Player) {
                     artworkRendering = style.optString("artworkRendering").toArtworkRendering(),
                     imageShape = style.optString("imageShape").toImageShape(),
                     accessorySymbol = style.optString("accessorySymbol").takeIf { it.isNotEmpty() },
+                    cardTint = style.optString("cardTint").takeIf { it.isNotEmpty() },
+                    cardImage = style.optString("cardImage").toCardImage(),
                   )
                 }
                 // An empty block collapses to "no declaration" — one shape on
                 // every platform, matching the browse decoders.
-                ?.takeIf {
-                  it.display != null ||
-                    it.artworkRendering != null ||
-                    it.imageShape != null ||
-                    it.accessorySymbol != null
-                },
+                ?.takeIf { it != EMPTY_TRACK_STYLE },
             disabled =
               if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled")
               else null,

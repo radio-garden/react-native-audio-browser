@@ -54,6 +54,8 @@ object TrackFactory {
             artworkRendering = it.artworkRendering,
             imageShape = it.imageShape,
             accessorySymbol = it.accessorySymbol,
+            cardTint = it.cardTint,
+            cardImage = it.cardImage,
           )
         },
       disabled = null,

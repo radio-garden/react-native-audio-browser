@@ -147,6 +147,32 @@ struct JsonStyleTests {
     #expect(track.style == nil)
   }
 
+  @Test func decodesTheCardFamily() throws {
+    let json = Data(
+      """
+      {"path":"/home","title":"Home","sections":[
+        {"style":{"display":"grid","gridTile":"card","cardTint":"#1e3a8a","cardImage":"background"},
+         "children":[{"title":"C","src":"s"}]}
+      ]}
+      """.utf8)
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let style = resolved.sections?.first?.style
+    #expect(style?.gridTile == .card)
+    #expect(style?.cardTint == "#1e3a8a")
+    #expect(style?.cardImage == .background)
+  }
+
+  @Test func unknownGridTileDecodesAsNoDeclaration() throws {
+    let json = Data(
+      """
+      {"path":"/home","title":"Home","sections":[
+        {"style":{"gridTile":"hexagon"},"children":[{"title":"C","src":"s"}]}
+      ]}
+      """.utf8)
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    #expect(resolved.sections?.first?.style == nil)
+  }
+
   @Test func styleAndDisabledSurviveThePersistenceRoundTrip() throws {
     // Restored queues keep their visible fidelity across process death.
     let original = JsonTrack(
@@ -170,9 +196,12 @@ struct JsonStyleTests {
       TrackStyle(
         display: nil, artworkRendering: .stencil,
         imageShape: .circular, accessorySymbol: "none",
+        cardTint: "#1e3a8a", cardImage: .background,
       ))
     #expect(snapshot?.artworkRendering == "stencil")
     #expect(snapshot?.imageShape == "circular")
     #expect(snapshot?.accessorySymbol == "none")
+    #expect(snapshot?.cardTint == "#1e3a8a")
+    #expect(snapshot?.cardImage == "background")
   }
 }

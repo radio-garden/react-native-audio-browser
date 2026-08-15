@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayPlayingIndicatorLocation; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -60,6 +62,8 @@ namespace margelo::nitro::audiobrowser { struct GateEvent; }
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `Gate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Gate; }
+// Forward declaration of `GridTile` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
@@ -220,6 +224,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "CarPlayNowPlayingButton.hpp"
 #include "CarPlayPlayingIndicatorLocation.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
+#include "CardImage.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -230,6 +235,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "GateDecision.hpp"
 #include "GateEvent.hpp"
 #include "GateReason.hpp"
+#include "GridTile.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"

@@ -39,6 +39,8 @@
 #include "JArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

@@ -12,11 +12,13 @@
 
 #include "ArtworkRendering.hpp"
 #include "ArtworkVariants.hpp"
+#include "CardImage.hpp"
 #include "HttpMethod.hpp"
 #include "ImageShape.hpp"
 #include "ImageSource.hpp"
 #include "JArtworkRendering.hpp"
 #include "JArtworkVariants.hpp"
+#include "JCardImage.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageShape.hpp"
 #include "JImageSource.hpp"

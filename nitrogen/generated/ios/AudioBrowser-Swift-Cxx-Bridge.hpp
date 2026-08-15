@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayPlayingIndicatorLocation; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -60,6 +62,8 @@ namespace margelo::nitro::audiobrowser { struct GateEvent; }
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `Gate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Gate; }
+// Forward declaration of `GridTile` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
@@ -220,6 +224,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "CarPlayNowPlayingButton.hpp"
 #include "CarPlayPlayingIndicatorLocation.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
+#include "CardImage.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -230,6 +235,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "GateDecision.hpp"
 #include "GateEvent.hpp"
 #include "GateReason.hpp"
+#include "GridTile.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
@@ -537,6 +543,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
+  // pragma MARK: std::optional<CardImage>
+  /**
+   * Specialized version of `std::optional<CardImage>`.
+   */
+  using std__optional_CardImage_ = std::optional<CardImage>;
+  inline std::optional<CardImage> create_std__optional_CardImage_(const CardImage& value) noexcept {
+    return std::optional<CardImage>(value);
+  }
+  inline bool has_value_std__optional_CardImage_(const std::optional<CardImage>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline CardImage get_std__optional_CardImage_(const std::optional<CardImage>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::optional<bool>
   /**
    * Specialized version of `std::optional<bool>`.
@@ -646,6 +667,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline SectionStyle get_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<GridTile>
+  /**
+   * Specialized version of `std::optional<GridTile>`.
+   */
+  using std__optional_GridTile_ = std::optional<GridTile>;
+  inline std::optional<GridTile> create_std__optional_GridTile_(const GridTile& value) noexcept {
+    return std::optional<GridTile>(value);
+  }
+  inline bool has_value_std__optional_GridTile_(const std::optional<GridTile>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline GridTile get_std__optional_GridTile_(const std::optional<GridTile>& optional) noexcept {
     return optional.value();
   }
   

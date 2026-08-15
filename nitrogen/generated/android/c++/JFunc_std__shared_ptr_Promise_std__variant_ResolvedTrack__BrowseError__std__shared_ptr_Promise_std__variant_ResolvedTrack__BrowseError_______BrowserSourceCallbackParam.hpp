@@ -24,12 +24,16 @@
 #include "SectionStyle.hpp"
 #include <optional>
 #include "JSectionStyle.hpp"
+#include "GridTile.hpp"
+#include "JGridTile.hpp"
 #include "StyleDisplay.hpp"
 #include "JStyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "JArtworkRendering.hpp"
 #include "ImageShape.hpp"
 #include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 #include "Section.hpp"
 #include <vector>
 #include "JSection.hpp"

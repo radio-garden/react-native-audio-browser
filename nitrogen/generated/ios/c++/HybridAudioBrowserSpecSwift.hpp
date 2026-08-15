@@ -30,10 +30,14 @@ namespace margelo::nitro::audiobrowser { enum class StyleDisplay; }
 namespace margelo::nitro::audiobrowser { enum class ArtworkRendering; }
 // Forward declaration of `ImageShape` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class ImageShape; }
+// Forward declaration of `CardImage` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CardImage; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SectionStyle; }
+// Forward declaration of `GridTile` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `Section` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Section; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
@@ -219,9 +223,11 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "StyleDisplay.hpp"
 #include "ArtworkRendering.hpp"
 #include "ImageShape.hpp"
+#include "CardImage.hpp"
 #include <functional>
 #include "ResolvedTrack.hpp"
 #include "SectionStyle.hpp"
+#include "GridTile.hpp"
 #include "Section.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "NavigationErrorEvent.hpp"
