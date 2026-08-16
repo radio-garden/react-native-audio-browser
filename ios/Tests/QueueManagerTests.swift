@@ -691,10 +691,10 @@ struct ClearTests {
 @Suite("replace & removeUpcomingTracks")
 @MainActor
 struct OtherMutationTests {
-  @Test func replace_updatesTrackAtIndex() {
+  @Test func replace_updatesTrackAtIndex() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
-    q.replace(1, Track(id: "B"))
+    try q.replace(1, Track(id: "B"))
     #expect(q.tracks[1].id == "B")
   }
 
@@ -738,10 +738,10 @@ struct OtherMutationTests {
     #expect(q.tracks[0].id == "a")
   }
 
-  @Test func replace_currentTrack_reflectsInCurrentTrack() {
+  @Test func replace_currentTrack_reflectsInCurrentTrack() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    q.replace(1, Track(id: "B"))
+    try q.replace(1, Track(id: "B"))
     #expect(q.currentTrack?.id == "B")
     #expect(q.currentIndex == 1)
   }
@@ -926,12 +926,12 @@ struct DelegateTests {
     #expect(spy.calls.count == 1)
   }
 
-  @Test func queueDidChangeTracks_firesOnReplace() {
+  @Test func queueDidChangeTracks_firesOnReplace() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b"))
     let spy = DelegateSpy()
     q.delegate = spy
-    q.replace(0, Track(id: "A"))
+    try q.replace(0, Track(id: "A"))
     #expect(spy.calls.count == 1)
   }
 

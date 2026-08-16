@@ -136,7 +136,7 @@ class TrackPlayer {
   var previousTracks: [Track] { coordinator.previousTracks }
   var isLastInPlaybackOrder: Bool { coordinator.isLastInPlaybackOrder }
   var playbackActive: Bool { coordinator.playbackActive }
-  var sleepTimerManager: SleepTimerManager { coordinator.sleepTimerManager as! SleepTimerManager }
+  var sleepTimerManager: any SleepTimerHandling { coordinator.sleepTimerManager }
   var queue: QueueManager { coordinator.queue }
   var loadSeekCoordinator: LoadSeekCoordinator { coordinator.loadSeekCoordinator }
   var playingStateManager: PlayingStateManager { coordinator.playingStateManager }
@@ -195,12 +195,17 @@ class TrackPlayer {
     return seconds.isNaN ? 0 : seconds
   }
 
+  /// The current item's duration, or 0 when it has none (a live stream).
+  ///
+  /// Deliberately does NOT consult `item.asset.duration`: that accessor is
+  /// deprecated as of the iOS 16 minimum (`load(.duration)` replaces it) and
+  /// blocks the caller while it fetches for a remote asset — on the main
+  /// thread, since this type is `@MainActor`. `item.duration` reports the same
+  /// value without blocking; it was already the fallback, so the asset branch
+  /// only ever won a race it should not have been running.
   var duration: Double {
     guard let item = avPlayer.currentItem else { return 0.0 }
 
-    if !item.asset.duration.seconds.isNaN {
-      return item.asset.duration.seconds
-    }
     if !item.duration.seconds.isNaN {
       return item.duration.seconds
     }
@@ -310,17 +315,6 @@ class TrackPlayer {
 
   func load(_ track: Track, playWhenReady: Bool? = nil) {
     coordinator.load(track, playWhenReady: playWhenReady)
-  }
-
-  func togglePlaying() {
-    switch avPlayer.timeControlStatus {
-    case .playing, .waitingToPlayAtSpecifiedRate:
-      pause()
-    case .paused:
-      play()
-    @unknown default:
-      fatalError("Unknown AVPlayer.timeControlStatus")
-    }
   }
 
   func play() { coordinator.play() }
@@ -896,8 +890,8 @@ extension TrackPlayer: TrackSelectionPlayer {}
 // MARK: - Queue Methods (thin forwarders)
 
 extension TrackPlayer {
-  func replace(_ index: Int, _ track: Track) {
-    coordinator.replace(index, track)
+  func replace(_ index: Int, _ track: Track) throws {
+    try coordinator.replace(index, track)
   }
 
   func setQueue(

@@ -11,7 +11,14 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  /// Current network connectivity state. Must only be set on main thread.
+  /// Current network connectivity state. Main-confined after construction: the
+  /// path handler hops via `DispatchQueue.main.async`, and every reader must
+  /// too (see `HybridAudioBrowser.getOnline()`).
+  ///
+  /// The one exception is the seed write in `init`, which runs on whatever
+  /// thread constructs the monitor. That is safe by publication rather than by
+  /// isolation — it completes before the instance reference escapes, and
+  /// `onChanged` is still nil, so no observer can see it.
   private(set) var isOnline: Bool = false {
     didSet {
       if oldValue != isOnline {

@@ -525,15 +525,17 @@ class PlaybackCoordinator {
       if queue.currentIndex == -1 {
         let changed = queue.add([track], initialIndex: 0)
         if changed { handleCurrentTrackChanged() }
-      } else {
-        queue.replace(queue.currentIndex, track)
+      } else if (try? queue.replace(queue.currentIndex, track)) != nil {
+        // `currentIndex` is invariantly -1 or in bounds, and -1 took the branch
+        // above — so this cannot fail. Advancing only on success keeps us from
+        // reloading the OLD track if that invariant is ever broken.
         handleCurrentTrackChanged()
       }
     }
   }
 
-  func replace(_ index: Int, _ track: Track) {
-    queue.replace(index, track)
+  func replace(_ index: Int, _ track: Track) throws {
+    try queue.replace(index, track)
   }
 
   func setQueue(

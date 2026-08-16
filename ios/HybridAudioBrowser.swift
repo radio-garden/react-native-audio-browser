@@ -303,8 +303,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     didSet {
       // The monitor->JS bridge is wired centrally in setupPlayer (so it doesn't depend on a JS
       // subscription and can also drive the now-playing re-render + player reconnect). Here we only
-      // push the current state to a newly-attached subscriber.
-      onOnlineChanged(networkMonitor.isOnline)
+      // push the current state to a newly-attached subscriber — read main-confined, see getOnline().
+      onOnlineChanged(onMainActor { networkMonitor.isOnline })
     }
   }
 
@@ -574,7 +574,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   static let invalidateAllSentinel = "__rnab_invalidate_all__"
 
   public func notifyContentChanged(path: String) throws {
-    onMainActor { browserManager.invalidateContentCache(path) }
+    // Throws on a contextual path (matching Android's `require`) — the caller
+    // must pass the container path, or the invalidation silently hits nothing.
+    try onMainActor { try browserManager.invalidateContentCache(path) }
 
     // Notify external controllers (CarPlay) that content changed
     externalContentChangedEmitter.emit(path)
@@ -1132,7 +1134,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setActiveTrackFavorited(favorited: Bool) throws {
-    onMainActor {
+    try onMainActor {
       guard let track = player?.currentTrack, let identity = track.identity else { return }
       guard let index = player?.currentIndex, index >= 0 else { return }
       // Optimistically reflect in the authoritative favorite set so the
@@ -1144,7 +1146,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // Hydration never overrides a caller-set `favorited`, so the queued
       // track must itself carry the latest explicit value (as Android's tag
       // swap and web's replaceTrack do).
-      player?.replace(index, updatedTrack)
+      try player?.replace(index, updatedTrack)
       // The ONLY emit: a favorite toggle is an in-place mutation of the active
       // track, not a transition — onPlaybackActiveTrackChanged stays
       // transition-only, and the useActiveTrack / useQueue hooks subscribe to
@@ -1319,7 +1321,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Network
 
   public func getOnline() throws -> Bool {
-    networkMonitor.getOnline()
+    // Hop like every other accessor here: `isOnline` is main-confined (the
+    // monitor's path handler writes it via `DispatchQueue.main.async`), and
+    // Nitro calls this on the JS thread. Reading it directly was the one
+    // unsynchronized access left on that property.
+    onMainActor { networkMonitor.getOnline() }
   }
 
   // MARK: - System Volume

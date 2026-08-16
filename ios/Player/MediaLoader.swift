@@ -38,19 +38,26 @@ final class MediaLoader {
   func resolveAndLoad(src: String, track: Track? = nil) {
     if let resolver = mediaUrlResolver {
       mediaResolverTask?.cancel()
-      mediaResolverTask = Task {
-        self.logger.debug("resolveAndLoad: starting resolution for \(src)")
+      // `[weak self]` like the sibling load tasks below: the resolver is
+      // consumer-supplied and `cancelAll()` cannot force an in-flight `await`
+      // to return, so a strong capture let a resolver that never settles pin
+      // this loader (which also retains the task) indefinitely.
+      mediaResolverTask = Task { [weak self] in
+        // Note `self?.` rather than an up-front `guard let self`: binding it
+        // strongly here would span the resolver await and reintroduce exactly
+        // the retain this avoids.
+        self?.logger.debug("resolveAndLoad: starting resolution for \(src)")
 
         guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoad: cancelled before start")
+          self?.logger.debug("resolveAndLoad: cancelled before start")
           return
         }
 
-        self.logger.debug("resolveAndLoad: calling resolver...")
+        self?.logger.debug("resolveAndLoad: calling resolver...")
         let resolved = await resolver(src, track)
 
-        guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoad: cancelled after resolver returned")
+        guard !Task.isCancelled, let self else {
+          self?.logger.debug("resolveAndLoad: cancelled after resolver returned")
           return
         }
 

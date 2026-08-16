@@ -11,13 +11,23 @@ final class SFSymbolRenderer: @unchecked Sendable {
   @MainActor static let shared = SFSymbolRenderer()
   static let defaultCanvasSize = CGSize(width: 200, height: 200)
 
+  /// Bumped whenever the rendering below changes (symbol point-size factor,
+  /// centering, tinting, background fill). It is part of the cache filename
+  /// because `.cachesDirectory` survives app updates and the existence check is
+  /// the only cache validation — without a version key, every device that had
+  /// rendered a symbol once would keep serving the OLD pixels forever after a
+  /// render change.
+  private static let renderVersion = 1
+
   private let logger = Logger(subsystem: "com.audiobrowser", category: "SFSymbolRenderer")
   private let scale: CGFloat
   private let cacheDirectory: URL
 
   @MainActor
   private init() {
-    scale = UIScreen.main.scale
+    // `UITraitCollection.current` rather than the deprecated `UIScreen.main`
+    // (also unavailable on visionOS, which the podspec targets).
+    scale = UITraitCollection.current.displayScale
 
     let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
     cacheDirectory = caches.appendingPathComponent("sf-symbols", isDirectory: true)
@@ -45,7 +55,8 @@ final class SFSymbolRenderer: @unchecked Sendable {
     let safeArtwork = artworkValue.unicodeScalars
       .filter { CharacterSet.alphanumerics.contains($0) || $0 == "_" }
       .map(String.init).joined()
-    let fileName = "\(safeArtwork)_\(Int(canvasSize.width))x\(Int(canvasSize.height))_\(Int(scale))x"
+    let fileName =
+      "\(safeArtwork)_\(Int(canvasSize.width))x\(Int(canvasSize.height))_\(Int(scale))x_v\(Self.renderVersion)"
     let fileURL = cacheDirectory.appendingPathComponent("\(fileName).png")
 
     if FileManager.default.fileExists(atPath: fileURL.path) {

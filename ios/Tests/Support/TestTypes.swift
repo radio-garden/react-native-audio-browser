@@ -185,17 +185,33 @@ final class MockSleepTimerHandling: SleepTimerHandling {
   var onComplete: (() -> Void)?
   var onFadeStart: ((_ duration: TimeInterval) -> Void)?
   var onFadeCancel: (() -> Void)?
+  var onChanged: ((SleepTimerState) -> Void)?
   var trackChangedCallCount = 0
   var trackPlayedToEndCallCount = 0
   var clearCallCount = 0
 
+  /// Records of the consumer-facing calls, so a test going through
+  /// `TrackPlayer.sleepTimerManager` can assert on them.
+  var state: SleepTimerState?
+  private(set) var setCalls: [(seconds: TimeInterval, fadeDuration: TimeInterval?)] = []
+  private(set) var setToEndOfTrackCallCount = 0
+
   @discardableResult func clear() -> Bool {
     clearCallCount += 1
+    state = nil
     return true
   }
 
   func onTrackChanged() { trackChangedCallCount += 1 }
   func onTrackPlayedToEnd() { trackPlayedToEndCallCount += 1 }
+
+  func get() -> SleepTimerState? { state }
+
+  func set(seconds: TimeInterval, fadeDuration: TimeInterval?) {
+    setCalls.append((seconds: seconds, fadeDuration: fadeDuration))
+  }
+
+  func setToEndOfTrack() { setToEndOfTrackCallCount += 1 }
 }
 
 // MARK: - Mock RetryHandling

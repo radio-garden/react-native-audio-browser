@@ -317,7 +317,9 @@ class QueueManager {
   // MARK: - Other Mutations
 
   /// Replace the track at a specific index.
-  func replace(_ index: Int, _ track: Track) {
+  /// Throws like every other index-taking mutation here, rather than trapping.
+  func replace(_ index: Int, _ track: Track) throws {
+    try throwIfIndexInvalid(index: index)
     tracks[index] = track
   }
 

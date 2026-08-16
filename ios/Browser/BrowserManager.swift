@@ -254,7 +254,18 @@ final class BrowserManager {
   }
 
   /// Invalidates the content cache for a specific path.
-  func invalidateContentCache(_ path: String) {
+  ///
+  /// Expects a *container* path. A contextual path (`…?__trackId=…`) addresses
+  /// a child, not a cache entry — entries are keyed by the stripped parent — so
+  /// passing one used to remove nothing at all, silently. Android `require`s the
+  /// same precondition; this throws so the misuse surfaces identically on both
+  /// platforms instead of no-opping on one.
+  func invalidateContentCache(_ path: String) throws {
+    guard !BrowserPathHelper.isContextual(path) else {
+      throw BrowserError.invalidConfiguration(
+        "invalidateContentCache() expects a container path, not a contextual path: \(path)",
+      )
+    }
     contentCache.remove(path)
   }
 
@@ -263,6 +274,11 @@ final class BrowserManager {
   func clearContentCache() {
     contentCache.clear()
     layerGeneration += 1
+    // The search slot is content too: a locale switch or a re-auth changes
+    // titles, src, artwork and availability, and nothing else ever evicts it,
+    // so a repeated query returned pre-invalidation results forever.
+    lastSearchKey = nil
+    lastSearchResults = nil
   }
 
   /// Refreshes the current path by invalidating cache and re-resolving.

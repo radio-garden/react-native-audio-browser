@@ -51,6 +51,16 @@ final class NowPlayingUpdater {
     self.nowPlayingInfoController = nowPlayingInfoController
   }
 
+  /// The phone's screen, found through the active window scene. Nil when the
+  /// app has no foreground UI scene (e.g. running headless for CarPlay), in
+  /// which case callers fall back to a sensible default — this only sizes a
+  /// CDN artwork request, so being approximate is harmless.
+  private static var activeScreen: UIScreen? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let active = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+    return active?.screen
+  }
+
   /// Publishes the static, per-track fields + artwork on a track change. The title/artist/album
   /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
   /// renders).
@@ -162,9 +172,12 @@ final class NowPlayingUpdater {
     let artworkUrl = track.artworkSource?.uri ?? track.artwork?.url
     logger.debug("loadArtwork: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
-    // Now Playing artwork: use screen width in pixels, capped at 1200px
-    let screenScale = UIScreen.main.scale
-    let screenWidth = UIScreen.main.bounds.width * screenScale
+    // Now Playing artwork: use screen width in pixels, capped at 1200px.
+    // Resolved from the active window scene rather than `UIScreen.main`, which
+    // is deprecated (and unavailable on visionOS, which the podspec targets).
+    let screen = Self.activeScreen
+    let screenScale = screen?.scale ?? 3
+    let screenWidth = (screen?.bounds.width ?? 430) * screenScale
     let artworkSize = min(screenWidth, 1200)
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 

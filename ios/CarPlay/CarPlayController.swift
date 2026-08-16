@@ -970,16 +970,22 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
+    // Compare against the same list `showTabBar` actually built templates from
+    // — disabled tabs are filtered out there, so comparing the RAW list meant
+    // the counts could never match once any tab was disabled, and the in-place
+    // restamp below was dead code: every tab change fell through to a full root
+    // rebuild that resets the selected tab and re-loads the first tab.
+    let visibleTabs = tabs.filter { $0.disabled != true }
     // Same tabs by path while ungated → only the tab-bar entries changed
     // (e.g. titles after a locale switch): restamp them in place. No rebuild,
     // so the selected tab and any pushed navigation stack survive. (Gate
     // templates carry no path, so a gated tab bar never matches here.)
     if !isGated,
        let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
-       tabBar.templates.count == min(tabs.count, CPTabBarTemplate.maximumTabCount),
-       zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.path })
+       tabBar.templates.count == min(visibleTabs.count, CPTabBarTemplate.maximumTabCount),
+       zip(tabBar.templates, visibleTabs).allSatisfy({ getPath(from: $0) == $1.path })
     {
-      for (template, tab) in zip(tabBar.templates, tabs) {
+      for (template, tab) in zip(tabBar.templates, visibleTabs) {
         applyTabBarEntry(to: template, for: tab)
       }
       pendingTabs = nil
@@ -1401,12 +1407,13 @@ extension UIImage {
     UIGraphicsBeginImageContextWithOptions(targetSize, false, scale)
     defer { UIGraphicsEndImageContext() }
 
-    // Scale to fit while maintaining aspect ratio
+    // Scale to fit while maintaining aspect ratio. Named `fitScale` so it does
+    // not shadow the `scale` parameter (the display scale) it sits next to.
     let widthRatio = targetSize.width / size.width
     let heightRatio = targetSize.height / size.height
-    let scale = min(widthRatio, heightRatio)
+    let fitScale = min(widthRatio, heightRatio)
 
-    let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
+    let scaledSize = CGSize(width: size.width * fitScale, height: size.height * fitScale)
     let origin = CGPoint(
       x: (targetSize.width - scaledSize.width) / 2,
       y: (targetSize.height - scaledSize.height) / 2,
