@@ -160,7 +160,9 @@ final class CarPlayListItemFactory {
     if let symbol = SectionPresentation.effectiveAccessorySymbol(style ?? track.style),
        let accessory = UIImage(systemName: symbol)
     {
-      item.accessoryImage = accessory
+      // `accessoryImage` is readonly on CPListItem; post-init updates go
+      // through the setter (which also clears `accessoryType`, per the SDK).
+      item.setAccessoryImage(accessory)
     }
 
     // An unavailable track grays out and goes inert — list rows are the
@@ -383,7 +385,7 @@ final class CarPlayListItemFactory {
       imageLoader?.loadArtwork(
         for: track,
         style: resolved,
-        size: Self.tileImageSize(gridTile: style?.gridTile, cardImage: resolved.cardImage),
+        size: Self.tileImageSize(gridTile: style.gridTile, cardImage: resolved.cardImage),
       ) { [weak item] image in
         Task { @MainActor in
           guard let item, let image else { return }
