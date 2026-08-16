@@ -34,6 +34,7 @@ object TestFixtures {
     album: String? = null,
     favorited: Boolean? = null,
     disabled: Boolean? = null,
+    style: TrackStyle? = null,
   ) =
     Track(
       id = id,
@@ -50,7 +51,7 @@ object TestFixtures {
       description = null,
       genre = null,
       duration = null,
-      style = null,
+      style = style,
       disabled = disabled,
       favorited = favorited,
       live = null,
@@ -58,7 +59,7 @@ object TestFixtures {
 
   /** A page [Section] — plain list by default. */
   fun section(
-    children: Array<Track>,
+    children: Array<Track> = emptyArray(),
     title: String? = null,
     subtitle: String? = null,
     style: SectionStyle? = null,
@@ -115,6 +116,7 @@ object TestFixtures {
     path: String = "https://api.example.com/channel/abc",
     artwork: String? = null,
     artworkSource: ImageSource? = null,
+    style: TrackStyle? = null,
   ) =
     Track(
       id = null,
@@ -131,7 +133,7 @@ object TestFixtures {
       description = null,
       genre = null,
       duration = null,
-      style = null,
+      style = style,
       disabled = null,
       favorited = null,
       live = null,

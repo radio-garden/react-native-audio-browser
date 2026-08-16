@@ -79,7 +79,10 @@ Consequences:
   (`carPlaySiriListButton`, the now-playing actions).
 - Nitro flattens `extends`, so the inheritance-completeness guarantee is
   a spec-level test (every inherited key read by every resolver;
-  positional keys provably excluded), not a type.
+  positional keys provably excluded), not a type. The same test holds the
+  dev diagnostic: every key of the block must be named by each platform's
+  `InertStyleDiagnostic` — by a rule, or by its explicit "no inertness
+  condition" list.
 - Amends ADR 0010: its `Section.style` string vocabulary is superseded by
   the block; sections themselves, queue scoping, and the flat-wire model
   are unchanged.

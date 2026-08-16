@@ -3,7 +3,12 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Inheritance-completeness guard for the style declaration block (ADR 0011).
+ * Completeness guards for the style declaration block (ADR 0011) — the checks
+ * Nitro's `extends`-flattening took out of the type system, in two parts:
+ * every key must be *resolved* by each platform's `StyleResolver`, and every
+ * key must be *accounted for* by each platform's `InertStyleDiagnostic`.
+ *
+ * Part one — inheritance completeness.
  *
  * `SectionStyle extends TrackStyle` in the spec, but Nitro flattens `extends`
  * into independent structs on every platform — so nothing in any type system
@@ -134,6 +139,72 @@ for (const resolver of RESOLVERS) {
       // level here would item-inherit a positional key.
       const mentions = trackBody.match(/display/g) ?? []
       expect(mentions).toHaveLength(1)
+    })
+  })
+}
+
+/**
+ * Part two — diagnostic completeness.
+ *
+ * The block model traded compile-time invalid-combination errors for
+ * inertness, and the dev-mode `InertStyleDiagnostic` is the recovery. It is
+ * exposed to the same flattening problem as the resolvers, one level up: a
+ * key added to the spec has no type-system tie to the diagnostic's rule set,
+ * so a property could ship whose inert combinations nobody is warned about.
+ *
+ * Each platform therefore dispositions the whole vocabulary — every key is a
+ * `Property` with an inertness rule, `alwaysRenderable`, or `positional` —
+ * and this test reads those three declarations and asserts set equality with
+ * the spec, both directions: a new key must be dispositioned, and a key
+ * deleted from the spec must not linger in the rule set.
+ */
+const DIAGNOSTICS = [
+  {
+    file: 'ios/Browser/InertStyleDiagnostic.swift',
+    // `case gridWrap`, up to the first member after the case list.
+    ruled: (source: string) =>
+      keysIn(
+        source,
+        /enum Property[\s\S]*?var isItemProperty/,
+        /^\s*case (\w+)$/gm
+      )
+  },
+  {
+    file: 'android/src/main/java/com/audiobrowser/browser/InertStyleDiagnostic.kt',
+    // `GRID_WRAP("gridWrap", …)`, up to the `;` that ends the entry list.
+    ruled: (source: string) =>
+      keysIn(source, /enum class Property[\s\S]*?;/, /\w+\("(\w+)"/g)
+  }
+]
+
+/** The capture group of every `pattern` match within the first `region`. */
+function keysIn(source: string, region: RegExp, pattern: RegExp): string[] {
+  const found = region.exec(source)
+  expect(found, `region ${region} not found`).not.toBeNull()
+  return [...found![0].matchAll(pattern)].flatMap((match) =>
+    match[1] === undefined ? [] : [match[1]]
+  )
+}
+
+for (const diagnostic of DIAGNOSTICS) {
+  describe(diagnostic.file, () => {
+    // Comment-free, so prose naming a key doesn't pass for dispositioning it.
+    const source = stripComments(
+      readFileSync(join(ROOT, diagnostic.file), 'utf8')
+    )
+    // The two lists are spelled `alwaysRenderable`/`positional` in Swift and
+    // SCREAMING_CASE in Kotlin; both hold bare string literals.
+    const listed = [
+      ...source.matchAll(
+        /(?:alwaysRenderable|ALWAYS_RENDERABLE|positional|POSITIONAL)\s*=[^\n]*/gi
+      )
+    ].flatMap((match) =>
+      [...match[0].matchAll(/"(\w+)"/g)].map((key) => key[1])
+    )
+
+    it('dispositions every key of the block, and only those', () => {
+      const dispositioned = [...diagnostic.ruled(source), ...listed]
+      expect(new Set(dispositioned)).toEqual(new Set(sectionKeys))
     })
   })
 }

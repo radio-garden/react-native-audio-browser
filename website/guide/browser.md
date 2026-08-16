@@ -527,6 +527,19 @@ Presentation lives in `style` blocks, separate from content, plus a few Track fi
 **`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Layouts render each platform's nearest supported form** — a single-line grid (`gridWrap: false`) on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a wrapping grid takes as many lines as it needs on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it shows more, never less. No car surface scrolls horizontally; an app UI typically renders `gridWrap: false` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). Item properties like `artworkRendering`, `imageShape`, and `accessorySymbol` are inherited — `track ?? section ?? page`, per property — so a section-wide value can be overridden per item; `accessorySymbol: 'none'` is the per-item escape from an inherited symbol, and where the accessory draws is the platform's choice per surface (trailing on list rows, leading the title on tiles). `display` is never inherited: it always describes the children of whatever it's set on. On a page or section it lays out that page or section; on a browsable track it declares the layout of the page that track opens — Android Auto needs it there, or that page renders as a list. `gridWrap` is inert unless `display` is `'grid'`. One AAOS caveat: AOSP-based Automotive units honor only the parent item's `display`, so a page mixing grid and list sections renders uniformly there — see [Android Auto → Browse display](/guide/android-auto#browse-display).
 :::
 
+::: tip Inert declarations are logged in debug builds
+A combination that can never render — `gridWrap` or `gridTile` outside a grid, `cardTint` with no card treatment in scope, `imageShape` on a list or a card, `accessorySymbol` on a card, `display` on a track that renders playable — is inert, not an error, so nothing breaks. In a **debug build**, each one is logged once per page resolution (`Timber` on Android, `os.log` on iOS) naming the section, the effective style, and the fix:
+
+```
+Inert style declaration on page '/home': `style.gridWrap` on section 'Featured'
+never renders — `gridWrap` renders only in a grid, but its effective style is
+display 'list'. Declare `display: 'grid'` on the section or the page, or drop
+`gridWrap`.
+```
+
+A property a _surface_ can't draw is never reported — that's the aspirational rule working, not a mistake. Release builds skip the check entirely, so a page you only ever serve to a release build reports nothing; browse it from a debug build to see the findings.
+:::
+
 ```ts
 // A grid page. Android Auto also needs display: 'grid' on the item
 // that opens this page — see the Android Auto guide:

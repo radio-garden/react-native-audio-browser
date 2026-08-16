@@ -317,6 +317,10 @@ final class BrowserManager {
     // untitled section — ADR 0010), then validate and transform. The output
     // never carries `children`.
     if let sections = resolvedTrack.normalizedSections {
+      // Dev diagnostic (ADR 0011) — before the blocks are folded, while each
+      // level is still attributable. Every page passes here whatever its
+      // source, and only on a cache miss. No-op outside debug builds.
+      InertStyleDiagnostic.warn(path: path, pageStyle: resolvedTrack.style, sections: sections)
       let transformed = try await transformSections(
         sections, parentPath: path, routeEntry: routeEntry?.0,
       )

@@ -594,6 +594,10 @@ class BrowserManager {
     // section — ADR 0010), then generate contextual paths and transform artwork
     // URLs. The output never carries `children`.
     val sections = resolvedTrack.normalizedSections ?: return resolvedTrack
+    // Dev diagnostic (ADR 0011) — before the blocks are folded, while each level is
+    // still attributable. Every page passes here whatever its source, and only on a
+    // cache miss. No-op outside debug builds.
+    InertStyleDiagnostic.warn(path, resolvedTrack.style, sections)
     // The contextual index is the flat page position — children concatenated in
     // section order (ADR 0009/0010).
     var flatIndex = 0

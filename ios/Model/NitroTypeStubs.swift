@@ -138,6 +138,16 @@
       default: return nil
       }
     }
+
+    // Mirrors the generated extension (nitrogen emits `stringValue` beside
+    // `init?(fromString:)` for every string-backed enum).
+    var stringValue: String {
+      switch self {
+      case .plain: "plain"
+      case .card: "card"
+      case .condensed: "condensed"
+      }
+    }
   }
 
   enum CardImage: Equatable {

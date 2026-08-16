@@ -1149,12 +1149,34 @@ interface ResolvedTrack extends Track {
           (every <code>TrackStyle</code> key read by every platform resolver —
           Nitro erases <code>extends</code>, so TS can't enforce this) shipped
           as <code>src/style-resolution.test.ts</code>. The dev-mode
-          inert-declaration diagnostic (warn when a declaration can never
-          render: <code>cardTint</code> with no card treatment in scope,
-          <code>gridWrap</code> on a list section) — the recovery for the
-          compile-time gating the block model deliberately gave up — is
-          <em>deferred</em>, tracked as an unchecked item on #132; what shipped
-          instead is the narrower promise-less all-grid page warning on Android.
+          inert-declaration diagnostic — the recovery for the compile-time
+          gating the block model deliberately gave up — shipped as
+          <code>InertStyleDiagnostic</code> on both platforms, called from each
+          <code>resolveUncached</code>: every page passes there whatever its
+          source (static config, route callback, fetched browse JSON) and only
+          on a cache miss, so a mistake is reported once per resolution rather
+          than once per serve, with the effective context and the fix (<code
+            >gridWrap</code
+          >
+          or <code>gridTile</code> outside a grid; <code>cardTint</code>/<code
+            >cardImage</code
+          >
+          with no card treatment in scope; <code>imageShape</code> on a list or
+          a card; <code>accessorySymbol</code> on a card;
+          <code>display</code> on a track rendered playable). Judged per level:
+          a section-level declaration against its own effective context, a
+          page-level one against every section it reaches — live anywhere is
+          live. Only <em>structural</em> inertness is reported;
+          <em>surface</em> inertness never is (a renderer dropping what it can't
+          draw is the aspirational rule working, not a mistake). The same
+          spec-level test file holds its key coverage, and the narrower
+          promise-less all-grid page warning on Android stays as its own check.
+          Debug builds only: the single gate is the diagnostic's own
+          <code>warn</code> entry point (<code>#if DEBUG</code> /
+          <code>BuildConfig.DEBUG</code>), so a release build never walks the
+          page and neither call site carries build-configuration knowledge — the
+          trade being that a page served only to a release build reports
+          nothing.
         </li>
       </ol>
 
