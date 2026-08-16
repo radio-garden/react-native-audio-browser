@@ -190,28 +190,19 @@ final class MockSleepTimerHandling: SleepTimerHandling {
   var trackPlayedToEndCallCount = 0
   var clearCallCount = 0
 
-  /// Records of the consumer-facing calls, so a test going through
-  /// `TrackPlayer.sleepTimerManager` can assert on them.
-  var state: SleepTimerState?
-  private(set) var setCalls: [(seconds: TimeInterval, fadeDuration: TimeInterval?)] = []
-  private(set) var setToEndOfTrackCallCount = 0
-
   @discardableResult func clear() -> Bool {
     clearCallCount += 1
-    state = nil
     return true
   }
 
   func onTrackChanged() { trackChangedCallCount += 1 }
   func onTrackPlayedToEnd() { trackPlayedToEndCallCount += 1 }
 
-  func get() -> SleepTimerState? { state }
-
-  func set(seconds: TimeInterval, fadeDuration: TimeInterval?) {
-    setCalls.append((seconds: seconds, fadeDuration: fadeDuration))
-  }
-
-  func setToEndOfTrack() { setToEndOfTrackCallCount += 1 }
+  // Consumer-facing surface — unused by the coordinator tests, present only to
+  // satisfy the protocol. Add recorders alongside the tests that need them.
+  func get() -> SleepTimerState? { nil }
+  func set(seconds _: TimeInterval, fadeDuration _: TimeInterval?) {}
+  func setToEndOfTrack() {}
 }
 
 // MARK: - Mock RetryHandling

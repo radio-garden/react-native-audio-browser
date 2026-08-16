@@ -11,20 +11,36 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  /// Current network connectivity state. Main-confined after construction: the
-  /// path handler hops via `DispatchQueue.main.async`, and every reader must
-  /// too (see `HybridAudioBrowser.getOnline()`).
+  /// Guards `_isOnline` only. Never held across `onChanged` — see `apply`.
+  private let lock = NSLock()
+  private var _isOnline = false
+
+  /// Current network connectivity state. Readable from any thread: the value is
+  /// lock-protected rather than confined, so callers on the JS thread (Nitro's
+  /// `getOnline`) don't have to block on a main-queue hop to read a Bool.
   ///
-  /// The one exception is the seed write in `init`, which runs on whatever
-  /// thread constructs the monitor. That is safe by publication rather than by
-  /// isolation — it completes before the instance reference escapes, and
-  /// `onChanged` is still nil, so no observer can see it.
-  private(set) var isOnline: Bool = false {
-    didSet {
-      if oldValue != isOnline {
-        logger.notice("Network status changed: \(oldValue) -> \(self.isOnline)")
-        onChanged?(isOnline)
-      }
+  /// The broadcast is main-confined even though the value isn't — `onChanged`
+  /// fans out to the JS bridge, a now-playing re-render and a player reload, so
+  /// it must not run under the lock (reentrancy) or off the main actor.
+  var isOnline: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return _isOnline
+  }
+
+  /// Stores a new status and, if it actually changed, broadcasts on main —
+  /// outside the lock.
+  private func apply(_ newStatus: Bool) {
+    lock.lock()
+    let changed = _isOnline != newStatus
+    let oldValue = _isOnline
+    _isOnline = newStatus
+    lock.unlock()
+
+    guard changed else { return }
+    logger.notice("Network status changed: \(oldValue) -> \(newStatus)")
+    DispatchQueue.main.async { [weak self] in
+      self?.onChanged?(newStatus)
     }
   }
 
@@ -40,10 +56,7 @@ final class NetworkMonitor: @unchecked Sendable {
 
     // Set up handler before starting
     monitor.pathUpdateHandler = { [weak self] path in
-      let newStatus = path.status == .satisfied
-      DispatchQueue.main.async { [weak self] in
-        self?.isOnline = newStatus
-      }
+      self?.apply(path.status == .satisfied)
     }
 
     // Start monitoring
@@ -52,15 +65,7 @@ final class NetworkMonitor: @unchecked Sendable {
     // Read initial state after starting (currentPath is now valid)
     let initialStatus = monitor.currentPath.status == .satisfied
     logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
-    isOnline = initialStatus
-  }
-
-  // MARK: - Public Methods
-
-  /// Gets the current network connectivity state.
-  /// - Returns: true if device is online, false otherwise
-  func getOnline() -> Bool {
-    isOnline
+    _isOnline = initialStatus
   }
 
   /// Stops monitoring and cleans up resources.

@@ -127,14 +127,10 @@ public struct MediaIntentCriteria: Sendable {
   /// Whether `query` is effectively the host app's own name. Case- and
   /// diacritic-insensitive.
   ///
-  /// Matches on whole words, not substrings. Siri does split app names — "Play
-  /// «App Name»" can arrive as just "Name" — so a partial match must still
-  /// count, but the old `a.contains(q) || q.contains(a)` counted ANY substring:
-  /// every spoken term that happened to sit inside the app name resumed instead
-  /// of searching, so a one-word station whose name is a word of the app name
-  /// was unreachable by voice. Requiring the query's words to be a subset of
-  /// the app name's (or vice versa) keeps the split-name case working while
-  /// letting an unrelated term through to search.
+  /// Whole-word subset match in either direction. Siri may deliver only part of
+  /// the name ("Name" for «App Name»), so a partial match must count — but a
+  /// substring match swallowed any query appearing inside the app name, making
+  /// one-word stations unreachable by voice.
   private static func queryMatchesAppName(_ query: String, appName: String?) -> Bool {
     guard let appName else { return false }
     let tokens: (String) -> Set<String> = {

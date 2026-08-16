@@ -26,22 +26,21 @@ public final class RNABCarPlayController: NSObject {
   private var trackSelector: TrackSelector?
 
   /// Track content subscriptions
-  private var isStarted = false
   private var listenerRemovals: [() -> Void] = []
 
-  /// Invalidates a `start()` whose readiness wait is still parked when a newer
-  /// `start()` supersedes it.
+  /// Identifies the current `start()` run; nil while stopped.
   ///
-  /// `start()` parks an untracked Task on `playerAndConfiguredBrowser.wait()`,
-  /// which is uncancellable and — per `OnceValue.reset()` — stays queued across
-  /// a reset, resuming every waiter when the value finally resolves. `isStarted`
-  /// alone can't tell the waiters apart: `restart()` is `stop(); start()`, so by
-  /// the time they resume it is `true` again and BOTH proceed. That is the
-  /// ordinary cold-start-in-car sequence (scene connects before RN is up, then
-  /// `instanceChangedEmitter` fires on `HybridAudioBrowser.init`), and it left
-  /// duplicate content subscriptions and a leaked `NowPlayingObserver` for the
-  /// rest of the session.
-  private var startGeneration: UInt = 0
+  /// A run needs an identity, not just a flag, because `start()` parks an
+  /// untracked Task on the uncancellable `playerAndConfiguredBrowser.wait()`,
+  /// which stays queued across a `reset()` and resumes every waiter. `restart()`
+  /// is `stop(); start()`, so a boolean is `true` again by the time the old
+  /// waiter resumes and both runs proceed — duplicate subscriptions and a leaked
+  /// `NowPlayingObserver` for the session. Comparing the captured run against
+  /// this answers "still running?" and "still me?" in one condition.
+  private var currentRun: UInt?
+  private var runCounter: UInt = 0
+
+  private var isStarted: Bool { currentRun != nil }
 
   /// Paths whose loading template has been pushed but not yet appeared. Guards a
   /// rapid double-tap from pushing the same destination twice (the first push is
@@ -111,6 +110,19 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
+  /// The tabs the tab bar actually shows. A disabled tab hides rather than
+  /// greys: `CPTabBarTemplate` has no disabled affordance, so per `Track`'s
+  /// rendering ladder an unavailable tab must not render as a normal-looking
+  /// control (matches Android Auto, which filters before its 4-tab cap).
+  ///
+  /// Named once because every site that reasons about the tab bar must agree on
+  /// it — `showTabBar` builds from this list, and `handleTabsChanged` compares
+  /// against it. Those two disagreeing is exactly what made the in-place
+  /// restamp dead code whenever any tab was disabled.
+  private static func visibleTabs(_ tabs: [Track]) -> [Track] {
+    tabs.filter { $0.disabled != true }
+  }
+
   /// Whether a list item identifies the currently active (loaded) track.
   ///
   /// Compares track identities (`id` when non-blank, else `src`): the active
@@ -154,9 +166,9 @@ public final class RNABCarPlayController: NSObject {
   @objc
   public func start() {
     guard !isStarted else { return }
-    isStarted = true
-    startGeneration &+= 1
-    let generation = startGeneration
+    runCounter &+= 1
+    currentRun = runCounter
+    let run = runCounter
 
     logger.info("Starting CarPlay controller")
 
@@ -183,10 +195,8 @@ public final class RNABCarPlayController: NSObject {
     // Wait for both browser and player to be ready
     Task { @MainActor in
       let (browser, _) = await playerAndConfiguredBrowser.wait()
-      // Both `isStarted` (are we running at all?) and the generation (are we
-      // still the CURRENT run?) — a restart re-arms the former, so only the
-      // latter distinguishes this waiter from the one that superseded it.
-      guard self.isStarted, self.startGeneration == generation else { return }
+      // Answers "still running?" and "still this run?" at once.
+      guard self.currentRun == run else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
       self.isGated = browser.isGateActive
@@ -221,7 +231,7 @@ public final class RNABCarPlayController: NSObject {
   @objc
   public func stop() {
     guard isStarted else { return }
-    isStarted = false
+    currentRun = nil
 
     logger.info("Stopping CarPlay controller")
 
@@ -484,11 +494,7 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func showTabBar(tabs allTabs: [Track]) async {
-    // A disabled tab hides — CPTabBarTemplate has no gray affordance, so per
-    // Track.disabled's rendering ladder an unavailable tab must not render as
-    // a normal-looking control (matches Android Auto, which filters before
-    // its 4-tab cap).
-    let tabs = allTabs.filter { $0.disabled != true }
+    let tabs = Self.visibleTabs(allTabs)
 
     // Serialize concurrent tab-bar builds across BOTH the gated and non-gated
     // paths with one shared generation token: bump at entry, capture, and bail
@@ -970,12 +976,8 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
-    // Compare against the same list `showTabBar` actually built templates from
-    // — disabled tabs are filtered out there, so comparing the RAW list meant
-    // the counts could never match once any tab was disabled, and the in-place
-    // restamp below was dead code: every tab change fell through to a full root
-    // rebuild that resets the selected tab and re-loads the first tab.
-    let visibleTabs = tabs.filter { $0.disabled != true }
+    // Compare against the list showTabBar builds templates from, not the raw one.
+    let visibleTabs = Self.visibleTabs(tabs)
     // Same tabs by path while ungated → only the tab-bar entries changed
     // (e.g. titles after a locale switch): restamp them in place. No rebuild,
     // so the selected tab and any pushed navigation stack survive. (Gate

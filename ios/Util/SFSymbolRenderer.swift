@@ -25,9 +25,7 @@ final class SFSymbolRenderer: @unchecked Sendable {
 
   @MainActor
   private init() {
-    // `UITraitCollection.current` rather than the deprecated `UIScreen.main`
-    // (also unavailable on visionOS, which the podspec targets).
-    scale = UITraitCollection.current.displayScale
+    scale = appDisplayScale
 
     let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
     cacheDirectory = caches.appendingPathComponent("sf-symbols", isDirectory: true)

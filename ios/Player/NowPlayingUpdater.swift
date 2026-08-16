@@ -30,15 +30,18 @@ final class NowPlayingUpdater {
     let album: String?
   }
 
+  /// Dedupe baseline for `applyFields`. Only meaningful while it describes the
+  /// controller's current info dict, so the two are cleared together in
+  /// `clearNowPlaying()` — never separately.
   private var lastPublished: Published?
 
-  /// Drops the publish-dedupe baseline. Must be called whenever the underlying
-  /// now-playing info dict is emptied (`NowPlayingInfoController.clear()`):
-  /// otherwise re-loading the SAME track compares equal to the last publish and
-  /// returns early, leaving title/artist/album absent from the freshly-cleared
-  /// dict — artwork still lands (non-comparable, never deduped), so the surface
-  /// showed art with no text and `onChanged` never fired.
-  func invalidatePublished() {
+  /// Empties the now-playing surface and the dedupe baseline that describes it.
+  /// One call, because clearing the dict without the baseline makes the next
+  /// publish of the SAME track dedupe against a dict that no longer holds it —
+  /// artwork lands (never deduped) but the text doesn't, and `onChanged`
+  /// never fires.
+  func clearNowPlaying() {
+    nowPlayingInfoController.clear()
     lastPublished = nil
   }
 
@@ -51,15 +54,19 @@ final class NowPlayingUpdater {
     self.nowPlayingInfoController = nowPlayingInfoController
   }
 
-  /// The phone's screen, found through the active window scene. Nil when the
-  /// app has no foreground UI scene (e.g. running headless for CarPlay), in
-  /// which case callers fall back to a sensible default — this only sizes a
-  /// CDN artwork request, so being approximate is harmless.
-  private static var activeScreen: UIScreen? {
-    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    let active = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
-    return active?.screen
+  /// Pixel width to request now-playing artwork at: the active scene's screen
+  /// width in pixels, capped at `maxArtworkPixelWidth`. With no foreground
+  /// scene (headless CarPlay) the cap stands in — every current device exceeds
+  /// it anyway, and this only sizes a CDN request.
+  private static var artworkPixelWidth: CGFloat {
+    guard let screen = UIApplication.shared.activeWindowScene?.screen else {
+      return maxArtworkPixelWidth
+    }
+    return min(screen.bounds.width * screen.scale, maxArtworkPixelWidth)
   }
+
+  /// Mirrored by the Kotlin twin's `artworkSizePx`.
+  private static let maxArtworkPixelWidth: CGFloat = 1200
 
   /// Publishes the static, per-track fields + artwork on a track change. The title/artist/album
   /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
@@ -172,13 +179,7 @@ final class NowPlayingUpdater {
     let artworkUrl = track.artworkSource?.uri ?? track.artwork?.url
     logger.debug("loadArtwork: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
-    // Now Playing artwork: use screen width in pixels, capped at 1200px.
-    // Resolved from the active window scene rather than `UIScreen.main`, which
-    // is deprecated (and unavailable on visionOS, which the podspec targets).
-    let screen = Self.activeScreen
-    let screenScale = screen?.scale ?? 3
-    let screenWidth = (screen?.bounds.width ?? 430) * screenScale
-    let artworkSize = min(screenWidth, 1200)
+    let artworkSize = Self.artworkPixelWidth
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 
     artworkLoadTask?.cancel()

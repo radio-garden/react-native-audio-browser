@@ -303,8 +303,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     didSet {
       // The monitor->JS bridge is wired centrally in setupPlayer (so it doesn't depend on a JS
       // subscription and can also drive the now-playing re-render + player reconnect). Here we only
-      // push the current state to a newly-attached subscriber — read main-confined, see getOnline().
-      onOnlineChanged(onMainActor { networkMonitor.isOnline })
+      // push the current state to a newly-attached subscriber.
+      onOnlineChanged(networkMonitor.isOnline)
     }
   }
 
@@ -1305,7 +1305,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // Classify a stall by connectivity so the formatter can show "No internet connection" vs
     // "Reconnecting…" without a separate read. nil while not stalled.
     let stalled: StallReason? =
-      player.isStalled ? (networkMonitor.getOnline() ? .buffering : .offline) : nil
+      player.isStalled ? (networkMonitor.isOnline ? .buffering : .offline) : nil
     player.nowPlayingUpdater.render(
       track: track,
       timedMetadata: latestTimedMetadata,
@@ -1321,11 +1321,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Network
 
   public func getOnline() throws -> Bool {
-    // Hop like every other accessor here: `isOnline` is main-confined (the
-    // monitor's path handler writes it via `DispatchQueue.main.async`), and
-    // Nitro calls this on the JS thread. Reading it directly was the one
-    // unsynchronized access left on that property.
-    onMainActor { networkMonitor.getOnline() }
+    // No `onMainActor` hop: `isOnline` is lock-protected, so this stays a
+    // cheap read on the JS thread instead of blocking on the main queue.
+    networkMonitor.isOnline
   }
 
   // MARK: - System Volume
@@ -1505,11 +1503,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public func openOutputPicker() throws {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      guard let windowScene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first(where: { $0.activationState == .foregroundActive }),
-        let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-        var topController = window.rootViewController
+      guard let windowScene = UIApplication.shared.activeWindowScene,
+            let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+            var topController = window.rootViewController
       else {
         self.logger.error("openOutputPicker: no active window scene / root view controller")
         return

@@ -15,10 +15,7 @@ struct SVGProcessor: ImageProcessor {
   @MainActor
   init(size: CGSize? = nil, scale: CGFloat? = nil) {
     self.size = size
-    // `UITraitCollection.current` rather than the deprecated `UIScreen.main`
-    // (also unavailable on visionOS, which the podspec targets): on the main
-    // actor it already reflects the environment we are rendering for.
-    self.scale = scale ?? UITraitCollection.current.displayScale
+    self.scale = scale ?? appDisplayScale
   }
 
   func process(item: ImageProcessItem, options _: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {

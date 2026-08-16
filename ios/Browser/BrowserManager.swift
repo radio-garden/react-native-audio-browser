@@ -67,13 +67,7 @@ final class BrowserManager {
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
-  // Cache for the most recent search. Keyed by the WHOLE parameter set, not
-  // just `query`: the structured fields (mode/genre/artist/album/title/
-  // playlist/reference) all reach the request, and voice intents routinely
-  // produce the same `query` with different structure — `MediaIntentCriteria`
-  // falls back to the structured value when there is no spoken name, so
-  // "play jazz" (genre="jazz") and a plain text search for "jazz" arrive with
-  // an identical `query`. Keying on `query` alone served one as the other.
+  // Most recent search, keyed by `searchCacheKey`.
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
@@ -600,27 +594,40 @@ final class BrowserManager {
     )
   }
 
-  /// The cache identity of a search: every field that reaches the request.
-  /// `\u{1}` separates, so a value containing the separator can't forge a
-  /// different key.
-  private static func searchCacheKey(_ params: SearchParams) -> String {
-    [
-      params.query,
-      params.mode?.stringValue,
-      params.genre,
-      params.artist,
-      params.album,
-      params.title,
-      params.playlist,
-      params.reference == .my ? "my" : nil,
-    ]
-    .map { $0 ?? "" }
-    .joined(separator: "\u{1}")
+  /// The query params a structured search sends: `q` plus whichever filters are
+  /// set. Mirrors Android's `executeSearchApiRequest` and the web stub.
+  ///
+  /// Single source of truth for "what distinguishes one search from another" —
+  /// the request sends exactly this, and the cache keys on exactly this, so a
+  /// field added here can't be forgotten in one place and silently serve one
+  /// search's results for another.
+  private static func searchQueryParams(_ params: SearchParams) -> [String: String] {
+    var query: [String: String] = ["q": params.query]
+    if let mode = params.mode { query["mode"] = mode.stringValue }
+    if params.reference == .my { query["reference"] = "my" }
+    if let genre = params.genre { query["genre"] = genre }
+    if let artist = params.artist { query["artist"] = artist }
+    if let album = params.album { query["album"] = album }
+    if let title = params.title { query["title"] = title }
+    if let playlist = params.playlist { query["playlist"] = playlist }
+    return query
   }
 
-  /// Structured search. Emits `q` plus any of `mode`/`genre`/`artist`/`album`/
-  /// `title`/`playlist` that are set, mirroring Android's `executeSearchApiRequest`
-  /// and the web stub. Cached by the full parameter set (see `lastSearchKey`).
+  /// The cache identity of a search. Sorted so key order is stable, and
+  /// `\u{1}`-delimited so two different param sets can't serialize alike.
+  private static func searchCacheKey(_ params: SearchParams) -> String {
+    searchQueryParams(params)
+      .sorted { $0.key < $1.key }
+      .map { "\($0.key)=\($0.value)" }
+      .joined(separator: "\u{1}")
+  }
+
+  /// Structured search, cached by the full parameter set.
+  ///
+  /// Voice intents reuse `query` across different structures —
+  /// `MediaIntentCriteria` falls back to the structured value when there is no
+  /// spoken name, so "play jazz" (genre) and a text search for "jazz" arrive
+  /// with an identical `query` — hence `searchCacheKey` rather than `query`.
   func search(_ params: SearchParams) async throws -> ResolvedTrack {
     let query = params.query
     let cacheKey = Self.searchCacheKey(params)
@@ -653,18 +660,9 @@ final class BrowserManager {
       // Seed the search config's static path onto the base — a layer's static
       // path never applies (carried from the base; only a transform may change
       // it). Matches the web stub's fetchSearchResults and Android.
-      var queryParams: [String: String] = ["q": query]
-      if let mode = params.mode { queryParams["mode"] = mode.stringValue }
-      if params.reference == .my { queryParams["reference"] = "my" }
-      if let genre = params.genre { queryParams["genre"] = genre }
-      if let artist = params.artist { queryParams["artist"] = artist }
-      if let album = params.album { queryParams["album"] = album }
-      if let title = params.title { queryParams["title"] = title }
-      if let playlist = params.playlist { queryParams["playlist"] = playlist }
-
       let request = try await buildApiRequest(
         kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": query],
-        initialQuery: queryParams,
+        initialQuery: Self.searchQueryParams(params),
       )
       logger.debug("Searching via API: \(request.url)")
       let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)

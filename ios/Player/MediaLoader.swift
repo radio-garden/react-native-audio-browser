@@ -42,22 +42,24 @@ final class MediaLoader {
       // consumer-supplied and `cancelAll()` cannot force an in-flight `await`
       // to return, so a strong capture let a resolver that never settles pin
       // this loader (which also retains the task) indefinitely.
+      // `Logger` is a value type, so capturing it directly keeps the logging
+      // off `self` — and `self` weak, so a consumer resolver that never settles
+      // can't pin the loader (`cancelAll()` can't force an in-flight `await` to
+      // return).
+      let logger = logger
       mediaResolverTask = Task { [weak self] in
-        // Note `self?.` rather than an up-front `guard let self`: binding it
-        // strongly here would span the resolver await and reintroduce exactly
-        // the retain this avoids.
-        self?.logger.debug("resolveAndLoad: starting resolution for \(src)")
+        logger.debug("resolveAndLoad: starting resolution for \(src)")
 
         guard !Task.isCancelled else {
-          self?.logger.debug("resolveAndLoad: cancelled before start")
+          logger.debug("resolveAndLoad: cancelled before start")
           return
         }
 
-        self?.logger.debug("resolveAndLoad: calling resolver...")
+        logger.debug("resolveAndLoad: calling resolver...")
         let resolved = await resolver(src, track)
 
         guard !Task.isCancelled, let self else {
-          self?.logger.debug("resolveAndLoad: cancelled after resolver returned")
+          logger.debug("resolveAndLoad: cancelled after resolver returned")
           return
         }
 

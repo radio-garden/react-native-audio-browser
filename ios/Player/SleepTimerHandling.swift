@@ -13,10 +13,8 @@ import Foundation
   func onTrackChanged()
   func onTrackPlayedToEnd()
 
-  // The consumer-facing surface. Previously absent, which forced
-  // `TrackPlayer.sleepTimerManager` to re-widen the coordinator's existential
-  // with `as! SleepTimerManager` — defeating the seam, since a fake injected
-  // into the coordinator could never reach a caller going through TrackPlayer.
+  // Consumer-facing surface — HybridAudioBrowser drives these through
+  // TrackPlayer, so they belong here rather than behind a concrete downcast.
 
   /// Invoked when the timer state changes (set, cleared, completed).
   var onChanged: ((SleepTimerState) -> Void)? { get set }

@@ -197,12 +197,9 @@ class TrackPlayer {
 
   /// The current item's duration, or 0 when it has none (a live stream).
   ///
-  /// Deliberately does NOT consult `item.asset.duration`: that accessor is
-  /// deprecated as of the iOS 16 minimum (`load(.duration)` replaces it) and
-  /// blocks the caller while it fetches for a remote asset — on the main
-  /// thread, since this type is `@MainActor`. `item.duration` reports the same
-  /// value without blocking; it was already the fallback, so the asset branch
-  /// only ever won a race it should not have been running.
+  /// Don't reintroduce `item.asset.duration`: it is deprecated as of the iOS 16
+  /// minimum and blocks the main actor fetching a remote asset's duration. Read
+  /// on every progress tick.
   var duration: Double {
     guard let item = avPlayer.currentItem else { return 0.0 }
 
@@ -450,15 +447,9 @@ class TrackPlayer {
     )
   }
 
-  /// Empties the queue and the now-playing surface. Deliberately does NOT
-  /// unlink the `MPNowPlayingSession`: `avPlayer` survives a clear and is
-  /// reused by the next load, while `linkPlayer` only ever runs from
-  /// `setupAVPlayer()` (init / `recreateAVPlayer()`). Unlinking here left the
-  /// session nil with nothing to restore it, so every subsequent load
-  /// published nowhere — no metadata, no transport controls — until an
-  /// error-retry or a media-services reset happened to recreate the player.
-  /// `coordinator.clear()` already clears the published info, which is what
-  /// actually removes the app from the surface.
+  /// Empties the queue and the published now-playing info. Unlinking the
+  /// session belongs in `destroy()`: `avPlayer` survives a clear, and only
+  /// `setupAVPlayer()` re-links.
   func clear() {
     coordinator.clear()
   }
@@ -861,9 +852,7 @@ extension TrackPlayer: PlaybackEffectHandler {
   }
 
   func clearNowPlaying() {
-    nowPlayingInfoController.clear()
-    // The info dict is now empty, so the updater's dedupe baseline is stale.
-    nowPlayingUpdater.invalidatePublished()
+    nowPlayingUpdater.clearNowPlaying()
   }
 
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
