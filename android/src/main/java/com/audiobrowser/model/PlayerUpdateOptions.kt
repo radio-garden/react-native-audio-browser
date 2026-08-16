@@ -20,7 +20,7 @@ data class PlayerUpdateOptions(
   var progressUpdateEventInterval: Double? = null,
 
   // Player capabilities - most enabled by default, only false values disable
-  // Exceptions: bookmark, jumpForward, jumpBackward default to false
+  // Exceptions: jumpForward, jumpBackward default to false
   var capabilities: PlayerCapabilities =
     PlayerCapabilities(
       play = null,
