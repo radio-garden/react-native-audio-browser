@@ -20,6 +20,7 @@ import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.browser.ContentNotFoundException
 import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
+import com.audiobrowser.browser.flattenedChildren
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
@@ -757,7 +758,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
       val searchResults = browserManager.search(query)
-      searchResults.children ?: emptyArray()
+      // Flattened, not `children`: a resolved page carries its rows in
+      // `sections` (ADR 0010) and search builds exactly one untitled section,
+      // so `children` is always null here and this returned nothing at all.
+      searchResults.flattenedChildren?.toTypedArray() ?: emptyArray()
     }
   }
 

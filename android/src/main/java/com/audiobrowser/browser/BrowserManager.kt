@@ -562,6 +562,10 @@ class BrowserManager {
   /** Clears all cached content. */
   fun clearContentCache() {
     contentCache.evictAll()
+    // The search slot is content too: a locale switch or a re-auth changes titles, src, artwork
+    // and availability, and nothing else ever evicts it, so a repeated query returned
+    // pre-invalidation results forever. (Matches the Swift twin's clearContentCache.)
+    lastSearch = null
     // Bump the layer generation so request/browse resolver thunks are re-resolved on the next
     // request (invalidateAllContent → clearContentCache is the documented re-resolve trigger).
     layerGeneration += 1

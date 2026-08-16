@@ -160,6 +160,35 @@ describe('QueueManager', () => {
       expect(q.nextIndex()).toBeUndefined()
     })
 
+    // Filling a queue that had no current track: the order is shuffled with
+    // nothing to lead it, so the track that becomes current can land anywhere —
+    // last included, which reads as end-of-queue from the very first track.
+    it('leads the order with the start track when setTracks fills an empty queue', () => {
+      const fresh = new QueueManager()
+      fresh.setShuffleEnabled(true) // shuffle already on, queue still empty
+      fresh.setTracks(tracks(4))
+      fresh.currentIndex = 2 // the start index
+
+      // identity order [0,1,2,3] re-pinned on 2 → [2,1,0,3]
+      expect(fresh.previousIndex()).toBeUndefined()
+      expect(fresh.nextIndex()).toBe(1)
+    })
+
+    it('leads the order with the start track when insert fills an empty queue', () => {
+      const fresh = new QueueManager()
+      fresh.setShuffleEnabled(true)
+      const random = vi.spyOn(Math, 'random').mockReturnValue(0.999)
+      try {
+        fresh.insert(tracks(4)) // slotted in at the order's end → [0,1,2,3]
+      } finally {
+        random.mockRestore()
+      }
+      fresh.currentIndex = 3 // would sit LAST in the order without the re-pin
+
+      expect(fresh.nextIndex()).toBe(1)
+      expect(fresh.previousIndex()).toBeUndefined()
+    })
+
     it('keeps every track at its shuffle position across a move', () => {
       q.currentIndex = 1
       q.move(1, 3) // tracks [s0,s2,s3,s1]; order remapped to [0,3,1,2]

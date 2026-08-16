@@ -668,6 +668,9 @@ class Player(internal val context: Context) {
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     exoPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    if (mediaItems.isNotEmpty()) {
+      exoPlayer.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
+    }
     queueSourcePath = sourcePath
     exoPlayer.prepare()
   }

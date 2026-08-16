@@ -167,7 +167,11 @@ class PlaybackStateStore(private val player: Player) {
       // Apply player settings from persisted state
       player.repeatMode = state.repeatMode
       player.shuffleMode = state.shuffleEnabled
-      player.playbackSpeed = state.playbackSpeed
+      // Guarded because this input is untrusted: ExoPlayer's setPlaybackSpeed rejects a
+      // non-positive speed with IllegalArgumentException, and a snapshot holding one (a
+      // corrupted prefs file — the normal write path can't produce it) would then throw on
+      // every resume, permanently, since the bad value stays persisted.
+      if (state.playbackSpeed > 0f) player.playbackSpeed = state.playbackSpeed
 
       Timber.d(
         "Restored player settings: repeatMode=${state.repeatMode}, shuffle=${state.shuffleEnabled}, speed=${state.playbackSpeed}"

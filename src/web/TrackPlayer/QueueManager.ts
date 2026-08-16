@@ -63,8 +63,22 @@ export class QueueManager {
   }
 
   set currentIndex(index: number | undefined) {
+    const hadNoCurrent = this._currentIndex === undefined
     this._lastIndex = this._currentIndex
     this._currentIndex = index
+
+    // A queue with no current track has an order that was shuffled with nothing
+    // to lead it — `setTracks` clears the index before regenerating, and
+    // `insert` drops new indices at random positions — so the track that then
+    // becomes current can sit anywhere, including last. That reads as
+    // end-of-queue immediately: `nextIndex` is undefined from the first track,
+    // so auto-advance fires onQueueEnded after one track. Re-pin at the moment
+    // the queue gains a current track. Safe as a setter hook here because the
+    // tracks are always in place before the index is assigned (both `setTracks`
+    // and `insert` run first).
+    if (hadNoCurrent && index !== undefined && this._shuffleEnabled) {
+      this.regenerateShuffleOrder()
+    }
   }
 
   get lastIndex(): number | undefined {
