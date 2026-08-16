@@ -207,6 +207,12 @@ setRate(1.5) // 1.5× speed
 getRate() // → current rate
 ```
 
+Rate is a speed multiplier, not a transport control: it's independent of
+play/pause, and setting it while paused doesn't start playback. Pass a value
+greater than zero — the platforms disagree on what a non-positive rate does
+(iOS ignores it, Android throws, web stalls the audio element), so treat it as
+unsupported rather than as a way to pause.
+
 There's no reactive hook for rate (it only changes when you set it), so a
 control that displays the current speed just holds it in local state:
 

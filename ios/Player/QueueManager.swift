@@ -225,11 +225,8 @@ class QueueManager {
     let wasEmpty = tracks.isEmpty
     let insertIndex = tracks.count
     tracks.append(contentsOf: newTracks)
+    if wasEmpty { return adoptInitialCurrent(initialIndex) }
     shuffleOrder.insert(at: insertIndex, count: newTracks.count)
-    if wasEmpty {
-      currentIndex = max(0, min(initialIndex, tracks.count - 1))
-      return true
-    }
     return false
   }
 
@@ -250,12 +247,29 @@ class QueueManager {
       currentIndex += newTracks.count
     }
     tracks.insert(contentsOf: newTracks, at: index)
+    if wasEmpty { return adoptInitialCurrent(0) }
     shuffleOrder.insert(at: index, count: newTracks.count)
-    if wasEmpty {
-      currentIndex = 0
-      return true
-    }
     return false
+  }
+
+  /// The queue was empty: `index` becomes the current track AND leads the
+  /// shuffle order. One operation because the two must not be separable —
+  /// forgetting the second half is the bug this exists to prevent.
+  ///
+  /// `insert(at:count:)` drops new indices at *random* shuffle positions, so
+  /// without the pin the starting track can land last in the order, which reads
+  /// as `isLastInPlaybackOrder`: the queue "ends" (and fires
+  /// `playerDidEndQueue`) the moment the first track finishes. Pins
+  /// unconditionally, like `setQueue` — the order has to be sane whether or not
+  /// shuffle is on right now, since `shuffleEnabled`'s didSet only re-pins on
+  /// the off→on edge.
+  ///
+  /// Returns true, so callers can `return adoptInitialCurrent(…)` to report the
+  /// current track changed.
+  private func adoptInitialCurrent(_ index: Int) -> Bool {
+    currentIndex = max(0, min(index, tracks.count - 1))
+    shuffleOrder = ShuffleOrder(length: tracks.count, firstIndex: currentIndex)
+    return true
   }
 
   /// Remove a track from the queue.

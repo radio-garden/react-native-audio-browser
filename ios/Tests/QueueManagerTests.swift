@@ -382,6 +382,25 @@ struct AddTests {
     #expect(q.tracks[2].id == "c")
     #expect(q.tracks[3].id == "d")
   }
+
+  /// Filling an empty queue must pin the start track to the head of the shuffle
+  /// order, exactly as `setQueue` does — `insert(at:count:)` places new indices
+  /// at random positions, so without the pin the start track can land last and
+  /// the queue reports end-of-queue as soon as it finishes. `shuffleEnabled`'s
+  /// didSet only re-pins on the off→on edge, so shuffle-already-on gets nothing
+  /// from it.
+  @Test func toEmptyQueue_withShuffleAlreadyOn_startTrackLeadsTheOrder() {
+    for start in 0 ..< 6 {
+      let q = QueueManager()
+      q.shuffleEnabled = true
+      q.add(tracks("a", "b", "c", "d", "e", "f"), initialIndex: start)
+
+      #expect(q.shuffleOrder.isFirst(start))
+      #expect(!q.isLastInPlaybackOrder)
+      #expect(q.nextTracks.count == 5)
+      #expect(q.previousTracks.isEmpty)
+    }
+  }
 }
 
 // MARK: - Mutations: addAt()
@@ -412,6 +431,18 @@ struct AddAtTests {
     let changed = try q.addAt(tracks("a"), at: 0)
     #expect(changed == true)
     #expect(q.currentIndex == 0)
+  }
+
+  /// Same pinning requirement as `add()` into an empty queue — see its twin.
+  @Test func toEmptyQueue_withShuffleAlreadyOn_startTrackLeadsTheOrder() throws {
+    let q = QueueManager()
+    q.shuffleEnabled = true
+    try q.addAt(tracks("a", "b", "c", "d", "e", "f"), at: 0)
+
+    #expect(q.shuffleOrder.isFirst(0))
+    #expect(!q.isLastInPlaybackOrder)
+    #expect(q.nextTracks.count == 5)
+    #expect(q.previousTracks.isEmpty)
   }
 
   @Test func invalidIndex_throws() {

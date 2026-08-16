@@ -384,6 +384,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   deinit {
+    // Block-based notification observers are retained by the center until an
+    // explicit removeObserver — observer death isn't detected — so without this
+    // every JS reload strands another token + closure. They capture `self`
+    // weakly, so a stranded one no-ops rather than misbehaving; what accumulates
+    // is the tokens and a wasted main-queue dispatch per interruption / route
+    // change / media-services reset. (`volumeObservation` needs no counterpart:
+    // NSKeyValueObservation invalidates itself when this instance releases it.)
+    for observer in [interruptionObserver, routeChangeObserver, mediaServicesResetObserver]
+      .compactMap(\.self)
+    {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
     // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
     let player = self.player
     if Thread.isMainThread {
@@ -1891,6 +1904,9 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
             return
           }
           browser.logger.info("resume: cold — restoring persisted track")
+          // Repeat / shuffle / speed come back before the queue is built — see
+          // `restorePlaybackSettings(from:)` for why that ordering matters.
+          player.restorePlaybackSettings(from: state)
           let startMs = (track.live == true) ? nil : state.positionMs
           // Match Android resume: re-expand the full queue from the track's contextual
           // path (parent container → siblings + selected index). Fall back to the single

@@ -509,23 +509,28 @@ public final class RNABCarPlayController: NSObject {
     gateBuildGeneration &+= 1
     let generation = gateBuildGeneration
 
-    // A zero-tab CPTabBarTemplate renders blank, with no copy, so empty routes
-    // to the .emptyContent error page like every other failure (formatted
-    // through the app's formatNavigationError, ADR 0001). The guard lives at
-    // this choke point — both the initial build and runtime tab changes pass
-    // through here — and sits before the gate check, since a gated build from
-    // zero tabs is equally blank.
-    guard !tabs.isEmpty else {
-      await showRootNavigationError(.code(.emptyContent))
-      return
-    }
-
     // While gated, each tab path is resolved per-request: a gated tab renders
     // the gate page with that request's chrome; an allowed tab shows real
     // content. This generalizes the old "all tabs show the gate" — a path the
     // resolver allows now shows real content.
+    //
+    // Ahead of the empty guard below, because a gated build from zero tabs is
+    // NOT blank: it paints a full-screen gate page as root (a gate raised
+    // before config loads is exactly that case). `showGatedTabBar` owns the
+    // empty-tabs decision and falls back to the same .emptyContent page when
+    // the resolver allows the root.
     if isGated {
       await showGatedTabBar(tabs: tabs, generation: generation)
+      return
+    }
+
+    // A zero-tab CPTabBarTemplate renders blank, with no copy, so empty routes
+    // to the .emptyContent error page like every other failure (formatted
+    // through the app's formatNavigationError, ADR 0001). The guard lives at
+    // this choke point — both the initial build and runtime tab changes pass
+    // through here.
+    guard !tabs.isEmpty else {
+      await showRootNavigationError(.code(.emptyContent))
       return
     }
 
@@ -568,8 +573,7 @@ public final class RNABCarPlayController: NSObject {
 
     guard !tabs.isEmpty else {
       // Tabs unknown (config not loaded yet, or none) — resolve the root path
-      // and show a single gate page (or, if allowed, fall back to a normal
-      // build once tabs arrive).
+      // and show a single gate page.
       let outcome = await audioBrowser.gateDecision(
         for: NativeGateRequest(reason: .browse, path: nil, search: nil),
       )
@@ -579,6 +583,11 @@ public final class RNABCarPlayController: NSObject {
         interfaceController.safeSetRoot(
           makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
         )
+      } else {
+        // The resolver allows the root, and there are no tabs to show — the
+        // same nothing-to-render case the ungated build routes to .emptyContent.
+        // Without this the loading spinner would stay as root forever.
+        await showRootNavigationError(.code(.emptyContent))
       }
       return
     }
@@ -1318,9 +1327,22 @@ public final class RNABCarPlayController: NSObject {
   /// view formatted via the app's `formatNavigationError` (path "/"), like every
   /// other browse failure. The empty view renders reliably here because it's the
   /// template's initial state at set-root time.
+  ///
+  /// Formatting awaits the app's `formatNavigationError` callback, so a tab-bar
+  /// build can start and paint during the hop — this error root must not
+  /// clobber it. Captured here rather than passed in: the `showTabBar` /
+  /// `showGatedTabBar` callers hold the newest generation when they call, so
+  /// capturing is equivalent for them and covers the others for free.
+  ///
+  /// Not airtight for `buildInitialInterface`'s two callers: that function
+  /// doesn't participate in `gateBuildGeneration` and suspends at `queryTabs()`,
+  /// so a build that superseded it *before* this was entered isn't caught.
+  /// Closing that needs a generation captured at `buildInitialInterface` entry.
   @MainActor
   private func showRootNavigationError(_ navError: NavigationError) async {
+    let generation = gateBuildGeneration
     let formatted = await formattedNavigationError(navError, path: "/")
+    guard gateBuildGeneration == generation else { return }
     let template = CPListTemplate(title: nil, sections: [])
     template.emptyViewTitleVariants = [formatted.title]
     template.emptyViewSubtitleVariants = formatted.message.flatMap { $0.isEmpty ? nil : [$0] } ?? []

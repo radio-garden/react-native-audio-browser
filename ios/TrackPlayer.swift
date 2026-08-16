@@ -254,8 +254,22 @@ class TrackPlayer {
   var rate: Float {
     get { coordinator.rate }
     set {
+      // A non-positive rate leaves the player unable to play at all — and would
+      // poison the next play() through `defaultRate` below. Rejected here, at
+      // the one setter every source funnels through (JS, remote command, CarPlay
+      // rate cycling, a restored snapshot), rather than at each of them.
+      guard newValue > 0 else { return }
       coordinator.rate = newValue
-      avPlayer.rate = newValue
+      // Assigning a nonzero `AVPlayer.rate` IS `play()` — so setting the speed
+      // while paused would start audible playback behind the user's back, with
+      // `playWhenReady` still false (the lock screen would read "paused" over
+      // sound). On Android and web the speed control is independent of the play
+      // intent; this keeps iOS the same.
+      avPlayer.defaultRate = newValue
+      if playWhenReady { avPlayer.rate = newValue }
+      // Same reason as the repeat/shuffle edges below — a speed changed while
+      // paused would otherwise not reach the snapshot the cold resume restores.
+      persistPlaybackState()
     }
   }
 
@@ -545,10 +559,12 @@ class TrackPlayer {
 
     nowPlayingInfoController.linkPlayer(avPlayer)
 
+    // Stage the rate unconditionally, so a freshly recreated player carries it
+    // before anything plays — `rate`'s setter holds the same invariant, and on
+    // the playWhenReady branch below `defaultRate` was previously left at 1.0.
+    avPlayer.defaultRate = rate
     if playWhenReady {
       startPlayback()
-    } else {
-      avPlayer.defaultRate = rate
     }
   }
 
@@ -750,11 +766,26 @@ extension TrackPlayer {
       PersistedPlaybackState(
         track: JsonTrack(from: track),
         positionMs: positionMs,
-        repeatMode: repeatMode.persistedString,
+        repeatMode: repeatMode.stringValue,
         shuffleEnabled: shuffleEnabled,
         playbackSpeed: rate,
       ),
     )
+  }
+
+  /// Applies the player settings a snapshot carries — the inverse of
+  /// `persistPlaybackState()`, and the twin of the Kotlin store's `restore()`.
+  ///
+  /// Call BEFORE building the queue: `setQueue` rebuilds the shuffle order
+  /// pinned to the starting track, so shuffle has to be set for that order to
+  /// be the one playback uses (and the mode events then precede the
+  /// queue-changed event, as on Android). An unrecognized repeat mode restores
+  /// as `.off` rather than failing the whole resume over one field; a
+  /// non-positive speed is rejected by `rate`'s own setter.
+  func restorePlaybackSettings(from state: PersistedPlaybackState) {
+    repeatMode = RepeatMode(fromString: state.repeatMode) ?? .off
+    shuffleEnabled = state.shuffleEnabled
+    rate = state.playbackSpeed
   }
 
   /// Start a 5 s repeating save while playback is active. A previous task is
@@ -773,17 +804,6 @@ extension TrackPlayer {
   private func stopPeriodicSave() {
     periodicSaveTask?.cancel()
     periodicSaveTask = nil
-  }
-}
-
-private extension RepeatMode {
-  /// String representation stored in `PersistedPlaybackState.repeatMode`.
-  var persistedString: String {
-    switch self {
-    case .off: "off"
-    case .track: "track"
-    case .queue: "queue"
-    }
   }
 }
 
@@ -855,12 +875,20 @@ extension TrackPlayer: PlaybackEffectHandler {
     nowPlayingUpdater.clearNowPlaying()
   }
 
+  // Both persist: a snapshot is otherwise only written on track load, on pause,
+  // and every 5s while playing, so a mode toggled while paused was lost — the
+  // cold-start resume would restore the value from before the toggle. Android
+  // persists on every setting change (`PlayerListener.onRepeatModeChanged` /
+  // `onShuffleModeEnabledChanged`); these are the same two edges, and the
+  // coordinator only calls them on a real change.
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     remoteCommandController.updateRepeatMode(mode)
+    persistPlaybackState()
   }
 
   func updateRemoteShuffleMode(_ enabled: Bool) {
     remoteCommandController.updateShuffleMode(enabled)
+    persistPlaybackState()
   }
 
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {

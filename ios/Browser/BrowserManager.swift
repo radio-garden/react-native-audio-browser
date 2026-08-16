@@ -171,8 +171,8 @@ final class BrowserManager {
   /// Optimistically reflects a local favorite toggle in the favorite set, keyed
   /// by the track's identity (id when non-blank, else src). The consumer
   /// reconciles `favoriteIds` to its canonical set on the next `setFavorites`;
-  /// `isFavorite` gives the same answer before and after, so the now-playing
-  /// heart stays responsive.
+  /// `hydrateFavorite` gives the same answer before and after, so the
+  /// now-playing heart stays responsive.
   func setFavorited(identity: String, favorited: Bool) {
     if favorited {
       favoriteIds.insert(identity)
@@ -188,13 +188,10 @@ final class BrowserManager {
   /// caller-set `favorited` wins — API/consumer-provided values are never
   /// overwritten (matches Android and web).
   func hydrateFavorite(_ track: Track) -> Track {
-    guard favoriteEnabled, track.favorited == nil, track.identity != nil else { return track }
-    return track.copying(favorited: isFavorite(track))
-  }
-
-  /// Whether the track's identity is in the favorite set.
-  private func isFavorite(_ track: Track) -> Bool {
-    track.identity.map(favoriteIds.contains) ?? false
+    // `identity` bridges a std::string out of the C++ track, so it is bound
+    // once here rather than computed again to answer "is it favorited".
+    guard favoriteEnabled, track.favorited == nil, let identity = track.identity else { return track }
+    return track.copying(favorited: favoriteIds.contains(identity))
   }
 
   /// Hydrates favorites on all tracks of a resolved page. Pages reach
@@ -632,10 +629,11 @@ final class BrowserManager {
     let query = params.query
     let cacheKey = Self.searchCacheKey(params)
 
-    // Check cache - re-hydrate favorites since they may have changed
+    // Check cache - hydrate favorites on the way out, since they may have
+    // changed since the search ran (the slot holds the raw results for exactly
+    // this reason — see below).
     if cacheKey == lastSearchKey, let results = lastSearchResults {
-      let hydratedResults = results.map { hydrateFavorite($0) }
-      return makeSearchResult(query: query, results: hydratedResults)
+      return makeSearchResult(query: query, results: results)
     }
 
     guard let routes = config.routes else {
@@ -671,14 +669,15 @@ final class BrowserManager {
       throw BrowserError.contentNotFound(path: Self.searchRoutePath)
     }
 
-    // Hydrate favorites in results
-    let hydratedResults = results.map { hydrateFavorite($0) }
-
-    // Cache results
+    // Cache the RAW results, never the hydrated ones: hydration is one-shot
+    // (`hydrateFavorite` skips a track whose `favorited` is already set), so a
+    // hydrated slot would serve the favorites as they were at first search
+    // forever. The content cache keys on the same rule — it stores the
+    // unhydrated resolve and hydrates in `resolve()`.
     lastSearchKey = cacheKey
-    lastSearchResults = hydratedResults
+    lastSearchResults = results
 
-    return makeSearchResult(query: query, results: hydratedResults)
+    return makeSearchResult(query: query, results: results)
   }
 
   /// Search and return playable tracks for "play «X»" voice intents, drilling
@@ -696,13 +695,16 @@ final class BrowserManager {
     }
   }
 
+  /// Wraps raw search results as a resolved page, hydrating favorites on the
+  /// way out — the single exit for `search`, so an unhydrated search page can't
+  /// be emitted (the same funnel `resolve()` gets from `hydrateChildren`).
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
     // Search results are a flat list; as a resolved page they are one
     // untitled section (ADR 0010).
     ResolvedTrack(
       path: BrowserPathHelper.createSearchPath(query),
       style: nil,
-      sections: [.untitled(results)],
+      sections: [.untitled(results.map { hydrateFavorite($0) })],
       children: nil,
       carPlaySiriListButton: nil,
       id: nil,

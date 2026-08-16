@@ -105,7 +105,7 @@ final class MediaLoader {
         .availableMetadataFormats,
       ) else { return }
 
-      guard !Task.isCancelled, pendingAsset == asset else { return }
+      guard isCurrent(pendingAsset) else { return }
 
       if !commonMetadata.isEmpty {
         delegate?.mediaLoaderDidReceiveCommonMetadata(commonMetadata)
@@ -113,19 +113,21 @@ final class MediaLoader {
 
       if !chapterLocales.isEmpty {
         for locale in chapterLocales {
-          guard !Task.isCancelled else { return }
+          guard isCurrent(pendingAsset) else { return }
           if let chapters = try? await pendingAsset.loadChapterMetadataGroups(
             withTitleLocale: locale,
             containingItemsWithCommonKeys: [],
           ) {
+            guard isCurrent(pendingAsset) else { return }
             delegate?.mediaLoaderDidReceiveChapterMetadata(chapters)
           }
         }
       } else {
         let duration = await (try? pendingAsset.load(.duration)) ?? .zero
         for format in metadataFormats {
-          guard !Task.isCancelled else { return }
+          guard isCurrent(pendingAsset) else { return }
           if let metadata = try? await pendingAsset.loadMetadata(for: format) {
+            guard isCurrent(pendingAsset) else { return }
             let timeRange = CMTimeRange(
               start: CMTime(seconds: 0, preferredTimescale: 1000),
               end: duration,
@@ -166,6 +168,19 @@ final class MediaLoader {
         }
       }
     }
+  }
+
+  /// Whether `candidate` is still the load this loader cares about — checked
+  /// after EVERY await, not just once before a loop.
+  ///
+  /// Cancellation alone is not enough: it only sets a flag, and can't abort a
+  /// load already in flight inside AVFoundation (only `cancelLoading()` does,
+  /// and the track-change path deliberately doesn't call it — the old asset
+  /// still backs the playing item at that point). So a load that lands after
+  /// the track changed would otherwise attribute the old asset's metadata to
+  /// the newly loaded track.
+  private func isCurrent(_ candidate: AVURLAsset) -> Bool {
+    !Task.isCancelled && candidate == asset
   }
 
   func cancelAll() {
