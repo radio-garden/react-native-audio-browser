@@ -29,6 +29,20 @@ public final class RNABCarPlayController: NSObject {
   private var isStarted = false
   private var listenerRemovals: [() -> Void] = []
 
+  /// Invalidates a `start()` whose readiness wait is still parked when a newer
+  /// `start()` supersedes it.
+  ///
+  /// `start()` parks an untracked Task on `playerAndConfiguredBrowser.wait()`,
+  /// which is uncancellable and — per `OnceValue.reset()` — stays queued across
+  /// a reset, resuming every waiter when the value finally resolves. `isStarted`
+  /// alone can't tell the waiters apart: `restart()` is `stop(); start()`, so by
+  /// the time they resume it is `true` again and BOTH proceed. That is the
+  /// ordinary cold-start-in-car sequence (scene connects before RN is up, then
+  /// `instanceChangedEmitter` fires on `HybridAudioBrowser.init`), and it left
+  /// duplicate content subscriptions and a leaked `NowPlayingObserver` for the
+  /// rest of the session.
+  private var startGeneration: UInt = 0
+
   /// Paths whose loading template has been pushed but not yet appeared. Guards a
   /// rapid double-tap from pushing the same destination twice (the first push is
   /// async, so `topTemplate` may not reflect it yet). Cleared when it appears.
@@ -141,6 +155,8 @@ public final class RNABCarPlayController: NSObject {
   public func start() {
     guard !isStarted else { return }
     isStarted = true
+    startGeneration &+= 1
+    let generation = startGeneration
 
     logger.info("Starting CarPlay controller")
 
@@ -167,7 +183,10 @@ public final class RNABCarPlayController: NSObject {
     // Wait for both browser and player to be ready
     Task { @MainActor in
       let (browser, _) = await playerAndConfiguredBrowser.wait()
-      guard self.isStarted else { return }
+      // Both `isStarted` (are we running at all?) and the generation (are we
+      // still the CURRENT run?) — a restart re-arms the former, so only the
+      // latter distinguishes this waiter from the one that superseded it.
+      guard self.isStarted, self.startGeneration == generation else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
       self.isGated = browser.isGateActive

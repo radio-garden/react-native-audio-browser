@@ -67,8 +67,14 @@ final class BrowserManager {
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
-  // Cache for search results
-  private var lastSearchQuery: String?
+  // Cache for the most recent search. Keyed by the WHOLE parameter set, not
+  // just `query`: the structured fields (mode/genre/artist/album/title/
+  // playlist/reference) all reach the request, and voice intents routinely
+  // produce the same `query` with different structure — `MediaIntentCriteria`
+  // falls back to the structured value when there is no spoken name, so
+  // "play jazz" (genre="jazz") and a plain text search for "jazz" arrive with
+  // an identical `query`. Keying on `query` alone served one as the other.
+  private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
   // Resolver caching: request/browse thunks resolve once per content generation.
@@ -574,14 +580,33 @@ final class BrowserManager {
     )
   }
 
+  /// The cache identity of a search: every field that reaches the request.
+  /// `\u{1}` separates, so a value containing the separator can't forge a
+  /// different key.
+  private static func searchCacheKey(_ params: SearchParams) -> String {
+    [
+      params.query,
+      params.mode?.stringValue,
+      params.genre,
+      params.artist,
+      params.album,
+      params.title,
+      params.playlist,
+      params.reference == .my ? "my" : nil,
+    ]
+    .map { $0 ?? "" }
+    .joined(separator: "\u{1}")
+  }
+
   /// Structured search. Emits `q` plus any of `mode`/`genre`/`artist`/`album`/
   /// `title`/`playlist` that are set, mirroring Android's `executeSearchApiRequest`
-  /// and the web stub. Cached by `query`.
+  /// and the web stub. Cached by the full parameter set (see `lastSearchKey`).
   func search(_ params: SearchParams) async throws -> ResolvedTrack {
     let query = params.query
+    let cacheKey = Self.searchCacheKey(params)
 
     // Check cache - re-hydrate favorites since they may have changed
-    if query == lastSearchQuery, let results = lastSearchResults {
+    if cacheKey == lastSearchKey, let results = lastSearchResults {
       let hydratedResults = results.map { hydrateFavorite($0) }
       return makeSearchResult(query: query, results: hydratedResults)
     }
@@ -632,7 +657,7 @@ final class BrowserManager {
     let hydratedResults = results.map { hydrateFavorite($0) }
 
     // Cache results
-    lastSearchQuery = query
+    lastSearchKey = cacheKey
     lastSearchResults = hydratedResults
 
     return makeSearchResult(query: query, results: hydratedResults)

@@ -32,6 +32,16 @@ final class NowPlayingUpdater {
 
   private var lastPublished: Published?
 
+  /// Drops the publish-dedupe baseline. Must be called whenever the underlying
+  /// now-playing info dict is emptied (`NowPlayingInfoController.clear()`):
+  /// otherwise re-loading the SAME track compares equal to the last publish and
+  /// returns early, leaving title/artist/album absent from the freshly-cleared
+  /// dict — artwork still lands (non-comparable, never deduped), so the surface
+  /// showed art with no text and `onChanged` never fired.
+  func invalidatePublished() {
+    lastPublished = nil
+  }
+
   /// Bumped on every `render`; an async formatter result applies only if its render is still the
   /// latest (latest-render-wins — drops a result whose track skipped or whose state moved on while
   /// the formatter was in flight).

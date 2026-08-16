@@ -456,13 +456,23 @@ class TrackPlayer {
     )
   }
 
+  /// Empties the queue and the now-playing surface. Deliberately does NOT
+  /// unlink the `MPNowPlayingSession`: `avPlayer` survives a clear and is
+  /// reused by the next load, while `linkPlayer` only ever runs from
+  /// `setupAVPlayer()` (init / `recreateAVPlayer()`). Unlinking here left the
+  /// session nil with nothing to restore it, so every subsequent load
+  /// published nowhere — no metadata, no transport controls — until an
+  /// error-retry or a media-services reset happened to recreate the player.
+  /// `coordinator.clear()` already clears the published info, which is what
+  /// actually removes the app from the surface.
   func clear() {
     coordinator.clear()
-    nowPlayingInfoController.unlinkPlayer()
   }
 
   func destroy() {
     clear()
+    // The player is going away for good — now the session must go with it.
+    nowPlayingInfoController.unlinkPlayer()
     // An AVPlayer retains its time observers: one left registered is still attached when the
     // player is released, and outlives this object.
     playerTimeObserver.unregisterForBoundaryTimeEvents()
@@ -858,6 +868,8 @@ extension TrackPlayer: PlaybackEffectHandler {
 
   func clearNowPlaying() {
     nowPlayingInfoController.clear()
+    // The info dict is now empty, so the updater's dedupe baseline is stale.
+    nowPlayingUpdater.invalidatePublished()
   }
 
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
