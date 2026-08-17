@@ -9,25 +9,27 @@
  */
 import { onBeforeUnmount, ref } from 'vue'
 
-// Always the canonical origin, even on a DOCS_BASE share deploy: what gets
-// pasted into someone's rules file should outlive this preview.
+// URLs only, and always the canonical origin — never a DOCS_BASE share deploy.
+// This text ends up pasted into someone else's repo, unversioned, where a path
+// into our package layout would quietly rot the first time we moved it.
 const instructions = `When working with react-native-audio-browser, read \
 https://audiobrowser.dev/llms.txt first to find the relevant page, then fetch \
 that page as Markdown by appending .md to its URL — e.g. \
 https://audiobrowser.dev/guide/queue.md.
 
-Every guide in one file: https://audiobrowser.dev/llms-full.txt
-
-The same Markdown ships inside the package, so it can be read without a \
-network fetch: node_modules/react-native-audio-browser/website/guide/`
+Every guide in one file: https://audiobrowser.dev/llms-full.txt`
 
 type State = 'idle' | 'copied' | 'failed'
 
 const state = ref<State>('idle')
 let resetTimer: ReturnType<typeof setTimeout> | undefined
 
+// The index URL rides alongside the label so the offer is concrete: a reader
+// can see where their agent is being sent, and go read it themselves.
+const indexUrl = 'https://audiobrowser.dev/llms.txt'
+
 const label = {
-  idle: 'Copy instructions for your AI agent',
+  idle: 'Copy to point your AI to the docs',
   copied: 'Copied — paste it into your agent',
   failed: 'Copy failed — select the text below'
 }
@@ -95,6 +97,7 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
         </template>
       </svg>
       <span>{{ label[state] }}</span>
+      <span class="url">{{ indexUrl }}</span>
     </button>
 
     <!-- Selectable fallback, only once the clipboard has actually refused. -->
@@ -116,8 +119,11 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
 }
 .trigger {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 4px 8px;
+  text-align: left;
   padding: 6px 12px 6px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -148,6 +154,13 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
 .icon {
   flex: none;
 }
+/* Muted and monospaced so it reads as the destination rather than as part of
+   the sentence. Wraps onto its own line before the label has to break. */
+.url {
+  color: var(--vp-c-text-3);
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+}
 .fallback {
   max-width: 460px;
   margin: 0;
@@ -176,6 +189,9 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
 @media (min-width: 960px) {
   .agent-copy {
     align-items: flex-start;
+  }
+  .trigger {
+    justify-content: flex-start;
   }
 }
 </style>
