@@ -1,3 +1,42 @@
+## [0.2.0-next.13](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.12...v0.2.0-next.13) (2026-08-17)
+
+### Features
+
+* gridTile card and condensed — the tile-family style vocabulary ([77cd1c1](https://github.com/radio-garden/react-native-audio-browser/commit/77cd1c107c9f1d6b2f08750411323a646d920816))
+* imageShape and accessorySymbol — inherited style item properties ([b39cd7a](https://github.com/radio-garden/react-native-audio-browser/commit/b39cd7ad42007a205d26fe926403c2b544dee64c))
+* **ios:** navigating to a tab's path selects that tab ([f7e91a5](https://github.com/radio-garden/react-native-audio-browser/commit/f7e91a523c69da1c11ce4a3a38e9f7928c25de70))
+* the inert-declaration diagnostic — warn on style that can never render ([9f50e45](https://github.com/radio-garden/react-native-audio-browser/commit/9f50e4542e0e1bf71169be49f43e1c7f01f87428)), closes [#if](https://github.com/radio-garden/react-native-audio-browser/issues/if)
+
+### Bug Fixes
+
+* **android,web:** four defects the iOS audit surfaced on the other platforms ([b5b2006](https://github.com/radio-garden/react-native-audio-browser/commit/b5b2006adfa239aefef710d919dd4b70f82fda95))
+* **ios:** CarPlay list-item factory compile errors ([f1df5cf](https://github.com/radio-garden/react-native-audio-browser/commit/f1df5cf978a200cc14d136f9e3240ee9619ae5dd))
+* **ios:** five verified player and browser defects ([e8e2716](https://github.com/radio-garden/react-native-audio-browser/commit/e8e2716c6a70b00db0b995007e3daec90e8bf057))
+* **ios:** nine verified player, browser and CarPlay defects ([c0e08d7](https://github.com/radio-garden/react-native-audio-browser/commit/c0e08d73a881bd7f1f88cfebfa941494d5b55fac))
+* **ios:** six verified player, browser and CarPlay defects ([c0b173f](https://github.com/radio-garden/react-native-audio-browser/commit/c0b173f899165d67b5a6011c706404ff3f210d55))
+* **ios:** the remaining audit findings ([468d7d9](https://github.com/radio-garden/react-native-audio-browser/commit/468d7d997355610f5f7f1dbac8e9c653a2e80d50))
+
+### Code Refactors
+
+* **ios:** dedupe and simplify the audit fixes ([627dcdb](https://github.com/radio-garden/react-native-audio-browser/commit/627dcdbca4ee42db1184d2373faef0eb7ef426dc))
+
+### Documentation
+
+* add a hero button that copies agent instructions ([bdc2da0](https://github.com/radio-garden/react-native-audio-browser/commit/bdc2da0e678ab0a883d80f4f8453d7513b74534d))
+* cut the page banner down to one line ([4f2c810](https://github.com/radio-garden/react-native-audio-browser/commit/4f2c8109f0ba7f0abb3c36e4791bece11fc0af08))
+* drop bookmark from the capability-defaults comment ([0e62894](https://github.com/radio-garden/react-native-audio-browser/commit/0e62894498a3bad3d8b636af2767dab5f3907aa0))
+* move the index pointer into the frontmatter ([082639a](https://github.com/radio-garden/react-native-audio-browser/commit/082639ae612714dd8a4e4263b0c4bca774dedcb9))
+* name the destination on the agent-instructions button ([fdfbb8a](https://github.com/radio-garden/react-native-audio-browser/commit/fdfbb8aae3f9252c080005781cad18bc6f285870))
+* place the index key next to url ([874f98b](https://github.com/radio-garden/react-native-audio-browser/commit/874f98b17eea931fcf8ce8f04a114b22450a0349))
+* point every Markdown page at the docs index ([9df0ab4](https://github.com/radio-garden/react-native-audio-browser/commit/9df0ab4589135fde138041102f540f4b5e251e79))
+* rewrite internal links in the Markdown pages to their .md twins ([98ea057](https://github.com/radio-garden/react-native-audio-browser/commit/98ea057970d34ac23fb07949f1d73d9de72292e1)), closes [api/features/queue/#setqueue](https://github.com/radio-garden/api/features/queue//issues/setqueue)
+* serve the docs as Markdown for coding agents ([e51cdc9](https://github.com/radio-garden/react-native-audio-browser/commit/e51cdc9e16270427d78b96bea42229d1af88ebc9))
+* the section-header lab session — findings and the reconciliation ([f9f3159](https://github.com/radio-garden/react-native-audio-browser/commit/f9f31595007cacece441cd8129701cc3b735b9b6))
+
+### Other changes
+
+* scripts for the Kotlin and Swift verification commands ([70a06cc](https://github.com/radio-garden/react-native-audio-browser/commit/70a06cc7c0e8a93439085a863cef2447ae82f4b5))
+
 ## [0.2.0-next.12](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.11...v0.2.0-next.12) (2026-08-15)
 
 ### ⚠ BREAKING CHANGES
