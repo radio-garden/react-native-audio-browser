@@ -27,13 +27,9 @@ const indexUrl = noindex
   ? `${base}llms.txt`
   : 'https://audiobrowser.dev/llms.txt'
 
-// Two trailing spaces are Markdown's hard line break, so the three lines stay
-// three lines inside the blockquote.
-const banner = [
-  '> Documentation index  ',
-  `> Every page of these docs, as Markdown: ${indexUrl}  `,
-  '> Use it to find the pages you need before exploring further.'
-].join('\n')
+// One line: naming the index and linking it is the whole job. An agent that
+// reaches an index doesn't need to be told to read it.
+const banner = `> Docs index: ${indexUrl}`
 
 // The generated pages open with frontmatter (`url`, `description`). The banner
 // belongs after it, above the h1 — frontmatter is metadata, not content.
@@ -61,7 +57,7 @@ function processDir(dir: string): number {
 
     const content = readFileSync(path, 'utf-8')
     // Idempotent, so a re-run over an existing dist doesn't stack banners.
-    if (content.includes('> Documentation index')) continue
+    if (content.includes('> Docs index:')) continue
 
     writeFileSync(path, withBanner(content))
     count++
