@@ -14,10 +14,10 @@ yarn codegen
 
 ### Android
 
-Compile Kotlin code from the example app directory:
+Compile Kotlin without building the app:
 
 ```bash
-cd apps/example-native/android && ./gradlew :react-native-audio-browser:compileDebugKotlin
+yarn android:types
 ```
 
 ## Testing
@@ -29,11 +29,11 @@ yarn test                          # vitest
 yarn types                         # tsc --noEmit
 yarn ci:lint                       # oxlint, type-aware
 yarn ci:format                     # oxfmt --check
-swift test --disable-sandbox       # iOS
-cd apps/example-native/android && ./gradlew :react-native-audio-browser:testDebugUnitTest
+yarn ios:test                      # Swift tests
+yarn android:test                  # Kotlin unit tests
 ```
 
-`swift test` needs `--disable-sandbox` locally: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
+`yarn ios:test` passes `--disable-sandbox`: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
 
 ### Testing hooks
 
