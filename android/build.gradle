@@ -158,6 +158,13 @@ repositories {
   google()
 }
 
+// Mockito's inline mock maker needs a Byte Buddy agent in the running JVM. Left to itself it
+// installs one through the JVM attach mechanism, which binds a unix socket under $TMPDIR —
+// denied inside sandboxed shells, and disabled by default on JDK 24+. Resolving the agent as its
+// own configuration lets the test JVM pre-load it with -javaagent, so no attach is needed.
+configurations {
+  mockitoAgent
+}
 
 dependencies {
   // For < 0.71, this will be from the local maven repo
@@ -210,12 +217,24 @@ dependencies {
   implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
 
   // Testing dependencies
+  def mockitoVersion = "5.8.0"
   testImplementation 'junit:junit:4.13.2'
-  testImplementation 'org.mockito:mockito-core:5.8.0'
+  testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+  // Resolved transitively so the agent jar always matches the Byte Buddy that Mockito uses.
+  mockitoAgent "org.mockito:mockito-core:${mockitoVersion}"
   testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
   testImplementation 'org.robolectric:robolectric:4.11.1'
 
   api 'com.jakewharton.timber:timber:5.0.1'
+}
+
+tasks.withType(Test).configureEach {
+  def agentJar = configurations.mockitoAgent.find { it.name.startsWith("byte-buddy-agent") }
+  if (agentJar == null) {
+    throw new GradleException("No byte-buddy-agent jar in the mockitoAgent configuration; " +
+        "Mockito would fall back to runtime self-attach. Check the mockito-core coordinates.")
+  }
+  jvmArgs "-javaagent:${agentJar}"
 }
 
 if (isNewArchitectureEnabled()) {
