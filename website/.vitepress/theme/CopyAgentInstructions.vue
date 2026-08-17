@@ -12,10 +12,12 @@ import { onBeforeUnmount, ref } from 'vue'
 // URLs only, and always the canonical origin — never a DOCS_BASE share deploy.
 // This text ends up pasted into someone else's repo, unversioned, where a path
 // into our package layout would quietly rot the first time we moved it.
+//
+// No "append .md" rule: every entry in llms.txt is already a Markdown link, and
+// the HTML pages carry their own pointer to their .md twin.
 const instructions = `When working with react-native-audio-browser, read \
-https://audiobrowser.dev/llms.txt first to find the relevant page, then fetch \
-that page as Markdown by appending .md to its URL — e.g. \
-https://audiobrowser.dev/guide/queue.md.
+https://audiobrowser.dev/llms.txt — an index of every documentation page, \
+linked as Markdown.
 
 Every guide in one file: https://audiobrowser.dev/llms-full.txt`
 

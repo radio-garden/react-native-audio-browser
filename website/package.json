@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "yarn typedoc && vitepress dev",
-    "build": "yarn build:demo && yarn typedoc && vitepress build",
+    "build": "yarn build:demo && yarn typedoc && vitepress build && node scripts/inject-docs-index.ts",
     "build:demo": "yarn workspace example-web build",
     "preview": "vitepress preview",
     "typedoc": "typedoc && node scripts/transform-sidebar.ts && node scripts/clean-markdown.ts"
