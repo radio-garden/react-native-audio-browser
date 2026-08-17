@@ -41,8 +41,11 @@ function withIndexKey(content: string): string {
 
   if (!head) return `---\n${key}\n---\n\n${content}`
 
-  // Appended as the last key, immediately above the closing delimiter.
-  return head.replace(/---\n$/, `${key}\n---\n`) + content.slice(head.length)
+  // Directly under `url` — the two are the same kind of thing, and a folded
+  // multi-line `description` between them makes the pair hard to read.
+  const placed = head.replace(/^(---\n(?:url: .*\n)?)/, `$1${key}\n`)
+
+  return placed + content.slice(head.length)
 }
 
 function processDir(dir: string): number {
