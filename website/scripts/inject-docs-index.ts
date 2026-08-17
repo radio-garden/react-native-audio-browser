@@ -2,13 +2,16 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
 /**
- * Prepend a pointer to `llms.txt` to every Markdown page in the build output.
+ * Add an `index` key to the frontmatter of every Markdown page in the build
+ * output, pointing at `llms.txt`.
  *
  * A page fetched on its own arrives context-free: an agent reading `queue.md`
- * has no way to know `playback.md` exists. The banner gives it the index in one
- * line, and reaches every route into the Markdown — a direct fetch, the "Copy
- * page" and download buttons, and the "Open in Claude / ChatGPT" links, all of
- * which serve these files verbatim.
+ * has no way to know `playback.md` exists. This reaches every route into the
+ * Markdown — a direct fetch, the "Copy page" and download buttons, and the
+ * "Open in Claude / ChatGPT" links, all of which serve these files verbatim.
+ *
+ * It sits in the frontmatter beside the `url` the plugin already writes, since
+ * that's what it is: metadata about the page, not part of the page.
  *
  * Done here rather than in the sources so it stays out of `llms-full.txt`,
  * where 52 copies of "go find the index" would be noise — that file already is
@@ -27,19 +30,19 @@ const indexUrl = noindex
   ? `${base}llms.txt`
   : 'https://audiobrowser.dev/llms.txt'
 
-// One line: naming the index and linking it is the whole job. An agent that
-// reaches an index doesn't need to be told to read it.
-const banner = `> Docs index: ${indexUrl}`
+const key = `index: ${indexUrl}`
 
-// The generated pages open with frontmatter (`url`, `description`). The banner
-// belongs after it, above the h1 — frontmatter is metadata, not content.
+// Every generated page opens with frontmatter carrying at least `url`, but
+// handle its absence rather than silently skipping the page.
 const frontmatter = /^---\n[\s\S]*?\n---\n/
 
-function withBanner(content: string): string {
-  const [head = ''] = content.match(frontmatter) ?? []
-  const body = content.slice(head.length).replace(/^\n+/, '')
+function withIndexKey(content: string): string {
+  const [head] = content.match(frontmatter) ?? []
 
-  return head ? `${head}\n${banner}\n\n${body}` : `${banner}\n\n${body}`
+  if (!head) return `---\n${key}\n---\n\n${content}`
+
+  // Appended as the last key, immediately above the closing delimiter.
+  return head.replace(/---\n$/, `${key}\n---\n`) + content.slice(head.length)
 }
 
 function processDir(dir: string): number {
@@ -56,10 +59,12 @@ function processDir(dir: string): number {
     if (!item.endsWith('.md')) continue
 
     const content = readFileSync(path, 'utf-8')
-    // Idempotent, so a re-run over an existing dist doesn't stack banners.
-    if (content.includes('> Docs index:')) continue
+    // Idempotent, so a re-run over an existing dist doesn't stack keys. Scoped
+    // to the frontmatter block so an "index:" line in prose can't match.
+    const [head = ''] = content.match(frontmatter) ?? []
+    if (head.includes('\nindex: ')) continue
 
-    writeFileSync(path, withBanner(content))
+    writeFileSync(path, withIndexKey(content))
     count++
   }
 
