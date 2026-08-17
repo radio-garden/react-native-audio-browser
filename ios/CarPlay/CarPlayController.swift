@@ -869,6 +869,9 @@ public final class RNABCarPlayController: NSObject {
   /// filled by `templateDidAppear` → `loadContentIfNeeded` → `loadContent`, which
   /// runs once the template is on screen (the timing CarPlay needs: updates made
   /// right after a push are dropped). Backing out and re-tapping retries.
+  ///
+  /// One exception to pushing: a path that IS a tab selects that tab (see
+  /// `selectTab`).
   @MainActor
   private func navigateToPath(_ path: String, title: String) async {
     // The gate is resolved per-request: a gated path pushes the gate page
@@ -888,6 +891,9 @@ public final class RNABCarPlayController: NSObject {
         return
       }
     }
+    // A link to a tab's own path switches to that tab instead of pushing a
+    // second copy of it into the current tab's stack.
+    if selectTab(owning: path) { return }
     // Avoid pushing a duplicate if the top template already shows this path.
     if let top = interfaceController.topTemplate, getPath(from: top) == path {
       return
@@ -909,6 +915,40 @@ public final class RNABCarPlayController: NSObject {
         self?.logger.error("pushTemplate failed for \(path): \(error.localizedDescription)")
       }
     }
+  }
+
+  /// Switches to the tab that owns `path`, if any — a "view all" header or row
+  /// pointing at a tab's own path belongs in the tab bar, not pushed on top of
+  /// whichever tab the user tapped from (which would strand them one level deep
+  /// in a list the bar already offers, with a Back button to a page they never
+  /// came from). Any pushed stack is popped first, so the tab opens at its root.
+  ///
+  /// Returns false — and the caller pushes as usual — when `path` is no tab,
+  /// when the root isn't the tab bar (the gate replaces it), or before iOS 17,
+  /// which has no tab-selection API.
+  @MainActor
+  private func selectTab(owning path: String) -> Bool {
+    guard #available(iOS 17.0, *),
+          let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+          let tab = tabBar.templates.first(where: { getPath(from: $0) == path })
+    else { return false }
+    let isPushed = interfaceController.templates.count > 1
+    // Already showing: the destination is where the user asked to be, so this
+    // is handled — just don't animate a pop-and-select over it.
+    if tabBar.selectedTemplate === tab, !isPushed { return true }
+    logger.debug("Navigating to tab \(path) instead of pushing it")
+    guard isPushed else {
+      tabBar.select(tab)
+      return true
+    }
+    interfaceController.safePopToRoot(animated: true) { popped, _ in
+      // Selecting after a failed pop would leave the pushed stack over the
+      // newly selected tab; the caller has already returned, so a failure just
+      // leaves the user where they were.
+      guard popped else { return }
+      tabBar.select(tab)
+    }
+    return true
   }
 
   /// Builds an empty list template for content that is still resolving.

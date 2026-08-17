@@ -176,6 +176,10 @@ configureBrowser({
 CarPlay and Android Auto cap the tab bar, so `tabs` is limited to **4**. More than four triggers a runtime warning and the extras are dropped.
 :::
 
+::: tip A tab's path stays a tab
+Link freely to a tab's own path — a "view all" section header on one tab pointing at another tab's route, say. On CarPlay (iOS 17+) that **switches to the tab** instead of pushing a second copy of it onto the current tab's stack, so the user lands where the tab bar already shows that content, with no Back button to a page they never came from. Elsewhere — earlier iOS, Android Auto, your app UI — it navigates as usual.
+:::
+
 Like any source, `tabs` can also be a **callback** — useful when the tabs themselves depend on runtime state, such as a debug build or the current user:
 
 ```ts
