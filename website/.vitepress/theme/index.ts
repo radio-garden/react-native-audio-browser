@@ -1,6 +1,7 @@
 import CopyOrDownloadAsMarkdownButtons from 'vitepress-plugin-llms/vitepress-components/CopyOrDownloadAsMarkdownButtons.vue'
 import DefaultTheme from 'vitepress/theme'
 import { h } from 'vue'
+import CopyAgentInstructions from './CopyAgentInstructions.vue'
 import LiveDemo from './LiveDemo.vue'
 import './custom.css'
 
@@ -10,7 +11,8 @@ export default {
     // Embed the real example-web app (live, via iframe) in the hero image slot.
     // Swap back to ./BrowseDemo.vue for the lightweight static mock.
     return h(DefaultTheme.Layout, null, {
-      'home-hero-image': () => h(LiveDemo)
+      'home-hero-image': () => h(LiveDemo),
+      'home-hero-actions-after': () => h(CopyAgentInstructions)
     })
   },
   enhanceApp({ app }) {
