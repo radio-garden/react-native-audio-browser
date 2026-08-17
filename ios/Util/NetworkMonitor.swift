@@ -54,18 +54,23 @@ final class NetworkMonitor: @unchecked Sendable {
   init() {
     monitor = NWPathMonitor()
 
-    // Set up handler before starting
+    // Seed BEFORE `start`. `start` publishes `self` to the monitor queue, so any
+    // write after it races the handler's locked write — and would clobber a real
+    // update with a `currentPath` the monitor hasn't finished evaluating. Nothing
+    // recovers from that: the handler has already fired, `onChanged` isn't wired
+    // until setupPlayer, and the stale value then drives `getOnline()`, the JS
+    // event, and RetryManager's offline parking until the next genuine path
+    // change. Seeding first is a best-effort guess; the handler fires shortly
+    // after `start` and is the authoritative last writer.
+    let initialStatus = monitor.currentPath.status == .satisfied
+    logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
+    _isOnline = initialStatus
+
     monitor.pathUpdateHandler = { [weak self] path in
       self?.apply(path.status == .satisfied)
     }
 
-    // Start monitoring
     monitor.start(queue: queue)
-
-    // Read initial state after starting (currentPath is now valid)
-    let initialStatus = monitor.currentPath.status == .satisfied
-    logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
-    _isOnline = initialStatus
   }
 
   /// Stops monitoring and cleans up resources.

@@ -1278,15 +1278,29 @@ public final class RNABCarPlayController: NSObject {
       logger.debug("Calling formatNavigationError callback...")
       // Call the JS callback and handle result
       let params = FormatNavigationErrorParams(error: error, defaultFormatted: defaultFormatted, path: path)
+      // The result callbacks are @Sendable and hop back explicitly: Nitro resolves
+      // its promises synchronously on the JS thread, so a plain closure would
+      // inherit this type's MainActor isolation and trap on entry under Swift 6's
+      // dynamic isolation check — and would otherwise drive UIKit off the main
+      // thread. Same pattern as HybridAudioBrowser.handleNavigationError and
+      // NowPlayingUpdater.render.
       formatter(params)
-        .then { [weak self] customDisplay in
-          self?.logger.debug("formatNavigationError returned: \(String(describing: customDisplay))")
-          self?.presentErrorActionSheet(customDisplay: customDisplay ?? defaultFormatted)
+        .then { @Sendable [weak self] customDisplay in
+          let description = String(describing: customDisplay)
+          Task { @MainActor in
+            guard let self else { return }
+            self.logger.debug("formatNavigationError returned: \(description)")
+            self.presentErrorActionSheet(customDisplay: customDisplay ?? defaultFormatted)
+          }
         }
-        .catch { [weak self] callbackError in
-          self?.logger.error("formatNavigationError failed: \(callbackError)")
-          // On error, fall back to defaults
-          self?.presentErrorActionSheet(customDisplay: defaultFormatted)
+        .catch { @Sendable [weak self] callbackError in
+          let message = callbackError.localizedDescription
+          Task { @MainActor in
+            guard let self else { return }
+            self.logger.error("formatNavigationError failed: \(message)")
+            // On error, fall back to defaults
+            self.presentErrorActionSheet(customDisplay: defaultFormatted)
+          }
         }
     } else {
       presentErrorActionSheet(customDisplay: defaultFormatted)

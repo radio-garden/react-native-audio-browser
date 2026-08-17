@@ -302,8 +302,18 @@ class QueueManager {
     let insertion = min(newTracks.count, toIndex)
     newTracks.insert(track, at: insertion)
     tracks = newTracks
+    // Carry the moved track's shuffle position across the move. `insert(at:count:)`
+    // would drop it at a RANDOM position instead — reordering the queue would then
+    // silently reorder shuffled playback, and moving the playing track could land it
+    // last in the order, ending the queue at the next track boundary with tracks
+    // still unplayed (the failure `adoptInitialCurrent` guards against elsewhere).
+    // `remove` shifts every later position down by one, so re-inserting at the
+    // captured position restores the exact prior order.
+    let shufflePosition = shuffleOrder.shufflePosition(of: fromIndex)
     shuffleOrder.remove(from: fromIndex, to: fromIndex + 1)
-    shuffleOrder.insert(at: insertion, count: 1)
+    shuffleOrder.insert(
+      at: insertion, atShufflePosition: shufflePosition ?? shuffleOrder.count,
+    )
     // The pointer follows the playing track; its identity never changes on a
     // move, so no caller needs to reload (returning true reloads).
     if currentIndex == fromIndex {

@@ -101,6 +101,13 @@ struct ShuffleOrder {
     return indexInShuffled[index] == 0
   }
 
+  /// The item's position in the shuffle order, or nil when it has none.
+  func shufflePosition(of index: Int) -> Int? {
+    guard index >= 0, index < indexInShuffled.count else { return nil }
+    let position = indexInShuffled[index]
+    return position >= 0 ? position : nil
+  }
+
   // MARK: - Mutation
 
   /// Inserts items at random positions in the shuffle order
@@ -122,6 +129,22 @@ struct ShuffleOrder {
     }
 
     // Rebuild reverse mapping
+    indexInShuffled = Self.buildIndexInShuffled(from: shuffled)
+  }
+
+  /// Inserts one item at `insertionIndex`, placing it at an explicit shuffle
+  /// position rather than a random one.
+  ///
+  /// Used by a queue `move`, which permutes positions but not identities: the
+  /// item already had a place in the playback order, and re-randomising it
+  /// silently reorders playback. For the *playing* track it can drop it at the
+  /// end of the order, which then reads as `isLastInPlaybackOrder` — the queue
+  /// reports itself over at the next track end, with tracks still unplayed.
+  mutating func insert(at insertionIndex: Int, atShufflePosition position: Int) {
+    for i in 0 ..< shuffled.count where shuffled[i] >= insertionIndex {
+      shuffled[i] += 1
+    }
+    shuffled.insert(insertionIndex, at: min(max(0, position), shuffled.count))
     indexInShuffled = Self.buildIndexInShuffled(from: shuffled)
   }
 

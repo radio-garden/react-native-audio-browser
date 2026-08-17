@@ -92,8 +92,14 @@ final class HttpClient: @unchecked Sendable {
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
-    // Set User-Agent (userAgent parameter takes precedence over headers)
-    urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
+    // An explicit `User-Agent` in `headers` wins, matching the two sibling paths
+    // (MediaLoader.buildAssetOptions and the artwork path in
+    // BrowserManager+URLResolution). `userAgent` carries a non-nil default, so
+    // overwriting unconditionally would replace a consumer's header with
+    // "react-native-audio-browser" whenever they set only the header.
+    if httpRequest.headers?["User-Agent"] == nil {
+      urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
+    }
 
     // Add body for non-GET requests
     switch httpRequest.method.uppercased() {

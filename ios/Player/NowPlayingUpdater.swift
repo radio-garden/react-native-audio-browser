@@ -43,12 +43,19 @@ final class NowPlayingUpdater {
   func clearNowPlaying() {
     nowPlayingInfoController.clear()
     lastPublished = nil
+    formattedTrackId = nil
   }
 
   /// Bumped on every `render`; an async formatter result applies only if its render is still the
   /// latest (latest-render-wins — drops a result whose track skipped or whose state moved on while
   /// the formatter was in flight).
   private var renderGeneration: UInt = 0
+
+  /// The track whose *formatted* line is currently on the surface. While this
+  /// matches the rendering track, `render` skips its interim default write — see
+  /// the comment at that site. Cleared whenever the surface stops showing a
+  /// formatter result (a flash overwrites it, `clearNowPlaying` empties it).
+  private var formattedTrackId: String?
 
   init(nowPlayingInfoController: NowPlayingInfoController) {
     self.nowPlayingInfoController = nowPlayingInfoController
@@ -102,6 +109,8 @@ final class NowPlayingUpdater {
     let defaultSecondary = override?.artist ?? track.artist
     let defaultAlbum = override?.album ?? track.album
 
+    let trackId = track.identity ?? track.path
+
     if let flash {
       applyFields(
         track: track,
@@ -109,10 +118,22 @@ final class NowPlayingUpdater {
         artist: flash.artist ?? defaultSecondary,
         album: flash.album ?? defaultAlbum,
       )
+      // The flash replaced the formatter's line, so the surface no longer shows
+      // one: the render that follows the flash reverting must publish the default
+      // immediately rather than sit on stale flash text awaiting the formatter.
+      formattedTrackId = nil
       return
     }
 
-    applyFields(track: track, title: defaultTitle, artist: defaultSecondary, album: defaultAlbum)
+    // Publish the raw default only while no formatter result is on screen for this
+    // track. `render` runs on EVERY playback transition (state change, playing/
+    // buffering flip, timed-metadata tick, connectivity change); writing the
+    // default each time would flash the track title over the formatter's line
+    // until the async result lands, since the two differ by construction on a live
+    // stream (station name vs. song line).
+    if formatter == nil || formattedTrackId != trackId {
+      applyFields(track: track, title: defaultTitle, artist: defaultSecondary, album: defaultAlbum)
+    }
 
     guard let formatter else { return }
     let params = FormatNowPlayingParams(
@@ -138,6 +159,9 @@ final class NowPlayingUpdater {
             artist: formatted.artist ?? defaultSecondary,
             album: formatted.album ?? defaultAlbum,
           )
+          // A formatter result now owns the surface for this track, so later
+          // renders skip the interim default write.
+          self.formattedTrackId = trackId
         }
       }
       .catch { @Sendable [weak self] error in

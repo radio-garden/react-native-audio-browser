@@ -120,6 +120,41 @@ struct NextTests {
     #expect(q.shuffleOrder.shuffled == order)
   }
 
+  /// A queue reorder permutes positions, not identities, so it must leave the
+  /// shuffled playback order alone. Re-inserting at a random shuffle position
+  /// would silently reshuffle under the listener.
+  @Test func shuffle_moveKeepsThePlaybackOrder() {
+    for target in 0 ..< 5 {
+      let q = QueueManager()
+      q.setQueue(tracks("a", "b", "c", "d", "e"))
+      q.shuffleEnabled = true
+      let before = q.shuffleOrder.shuffled.map { q.tracks[$0].id }
+
+      _ = try? q.move(fromIndex: 0, toIndex: target)
+
+      #expect(q.shuffleOrder.shuffled.map { q.tracks[$0].id } == before)
+    }
+  }
+
+  /// The same hazard as `shuffle_startTrackLeadsTheOrder`, reached by moving the
+  /// *playing* track: a random re-insert can drop it last in the shuffle order,
+  /// which reads as `isLastInPlaybackOrder` and ends the queue at the next track
+  /// boundary with tracks still unplayed.
+  @Test func shuffle_movingCurrentTrackDoesNotEndTheQueue() {
+    for target in 1 ..< 6 {
+      let q = QueueManager()
+      q.setQueue(tracks("a", "b", "c", "d", "e", "f"), initialIndex: 0)
+      q.shuffleEnabled = true // pins "a" first in the order
+      #expect(!q.isLastInPlaybackOrder)
+
+      _ = try? q.move(fromIndex: 0, toIndex: target)
+
+      #expect(q.currentTrack?.id == "a")
+      #expect(!q.isLastInPlaybackOrder)
+      #expect(q.nextTracks.count == 5)
+    }
+  }
+
   @Test func shuffle_visitsAllTracks() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d"))

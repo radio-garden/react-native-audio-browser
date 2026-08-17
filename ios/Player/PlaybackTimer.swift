@@ -48,10 +48,16 @@ final class PlaybackTimer {
 
   private func start(_ interval: TimeInterval) {
     guard timer == nil else { return }
-    timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) {
-      [weak self] _ in
+    // `.common`, not the `.default` mode `Timer.scheduledTimer` installs: UIKit
+    // runs the main run loop in tracking mode while a list is being dragged, and
+    // a default-mode timer does not fire there. Missed repeats are dropped rather
+    // than replayed, so progress events would freeze and interval ticks would be
+    // lost for as long as the user scrolls. (VolumeFader already does this.)
+    let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated { self?.onTick() }
     }
+    self.timer = timer
+    RunLoop.main.add(timer, forMode: .common)
   }
 
   private func stop() {

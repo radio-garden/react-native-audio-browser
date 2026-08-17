@@ -136,6 +136,22 @@ struct RemoteCommandControllerTests {
     #expect(center.previousTrackCommand.isEnabled)
   }
 
+  /// The handler properties must not capture the controller strongly. Assigning a
+  /// bare method reference (`= handlePlayCommandDefault`) curries to
+  /// `{ [self] in self.method($0) }`, and storing that back on self is a permanent
+  /// cycle — one leaked controller per player instance, across every JS reload.
+  @Test func doesNotRetainItselfThroughHandlers() {
+    weak var weakController: RemoteCommandController?
+    autoreleasepool {
+      let (controller, _) = makeController()
+      // Forces every lazy handler to initialize, which is what closes the cycle.
+      controller.enable(commands: RemoteCommand.all())
+      controller.disableAll()
+      weakController = controller
+    }
+    #expect(weakController == nil)
+  }
+
   @Test func shuffleAndRepeatStateSurviveCommandCenterSwitch() {
     let (controller, _) = makeController()
     let center = MPRemoteCommandCenter.shared()

@@ -218,12 +218,21 @@ final class BrowserManager {
     self.path = path
     content = nil // Clear for loading state
 
-    let resolved = try await resolve(path)
+    do {
+      let resolved = try await resolve(path)
 
-    // Only apply result if this is still the current navigation
-    guard navigationId == currentNavigationId else { return }
+      // Only apply result if this is still the current navigation
+      guard navigationId == currentNavigationId else { return }
 
-    content = resolved
+      content = resolved
+    } catch {
+      // A superseded navigation's failure is not the current page's failure.
+      // Every caller reports a throw unconditionally (and CarPlay presents it as
+      // a modal action sheet), so without this a slow /a that fails after a fast
+      // /b succeeded would show /a's error over /b's content.
+      guard navigationId == currentNavigationId else { return }
+      throw error
+    }
   }
 
   /// Resolves content for a path with optional caching.
@@ -282,12 +291,19 @@ final class BrowserManager {
 
     let currentPath = path
     contentCache.remove(currentPath)
-    let resolved = try await resolve(currentPath, useCache: false)
 
-    // Only apply result if this is still the current navigation
-    guard navigationId == currentNavigationId else { return }
+    do {
+      let resolved = try await resolve(currentPath, useCache: false)
 
-    content = resolved
+      // Only apply result if this is still the current navigation
+      guard navigationId == currentNavigationId else { return }
+
+      content = resolved
+    } catch {
+      // Superseded refreshes stay silent, for the same reason as `navigate`.
+      guard navigationId == currentNavigationId else { return }
+      throw error
+    }
   }
 
   private func resolveUncached(_ path: String) async throws -> ResolvedTrack {

@@ -769,6 +769,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         guard let self else { return }
         self.applyAudioSessionCategory = applyCategory
 
+        // A re-setup REPLACES the player, so the outgoing one has to be torn down
+        // and un-published first. `TrackPlayer` has no deinit: dropping the
+        // reference alone would leave its AVPlayer and MPNowPlayingSession alive.
+        // And `playerAndConfiguredBrowser` holds the old player strongly — its
+        // `resolve` is a one-shot, so without the reset the gate would keep
+        // handing the dead player to the CarPlay controller and Siri intents,
+        // which both await it. No-op on first setup.
+        player?.destroy()
+        playerAndConfiguredBrowser.reset()
+
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
 
@@ -868,6 +878,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
         applyPendingPlayerState()
 
+        // Push the resolved event cadence unconditionally. `updateOptions` applies
+        // the interval only when it *differs* from the stored one, but the store
+        // outlives the player — so on a re-setup with unchanged options the new
+        // player would come up with no progress timer at all.
+        player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
+        player?.setPlaybackIntervalEnabled(playbackIntervalEnabled)
+
         // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
       }
@@ -932,8 +949,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor { playerOptions.toOptions() }
   }
 
+  /// Stored so a re-setup can re-apply it: unlike the other runtime options this
+  /// one has no home in `playerOptions`, and the player it was pushed to does not
+  /// survive `setupPlayer`.
+  @MainActor private var playbackIntervalEnabled = false
+
   public func setPlaybackIntervalEnabled(enabled: Bool) {
-    onMainActor { player?.setPlaybackIntervalEnabled(enabled) }
+    onMainActor {
+      playbackIntervalEnabled = enabled
+      player?.setPlaybackIntervalEnabled(enabled)
+    }
   }
 
   // MARK: - Playback Control

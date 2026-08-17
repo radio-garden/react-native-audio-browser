@@ -281,24 +281,59 @@ class RemoteCommandController {
 
   // MARK: - Handlers
 
-  lazy var handlePlayCommand: RemoteCommandHandler = handlePlayCommandDefault
-  lazy var handlePauseCommand: RemoteCommandHandler = handlePauseCommandDefault
-  lazy var handleStopCommand: RemoteCommandHandler = handleStopCommandDefault
-  lazy var handleTogglePlayPauseCommand: RemoteCommandHandler =
-    handleTogglePlayPauseCommandDefault
-  lazy var handleSkipForwardCommand: RemoteCommandHandler = handleSkipForwardCommandDefault
-  lazy var handleSkipBackwardCommand: RemoteCommandHandler = handleSkipBackwardDefault
-  lazy var handleChangePlaybackPositionCommand: RemoteCommandHandler =
-    handleChangePlaybackPositionCommandDefault
-  lazy var handleNextTrackCommand: RemoteCommandHandler = handleNextTrackCommandDefault
-  lazy var handlePreviousTrackCommand: RemoteCommandHandler =
-    handlePreviousTrackCommandDefault
-  lazy var handleChangeRepeatModeCommand: RemoteCommandHandler =
-    handleChangeRepeatModeCommandDefault
-  lazy var handleChangeShuffleModeCommand: RemoteCommandHandler =
-    handleChangeShuffleModeCommandDefault
-  lazy var handleChangePlaybackRateCommand: RemoteCommandHandler =
-    handleChangePlaybackRateCommandDefault
+  // Each default is wrapped in a `[weak self]` closure rather than assigned as a
+  // bare method reference (`= handlePlayCommandDefault`): an unapplied instance
+  // method curries to `{ [self] in self.method($0) }`, which strongly captures
+  // self. Stored back onto self, that is a permanent cycle — `enable(command:)`
+  // forces every lazy init, so the controller would never deallocate, leaking one
+  // per player instance across JS reloads and re-setups.
+  lazy var handlePlayCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handlePlayCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handlePauseCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handlePauseCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleStopCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleStopCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleTogglePlayPauseCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleTogglePlayPauseCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleSkipForwardCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleSkipForwardCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleSkipBackwardCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleSkipBackwardDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleChangePlaybackPositionCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleChangePlaybackPositionCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleNextTrackCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleNextTrackCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handlePreviousTrackCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handlePreviousTrackCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleChangeRepeatModeCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleChangeRepeatModeCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleChangeShuffleModeCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleChangeShuffleModeCommandDefault(event: event) ?? .commandFailed
+  }
+
+  lazy var handleChangePlaybackRateCommand: RemoteCommandHandler = { [weak self] event in
+    self?.handleChangePlaybackRateCommandDefault(event: event) ?? .commandFailed
+  }
 
   private func handlePlayCommandDefault(event _: MPRemoteCommandEvent)
     -> MPRemoteCommandHandlerStatus
