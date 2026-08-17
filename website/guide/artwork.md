@@ -1,3 +1,7 @@
+---
+description: 'Set Track.artwork once and render it everywhere: the fetch and transform pipeline, per-surface sizing, SF Symbols, tinting, light/dark pairs, Android vector icons, and SVG.'
+---
+
 # Artwork
 
 **Artwork** is the image shown for a track — the thumbnail in a browse list, the cover on the lock screen, the icon on a CarPlay row. You set one field, `artwork`, on a [`Track`](/guide/track); the library resolves and transforms it per surface and per requested size, and hands the ready-to-render result back on `artworkSource`.

@@ -1,3 +1,7 @@
+---
+description: 'Override what the lock-screen, notification, car, and headset buttons do with handleRemote*, and observe presses with the onRemote* events.'
+---
+
 # Remote Controls
 
 **Remote controls** are the playback buttons on surfaces outside your app — the

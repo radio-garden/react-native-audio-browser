@@ -12,6 +12,22 @@ yarn build
 
 Runs TypeDoc → transforms sidebar → cleans markdown → builds VitePress.
 
+## Frontmatter
+
+Every guide needs a `description` — one sentence naming what the page covers, concretely enough that someone can decide from it alone whether this is the page they want:
+
+```yaml
+---
+description: 'Build and edit the queue, move between tracks with next and previous, and read it back for an "up next" UI.'
+---
+```
+
+It's the line next to the page in [`/llms.txt`](https://audiobrowser.dev/llms.txt), which is how a coding agent picks what to read. A guide without one is listed as a bare title, so it gets skipped.
+
+## Agent-readable output
+
+`vitepress-plugin-llms` emits a `.md` twin of every page plus `/llms.txt` and `/llms-full.txt` (guides only — the TypeDoc reference is excluded there, see `.vitepress/config.ts`). Nothing to maintain per page beyond the `description` above, but do check `dist/llms.txt` after restructuring the sidebar: pages fall into an "Other" section when they don't match a sidebar entry.
+
 ## Code Examples
 
 Wrap code inside fenced blocks at **80 characters** (Prettier's default `printWidth` — the repo has no custom config). Don't let a trailing comment push a line over: put the comment on its own line above the code instead. Break long object literals, imports, and JSX across lines as Prettier would.

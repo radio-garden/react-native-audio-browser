@@ -1,3 +1,7 @@
+---
+description: 'Playback errors versus navigation errors: how each surfaces, what the automatic retry budget does, and how to show an advisory error while it retries.'
+---
+
 # Errors
 
 Two different things can fail, and they surface separately:

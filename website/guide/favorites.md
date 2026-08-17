@@ -1,3 +1,7 @@
+---
+description: 'Let listeners heart the active track from the now-playing screen, notification, CarPlay, and Android Auto, and surface a Favorites tab and voice command.'
+---
+
 # Favorites
 
 **Favorites** let a listener mark the active track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite _state_ (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).

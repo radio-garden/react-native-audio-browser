@@ -174,6 +174,16 @@ Full guides and the complete [API Reference](https://audiobrowser.dev/api/) live
 
 The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate.
 
+### For coding agents
+
+Every page is also served as raw Markdown — append `.md` to any URL, e.g.
+[`audiobrowser.dev/guide/queue.md`](https://audiobrowser.dev/guide/queue.md).
+
+- [`/llms.txt`](https://audiobrowser.dev/llms.txt) — an index of every page with a one-line summary, to pick what to read.
+- [`/llms-full.txt`](https://audiobrowser.dev/llms-full.txt) — every guide in one file.
+
+The same guide Markdown ships in the package, so it can be read straight off disk without a network fetch: `node_modules/react-native-audio-browser/website/guide/`.
+
 ## Support
 
 Questions or bugs? [Open an issue](https://github.com/radio-garden/react-native-audio-browser/issues). Release notes live in the [changelog](CHANGELOG.md).

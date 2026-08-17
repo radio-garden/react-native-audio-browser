@@ -1,3 +1,7 @@
+---
+description: 'CarPlay for audio apps: browse templates generated from your browse tree, the UIScene and headless React Native host setup, and Siri voice search via INPlayMediaIntent.'
+---
+
 # CarPlay
 
 ## Overview

@@ -1,3 +1,7 @@
+---
+description: 'Detect the Android 12+ battery restrictions that block the foreground service the player needs, and prompt the listener to fix their settings.'
+---
+
 # Battery
 
 On Android 12+, if the OS has put your app under battery restrictions, it

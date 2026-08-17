@@ -1,3 +1,7 @@
+---
+description: 'Shape playback tone with the Android system equalizer: named presets, custom band levels, and handling its absence on iOS.'
+---
+
 # Equalizer
 
 The equalizer lets you shape playback tone — boost the bass, tame the treble —

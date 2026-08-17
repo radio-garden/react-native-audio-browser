@@ -1,3 +1,7 @@
+---
+description: 'Install react-native-audio-browser and its react-native-nitro-modules peer dependency, then complete the iOS and Android native setup.'
+---
+
 # Getting Started
 
 ## Installation

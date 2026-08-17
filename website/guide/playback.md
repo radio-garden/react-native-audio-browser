@@ -1,3 +1,7 @@
+---
+description: 'Control the active track — play, pause, stop, seek, playback state, progress, rate, and volume — the toolkit for building your own player UI.'
+---
+
 # Playback
 
 This guide covers **controlling the active track** — transport (play / pause /

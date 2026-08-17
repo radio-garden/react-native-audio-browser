@@ -31,6 +31,7 @@
     "ios/**/*.mm",
     "ios/**/*.cpp",
     "ios/**/*.swift",
+    "website/guide",
     "*.podspec",
     "README.md"
   ],

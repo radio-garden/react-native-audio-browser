@@ -1,3 +1,7 @@
+---
+description: 'Stop playback after a fixed time or at the end of the current track, counted down natively so it fires with the app backgrounded or the screen off.'
+---
+
 # Sleep Timer
 
 A **sleep timer** stops playback on its own after a set time — the classic

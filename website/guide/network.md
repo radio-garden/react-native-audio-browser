@@ -1,3 +1,7 @@
+---
+description: 'Track the device''s validated internet connectivity with useOnline, getOnline, and onOnlineChanged, and what "online" means on each platform.'
+---
+
 # Network
 
 The library tracks the device's internet connectivity with a native monitor and

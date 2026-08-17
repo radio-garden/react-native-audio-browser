@@ -1,3 +1,7 @@
+---
+description: 'The map for live audio: stream formats, missing durations, dropped connections, expiring URLs, and song titles carried in-band.'
+---
+
 # Live Streams
 
 Live audio is what most of this player's edge cases are about: streams that

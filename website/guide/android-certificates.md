@@ -1,3 +1,7 @@
+---
+description: 'Fix Android SSLHandshakeException / "Trust anchor for certification path not found" on HTTPS streams whose server omits its intermediate certificate.'
+---
+
 # Android: SSL "Trust anchor for certification path not found" (missing intermediate certificates)
 
 **If Android playback of a radio stream (or any HTTPS audio source) fails with an

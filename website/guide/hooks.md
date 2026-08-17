@@ -1,3 +1,7 @@
+---
+description: 'The React hooks that keep your UI in sync with playback, the queue, the browse tree, and the device — including changes driven from outside your app.'
+---
+
 # Hooks
 
 The library exposes its state as **React hooks** — call one in a component and it returns the current value and re-renders whenever that value changes. They keep your in-app UI in sync with playback, the queue, the browse tree, and the device, including changes driven from _outside_ your app (the lock screen, CarPlay, Android Auto, Bluetooth).

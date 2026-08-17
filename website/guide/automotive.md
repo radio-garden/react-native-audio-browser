@@ -1,3 +1,7 @@
+---
+description: 'How CarPlay, Android Auto, and Android Automotive all reuse the browse tree, queue, now-playing metadata, and search source you have already built.'
+---
+
 # In the car
 
 CarPlay, Android Auto, and Android Automotive all show your content on the car

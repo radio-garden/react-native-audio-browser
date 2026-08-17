@@ -1,3 +1,7 @@
+---
+description: 'What the system surfaces show: which metadata field lands where, the four layers that decide its value at any moment, and reading the result back in your own UI.'
+---
+
 # Now Playing
 
 The now-playing surface is everything that displays the current track on the _system's_ surfaces: the iOS lock screen and Control Center, the Android notification, CarPlay and Android Auto's Now Playing screens, and Bluetooth head units. The library publishes one metadata dictionary and the _operating system_ renders it — each surface picks different fields, composes them differently, and ignores the rest. The same published metadata is also readable inside your own app — see [Reading now-playing in your own UI](#reading-now-playing-in-your-own-ui).

@@ -1,3 +1,7 @@
+---
+description: 'The Track shape — the single unit of content: required fields, identity, metadata, and artwork, used for browse rows, queue items, and lock-screen metadata.'
+---
+
 # Track
 
 A **Track** is the one unit of content in the library. The same object describes a row in a browse list, an item in the playback queue, and the metadata on the lock screen — so once you know the Track shape, you can read and build content everywhere.

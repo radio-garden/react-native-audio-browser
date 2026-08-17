@@ -1,3 +1,7 @@
+---
+description: 'Read the metadata coming out of the media as it plays: the live ICY or HLS song, the static tags baked into a file, and chapter markers.'
+---
+
 # Metadata
 
 As a track plays, the player surfaces metadata it reads _from the media_ — the

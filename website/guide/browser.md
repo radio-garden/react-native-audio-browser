@@ -1,3 +1,7 @@
+---
+description: 'The reference for configureBrowser: every source shape (static, callback, JSON API), routing and path patterns, request transforms, and BrowserConfiguration option.'
+---
+
 # Browser
 
 The **Browser** is the subsystem that turns one declarative description of your content into a navigable tree — the same tree that powers your in-app browse UI, CarPlay, and Android Auto. You describe it once with **`configureBrowser`**; the library resolves paths, fetches children, transforms requests, and renders the native surfaces for you.

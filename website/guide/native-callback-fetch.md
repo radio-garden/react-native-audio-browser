@@ -1,3 +1,7 @@
+---
+description: "Why React Native's fetch hangs inside browse resolvers, search sources, and request transforms when the device is asleep, and what to use instead."
+---
+
 # Networking in native callbacks (don't use `fetch`)
 
 **If a browse route resolver, search source, or request `transform` does its own

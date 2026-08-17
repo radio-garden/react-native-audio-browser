@@ -1,3 +1,7 @@
+---
+description: 'The whole options surface — setupPlayer, updateOptions, and getOptions — mapped to the feature guide that covers each area in depth.'
+---
+
 # Configuration
 
 Everything about how the player behaves is set through three functions:

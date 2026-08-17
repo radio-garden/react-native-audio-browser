@@ -1,3 +1,4 @@
+import CopyOrDownloadAsMarkdownButtons from 'vitepress-plugin-llms/vitepress-components/CopyOrDownloadAsMarkdownButtons.vue'
 import DefaultTheme from 'vitepress/theme'
 import { h } from 'vue'
 import LiveDemo from './LiveDemo.vue'
@@ -11,5 +12,13 @@ export default {
     return h(DefaultTheme.Layout, null, {
       'home-hero-image': () => h(LiveDemo)
     })
+  },
+  enhanceApp({ app }) {
+    // Placed under each page's h1 by the markdown-it plugin registered in
+    // config.ts — the human-facing half of the Markdown output.
+    app.component(
+      'CopyOrDownloadAsMarkdownButtons',
+      CopyOrDownloadAsMarkdownButtons
+    )
   }
 }

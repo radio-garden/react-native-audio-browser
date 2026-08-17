@@ -1,3 +1,7 @@
+---
+description: 'Porting from react-native-track-player v4: what carries over unchanged, what was renamed or reshaped, and what is new.'
+---
+
 # Migrating from react-native-track-player
 
 If you're coming from [react-native-track-player](https://github.com/doublesymmetry/react-native-track-player/tree/v4)

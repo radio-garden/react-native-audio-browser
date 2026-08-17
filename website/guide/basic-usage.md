@@ -1,3 +1,7 @@
+---
+description: 'The browse tree in one page: browsable versus playable Tracks, setting up the player, declaring content, and playing it.'
+---
+
 # Basic Usage
 
 This guide covers the core idea — the **browse tree** — and the minimal code to set up the player, define some content, and play it. Installation is in [Getting Started](/guide/getting-started).

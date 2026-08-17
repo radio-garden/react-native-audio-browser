@@ -1,3 +1,7 @@
+---
+description: 'Block premium, login-only, or region-locked content on CarPlay and Android Auto with a short message — without touching your in-app UI or interrupting playback.'
+---
+
 # Gate
 
 When part of your catalog is premium, login-only, or region-locked, you need a way to block it on the car surfaces — without building a separate UI for them. That's what a **Gate** is: you hand the library a short message, and it shows that in place of the browse content on **CarPlay** and **Android Auto**, and can turn away voice searches.

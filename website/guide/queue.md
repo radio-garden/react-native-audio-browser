@@ -1,3 +1,7 @@
+---
+description: 'Build and edit the queue, move between tracks with next and previous, and read it back for an "up next" UI.'
+---
+
 # Queue
 
 The **queue** is the ordered list of tracks the player works through. The track

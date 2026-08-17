@@ -1,3 +1,7 @@
+---
+description: 'Configure the search source that answers both your in-app search UI and the voice search on Siri, CarPlay, and Android Auto.'
+---
+
 # Search
 
 **Search** is the query subsystem: it turns a voice command ("play jazz") or a text query into a list of playable tracks. It is distinct from **Browse** (navigating the content tree) — search takes structured query parameters and returns results.

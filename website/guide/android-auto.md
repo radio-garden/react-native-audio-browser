@@ -1,3 +1,7 @@
+---
+description: 'Put your browse tree and playback on the Android Auto car screen: the automotive app descriptor, the manifest entries the library merges in, and "Hey Google, play…" voice search.'
+---
+
 # Android Auto
 
 ## Overview

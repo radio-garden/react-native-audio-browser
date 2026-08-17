@@ -1,3 +1,7 @@
+---
+description: 'Read where audio is currently playing (speaker, Bluetooth, AirPlay, the car), react when the route changes, and open the system output switcher.'
+---
+
 # Audio Output
 
 Read where audio is currently playing (speaker, Bluetooth, AirPlay, the car…),
