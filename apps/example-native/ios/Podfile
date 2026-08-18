@@ -34,9 +34,11 @@ target 'AudioBrowserExample' do
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        # Enable Swift 6 language mode and strict concurrency for AudioBrowser
+        # Strict concurrency for AudioBrowser. NOTE: deliberately do NOT pin
+        # SWIFT_VERSION here -- the podspec declares swift_version 6.2 and
+        # consumers get that, so overriding it to 6.0 would make the example
+        # build laxer than real consumers and mask data-race diagnostics.
         if target.name == 'AudioBrowser'
-          config.build_settings['SWIFT_VERSION'] = '6.0'
           config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'complete'
         end
 
