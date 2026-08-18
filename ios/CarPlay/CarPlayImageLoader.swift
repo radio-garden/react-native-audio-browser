@@ -73,13 +73,20 @@ final class CarPlayImageLoader {
     }
 
     // Build URL resolver closure that wraps BrowserManager
-    let urlResolver: ((Double, Double) async -> ArtworkResolvedImage?)? = browserManager.map { bm in
-      { [weak bm] pixelWidth, pixelHeight in
-        guard let bm else { return nil }
+    // @Sendable keeps the closure out of the main-actor isolation region so it
+    // can be handed to the nonisolated CarPlayArtworkResolver.resolve without a
+    // data-race diagnostic. BrowserManager is @MainActor (hence Sendable), so the
+    // weak capture is safe and its call still hops via await.
+    let urlResolver: (@Sendable (Double, Double) async -> ArtworkResolvedImage?)?
+    if let browserManager {
+      urlResolver = { [weak browserManager] pixelWidth, pixelHeight in
+        guard let browserManager else { return nil }
         let imageContext = ImageContext(width: pixelWidth, height: pixelHeight)
-        guard let source = await bm.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
+        guard let source = await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
         return ArtworkResolvedImage(uri: source.uri, headers: source.headers)
       }
+    } else {
+      urlResolver = nil
     }
 
     Task {

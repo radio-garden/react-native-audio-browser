@@ -460,8 +460,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       browserManager.config = buildConfig()
 
       // Notify player that browser configuration is ready (routes/tabs available)
-      // This allows Android Auto to start browsing content
-      connectedService?.player?.notifyBrowserConfigurationReady()
+      // This allows Android Auto to start browsing content.
+      // This reaches MediaSession.getConnectedControllers, which asserts the
+      // main thread, and this setter runs on the JS thread. Hop without
+      // blocking -- runBlockingOnMain would deadlock here for the same reason
+      // described for the navigation below (JS callbacks can't run while the
+      // JS thread waits). Ordering with navigationJob is preserved: both are
+      // queued on mainScope.
+      launchInScope { connectedService?.player?.notifyBrowserConfigurationReady() }
 
       clearNavigationError()
 
@@ -777,8 +783,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Invalidate cached content so future navigations fetch fresh data
     browserManager.invalidateContentCache(path)
 
-    // Notify external media controllers (Android Auto)
-    connectedService?.player?.notifyContentChanged(path)
+    // Notify external media controllers (Android Auto). Reaches MediaSession,
+    // which asserts the main thread; this override runs on the JS thread.
+    launchInScope { connectedService?.player?.notifyContentChanged(path) }
 
     // If we're currently viewing this path, refresh the content
     if (browserManager.getPath() == path) {
@@ -792,8 +799,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Clear all cached content so every path re-fetches fresh data
     browserManager.clearContentCache()
 
-    // Notify external media controllers (Android Auto) to refresh subscribed paths
-    connectedService?.player?.invalidateAllContent()
+    // Notify external media controllers (Android Auto) to refresh subscribed paths.
+    // Reaches MediaSession, which asserts the main thread; this override runs on
+    // the JS thread.
+    launchInScope { connectedService?.player?.invalidateAllContent() }
 
     // Refresh whatever the browser is currently viewing
     mainScope.launch { browserManager.refresh() }
@@ -834,14 +843,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Re-query every subscribed parent so a connected controller (Android
     // Auto) swaps its lists for the gate tile without reconnecting. Notify
     // only — the content cache stays warm for when the gate clears.
-    connectedService?.player?.invalidateAllContent()
+    // MediaSession asserts the main thread; this override runs on the JS thread.
+    launchInScope { connectedService?.player?.invalidateAllContent() }
   }
 
   override fun clearGate() {
     if (!gateState.active) return
     // Single atomic assignment — readers never see a half-cleared triple.
     gateState = GateState(active = false, chrome = null, hasResolver = false)
-    connectedService?.player?.invalidateAllContent()
+    // MediaSession asserts the main thread; this override runs on the JS thread.
+    launchInScope { connectedService?.player?.invalidateAllContent() }
   }
 
   /**
@@ -927,8 +938,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun updateOptions(options: NativeUpdateOptions) {
     updateOptions.updateFromBridge(options)
-    // Only update the options if the service is around
-    connectedService?.let { player.applyOptions(updateOptions) }
+    // Only update the options if the service is around.
+    // applyOptions touches the Media3 player, which asserts it is only ever
+    // driven from the main thread ("Player callback method is called from a
+    // wrong thread"). Nitro invokes this from the JS thread, so hop like every
+    // other player-touching method here does.
+    connectedService?.let { runBlockingOnMain { player.applyOptions(updateOptions) } }
   }
 
   override fun getOptions(): Options {

@@ -259,7 +259,7 @@ final class CarPlayListItemFactory {
     // API (the elements are captured per availability branch — their type
     // doesn't exist before iOS 26). nil = the legacy gridImages path.
     // @MainActor makes the closure Sendable for the artwork completion hop.
-    var applyImage: (@MainActor (Int, UIImage) -> Void)?
+    var applyImage: (@MainActor @Sendable (Int, UIImage) -> Void)?
     // Resolved once per track, shared by element construction and the
     // artwork loads below.
     let resolvedStyles = tracks.map { StyleResolver.trackStyle(track: $0.style, section: style) }
@@ -280,7 +280,7 @@ final class CarPlayListItemFactory {
       }
       // The image setter every element family shares (`image` is on the base
       // class); bounds-checked against the elements the row was built with.
-      func imageApplier(_ elements: [some CPListImageRowItemElement]) -> @MainActor (Int, UIImage) -> Void {
+      func imageApplier(_ elements: [some CPListImageRowItemElement]) -> @MainActor @Sendable (Int, UIImage) -> Void {
         { index, image in
           guard index < elements.count else { return }
           elements[index].image = image
@@ -386,7 +386,7 @@ final class CarPlayListItemFactory {
         for: track,
         style: resolved,
         size: Self.tileImageSize(gridTile: style.gridTile, cardImage: resolved.cardImage),
-      ) { [weak item] image in
+      ) { [weak item, applyImage] image in
         Task { @MainActor in
           guard let item, let image else { return }
           if let applyImage {
