@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -29,6 +29,12 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { SearchScreen } from './SearchScreen'
 
 type Screen = 'browser' | 'search'
+
+// Flatten sections into FlatList rows: a titled section renders a header
+// followed by its tracks; an untitled one renders its tracks bare.
+type BrowseRow =
+  | { kind: 'header'; title: string; key: string }
+  | { kind: 'track'; track: Track; key: string }
 
 export function BrowserScreen() {
   const insets = useSafeAreaInsets()
@@ -73,13 +79,48 @@ export function BrowserScreen() {
     }
   }, [path, tabs])
 
-  const renderItem = ({ item }: { item: Track }) => (
-    <TrackListItem
-      track={item}
-      isActive={item.src != null && activeTrack?.src === item.src}
-      onPress={() => navigate(item)}
-    />
-  )
+  // A route declares its payload either as a flat `children` list (e.g.
+  // /favorites) or as grouped `sections` (e.g. /library). Flatten both into one
+  // row list so the list renders whichever shape the route returned -- reading
+  // only `children` silently renders nothing for a sections-based route.
+  const rows: BrowseRow[] = useMemo(() => {
+    if (!content) return []
+
+    if (content.sections?.length) {
+      return content.sections.flatMap((section, si): BrowseRow[] => {
+        const trackRows: BrowseRow[] = (section.children ?? []).map(
+          (track, i) => ({
+            kind: 'track',
+            track,
+            key: `track-${si}-${i}-${track.title}`
+          })
+        )
+        return section.title
+          ? [
+              { kind: 'header', title: section.title, key: `head-${si}` },
+              ...trackRows
+            ]
+          : trackRows
+      })
+    }
+
+    return (content.children ?? []).map((track, i) => ({
+      kind: 'track',
+      track,
+      key: `track-${i}-${track.title}`
+    }))
+  }, [content])
+
+  const renderItem = ({ item }: { item: BrowseRow }) =>
+    item.kind === 'header' ? (
+      <Text style={styles.sectionHeader}>{item.title}</Text>
+    ) : (
+      <TrackListItem
+        track={item.track}
+        isActive={item.track.src != null && activeTrack?.src === item.track.src}
+        onPress={() => navigate(item.track)}
+      />
+    )
 
   return (
     <View style={styles.container}>
@@ -154,9 +195,9 @@ export function BrowserScreen() {
             </Text>
 
             <FlatList
-              data={content.children || []}
+              data={rows}
               renderItem={renderItem}
-              keyExtractor={(item, index) => `${item.title}-${index}`}
+              keyExtractor={(item) => item.key}
               style={styles.list}
               showsVerticalScrollIndicator={false}
             />
@@ -243,6 +284,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 16,
     paddingTop: 16
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8
   },
   list: {
     flex: 1
