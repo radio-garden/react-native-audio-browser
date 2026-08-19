@@ -77,16 +77,15 @@ final class CarPlayImageLoader {
     // can be handed to the nonisolated CarPlayArtworkResolver.resolve without a
     // data-race diagnostic. BrowserManager is @MainActor (hence Sendable), so the
     // weak capture is safe and its call still hops via await.
-    let urlResolver: (@Sendable (Double, Double) async -> ArtworkResolvedImage?)?
-    if let browserManager {
-      urlResolver = { [weak browserManager] pixelWidth, pixelHeight in
-        guard let browserManager else { return nil }
+    // The return-type annotation is load-bearing: `@Sendable` is not inferred
+    // through `Optional.map`, and without it the closure fails to type-check.
+    let urlResolver = browserManager.map { bm -> @Sendable (Double, Double) async -> ArtworkResolvedImage? in
+      { [weak bm] pixelWidth, pixelHeight in
+        guard let bm else { return nil }
         let imageContext = ImageContext(width: pixelWidth, height: pixelHeight)
-        guard let source = await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
+        guard let source = await bm.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
         return ArtworkResolvedImage(uri: source.uri, headers: source.headers)
       }
-    } else {
-      urlResolver = nil
     }
 
     Task {
