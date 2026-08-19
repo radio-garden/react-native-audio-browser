@@ -1,3 +1,15 @@
+## [0.2.0-next.14](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.13...v0.2.0-next.14) (2026-08-19)
+
+### ⚠ BREAKING CHANGES
+
+* `Section.subtitle` is removed. A section's view-all row
+is titled by the `viewMoreTitle` browser option instead, and a section
+with a `path` now gets that row at every `display`, not only grids.
+
+### Features
+
+* replace Section.subtitle with a global viewMoreTitle option ([b7bbdea](https://github.com/radio-garden/react-native-audio-browser/commit/b7bbdea50ceb0970aed0e0b501afacf0992b3ccf))
+
 ## [0.2.0-next.13](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.12...v0.2.0-next.13) (2026-08-17)
 
 ### Features
