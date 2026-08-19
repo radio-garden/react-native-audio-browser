@@ -97,6 +97,7 @@ class TrackPlayer {
   // MARK: - Coordinator Forwarding Properties
 
   var state: PlaybackState { coordinator.state }
+  var hasLoadedAsset: Bool { coordinator.effectHandler?.hasLoadedAsset ?? false }
   var playbackError: TrackPlayerError.PlaybackError? {
     get { coordinator.playbackError }
     set { coordinator.playbackError = newValue }
