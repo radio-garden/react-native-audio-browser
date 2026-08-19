@@ -72,13 +72,9 @@ final class CarPlayImageLoader {
       return
     }
 
-    // Build URL resolver closure that wraps BrowserManager
-    // @Sendable keeps the closure out of the main-actor isolation region so it
-    // can be handed to the nonisolated CarPlayArtworkResolver.resolve without a
-    // data-race diagnostic. BrowserManager is @MainActor (hence Sendable), so the
-    // weak capture is safe and its call still hops via await.
-    // The return-type annotation is load-bearing: `@Sendable` is not inferred
-    // through `Optional.map`, and without it the closure fails to type-check.
+    // The annotation goes on the closure's return type, not the binding:
+    // @Sendable isn't inferred through `map`, and omitting it fails with
+    // "type of expression is ambiguous" — which doesn't mention @Sendable.
     let urlResolver = browserManager.map { bm -> @Sendable (Double, Double) async -> ArtworkResolvedImage? in
       { [weak bm] pixelWidth, pixelHeight in
         guard let bm else { return nil }
