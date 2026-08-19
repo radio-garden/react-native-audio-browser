@@ -79,37 +79,25 @@ export function BrowserScreen() {
     }
   }, [path, tabs])
 
-  // A route declares its payload either as a flat `children` list (e.g.
-  // /favorites) or as grouped `sections` (e.g. /library). Flatten both into one
-  // row list so the list renders whichever shape the route returned -- reading
-  // only `children` silently renders nothing for a sections-based route.
-  const rows: BrowseRow[] = useMemo(() => {
-    if (!content) return []
-
-    if (content.sections?.length) {
-      return content.sections.flatMap((section, si): BrowseRow[] => {
-        const trackRows: BrowseRow[] = (section.children ?? []).map(
-          (track, i) => ({
-            kind: 'track',
-            track,
-            key: `track-${si}-${i}-${track.title}`
-          })
-        )
+  // A resolved page always carries `sections`: authored `children` sugar is
+  // normalized into one untitled section before it reaches a consumer.
+  const rows: BrowseRow[] = useMemo(
+    () =>
+      (content?.sections ?? []).flatMap((section, si): BrowseRow[] => {
+        const trackRows: BrowseRow[] = section.children.map((track, i) => ({
+          kind: 'track',
+          track,
+          key: `track-${si}-${i}-${track.title}`
+        }))
         return section.title
           ? [
               { kind: 'header', title: section.title, key: `head-${si}` },
               ...trackRows
             ]
           : trackRows
-      })
-    }
-
-    return (content.children ?? []).map((track, i) => ({
-      kind: 'track',
-      track,
-      key: `track-${i}-${track.title}`
-    }))
-  }, [content])
+      }),
+    [content]
+  )
 
   const renderItem = ({ item }: { item: BrowseRow }) =>
     item.kind === 'header' ? (
