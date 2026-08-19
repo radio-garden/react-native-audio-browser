@@ -95,7 +95,7 @@ export function BrowserScreen() {
         const trackRows: BrowseRow[] = section.children.map((track, i) => ({
           kind: 'track',
           track,
-          key: `track-${si}-${i}-${track.title}`
+          key: `track-${si}-${i}`
         }))
         return section.title
           ? [
