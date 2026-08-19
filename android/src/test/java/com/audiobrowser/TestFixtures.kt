@@ -61,10 +61,9 @@ object TestFixtures {
   fun section(
     children: Array<Track> = emptyArray(),
     title: String? = null,
-    subtitle: String? = null,
     style: SectionStyle? = null,
     path: String? = null,
-  ) = Section(title = title, subtitle = subtitle, style = style, path = path, children = children)
+  ) = Section(title = title, style = style, path = path, children = children)
 
   fun transformableConfig(
     baseUrl: String? = null,

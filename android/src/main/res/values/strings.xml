@@ -1,10 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default copy for the two error tiles the library invents in the Android Auto
+  browse list. These rows have no consumer-authored Track behind them, so there
+  is nothing in the browse tree to read a title from; English here because a
+  default that renders beats a blank row.
+
+  Resources rather than a browser-config option — the route the library's
+  cross-platform copy takes (`formatNavigationError`, `carPlayLoadingTitle`,
+  `viewMoreTitle`) — because these two are not cross-platform. They exist only
+  because Media3 drops the message from `LibraryResult.ofError` on the legacy
+  browse bridge, so a row is the sole signal available; CarPlay has no
+  counterpart, stating failures in the list's centered empty view instead
+  (CarPlayController.showMessage). Android-only copy in the Android-idiomatic
+  place: an app re-skins either by declaring the same name in its own
+  strings.xml, and a `values-<locale>/` file can add translations later without
+  touching the API.
+-->
 <resources>
-    <!-- Error message shown in Android Auto when network is offline -->
+    <!--
+      The offline tile: shown in place of a page's contents when the device is
+      offline and the consumer left `androidControllerOfflineError` on. Distinct
+      from the browse-error tile below — this one is used only when the network
+      monitor says we are actually offline, so it may name the cause. The
+      subtitle is the tile's second line.
+    -->
     <string name="audio_browser_offline_error">No internet connection</string>
     <string name="audio_browser_offline_error_subtitle">Check your connection and try again</string>
 
-    <!-- Generic error message shown in Android Auto when browsing fails -->
+    <!--
+      The browse-error tile: shown when a browse fails while ONLINE — a server
+      error, a bad status, a timeout waiting for the JS browser. Deliberately
+      vague, and deliberately not "no internet connection": the genuinely-offline
+      case is caught earlier and gets the tile above, so anything reaching this
+      one has a working connection and would be misdiagnosed by that wording.
+
+      A tile rather than an error dialog because Media3 drops the message from
+      `LibraryResult.ofError` on the legacy browse bridge, which would leave a
+      bare "No items" screen. Verified on a head unit (2026-06): the Android Auto
+      browse list never renders error text by any other route, so tiles are the
+      only in-browse signal the library controls.
+    -->
     <string name="audio_browser_browse_error">Something went wrong</string>
     <string name="audio_browser_browse_error_subtitle">Please try again later</string>
 </resources>

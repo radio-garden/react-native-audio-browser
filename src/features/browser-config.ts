@@ -289,6 +289,7 @@ export function toNativeConfig(
     singleTrack: config.singleTrack,
     handleTrackLoad: config.handleTrackLoad,
     androidControllerOfflineError: config.androidControllerOfflineError,
+    viewMoreTitle: config.viewMoreTitle,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
     resolveAlbumPath: config.resolveAlbumPath,
     formatNavigationError: config.formatNavigationError

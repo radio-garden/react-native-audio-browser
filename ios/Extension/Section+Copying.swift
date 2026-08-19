@@ -9,14 +9,12 @@ extension Section {
   /// `children` is single-optional since it is non-optional on Section.
   func copying(
     title: String?? = nil,
-    subtitle: String?? = nil,
     style: SectionStyle?? = nil,
     path: String?? = nil,
     children: [Track]? = nil,
   ) -> Section {
     Section(
       title: title ?? self.title,
-      subtitle: subtitle ?? self.subtitle,
       style: style ?? self.style,
       path: path ?? self.path,
       children: children ?? self.children,
@@ -26,6 +24,6 @@ extension Section {
   /// One untitled section — the canonical wrap of a flat track list
   /// (`children` authoring sugar, search results — ADR 0010).
   static func untitled(_ children: [Track]) -> Section {
-    Section(title: nil, subtitle: nil, style: nil, path: nil, children: children)
+    Section(title: nil, style: nil, path: nil, children: children)
   }
 }

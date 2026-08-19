@@ -59,7 +59,7 @@ object SectionScope {
  * search results — ADR 0010).
  */
 fun untitledSection(children: Array<Track>): Section =
-  Section(title = null, subtitle = null, style = null, path = null, children = children)
+  Section(title = null, style = null, path = null, children = children)
 
 /**
  * The canonical sectioned shape: `sections` wins when present; plain `children` is authoring sugar

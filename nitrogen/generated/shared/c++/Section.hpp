@@ -47,14 +47,13 @@ namespace margelo::nitro::audiobrowser {
   struct Section final {
   public:
     std::optional<std::string> title     SWIFT_PRIVATE;
-    std::optional<std::string> subtitle     SWIFT_PRIVATE;
     std::optional<SectionStyle> style     SWIFT_PRIVATE;
     std::optional<std::string> path     SWIFT_PRIVATE;
     std::vector<Track> children     SWIFT_PRIVATE;
 
   public:
     Section() = default;
-    explicit Section(std::optional<std::string> title, std::optional<std::string> subtitle, std::optional<SectionStyle> style, std::optional<std::string> path, std::vector<Track> children): title(title), subtitle(subtitle), style(style), path(path), children(children) {}
+    explicit Section(std::optional<std::string> title, std::optional<SectionStyle> style, std::optional<std::string> path, std::vector<Track> children): title(title), style(style), path(path), children(children) {}
 
   public:
     friend bool operator==(const Section& lhs, const Section& rhs) = default;
@@ -71,7 +70,6 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::Section(
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "subtitle"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "style"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path"))),
         JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "children")))
@@ -80,7 +78,6 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Section& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.title));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "subtitle"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "style"), JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::toJSI(runtime, arg.style));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "path"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "children"), JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::toJSI(runtime, arg.children));
@@ -95,7 +92,6 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "subtitle")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "style")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))) return false;
       if (!JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "children")))) return false;

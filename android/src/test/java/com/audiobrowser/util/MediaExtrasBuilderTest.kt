@@ -130,8 +130,9 @@ class MediaExtrasBuilderTest {
         path = "/popular",
         style = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = false),
       )
-    val navigation = TrackFactory.navigationTrack(section)
+    val navigation = TrackFactory.navigationTrack(section, "View more")
     assertEquals(StyleDisplay.GRID, navigation.style?.display)
+    assertEquals("View more", navigation.title)
 
     val extras = MediaExtrasBuilder.build(navigation)
     assertEquals(

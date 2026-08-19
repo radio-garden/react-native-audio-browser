@@ -144,4 +144,13 @@ class BrowserManagerLayerResolutionTest {
     assertSame(request, browserManager.resolvedRequestLayerForTest)
     assertNull(browserManager.resolvedBrowseLayerForTest)
   }
+
+  @Test
+  fun `viewMoreTitle falls back to the in-code default when unconfigured`() = runTest {
+    // The only viewMoreTitle path a JVM test can reach — a configured callback returns a Nitro
+    // Promise, see the resolver-thunk gap noted above.
+    browserManager.config = BrowserConfig()
+
+    assertEquals(BrowserManager.DEFAULT_VIEW_MORE_TITLE, browserManager.viewMoreTitle())
+  }
 }

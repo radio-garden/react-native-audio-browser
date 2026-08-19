@@ -32,7 +32,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   ResolvedTrack(
     path: "/original",
     style: SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil),
-    sections: [Section(title: "Group A", subtitle: nil, style: nil, path: nil, children: [])],
+    sections: [Section(title: "Group A", style: nil, path: nil, children: [])],
     children: [Track(id: "t1", path: "/t1")],
     carPlaySiriListButton: .top,
     id: "original-id",
@@ -162,7 +162,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 @Test func copyingOverridesSections() {
   let original = makeResolvedTrack()
   let sections = [
-    Section(title: "A", subtitle: nil, style: nil, path: nil, children: [Track(id: "c1", src: "c1")]),
+    Section(title: "A", style: nil, path: nil, children: [Track(id: "c1", src: "c1")]),
   ]
   let copy = original.copying(sections: sections)
   #expect(copy.sections == sections)

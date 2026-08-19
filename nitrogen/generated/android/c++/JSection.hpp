@@ -62,8 +62,6 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
-      static const auto fieldSubtitle = clazz->getField<jni::JString>("subtitle");
-      jni::local_ref<jni::JString> subtitle = this->getFieldValue(fieldSubtitle);
       static const auto fieldStyle = clazz->getField<JSectionStyle>("style");
       jni::local_ref<JSectionStyle> style = this->getFieldValue(fieldStyle);
       static const auto fieldPath = clazz->getField<jni::JString>("path");
@@ -72,7 +70,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> children = this->getFieldValue(fieldChildren);
       return Section(
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
-        subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt,
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         [&]() {
@@ -94,13 +91,12 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JSection::javaobject> fromCpp(const Section& value) {
-      using JSignature = JSection(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JSectionStyle>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>);
+      using JSignature = JSection(jni::alias_ref<jni::JString>, jni::alias_ref<JSectionStyle>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
-        value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
         value.style.has_value() ? JSectionStyle::fromCpp(value.style.value()) : nullptr,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         [&]() {

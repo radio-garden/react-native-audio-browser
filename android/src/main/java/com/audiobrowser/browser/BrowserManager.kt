@@ -24,6 +24,7 @@ import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.Promise
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -132,6 +133,12 @@ class BrowserManager {
   private var resolvedLayerGeneration = -1
   private var resolvedRequestLayer: TransformableRequestConfig? = null
   private var resolvedBrowseLayer: TransformableRequestConfig? = null
+
+  // The "view more" row title, cached on the same generation as the layers above — see
+  // viewMoreTitle(). Kept separate from them because it is resolved lazily (only a browse that
+  // actually appends a row asks for it), not eagerly alongside every request.
+  private var resolvedViewMoreTitleGeneration = -1
+  private var resolvedViewMoreTitle = DEFAULT_VIEW_MORE_TITLE
 
   /** Test-only accessors for the resolver-layer cache state (see ensureLayersResolved). */
   internal val layerGenerationForTest: Int
@@ -1129,6 +1136,14 @@ class BrowserManager {
 
     /** Internal path used for search */
     internal const val SEARCH_ROUTE_PATH = "__search__"
+
+    /**
+     * Title of the appended "view more" row when the consumer sets no
+     * [BrowserConfig.viewMoreTitle]. English in code, like [defaultFormattedError]'s error copy — a
+     * default that renders beats a section whose `path` is unreachable, and it still resolves when
+     * the JS runtime is gone.
+     */
+    internal const val DEFAULT_VIEW_MORE_TITLE = "View more"
   }
 
   /**
@@ -1302,6 +1317,33 @@ class BrowserManager {
   internal suspend fun resolvedRequestConfig(): TransformableRequestConfig? {
     ensureLayersResolved()
     return resolvedRequestLayer
+  }
+
+  /**
+   * The title for the "view more" row appended to a pathed section on a surface whose header cannot
+   * be tapped (Android Auto).
+   *
+   * Resolved from [BrowserConfig.viewMoreTitle] once per content generation — the same generation
+   * the resolver layers use, so `invalidateAllContent()` re-reads it and an app that switched
+   * language mid-drive gets the new copy without reconfiguring. Falls back to
+   * [DEFAULT_VIEW_MORE_TITLE] when unset, blank, or throwing: a row with the default copy still
+   * reaches the section's page, an untitled one does not.
+   */
+  internal suspend fun viewMoreTitle(): String {
+    val generation = layerGeneration
+    if (resolvedViewMoreTitleGeneration == generation) return resolvedViewMoreTitle
+    val title =
+      try {
+        config.viewMoreTitle?.invoke()?.await()?.takeIf { it.isNotBlank() }
+      } catch (e: Exception) {
+        Timber.e(e, "viewMoreTitle callback failed; falling back to the default")
+        null
+      } ?: DEFAULT_VIEW_MORE_TITLE
+    // A newer generation started while awaiting — use this result, but don't cache it as current.
+    if (generation != layerGeneration) return title
+    resolvedViewMoreTitle = title
+    resolvedViewMoreTitleGeneration = generation
+    return title
   }
 
   /**
@@ -1502,6 +1544,8 @@ data class BrowserConfig(
   // Behavior
   val singleTrack: Boolean = false,
   val androidControllerOfflineError: Boolean = true,
+  // Titles the "view more" row appended to a pathed section. See BrowserManager.viewMoreTitle.
+  val viewMoreTitle: (() -> Promise<String>)? = null,
 ) {
   /** Returns true if search functionality is configured (either callback or config). */
   val hasSearch: Boolean

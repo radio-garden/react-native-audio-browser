@@ -300,6 +300,7 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
 #include <NitroModules/JUnit.hpp>
 #include "JTrackLoadEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"

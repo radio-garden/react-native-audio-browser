@@ -186,7 +186,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, requestResolver: nil, browse: nil, browseResolver: nil, media: nil, artwork: nil, nowPlayingArtwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
-    androidControllerOfflineError: nil, carPlayLoadingTitle: nil, resolveAlbumPath: nil, formatNavigationError: nil,
+    androidControllerOfflineError: nil, viewMoreTitle: nil, carPlayLoadingTitle: nil, resolveAlbumPath: nil,
+    formatNavigationError: nil,
   ) {
     didSet {
       // Copied here, on the setter's thread: the Task below outlives this call,

@@ -25,13 +25,16 @@ object TrackFactory {
   }
 
   /**
-   * A synthetic browsable Track for a section's "view all" surface — the section has a path, title,
-   * and label, but no Track (ADR 0010). It carries the section's declared item block as its own,
+   * A synthetic browsable Track for a section's "view more" row — the section has a path but no
+   * Track to hang it on (ADR 0010). It carries the section's declared item block as its own,
    * `display` included: the section's declaration about this content's layout is the only declared
    * promise the "view all" page can ever have (there is no consumer-authored handle to declare one
    * on), and without it Android Auto would always render that page as a list.
+   *
+   * [title] is the consumer's `viewMoreTitle`, one string for every section — not the section's own
+   * title, which the group header above the row already shows.
    */
-  fun navigationTrack(section: Section): Track =
+  fun navigationTrack(section: Section, title: String): Track =
     Track(
       id = null,
       path = section.path,
@@ -39,8 +42,8 @@ object TrackFactory {
       artwork = null,
       artworkSource = null,
       request = null,
-      title = section.title ?: "",
-      subtitle = section.subtitle,
+      title = title,
+      subtitle = null,
       artist = null,
       albumPath = null,
       album = null,

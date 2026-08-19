@@ -203,6 +203,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       singleTrack = null,
       handleTrackLoad = null,
       androidControllerOfflineError = null,
+      viewMoreTitle = null,
       carPlayLoadingTitle = null,
       resolveAlbumPath = null,
       formatNavigationError = null,
@@ -369,6 +370,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       routes = _configuration.routes,
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
+      viewMoreTitle = _configuration.viewMoreTitle,
     )
   }
 
@@ -1571,6 +1573,7 @@ private fun NativeBrowserConfiguration.strippingJSCallbacks() =
     requestResolver = null,
     browseResolver = null,
     handleTrackLoad = null,
+    viewMoreTitle = null,
     resolveAlbumPath = null,
     formatNavigationError = null,
     request = request?.strippingJSCallbacks(),

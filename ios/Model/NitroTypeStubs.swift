@@ -189,7 +189,6 @@
 
   struct Section: Equatable {
     var title: String?
-    var subtitle: String?
     var style: SectionStyle?
     var path: String?
     var children: [Track]

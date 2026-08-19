@@ -235,20 +235,17 @@ extension JsonStyle {
 /// ignored dead weight.
 struct JsonSection: Codable {
   let title: String?
-  let subtitle: String?
   let style: JsonStyle?
   let path: String?
   let children: [JsonTrack]
 
   init(
     title: String? = nil,
-    subtitle: String? = nil,
     style: JsonStyle? = nil,
     path: String? = nil,
     children: [JsonTrack],
   ) {
     self.title = title
-    self.subtitle = subtitle
     self.style = style
     self.path = path
     self.children = children
@@ -464,7 +461,6 @@ struct JsonTrack: Codable {
     func toNitro() -> Section {
       Section(
         title: title,
-        subtitle: subtitle,
         style: style?.toSectionStyle(),
         path: path,
         children: children.map { $0.toNitro() },
@@ -550,7 +546,6 @@ struct JsonTrack: Codable {
     func toNitro() -> Section {
       Section(
         title: title,
-        subtitle: subtitle,
         style: style?.toSectionStyle(),
         path: path,
         children: children.map { $0.toNitro() },

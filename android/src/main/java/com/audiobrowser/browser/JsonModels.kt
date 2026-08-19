@@ -40,7 +40,6 @@ data class JsonTrackRequest(
 @Serializable
 data class JsonSection(
   val title: String? = null,
-  val subtitle: String? = null,
   val style: JsonElement? = null,
   val path: String? = null,
   val children: List<JsonTrack>,
@@ -150,7 +149,6 @@ private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosi
 fun JsonSection.toNitro(): Section {
   return Section(
     title = title,
-    subtitle = subtitle,
     style = style.toSectionStyle(),
     path = path,
     children = children.map { it.toNitro() }.toTypedArray(),

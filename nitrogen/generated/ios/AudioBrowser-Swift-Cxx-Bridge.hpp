@@ -1736,6 +1736,56 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__string______ = std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::string>>()>> create_std__optional_std__function_std__shared_ptr_Promise_std__string______(const std::function<std::shared_ptr<Promise<std::string>>()>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__string______(const std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::string>>()> get_std__optional_std__function_std__shared_ptr_Promise_std__string______(const std::optional<std::function<std::shared_ptr<Promise<std::string>>()>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::string>>()>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::string>>()>`.
+   */
+  using Func_std__shared_ptr_Promise_std__string__ = std::function<std::shared_ptr<Promise<std::string>>()>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::string>>()>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__string___Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__string___Wrapper(std::function<std::shared_ptr<Promise<std::string>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::string>>()>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::string>> call() const noexcept {
+      auto __result = _function->operator()();
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::string>>()>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__string__ create_Func_std__shared_ptr_Promise_std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__string__(Func_std__shared_ptr_Promise_std__string__ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__string___Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::string>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::string>>`.
+   */
+  using std__shared_ptr_Promise_std__string__ = std::shared_ptr<Promise<std::string>>;
+  inline std::shared_ptr<Promise<std::string>> create_std__shared_ptr_Promise_std__string__() noexcept {
+    return Promise<std::string>::create();
+  }
+  inline PromiseHolder<std::string> wrap_std__shared_ptr_Promise_std__string__(std::shared_ptr<Promise<std::string>> promise) noexcept {
+    return PromiseHolder<std::string>(std::move(promise));
+  }
+  
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>
   /**
    * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& / * track * /)>>`.

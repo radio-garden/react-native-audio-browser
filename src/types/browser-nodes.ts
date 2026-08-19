@@ -294,11 +294,6 @@ export interface Section {
   /** Header text. Absent = headerless group. */
   title?: string
   /**
-   * Secondary line for the section's navigation surface — e.g. the label
-   * of the "view all" link a tile section gets on Android Auto.
-   */
-  subtitle?: string
-  /**
    * Presentation, separated from content. Each surface renders the
    * declared layout's nearest supported form; on CarPlay
    * a wrapping grid requires iOS 26+ and renders a list before that,
@@ -308,10 +303,20 @@ export interface Section {
    */
   style?: SectionStyle
   /**
-   * Navigation target for the section header / "view all" surface. A
-   * tile section's header tap (CarPlay) and appended "view all" link
-   * (Android Auto) navigate here. Absent = a self-contained section:
-   * the header is a plain label, not a link.
+   * Navigation target for the section's "view all" affordance — the
+   * fuller page this section is a teaser for. Absent = a self-contained
+   * section: the header is a plain label, not a link.
+   *
+   * The surface picks the form (ADR 0010), and each carries the copy
+   * itself — a `path` never adds words to the section:
+   *
+   * - **CarPlay** — a tile section's row draws a disclosure chevron and
+   *   the whole row navigates. A list section renders no affordance:
+   *   CarPlay has no "see all" idiom for one, and an invented row would
+   *   spend an item from the template's cap.
+   * - **Android Auto** — no header is tappable at any display, so the
+   *   section gets an appended browsable row, titled by the global
+   *   `viewMoreTitle` browser option ("View more" by default).
    */
   path?: string
   /** The section's tracks. */

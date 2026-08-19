@@ -932,6 +932,41 @@ export type BrowserConfiguration = {
   androidControllerOfflineError?: boolean
 
   /**
+   * Titles the "view more" row appended to a `Section` that carries a
+   * `Section.path` on surfaces whose section header cannot be tapped —
+   * Android Auto, today the only one.
+   *
+   * Leave it unset and the row is titled "View more" — the library's in-code
+   * default, the same arrangement `formatNavigationError` has. Set this to
+   * localize it: it is re-resolved once per content generation, so
+   * `invalidateAllContent()` after an in-app language switch picks up the new
+   * copy without reconfiguring the browser. That is why it is a callback rather
+   * than a plain string — an app whose locale is its own, not the system's,
+   * cannot express that with a value frozen at configure time.
+   *
+   * One string for every section by design — the row is a fallback for a
+   * surface that cannot draw a link in its header, so per-section wording would
+   * be ceremony most consumers never see rendered.
+   *
+   * For wording that varies by section — "View all 42 albums", "See every
+   * episode" — author the link yourself instead: append an ordinary browsable
+   * {@link Track} to the section's `children`, titled however you like, and
+   * leave `Section.path` unset so this row doesn't also appear. Since the
+   * row is Android-only, that branch is an ordinary platform check on the
+   * content you emit; CarPlay never sees the extra row.
+   *
+   * @default 'View more'
+   *
+   * @example
+   * ```typescript
+   * viewMoreTitle: () => t('View more')
+   * ```
+   *
+   * @platform android
+   */
+  viewMoreTitle?: ViewMoreTitleCallback
+
+  /**
    * Title shown (as the list's centered empty state) on CarPlay screens whose
    * content is still loading — browse destinations while they resolve, and the
    * startup screen while tabs load. Supply your app's localized "Loading…"
@@ -1093,3 +1128,6 @@ export type FormatNavigationErrorCallback = (
  * or `undefined` to do nothing. See `resolveAlbumPath`.
  */
 export type ResolveAlbumPathCallback = (track: Track) => string | undefined
+
+/** Supplies the title of the appended "view more" row. See `viewMoreTitle`. */
+export type ViewMoreTitleCallback = () => string

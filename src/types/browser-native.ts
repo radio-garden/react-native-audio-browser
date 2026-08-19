@@ -14,7 +14,8 @@ import type {
   HandleTrackLoadCallback,
   MediaRequestConfig,
   SearchSourceCallback,
-  TransformableRequestConfig
+  TransformableRequestConfig,
+  ViewMoreTitleCallback
 } from './browser'
 import type { ResolvedTrack } from './browser-nodes'
 
@@ -73,6 +74,9 @@ export interface NativeBrowserConfiguration {
   singleTrack?: boolean
   handleTrackLoad?: HandleTrackLoadCallback
   androidControllerOfflineError?: boolean
+  // Title of the "view more" row appended to a pathed section where the header
+  // can't be tapped (Android Auto). Absent = native's "View more" default.
+  viewMoreTitle?: ViewMoreTitleCallback
 
   // CarPlay options
   carPlayLoadingTitle?: string

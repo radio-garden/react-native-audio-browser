@@ -22,9 +22,6 @@ data class Section(
   val title: String?,
   @DoNotStrip
   @Keep
-  val subtitle: String?,
-  @DoNotStrip
-  @Keep
   val style: SectionStyle?,
   @DoNotStrip
   @Keep
@@ -43,8 +40,8 @@ data class Section(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String?, subtitle: String?, style: SectionStyle?, path: String?, children: Array<Track>): Section {
-      return Section(title, subtitle, style, path, children)
+    private fun fromCpp(title: String?, style: SectionStyle?, path: String?, children: Array<Track>): Section {
+      return Section(title, style, path, children)
     }
   }
 }

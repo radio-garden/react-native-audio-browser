@@ -224,6 +224,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::string>>()>
+  Func_std__shared_ptr_Promise_std__string__ create_Func_std__shared_ptr_Promise_std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__string__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)]() mutable -> std::shared_ptr<Promise<std::string>> {
+      auto __result = swiftClosure.call();
+      return __result;
+    };
+  }
+  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>
   Func_std__shared_ptr_Promise_std__optional_std__string____Track create_Func_std__shared_ptr_Promise_std__optional_std__string____Track(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__optional_std__string____Track::fromUnsafe(swiftClosureWrapper);

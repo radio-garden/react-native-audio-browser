@@ -32,7 +32,6 @@ import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Section
-import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -419,33 +418,33 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Flattens a page's sections to MediaItems for browse delivery — the Media3 boundary where
    * sections die (ADR 0010): the MediaBrowser protocol has no section node, so each child is
-   * stamped with its owning section's title/style hints. A grid-displayed section with a `path`
-   * gains a browsable "view all" link under the same header. Http(s) artwork routes through the
-   * content:// provider so Android Auto can load it via the ArtworkContentProvider.
+   * stamped with its owning section's title/style hints. A section with a `path` gains a browsable
+   * "view more" row under the same header — at every `display`, because no Android Auto header is
+   * tappable at any of them, so the row is the section's only "view all" affordance here. Http(s)
+   * artwork routes through the content:// provider so Android Auto can load it via the
+   * ArtworkContentProvider.
    */
-  private fun toMediaItems(sections: List<Section>): List<MediaItem> {
+  private suspend fun toMediaItems(sections: List<Section>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
     val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
     return sections.flatMap { section ->
       // Android Auto has no disabled affordance, so an unavailable track hides
       // — never a normal-looking dead row (Track.disabled's rendering ladder).
-      val visibleChildren = section.children.filter { it.disabled != true }
-      val items =
-        visibleChildren.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
-      val isTileSection = section.style?.display == StyleDisplay.GRID
-      // No "view all" under an empty section — CarPlay skips empty sections
+      val children = section.children.filter { it.disabled != true }
+      val items = children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
+      // No "view more" under an empty section — CarPlay skips empty sections
       // outright, and a lone navigation tile under a header is a dead end.
-      if (isTileSection && section.path != null && visibleChildren.isNotEmpty()) {
-        items +
-          TrackFactory.toBrowseMediaItem(
-            TrackFactory.navigationTrack(section),
-            registry,
-            authority,
-            section,
-          )
-      } else {
-        items
-      }
+      if (section.path == null || children.isEmpty()) return@flatMap items
+      // The browser is already up at every call site, so awaiting it here is a field read, and
+      // viewMoreTitle is memoized per content generation — both are free after the first row.
+      val title = player.awaitBrowser().browserManager.viewMoreTitle()
+      items +
+        TrackFactory.toBrowseMediaItem(
+          TrackFactory.navigationTrack(section, title),
+          registry,
+          authority,
+          section,
+        )
     }
   }
 
@@ -453,7 +452,7 @@ class MediaSessionCallback(private val player: Player) :
    * Flat lists (tabs, search results) convert as one untitled list section — which contributes no
    * group or style hints — so exactly one Track→MediaItem path exists at the Media3 boundary.
    */
-  private fun toFlatMediaItems(tracks: List<Track>): List<MediaItem> =
+  private suspend fun toFlatMediaItems(tracks: List<Track>): List<MediaItem> =
     toMediaItems(listOf(untitledSection(tracks.toTypedArray())))
 
   override fun onGetItem(
