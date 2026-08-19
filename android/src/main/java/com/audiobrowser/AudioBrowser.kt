@@ -941,9 +941,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Only update the options if the service is around.
     // applyOptions touches the Media3 player, which asserts it is only ever
     // driven from the main thread ("Player callback method is called from a
-    // wrong thread"). Nitro invokes this from the JS thread, so hop like every
-    // other player-touching method here does.
-    connectedService?.let { runBlockingOnMain { player.applyOptions(updateOptions) } }
+    // wrong thread"). Nitro invokes this from the JS thread, so hop.
+    //
+    // The hop blocks rather than launching because `updateOptions` is a single
+    // mutable holder: updateFromBridge mutates it in place on the JS thread and
+    // applyOptions reads it on main. Blocking is what keeps the two ordered.
+    connectedService?.let { service ->
+      runBlockingOnMain { service.player.applyOptions(updateOptions) }
+    }
   }
 
   override fun getOptions(): Options {
