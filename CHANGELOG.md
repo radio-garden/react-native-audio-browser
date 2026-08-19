@@ -1,3 +1,26 @@
+## [0.2.0-next.15](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.14...v0.2.0-next.15) (2026-08-19)
+
+### Bug Fixes
+
+* **android, ios:** fix runtime and build failures with iOS and Android on modern versions of RN ([c78ab51](https://github.com/radio-garden/react-native-audio-browser/commit/c78ab513f3721f35a71fc76d16eed80e3ef4129d))
+* **apps:** drop the track title from browse row keys ([6d906a9](https://github.com/radio-garden/react-native-audio-browser/commit/6d906a9998f1aabc4f866baa05328d3076dab96e))
+
+### Code Refactors
+
+* **android:** capture the service across the updateOptions hop ([32791a2](https://github.com/radio-garden/react-native-audio-browser/commit/32791a26671be898dd835d01626b287a09cdd5c8))
+* **example-nextjs:** drop the unreachable children fallback ([9e7233f](https://github.com/radio-garden/react-native-audio-browser/commit/9e7233fae427c53681ac2b1caf1a0164cf54a64d))
+
+### Documentation
+
+* **ios:** cut comment blocks the compiler already enforces ([546c6dd](https://github.com/radio-garden/react-native-audio-browser/commit/546c6ddd97a80e483fc01fb4d5dd8a828b707c8c)), closes [#SendableClosureCaptures](https://github.com/radio-garden/react-native-audio-browser/issues/SendableClosureCaptures)
+
+### Other changes
+
+* **apps:** update example-nextjs to modern RN and lib API ([04d3e78](https://github.com/radio-garden/react-native-audio-browser/commit/04d3e783f46c7c90ce13c928b7e501f0ee7d3c7c))
+* **apps:** upgrade example apps to react-native 0.86.2 ([5835c42](https://github.com/radio-garden/react-native-audio-browser/commit/5835c42d3980c73530ad88c684f381b93ba75219))
+* **example-native:** remove the unused jest harness ([7f351eb](https://github.com/radio-garden/react-native-audio-browser/commit/7f351ebb64348255b342f9f53c6b9898391a7cf4))
+* **ios:** pin SwiftFormat in mise.toml and enforce it through a wrapper ([221051f](https://github.com/radio-garden/react-native-audio-browser/commit/221051f02a48f98df2f6eeaaba9f1f94492e0719))
+
 ## [0.2.0-next.14](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.13...v0.2.0-next.14) (2026-08-19)
 
 ### ⚠ BREAKING CHANGES
