@@ -12,9 +12,12 @@ Thanks for your interest in improving **react-native-audio-browser** — issues 
 This repo uses **Yarn 4** (via Corepack) and the React Native **New Architecture**.
 
 ```sh
+mise install               # Node + SwiftFormat, at the versions this repo pins
 corepack yarn install
 corepack yarn codegen      # regenerate the Nitro bindings + build lib/
 ```
+
+[mise](https://mise.jdx.dev) is optional for Node, but it is the easiest way to get the pinned **SwiftFormat**. SwiftFormat is a global tool whose output changes between releases, so `mise.toml` pins one version and `yarn ios:format` / `yarn ci:format:ios` refuse to run any other — a different build would reformat files CI considers correct. Without mise, install that exact version from the [SwiftFormat releases](https://github.com/nicklockwood/SwiftFormat/releases); the error message tells you which one.
 
 Run an example app to try changes end-to-end:
 

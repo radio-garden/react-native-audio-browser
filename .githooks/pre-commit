@@ -69,20 +69,17 @@ fi
 # --- Swift --------------------------------------------------------------------
 swift_files=$(matching 'ios/*.swift')
 if [ -n "$swift_files" ]; then
-  # Pinned in CI because SwiftFormat's output shifts between releases: running an
-  # unpinned version here would reformat files the pinned one considers correct,
-  # turning an unrelated commit into a repo-wide diff. Read the pin from the
-  # workflow so there is one place to bump it.
-  pinned=$(sed -n 's/^ *SWIFTFORMAT_VERSION: *//p' .github/workflows/test.yml | head -1)
-  if ! command -v swiftformat >/dev/null 2>&1; then
-    echo "pre-commit: swiftformat not installed, skipping ${swift_files}" >&2
-  elif [ "$(swiftformat --version 2>/dev/null)" != "$pinned" ]; then
-    echo "pre-commit: swiftformat $(swiftformat --version) != pinned $pinned, skipping" >&2
-    echo "            (a different version reformats files CI considers correct)" >&2
-  else
-    # shellcheck disable=SC2086 # newline-separated path list
-    swiftformat $swift_files >/dev/null 2>&1
-  fi
+  # The wrapper enforces the version pinned in mise.toml and explains itself on
+  # stderr when the local swiftformat is missing or a different build — running
+  # another version would reformat files CI considers correct, turning an
+  # unrelated commit into a repo-wide diff. The hook never blocks, so a mismatch
+  # just means these files go unformatted.
+  #
+  # --quiet drops SwiftFormat's own progress lines (what it rewrote is reported
+  # by the re-stage summary below) without hiding the wrapper's explanation.
+  # shellcheck disable=SC2086 # newline-separated path list
+  scripts/swiftformat.sh --quiet $swift_files >/dev/null ||
+    echo "pre-commit: skipping swiftformat for:$swift_files" >&2
 fi
 
 # --- Kotlin -------------------------------------------------------------------
