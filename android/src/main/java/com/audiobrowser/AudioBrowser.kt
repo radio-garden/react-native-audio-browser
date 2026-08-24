@@ -224,7 +224,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
-  private var connectedService: Service? = null
+  // Written only on the main thread (ServiceConnection callbacks, dispose); read from main or,
+  // in a few places, straight from the JS thread. @Volatile gives those reads visibility — they
+  // must still tolerate staleness in both directions (a just-detached service, or null while
+  // onServiceConnected is pending). Keep writes on main; no read-modify-write.
+  @Volatile private var connectedService: Service? = null
 
   private val serviceBinding = ServiceBinding(context)
 
