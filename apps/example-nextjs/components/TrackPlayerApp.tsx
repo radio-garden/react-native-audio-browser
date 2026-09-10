@@ -11,6 +11,8 @@ import AudioBrowser, {
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { authedMediaTransform } from '../../example-native/src/api/authed'
+import { radioGardenMediaTransform } from '../../example-native/src/api/radio-garden'
 import { BrowserScreen } from '../screens'
 
 const styles = StyleSheet.create({
@@ -60,14 +62,13 @@ const configuration: BrowserConfiguration = {
     }
   ],
   media: {
-    async transform(request) {
-      if (request.path && request.path.startsWith('/rg/')) {
-        return {
-          baseUrl: 'https://radio.garden/api/ara/content/listen',
-          path: `${request.path.replace('/rg/', '')}/channel.mp3`
-        }
-      }
-      return request
+    // Shared with the native example rather than re-inlined, so the two can't
+    // drift. Each returns the request untouched when the path isn't its own.
+    async transform(request, params) {
+      return authedMediaTransform(
+        await radioGardenMediaTransform(request, params),
+        params
+      )
     }
   },
   routes: {
