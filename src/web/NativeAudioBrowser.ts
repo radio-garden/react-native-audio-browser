@@ -42,7 +42,12 @@ import type {
   AudioBrowser as AudioBrowserSpec,
   Output
 } from '../specs/audio-browser.nitro'
-import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
+import type {
+  RequestConfig,
+  ResolvedTrack,
+  Track,
+  TrackLoadEvent
+} from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { getTrackIdentity } from '../utils/getTrackIdentity'
 import { BrowserManager } from './browser/BrowserManager'
@@ -50,6 +55,7 @@ import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
 import { SearchManager } from './browser/SearchManager'
+import { followMediaRedirect } from './http/followMediaRedirect'
 import { HttpClient } from './http/HttpClient'
 import { RequestConfigBuilder } from './http/RequestConfigBuilder'
 import { NowPlayingManager } from './player/NowPlayingManager'
@@ -306,6 +312,11 @@ export class NativeAudioBrowser
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
+    } else if (oldState.state === 'error') {
+      // Leaving the error state clears it, as it does natively. The getter
+      // already reads undefined — consumers subscribe to the event, so without
+      // this a stale error outlives the next successful load.
+      this.onPlaybackError({ error: undefined })
     }
   }
 
@@ -610,16 +621,15 @@ export class NativeAudioBrowser
    * Supports the transform callback for URL manipulation.
    * Mirrors Android's MediaFactory.getMediaRequestConfig behavior.
    */
-  private async resolveMediaUrl(src: string): Promise<string> {
+  private async resolveMediaRequest(src: string): Promise<RequestConfig> {
     const { request, media } = this.browserManager.configuration
-    return RequestConfigBuilder.resolveMediaUrl(src, request, media)
+    return RequestConfigBuilder.resolveMediaRequest(src, request, media)
   }
 
   /**
-   * Reload from the queue's own entry, whose `src` is still unresolved —
-   * `current` holds the resolved track, and re-feeding it into `load()` would
-   * re-resolve the resolved URL (double-applying a `transform`) and replace
-   * the queue entry with it.
+   * Reload from the queue's own entry, keeping the queue the source of truth.
+   * `current` preserves the track as queued — the resolved URL is passed to
+   * `load()` separately — so re-feeding it would resolve correctly too.
    */
   protected override reloadCurrent(): void {
     const index = this.queue.currentIndex
@@ -665,35 +675,54 @@ export class NativeAudioBrowser
     // Resolve the media URL before loading (async but we don't await)
     const loadId = ++this.currentLoadId
     const doLoad = async () => {
-      const resolvedTrack: Track = track.src
-        ? { ...track, src: await this.resolveMediaUrl(track.src) }
-        : track
+      const resolvedRequest = track.src
+        ? await this.resolveMediaRequest(track.src)
+        : undefined
+      // Web-only, and forced: a progressive file plays via `mediaElement.src`,
+      // which cannot carry headers. Native sends them with the media request
+      // and follows the redirect inline, so it needs none of this.
+      const resolvedMedia = resolvedRequest
+        ? await followMediaRedirect(
+            resolvedRequest.path ?? track.src!,
+            resolvedRequest.headers
+          )
+        : undefined
 
       // A newer load() was called while resolving — discard this stale result
       if (loadId !== this.currentLoadId) {
         return
       }
 
-      super.load(resolvedTrack, (loadedTrack) => {
-        this.onPlaybackActiveTrackChanged({
-          lastTrack,
-          lastPosition,
-          lastIndex,
-          index: currentIndex,
-          track
-        })
+      super.load(
+        track,
+        (loadedTrack) => {
+          // Call the provided callback if any
+          if (callback) {
+            callback(loadedTrack)
+          }
+        },
+        { headers: resolvedMedia?.headers, src: resolvedMedia?.src }
+      )
 
-        // Update now playing metadata
-        const nowPlaying = this.getNowPlaying()
-        if (nowPlaying) {
-          this.publishNowPlaying(nowPlaying)
-        }
-
-        // Call the provided callback if any
-        if (callback) {
-          callback(loadedTrack)
-        }
+      // Announced on the attempt, as native does — ExoPlayer from
+      // onMediaItemTransition, iOS from the queue coordinator. On success only,
+      // a track that fails to load never becomes active, leaving a UI bound to
+      // it nothing to render and its error nowhere to appear.
+      this.onPlaybackActiveTrackChanged({
+        lastTrack,
+        lastPosition,
+        lastIndex,
+        index: currentIndex,
+        track
       })
+
+      // Once, here: duration reaches the media session through
+      // `updateProgress()` on each tick, so only metadata needs publishing.
+      // iOS draws the same line.
+      const nowPlaying = this.getNowPlaying()
+      if (nowPlaying) {
+        this.publishNowPlaying(nowPlaying)
+      }
     }
 
     // Execute async load without blocking, with error handling
