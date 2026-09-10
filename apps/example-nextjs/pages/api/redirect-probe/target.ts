@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-
 import { logHop, SILENT_MP3 } from './log'
 
 /**
