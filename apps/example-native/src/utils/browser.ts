@@ -11,6 +11,7 @@ import {
   archiveRoutes,
   searchArchive
 } from '../api/archive-org'
+import { authedMediaTransform } from '../api/authed'
 import {
   radioGardenLibrarySection,
   radioGardenMediaTransform,
@@ -38,7 +39,15 @@ const configuration: BrowserConfiguration = {
     }
   ],
   media: {
-    transform: radioGardenMediaTransform
+    // Each transform returns the request untouched when the path isn't its own,
+    // so they compose: radio.garden rewrites the URL, the authed one attaches a
+    // bearer token to `/api/authed/…`.
+    async transform(request, params) {
+      return authedMediaTransform(
+        await radioGardenMediaTransform(request, params),
+        params
+      )
+    }
   },
   routes: {
     '/api/**': { baseUrl: 'http://localhost:3003' },

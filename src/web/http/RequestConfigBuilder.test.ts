@@ -57,3 +57,94 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
     expect(out.path).toBe('/p')
   })
 })
+
+/**
+ * A media request needs more than its URL. The layers resolve headers (and a
+ * user agent) alongside it, and native applies them to the AVURLAsset /
+ * ExoPlayer DataSpec — so a resolver that returned only the URL left web unable
+ * to play media that authenticated fine on iOS and Android.
+ */
+describe('RequestConfigBuilder.resolveMediaRequest', () => {
+  const src = 'https://cdn.example.com/track.m3u8'
+
+  it('keeps the headers a media transform resolves', async () => {
+    const media = {
+      transform: async (req: RequestConfig) => ({
+        ...req,
+        headers: { ...req.headers, Authorization: 'Bearer token' }
+      })
+    }
+
+    const out = await RequestConfigBuilder.resolveMediaRequest(
+      src,
+      undefined,
+      media
+    )
+
+    expect(out.path).toBe(src)
+    expect(out.headers).toEqual({ Authorization: 'Bearer token' })
+  })
+
+  it('keeps the headers of a static media config', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(src, undefined, {
+      headers: { 'X-Api-Key': 'k' }
+    })
+
+    expect(out.headers).toEqual({ 'X-Api-Key': 'k' })
+  })
+
+  it('merges the shared request layer under the media layer', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(
+      src,
+      { headers: { 'User-Agent': 'shared', 'X-Shared': 'yes' } },
+      { headers: { 'User-Agent': 'media' } }
+    )
+
+    expect(out.headers).toEqual({
+      'User-Agent': 'media',
+      'X-Shared': 'yes'
+    })
+  })
+
+  it('folds baseUrl into the resolved path', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(
+      '/track.m3u8',
+      undefined,
+      { baseUrl: 'https://cdn.example.com' }
+    )
+
+    expect(out.path).toBe('https://cdn.example.com/track.m3u8')
+    expect(out.baseUrl).toBeUndefined()
+  })
+
+  it('carries the media config query onto the resolved url', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(src, undefined, {
+      query: { token: 'abc' }
+    })
+
+    expect(out.path).toBe(`${src}?token=abc`)
+    // cleared so the resolved url can't be rebuilt and double-append it
+    expect(out.query).toBeUndefined()
+  })
+
+  it('appends query to a url that already has one', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(
+      'https://cdn.example.com/track.m3u8?v=2',
+      undefined,
+      { query: { token: 'abc' } }
+    )
+
+    expect(out.path).toBe('https://cdn.example.com/track.m3u8?v=2&token=abc')
+  })
+
+  it('falls back to the original src when a transform throws', async () => {
+    const out = await RequestConfigBuilder.resolveMediaRequest(src, undefined, {
+      transform: async () => {
+        throw new Error('boom')
+      }
+    })
+
+    expect(out.path).toBe(src)
+    expect(out.headers).toBeUndefined()
+  })
+})

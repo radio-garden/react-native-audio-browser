@@ -2,8 +2,7 @@ import type {
   BrowserSource,
   MediaRequestConfig,
   ResolvedTrack,
-  Section,
-  Track
+  Section
 } from 'react-native-audio-browser'
 import { Platform } from 'react-native'
 
@@ -115,16 +114,17 @@ const playlists: Record<string, ResolvedTrack> = {
   }
 }
 
-export const radioGardenMediaTransform: MediaRequestConfig['transform'] =
-  async (request) => {
-    if (request.path && request.path.startsWith('/rg/')) {
-      return {
-        baseUrl: 'https://radio.garden/api/ara/content/listen',
-        path: `${request.path.replace('/rg/', '')}/channel.mp3`
-      }
+export const radioGardenMediaTransform: NonNullable<
+  MediaRequestConfig['transform']
+> = async (request) => {
+  if (request.path && request.path.startsWith('/rg/')) {
+    return {
+      baseUrl: 'https://radio.garden/api/ara/content/listen',
+      path: `${request.path.replace('/rg/', '')}/channel.mp3`
     }
-    return request
   }
+  return request
+}
 
 export const radioGardenRoutes: Record<string, BrowserSource> = {
   '/library/playlists': {

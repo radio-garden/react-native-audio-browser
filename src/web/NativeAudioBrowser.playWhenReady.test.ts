@@ -299,3 +299,114 @@ describe('NativeAudioBrowser setQueue start position', () => {
     expect(skips).toEqual([[0, 30]])
   })
 })
+
+/**
+ * Android emits the active-track transition from ExoPlayer's
+ * `onMediaItemTransition`, which fires when the media item is set — before the
+ * load has resolved, and regardless of whether it ever does. iOS drives it from
+ * the queue coordinator, which behaves the same. Web announcing it only on
+ * success meant a track that failed to load never became the active track for
+ * consumers, so a UI bound to `useActiveTrack()` had nothing to render and a
+ * playback error had nowhere to appear.
+ */
+describe('NativeAudioBrowser active track announced on the load attempt', () => {
+  class FailingLoadBrowser extends TestBrowser {
+    constructor(loadResult: () => Promise<void>) {
+      super()
+      this.player = {
+        load: loadResult,
+        unload: () => Promise.resolve()
+      } as unknown as typeof this.player
+    }
+  }
+
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+  it('announces the transition even when the load fails', async () => {
+    const browser = new FailingLoadBrowser(() =>
+      Promise.reject(new Error('401'))
+    )
+    const announced: (Track | undefined)[] = []
+    browser.onPlaybackActiveTrackChanged = (event) =>
+      announced.push(event.track)
+
+    browser.load(track)
+    await tick()
+
+    expect(announced.map((t) => t?.src)).toContain(track.src)
+    expect(browser.getActiveTrack()?.src).toBe(track.src)
+  })
+
+  it('announces the transition exactly once on a successful load', async () => {
+    const browser = new FailingLoadBrowser(() => Promise.resolve())
+    const announced: (Track | undefined)[] = []
+    browser.onPlaybackActiveTrackChanged = (event) =>
+      announced.push(event.track)
+
+    browser.load(track)
+    await tick()
+
+    expect(announced).toHaveLength(1)
+    expect(announced[0]?.src).toBe(track.src)
+  })
+})
+
+/**
+ * Both native platforms clear the playback error when the state leaves `error`,
+ * and say so: Android emits `onPlaybackError(null)` when leaving ERROR, iOS
+ * clears `playbackError` before emitting the state change. Web derived the
+ * cleared value correctly from state but never emitted it, so a consumer
+ * subscribed to the event kept showing a stale error after the next track
+ * loaded fine.
+ */
+describe('NativeAudioBrowser playback error lifecycle', () => {
+  class ErrorStateBrowser extends TestBrowser {
+    setErrorState(code: string): void {
+      this.state = {
+        state: 'error',
+        error: { kind: 'unknown', code, message: code }
+      }
+    }
+
+    setPlainState(state: PlaybackState): void {
+      this.state = { state }
+    }
+  }
+
+  const collect = () => {
+    const browser = new ErrorStateBrowser()
+    const events: (string | undefined)[] = []
+    browser.onPlaybackError = (event) => events.push(event.error?.code)
+    return { browser, events }
+  }
+
+  it('emits the error, then emits the clear when leaving the error state', () => {
+    const { browser, events } = collect()
+
+    browser.setErrorState('shaka-1001')
+    expect(events).toEqual(['shaka-1001'])
+    expect(browser.getPlaybackError()?.code).toBe('shaka-1001')
+
+    browser.setPlainState('loading')
+    expect(events).toEqual(['shaka-1001', undefined])
+    expect(browser.getPlaybackError()).toBeUndefined()
+  })
+
+  it('does not emit a clear when no error preceded the transition', () => {
+    const { browser, events } = collect()
+
+    browser.setPlainState('loading')
+    browser.setPlainState('playing')
+
+    expect(events).toEqual([])
+  })
+
+  it('emits the new error when one error replaces another', () => {
+    const { browser, events } = collect()
+
+    browser.setErrorState('shaka-1001')
+    browser.setErrorState('shaka-3016')
+
+    expect(events).toEqual(['shaka-1001', 'shaka-3016'])
+  })
+})
