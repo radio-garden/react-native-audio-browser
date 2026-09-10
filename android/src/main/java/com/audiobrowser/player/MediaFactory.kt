@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
@@ -16,6 +16,8 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import java.io.IOException
+import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
 
 class MediaFactory(
   private val context: Context,
@@ -31,6 +33,19 @@ class MediaFactory(
 
   companion object {
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
+
+    /**
+     * The client media requests go out on. One per process so connections are reused; not
+     * `HttpClient`'s browse client, whose read timeout is sized for JSON and would cut a long media
+     * read short. The timeouts are media3's own defaults, so stall detection and
+     * [RetryLoadErrorHandlingPolicy] behave as they did before.
+     */
+    private val mediaHttpClient: OkHttpClient by lazy {
+      OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .build()
+    }
   }
 
   private val extractorsFactory =
@@ -95,17 +110,20 @@ class MediaFactory(
     // ExoPlayer's IO thread. This prevents deadlocks when the JS thread is blocked by
     // synchronous Nitro calls (e.g., seekTo) while a media transform callback needs the
     // JS thread to resolve.
+
+    // OkHttp rather than DefaultHttpDataSource, for how each treats a redirect.
+    // DefaultHttpDataSource re-applies the request headers on every hop, handing
+    // an Authorization header to whatever host the first one named. OkHttp drops
+    // it once the hop leaves the origin (host, port or scheme) while still
+    // following http<->https.
     val httpFactory =
-      DefaultHttpDataSource.Factory().apply {
-        // Deliberately NOT setUserAgent(): DefaultHttpDataSource applies the factory
-        // user-agent as a FINAL setRequestProperty("User-Agent", …) that runs after —
-        // and overrides — the per-request DataSpec headers. That would clobber the
-        // User-Agent TransformingDataSource sets per request (the whole point of the
-        // per-request userAgent override). Supplying the same value as a default
-        // request property keeps the default for un-overridden requests while letting
-        // the per-request DataSpec header win.
+      OkHttpDataSource.Factory(mediaHttpClient).apply {
+        // Deliberately NOT setUserAgent(): it is applied last via addHeader(),
+        // which appends, so a request already carrying one would send two. As a
+        // default request property it is merged under dataSpec.httpRequestHeaders
+        // and applied with header(), letting TransformingDataSource's per-request
+        // override win.
         setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
-        setAllowCrossProtocolRedirects(true)
         // Connect transfer listener for bandwidth measurement
         transferListener?.let { setTransferListener(it) }
       }
