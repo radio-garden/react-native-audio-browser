@@ -149,6 +149,7 @@ Optional fields that change how a Track renders on CarPlay / Android Auto. Each 
 | `favorited`                                | filled/empty heart (needs the `favorite` capability)                   | Android Auto, notification |
 | `live`                                     | a "live" indicator                                                     | iOS now-playing            |
 | `albumPath`                                | make the now-playing album line tappable                               | CarPlay                    |
+| `icyCharset`                               | decode ICY titles a station sends in a legacy code page                | iOS, Android               |
 
 A couple of constraints worth knowing:
 

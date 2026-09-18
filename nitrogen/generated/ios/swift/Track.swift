@@ -18,7 +18,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, disabled: Bool?, favorited: Bool?, live: Bool?) {
+  init(id: String?, path: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, disabled: Bool?, favorited: Bool?, live: Bool?, icyCharset: String?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = id {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -125,6 +125,12 @@ public extension Track {
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = live {
         return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = icyCharset {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -325,6 +331,18 @@ public extension Track {
       if bridge.has_value_std__optional_bool_(self.__live) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__live)
         return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var icyCharset: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__icyCharset) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__icyCharset)
+        return String(__unwrapped)
       } else {
         return nil
       }

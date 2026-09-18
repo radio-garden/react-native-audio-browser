@@ -284,6 +284,7 @@ struct JsonResolvedTrack: Codable {
   let style: JsonStyle?
   let disabled: Bool?
   let live: Bool?
+  let icyCharset: String?
   let carPlaySiriListButton: String?
 
   init(
@@ -304,6 +305,7 @@ struct JsonResolvedTrack: Codable {
     style: JsonStyle? = nil,
     disabled: Bool? = nil,
     live: Bool? = nil,
+    icyCharset: String? = nil,
     carPlaySiriListButton: String? = nil,
   ) {
     self.path = path
@@ -322,6 +324,7 @@ struct JsonResolvedTrack: Codable {
     self.style = style
     self.disabled = disabled
     self.live = live
+    self.icyCharset = icyCharset
     self.carPlaySiriListButton = carPlaySiriListButton
     self.id = id
   }
@@ -345,6 +348,7 @@ struct JsonTrack: Codable {
   let style: JsonStyle?
   let disabled: Bool?
   let live: Bool?
+  let icyCharset: String?
 
   init(
     id: String? = nil,
@@ -363,6 +367,7 @@ struct JsonTrack: Codable {
     style: JsonStyle? = nil,
     disabled: Bool? = nil,
     live: Bool? = nil,
+    icyCharset: String? = nil,
   ) {
     self.path = path
     self.title = title
@@ -379,6 +384,7 @@ struct JsonTrack: Codable {
     self.style = style
     self.disabled = disabled
     self.live = live
+    self.icyCharset = icyCharset
     self.id = id
   }
 }
@@ -417,6 +423,7 @@ struct JsonTrack: Codable {
         style: JsonStyle(track.style),
         disabled: track.disabled,
         live: track.live,
+        icyCharset: track.icyCharset,
       )
     }
   }
@@ -447,6 +454,7 @@ struct JsonTrack: Codable {
         style: JsonStyle(track.style),
         disabled: track.disabled,
         live: track.live,
+        icyCharset: track.icyCharset,
       )
     }
   }
@@ -491,6 +499,7 @@ struct JsonTrack: Codable {
         disabled: disabled,
         favorited: nil,
         live: live,
+        icyCharset: icyCharset,
       )
     }
   }
@@ -516,6 +525,7 @@ struct JsonTrack: Codable {
         disabled: disabled,
         favorited: nil,
         live: live,
+        icyCharset: icyCharset,
       )
     }
   }
@@ -538,6 +548,7 @@ struct JsonTrack: Codable {
         style: style?.toTrackStyle(),
         disabled: disabled,
         live: live,
+        icyCharset: icyCharset,
       )
     }
   }

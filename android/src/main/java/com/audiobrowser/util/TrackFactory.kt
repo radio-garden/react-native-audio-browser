@@ -64,6 +64,7 @@ object TrackFactory {
       disabled = null,
       favorited = null,
       live = null,
+      icyCharset = null,
     )
 
   fun toMedia3(tracks: Array<Track>): List<MediaItem> {

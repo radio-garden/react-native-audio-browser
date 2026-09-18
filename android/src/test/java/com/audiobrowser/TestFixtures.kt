@@ -55,6 +55,7 @@ object TestFixtures {
       disabled = disabled,
       favorited = favorited,
       live = null,
+      icyCharset = null,
     )
 
   /** A page [Section] — plain list by default. */
@@ -136,6 +137,7 @@ object TestFixtures {
       disabled = null,
       favorited = null,
       live = null,
+      icyCharset = null,
     )
 
   /** A container [ResolvedTrack] — what a browse route hands back for a path. */
@@ -168,6 +170,7 @@ object TestFixtures {
       disabled = null,
       favorited = null,
       live = null,
+      icyCharset = null,
     )
 
   /**

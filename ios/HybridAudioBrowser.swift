@@ -1760,7 +1760,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
     for group in groups {
-      if let metadata = TimedMetadata.from(items: group.items) {
+      if let metadata = TimedMetadata.from(items: group.items, icyCharset: player?.currentTrack?.icyCharset) {
         latestTimedMetadata = metadata
         onTimedMetadata(metadata)
         // Re-render the now-playing so the formatter can reflect the live song.

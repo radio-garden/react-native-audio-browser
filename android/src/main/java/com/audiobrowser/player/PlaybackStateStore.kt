@@ -233,6 +233,7 @@ class PlaybackStateStore(private val player: Player) {
           put("disabled", track.disabled)
           put("favorited", track.favorited)
           put("live", track.live)
+          put("icyCharset", track.icyCharset)
         }
         .toString()
 
@@ -281,6 +282,7 @@ class PlaybackStateStore(private val player: Player) {
               if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
               else null,
             live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
+            icyCharset = obj.optString("icyCharset").takeIf { it.isNotEmpty() },
             // Not persisted: on resumption the contextual path is re-browsed
             // (expandQueueFromContextualPath), which re-parses each track's request
             // from the API's current response and re-caches it.

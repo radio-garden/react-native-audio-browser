@@ -25,6 +25,7 @@ private func makeResolvedTrack(
     disabled: nil,
     favorited: nil,
     live: nil,
+    icyCharset: nil,
   )
 }
 
@@ -49,6 +50,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     disabled: false,
     favorited: true,
     live: false,
+    icyCharset: nil,
   )
 }
 

@@ -44,4 +44,5 @@ fun ResolvedTrack.toTrack(): Track =
     disabled = disabled,
     favorited = favorited,
     live = live,
+    icyCharset = icyCharset,
   )
