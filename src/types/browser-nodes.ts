@@ -547,6 +547,18 @@ export interface Track {
    * calls. Declare it on every live track.
    */
   live?: boolean
+
+  /**
+   * Byte encoding of this track's ICY `StreamTitle` when it is not UTF-8, as
+   * an IANA label (`'windows-1251'`, `'windows-874'`, …). Some Shoutcast /
+   * Icecast stations send titles in a legacy code page; ICY declares no
+   * encoding, so the player's UTF-8 decode fails and falls back to Latin-1,
+   * showing mojibake. With this set, a title whose bytes are not valid UTF-8
+   * is decoded with the given charset instead. Applies to ICY only: ID3 and
+   * HLS timed metadata declare their own encoding and are never touched. A
+   * label the platform cannot decode with is ignored.
+   */
+  icyCharset?: string
 }
 
 /**

@@ -417,7 +417,7 @@ final class CarPlayListItemFactory {
       id: nil, path: path, src: nil, artwork: nil, artworkSource: nil,
       request: nil, title: title ?? "", subtitle: nil,
       artist: nil, albumPath: nil, album: nil, description: nil, genre: nil,
-      duration: nil, style: nil, disabled: nil, favorited: nil, live: nil,
+      duration: nil, style: nil, disabled: nil, favorited: nil, live: nil, icyCharset: nil,
     )
   }
 }

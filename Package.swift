@@ -56,6 +56,7 @@ let package = Package(
         "Extension/Track+Identity.swift",
         "Extension/Variant+Artwork.swift",
         "Extension/TrackMetadata+AVFoundation.swift",
+        "Extension/String+IcyCharset.swift",
         "Extension/TimedMetadata+AVFoundation.swift",
         "Extension/ChapterMetadata+AVFoundation.swift",
         "Util/Emitter.swift",

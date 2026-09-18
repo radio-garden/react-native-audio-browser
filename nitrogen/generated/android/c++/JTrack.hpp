@@ -89,6 +89,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> favorited = this->getFieldValue(fieldFavorited);
       static const auto fieldLive = clazz->getField<jni::JBoolean>("live");
       jni::local_ref<jni::JBoolean> live = this->getFieldValue(fieldLive);
+      static const auto fieldIcyCharset = clazz->getField<jni::JString>("icyCharset");
+      jni::local_ref<jni::JString> icyCharset = this->getFieldValue(fieldIcyCharset);
       return Track(
         id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
@@ -107,7 +109,8 @@ namespace margelo::nitro::audiobrowser {
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt,
         disabled != nullptr ? std::make_optional(static_cast<bool>(disabled->value())) : std::nullopt,
         favorited != nullptr ? std::make_optional(static_cast<bool>(favorited->value())) : std::nullopt,
-        live != nullptr ? std::make_optional(static_cast<bool>(live->value())) : std::nullopt
+        live != nullptr ? std::make_optional(static_cast<bool>(live->value())) : std::nullopt,
+        icyCharset != nullptr ? std::make_optional(icyCharset->toStdString()) : std::nullopt
       );
     }
 
@@ -117,7 +120,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
-      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JVariant_String_ArtworkVariants>, jni::alias_ref<JImageSource>, jni::alias_ref<JTrackRequest>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JVariant_String_ArtworkVariants>, jni::alias_ref<JImageSource>, jni::alias_ref<JTrackRequest>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -139,7 +142,8 @@ namespace margelo::nitro::audiobrowser {
         value.style.has_value() ? JTrackStyle::fromCpp(value.style.value()) : nullptr,
         value.disabled.has_value() ? jni::JBoolean::valueOf(value.disabled.value()) : nullptr,
         value.favorited.has_value() ? jni::JBoolean::valueOf(value.favorited.value()) : nullptr,
-        value.live.has_value() ? jni::JBoolean::valueOf(value.live.value()) : nullptr
+        value.live.has_value() ? jni::JBoolean::valueOf(value.live.value()) : nullptr,
+        value.icyCharset.has_value() ? jni::make_jstring(value.icyCharset.value()) : nullptr
       );
     }
   };

@@ -15,11 +15,12 @@ data class PlaybackMetadata(
   companion object {
     /**
      * Creates PlaybackMetadata from raw Metadata entries. Handles ICY streams specially, uses
-     * Media3's unified approach for everything else.
+     * Media3's unified approach for everything else. [icyCharset] is the track's declared charset
+     * for ICY titles whose bytes are not UTF-8; it never touches other metadata.
      */
-    fun from(metadata: Metadata): PlaybackMetadata? {
+    fun from(metadata: Metadata, icyCharset: String? = null): PlaybackMetadata? {
       // Try ICY first (streaming-specific)
-      fromIcy(metadata)?.let {
+      fromIcy(metadata, icyCharset)?.let {
         return it
       }
 
@@ -32,12 +33,13 @@ data class PlaybackMetadata(
     }
 
     /** Shoutcast / Icecast metadata (ICY protocol) https://cast.readme.io/docs/icy */
-    private fun fromIcy(metadata: Metadata): PlaybackMetadata? {
+    private fun fromIcy(metadata: Metadata, icyCharset: String?): PlaybackMetadata? {
       for (i in 0 until metadata.length()) {
         when (val entry = metadata[i]) {
           is IcyInfo -> {
             if (entry.title != null) {
-              return PlaybackMetadata(title = entry.title)
+              val title = icyCharset?.let { IcyTitle.decode(entry.rawMetadata, it) } ?: entry.title
+              return PlaybackMetadata(title = title)
             }
           }
         }

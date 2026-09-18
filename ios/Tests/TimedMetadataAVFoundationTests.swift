@@ -20,6 +20,48 @@ struct TimedMetadataICYTests {
     #expect(result?.artist == nil)
   }
 
+  private func icyTitle(_ value: String) -> AVMetadataItem {
+    let item = AVMutableMetadataItem()
+    item.key = "StreamTitle" as NSString
+    item.keySpace = .icy
+    item.value = value as NSString
+    return item
+  }
+
+  // "Алия" as windows-1251 bytes, decoded as Latin-1 the way AVFoundation does when it guesses wrong.
+  private let latin1Shaped = "\u{C0}\u{EB}\u{E8}\u{FF}"
+
+  @Test func icyCharset_redecodesLatin1ShapedTitle() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)], icyCharset: "windows-1251")
+    #expect(result?.title == "Алия")
+  }
+
+  @Test func icyCharset_leavesAlreadyDecodedTitle() {
+    let result = TimedMetadata.from(items: [icyTitle("Алия")], icyCharset: "windows-1251")
+    #expect(result?.title == "Алия")
+  }
+
+  @Test func icyCharset_leavesAscii() {
+    let result = TimedMetadata.from(items: [icyTitle("Plain Title")], icyCharset: "windows-1251")
+    #expect(result?.title == "Plain Title")
+  }
+
+  @Test func icyCharset_ignoresUnknownCharset() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)], icyCharset: "no-such-charset")
+    #expect(result?.title == latin1Shaped)
+  }
+
+  @Test func icyCharset_absent_keepsTitle() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)])
+    #expect(result?.title == latin1Shaped)
+  }
+
+  @Test func icyCharset_neverTouchesId3() {
+    let items = [makeMetadataItem(identifier: .id3MetadataTitleDescription, value: latin1Shaped)]
+    let result = TimedMetadata.from(items: items, icyCharset: "windows-1251")
+    #expect(result?.title == latin1Shaped)
+  }
+
   @Test func icyWithoutStreamTitle_returnsNil() {
     let item = AVMutableMetadataItem()
     item.key = "StreamUrl" as NSString

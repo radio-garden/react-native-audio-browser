@@ -83,10 +83,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<bool> disabled     SWIFT_PRIVATE;
     std::optional<bool> favorited     SWIFT_PRIVATE;
     std::optional<bool> live     SWIFT_PRIVATE;
+    std::optional<std::string> icyCharset     SWIFT_PRIVATE;
 
   public:
     ResolvedTrack() = default;
-    explicit ResolvedTrack(std::string path, std::optional<SectionStyle> style, std::optional<std::vector<Section>> sections, std::optional<std::vector<Track>> children, std::optional<CarPlaySiriListButtonPosition> carPlaySiriListButton, std::optional<std::string> id, std::optional<std::string> src, std::optional<std::variant<std::string, ArtworkVariants>> artwork, std::optional<ImageSource> artworkSource, std::optional<TrackRequest> request, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> albumPath, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<bool> disabled, std::optional<bool> favorited, std::optional<bool> live): path(path), style(style), sections(sections), children(children), carPlaySiriListButton(carPlaySiriListButton), id(id), src(src), artwork(artwork), artworkSource(artworkSource), request(request), title(title), subtitle(subtitle), artist(artist), albumPath(albumPath), album(album), description(description), genre(genre), duration(duration), disabled(disabled), favorited(favorited), live(live) {}
+    explicit ResolvedTrack(std::string path, std::optional<SectionStyle> style, std::optional<std::vector<Section>> sections, std::optional<std::vector<Track>> children, std::optional<CarPlaySiriListButtonPosition> carPlaySiriListButton, std::optional<std::string> id, std::optional<std::string> src, std::optional<std::variant<std::string, ArtworkVariants>> artwork, std::optional<ImageSource> artworkSource, std::optional<TrackRequest> request, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> albumPath, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<bool> disabled, std::optional<bool> favorited, std::optional<bool> live, std::optional<std::string> icyCharset): path(path), style(style), sections(sections), children(children), carPlaySiriListButton(carPlaySiriListButton), id(id), src(src), artwork(artwork), artworkSource(artworkSource), request(request), title(title), subtitle(subtitle), artist(artist), albumPath(albumPath), album(album), description(description), genre(genre), duration(duration), disabled(disabled), favorited(favorited), live(live), icyCharset(icyCharset) {}
 
   public:
     friend bool operator==(const ResolvedTrack& lhs, const ResolvedTrack& rhs) = default;
@@ -122,7 +123,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "duration"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "disabled"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorited"))),
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "live")))
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "live"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "icyCharset")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::ResolvedTrack& arg) {
@@ -148,6 +150,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "disabled"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.disabled));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "favorited"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.favorited));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "live"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.live));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "icyCharset"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.icyCharset));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -179,6 +182,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "disabled")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorited")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "live")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "icyCharset")))) return false;
       return true;
     }
   };
