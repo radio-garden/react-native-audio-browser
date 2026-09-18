@@ -2,50 +2,48 @@ package com.audiobrowser.model
 
 import java.nio.charset.Charset
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class IcyTitleTest {
-  private fun block(title: String, charset: String) =
-    "StreamTitle='$title';StreamUrl='';".toByteArray(Charset.forName(charset))
+  /** What media3's ISO-8859-1 fallback yields for [text] sent as [charset]. */
+  private fun latin1Shaped(text: String, charset: String) =
+    String(text.toByteArray(Charset.forName(charset)), Charsets.ISO_8859_1)
 
   @Test
-  fun `decodes a legacy code page title`() {
-    val raw = block("Алия Акылбекова - Жылдызым", "windows-1251")
-    assertEquals("Алия Акылбекова - Жылдызым", IcyTitle.decode(raw, "windows-1251"))
+  fun `re-decodes a legacy code page title`() {
+    val title = latin1Shaped("Алия Акылбекова - Жылдызым", "windows-1251")
+    assertEquals("Алия Акылбекова - Жылдызым", IcyTitle.redecode(title, "windows-1251"))
   }
 
   @Test
-  fun `decodes thai`() {
-    val raw = block("ลืมไปแล้วว่าลืมยังไง", "windows-874")
-    assertEquals("ลืมไปแล้วว่าลืมยังไง", IcyTitle.decode(raw, "windows-874"))
+  fun `re-decodes thai`() {
+    val title = latin1Shaped("ลืมไปแล้วว่าลืมยังไง", "windows-874")
+    assertEquals("ลืมไปแล้วว่าลืมยังไง", IcyTitle.redecode(title, "windows-874"))
   }
 
   @Test
-  fun `leaves valid utf-8 to the default decode`() {
-    assertNull(IcyTitle.decode(block("Алия", "UTF-8"), "windows-1251"))
-    assertNull(IcyTitle.decode(block("Plain Title", "UTF-8"), "windows-1251"))
+  fun `re-decodes a title the station utf-8 encoded from legacy bytes`() {
+    // media3 decodes the valid UTF-8 to the same Latin-1-shaped string the fallback would give.
+    val doubleEncoded = latin1Shaped("Rabbit - กาลเวลา", "windows-874").toByteArray(Charsets.UTF_8)
+    assertEquals(
+      "Rabbit - กาลเวลา",
+      IcyTitle.redecode(String(doubleEncoded, Charsets.UTF_8), "windows-874"),
+    )
+  }
+
+  @Test
+  fun `leaves a title already in another script`() {
+    assertEquals("Алия", IcyTitle.redecode("Алия", "windows-1251"))
+  }
+
+  @Test
+  fun `leaves ascii`() {
+    assertEquals("Plain Title", IcyTitle.redecode("Plain Title", "windows-1251"))
   }
 
   @Test
   fun `ignores a charset the runtime cannot decode with`() {
-    assertNull(IcyTitle.decode(block("Алия", "windows-1251"), "no-such-charset"))
-  }
-
-  @Test
-  fun `needs a non-empty StreamTitle`() {
-    assertNull(
-      IcyTitle.decode(
-        "StreamTitle='';".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(0xC0.toByte()),
-        "windows-1251",
-      )
-    )
-    assertNull(IcyTitle.decode(byteArrayOf(0xC0.toByte(), 0xEB.toByte()), "windows-1251"))
-  }
-
-  @Test
-  fun `keeps quotes inside the title`() {
-    val raw = block("Rock'n'Roll - Кино", "windows-1251")
-    assertEquals("Rock'n'Roll - Кино", IcyTitle.decode(raw, "windows-1251"))
+    val title = latin1Shaped("Алия", "windows-1251")
+    assertEquals(title, IcyTitle.redecode(title, "no-such-charset"))
   }
 }

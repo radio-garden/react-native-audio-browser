@@ -553,10 +553,13 @@ export interface Track {
    * an IANA label (`'windows-1251'`, `'windows-874'`, …). Some Shoutcast /
    * Icecast stations send titles in a legacy code page; ICY declares no
    * encoding, so the player's UTF-8 decode fails and falls back to Latin-1,
-   * showing mojibake. With this set, a title whose bytes are not valid UTF-8
-   * is decoded with the given charset instead. Applies to ICY only: ID3 and
-   * HLS timed metadata declare their own encoding and are never touched. A
-   * label the platform cannot decode with is ignored.
+   * showing mojibake. With this set, a title that came out Latin-1 shaped
+   * (every char at or below U+00FF, some at or above U+0080) is re-decoded
+   * through ISO-8859-1 with the given charset; this also repairs stations
+   * that UTF-8 encoded their legacy bytes. A title already in another script
+   * or pure ASCII is left alone. Applies to ICY only: ID3 and HLS timed
+   * metadata declare their own encoding and are never touched. A label the
+   * platform cannot decode with is ignored.
    */
   icyCharset?: string
 }
