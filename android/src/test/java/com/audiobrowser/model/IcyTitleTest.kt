@@ -11,29 +11,29 @@ class IcyTitleTest {
 
   @Test
   fun `re-decodes a legacy code page title`() {
-    val title = latin1Shaped("Алия Акылбекова - Жылдызым", "windows-1251")
-    assertEquals("Алия Акылбекова - Жылдызым", IcyTitle.redecode(title, "windows-1251"))
+    val title = latin1Shaped("Артист - Песня", "windows-1251")
+    assertEquals("Артист - Песня", IcyTitle.redecode(title, "windows-1251"))
   }
 
   @Test
   fun `re-decodes thai`() {
-    val title = latin1Shaped("ลืมไปแล้วว่าลืมยังไง", "windows-874")
-    assertEquals("ลืมไปแล้วว่าลืมยังไง", IcyTitle.redecode(title, "windows-874"))
+    val title = latin1Shaped("ศิลปิน - เพลง", "windows-874")
+    assertEquals("ศิลปิน - เพลง", IcyTitle.redecode(title, "windows-874"))
   }
 
   @Test
   fun `re-decodes a title the station utf-8 encoded from legacy bytes`() {
     // media3 decodes the valid UTF-8 to the same Latin-1-shaped string the fallback would give.
-    val doubleEncoded = latin1Shaped("Rabbit - กาลเวลา", "windows-874").toByteArray(Charsets.UTF_8)
+    val doubleEncoded = latin1Shaped("Artist - เพลง", "windows-874").toByteArray(Charsets.UTF_8)
     assertEquals(
-      "Rabbit - กาลเวลา",
+      "Artist - เพลง",
       IcyTitle.redecode(String(doubleEncoded, Charsets.UTF_8), "windows-874"),
     )
   }
 
   @Test
   fun `leaves a title already in another script`() {
-    assertEquals("Алия", IcyTitle.redecode("Алия", "windows-1251"))
+    assertEquals("Песня", IcyTitle.redecode("Песня", "windows-1251"))
   }
 
   @Test
@@ -43,7 +43,7 @@ class IcyTitleTest {
 
   @Test
   fun `ignores a charset the runtime cannot decode with`() {
-    val title = latin1Shaped("Алия", "windows-1251")
+    val title = latin1Shaped("Песня", "windows-1251")
     assertEquals(title, IcyTitle.redecode(title, "no-such-charset"))
   }
 }

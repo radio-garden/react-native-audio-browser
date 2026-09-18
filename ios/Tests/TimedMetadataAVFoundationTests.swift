@@ -28,17 +28,17 @@ struct TimedMetadataICYTests {
     return item
   }
 
-  // "Алия" as windows-1251 bytes, decoded as Latin-1 the way AVFoundation does when it guesses wrong.
-  private let latin1Shaped = "\u{C0}\u{EB}\u{E8}\u{FF}"
+  // "Песня" as windows-1251 bytes, decoded as Latin-1 the way AVFoundation does when it guesses wrong.
+  private let latin1Shaped = "\u{CF}\u{E5}\u{F1}\u{ED}\u{FF}"
 
   @Test func icyCharset_redecodesLatin1ShapedTitle() {
     let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)], icyCharset: "windows-1251")
-    #expect(result?.title == "Алия")
+    #expect(result?.title == "Песня")
   }
 
   @Test func icyCharset_leavesAlreadyDecodedTitle() {
-    let result = TimedMetadata.from(items: [icyTitle("Алия")], icyCharset: "windows-1251")
-    #expect(result?.title == "Алия")
+    let result = TimedMetadata.from(items: [icyTitle("Песня")], icyCharset: "windows-1251")
+    #expect(result?.title == "Песня")
   }
 
   @Test func icyCharset_leavesAscii() {
