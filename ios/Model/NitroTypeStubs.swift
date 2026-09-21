@@ -42,6 +42,7 @@
     var style: TrackStyle?
     var disabled: Bool?
     var live: Bool?
+    var icyCharset: String?
   }
 
   struct TrackLoadEvent {
@@ -216,6 +217,7 @@
     var disabled: Bool?
     var favorited: Bool?
     var live: Bool?
+    var icyCharset: String?
   }
 
   enum PlaybackState: Equatable {

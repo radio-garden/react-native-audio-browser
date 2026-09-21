@@ -738,6 +738,7 @@ final class BrowserManager {
       disabled: nil,
       favorited: nil,
       live: nil,
+      icyCharset: nil,
     )
   }
 

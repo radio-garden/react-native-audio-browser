@@ -33,6 +33,7 @@ extension ResolvedTrack {
     disabled: Bool?? = nil,
     favorited: Bool?? = nil,
     live: Bool?? = nil,
+    icyCharset: String?? = nil,
   ) -> ResolvedTrack {
     ResolvedTrack(
       path: path ?? self.path,
@@ -56,6 +57,7 @@ extension ResolvedTrack {
       disabled: disabled ?? self.disabled,
       favorited: favorited ?? self.favorited,
       live: live ?? self.live,
+      icyCharset: icyCharset ?? self.icyCharset,
     )
   }
 }

@@ -359,6 +359,7 @@ class BrowserManager {
           disabled = null,
           favorited = null,
           live = null,
+          icyCharset = null,
         )
       )
     }
@@ -1005,6 +1006,7 @@ class BrowserManager {
           disabled = null,
           favorited = null,
           live = null,
+          icyCharset = null,
         )
 
       // Cache search results for getCachedSearchResults()
@@ -1044,6 +1046,7 @@ class BrowserManager {
           disabled = null,
           favorited = null,
           live = null,
+          icyCharset = null,
         )
 
       return emptySearchResult

@@ -6,11 +6,13 @@ import AVFoundation
 
 extension TimedMetadata {
   /// Creates TimedMetadata from AVMetadataItem array, detecting the metadata format.
-  static func from(items: [AVMetadataItem]) -> TimedMetadata? {
+  /// `icyCharset` is the track's declared charset for ICY titles AVFoundation
+  /// decoded as Latin-1; it never touches ID3 or common metadata.
+  static func from(items: [AVMetadataItem], icyCharset: String? = nil) -> TimedMetadata? {
     // Check for ICY metadata (Shoutcast/Icecast streams)
     let icyItems = items.filter { $0.keySpace == .icy }
     if !icyItems.isEmpty {
-      return fromIcy(items: icyItems)
+      return fromIcy(items: icyItems, icyCharset: icyCharset)
     }
 
     // Check for ID3 metadata (MP3)
@@ -24,7 +26,7 @@ extension TimedMetadata {
   }
 
   /// Creates TimedMetadata from ICY (Shoutcast/Icecast) metadata.
-  static func fromIcy(items: [AVMetadataItem]) -> TimedMetadata? {
+  static func fromIcy(items: [AVMetadataItem], icyCharset: String? = nil) -> TimedMetadata? {
     var title: String?
 
     for item in items {
@@ -35,7 +37,7 @@ extension TimedMetadata {
 
     guard let title else { return nil }
     return TimedMetadata(
-      title: title,
+      title: icyCharset.map { title.redecodingIcyTitle(charset: $0) } ?? title,
       artist: nil,
       album: nil,
       date: nil,

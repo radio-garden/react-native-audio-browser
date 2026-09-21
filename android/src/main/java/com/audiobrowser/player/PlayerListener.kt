@@ -59,7 +59,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     }
 
     // Extract and emit timed metadata (ICY, ID3, etc.)
-    PlaybackMetadata.from(metadata)?.let {
+    PlaybackMetadata.from(metadata, player.currentTrack?.icyCharset)?.let {
       val timed = it.toNitro()
       player.callbacks?.onTimedMetadata(timed)
       player.nowPlaying.onTimedMetadataReceived(timed)
