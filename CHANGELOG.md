@@ -1,3 +1,13 @@
+## [0.2.0-next.16](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.15...v0.2.0-next.16) (2026-09-21)
+
+### Features
+
+* **track:** add icyCharset for legacy-encoded ICY StreamTitle ([c0c342a](https://github.com/radio-garden/react-native-audio-browser/commit/c0c342a347da48e4bd6f0b99aff1899daabdef72)), closes [#145](https://github.com/radio-garden/react-native-audio-browser/issues/145)
+
+### Bug Fixes
+
+* **android:** re-decode ICY titles by their Latin-1 shape, not raw bytes ([ac960c8](https://github.com/radio-garden/react-native-audio-browser/commit/ac960c8c2c6679b18575647f29ee18f0fe630527))
+
 ## [0.2.0-next.15](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.14...v0.2.0-next.15) (2026-08-19)
 
 ### Bug Fixes
