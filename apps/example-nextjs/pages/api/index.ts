@@ -13,6 +13,16 @@ const root = {
       title: 'Errors',
       subtitle: 'Various example error responses',
       path: '/api/errors'
+    },
+    {
+      title: 'Auth + Redirect',
+      subtitle: 'Media authenticated by a header, redirected to a public file',
+      path: '/api/authed'
+    },
+    {
+      title: 'Redirect Header Probe',
+      subtitle: 'Does this platform re-send the token across a redirect?',
+      path: '/api/redirect-probe'
     }
   ]
 }

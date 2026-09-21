@@ -171,35 +171,44 @@ export const RequestConfigBuilder = {
   },
 
   /**
-   * Resolves a media URL using the media configuration.
-   * Creates a RequestConfig with the track's src as the path, then builds the URL.
-   * Supports the transform callback for URL manipulation.
+   * Resolves a media request from the layered configuration, returning the
+   * whole request rather than just its URL.
    *
-   * The shared `request` layer is applied first (its transform runs for media
-   * too, per the documented contract — e.g. a dynamic baseUrl), then the media
-   * transform / static fields on top. Mirrors native's resolveMediaUrl,
-   * including its best-effort behaviour: if a transform throws, fall back to the
-   * original `src` rather than failing the load.
+   * The layers resolve headers (and a user agent) alongside the URL, and the
+   * media request needs all of them: native applies them to the AVURLAsset /
+   * ExoPlayer DataSpec, so web has to apply them to Shaka's requests or the
+   * same configuration authenticates on iOS and Android but 401s here.
+   *
+   * The resolved URL is returned in `path`, with `baseUrl` already folded into
+   * it. Best-effort like the layers themselves: if a transform throws, fall
+   * back to the original `src` rather than failing the load.
    *
    * @param src The track's src value (may be relative or absolute)
    * @param requestConfig The shared request configuration (applied first)
    * @param mediaConfig The media request configuration
-   * @returns The resolved absolute URL
+   * @returns The resolved request, its URL in `path`
    */
-  async resolveMediaUrl(
+  async resolveMediaRequest(
     src: string,
     requestConfig: TransformableRequestConfig | undefined,
     mediaConfig: MediaRequestConfig | undefined
-  ): Promise<string> {
+  ): Promise<RequestConfig> {
     try {
       const config = await this.applyLayers({ path: src }, [
         requestConfig,
         mediaConfig
       ])
-      return BrowserPathHelper.buildUrl(config.baseUrl, config.path ?? src)
+      // buildUrl folds in baseUrl *and* appends `query`; both are cleared on
+      // the way out so the resolved url can't be rebuilt and double-applied.
+      return {
+        ...config,
+        baseUrl: undefined,
+        query: undefined,
+        path: this.buildUrl({ ...config, path: config.path ?? src })
+      }
     } catch (e) {
       console.error('Failed to resolve media URL, using original src', e)
-      return BrowserPathHelper.buildUrl(undefined, src)
+      return { path: BrowserPathHelper.buildUrl(undefined, src) }
     }
   },
 

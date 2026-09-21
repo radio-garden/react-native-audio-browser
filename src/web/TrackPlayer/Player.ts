@@ -32,6 +32,23 @@ interface ShakaError {
   data?: unknown[]
 }
 
+/** Per-load overrides that don't belong on the track itself. */
+export interface LoadOptions {
+  /** Headers resolved from the media configuration, applied to Shaka's requests. */
+  headers?: Record<string, string>
+  /**
+   * The URL to play, when it differs from `track.src` — a followed redirect,
+   * say. Kept here rather than rewritten onto the track so the caller's own
+   * identity for it survives the load.
+   */
+  src?: string
+}
+
+/** The mutable request Shaka hands to a networking-engine request filter. */
+interface ShakaRequest {
+  headers: Record<string, string>
+}
+
 interface ShakaBufferingEvent extends CustomEvent {
   detail: {
     buffering: boolean
@@ -48,6 +65,12 @@ export class Player {
   protected _isStopped = false
   protected _loadInProgress = false
   protected _pendingSeek: number | undefined
+  /**
+   * Headers for the track currently loaded, applied by the request filter
+   * installed in `setupPlayer`. On the instance rather than per request so the
+   * manifest, its segments and any key requests all carry them.
+   */
+  protected mediaHeaders?: Record<string, string>
 
   // current getter/setter
   public get current(): Track | undefined {
@@ -124,6 +147,17 @@ export class Player {
     const player = new shaka.Player()
     await player.attach(element)
     this.player = player
+
+    // Apply the media config's headers to Shaka's requests, as native does to
+    // the AVURLAsset / ExoPlayer DataSpec. Without this they resolve and are
+    // then dropped, and authenticated media 401s on web alone.
+    player
+      .getNetworkingEngine()
+      ?.registerRequestFilter((_type: unknown, request: ShakaRequest) => {
+        const headers = this.mediaHeaders
+        if (!headers) return
+        request.headers = { ...request.headers, ...headers }
+      })
 
     // Listen for relevant events
     player.addEventListener('error', (event: Event) => {
@@ -241,13 +275,29 @@ export class Player {
    * may surface that (or run its onLoaded side effects). */
   private _loadGeneration = 0
 
-  public load(track: Track, onLoaded?: (track: Track) => void): void {
+  public load(
+    track: Track,
+    onLoaded?: (track: Track) => void,
+    options?: LoadOptions
+  ): void {
     const player = this.requirePlayer()
     this._isStopped = false
     this._loadInProgress = true
+    const headers = options?.headers
+    this.mediaHeaders =
+      headers && Object.keys(headers).length > 0 ? headers : undefined
+    // What Shaka plays may differ from what the caller queued; `track` is left
+    // alone so `current` and `getActiveTrack()` keep the caller's identity for
+    // it rather than a transport detail.
+    const playbackSrc = options?.src ?? track.src
+    // Current on the attempt, not on success — native derives the active track
+    // from the queue, so a failed load is still the active track there and its
+    // error has somewhere to show. `getActiveTrackIndex()` already reported the
+    // queue's index either way; this makes the pair agree.
+    this.current = track
     const generation = ++this._loadGeneration
 
-    if (!track.src) {
+    if (!playbackSrc) {
       this._loadInProgress = false
       this._pendingSeek = undefined
       const error: PlaybackError = {
@@ -263,11 +313,10 @@ export class Player {
     }
 
     player
-      .load(track.src)
+      .load(playbackSrc)
       .then(() => {
         if (generation !== this._loadGeneration || this._isStopped) return
         this._loadInProgress = false
-        this.current = track
         onLoaded?.(track)
 
         // Execute any pending seek that arrived during loading
