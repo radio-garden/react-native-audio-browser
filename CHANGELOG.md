@@ -1,3 +1,14 @@
+## [0.2.0-next.17](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.16...v0.2.0-next.17) (2026-09-21)
+
+### Bug Fixes
+
+* **android:** make connectedService @Volatile ([6730f39](https://github.com/radio-garden/react-native-audio-browser/commit/6730f390e6f70e1bf4722bc2769b1a9c44e7601c)), closes [#138](https://github.com/radio-garden/react-native-audio-browser/issues/138)
+* **build:** declare the emitted declarations CommonJS ([2307144](https://github.com/radio-garden/react-native-audio-browser/commit/230714404944a52dee36722750bda127408f01f1))
+
+### Documentation
+
+* **android:** rework the MediaSessionCallback comments ([d2c28df](https://github.com/radio-garden/react-native-audio-browser/commit/d2c28df71b8d1c0e647329d24d7ec61d4d34559a))
+
 ## [0.2.0-next.16](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.15...v0.2.0-next.16) (2026-09-21)
 
 ### Features
