@@ -55,7 +55,7 @@
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && node codegen/strip-struct-equality.cjs && yarn build",
-    "prepare": "bob build && yarn hooks:install",
+    "prepare": "bob build && echo '{\"type\":\"commonjs\"}' > lib/typescript/package.json && yarn hooks:install",
     "hooks:install": "git config core.hooksPath .githooks || exit 0",
     "example": "yarn workspace example-native",
     "ci:android": "yarn android:format:check && yarn android:types && yarn android:test",
