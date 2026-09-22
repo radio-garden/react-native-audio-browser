@@ -541,14 +541,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 
-  private fun setNavigationError(
-    code: NavigationErrorType,
-    message: String,
-    path: String,
-    statusCode: Double? = null,
-    statusCodeSuccess: Boolean? = null,
-  ) {
-    val navError = NavigationError(code, message, statusCode, statusCodeSuccess)
+  private fun setNavigationError(navError: NavigationError, path: String) {
     navigationError = navError
     onNavigationError(NavigationErrorEvent(navigationError))
 
@@ -572,52 +565,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 
-  /** Maps common browser exceptions to navigation errors */
+  /** Raises the navigation error [e] maps to, for a failed navigation to [path]. */
   private fun handleBrowserException(e: Exception, path: String, logContext: String) {
-    when (e) {
-      is HttpStatusException -> {
-        Timber.e(e, "HTTP error $logContext")
-        setNavigationError(
-          NavigationErrorType.HTTP_ERROR,
-          e.message ?: "Server error",
-          path,
-          e.statusCode.toDouble(),
-          e.statusCode in 200..299,
-        )
-      }
-      is NetworkException -> {
-        Timber.e(e, "Network error $logContext")
-        setNavigationError(
-          NavigationErrorType.NETWORK_ERROR,
-          e.message ?: "Network request failed",
-          path,
-        )
-      }
-      is ContentNotFoundException -> {
-        Timber.e(e, "Content not found $logContext")
-        setNavigationError(
-          NavigationErrorType.CONTENT_NOT_FOUND,
-          e.message ?: "Content not found",
-          path,
-        )
-      }
-      is CallbackException -> {
-        Timber.e(e, "Callback error $logContext")
-        setNavigationError(
-          NavigationErrorType.CALLBACK_ERROR,
-          e.message ?: "An error occurred",
-          path,
-        )
-      }
-      else -> {
-        Timber.e(e, "Unexpected error $logContext")
-        setNavigationError(
-          NavigationErrorType.UNKNOWN_ERROR,
-          e.message ?: "An unexpected error occurred",
-          path,
-        )
-      }
-    }
+    val navError = navigationErrorFor(e)
+    Timber.e(e, "${navError.code} $logContext")
+    setNavigationError(navError, path)
   }
 
   private fun clearNavigationError() {
@@ -1626,3 +1578,46 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
     media = media?.strippingJSCallbacks(),
     artwork = artwork?.strippingJSCallbacks(),
   )
+
+/**
+ * The navigation error an exception raises, mapped in one place so a failure is named one way
+ * wherever it surfaces.
+ */
+internal fun navigationErrorFor(e: Exception): NavigationError =
+  when (e) {
+    is HttpStatusException ->
+      NavigationError(
+        NavigationErrorType.HTTP_ERROR,
+        e.message ?: "Server error",
+        e.statusCode.toDouble(),
+        e.statusCode in 200..299,
+      )
+    is NetworkException ->
+      NavigationError(
+        NavigationErrorType.NETWORK_ERROR,
+        e.message ?: "Network request failed",
+        null,
+        null,
+      )
+    is ContentNotFoundException ->
+      NavigationError(
+        NavigationErrorType.CONTENT_NOT_FOUND,
+        e.message ?: "Content not found",
+        null,
+        null,
+      )
+    is CallbackException ->
+      NavigationError(
+        NavigationErrorType.CALLBACK_ERROR,
+        e.message ?: "An error occurred",
+        null,
+        null,
+      )
+    else ->
+      NavigationError(
+        NavigationErrorType.UNKNOWN_ERROR,
+        e.message ?: "An unexpected error occurred",
+        null,
+        null,
+      )
+  }
