@@ -1,7 +1,10 @@
 package com.audiobrowser.player
 
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaSession
 import com.audiobrowser.NavigationErrorException
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.HttpStatusException
@@ -35,13 +38,25 @@ import org.robolectric.RobolectricTestRunner
  * so the pieces under test are the ones carved out of it: [browseLevelItems] (the empty-branch
  * decision), the tile builders, [BrowserPathHelper.isDeadEndPath] (the drill-in guard),
  * [announcedSearchCount] (what onSearch tells the controller to ask for), [FailedSearchSlot] (a
- * failed search, which must not read as an empty one), [navigationErrorFor] (the one exception
- * mapping browse, search and the JS-facing `search` rejection share) and [formattedOrDefault] (the
- * formatter hop's fallback rule, which sits off the JNI-backed Promise edge for exactly this
- * reason).
+ * failed search, which must not read as an empty one), [OfflineSearchRegistry] (the searches
+ * connectivity returning re-runs), [navigationErrorFor] (the one exception mapping browse, search
+ * and the JS-facing `search` rejection share) and [formattedOrDefault] (the formatter hop's
+ * fallback rule, which sits off the JNI-backed Promise edge for exactly this reason).
  */
 @RunWith(RobolectricTestRunner::class)
 class BrowseTilesTest {
+
+  private fun controller(packageName: String, uid: Int): MediaSession.ControllerInfo =
+    MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+      packageName,
+      /* pid= */ 0,
+      uid,
+      /* libraryVersion= */ 2,
+      /* interfaceVersion= */ 2,
+      /* trusted= */ true,
+      Bundle.EMPTY,
+      /* isPackageNameVerified= */ true,
+    )
 
   private fun track(title: String): MediaItem =
     MediaItem.Builder()
@@ -199,6 +214,24 @@ class BrowseTilesTest {
   }
 
   @Test
+  fun `an offline search serves the offline tile with the app's copy for the search path`() {
+    val searchPath = BrowserPathHelper.createSearchPath("jazz")
+    val slot = FailedSearchSlot()
+
+    val tile = createOfflineMediaItem(appCopy(offlineError(), searchPath))
+
+    assertEquals(BrowserPathHelper.OFFLINE_PATH, tile.mediaId)
+    assertEquals("Search needs a connection", tile.mediaMetadata.title)
+    assertEquals("Reconnect and try again.", tile.mediaMetadata.subtitle)
+    assertFalse(tile.mediaMetadata.isBrowsable!!)
+    assertFalse(tile.mediaMetadata.isPlayable!!)
+    assertTrue(BrowserPathHelper.isDeadEndPath(BrowserPathHelper.OFFLINE_PATH))
+    // Offline is not a search that failed: connectivity returning is what serves results again,
+    // so the slot stays empty and a later re-query of the query is not a failure.
+    assertNull(slot.errorFor("jazz"))
+  }
+
+  @Test
   fun `the offline tile is worded per path, and title-only by default`() {
     val browseTile = createOfflineMediaItem(appCopy(offlineError(), "/favorites"))
     assertEquals("You're offline", browseTile.mediaMetadata.title)
@@ -260,6 +293,68 @@ class BrowseTilesTest {
     val unknown = navigationErrorFor(IllegalStateException())
     assertEquals(NavigationErrorType.UNKNOWN_ERROR, unknown.code)
     assertEquals("An unexpected error occurred", unknown.message)
+  }
+
+  @Test
+  fun `an offline search is remembered per controller, latest query only`() {
+    val registry = OfflineSearchRegistry()
+    val auto = controller("com.google.android.projection.gearhead", uid = 10)
+    val assistant = controller("com.google.android.googlequicksearchbox", uid = 11)
+
+    registry.record(auto, "jazz", null)
+    registry.record(assistant, "blues", null)
+    registry.record(auto, "jazz fm", null)
+
+    val pending = registry.drain()
+    assertEquals(2, pending.size)
+    assertEquals("jazz fm", pending.single { it.browser == auto }.query)
+    assertEquals("blues", pending.single { it.browser == assistant }.query)
+    // Drained, so a second connectivity change does not re-run the same searches again.
+    assertTrue(registry.drain().isEmpty())
+  }
+
+  @Test
+  fun `a re-run search is announced by its hits, an offline one by its tile`() {
+    val hits =
+      listOf(
+        TestFixtures.section(
+          children =
+            arrayOf(TestFixtures.track(title = "Jazz FM"), TestFixtures.track(title = "Jazz24"))
+        )
+      )
+
+    // The re-run goes through the same count as the first, online search, so what a controller is
+    // told to fetch is what onGetSearchResult then serves from the cache that search filled.
+    assertEquals(2, announcedSearchCount(hits))
+    // While offline there is nothing to count: the one tile is announced instead.
+    assertEquals(1, announcedSearchCount(null))
+  }
+
+  @Test
+  fun `a disconnected controller's offline search is forgotten`() {
+    val registry = OfflineSearchRegistry()
+    val auto = controller("com.google.android.projection.gearhead", uid = 10)
+    val assistant = controller("com.google.android.googlequicksearchbox", uid = 11)
+    registry.record(auto, "jazz", null)
+    registry.record(assistant, "blues", null)
+
+    registry.forget(auto)
+
+    assertEquals(listOf("blues"), registry.drain().map { it.query })
+  }
+
+  @Test
+  fun `a remembered search keeps the params its controller asked with`() {
+    val registry = OfflineSearchRegistry()
+    val auto = controller("com.google.android.projection.gearhead", uid = 10)
+    val params =
+      MediaLibraryService.LibraryParams.Builder()
+        .setExtras(Bundle().apply { putInt("page", 3) })
+        .build()
+
+    registry.record(auto, "jazz", params)
+
+    assertEquals(3, registry.drain().single().params?.extras?.getInt("page"))
   }
 
   @Test

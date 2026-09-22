@@ -11,6 +11,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
 import com.audiobrowser.browser.styleResolvedSections
@@ -67,6 +68,7 @@ class MediaSessionCallback(private val player: Player) :
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
   private val failedSearch = FailedSearchSlot()
+  private val offlineSearches = OfflineSearchRegistry()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
 
   /**
@@ -78,7 +80,12 @@ class MediaSessionCallback(private val player: Player) :
     private set
 
   init {
-    player.networkMonitor.observeOnline(scope) { _ -> notifySubscribedChildrenChanged() }
+    player.networkMonitor.observeOnline(scope) { online ->
+      notifySubscribedChildrenChanged()
+      // A browse level is re-queried through its subscription; a search has none, so its offline
+      // tile has to be taken off the screen by re-running the query.
+      if (online) scope.launch { reannounceOfflineSearches() }
+    }
   }
 
   /** Media3's legacy browse bridge asks for a whole list with pageSize [Int.MAX_VALUE]. */
@@ -144,6 +151,18 @@ class MediaSessionCallback(private val player: Player) :
   ): MediaSession.ConnectionResult {
     Timber.Forest.d("MediaSession connect: ${controller.packageName}")
     return commandManager.buildConnectionResult(session)
+  }
+
+  override fun onDisconnected(session: MediaSession, controller: MediaSession.ControllerInfo) {
+    Timber.Forest.d("MediaSession disconnect: ${controller.packageName}")
+    // A controller that leaves without unsubscribing (Android Auto's normal exit) would otherwise
+    // be notified — and held — forever.
+    offlineSearches.forget(controller)
+    synchronized(this) {
+      parentIdSubscriptions.values.forEach { it.remove(controller) }
+      parentIdSubscriptions.entries.removeAll { (_, browsers) -> browsers.isEmpty() }
+    }
+    super.onDisconnected(session, controller)
   }
 
   override fun onCustomCommand(
@@ -626,34 +645,83 @@ class MediaSessionCallback(private val player: Player) :
         return@future LibraryResult.ofVoid()
       }
 
+      // Before the offline branch inside announceSearch: with no search source configured the
+      // answer is not-supported, online or not.
       if (!browserManager.config.hasSearch) {
         Timber.w("Search requested but no search source configured")
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }
 
+      announceSearch(session, browser, browserManager, query, params)
+      LibraryResult.ofVoid()
+    }
+  }
+
+  /**
+   * Runs [query] and tells [browser] how many items [onGetSearchResult] will serve for it: the
+   * search's own hits, or the single tile standing in for them — a controller told zero never asks
+   * for items. Offline keeps the query for [reannounceOfflineSearches]; every other outcome drops
+   * it, so one controller holds at most its latest unanswered search.
+   */
+  private suspend fun announceSearch(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    browserManager: BrowserManager,
+    query: String,
+    params: MediaLibraryService.LibraryParams?,
+  ) {
+    if (
+      !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
+    ) {
+      Timber.w("Network offline - announcing the offline tile for query: $query")
+      offlineSearches.record(browser, query, params)
+      session.notifySearchResultChanged(browser, query, 1, params)
+      return
+    }
+    offlineSearches.forget(browser)
+
+    try {
+      // Caches the result set under the query, which onGetSearchResult reads back through
+      // getCachedSearchResults.
+      val searchResults = browserManager.search(query)
+      failedSearch.clear()
+      val resultCount = announcedSearchCount(searchResults.normalizedSections)
+
+      Timber.d("Search announced $resultCount item(s) for query '$query'")
+
+      session.notifySearchResultChanged(browser, query, resultCount, params)
+    } catch (e: Exception) {
+      if (e is CancellationException && e !is TimeoutCancellationException) throw e
+      Timber.e(e, "Error during search for query: $query")
+      // A failed search announces its one item — the browse-error tile onGetSearchResult
+      // serves — rather than an ofError the browse list renders as nothing at all. Without
+      // the slot the failure is indistinguishable from an empty page by the time that call
+      // arrives, and a server error would read as the app's "no results" copy.
+      failedSearch.record(query, navigationErrorFor(e))
+      session.notifySearchResultChanged(browser, query, 1, params)
+    }
+  }
+
+  /**
+   * Re-runs every search that was served the offline tile, now that the network is back. Announcing
+   * what the fresh search found — rather than a bare "one item" — keeps the announced count equal
+   * to what [onGetSearchResult] will then serve from the cache this fills.
+   */
+  private suspend fun reannounceOfflineSearches() {
+    val pending = offlineSearches.drain()
+    if (pending.isEmpty()) return
+    val session = mediaLibrarySession ?: return
+    val browserManager =
       try {
-        // Caches the result set under the query, which onGetSearchResult reads back through
-        // getCachedSearchResults.
-        val searchResults = browserManager.search(query)
-        failedSearch.clear()
-        val resultCount = announcedSearchCount(searchResults.normalizedSections)
-
-        Timber.d("Search announced $resultCount item(s) for query '$query'")
-
-        session.notifySearchResultChanged(browser, query, resultCount, params)
-
-        LibraryResult.ofVoid()
-      } catch (e: Exception) {
-        if (e is CancellationException && e !is TimeoutCancellationException) throw e
-        Timber.e(e, "Error during search for query: $query")
-        // A failed search announces its one item — the browse-error tile onGetSearchResult
-        // serves — rather than an ofError the browse list renders as nothing at all. Without
-        // the slot the failure is indistinguishable from an empty page by the time that call
-        // arrives, and a server error would read as the app's "no results" copy.
-        failedSearch.record(query, navigationErrorFor(e))
-        session.notifySearchResultChanged(browser, query, 1, params)
-        LibraryResult.ofVoid()
+        player.awaitBrowser().browserManager
+      } catch (e: TimeoutCancellationException) {
+        Timber.w("Timed out waiting for browser - offline searches not re-announced")
+        return
       }
+
+    pending.forEach { search ->
+      Timber.d("Network back - re-running search: ${search.query}")
+      announceSearch(session, search.browser, browserManager, search.query, search.params)
     }
   }
 
@@ -687,6 +755,26 @@ class MediaSessionCallback(private val player: Player) :
         audioBrowser.onGate(GateEvent(GateReason.SEARCH))
         return@future LibraryResult.ofItemList(
           ImmutableList.of(createGateMediaItem(searchOutcome.chrome!!)),
+          params,
+        )
+      }
+
+      // Checked before the failure slot, as in onGetChildren: a search that never reached the
+      // network is not a server failure, and connectivity returning is what fixes it.
+      if (
+        !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
+      ) {
+        Timber.w("Network offline - returning the offline tile for query: $query")
+        sendBrowseError(session, browser, offline = true)
+        return@future LibraryResult.ofItemList(
+          ImmutableList.of(
+            createOfflineMediaItem(
+              audioBrowser.resolveFormattedError(
+                offlineError(),
+                BrowserPathHelper.createSearchPath(query),
+              )
+            )
+          ),
           params,
         )
       }
@@ -1006,6 +1094,45 @@ internal fun browseFailureError(): NavigationError =
 internal fun announcedSearchCount(sections: List<Section>?): Int =
   (sections?.sumOf { section -> section.children.count { it.disabled != true } } ?: 0)
     .coerceAtLeast(1)
+
+/**
+ * The search each controller was last served the offline tile for. Media3 addresses a search result
+ * by (controller, query) and keeps no record of its own, and a search has no subscription the way a
+ * browse level does — so without this the offline tile stays on screen until the user searches
+ * again. Only an offline-served query is kept: a search that ran found what it found, and one that
+ * failed did so with a network.
+ *
+ * Written from the callback's IO scope and read from the connectivity observer, so every accessor
+ * is synchronized.
+ */
+internal class OfflineSearchRegistry {
+  private val searches = mutableMapOf<MediaSession.ControllerInfo, OfflineSearch>()
+
+  @Synchronized
+  fun record(
+    browser: MediaSession.ControllerInfo,
+    query: String,
+    params: MediaLibraryService.LibraryParams?,
+  ) {
+    searches[browser] = OfflineSearch(browser, query, params)
+  }
+
+  @Synchronized
+  fun forget(browser: MediaSession.ControllerInfo) {
+    searches.remove(browser)
+  }
+
+  /** Takes every record: a re-run that finds the network gone again records its own. */
+  @Synchronized
+  fun drain(): List<OfflineSearch> = searches.values.toList().also { searches.clear() }
+}
+
+/** One controller's unanswered search: everything announcing it again needs. */
+internal data class OfflineSearch(
+  val browser: MediaSession.ControllerInfo,
+  val query: String,
+  val params: MediaLibraryService.LibraryParams?,
+)
 
 /**
  * Remembers the query whose search threw, so [MediaSessionCallback.onGetSearchResult] serves the
