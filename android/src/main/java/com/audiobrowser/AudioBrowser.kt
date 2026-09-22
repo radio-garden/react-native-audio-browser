@@ -509,7 +509,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   /**
    * Resolves a navigation error to its display form: the app's `formatNavigationError` for the
-   * given [path] when one is configured, else the built-in default.
+   * given [path] when one is configured, else the built-in default. Shared by [setNavigationError]
+   * and the Android Auto empty tile so in-app and in-car copy cannot drift (ADR 0001).
    */
   internal suspend fun resolveFormattedError(
     error: NavigationError,
@@ -699,7 +700,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun search(query: String): Promise<Array<Track>> {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
-      val searchResults = browserManager.search(query)
+      // Rejects with the error the browse surface would raise, but leaves the navigation error
+      // itself unset: a search is not a navigation, and its failure must not replace the
+      // displayed page's state (mirrors HybridAudioBrowser.search).
+      val searchResults =
+        try {
+          browserManager.search(query)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          Timber.e(e, "Search failed for query: $query")
+          throw NavigationErrorException(navigationErrorFor(e))
+        }
       // Flattened, not `children`: a resolved page carries its rows in
       // `sections` (ADR 0010) and search builds exactly one untitled section,
       // so `children` is always null here and this returned nothing at all.
@@ -1564,8 +1576,9 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
 private val FORMATTER_TIMEOUT = 10.seconds
 
 /**
- * The navigation error an exception raises, mapped in one place so a failure is named one way
- * wherever it surfaces.
+ * The navigation error an exception raises. Shared by [AudioBrowser]'s failed navigations, the
+ * rejection [AudioBrowser.search] hands JS, and the Android Auto browse-error tile, so one failure
+ * is named one way wherever it surfaces.
  */
 internal fun navigationErrorFor(e: Exception): NavigationError =
   when (e) {
@@ -1605,6 +1618,9 @@ internal fun navigationErrorFor(e: Exception): NavigationError =
         null,
       )
   }
+
+/** Carries a [NavigationError] across a rejected Promise, whose JS error keeps its message. */
+class NavigationErrorException(val error: NavigationError) : Exception(error.message)
 
 /**
  * The built-in display copy for a navigation error, and the fallback when the app's is unusable.

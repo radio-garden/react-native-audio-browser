@@ -66,6 +66,7 @@ class MediaSessionCallback(private val player: Player) :
   // threads (network observer, JS-triggered notifies) — guard all access with synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
+  private val failedSearch = FailedSearchSlot()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
 
   /**
@@ -634,6 +635,7 @@ class MediaSessionCallback(private val player: Player) :
         // Caches the result set under the query, which onGetSearchResult reads back through
         // getCachedSearchResults.
         val searchResults = browserManager.search(query)
+        failedSearch.clear()
         val resultCount = announcedSearchCount(searchResults.normalizedSections)
 
         Timber.d("Search announced $resultCount item(s) for query '$query'")
@@ -644,7 +646,13 @@ class MediaSessionCallback(private val player: Player) :
       } catch (e: Exception) {
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error during search for query: $query")
-        LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
+        // A failed search announces its one item — the browse-error tile onGetSearchResult
+        // serves — rather than an ofError the browse list renders as nothing at all. Without
+        // the slot the failure is indistinguishable from an empty page by the time that call
+        // arrives, and a server error would read as the app's "no results" copy.
+        failedSearch.record(query, navigationErrorFor(e))
+        session.notifySearchResultChanged(browser, query, 1, params)
+        LibraryResult.ofVoid()
       }
     }
   }
@@ -679,6 +687,20 @@ class MediaSessionCallback(private val player: Player) :
         audioBrowser.onGate(GateEvent(GateReason.SEARCH))
         return@future LibraryResult.ofItemList(
           ImmutableList.of(createGateMediaItem(searchOutcome.chrome!!)),
+          params,
+        )
+      }
+
+      // The search itself failed, so this is a failure, not an empty page — same tile and same
+      // SessionError the browse catch sends, worded for the error its exception mapped to.
+      failedSearch.errorFor(query)?.let { error ->
+        sendBrowseError(session, browser, offline = false)
+        return@future LibraryResult.ofItemList(
+          ImmutableList.of(
+            createBrowseErrorMediaItem(
+              audioBrowser.resolveFormattedError(error, BrowserPathHelper.createSearchPath(query))
+            )
+          ),
           params,
         )
       }
@@ -978,9 +1000,33 @@ internal fun browseFailureError(): NavigationError =
  * The item count [MediaSessionCallback.onSearch] announces for a search that ran. Disabled tracks
  * hide on Android Auto (Track.disabled), so they never inflate it; and a search with nothing
  * servable announces one — the empty tile [MediaSessionCallback.onGetSearchResult] serves in their
- * place — because a controller told zero never asks for items. The gate branch announces its own
- * single tile by the same rule.
+ * place — because a controller told zero never asks for items. The gate and failure branches
+ * announce their own single tile by the same rule.
  */
 internal fun announcedSearchCount(sections: List<Section>?): Int =
   (sections?.sumOf { section -> section.children.count { it.disabled != true } } ?: 0)
     .coerceAtLeast(1)
+
+/**
+ * Remembers the query whose search threw, so [MediaSessionCallback.onGetSearchResult] serves the
+ * browse-error tile instead of the empty one — by then the failure is otherwise indistinguishable
+ * from a page that found nothing. Written and read from the callback's IO scope.
+ *
+ * One slot, matching BrowserManager's single-entry result cache: two failures in a row leave only
+ * the later query recorded, so a late fetch of the earlier one serves the empty tile instead of the
+ * error tile. Acceptable while only the most recent search's results are retrievable at all.
+ */
+internal class FailedSearchSlot {
+  @Volatile private var failed: Pair<String, NavigationError>? = null
+
+  fun record(query: String, error: NavigationError) {
+    failed = query to error
+  }
+
+  fun clear() {
+    failed = null
+  }
+
+  /** The error [query] failed with, or null when it is not the query that failed. */
+  fun errorFor(query: String): NavigationError? = failed?.takeIf { it.first == query }?.second
+}

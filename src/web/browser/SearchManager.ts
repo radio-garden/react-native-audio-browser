@@ -15,7 +15,9 @@ export class SearchManager {
    * Matches Android's BrowserManager.search(params: SearchParams) behavior.
    *
    * @param params Search parameters (query is required, other fields optional)
-   * @returns Array of matching tracks
+   * @returns Array of matching tracks — empty only when the source found none
+   * @throws The failure itself: an `Error` carrying a `NavigationErrorType`
+   *   `code` from `HttpClient`, or whatever a `searchCallback` rejected with
    */
   async search(params: SearchParams): Promise<Track[]> {
     // Find __search__ route entry
@@ -48,15 +50,10 @@ export class SearchManager {
 
       // Delegate to the shared layered fetch (request → search) on BrowserManager
       // so the ladder lives in one place.
-      try {
-        results = await this.browserManager.fetchSearchResults(
-          searchRoute.searchConfig,
-          searchQueryParams
-        )
-      } catch (error) {
-        console.error('Search failed:', error)
-        return []
-      }
+      results = await this.browserManager.fetchSearchResults(
+        searchRoute.searchConfig,
+        searchQueryParams
+      )
     }
 
     // Transform artwork URLs on search results using async method with full Track access

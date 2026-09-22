@@ -2,8 +2,10 @@ package com.audiobrowser.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.audiobrowser.NavigationErrorException
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.HttpStatusException
+import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.defaultFormattedError
 import com.audiobrowser.formattedOrDefault
 import com.audiobrowser.navigationErrorFor
@@ -17,6 +19,7 @@ import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -31,9 +34,11 @@ import org.robolectric.RobolectricTestRunner
  * `formatNavigationError` (ADR 0001). MediaSessionCallback itself needs a live MediaLibrarySession,
  * so the pieces under test are the ones carved out of it: [browseLevelItems] (the empty-branch
  * decision), the tile builders, [BrowserPathHelper.isDeadEndPath] (the drill-in guard),
- * [announcedSearchCount] (what onSearch tells the controller to ask for), [navigationErrorFor] (the
- * one exception mapping browse and search share) and [formattedOrDefault] (the formatter hop's
- * fallback rule, which sits off the JNI-backed Promise edge for exactly this reason).
+ * [announcedSearchCount] (what onSearch tells the controller to ask for), [FailedSearchSlot] (a
+ * failed search, which must not read as an empty one), [navigationErrorFor] (the one exception
+ * mapping browse, search and the JS-facing `search` rejection share) and [formattedOrDefault] (the
+ * formatter hop's fallback rule, which sits off the JNI-backed Promise edge for exactly this
+ * reason).
  */
 @RunWith(RobolectricTestRunner::class)
 class BrowseTilesTest {
@@ -220,6 +225,47 @@ class BrowseTilesTest {
 
     // A re-read of the tile has no exception left to map, so it stands on the generic failure.
     assertEquals("Error", defaultFormattedError(browseFailureError()).title)
+  }
+
+  @Test
+  fun `a recorded search failure carries its error for that query only, until a success clears it`() {
+    val slot = FailedSearchSlot()
+    val failure = navigationErrorFor(HttpStatusException(500, "Internal Server Error"))
+    assertNull(slot.errorFor("jazz"))
+
+    slot.record("jazz", failure)
+    assertEquals(failure, slot.errorFor("jazz"))
+    assertNull(slot.errorFor("blues"))
+
+    slot.clear()
+    assertNull(slot.errorFor("jazz"))
+  }
+
+  @Test
+  fun `a failed search rejects with the navigation error a failed browse would raise`() {
+    // Nitro's Promise is JNI-backed (its constructor calls initHybrid), so the JS-facing
+    // AudioBrowser.search cannot be built here; what it rejects with is this.
+    val rejection =
+      NavigationErrorException(navigationErrorFor(HttpStatusException(503, "Service Unavailable")))
+    assertEquals(NavigationErrorType.HTTP_ERROR, rejection.error.code)
+    assertEquals(503.0, rejection.error.statusCode!!, 0.0)
+    assertEquals(false, rejection.error.statusCodeSuccess)
+    assertEquals("Service Unavailable", rejection.message)
+
+    assertEquals(
+      NavigationErrorType.NETWORK_ERROR,
+      navigationErrorFor(NetworkException("Network request failed")).code,
+    )
+
+    val unknown = navigationErrorFor(IllegalStateException())
+    assertEquals(NavigationErrorType.UNKNOWN_ERROR, unknown.code)
+    assertEquals("An unexpected error occurred", unknown.message)
+  }
+
+  @Test
+  fun `the failure sentinel is distinct from the empty one and dead-ends too`() {
+    assertNotEquals(BrowserPathHelper.EMPTY_PATH, BrowserPathHelper.ERROR_PATH)
+    assertTrue(BrowserPathHelper.isDeadEndPath(BrowserPathHelper.ERROR_PATH))
   }
 
   @Test
