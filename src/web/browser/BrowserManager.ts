@@ -345,6 +345,9 @@ export class BrowserManager {
    * results (no contextual URLs), like the native `makeSearchResult`.
    * Matches Android's BrowserManager.search() which bypasses resolve() entirely.
    *
+   * A failed search propagates, so `navigate` turns it into a navigation error
+   * the way it does a failed browse resolve.
+   *
    * @param searchPath The search path (format: /__search?q=query)
    * @returns ResolvedTrack containing search results as one untitled section
    */
@@ -379,17 +382,9 @@ export class BrowserManager {
     }
     // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {
-      try {
-        searchResults = await this.fetchSearchResults(
-          searchRoute.searchConfig,
-          {
-            q: query
-          }
-        )
-      } catch (error) {
-        console.error('Search failed:', error)
-        return undefined
-      }
+      searchResults = await this.fetchSearchResults(searchRoute.searchConfig, {
+        q: query
+      })
     }
 
     // Search callbacks should return fresh tracks without contextual paths (like Android)

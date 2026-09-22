@@ -93,13 +93,17 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 @Keep
@@ -503,121 +507,48 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getFormattedNavigationError(): FormattedNavigationError? = formattedNavigationError
 
-  /** Creates a default formatted error from a NavigationError */
-  private fun defaultFormattedError(error: NavigationError): FormattedNavigationError {
-    val title =
-      when (error.code) {
-        NavigationErrorType.CONTENT_NOT_FOUND -> "Content Not Found"
-        NavigationErrorType.NETWORK_ERROR -> "Network Error"
-        NavigationErrorType.HTTP_ERROR -> {
-          // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
-          error.statusCode?.let { httpStatusText(it.toInt()) } ?: "Server Error"
-        }
-        NavigationErrorType.CALLBACK_ERROR -> "Error"
-        NavigationErrorType.UNKNOWN_ERROR -> "Error"
-        // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
-        NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
-        NavigationErrorType.TIMEOUT -> "Couldn't load"
-      }
-    // Omit an empty message so it renders as title-only (e.g. the empty-content case).
-    return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
-  }
-
-  /** Returns localized HTTP status text for the given status code */
-  private fun httpStatusText(statusCode: Int): String {
-    return when (statusCode) {
-      400 -> "Bad Request"
-      401 -> "Unauthorized"
-      403 -> "Forbidden"
-      404 -> "Not Found"
-      405 -> "Method Not Allowed"
-      408 -> "Request Timeout"
-      429 -> "Too Many Requests"
-      500 -> "Internal Server Error"
-      502 -> "Bad Gateway"
-      503 -> "Service Unavailable"
-      504 -> "Gateway Timeout"
-      else -> "Server Error"
+  /**
+   * Resolves a navigation error to its display form: the app's `formatNavigationError` for the
+   * given [path] when one is configured, else the built-in default. Shared by [setNavigationError]
+   * and the Android Auto empty tile so in-app and in-car copy cannot drift (ADR 0001).
+   */
+  internal suspend fun resolveFormattedError(
+    error: NavigationError,
+    path: String,
+  ): FormattedNavigationError {
+    val default = defaultFormattedError(error)
+    val formatter = _configuration.formatNavigationError ?: return default
+    return formattedOrDefault(mainScope, default) {
+      formatter(FormatNavigationErrorParams(error, default, path)).await()
     }
   }
 
-  private fun setNavigationError(
-    code: NavigationErrorType,
-    message: String,
-    path: String,
-    statusCode: Double? = null,
-    statusCodeSuccess: Boolean? = null,
-  ) {
-    val navError = NavigationError(code, message, statusCode, statusCodeSuccess)
+  private fun setNavigationError(navError: NavigationError, path: String) {
     navigationError = navError
     onNavigationError(NavigationErrorEvent(navigationError))
 
-    // Format the error (async if using JS callback, sync for defaults)
-    val defaultFormatted = defaultFormattedError(navError)
-    val formatter = _configuration.formatNavigationError
-    if (formatter != null) {
-      mainScope.launch {
-        try {
-          val params = FormatNavigationErrorParams(navError, defaultFormatted, path)
-          val customFormatted = formatter(params).await()
-          formattedNavigationError = customFormatted ?: defaultFormatted
-        } catch (e: Exception) {
-          formattedNavigationError = defaultFormatted
-        }
-        onFormattedNavigationError(formattedNavigationError)
-      }
-    } else {
-      formattedNavigationError = defaultFormatted
-      onFormattedNavigationError(formattedNavigationError)
+    // No formatter means no hop, and the field and event land in this turn: a same-turn
+    // getFormattedNavigationError, or a clearNavigationError right after, must not race a
+    // launch that has yet to run.
+    if (_configuration.formatNavigationError == null) {
+      val default = defaultFormattedError(navError)
+      formattedNavigationError = default
+      onFormattedNavigationError(default)
+      return
+    }
+
+    mainScope.launch {
+      val formatted = resolveFormattedError(navError, path)
+      formattedNavigationError = formatted
+      onFormattedNavigationError(formatted)
     }
   }
 
-  /** Maps common browser exceptions to navigation errors */
+  /** Raises the navigation error [e] maps to, for a failed navigation to [path]. */
   private fun handleBrowserException(e: Exception, path: String, logContext: String) {
-    when (e) {
-      is HttpStatusException -> {
-        Timber.e(e, "HTTP error $logContext")
-        setNavigationError(
-          NavigationErrorType.HTTP_ERROR,
-          e.message ?: "Server error",
-          path,
-          e.statusCode.toDouble(),
-          e.statusCode in 200..299,
-        )
-      }
-      is NetworkException -> {
-        Timber.e(e, "Network error $logContext")
-        setNavigationError(
-          NavigationErrorType.NETWORK_ERROR,
-          e.message ?: "Network request failed",
-          path,
-        )
-      }
-      is ContentNotFoundException -> {
-        Timber.e(e, "Content not found $logContext")
-        setNavigationError(
-          NavigationErrorType.CONTENT_NOT_FOUND,
-          e.message ?: "Content not found",
-          path,
-        )
-      }
-      is CallbackException -> {
-        Timber.e(e, "Callback error $logContext")
-        setNavigationError(
-          NavigationErrorType.CALLBACK_ERROR,
-          e.message ?: "An error occurred",
-          path,
-        )
-      }
-      else -> {
-        Timber.e(e, "Unexpected error $logContext")
-        setNavigationError(
-          NavigationErrorType.UNKNOWN_ERROR,
-          e.message ?: "An unexpected error occurred",
-          path,
-        )
-      }
-    }
+    val navError = navigationErrorFor(e)
+    Timber.e(e, "${navError.code} $logContext")
+    setNavigationError(navError, path)
   }
 
   private fun clearNavigationError() {
@@ -769,7 +700,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun search(query: String): Promise<Array<Track>> {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
-      val searchResults = browserManager.search(query)
+      // Rejects with the error the browse surface would raise, but leaves the navigation error
+      // itself unset: a search is not a navigation, and its failure must not replace the
+      // displayed page's state (mirrors HybridAudioBrowser.search).
+      val searchResults =
+        try {
+          browserManager.search(query)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          Timber.e(e, "Search failed for query: $query")
+          throw NavigationErrorException(navigationErrorFor(e))
+        }
       // Flattened, not `children`: a resolved page carries its rows in
       // `sections` (ADR 0010) and search builds exactly one untitled section,
       // so `children` is always null here and this returned nothing at all.
@@ -1626,3 +1568,115 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
     media = media?.strippingJSCallbacks(),
     artwork = artwork?.strippingJSCallbacks(),
   )
+
+/**
+ * Ceiling on the app's `formatNavigationError` hop. Same budget [Player.awaitBrowser] gives the JS
+ * side, the only other JS wait a browse serve already blocks on.
+ */
+private val FORMATTER_TIMEOUT = 10.seconds
+
+/**
+ * The navigation error an exception raises. Shared by [AudioBrowser]'s failed navigations, the
+ * rejection [AudioBrowser.search] hands JS, and the Android Auto browse-error tile, so one failure
+ * is named one way wherever it surfaces.
+ */
+internal fun navigationErrorFor(e: Exception): NavigationError =
+  when (e) {
+    is HttpStatusException ->
+      NavigationError(
+        NavigationErrorType.HTTP_ERROR,
+        e.message ?: "Server error",
+        e.statusCode.toDouble(),
+        e.statusCode in 200..299,
+      )
+    is NetworkException ->
+      NavigationError(
+        NavigationErrorType.NETWORK_ERROR,
+        e.message ?: "Network request failed",
+        null,
+        null,
+      )
+    is ContentNotFoundException ->
+      NavigationError(
+        NavigationErrorType.CONTENT_NOT_FOUND,
+        e.message ?: "Content not found",
+        null,
+        null,
+      )
+    is CallbackException ->
+      NavigationError(
+        NavigationErrorType.CALLBACK_ERROR,
+        e.message ?: "An error occurred",
+        null,
+        null,
+      )
+    else ->
+      NavigationError(
+        NavigationErrorType.UNKNOWN_ERROR,
+        e.message ?: "An unexpected error occurred",
+        null,
+        null,
+      )
+  }
+
+/** Carries a [NavigationError] across a rejected Promise, whose JS error keeps its message. */
+class NavigationErrorException(val error: NavigationError) : Exception(error.message)
+
+/**
+ * The built-in display copy for a navigation error, and the fallback when the app's is unusable.
+ */
+internal fun defaultFormattedError(error: NavigationError): FormattedNavigationError {
+  val title =
+    when (error.code) {
+      NavigationErrorType.CONTENT_NOT_FOUND -> "Content Not Found"
+      NavigationErrorType.NETWORK_ERROR -> "Network Error"
+      NavigationErrorType.HTTP_ERROR -> {
+        // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
+        error.statusCode?.let { httpStatusText(it.toInt()) } ?: "Server Error"
+      }
+      NavigationErrorType.CALLBACK_ERROR -> "Error"
+      NavigationErrorType.UNKNOWN_ERROR -> "Error"
+      // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
+      NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
+      NavigationErrorType.TIMEOUT -> "Couldn't load"
+    }
+  // Omit an empty message so it renders as title-only (e.g. the empty-content case).
+  return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
+}
+
+/**
+ * The formatter hop's fallback rule: the app's answer when it produces one, [default] when it
+ * answers null, throws, or outruns [FORMATTER_TIMEOUT]. Kept off the JS edge so the rule is
+ * exercisable without a Nitro Promise.
+ *
+ * The hop runs in [scope] and is awaited through its [kotlinx.coroutines.Deferred], because Nitro's
+ * `Promise.await` parks in a plain `suspendCoroutine`: cancelling it does not unpark it. Awaiting
+ * the Deferred is cancellable, so the timeout leaves the orphan to finish unobserved instead of
+ * holding the caller open until JS answers — which for a browse serve would be forever.
+ */
+internal suspend fun formattedOrDefault(
+  scope: CoroutineScope,
+  default: FormattedNavigationError,
+  format: suspend () -> FormattedNavigationError?,
+): FormattedNavigationError {
+  val hop = scope.async { runCatching { format() }.getOrNull() }
+  return withTimeoutOrNull(FORMATTER_TIMEOUT) { hop.await() } ?: default
+}
+
+/** Returns localized HTTP status text for the given status code */
+private fun httpStatusText(statusCode: Int): String {
+  return when (statusCode) {
+    400 -> "Bad Request"
+    401 -> "Unauthorized"
+    403 -> "Forbidden"
+    404 -> "Not Found"
+    405 -> "Method Not Allowed"
+    408 -> "Request Timeout"
+    429 -> "Too Many Requests"
+    500 -> "Internal Server Error"
+    502 -> "Bad Gateway"
+    503 -> "Service Unavailable"
+    504 -> "Gateway Timeout"
+    else -> "Server Error"
+  }
+}

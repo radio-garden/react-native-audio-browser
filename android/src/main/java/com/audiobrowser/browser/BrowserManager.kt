@@ -877,6 +877,8 @@ class BrowserManager {
    *
    * @param query The search query string
    * @return Array of playable tracks, or null if no results or search not configured
+   * @throws Exception when the search itself fails — a zero-result page means "found nothing",
+   *   never "couldn't ask"
    */
   suspend fun searchPlayable(query: String): Array<Track>? {
     return searchPlayable(
@@ -900,6 +902,8 @@ class BrowserManager {
    *
    * @param params The structured search parameters
    * @return Array of playable tracks, or null if no results or search not configured
+   * @throws Exception when the search itself fails — a zero-result page means "found nothing",
+   *   never "couldn't ask"
    */
   suspend fun searchPlayable(params: SearchParams): Array<Track>? {
     val searchResults = search(params)
@@ -937,6 +941,8 @@ class BrowserManager {
    *
    * @param query The search query string
    * @return ResolvedTrack containing search results as children
+   * @throws Exception when the search itself fails — a zero-result page means "found nothing",
+   *   never "couldn't ask"
    */
   suspend fun search(query: String): ResolvedTrack {
     return search(
@@ -960,6 +966,8 @@ class BrowserManager {
    *
    * @param params The structured search parameters
    * @return ResolvedTrack containing search results as children
+   * @throws Exception when the search itself fails — a zero-result page means "found nothing",
+   *   never "couldn't ask"
    */
   suspend fun search(params: SearchParams): ResolvedTrack {
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
@@ -1020,36 +1028,10 @@ class BrowserManager {
 
       return searchResolvedTrack
     } catch (e: Exception) {
+      // Propagates, like the iOS `search`: a caller that cannot tell a failed search from one
+      // that found nothing renders a server error as "No results found".
       Timber.e(e, "Error during search for query: ${params.query}")
-
-      // Return empty search result on error
-      val emptySearchResult =
-        ResolvedTrack(
-          id = null,
-          path = searchPath,
-          title = "Search: ${params.query}",
-          sections = arrayOf(untitledSection(emptyArray())),
-          children = null,
-          carPlaySiriListButton = null,
-          artwork = null,
-          artworkSource = null,
-          request = null,
-          artist = null,
-          albumPath = null,
-          description = null,
-          subtitle = null,
-          album = null,
-          genre = null,
-          duration = null,
-          src = null,
-          style = null,
-          disabled = null,
-          favorited = null,
-          live = null,
-          icyCharset = null,
-        )
-
-      return emptySearchResult
+      throw e
     }
   }
 

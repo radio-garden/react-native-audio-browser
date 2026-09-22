@@ -157,8 +157,16 @@ export function hasSearch(): boolean {
 /**
  * Searches for tracks using the configured search source.
  *
+ * Resolves `[]` only when the source found nothing; a failed search rejects,
+ * so a caller can tell "no results" from "the request failed". The rejection's
+ * message describes the failure — native platforms reject with the underlying
+ * throwable and JS sees only its message. On web the `Error` also carries a
+ * `code`, the {@link NavigationErrorType} the browse path reports as a
+ * {@link NavigationError} (`'http-error'`, `'network-error'`).
+ *
  * @param query - The search query string
  * @returns Promise resolving to an array of matching tracks
+ * @throws When the search source or its request fails
  *
  * @see {@link configureBrowser}
  *
