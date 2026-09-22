@@ -18,28 +18,13 @@
 -->
 <resources>
     <!--
-      The offline tile: shown in place of a page's contents when the device is
-      offline and the consumer left `androidControllerOfflineError` on. Distinct
-      from the browse-error tile below — this one is used only when the network
-      monitor says we are actually offline, so it may name the cause. The
-      subtitle is the tile's second line.
+      The SessionError message a browse or search failure sends alongside its
+      tile. The tiles themselves are worded by the app's `formatNavigationError`
+      (ADR 0001), so these two are the library's only device-locale browse copy —
+      kept because a SessionError carries a string, not a navigation error.
+      Offline is distinct from the browse error: it is sent only when the network
+      monitor says we are actually offline, so it may name the cause.
     -->
     <string name="audio_browser_offline_error">No internet connection</string>
-    <string name="audio_browser_offline_error_subtitle">Check your connection and try again</string>
-
-    <!--
-      The browse-error tile: shown when a browse fails while ONLINE — a server
-      error, a bad status, a timeout waiting for the JS browser. Deliberately
-      vague, and deliberately not "no internet connection": the genuinely-offline
-      case is caught earlier and gets the tile above, so anything reaching this
-      one has a working connection and would be misdiagnosed by that wording.
-
-      A tile rather than an error dialog because Media3 drops the message from
-      `LibraryResult.ofError` on the legacy browse bridge, which would leave a
-      bare "No items" screen. Verified on a head unit (2026-06): the Android Auto
-      browse list never renders error text by any other route, so tiles are the
-      only in-browse signal the library controls.
-    -->
     <string name="audio_browser_browse_error">Something went wrong</string>
-    <string name="audio_browser_browse_error_subtitle">Please try again later</string>
 </resources>

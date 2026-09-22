@@ -17,17 +17,21 @@ import com.audiobrowser.browser.styleResolvedSections
 import com.audiobrowser.browser.untitledSection
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toTrack
+import com.audiobrowser.navigationErrorFor
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
 import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.NativeGateRequest
+import com.margelo.nitro.audiobrowser.NavigationError
+import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
@@ -85,42 +89,6 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
-  private fun createOfflineMediaItem(): MediaItem =
-    createErrorMediaItem(
-      mediaId = BrowserPathHelper.OFFLINE_PATH,
-      title = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error),
-      subtitle =
-        player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle),
-    )
-
-  /**
-   * Builds a non-browsable, non-playable [MediaItem] used to surface an error inside an Android
-   * Auto / AAOS browse list. Rendered as a greyed-out, non-interactive tile, which is the only
-   * side-effect-free way to communicate a browse failure to legacy controllers (Media3 drops
-   * [LibraryResult.ofError] on the legacy browse bridge, leaving an empty "No items" screen).
-   *
-   * Tiles are the only in-browse error signal that exists. Verified on a head unit (2026-06): the
-   * Android Auto browse list renders no error text for a transient [SessionError], for sticky
-   * non-fatal replication, or for fatal replication (setLibraryErrorReplicationMode). Fatal
-   * replication does surface the message on the playback screen, but at the cost of presenting the
-   * session as STATE_ERROR with no actions, hiding the now-playing item and transport controls.
-   */
-  private fun createErrorMediaItem(mediaId: String, title: String, subtitle: String): MediaItem =
-    MediaItem.Builder()
-      .setMediaId(mediaId)
-      .setMediaMetadata(
-        MediaMetadata.Builder()
-          .setTitle(title)
-          .setSubtitle(subtitle)
-          // Android Auto ignores these flags and drills into a tapped tile anyway; onGetChildren
-          // returns an empty list for the sentinel paths, so it dead-ends at "No Items" rather
-          // than stacking error pages.
-          .setIsBrowsable(false)
-          .setIsPlayable(false)
-          .build()
-      )
-      .build()
-
   /**
    * Wraps a raw external-search query string into the structured [SearchParams] the gate request
    * carries. The car search surfaces only give a free-text query, so the other fields stay null —
@@ -143,28 +111,11 @@ class MediaSessionCallback(private val player: Player) :
    * gated browse/search level serves this single tile (see the gate checks in [onGetChildren] /
    * [onGetSearchResult]). Same shape as the error tiles — non-browsable, non-playable — and
    * deliberately NOT accompanied by a SessionError: a gate is deliberate app state, not a failure.
-   * The message renders as the tile's subtitle (newlines collapse to spaces — list rows are
-   * single-line).
    */
   private fun createGateMediaItem(gate: Gate): MediaItem =
     createErrorMediaItem(
-      mediaId = BrowserPathHelper.GATE_PATH,
-      title = gate.title,
-      subtitle = gate.message?.replace('\n', ' ') ?: "",
-    )
-
-  /**
-   * Builds a generic "something went wrong" error tile for a browse failure. The true offline case
-   * is handled separately by the networkMonitor guard in [onGetChildren]; anything reaching the
-   * catch block is an online-but-failed request (e.g. server down, bad status), so it must NOT be
-   * labelled "no internet connection".
-   */
-  private fun createBrowseErrorMediaItem(): MediaItem =
-    createErrorMediaItem(
-      mediaId = BrowserPathHelper.ERROR_PATH,
-      title = player.context.getString(com.audiobrowser.R.string.audio_browser_browse_error),
-      subtitle =
-        player.context.getString(com.audiobrowser.R.string.audio_browser_browse_error_subtitle),
+      BrowserPathHelper.GATE_PATH,
+      FormattedNavigationError(gate.title, gate.message),
     )
 
   fun updateMediaSession(
@@ -330,7 +281,12 @@ class MediaSessionCallback(private val player: Player) :
       ) {
         Timber.w("Network offline - returning error message for: $parentId")
         sendBrowseError(session, browser, offline = true)
-        return@future LibraryResult.ofItemList(ImmutableList.of(createOfflineMediaItem()), params)
+        return@future LibraryResult.ofItemList(
+          ImmutableList.of(
+            createOfflineMediaItem(audioBrowser.resolveFormattedError(offlineError(), parentId))
+          ),
+          params,
+        )
       }
 
       try {
@@ -364,7 +320,14 @@ class MediaSessionCallback(private val player: Player) :
         // A tile rather than a bare ofError() — see createErrorMediaItem and
         // https://github.com/androidx/media/issues/2901
         sendBrowseError(session, browser, offline = false)
-        LibraryResult.ofItemList(ImmutableList.of(createBrowseErrorMediaItem()), params)
+        LibraryResult.ofItemList(
+          ImmutableList.of(
+            createBrowseErrorMediaItem(
+              audioBrowser.resolveFormattedError(navigationErrorFor(e), parentId)
+            )
+          ),
+          params,
+        )
       }
     }
   }
@@ -444,14 +407,42 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<MediaItem>> {
     Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
     return scope.future {
-      // Offline, error and root answer ahead of awaitBrowser: they need no browser. The gate
-      // sentinel below still does, for gateDecision.
+      // Only the root answers ahead of awaitBrowser: it needs no browser. Every tile sentinel
+      // below does — for the formatter hop, and the gate one for gateDecision.
+      if (mediaId == BrowserPathHelper.ROOT_PATH) {
+        return@future LibraryResult.ofItem(
+          MediaItem.Builder()
+            .setMediaId(mediaId)
+            .setMediaMetadata(
+              MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
+            )
+            .build(),
+          null,
+        )
+      }
+
       if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
-        return@future LibraryResult.ofItem(createOfflineMediaItem(), null)
+        return@future LibraryResult.ofItem(
+          createOfflineMediaItem(
+            player
+              .awaitBrowser()
+              .resolveFormattedError(offlineError(), BrowserPathHelper.OFFLINE_PATH)
+          ),
+          null,
+        )
       }
 
       if (mediaId == BrowserPathHelper.ERROR_PATH) {
-        return@future LibraryResult.ofItem(createBrowseErrorMediaItem(), null)
+        // The exception that produced the tile is gone by now — the sentinel is all the controller
+        // hands back — so the copy formats for the sentinel under the generic failure code.
+        return@future LibraryResult.ofItem(
+          createBrowseErrorMediaItem(
+            player
+              .awaitBrowser()
+              .resolveFormattedError(browseFailureError(), BrowserPathHelper.ERROR_PATH)
+          ),
+          null,
+        )
       }
 
       if (mediaId == BrowserPathHelper.GATE_PATH) {
@@ -470,18 +461,6 @@ class MediaSessionCallback(private val player: Player) :
             )
         if (!outcome.gated) return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         return@future LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
-      }
-
-      if (mediaId == BrowserPathHelper.ROOT_PATH) {
-        return@future LibraryResult.ofItem(
-          MediaItem.Builder()
-            .setMediaId(mediaId)
-            .setMediaMetadata(
-              MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
-            )
-            .build(),
-          null,
-        )
       }
 
       val browserManager = player.awaitBrowser().browserManager
@@ -890,3 +869,66 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 }
+
+/**
+ * Builds a non-browsable, non-playable [MediaItem] used to surface an error inside an Android Auto
+ * / AAOS browse list. Rendered as a greyed-out, non-interactive tile, which is the only
+ * side-effect-free way to communicate a browse failure to legacy controllers (Media3 drops
+ * [LibraryResult.ofError] on the legacy browse bridge, leaving an empty "No items" screen).
+ *
+ * Tiles are the only in-browse error signal that exists. Verified on a head unit (2026-06): the
+ * Android Auto browse list renders no error text for a transient [SessionError], for sticky
+ * non-fatal replication, or for fatal replication (setLibraryErrorReplicationMode). Fatal
+ * replication does surface the message on the playback screen, but at the cost of presenting the
+ * session as STATE_ERROR with no actions, hiding the now-playing item and transport controls.
+ */
+internal fun createErrorMediaItem(mediaId: String, title: String, subtitle: String): MediaItem =
+  MediaItem.Builder()
+    .setMediaId(mediaId)
+    .setMediaMetadata(
+      MediaMetadata.Builder()
+        .setTitle(title)
+        .setSubtitle(subtitle)
+        // Android Auto ignores these flags and drills into a tapped tile anyway; onGetChildren
+        // returns an empty list for the sentinel paths, so it dead-ends at "No Items" rather
+        // than stacking error pages.
+        .setIsBrowsable(false)
+        .setIsPlayable(false)
+        .build()
+    )
+    .build()
+
+/**
+ * The formatted form every tile is built from: the message renders as the subtitle, with newlines
+ * collapsed to spaces — list rows are single-line.
+ */
+private fun createErrorMediaItem(mediaId: String, formatted: FormattedNavigationError): MediaItem =
+  createErrorMediaItem(
+    mediaId = mediaId,
+    title = formatted.title,
+    subtitle = formatted.message?.replace('\n', ' ') ?: "",
+  )
+
+/**
+ * Builds the offline tile from the app's formatted `network-error` copy for the path being served,
+ * so one browse list never mixes the app's locale with the device's.
+ */
+internal fun createOfflineMediaItem(formatted: FormattedNavigationError): MediaItem =
+  createErrorMediaItem(BrowserPathHelper.OFFLINE_PATH, formatted)
+
+/**
+ * Builds the tile a failed browse or search serves, from the formatted copy for the error the
+ * request's exception mapped to. The true offline case is handled separately by the networkMonitor
+ * guards; anything reaching a catch block is an online-but-failed request (e.g. server down, bad
+ * status), so it must NOT be labelled "no internet connection".
+ */
+internal fun createBrowseErrorMediaItem(formatted: FormattedNavigationError): MediaItem =
+  createErrorMediaItem(BrowserPathHelper.ERROR_PATH, formatted)
+
+/** The navigation error a browse or search served while offline raises. */
+internal fun offlineError(): NavigationError =
+  NavigationError(NavigationErrorType.NETWORK_ERROR, "", null, null)
+
+/** The failure a re-read of the browse-error tile stands on, its own exception long gone. */
+internal fun browseFailureError(): NavigationError =
+  NavigationError(NavigationErrorType.UNKNOWN_ERROR, "", null, null)
