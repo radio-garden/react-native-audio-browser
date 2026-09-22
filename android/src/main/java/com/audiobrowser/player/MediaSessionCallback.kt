@@ -263,13 +263,11 @@ class MediaSessionCallback(private val player: Player) :
         }
       }
 
-      // The error / offline tiles are dead-ends. Some controllers (e.g. Android Auto when online)
-      // treat a non-browsable tile as tappable and subscribe to its mediaId anyway; returning the
-      // error tile again here would push an endless stack of error pages. Return nothing instead.
-      // For the offline tile, re-send the alert when still offline so a tap surfaces the
-      // explanation again — but only then, since these paths are also re-queried by
-      // notifyChildrenChanged (e.g. when connectivity returns) without any user action.
-      if (parentId == BrowserPathHelper.OFFLINE_PATH || parentId == BrowserPathHelper.ERROR_PATH) {
+      // A drill-in on the error / offline / empty tile returns nothing (see isDeadEndPath). For
+      // the offline tile, re-send the alert when still offline so a tap surfaces the explanation
+      // again — but only then, since these paths are also re-queried by notifyChildrenChanged
+      // (e.g. when connectivity returns) without any user action.
+      if (BrowserPathHelper.isDeadEndPath(parentId)) {
         if (parentId == BrowserPathHelper.OFFLINE_PATH && !player.networkMonitor.isOnline.value) {
           sendBrowseError(session, browser, offline = true)
         }
@@ -308,7 +306,13 @@ class MediaSessionCallback(private val player: Player) :
               resolvedTrack.styleResolvedSections()
                 ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
             browserManager.warnIfGridPageLacksPromise(parentId, sections)
-            toMediaItems(sections)
+            // A page with no children resolved fine, so it raises no SessionError and no event —
+            // notifyChildrenChanged re-queries these paths without any user action. It serves the
+            // app's path-aware `empty-content` copy as one inert tile (ADR 0001) instead of
+            // Android Auto's bare "No items".
+            browseLevelItems(toMediaItems(sections)) {
+              audioBrowser.resolveFormattedError(emptyContentError(), parentId)
+            }
           }
 
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
@@ -440,6 +444,20 @@ class MediaSessionCallback(private val player: Player) :
             player
               .awaitBrowser()
               .resolveFormattedError(browseFailureError(), BrowserPathHelper.ERROR_PATH)
+          ),
+          null,
+        )
+      }
+
+      if (mediaId == BrowserPathHelper.EMPTY_PATH) {
+        // A controller re-reading the tile it was served. The page's path is gone by now — the
+        // sentinel is all it hands back — so the copy formats for the sentinel and lands on the
+        // app's generic empty wording, or the default.
+        return@future LibraryResult.ofItem(
+          createEmptyMediaItem(
+            player
+              .awaitBrowser()
+              .resolveFormattedError(emptyContentError(), BrowserPathHelper.EMPTY_PATH)
           ),
           null,
         )
@@ -616,14 +634,9 @@ class MediaSessionCallback(private val player: Player) :
         // Caches the result set under the query, which onGetSearchResult reads back through
         // getCachedSearchResults.
         val searchResults = browserManager.search(query)
-        // Count what onGetSearchResult will actually serve: disabled tracks
-        // hide on Android Auto, so they must not inflate the announced count.
-        val resultCount =
-          searchResults.normalizedSections?.sumOf { section ->
-            section.children.count { it.disabled != true }
-          } ?: 0
+        val resultCount = announcedSearchCount(searchResults.normalizedSections)
 
-        Timber.d("Search completed: $resultCount results for query '$query'")
+        Timber.d("Search announced $resultCount item(s) for query '$query'")
 
         session.notifySearchResultChanged(browser, query, resultCount, params)
 
@@ -671,17 +684,22 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       try {
-        browserManager.getCachedSearchResults(query)?.let { tracks ->
-          val mediaItems = toFlatMediaItems(tracks.toList())
-
-          val paginatedItems = mediaItems.paginate(page, pageSize)
-          Timber.d("Returning ${paginatedItems.size} search results")
-          LibraryResult.ofItemList(ImmutableList.copyOf(paginatedItems), params)
-        }
-          ?: run {
-            Timber.w("No cached search results for query: $query")
-            LibraryResult.ofItemList(ImmutableList.of(), params)
+        val tracks = browserManager.getCachedSearchResults(query)
+        if (tracks == null) Timber.w("No cached search results for query: $query")
+        // A search with nothing servable — no hits, every hit disabled, or nothing cached under
+        // this query — serves the app's copy for the search path instead of the car's bare "No
+        // items" (ADR 0001). Something must always come back: onSearch announced one item.
+        val mediaItems =
+          browseLevelItems(toFlatMediaItems(tracks?.toList().orEmpty())) {
+            audioBrowser.resolveFormattedError(
+              emptyContentError(),
+              BrowserPathHelper.createSearchPath(query),
+            )
           }
+
+        val paginatedItems = mediaItems.paginate(page, pageSize)
+        Timber.d("Returning ${paginatedItems.size} search results")
+        LibraryResult.ofItemList(ImmutableList.copyOf(paginatedItems), params)
       } catch (e: Exception) {
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting search results for query: $query")
@@ -910,6 +928,15 @@ private fun createErrorMediaItem(mediaId: String, formatted: FormattedNavigation
   )
 
 /**
+ * Builds the empty tile from the app's formatted `empty-content` copy for the page's path, so an
+ * empty Favorites tab and an empty search can be worded apart (ADR 0001). Same shape as the error
+ * tiles — non-browsable, non-playable — and deliberately NOT accompanied by a SessionError: an
+ * empty page is a successful resolve.
+ */
+internal fun createEmptyMediaItem(formatted: FormattedNavigationError): MediaItem =
+  createErrorMediaItem(BrowserPathHelper.EMPTY_PATH, formatted)
+
+/**
  * Builds the offline tile from the app's formatted `network-error` copy for the path being served,
  * so one browse list never mixes the app's locale with the device's.
  */
@@ -925,6 +952,20 @@ internal fun createOfflineMediaItem(formatted: FormattedNavigationError): MediaI
 internal fun createBrowseErrorMediaItem(formatted: FormattedNavigationError): MediaItem =
   createErrorMediaItem(BrowserPathHelper.ERROR_PATH, formatted)
 
+/**
+ * What a non-root browse level or a search serves: its own items, or the lone empty tile when it
+ * came back with none. [formatted] is a JS hop, so it runs only when there is nothing to show. The
+ * root is not served through here — an empty tab list is a different condition.
+ */
+internal suspend fun browseLevelItems(
+  children: List<MediaItem>,
+  formatted: suspend () -> FormattedNavigationError,
+): List<MediaItem> = children.ifEmpty { listOf(createEmptyMediaItem(formatted())) }
+
+/** The navigation error an empty page raises: no message of its own, the path carries the copy. */
+internal fun emptyContentError(): NavigationError =
+  NavigationError(NavigationErrorType.EMPTY_CONTENT, "", null, null)
+
 /** The navigation error a browse or search served while offline raises. */
 internal fun offlineError(): NavigationError =
   NavigationError(NavigationErrorType.NETWORK_ERROR, "", null, null)
@@ -932,3 +973,14 @@ internal fun offlineError(): NavigationError =
 /** The failure a re-read of the browse-error tile stands on, its own exception long gone. */
 internal fun browseFailureError(): NavigationError =
   NavigationError(NavigationErrorType.UNKNOWN_ERROR, "", null, null)
+
+/**
+ * The item count [MediaSessionCallback.onSearch] announces for a search that ran. Disabled tracks
+ * hide on Android Auto (Track.disabled), so they never inflate it; and a search with nothing
+ * servable announces one — the empty tile [MediaSessionCallback.onGetSearchResult] serves in their
+ * place — because a controller told zero never asks for items. The gate branch announces its own
+ * single tile by the same rule.
+ */
+internal fun announcedSearchCount(sections: List<Section>?): Int =
+  (sections?.sumOf { section -> section.children.count { it.disabled != true } } ?: 0)
+    .coerceAtLeast(1)

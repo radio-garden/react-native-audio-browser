@@ -2,7 +2,7 @@
 
 **Status:** accepted
 
-When a browse path resolves successfully but yields zero children (an empty Favorites tab, a search with no results, an emptied playlist), we surface it as a `NavigationError` with code `empty` — not as a separate empty-state concept. This lets empty and failure share the one path-aware `formatNavigationError` formatter, so a consumer can word an empty Favorites tab differently from an empty search without a second mechanism. On External surfaces both render through the same centered empty view (`CPListTemplate.emptyViewTitleVariants` on CarPlay, the equivalent on Android Auto).
+When a browse path resolves successfully but yields zero children (an empty Favorites tab, a search with no results, an emptied playlist), we surface it as a `NavigationError` with code `empty` — not as a separate empty-state concept. This lets empty and failure share the one path-aware `formatNavigationError` formatter, so a consumer can word an empty Favorites tab differently from an empty search without a second mechanism. On External surfaces both render through whatever carries a message there: CarPlay's centered empty view (`CPListTemplate.emptyViewTitleVariants`), and on Android Auto — whose browse list has no empty view — a single non-browsable, non-playable tile carrying the same formatted title and message, alongside the offline, browse-error and gate tiles.
 
 ## Considered options
 

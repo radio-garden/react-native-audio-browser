@@ -8,7 +8,7 @@ import java.net.URLEncoder
  * Utility for handling browser paths and contextual URLs in the media browser system.
  *
  * Handles two types of special paths:
- * 1. System paths (prefixed with `/__`): root, search, offline, error, and gate paths
+ * 1. System paths (prefixed with `/__`): root, search, offline, error, gate, and empty paths
  * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
  * Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}` (the
@@ -40,6 +40,9 @@ object BrowserPathHelper {
   /** Browse Gate placeholder media ID (subscription/login/region block) */
   const val GATE_PATH = "/__gate"
 
+  /** Empty-page placeholder media ID — a level that resolved with zero children (ADR 0001) */
+  const val EMPTY_PATH = "/__empty"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 
@@ -49,6 +52,15 @@ object BrowserPathHelper {
   /** Check if a path is a special system path (not a regular navigation path) */
   fun isSpecialPath(path: String): Boolean {
     return path == ROOT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
+  }
+
+  /**
+   * The tile sentinels a drill-in dead-ends on: Android Auto ignores the tiles' non-browsable flag
+   * and subscribes anyway, so these serve no children rather than stacking another page.
+   * [GATE_PATH] is not one of them — it re-serves the gate tile so the message stays readable.
+   */
+  fun isDeadEndPath(path: String): Boolean {
+    return path == OFFLINE_PATH || path == ERROR_PATH || path == EMPTY_PATH
   }
 
   /** Create a search path for a given query */
