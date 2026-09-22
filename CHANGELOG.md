@@ -1,3 +1,20 @@
+## [0.2.0-next.18](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.17...v0.2.0-next.18) (2026-09-22)
+
+### Features
+
+* **android:** serve an empty browse level or search as an empty-content tile ([a58c2a7](https://github.com/radio-garden/react-native-audio-browser/commit/a58c2a7200f988ea95f64bfd14acfe25edf43716))
+
+### Bug Fixes
+
+* a failed search rejects instead of resolving empty ([729afdf](https://github.com/radio-garden/react-native-audio-browser/commit/729afdf77508a349d3a7dd93f85016e9886ad2e0))
+* **android:** bound the formatNavigationError hop ([00cecb1](https://github.com/radio-garden/react-native-audio-browser/commit/00cecb1b07ab738956beffdd21fe75fc01631e0b))
+* **android:** guard search against offline and re-run it when connectivity returns ([6e185d8](https://github.com/radio-garden/react-native-audio-browser/commit/6e185d83540e11234c9588fb7e01b83ed7b01a8e))
+* **android:** word every Android Auto tile through formatNavigationError ([eaf209e](https://github.com/radio-garden/react-native-audio-browser/commit/eaf209e273c78351db71ed0e73ece45c47b72dbf))
+
+### Code Refactors
+
+* **android:** map a browser exception to its NavigationError in one place ([84b6f4f](https://github.com/radio-garden/react-native-audio-browser/commit/84b6f4f876529915b64f3e8c96bf671b58d948f1))
+
 ## [0.2.0-next.17](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.16...v0.2.0-next.17) (2026-09-21)
 
 ### Bug Fixes
