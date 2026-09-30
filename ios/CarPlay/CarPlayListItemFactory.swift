@@ -213,23 +213,25 @@ final class CarPlayListItemFactory {
     return CPListImageRowItem.maximumImageSize
   }
 
-  /// Target artwork size for one tile. Cards and plain row elements read
-  /// their own class maximums ('background' selects the larger full-height
-  /// card target); condensed tiles use the shared element size.
-  private static func tileImageSize(gridTile: GridTile?, cardImage: CardImage?) -> CGSize {
-    if #available(iOS 26.0, *) {
-      switch gridTile {
-      case .card:
-        return cardImage == .background
-          ? CPListImageRowItemCardElement.maximumFullHeightImageSize
-          : CPListImageRowItemCardElement.maximumImageSize
-      case .plain, nil:
-        return CPListImageRowItemRowElement.maximumImageSize
-      case .condensed:
-        break
-      }
+  /// Target artwork size for one tile. Cards, image tiles and plain row
+  /// elements read their own class maximums ('background' selects the larger
+  /// full-height card target); condensed tiles use the shared element size.
+  private static func tileImageSize(
+    family: SectionPresentation.TileElementFamily, cardImage: CardImage?,
+  ) -> CGSize {
+    guard #available(iOS 26.0, *) else { return CPListImageRowItem.maximumImageSize }
+    switch family {
+    case .cardElements:
+      return cardImage == .background
+        ? CPListImageRowItemCardElement.maximumFullHeightImageSize
+        : CPListImageRowItemCardElement.maximumImageSize
+    case .rowElements:
+      return CPListImageRowItemRowElement.maximumImageSize
+    case .imageGridElements:
+      return CPListImageRowItemImageGridElement.maximumImageSize
+    case .condensedElements:
+      return CPListImageRowItemElement.maximumImageSize
     }
-    return rowImageSize
   }
 
   /// Creates the image-row item rendering a tile-presented section: a single
@@ -242,6 +244,7 @@ final class CarPlayListItemFactory {
     for section: Section, style: SectionStyle, presentation: SectionPresentation,
   ) -> CPListImageRowItem? {
     let singleLine = presentation == .singleLineRow
+    let family = SectionPresentation.tileFamily(for: style)
     // Disabled ladder: iOS 26 elements can draw unavailability (grayed +
     // inert, below); the legacy image row can't, so there a disabled track
     // hides — never a normal-looking dead tile.
@@ -296,7 +299,7 @@ final class CarPlayListItemFactory {
       // The family is style-driven (`SectionPresentation.tileFamily`); every
       // family takes either wrap mode. Pre-26 the treatment drops and the
       // layout survives (the legacy branch below).
-      switch SectionPresentation.tileFamily(for: style) {
+      switch family {
       case .cardElements:
         // Cards have no shape and no accessory slot; their knobs are the
         // tint and the image mode ('background' fills the card full-height
@@ -326,6 +329,21 @@ final class CarPlayListItemFactory {
         }
         item = CPListImageRowItem(
           text: section.title, condensedElements: elements, allowsMultipleLines: !singleLine,
+        )
+        applyImage = imageApplier(elements)
+      case .imageGridElements:
+        // imageGridElements, never the title-less gridElements: an
+        // artwork-less track must keep its name on screen (ADR 0010).
+        let elements = makeElements { track, resolved in
+          CPListImageRowItemImageGridElement(
+            image: placeholder(),
+            imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
+            title: track.title,
+            accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
+          )
+        }
+        item = CPListImageRowItem(
+          text: section.title, imageGridElements: elements, allowsMultipleLines: !singleLine,
         )
         applyImage = imageApplier(elements)
       case .rowElements:
@@ -381,7 +399,7 @@ final class CarPlayListItemFactory {
       imageLoader?.loadArtwork(
         for: track,
         style: resolved,
-        size: Self.tileImageSize(gridTile: style.gridTile, cardImage: resolved.cardImage),
+        size: Self.tileImageSize(family: family, cardImage: resolved.cardImage),
       ) { [weak item, applyImage] image in
         Task { @MainActor in
           guard let item, let image else { return }

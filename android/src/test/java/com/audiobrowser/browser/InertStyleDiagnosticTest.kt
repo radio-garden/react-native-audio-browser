@@ -113,10 +113,17 @@ class InertStyleDiagnosticTest {
         gridTile = GridTile.CONDENSED,
         imageShape = ImageShape.CIRCULAR,
       )
+    val image =
+      sectionStyle(
+        display = StyleDisplay.GRID,
+        gridTile = GridTile.IMAGE,
+        imageShape = ImageShape.CIRCULAR,
+      )
     assertEquals(1, findings(listOf(section(style = list))).size)
     assertEquals(1, findings(listOf(section(style = plain))).size)
     assertEquals(1, findings(listOf(section(style = cards))).size)
     assertTrue(findings(listOf(section(style = condensed))).isEmpty())
+    assertTrue(findings(listOf(section(style = image))).isEmpty())
   }
 
   @Test
@@ -128,6 +135,12 @@ class InertStyleDiagnosticTest {
         gridTile = GridTile.CONDENSED,
         accessorySymbol = "lock.fill",
       )
+    val image =
+      sectionStyle(
+        display = StyleDisplay.GRID,
+        gridTile = GridTile.IMAGE,
+        accessorySymbol = "lock.fill",
+      )
     val plain = sectionStyle(display = StyleDisplay.GRID, accessorySymbol = "lock.fill")
     val cards =
       sectionStyle(
@@ -137,6 +150,7 @@ class InertStyleDiagnosticTest {
       )
     assertTrue(findings(listOf(section(style = rows))).isEmpty())
     assertTrue(findings(listOf(section(style = condensed))).isEmpty())
+    assertTrue(findings(listOf(section(style = image))).isEmpty())
     for (style in listOf(plain, cards)) {
       val found = findings(listOf(section(style = style)))
       assertEquals(1, found.size)
@@ -180,7 +194,7 @@ class InertStyleDiagnosticTest {
   fun `a track's own shape is live in a shaped grid`() {
     val grid =
       section(
-        style = sectionStyle(display = StyleDisplay.GRID, gridTile = GridTile.CONDENSED),
+        style = sectionStyle(display = StyleDisplay.GRID, gridTile = GridTile.IMAGE),
         children = arrayOf(track(style = trackStyle(imageShape = ImageShape.CIRCULAR))),
       )
     assertTrue(findings(listOf(grid)).isEmpty())

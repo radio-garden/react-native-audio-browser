@@ -128,12 +128,14 @@
 
   enum GridTile: Equatable {
     case plain
+    case image
     case card
     case condensed
 
     init?(fromString string: String) {
       switch string {
       case "plain": self = .plain
+      case "image": self = .image
       case "card": self = .card
       case "condensed": self = .condensed
       default: return nil
@@ -145,6 +147,7 @@
     var stringValue: String {
       switch self {
       case .plain: "plain"
+      case .image: "image"
       case .card: "card"
       case .condensed: "condensed"
       }

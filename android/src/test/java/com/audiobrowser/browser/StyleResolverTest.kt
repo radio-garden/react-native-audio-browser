@@ -132,6 +132,12 @@ class StyleResolverTest {
         page = sectionStyle(gridTile = GridTile.CARD),
       )
     assertEquals(GridTile.PLAIN, overridden.gridTile)
+    val image =
+      StyleResolver.sectionStyle(
+        section = sectionStyle(gridTile = GridTile.IMAGE),
+        page = sectionStyle(gridTile = GridTile.CARD),
+      )
+    assertEquals(GridTile.IMAGE, image.gridTile)
   }
 
   @Test

@@ -162,6 +162,20 @@ struct JsonStyleTests {
     #expect(style?.cardImage == .background)
   }
 
+  @Test func decodesTheImageFamily() throws {
+    let json = Data(
+      """
+      {"path":"/home","title":"Home","sections":[
+        {"style":{"display":"grid","gridTile":"image","imageShape":"circular"},
+         "children":[{"title":"C","src":"s"}]}
+      ]}
+      """.utf8)
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let style = resolved.sections?.first?.style
+    #expect(style?.gridTile == .image)
+    #expect(style?.imageShape == .circular)
+  }
+
   @Test func unknownGridTileDecodesAsNoDeclaration() throws {
     let json = Data(
       """

@@ -64,6 +64,8 @@ struct SectionPresentationTests {
     // whether its elements take more than one line.
     #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .card)) == .cardElements)
     #expect(
+      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .image)) == .imageGridElements)
+    #expect(
       SectionPresentation.tileFamily(for: SectionStyle(gridTile: .condensed)) == .condensedElements)
     #expect(SectionPresentation.tileFamily(for: nil) == .rowElements)
     #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain)) == .rowElements)

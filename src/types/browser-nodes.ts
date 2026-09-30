@@ -26,7 +26,7 @@ export type StyleDisplay = 'list' | 'grid'
 export type ArtworkRendering = 'original' | 'stencil'
 
 /**
- * The shape a condensed grid tile's artwork is cropped to.
+ * The shape an image or condensed grid tile's artwork is cropped to.
  *
  * - `'rounded-rectangle'` (default) — the standard tile crop.
  * - `'circular'` — the standard presentation for *people* (artists, hosts,
@@ -44,17 +44,21 @@ export type ImageShape = 'circular' | 'rounded-rectangle'
  *
  * - `'plain'` (default) — large artwork tiles with a title and subtitle
  *   below. No shape and no accessory.
+ * - `'image'` — artwork tiles with a title and no subtitle; takes
+ *   {@link TrackStyle.imageShape} and {@link TrackStyle.accessorySymbol}.
+ *   The grid of round tiles for people is `'image'` with
+ *   `imageShape: 'circular'`.
  * - `'card'` — a larger card with title/subtitle and a
  *   {@link TrackStyle.cardTint} color; its image mode is
- *   {@link TrackStyle.cardImage}. Cards have no shape.
+ *   {@link TrackStyle.cardImage}. Cards have no shape and no accessory.
  * - `'condensed'` — a denser cell carrying title + subtitle beside a small
- *   image; the one tile that takes {@link TrackStyle.imageShape} and
+ *   image; takes {@link TrackStyle.imageShape} and
  *   {@link TrackStyle.accessorySymbol}.
  *
  * Element families are mutually exclusive within a container, so this is
  * a container property — hence the enum, and the `grid` prefix.
  */
-export type GridTile = 'plain' | 'card' | 'condensed'
+export type GridTile = 'plain' | 'image' | 'card' | 'condensed'
 
 /**
  * How a card tile uses its image.
@@ -129,12 +133,13 @@ export interface TrackStyle {
   artworkRendering?: ArtworkRendering
 
   /**
-   * Inherited (`track ?? section ?? page`): the shape a condensed grid
-   * tile's artwork is cropped to — `'circular'` for people, the default
-   * `'rounded-rectangle'` for everything else. Shape follows the item
-   * wherever it travels: a circular artist stays circular in whatever
-   * condensed grid renders it next. Inert where the presentation has no
-   * shape (list rows, plain and card tiles, pre-26 CarPlay, Android Auto).
+   * Inherited (`track ?? section ?? page`): the shape an image or
+   * condensed grid tile's artwork is cropped to — `'circular'` for people,
+   * the default `'rounded-rectangle'` for everything else. Shape follows
+   * the item wherever it travels: a circular artist stays circular in
+   * whatever shaped grid renders it next. Inert where the presentation has
+   * no shape (list rows, plain and card tiles, pre-26 CarPlay, Android
+   * Auto).
    *
    * @default 'rounded-rectangle'
    *
@@ -145,9 +150,9 @@ export interface TrackStyle {
   /**
    * Inherited (`track ?? section ?? page`): an SF Symbol name drawn as
    * the item's accessory wherever the current presentation supports one —
-   * the trailing edge of a list row, leading the title on an iOS 26
-   * condensed tile (placement is the platform's choice per surface); plain
-   * and card tiles have no slot for one. A resolved
+   * the trailing edge of a list row, leading the title on an iOS 26 image
+   * or condensed tile (placement is the platform's choice per surface);
+   * plain and card tiles have no slot for one. A resolved
    * symbol replaces the derived accessory (the disclosure chevron a
    * browsable row gets); `'none'` clears an inherited value, restoring
    * the derived behavior — inheritance has no other escape, and no SF

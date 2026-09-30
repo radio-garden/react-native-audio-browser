@@ -1,5 +1,7 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.toGridTile
+import com.audiobrowser.util.toWireString
 import com.margelo.nitro.audiobrowser.ArtworkRendering
 import com.margelo.nitro.audiobrowser.CardImage
 import com.margelo.nitro.audiobrowser.GridTile
@@ -132,6 +134,25 @@ class JsonStyleTest {
     assertEquals(GridTile.CARD, style?.gridTile)
     assertEquals("#1e3a8a", style?.cardTint)
     assertEquals(CardImage.BACKGROUND, style?.cardImage)
+  }
+
+  @Test
+  fun `decodes the image family`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridTile":"image","imageShape":"circular"},
+           "children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(GridTile.IMAGE, style?.gridTile)
+    assertEquals(ImageShape.CIRCULAR, style?.imageShape)
+  }
+
+  @Test
+  fun `every gridTile survives the wire`() {
+    GridTile.entries.forEach { assertEquals(it, it.toWireString().toGridTile()) }
   }
 
   @Test

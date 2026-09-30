@@ -167,4 +167,6 @@ element as the single-line shelf, rather than `imageGridElements`. The row
 element is titled, so artwork-less tracks still keep their name on screen,
 and it adds the subtitle line and a larger image; it has no shape and no
 accessory slot, so `imageShape` and `accessorySymbol` no longer render on
-plain tiles.
+plain tiles. They render on `gridTile: 'image'` — the `imageGridElements`
+family as a declared value, in either wrap mode — and on `'condensed'`
+(see [ADR 0011](0011-style-is-a-declaration-block.md)).

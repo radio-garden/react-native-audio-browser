@@ -66,8 +66,8 @@ object InertStyleDiagnostic {
       when (this) {
         GRID_WRAP,
         GRID_TILE -> !context.isGrid
-        IMAGE_SHAPE -> !context.isCondensed
-        ACCESSORY_SYMBOL -> context.isGrid && !context.isCondensed
+        IMAGE_SHAPE -> !context.isShaped
+        ACCESSORY_SYMBOL -> context.isGrid && !context.isShaped
         CARD_TINT,
         CARD_IMAGE -> !context.isCard
       }
@@ -78,8 +78,9 @@ object InertStyleDiagnostic {
         when (this) {
           GRID_WRAP,
           GRID_TILE -> "`$key` renders only in a grid"
-          IMAGE_SHAPE -> "only condensed tiles have a shape"
-          ACCESSORY_SYMBOL -> "among grid tiles only condensed ones have an accessory slot"
+          IMAGE_SHAPE -> "only image and condensed tiles have a shape"
+          ACCESSORY_SYMBOL ->
+            "among grid tiles only image and condensed ones have an accessory slot"
           CARD_TINT,
           CARD_IMAGE -> "the card properties render only under `gridTile: 'card'`"
         }
@@ -89,8 +90,9 @@ object InertStyleDiagnostic {
         when (this) {
           GRID_WRAP,
           GRID_TILE -> "Declare `display: 'grid'` on the section or the page, or drop `$key`."
-          IMAGE_SHAPE -> "Render the items as condensed grid tiles, or drop `imageShape`."
-          ACCESSORY_SYMBOL -> "Use `gridTile: 'condensed'` or a list, or drop `accessorySymbol`."
+          IMAGE_SHAPE -> "Use `gridTile: 'image'` or `'condensed'` in a grid, or drop `imageShape`."
+          ACCESSORY_SYMBOL ->
+            "Use `gridTile: 'image'` or `'condensed'`, or a list, or drop `accessorySymbol`."
           CARD_TINT,
           CARD_IMAGE -> "Declare `display: 'grid'` with `gridTile: 'card'`, or drop `$key`."
         }
@@ -146,16 +148,28 @@ object InertStyleDiagnostic {
 
     /**
      * Whether the card treatment is what this container renders — the `card*` family's condition.
+     * Exhaustive, like [isShaped]: a new tile kind has to be ruled on here.
      */
     val isCard: Boolean
-      get() = isGrid && tile == GridTile.CARD
+      get() =
+        isGrid &&
+          when (tile) {
+            GridTile.CARD -> true
+            GridTile.PLAIN,
+            GridTile.IMAGE,
+            GridTile.CONDENSED -> false
+          }
 
-    /**
-     * Whether condensed tiles are what this container renders — the one tile family with a shape
-     * and an accessory slot.
-     */
-    val isCondensed: Boolean
-      get() = isGrid && tile == GridTile.CONDENSED
+    /** Whether this container renders a tile family with a shape and an accessory slot. */
+    val isShaped: Boolean
+      get() =
+        isGrid &&
+          when (tile) {
+            GridTile.IMAGE,
+            GridTile.CONDENSED -> true
+            GridTile.PLAIN,
+            GridTile.CARD -> false
+          }
 
     /**
      * The effective style, for the message — in the wire spelling the author types ([toWireString]

@@ -24,7 +24,7 @@ interface TrackStyle {
 }
 interface SectionStyle extends TrackStyle {
   gridWrap?: boolean                 // ┐ container properties (scope override):
-  gridTile?: 'plain' | 'card' | 'condensed' // ┘ section ?? page ?? default
+  gridTile?: 'plain' | 'image' | 'card' | 'condensed' // ┘ section ?? page ?? default
 }
 
 Section.style?: SectionStyle
@@ -36,6 +36,9 @@ Of these, `display`, `gridWrap`, and `artworkRendering` ship with the
 flip; the rest landed with their features (`imageShape` #131,
 `accessorySymbol` #125, and the `gridTile`/`cardTint`/`cardImage`
 card-and-condensed family) — the no-dead-fields rule held throughout.
+`gridTile: 'image'` followed (#153): `CPListImageRowItemImageGridElement`,
+named by Apple's class word minus the `grid` the property already says, as
+`'card'` and `'condensed'` are.
 
 The rules, once:
 

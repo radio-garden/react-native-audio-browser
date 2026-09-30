@@ -77,19 +77,23 @@ struct InertStyleDiagnosticTests {
     let plain = SectionStyle(display: .grid, imageShape: .circular)
     let cards = SectionStyle(gridTile: .card, display: .grid, imageShape: .circular)
     let condensed = SectionStyle(gridTile: .condensed, display: .grid, imageShape: .circular)
+    let image = SectionStyle(gridTile: .image, display: .grid, imageShape: .circular)
     #expect(findings([Section(style: list, children: [])]).count == 1)
     #expect(findings([Section(style: plain, children: [])]).count == 1)
     #expect(findings([Section(style: cards, children: [])]).count == 1)
     #expect(findings([Section(style: condensed, children: [])]).isEmpty)
+    #expect(findings([Section(style: image, children: [])]).isEmpty)
   }
 
   @Test func accessorySymbolNeedsAnAccessorySlot() {
     let rows = SectionStyle(accessorySymbol: "lock.fill")
     let condensed = SectionStyle(gridTile: .condensed, display: .grid, accessorySymbol: "lock.fill")
+    let image = SectionStyle(gridTile: .image, display: .grid, accessorySymbol: "lock.fill")
     let plain = SectionStyle(display: .grid, accessorySymbol: "lock.fill")
     let cards = SectionStyle(gridTile: .card, display: .grid, accessorySymbol: "lock.fill")
     #expect(findings([Section(style: rows, children: [])]).isEmpty)
     #expect(findings([Section(style: condensed, children: [])]).isEmpty)
+    #expect(findings([Section(style: image, children: [])]).isEmpty)
     for style in [plain, cards] {
       let found = findings([Section(style: style, children: [])])
       #expect(found.count == 1)
@@ -121,7 +125,7 @@ struct InertStyleDiagnosticTests {
 
   @Test func aTracksOwnShapeIsLiveInAShapedGrid() {
     let section = Section(
-      style: SectionStyle(gridTile: .condensed, display: .grid),
+      style: SectionStyle(gridTile: .image, display: .grid),
       children: [playable(style: TrackStyle(imageShape: .circular))],
     )
     #expect(findings([section]).isEmpty)

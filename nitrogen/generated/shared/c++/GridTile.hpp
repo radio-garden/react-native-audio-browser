@@ -30,8 +30,9 @@ namespace margelo::nitro::audiobrowser {
    */
   enum class GridTile {
     PLAIN      SWIFT_NAME(plain) = 0,
-    CARD      SWIFT_NAME(card) = 1,
-    CONDENSED      SWIFT_NAME(condensed) = 2,
+    IMAGE      SWIFT_NAME(image) = 1,
+    CARD      SWIFT_NAME(card) = 2,
+    CONDENSED      SWIFT_NAME(condensed) = 3,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -45,6 +46,7 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("plain"): return margelo::nitro::audiobrowser::GridTile::PLAIN;
+        case hashString("image"): return margelo::nitro::audiobrowser::GridTile::IMAGE;
         case hashString("card"): return margelo::nitro::audiobrowser::GridTile::CARD;
         case hashString("condensed"): return margelo::nitro::audiobrowser::GridTile::CONDENSED;
         default: [[unlikely]]
@@ -54,6 +56,7 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::GridTile arg) {
       switch (arg) {
         case margelo::nitro::audiobrowser::GridTile::PLAIN: return JSIConverter<std::string>::toJSI(runtime, "plain");
+        case margelo::nitro::audiobrowser::GridTile::IMAGE: return JSIConverter<std::string>::toJSI(runtime, "image");
         case margelo::nitro::audiobrowser::GridTile::CARD: return JSIConverter<std::string>::toJSI(runtime, "card");
         case margelo::nitro::audiobrowser::GridTile::CONDENSED: return JSIConverter<std::string>::toJSI(runtime, "condensed");
         default: [[unlikely]]
@@ -68,6 +71,7 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("plain"):
+        case hashString("image"):
         case hashString("card"):
         case hashString("condensed"):
           return true;

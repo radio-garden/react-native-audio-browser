@@ -44,17 +44,19 @@ enum SectionPresentation: Equatable {
   /// The element family a tile presentation renders on iOS 26+ — here, not
   /// in the CarPlay factory, so the style→family mapping is testable
   /// off-device. `gridTile` picks the family (plain by default), in either
-  /// wrap mode: a plain tile is a row element, the one plain element with a
-  /// subtitle slot. Pre-26 has no element API at all: the treatment drops
+  /// wrap mode: a plain tile is a row element (title + subtitle), an image
+  /// tile an image-grid element (title, shape, accessory). Pre-26 has no element API at all: the treatment drops
   /// with the legacy image row (decorations drop before layout).
   enum TileElementFamily: Equatable {
     case rowElements
+    case imageGridElements
     case cardElements
     case condensedElements
   }
 
   static func tileFamily(for style: SectionStyle?) -> TileElementFamily {
     switch style?.gridTile {
+    case .image: .imageGridElements
     case .card: .cardElements
     case .condensed: .condensedElements
     case .plain, nil: .rowElements
