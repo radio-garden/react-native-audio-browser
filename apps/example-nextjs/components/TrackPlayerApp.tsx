@@ -119,7 +119,7 @@ const configuration: BrowserConfiguration = {
               id: 'whip-hls',
               title: 'Whip',
               src: '/whip/playlist.m3u8',
-              artwork: '/whip/whip.jpeg'
+              artwork: '/whip/whip.png'
             }
           ]
         },
