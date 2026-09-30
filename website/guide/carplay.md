@@ -601,6 +601,36 @@ Return a browse path to enable the album line for that track, or `undefined` to 
 CarPlay renders the tappable album/artist button as a **separate line built from the track's `album`** (visible as the third metadata line, with a chevron). Tracks without an `album` have no string for CarPlay to turn into a button — the artist line alone is never tappable. Set `album` on any track that should offer album-line navigation. See [Now Playing](/guide/now-playing) for the full field-by-surface rendering matrix.
 :::
 
+## Template Depth
+
+CarPlay limits an audio app's template stack to **five templates, the tab bar included** (CarPlay App Programming Guide, p. 15), so the stack is full four pushes in. Now Playing and Up Next each take a slot like any list. A browse tree with a fixed shape (tabs → show → episodes) never gets there; one that can be drilled without end — a place, a place near it, a place near that — does.
+
+At the limit, the library replaces the **top** page with the new one, so a push always lands:
+
+```
+[tabs, A, B, C, D]  + push E
+[tabs, A, B, C, E]
+```
+
+- **Forward never blocks.** A deeper list, Now Playing and Up Next all open at full depth.
+- **Back skips one page.** From `E` it goes to `C`: `D`, the page the listener came from, is the one that was replaced. Below full depth, back works as usual.
+- **The swap is a pop and a push.** CarPlay can't replace a template in place, so the library pops the top one without animation and then pushes the new one.
+
+Each replacement is logged under the `com.audiobrowser` subsystem, category `TemplateStack`:
+
+```
+push at the depth limit: replacing the top, CPListTemplate, with CPListTemplate
+```
+
+To watch for it on the simulator:
+
+```sh
+xcrun simctl spawn booted log stream --level info \
+  --predicate 'subsystem == "com.audiobrowser" AND category == "TemplateStack"'
+```
+
+An `error` line in that category means the pop or the push failed; it names the template involved.
+
 ## Testing
 
 Test your app in the `CarPlay Simulator.app`, which is part of the [Additional Tools for Xcode](https://developer.apple.com/download/all/?q=additional%20tools%20for%20xcode). Siri voice search works there, so you can exercise the full intent flow without a car. CarPlay support on the iOS Simulator can be a little flaky — if something looks broken, retry or fall back to a physical device for final verification.
