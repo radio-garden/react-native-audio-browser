@@ -46,11 +46,19 @@ final class CarPlayListItemFactory {
 
   // MARK: - Sections
 
-  /// Whether this OS has CarPlay's wrapping tile container (the iOS 26
-  /// element API) — the capability `SectionPresentation` degrades against.
-  private static var supportsWrappingGrid: Bool {
+  /// Whether this OS has CarPlay's iOS 26 element API — the wrapping tile
+  /// container and the text-less image row `SectionPresentation` degrades
+  /// against.
+  private static var supportsElements: Bool {
     if #available(iOS 26.0, *) { return true }
     return false
+  }
+
+  private static func listSection(_ items: [CPListTemplateItem], header: String?) -> CPListSection {
+    if let header {
+      return CPListSection(items: items, header: header, sectionIndexTitle: nil)
+    }
+    return CPListSection(items: items)
   }
 
   /// Maps the page's sections 1:1 to CPListSections (ADR 0010), respecting
@@ -58,10 +66,9 @@ final class CarPlayListItemFactory {
   /// requested presentation (resolved `section ?? page` here — ADR 0011);
   /// this renders CarPlay's nearest supported form (`SectionPresentation`):
   /// - list (default): a titled/headerless section of list rows.
-  /// - single-line grid (`gridWrap: false`): a headerless section holding
-  ///   one single-line image-row item whose text is the section title — the
-  ///   tiles that fit render, the rest truncate (the platform doesn't
-  ///   report the fit).
+  /// - single-line grid (`gridWrap: false`): a section holding one
+  ///   single-line image-row item — the tiles that fit render, the rest
+  ///   truncate (the platform doesn't report the fit).
   /// - wrapping grid: a wrapping, titled tile grid on iOS 26+; a plain list
   ///   before that.
   func createSections(from resolvedTrack: ResolvedTrack) -> [CPListSection] {
@@ -84,26 +91,24 @@ final class CarPlayListItemFactory {
       guard !section.children.isEmpty else { continue }
 
       let style = StyleResolver.sectionStyle(section: section.style, page: resolvedTrack.style)
-      let presentation = SectionPresentation(for: style, supportsWrappingGrid: Self.supportsWrappingGrid)
+      let presentation = SectionPresentation(for: style, supportsWrappingGrid: Self.supportsElements)
       switch presentation {
       case .list:
         let availableSlots = maxTotalItems - totalItemCount
         let items: [CPListTemplateItem] = section.children.prefix(availableSlots).map {
           createListItem(for: $0, style: StyleResolver.trackStyle(track: $0.style, section: style))
         }
-        if let title = section.title {
-          listSections.append(CPListSection(items: items, header: title, sectionIndexTitle: nil))
-        } else {
-          listSections.append(CPListSection(items: items))
-        }
+        listSections.append(Self.listSection(items, header: section.title))
         totalItemCount += items.count
       case .singleLineRow, .wrappingGrid:
-        // Tile presentations render as one image-row item inside a
-        // headerless CPListSection, with the section title as the item's
-        // text — a headed section would render the title twice.
-        guard let item = createImageRowItem(for: section, style: style, presentation: presentation)
-        else { continue }
-        listSections.append(CPListSection(items: [item]))
+        // Tile presentations render as one image-row item in its own
+        // CPListSection. The title is drawn once: as the section's header
+        // (`SectionPresentation.tileSectionHeader`), or as the item's text.
+        let header = SectionPresentation.tileSectionHeader(section, supportsElements: Self.supportsElements)
+        guard let item = createImageRowItem(
+          for: section, text: header == nil ? section.title : nil, style: style, presentation: presentation,
+        ) else { continue }
+        listSections.append(Self.listSection([item], header: header))
         totalItemCount += 1
       }
     }
@@ -240,8 +245,11 @@ final class CarPlayListItemFactory {
   ///
   /// Returns nil when nothing is drawable — every child hidden by the
   /// disabled ladder (pre-26 only; the element APIs gray instead).
+  ///
+  /// - Parameter text: the row's own title; nil when the list section's
+  ///   header carries it.
   private func createImageRowItem(
-    for section: Section, style: SectionStyle, presentation: SectionPresentation,
+    for section: Section, text rowText: String?, style: SectionStyle, presentation: SectionPresentation,
   ) -> CPListImageRowItem? {
     let singleLine = presentation == .singleLineRow
     let family = SectionPresentation.tileFamily(for: style)
@@ -314,7 +322,7 @@ final class CarPlayListItemFactory {
           )
         }
         item = CPListImageRowItem(
-          text: section.title, cardElements: elements, allowsMultipleLines: !singleLine,
+          text: rowText, cardElements: elements, allowsMultipleLines: !singleLine,
         )
         applyImage = imageApplier(elements)
       case .condensedElements:
@@ -328,7 +336,7 @@ final class CarPlayListItemFactory {
           )
         }
         item = CPListImageRowItem(
-          text: section.title, condensedElements: elements, allowsMultipleLines: !singleLine,
+          text: rowText, condensedElements: elements, allowsMultipleLines: !singleLine,
         )
         applyImage = imageApplier(elements)
       case .imageGridElements:
@@ -343,7 +351,7 @@ final class CarPlayListItemFactory {
           )
         }
         item = CPListImageRowItem(
-          text: section.title, imageGridElements: elements, allowsMultipleLines: !singleLine,
+          text: rowText, imageGridElements: elements, allowsMultipleLines: !singleLine,
         )
         applyImage = imageApplier(elements)
       case .rowElements:
@@ -355,7 +363,7 @@ final class CarPlayListItemFactory {
           )
         }
         item = CPListImageRowItem(
-          text: section.title, elements: elements, allowsMultipleLines: !singleLine,
+          text: rowText, elements: elements, allowsMultipleLines: !singleLine,
         )
         applyImage = imageApplier(elements)
       }
@@ -363,21 +371,19 @@ final class CarPlayListItemFactory {
       let placeholders = tracks.map { _ in placeholder() }
       // Use imageTitles variant on iOS 17.4+ to show titles below each thumbnail
       if #available(iOS 17.4, *) {
-        item = CPListImageRowItem(text: section.title ?? "", images: placeholders, imageTitles: tracks.map(\.title))
+        item = CPListImageRowItem(text: rowText ?? "", images: placeholders, imageTitles: tracks.map(\.title))
       } else {
-        item = CPListImageRowItem(text: section.title ?? "", images: placeholders)
+        item = CPListImageRowItem(text: rowText ?? "", images: placeholders)
       }
     }
 
     // Header tap → navigate to section.path ("view all"). A path-less
-    // section is a pure preview — its header tap is a no-op rather than a
-    // selection that can't resolve.
-    item.handler = { [onItemSelected] _, completion in
-      guard let path = section.path else {
-        completion()
-        return
+    // section is a pure preview and gets no handler.
+    if let path = section.path {
+      let target = Self.navigationTrack(path: path, title: section.title)
+      item.handler = { [onItemSelected] _, completion in
+        onItemSelected(target, completion)
       }
-      onItemSelected(Self.navigationTrack(path: path, title: section.title), completion)
     }
 
     // Per-tile taps select the child track directly. A disabled tile is

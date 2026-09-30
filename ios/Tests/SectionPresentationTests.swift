@@ -71,6 +71,19 @@ struct SectionPresentationTests {
     #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain)) == .rowElements)
   }
 
+  @Test func aPathlessShelfTitlesTheSectionHeader() {
+    let viewAll = Section(title: "Popular", path: "/popular", children: [])
+    let preview = Section(title: "Popular", children: [])
+    let untitled = Section(children: [])
+    // The image row's own text carries a chevron, so it is kept for the
+    // shelf that has somewhere to go.
+    #expect(SectionPresentation.tileSectionHeader(viewAll, supportsElements: true) == nil)
+    #expect(SectionPresentation.tileSectionHeader(preview, supportsElements: true) == "Popular")
+    #expect(SectionPresentation.tileSectionHeader(untitled, supportsElements: true) == nil)
+    // The legacy row cannot drop its text.
+    #expect(SectionPresentation.tileSectionHeader(preview, supportsElements: false) == nil)
+  }
+
   @Test func effectiveAccessorySymbol_noneAndAbsenceDrawNothing() {
     // A declared symbol draws; 'none' (the inheritance escape) and absence
     // both fall back to the derived accessory.

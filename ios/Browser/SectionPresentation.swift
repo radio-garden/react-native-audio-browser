@@ -41,6 +41,18 @@ enum SectionPresentation: Equatable {
     return symbol
   }
 
+  /// The title a tile shelf draws as the list section's header; nil when
+  /// the image row's own text carries it — here, not in the CarPlay factory,
+  /// so the rule is testable off-device. CarPlay draws a chevron beside an
+  /// image row's text whether or not the row has a handler, so only a shelf
+  /// with a "view all" `path` keeps its title there.
+  ///
+  /// - Parameter supportsElements: whether the platform has the iOS 26
+  ///   element API; the legacy image row's text is not optional.
+  static func tileSectionHeader(_ section: Section, supportsElements: Bool) -> String? {
+    supportsElements && section.path == nil ? section.title : nil
+  }
+
   /// The element family a tile presentation renders on iOS 26+ — here, not
   /// in the CarPlay factory, so the style→family mapping is testable
   /// off-device. `gridTile` picks the family (plain by default), in either
