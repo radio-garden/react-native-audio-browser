@@ -1,3 +1,9 @@
+## [0.2.0-next.21](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.20...v0.2.0-next.21) (2026-09-30)
+
+### Other changes
+
+* **apps:** add attribution and update metadata for sample HLS stream ([ee5cea0](https://github.com/radio-garden/react-native-audio-browser/commit/ee5cea04e4049631d866fb4997a306b7bbd8abbe))
+
 ## [0.2.0-next.20](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.19...v0.2.0-next.20) (2026-09-30)
 
 ### Bug Fixes
