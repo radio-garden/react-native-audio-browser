@@ -63,11 +63,11 @@ export type GridTile = 'plain' | 'image' | 'card' | 'condensed'
 /**
  * How a card tile uses its image.
  *
- * - `'normal'` (default) — image above the labels;
- *   {@link TrackStyle.cardTint} colors a gradient behind the labels.
+ * - `'normal'` (default) — a square image inset above the labels;
+ *   {@link TrackStyle.cardTint} colors the whole card.
  * - `'background'` — the image fills the card full-height with the labels
- *   overlaid; `cardTint` becomes the color behind them. Selects the larger
- *   artwork target size.
+ *   overlaid; `cardTint` fades in behind them. Selects the larger artwork
+ *   target size.
  *
  * An enum rather than a boolean: it names the card's image mode and
  * leaves room for future modes.
@@ -150,9 +150,9 @@ export interface TrackStyle {
   /**
    * Inherited (`track ?? section ?? page`): an SF Symbol name drawn as
    * the item's accessory wherever the current presentation supports one —
-   * the trailing edge of a list row, leading the title on an iOS 26 image
-   * or condensed tile (placement is the platform's choice per surface);
-   * plain and card tiles have no slot for one. A resolved
+   * the trailing edge of a list row or an iOS 26 condensed tile, leading
+   * the title on an image tile (placement is the platform's choice per
+   * surface); plain and card tiles have no slot for one. A resolved
    * symbol replaces the derived accessory (the disclosure chevron a
    * browsable row gets); `'none'` clears an inherited value, restoring
    * the derived behavior — inheritance has no other escape, and no SF
@@ -165,8 +165,8 @@ export interface TrackStyle {
 
   /**
    * Inherited (`track ?? section ?? page`): the card treatment's tint
-   * color (hex, e.g. `'#1e3a8a'`) — a gradient behind the labels, or the
-   * color behind them when {@link TrackStyle.cardImage} is
+   * color (hex, e.g. `'#1e3a8a'`) — the card's own color, or the color
+   * that fades in behind the labels when {@link TrackStyle.cardImage} is
    * `'background'`. Card-prefixed: inert unless the container renders
    * `gridTile: 'card'`.
    *

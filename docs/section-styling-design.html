@@ -260,9 +260,9 @@ interface TrackStyle {
 
   /**
    * SF Symbol name drawn as the item's accessory — trailing on list
-   * rows, leading the title on `'image'` and `'condensed'` grid tiles
-   * (placement is the platform's, per surface; there is no API to
-   * choose it; `'plain'` and `'card'` tiles have no slot). An
+   * rows and `'condensed'` grid tiles, leading the title on `'image'`
+   * tiles (placement is the platform's, per surface; there is no API
+   * to choose it; `'plain'` and `'card'` tiles have no slot). An
    * explicit symbol replaces the derived disclosure chevron on
    * browsable rows. `'none'` clears an inherited section value
    * (inheritance has no other escape: absent means inherit; no SF Symbol
@@ -343,9 +343,9 @@ interface TrackStyle {
    * `#RGB` | `#RRGGBB` | `'none'` (the `sf:` scheme's parser is
    * 3/6-digit; alpha `#RRGGBBAA` is a planned future extension).
    * A string outside the grammar is treated as absent — inert,
-   * never an error, never black. The color is the gradient at the
-   * bottom of the card, or the color behind the labels when
-   * `cardImage` is `'background'`. `'none'` clears an inherited
+   * never an error, never black. The color fills the whole card, or
+   * fades in behind the labels over the image when `cardImage` is
+   * `'background'`. `'none'` clears an inherited
    * value back to the platform's standard coloring. Tints must read
    * on both appearances (no light/dark pair yet — `ArtworkVariants`
    * is the model if a consumer ever needs one).
@@ -368,10 +368,10 @@ interface TrackStyle {
   /**
    * How a card renders its artwork.
    *
-   * - `'normal'` — artwork above, text in a footer over the
-   *   `cardTint` gradient.
+   * - `'normal'` — a square artwork inset above the labels, on a
+   *   card filled with `cardTint`.
    * - `'background'` — the artwork becomes the card's backdrop,
-   *   text overlaid, with `cardTint` as the color behind the labels
+   *   text overlaid, with `cardTint` fading in behind the labels
    *   (the tint flips roles because the image took the background).
    *   Selects the larger artwork target size — the artwork pipeline
    *   reads this.
@@ -724,9 +724,9 @@ interface ResolvedTrack extends Track {
             <code>accessorySymbolName</code> (tiles)
           </td>
           <td>
-            CarPlay (trailing on rows, leading the title on image + condensed
-            tiles — placement is the platform's; plain and card tiles have no
-            slot)
+            CarPlay (trailing on rows and condensed tiles, leading the title on
+            image tiles — placement is the platform's; plain and card tiles have
+            no slot)
           </td>
           <td>
             Absorbs #125's <code>carPlayAccessorySymbol</code>. Values are SF
@@ -897,8 +897,9 @@ interface ResolvedTrack extends Track {
         <tr>
           <td>+ <code>gridTile: 'condensed'</code></td>
           <td>
-            condensed cells (layout empirically TBD — Apple documents only the
-            word; has subtitles + shape)
+            condensed cells: a wide pill with a small image beside title and
+            subtitle, two to a line (two cells on a single line); shape and
+            accessory
           </td>
           <td>list</td>
           <td>grid</td>
@@ -1222,13 +1223,6 @@ interface ResolvedTrack extends Track {
           Does the phone-UI example honor <code>gridWrap: false</code> as a
           scroller (demonstrating intended usage), or stay
           <code>display</code>-only?
-        </li>
-        <li>
-          Condensed's actual layout (Apple documents only the word) — lab
-          question. <code>gridWrap: false</code> + <code>'condensed'</code> is
-          specified (condensed elements,
-          <code>allowsMultipleLines: false</code>); whether shape/accessory
-          render in that mode is part of the same lab check.
         </li>
         <li>
           Nitrogen <code>extends</code>-flattening: confirmed at implementation

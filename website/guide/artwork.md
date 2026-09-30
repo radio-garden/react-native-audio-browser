@@ -238,7 +238,7 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
 }
 ```
 
-Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a single-line grid (`gridWrap: false`) shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a wrapping grid takes as many lines as it needs on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
+Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a single-line grid (`gridWrap: false`) shows the tiles that fit on one line (seven on a wide screen, or two condensed cells; the rest are truncated) and a wrapping grid takes as many lines as it needs on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
 
 ## API summary
 

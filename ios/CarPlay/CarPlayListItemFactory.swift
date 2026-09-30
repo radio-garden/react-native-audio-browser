@@ -311,7 +311,7 @@ final class CarPlayListItemFactory {
       case .cardElements:
         // Cards have no shape and no accessory slot; their knobs are the
         // tint and the image mode ('background' fills the card full-height
-        // and turns the tint into the color behind the labels).
+        // and fades the tint in behind the labels).
         let elements = makeElements { track, resolved in
           CPListImageRowItemCardElement(
             image: placeholder(),
