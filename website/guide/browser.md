@@ -569,6 +569,10 @@ A property a _surface_ can't draw is never reported — that's the aspirational 
 }
 ```
 
+::: tip See every style rendered
+The example app's **Style Lab** tab draws each `style` declaration on CarPlay: one page per `gridTile` value, plus pages for section headers and for inheritance from page to section to track. Every shelf is titled with the block it renders, so what you see on screen names what to copy. The pages are plain route data in [`style-lab.ts`](https://github.com/radio-garden/react-native-audio-browser/blob/main/apps/example-native/src/utils/style-lab.ts), with a comment on each example saying what it shows.
+:::
+
 Two config-level platform options round it out: `carPlayLoadingTitle` (localized "Loading…" on older CarPlay) and `androidControllerOfflineError`. The album-line tap needs both `albumPath` on the track and a `resolveAlbumPath` callback in the config that maps it to a browse path — see [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 
 ## Where to go next

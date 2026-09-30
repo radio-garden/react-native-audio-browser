@@ -4,10 +4,7 @@ import type {
   ResolvedTrack,
   Section
 } from 'react-native-audio-browser'
-import { Platform } from 'react-native'
-
-const sf = (name: string, bg: string) =>
-  Platform.select({ ios: `sf:${name}?bg=${bg}&fg=#fff` })
+import { sf } from '../utils/sf'
 
 const playlists: Record<string, ResolvedTrack> = {
   'independent-sounds': {
