@@ -1060,12 +1060,11 @@
             not a style kind: density is an axis of the grid, with no
             cross-surface meaning. In the block model it is one value of the
             <code>gridTile</code> enum, mutually exclusive with
-            <code>'card'</code>. And <em>not</em> per-track: the item
-            initializers are homogeneous per element family (<code
-              >imageGridElements:</code
-            >
-            <em>or</em> <code>condensedElements:</code>) — one condensed cell
-            inside a regular grid cannot render. Shape is an element
+            <code>'image'</code> and <code>'card'</code>. And
+            <em>not</em> per-track: the item initializers are homogeneous per
+            element family (<code>imageGridElements:</code> <em>or</em>
+            <code>condensedElements:</code>) — one condensed cell inside a
+            regular grid cannot render. Shape is an element
             <em>parameter</em> (per-item legal); condensed is an element
             <em>class</em> (container-wide).</span
           >
@@ -1079,13 +1078,13 @@
           condensed elements take <code>imageShape</code> (the predicted
           widening of <code>style.imageShape</code>, arriving as a hint combo
           instead of a new style) and <code>accessorySymbolName</code> — and
-          they carry a <strong>subtitle</strong> slot, which regular
-          <code>grid</code> tiles lack, making this currently the only way a
-          wrapping grid can show subtitles. Note Apple documents
-          <em>only</em> the word “condensed”: no layout, density, or row count
-          is specified anywhere; wrapping is governed by the item-level
-          <code>allowsMultipleLines</code>. What it actually looks like is an
-          empirical lab question (the demo passes
+          they carry a <strong>subtitle</strong> slot, which
+          <code>gridTile: 'image'</code> tiles lack: condensed is the one family
+          with a shape, an accessory and a subtitle together. Note Apple
+          documents <em>only</em> the word “condensed”: no layout, density, or
+          row count is specified anywhere; wrapping is governed by the
+          item-level <code>allowsMultipleLines</code>. What it actually looks
+          like is an empirical lab question (the demo passes
           <code>allowsMultipleLines: true</code>).
         </p>
       </div>
@@ -1104,18 +1103,19 @@
           >
         </h3>
         <div class="meta">
-          Mask applied to grid/condensed tile images: rounded rectangle or
-          circle.
+          Mask applied to image-grid and condensed tile images: rounded
+          rectangle or circle.
         </div>
         <div class="scope">
           <span class="lbl">Applies to</span> <span class="chip on">grid</span
-          ><span class="chip off">single-line</span
+          ><span class="chip on">single-line</span
           ><span class="chip off">list</span>
           <span class="note"
-            >iOS 26 <code>grid</code> tiles (and
-            <code>gridTile: 'condensed'</code> tiles, whose elements also take a
-            shape) only — the <code>gridWrap: false</code> row element and the
-            pre-26 legacy image row have no shape parameter.</span
+            >iOS 26 <code>gridTile: 'image'</code> tiles
+            (<code>ImageGridElement</code>) and
+            <code>gridTile: 'condensed'</code> tiles, in either wrap mode — the
+            default <code>'plain'</code> tile (<code>RowElement</code>), the
+            card and the pre-26 legacy image row have no shape parameter.</span
           >
         </div>
         <div class="cols">
@@ -1123,12 +1123,12 @@
             <h4>How you’d use it</h4>
             <pre><code>{
   title: 'Results',
-  style: 'grid',
-  style.imageShape: 'circular',  // section default
+  style: { display: 'grid', gridTile: 'image',
+           imageShape: 'circular' },  // section default
   children: [
     { title: 'Miles Davis', ... },  // circular (inherits)
     { title: 'Kind of Blue',        // per-item override wins
-      style.imageShape: 'rounded-rectangle', ... }
+      style: { imageShape: 'rounded-rectangle' }, ... }
   ]
 }</code></pre>
             <p>

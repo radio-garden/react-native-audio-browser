@@ -260,8 +260,9 @@ interface TrackStyle {
 
   /**
    * SF Symbol name drawn as the item's accessory — trailing on list
-   * rows, leading the title on grid tiles (placement is the
-   * platform's, per surface; there is no API to choose it). An
+   * rows, leading the title on `'image'` and `'condensed'` grid tiles
+   * (placement is the platform's, per surface; there is no API to
+   * choose it; `'plain'` and `'card'` tiles have no slot). An
    * explicit symbol replaces the derived disclosure chevron on
    * browsable rows. `'none'` clears an inherited section value
    * (inheritance has no other escape: absent means inherit; no SF Symbol
@@ -325,8 +326,9 @@ interface TrackStyle {
    * Bare name — the one true passthrough in the artwork group
    * (mirrors Apple's `imageShape` exactly), and the prefix rule is
    * *prefix only when meaningless outside one mode*: shape applies
-   * to plain and `'condensed'` tiles alike (`'card'` tiles have no
-   * shape; CarPlay list rows have no shape API today).
+   * to `'image'` and `'condensed'` tiles alike (`'plain'` and
+   * `'card'` tiles have no shape; CarPlay list rows have no shape API
+   * today).
    *
    * @default 'rounded-rectangle'
    *
@@ -429,21 +431,23 @@ interface SectionStyle extends TrackStyle {
   /**
    * Tile treatment — which cell the tiles render as.
    *
-   * - `'plain'` (default) — plain artwork tiles. Exists as a value
-   *   (not just absence) so a section can override a page-level
-   *   treatment — the override's only escape hatch is an
-   *   expressible default.
+   * - `'plain'` (default) — large artwork tiles with a title and a
+   *   subtitle, in either wrap mode; no shape and no accessory.
+   *   Exists as a value (not just absence) so a section can override
+   *   a page-level treatment — the override's only escape hatch is
+   *   an expressible default.
+   * - `'image'` — artwork tiles with a title and no subtitle; the
+   *   tile that takes `imageShape` and `accessorySymbol`. With
+   *   `imageShape: 'circular'` this is the grid of round tiles for
+   *   people. Named by Apple's class word (`ImageGridElement`) minus
+   *   the `grid` the property already says.
    * - `'card'` — large editorial cards: artwork with a text overlay
    *   or footer, colored via `cardTint` (inheritable — section-wide
    *   or per child), with `cardImage: 'background'` for full-bleed
    *   artwork. With `gridWrap: false`, this is the classic featured
    *   "hero row".
-   * - `'condensed'` — a denser cell carrying title + subtitle.
-   *   Note: currently the only way a *wrapping* grid shows
-   *   subtitles (regular grid tiles have no subtitle slot) — a
-   *   content-visibility effect riding a density knob, named here
-   *   so it is at least discoverable. (Layout is otherwise the
-   *   platform's; Apple documents only the word.)
+   * - `'condensed'` — a denser cell: a small image beside title +
+   *   subtitle; takes `imageShape` and `accessorySymbol`.
    *
    * One treatment per section: the underlying containers are
    * homogeneous — a section cannot mix card and plain tiles. Mixed
@@ -458,10 +462,12 @@ interface SectionStyle extends TrackStyle {
    *
    * @platform carplay
    *
+   * @see https://developer.apple.com/documentation/carplay/cplistimagerowitemrowelement
+   * @see https://developer.apple.com/documentation/carplay/cplistimagerowitemimagegridelement
    * @see https://developer.apple.com/documentation/carplay/cplistimagerowitemcardelement
    * @see https://developer.apple.com/documentation/carplay/cplistimagerowitemcondensedelement
    */
-  gridTile?: 'plain' | 'card' | 'condensed'
+  gridTile?: 'plain' | 'image' | 'card' | 'condensed'
 }
 
 interface Section {
@@ -718,8 +724,9 @@ interface ResolvedTrack extends Track {
             <code>accessorySymbolName</code> (tiles)
           </td>
           <td>
-            CarPlay (trailing on rows, leading the title on tiles — placement is
-            the platform's)
+            CarPlay (trailing on rows, leading the title on image + condensed
+            tiles — placement is the platform's; plain and card tiles have no
+            slot)
           </td>
           <td>
             Absorbs #125's <code>carPlayAccessorySymbol</code>. Values are SF
@@ -743,17 +750,24 @@ interface ResolvedTrack extends Track {
           </td>
         </tr>
         <tr>
-          <td><code>gridTile: 'plain' | 'card' | 'condensed'</code></td>
+          <td>
+            <code>gridTile: 'plain' | 'image' | 'card' | 'condensed'</code>
+          </td>
           <td>container (section ?? page)</td>
           <td>
-            element <em>class</em> (<code>cardElements:</code> /
+            element <em>class</em> (<code>elements:</code> /
+            <code>imageGridElements:</code> / <code>cardElements:</code> /
             <code>condensedElements:</code>)
           </td>
           <td>CarPlay iOS 26+</td>
           <td>
             Element families are container-homogeneous → section-only by
             mechanics; enum because families are mutually exclusive. Name avoids
-            the <code>style.gridStyle</code> stutter; see open questions.
+            the <code>style.gridStyle</code> stutter; see open questions. Each
+            value is one Apple class in either wrap mode; the non-default values
+            take Apple's class word (<code>'image'</code> is
+            <code>ImageGridElement</code> minus the <code>grid</code> the
+            property already says).
           </td>
         </tr>
         <tr>
@@ -761,7 +775,8 @@ interface ResolvedTrack extends Track {
           <td>inheritable (track ?? section ?? page)</td>
           <td>Apple's <code>imageShape</code> (element <em>parameter</em>)</td>
           <td>
-            CarPlay iOS 26+ (plain + condensed tiles; cards have no shape)
+            CarPlay iOS 26+ (image + condensed tiles; plain and card tiles have
+            no shape)
           </td>
           <td>
             Per-element in the API → per-item legal → inherited. Tracked:
@@ -840,13 +855,16 @@ interface ResolvedTrack extends Track {
         </tr>
         <tr>
           <td><code>{ display: 'grid' }</code></td>
-          <td>wrapping titled tile grid</td>
+          <td>
+            wrapping grid of plain tiles (<code>RowElement</code>s — title +
+            subtitle)
+          </td>
           <td>list (tile container truncates unknowably)</td>
           <td>
             projected: grid (per-item hints) · AAOS: grid only if the handle
             promised it (parent hint)
           </td>
-          <td rowspan="5">
+          <td rowspan="6">
             Renders from the same declarations; properties it honors, it honors
             as intended usage. Today's example apps read
             <code>display</code> only.
@@ -854,9 +872,18 @@ interface ResolvedTrack extends Track {
         </tr>
         <tr>
           <td>+ <code>gridWrap: false</code></td>
-          <td>single-line row (<code>RowElement</code>s — has subtitles)</td>
+          <td>single-line row of the same tiles</td>
           <td>legacy single-line image row</td>
           <td>projected: grid, wraps · AAOS: per the parent promise</td>
+        </tr>
+        <tr>
+          <td>+ <code>gridTile: 'image'</code></td>
+          <td>
+            image tiles (<code>ImageGridElement</code>s — title, shape,
+            accessory; no subtitle), wrapping or single-line
+          </td>
+          <td>list · legacy image row with <code>gridWrap: false</code></td>
+          <td>grid</td>
         </tr>
         <tr>
           <td>+ <code>gridTile: 'card'</code></td>
@@ -1069,14 +1096,15 @@ interface ResolvedTrack extends Track {
         <li>
           <strong>iOS</strong>: <code>SectionPresentation</code> keys off
           <code>display == .grid</code> + <code>gridWrap</code> +
-          <code>gridTile</code>: 26+ picks the element family (plain / card /
-          condensed) and line mode; pre-26 drops the treatment and keeps the
-          layout — <code>gridWrap: false</code> → legacy image row (whatever the
-          treatment), wrapping → list. The style resolver threads the resolved
-          TrackStyle into <code>createListItem</code> (which today never
-          receives the section, and has one legitimately section-less caller to
-          tolerate). The artwork loader reads <code>cardImage</code> for the
-          target size (<code>maximumFullHeightImageSize</code>).
+          <code>gridTile</code>: 26+ picks the element family (plain / image /
+          card / condensed) and line mode; pre-26 drops the treatment and keeps
+          the layout — <code>gridWrap: false</code> → legacy image row (whatever
+          the treatment), wrapping → list. The style resolver threads the
+          resolved TrackStyle into <code>createListItem</code> (which today
+          never receives the section, and has one legitimately section-less
+          caller to tolerate). The artwork loader reads
+          <code>cardImage</code> for the target size
+          (<code>maximumFullHeightImageSize</code>).
         </li>
         <li>
           <strong>Android</strong>:
@@ -1161,12 +1189,12 @@ interface ResolvedTrack extends Track {
           or <code>gridTile</code> outside a grid; <code>cardTint</code>/<code
             >cardImage</code
           >
-          with no card treatment in scope; <code>imageShape</code> on a list or
-          a card; <code>accessorySymbol</code> on a card;
-          <code>display</code> on a track rendered playable). Judged per level:
-          a section-level declaration against its own effective context, a
-          page-level one against every section it reaches — live anywhere is
-          live. Only <em>structural</em> inertness is reported;
+          with no card treatment in scope; <code>imageShape</code> anywhere but
+          an image or condensed grid; <code>accessorySymbol</code> on a plain or
+          card grid; <code>display</code> on a track rendered playable). Judged
+          per level: a section-level declaration against its own effective
+          context, a page-level one against every section it reaches — live
+          anywhere is live. Only <em>structural</em> inertness is reported;
           <em>surface</em> inertness never is (a renderer dropping what it can't
           draw is the aspirational rule working, not a mistake). The same
           spec-level test file holds its key coverage, and the narrower
