@@ -74,22 +74,27 @@ struct InertStyleDiagnosticTests {
 
   @Test func imageShapeNeedsAShapedTile() {
     let list = SectionStyle(imageShape: .circular)
+    let plain = SectionStyle(display: .grid, imageShape: .circular)
     let cards = SectionStyle(gridTile: .card, display: .grid, imageShape: .circular)
     let condensed = SectionStyle(gridTile: .condensed, display: .grid, imageShape: .circular)
     #expect(findings([Section(style: list, children: [])]).count == 1)
+    #expect(findings([Section(style: plain, children: [])]).count == 1)
     #expect(findings([Section(style: cards, children: [])]).count == 1)
-    // Plain and condensed tiles both take a shape.
     #expect(findings([Section(style: condensed, children: [])]).isEmpty)
   }
 
-  @Test func accessorySymbolIsInertOnlyOnCards() {
+  @Test func accessorySymbolNeedsAnAccessorySlot() {
     let rows = SectionStyle(accessorySymbol: "lock.fill")
+    let condensed = SectionStyle(gridTile: .condensed, display: .grid, accessorySymbol: "lock.fill")
+    let plain = SectionStyle(display: .grid, accessorySymbol: "lock.fill")
     let cards = SectionStyle(gridTile: .card, display: .grid, accessorySymbol: "lock.fill")
-    // List rows draw accessories; card elements have no slot for one.
     #expect(findings([Section(style: rows, children: [])]).isEmpty)
-    let found = findings([Section(style: cards, children: [])])
-    #expect(found.count == 1)
-    #expect(found[0].contains("no accessory slot"))
+    #expect(findings([Section(style: condensed, children: [])]).isEmpty)
+    for style in [plain, cards] {
+      let found = findings([Section(style: style, children: [])])
+      #expect(found.count == 1)
+      #expect(found[0].contains("accessory slot"))
+    }
   }
 
   @Test func artworkRenderingIsNeverInert() {
@@ -114,9 +119,9 @@ struct InertStyleDiagnosticTests {
     #expect(found[0].contains("style.cardTint"))
   }
 
-  @Test func aTracksOwnShapeIsLiveInAPlainGrid() {
+  @Test func aTracksOwnShapeIsLiveInAShapedGrid() {
     let section = Section(
-      style: SectionStyle(display: .grid),
+      style: SectionStyle(gridTile: .condensed, display: .grid),
       children: [playable(style: TrackStyle(imageShape: .circular))],
     )
     #expect(findings([section]).isEmpty)

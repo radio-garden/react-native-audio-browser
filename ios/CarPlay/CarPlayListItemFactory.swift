@@ -213,14 +213,21 @@ final class CarPlayListItemFactory {
     return CPListImageRowItem.maximumImageSize
   }
 
-  /// Target artwork size for one tile. Cards read their own class maximums
-  /// ('background' selects the larger full-height target); every other
-  /// family uses the shared element size.
+  /// Target artwork size for one tile. Cards and plain row elements read
+  /// their own class maximums ('background' selects the larger full-height
+  /// card target); condensed tiles use the shared element size.
   private static func tileImageSize(gridTile: GridTile?, cardImage: CardImage?) -> CGSize {
-    if #available(iOS 26.0, *), gridTile == .card {
-      return cardImage == .background
-        ? CPListImageRowItemCardElement.maximumFullHeightImageSize
-        : CPListImageRowItemCardElement.maximumImageSize
+    if #available(iOS 26.0, *) {
+      switch gridTile {
+      case .card:
+        return cardImage == .background
+          ? CPListImageRowItemCardElement.maximumFullHeightImageSize
+          : CPListImageRowItemCardElement.maximumImageSize
+      case .plain, nil:
+        return CPListImageRowItemRowElement.maximumImageSize
+      case .condensed:
+        break
+      }
     }
     return rowImageSize
   }
@@ -286,10 +293,10 @@ final class CarPlayListItemFactory {
           elements[index].image = image
         }
       }
-      // The family is style-driven (`SectionPresentation.tileFamily`); both
-      // non-plain families take either wrap mode. Pre-26 the treatment drops
-      // and the layout survives (the legacy branch below).
-      switch SectionPresentation.tileFamily(for: style, singleLine: singleLine) {
+      // The family is style-driven (`SectionPresentation.tileFamily`); every
+      // family takes either wrap mode. Pre-26 the treatment drops and the
+      // layout survives (the legacy branch below).
+      switch SectionPresentation.tileFamily(for: style) {
       case .cardElements:
         // Cards have no shape and no accessory slot; their knobs are the
         // tint and the image mode ('background' fills the card full-height
@@ -322,27 +329,16 @@ final class CarPlayListItemFactory {
         )
         applyImage = imageApplier(elements)
       case .rowElements:
-        // The only plain tile with a subtitle slot — the imageGridElements
-        // family has no equivalent, by SDK design.
+        // Titled, so an artwork-less track keeps its name on screen
+        // (ADR 0010); no shape and no accessory slot.
         let elements = makeElements { track, _ in
           CPListImageRowItemRowElement(
             image: placeholder(), title: track.title, subtitle: track.subtitle,
           )
         }
-        item = CPListImageRowItem(text: section.title, elements: elements, allowsMultipleLines: false)
-        applyImage = imageApplier(elements)
-      case .imageGridElements:
-        // imageGridElements, never the title-less gridElements: an
-        // artwork-less track must keep its name on screen (ADR 0010).
-        let elements = makeElements { track, resolved in
-          CPListImageRowItemImageGridElement(
-            image: placeholder(),
-            imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
-            title: track.title,
-            accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
-          )
-        }
-        item = CPListImageRowItem(text: section.title, imageGridElements: elements, allowsMultipleLines: true)
+        item = CPListImageRowItem(
+          text: section.title, elements: elements, allowsMultipleLines: !singleLine,
+        )
         applyImage = imageApplier(elements)
       }
     } else {

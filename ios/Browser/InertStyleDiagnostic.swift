@@ -69,8 +69,8 @@ enum InertStyleDiagnostic {
     func isInert(in context: Context) -> Bool {
       switch self {
       case .gridWrap, .gridTile: !context.isGrid
-      case .imageShape: !context.isGrid || context.isCard
-      case .accessorySymbol: context.isCard
+      case .imageShape: !context.isCondensed
+      case .accessorySymbol: context.isGrid && !context.isCondensed
       case .cardTint, .cardImage: !context.isCard
       }
     }
@@ -79,8 +79,8 @@ enum InertStyleDiagnostic {
     var rule: String {
       switch self {
       case .gridWrap, .gridTile: "`\(rawValue)` renders only in a grid"
-      case .imageShape: "only plain and condensed tiles have a shape"
-      case .accessorySymbol: "card tiles have no accessory slot"
+      case .imageShape: "only condensed tiles have a shape"
+      case .accessorySymbol: "among grid tiles only condensed ones have an accessory slot"
       case .cardTint, .cardImage: "the card properties render only under `gridTile: 'card'`"
       }
     }
@@ -90,9 +90,9 @@ enum InertStyleDiagnostic {
       case .gridWrap, .gridTile:
         "Declare `display: 'grid'` on the section or the page, or drop `\(rawValue)`."
       case .imageShape:
-        "Render the items as plain or condensed grid tiles, or drop `imageShape`."
+        "Render the items as condensed grid tiles, or drop `imageShape`."
       case .accessorySymbol:
-        "Use `gridTile: 'plain'` or `'condensed'`, or drop `accessorySymbol`."
+        "Use `gridTile: 'condensed'` or a list, or drop `accessorySymbol`."
       case .cardTint, .cardImage:
         "Declare `display: 'grid'` with `gridTile: 'card'`, or drop `\(rawValue)`."
       }
@@ -131,6 +131,10 @@ enum InertStyleDiagnostic {
     /// Whether the card treatment is what this container renders — the
     /// condition the `card*` family is named after.
     var isCard: Bool { isGrid && tile == .card }
+
+    /// Whether condensed tiles are what this container renders — the one
+    /// tile family with a shape and an accessory slot.
+    var isCondensed: Bool { isGrid && tile == .condensed }
 
     /// The effective style, for the message — in the wire spelling the author
     /// types (`stringValue` is the generated enum's own mapping). `gridTile`

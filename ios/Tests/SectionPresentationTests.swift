@@ -59,21 +59,14 @@ struct SectionPresentationTests {
         == .list)
   }
 
-  @Test func tileFamilyFollowsGridTileWithThePlainSplit() {
-    // Card/condensed follow the declaration in either wrap mode; the plain
-    // default splits on the wrap: single-line keeps row elements (the
-    // subtitle slot), wrapping renders the image grid.
+  @Test func tileFamilyFollowsGridTile() {
+    // The family follows the declaration alone; the wrap mode only decides
+    // whether its elements take more than one line.
+    #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .card)) == .cardElements)
     #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .card), singleLine: true)
-        == .cardElements)
-    #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .condensed), singleLine: false)
-        == .condensedElements)
-    #expect(SectionPresentation.tileFamily(for: nil, singleLine: true) == .rowElements)
-    #expect(SectionPresentation.tileFamily(for: nil, singleLine: false) == .imageGridElements)
-    #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain), singleLine: true)
-        == .rowElements)
+      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .condensed)) == .condensedElements)
+    #expect(SectionPresentation.tileFamily(for: nil) == .rowElements)
+    #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain)) == .rowElements)
   }
 
   @Test func effectiveAccessorySymbol_noneAndAbsenceDrawNothing() {

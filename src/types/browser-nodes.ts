@@ -26,7 +26,7 @@ export type StyleDisplay = 'list' | 'grid'
 export type ArtworkRendering = 'original' | 'stencil'
 
 /**
- * The shape a grid tile's artwork is cropped to.
+ * The shape a condensed grid tile's artwork is cropped to.
  *
  * - `'rounded-rectangle'` (default) — the standard tile crop.
  * - `'circular'` — the standard presentation for *people* (artists, hosts,
@@ -42,13 +42,14 @@ export type ImageShape = 'circular' | 'rounded-rectangle'
 /**
  * The kind of tile a grid renders.
  *
- * - `'plain'` (default) — artwork tiles with a title.
+ * - `'plain'` (default) — large artwork tiles with a title and subtitle
+ *   below. No shape and no accessory.
  * - `'card'` — a larger card with title/subtitle and a
  *   {@link TrackStyle.cardTint} color; its image mode is
  *   {@link TrackStyle.cardImage}. Cards have no shape.
- * - `'condensed'` — a denser cell carrying title + subtitle; takes
- *   {@link TrackStyle.imageShape} and {@link TrackStyle.accessorySymbol}
- *   like a plain tile.
+ * - `'condensed'` — a denser cell carrying title + subtitle beside a small
+ *   image; the one tile that takes {@link TrackStyle.imageShape} and
+ *   {@link TrackStyle.accessorySymbol}.
  *
  * Element families are mutually exclusive within a container, so this is
  * a container property — hence the enum, and the `grid` prefix.
@@ -128,12 +129,12 @@ export interface TrackStyle {
   artworkRendering?: ArtworkRendering
 
   /**
-   * Inherited (`track ?? section ?? page`): the shape a grid tile's
-   * artwork is cropped to — `'circular'` for people, the default
+   * Inherited (`track ?? section ?? page`): the shape a condensed grid
+   * tile's artwork is cropped to — `'circular'` for people, the default
    * `'rounded-rectangle'` for everything else. Shape follows the item
    * wherever it travels: a circular artist stays circular in whatever
-   * grid renders it next. Inert where the presentation has no shape
-   * (list rows, pre-26 CarPlay, Android Auto).
+   * condensed grid renders it next. Inert where the presentation has no
+   * shape (list rows, plain and card tiles, pre-26 CarPlay, Android Auto).
    *
    * @default 'rounded-rectangle'
    *
@@ -144,8 +145,9 @@ export interface TrackStyle {
   /**
    * Inherited (`track ?? section ?? page`): an SF Symbol name drawn as
    * the item's accessory wherever the current presentation supports one —
-   * the trailing edge of a list row, leading the title on an iOS 26 grid
-   * tile (placement is the platform's choice per surface). A resolved
+   * the trailing edge of a list row, leading the title on an iOS 26
+   * condensed tile (placement is the platform's choice per surface); plain
+   * and card tiles have no slot for one. A resolved
    * symbol replaces the derived accessory (the disclosure chevron a
    * browsable row gets); `'none'` clears an inherited value, restoring
    * the derived behavior — inheritance has no other escape, and no SF

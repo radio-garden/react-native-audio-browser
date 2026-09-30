@@ -100,6 +100,7 @@ class InertStyleDiagnosticTest {
   @Test
   fun `imageShape needs a shaped tile`() {
     val list = sectionStyle(imageShape = ImageShape.CIRCULAR)
+    val plain = sectionStyle(display = StyleDisplay.GRID, imageShape = ImageShape.CIRCULAR)
     val cards =
       sectionStyle(
         display = StyleDisplay.GRID,
@@ -113,25 +114,34 @@ class InertStyleDiagnosticTest {
         imageShape = ImageShape.CIRCULAR,
       )
     assertEquals(1, findings(listOf(section(style = list))).size)
+    assertEquals(1, findings(listOf(section(style = plain))).size)
     assertEquals(1, findings(listOf(section(style = cards))).size)
-    // Plain and condensed tiles both take a shape.
     assertTrue(findings(listOf(section(style = condensed))).isEmpty())
   }
 
   @Test
-  fun `accessorySymbol is inert only on cards`() {
+  fun `accessorySymbol needs an accessory slot`() {
     val rows = sectionStyle(accessorySymbol = "lock.fill")
+    val condensed =
+      sectionStyle(
+        display = StyleDisplay.GRID,
+        gridTile = GridTile.CONDENSED,
+        accessorySymbol = "lock.fill",
+      )
+    val plain = sectionStyle(display = StyleDisplay.GRID, accessorySymbol = "lock.fill")
     val cards =
       sectionStyle(
         display = StyleDisplay.GRID,
         gridTile = GridTile.CARD,
         accessorySymbol = "lock.fill",
       )
-    // List rows draw accessories; card elements have no slot for one.
     assertTrue(findings(listOf(section(style = rows))).isEmpty())
-    val found = findings(listOf(section(style = cards)))
-    assertEquals(1, found.size)
-    assertTrue(found[0], found[0].contains("no accessory slot"))
+    assertTrue(findings(listOf(section(style = condensed))).isEmpty())
+    for (style in listOf(plain, cards)) {
+      val found = findings(listOf(section(style = style)))
+      assertEquals(1, found.size)
+      assertTrue(found[0], found[0].contains("accessory slot"))
+    }
   }
 
   @Test
@@ -167,10 +177,10 @@ class InertStyleDiagnosticTest {
   }
 
   @Test
-  fun `a track's own shape is live in a plain grid`() {
+  fun `a track's own shape is live in a shaped grid`() {
     val grid =
       section(
-        style = sectionStyle(display = StyleDisplay.GRID),
+        style = sectionStyle(display = StyleDisplay.GRID, gridTile = GridTile.CONDENSED),
         children = arrayOf(track(style = trackStyle(imageShape = ImageShape.CIRCULAR))),
       )
     assertTrue(findings(listOf(grid)).isEmpty())

@@ -66,8 +66,8 @@ object InertStyleDiagnostic {
       when (this) {
         GRID_WRAP,
         GRID_TILE -> !context.isGrid
-        IMAGE_SHAPE -> !context.isGrid || context.isCard
-        ACCESSORY_SYMBOL -> context.isCard
+        IMAGE_SHAPE -> !context.isCondensed
+        ACCESSORY_SYMBOL -> context.isGrid && !context.isCondensed
         CARD_TINT,
         CARD_IMAGE -> !context.isCard
       }
@@ -78,8 +78,8 @@ object InertStyleDiagnostic {
         when (this) {
           GRID_WRAP,
           GRID_TILE -> "`$key` renders only in a grid"
-          IMAGE_SHAPE -> "only plain and condensed tiles have a shape"
-          ACCESSORY_SYMBOL -> "card tiles have no accessory slot"
+          IMAGE_SHAPE -> "only condensed tiles have a shape"
+          ACCESSORY_SYMBOL -> "among grid tiles only condensed ones have an accessory slot"
           CARD_TINT,
           CARD_IMAGE -> "the card properties render only under `gridTile: 'card'`"
         }
@@ -89,8 +89,8 @@ object InertStyleDiagnostic {
         when (this) {
           GRID_WRAP,
           GRID_TILE -> "Declare `display: 'grid'` on the section or the page, or drop `$key`."
-          IMAGE_SHAPE -> "Render the items as plain or condensed grid tiles, or drop `imageShape`."
-          ACCESSORY_SYMBOL -> "Use `gridTile: 'plain'` or `'condensed'`, or drop `accessorySymbol`."
+          IMAGE_SHAPE -> "Render the items as condensed grid tiles, or drop `imageShape`."
+          ACCESSORY_SYMBOL -> "Use `gridTile: 'condensed'` or a list, or drop `accessorySymbol`."
           CARD_TINT,
           CARD_IMAGE -> "Declare `display: 'grid'` with `gridTile: 'card'`, or drop `$key`."
         }
@@ -149,6 +149,13 @@ object InertStyleDiagnostic {
      */
     val isCard: Boolean
       get() = isGrid && tile == GridTile.CARD
+
+    /**
+     * Whether condensed tiles are what this container renders — the one tile family with a shape
+     * and an accessory slot.
+     */
+    val isCondensed: Boolean
+      get() = isGrid && tile == GridTile.CONDENSED
 
     /**
      * The effective style, for the message — in the wire spelling the author types ([toWireString]

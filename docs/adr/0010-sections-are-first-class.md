@@ -160,3 +160,11 @@ declaration block (`SectionStyle`), `'rail'` became `display: 'grid'` +
 docs. Sections as first-class structure, declared queue scoping, and the
 flat wire are unchanged. See
 [ADR 0011](0011-style-is-a-declaration-block.md).
+
+**Amendment (September 2026):** a plain wrapping grid renders
+`CPListImageRowItemRowElement`s with `allowsMultipleLines: true`, the same
+element as the single-line shelf, rather than `imageGridElements`. The row
+element is titled, so artwork-less tracks still keep their name on screen,
+and it adds the subtitle line and a larger image; it has no shape and no
+accessory slot, so `imageShape` and `accessorySymbol` no longer render on
+plain tiles.
