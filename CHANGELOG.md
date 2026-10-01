@@ -1,3 +1,24 @@
+## [0.2.0-next.22](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.21...v0.2.0-next.22) (2026-10-01)
+
+### Features
+
+* add gridTile 'image', the ImageGridElement family ([9d1eb70](https://github.com/radio-garden/react-native-audio-browser/commit/9d1eb7089fafbda6983e8c89772c7ae4a7617ed5)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+* **example:** add the style lab ([43be533](https://github.com/radio-garden/react-native-audio-browser/commit/43be5336260be6760683c2741af04cc77322a382)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+* **ios:** render a plain wrapping grid as row elements ([38cb435](https://github.com/radio-garden/react-native-audio-browser/commit/38cb43508574580cf088187c9f6d4514f6ebd8a9)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+
+### Bug Fixes
+
+* **ios:** title a path-less tile shelf in the section header ([20f7b9d](https://github.com/radio-garden/react-native-audio-browser/commit/20f7b9d6eb4dce51f671ee1837ce3d111c837b00)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+
+### Documentation
+
+* record the style lab verdicts in the SDK audit ([4846dae](https://github.com/radio-garden/react-native-audio-browser/commit/4846dae01c06f97b1c2f9b1461df58083c11b87b)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+* state which tile families take a shape and an accessory ([d105061](https://github.com/radio-garden/react-native-audio-browser/commit/d1050615b68b912e466031965d65974d73d3cf0c)), closes [#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)
+
+### Other changes
+
+* **example:** raise pod deployment targets to the app's ([c6551fb](https://github.com/radio-garden/react-native-audio-browser/commit/c6551fb8cf7bd0e351ac885a2a2f148512e4c94d))
+
 ## [0.2.0-next.21](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.20...v0.2.0-next.21) (2026-09-30)
 
 ### Other changes
