@@ -1,3 +1,9 @@
+## [0.2.0-next.23](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.22...v0.2.0-next.23) (2026-10-01)
+
+### Bug Fixes
+
+* **ios:** replace the top CarPlay page when a push would exceed the depth limit ([1701606](https://github.com/radio-garden/react-native-audio-browser/commit/1701606ee6d35df5e76faec501ad30b6c9008899)), closes [#90](https://github.com/radio-garden/react-native-audio-browser/issues/90)
+
 ## [0.2.0-next.22](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.21...v0.2.0-next.22) (2026-10-01)
 
 ### Features
