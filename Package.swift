@@ -51,6 +51,7 @@ let package = Package(
         "PlaybackEvent.swift",
         "TrackSelector.swift",
         "CarPlay/CarPlayArtworkResolver.swift",
+        "CarPlay/TopTemplateReplacer.swift",
         "Extension/ResolvedTrack+Copying.swift",
         "Extension/Section+Copying.swift",
         "Extension/Track+Identity.swift",
