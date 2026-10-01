@@ -172,7 +172,7 @@ Full guides and the complete [API Reference](https://audiobrowser.dev/api/) live
 
 **Troubleshooting** — [Networking in native callbacks](https://audiobrowser.dev/guide/native-callback-fetch) · [Android SSL / trust anchors](https://audiobrowser.dev/guide/android-certificates)
 
-The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate.
+The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate. Its **Style Lab** tab renders every CarPlay `style` declaration, each shelf titled with the block it draws ([source](https://github.com/radio-garden/react-native-audio-browser/blob/main/apps/example-native/src/utils/style-lab.ts)).
 
 ### For coding agents
 

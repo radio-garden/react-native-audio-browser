@@ -18,6 +18,7 @@ import {
   radioGardenRoutes
 } from '../api/radio-garden'
 import { fetchFavorites, setupFavorites } from '../favorites'
+import { styleLabRoutes } from './style-lab'
 import { throttle } from './throttle'
 
 const configuration: BrowserConfiguration = {
@@ -36,6 +37,11 @@ const configuration: BrowserConfiguration = {
       title: 'Favorites',
       path: '/favorites',
       artwork: Platform.select({ ios: 'sf:heart.fill' })
+    },
+    {
+      title: 'Style Lab',
+      path: '/lab',
+      artwork: Platform.select({ ios: 'sf:paintpalette.fill' })
     }
   ],
   media: {
@@ -54,6 +60,7 @@ const configuration: BrowserConfiguration = {
     '/favorites': fetchFavorites,
     ...radioGardenRoutes,
     ...archiveRoutes,
+    ...styleLabRoutes,
     '/library': {
       path: '/library',
       title: 'Library',
@@ -61,85 +68,6 @@ const configuration: BrowserConfiguration = {
       sections: [
         archiveLibrarySection,
         radioGardenLibrarySection,
-        {
-          // Lab shelf for the inherited item properties (#125, #131): a
-          // wrapping grid — the iOS 26 tile path that renders imageShape
-          // and tile accessories.
-          title: 'Style Lab',
-          style: {
-            display: 'grid',
-            imageShape: 'circular',
-            accessorySymbol: 'star.fill'
-          },
-          children: [
-            {
-              // Inherits both: circular tile, star accessory.
-              title: 'Inherits circular + star',
-              path: '/playlist/independent-sounds',
-              artwork: 'sf:person.fill?bg=#FF0090'
-            },
-            {
-              // Per-item override: rounded tile in a circular shelf.
-              title: 'Rounded override',
-              path: '/playlist/energetic-rhythms',
-              artwork: 'sf:opticaldisc?bg=#8AC926',
-              style: { imageShape: 'rounded-rectangle' }
-            },
-            {
-              // 'none' escapes the inherited accessory; shape still inherits.
-              title: 'No badge (none)',
-              path: '/archive',
-              artwork: 'sf:person.2.fill?bg=#1982C4',
-              style: { accessorySymbol: 'none' }
-            }
-          ]
-        },
-        {
-          // Card treatment (iOS 26 grid): tinted cards, one opting into the
-          // full-height 'background' image mode.
-          title: 'Card Lab',
-          style: { display: 'grid', gridTile: 'card', cardTint: '#1e3a8a' },
-          children: [
-            {
-              title: 'Tinted card',
-              subtitle: 'cardImage: normal',
-              path: '/playlist/independent-sounds',
-              artwork: 'sf:music.note?bg=#1e3a8a'
-            },
-            {
-              title: 'Background card',
-              subtitle: 'cardImage: background',
-              path: '/playlist/energetic-rhythms',
-              artwork: 'sf:bolt.fill?bg=#8AC926',
-              style: { cardImage: 'background' }
-            }
-          ]
-        },
-        {
-          // Condensed tiles: denser cells with title + subtitle; take
-          // imageShape and accessorySymbol like plain tiles.
-          title: 'Condensed Lab',
-          style: {
-            display: 'grid',
-            gridTile: 'condensed',
-            imageShape: 'circular'
-          },
-          children: [
-            {
-              title: 'Condensed circular',
-              subtitle: 'inherits circular',
-              path: '/archive',
-              artwork: 'sf:person.fill?bg=#FF0090'
-            },
-            {
-              title: 'Condensed badged',
-              subtitle: 'accessorySymbol',
-              path: '/library/playlists',
-              artwork: 'sf:opticaldisc?bg=#1982C4',
-              style: { accessorySymbol: 'star.fill' }
-            }
-          ]
-        },
         {
           title: 'Other',
           children: [

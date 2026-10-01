@@ -48,6 +48,11 @@ struct SectionStyleResolutionTests {
       page: SectionStyle(gridTile: .card),
     )
     #expect(overridden.gridTile == .plain)
+    let image = StyleResolver.sectionStyle(
+      section: SectionStyle(gridTile: .image),
+      page: SectionStyle(gridTile: .card),
+    )
+    #expect(image.gridTile == .image)
   }
 }
 

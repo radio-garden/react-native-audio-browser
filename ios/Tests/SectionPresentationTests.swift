@@ -59,21 +59,29 @@ struct SectionPresentationTests {
         == .list)
   }
 
-  @Test func tileFamilyFollowsGridTileWithThePlainSplit() {
-    // Card/condensed follow the declaration in either wrap mode; the plain
-    // default splits on the wrap: single-line keeps row elements (the
-    // subtitle slot), wrapping renders the image grid.
+  @Test func tileFamilyFollowsGridTile() {
+    // The family follows the declaration alone; the wrap mode only decides
+    // whether its elements take more than one line.
+    #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .card)) == .cardElements)
     #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .card), singleLine: true)
-        == .cardElements)
+      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .image)) == .imageGridElements)
     #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .condensed), singleLine: false)
-        == .condensedElements)
-    #expect(SectionPresentation.tileFamily(for: nil, singleLine: true) == .rowElements)
-    #expect(SectionPresentation.tileFamily(for: nil, singleLine: false) == .imageGridElements)
-    #expect(
-      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain), singleLine: true)
-        == .rowElements)
+      SectionPresentation.tileFamily(for: SectionStyle(gridTile: .condensed)) == .condensedElements)
+    #expect(SectionPresentation.tileFamily(for: nil) == .rowElements)
+    #expect(SectionPresentation.tileFamily(for: SectionStyle(gridTile: .plain)) == .rowElements)
+  }
+
+  @Test func aPathlessShelfTitlesTheSectionHeader() {
+    let viewAll = Section(title: "Popular", path: "/popular", children: [])
+    let preview = Section(title: "Popular", children: [])
+    let untitled = Section(children: [])
+    // The image row's own text carries a chevron, so it is kept for the
+    // shelf that has somewhere to go.
+    #expect(SectionPresentation.tileSectionHeader(viewAll, supportsElements: true) == nil)
+    #expect(SectionPresentation.tileSectionHeader(preview, supportsElements: true) == "Popular")
+    #expect(SectionPresentation.tileSectionHeader(untitled, supportsElements: true) == nil)
+    // The legacy row cannot drop its text.
+    #expect(SectionPresentation.tileSectionHeader(preview, supportsElements: false) == nil)
   }
 
   @Test func effectiveAccessorySymbol_noneAndAbsenceDrawNothing() {

@@ -17,8 +17,9 @@ import com.facebook.proguard.annotations.DoNotStrip
 @Keep
 enum class GridTile(@DoNotStrip @Keep val value: Int) {
   PLAIN(0),
-  CARD(1),
-  CONDENSED(2);
+  IMAGE(1),
+  CARD(2),
+  CONDENSED(3);
 
   companion object
 }

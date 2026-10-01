@@ -82,6 +82,7 @@ internal fun String?.toImageShape(): ImageShape? =
 internal fun GridTile.toWireString(): String =
   when (this) {
     GridTile.PLAIN -> "plain"
+    GridTile.IMAGE -> "image"
     GridTile.CARD -> "card"
     GridTile.CONDENSED -> "condensed"
   }
@@ -89,6 +90,7 @@ internal fun GridTile.toWireString(): String =
 internal fun String?.toGridTile(): GridTile? =
   when (this?.takeIf { it.isNotEmpty() }?.lowercase()) {
     "plain" -> GridTile.PLAIN
+    "image" -> GridTile.IMAGE
     "card" -> GridTile.CARD
     "condensed" -> GridTile.CONDENSED
     else -> null

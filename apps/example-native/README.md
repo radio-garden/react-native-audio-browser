@@ -1,5 +1,11 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+# Style Lab
+
+The **Style Lab** tab shows what each `style` declaration looks like on CarPlay: one page per `gridTile` value (`plain`, `image`, `card`, `condensed`), a page for section headers, and two pages for inheritance from page to section to track. Each shelf is titled with the style block it renders. To see it, run the app on iOS and open CarPlay (in the simulator: I/O → External Displays → CarPlay).
+
+The pages are route data in [`src/utils/style-lab.ts`](src/utils/style-lab.ts); the comments there say what each example demonstrates.
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.

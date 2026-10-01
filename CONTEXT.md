@@ -107,11 +107,11 @@ The declaration block of presentation properties carried by a **Track**, a **Sec
 _Avoid_: hint (the retired platform-prefix era), flag, option.
 
 **Inherited property**:
-A style property whose value flows to the items within a **Page** — track ?? section ?? page — unless a closer block declares its own (`artworkRendering` today; `imageShape`, `accessorySymbol`, `cardTint`, `cardImage` are designed and land with their features). Admission test for any future one: "if set on a browsable parent, should its resolved descendants inherit it unless overridden?" Inheritance never crosses resolution.
+A style property whose value flows to the items within a **Page** — track ?? section ?? page — unless a closer block declares its own (`artworkRendering`, `imageShape`, `accessorySymbol`, `cardTint`, `cardImage`). Admission test for any future one: "if set on a browsable parent, should its resolved descendants inherit it unless overridden?" Inheritance never crosses resolution.
 _Avoid_: cascading (CSS's cascade resolves competing declarations for one element — this model has no competing declarations, only inheritance and scope).
 
 **Container property**:
-A style property stating a fact about a container rather than its items (`gridWrap` today; `gridTile` is designed and lands with its feature). Resolved by scope override, not inheritance: the **Page** declares for its whole scope, a **Section** overrides for its own children — two declarations about the same rendering decision at different widths, the narrower winning. The positional `display` is its own third category — each holder describes its own children, never its descendants — but resolves between containers by the same scope override.
+A style property stating a fact about a container rather than its items (`gridWrap`, `gridTile`). Resolved by scope override, not inheritance: the **Page** declares for its whole scope, a **Section** overrides for its own children — two declarations about the same rendering decision at different widths, the narrower winning. The positional `display` is its own third category — each holder describes its own children, never its descendants — but resolves between containers by the same scope override.
 _Avoid_: fallback (the section isn't missing anything), inherited (container properties never flow to items).
 
 **Disabled**:

@@ -19,6 +19,8 @@ public extension GridTile {
     switch string {
       case "plain":
         self = .plain
+      case "image":
+        self = .image
       case "card":
         self = .card
       case "condensed":
@@ -35,6 +37,8 @@ public extension GridTile {
     switch self {
       case .plain:
         return "plain"
+      case .image:
+        return "image"
       case .card:
         return "card"
       case .condensed:

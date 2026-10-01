@@ -69,8 +69,8 @@ enum InertStyleDiagnostic {
     func isInert(in context: Context) -> Bool {
       switch self {
       case .gridWrap, .gridTile: !context.isGrid
-      case .imageShape: !context.isGrid || context.isCard
-      case .accessorySymbol: context.isCard
+      case .imageShape: !context.isShaped
+      case .accessorySymbol: context.isGrid && !context.isShaped
       case .cardTint, .cardImage: !context.isCard
       }
     }
@@ -79,8 +79,8 @@ enum InertStyleDiagnostic {
     var rule: String {
       switch self {
       case .gridWrap, .gridTile: "`\(rawValue)` renders only in a grid"
-      case .imageShape: "only plain and condensed tiles have a shape"
-      case .accessorySymbol: "card tiles have no accessory slot"
+      case .imageShape: "only image and condensed tiles have a shape"
+      case .accessorySymbol: "among grid tiles only image and condensed ones have an accessory slot"
       case .cardTint, .cardImage: "the card properties render only under `gridTile: 'card'`"
       }
     }
@@ -90,9 +90,9 @@ enum InertStyleDiagnostic {
       case .gridWrap, .gridTile:
         "Declare `display: 'grid'` on the section or the page, or drop `\(rawValue)`."
       case .imageShape:
-        "Render the items as plain or condensed grid tiles, or drop `imageShape`."
+        "Use `gridTile: 'image'` or `'condensed'` in a grid, or drop `imageShape`."
       case .accessorySymbol:
-        "Use `gridTile: 'plain'` or `'condensed'`, or drop `accessorySymbol`."
+        "Use `gridTile: 'image'` or `'condensed'`, or a list, or drop `accessorySymbol`."
       case .cardTint, .cardImage:
         "Declare `display: 'grid'` with `gridTile: 'card'`, or drop `\(rawValue)`."
       }
@@ -129,8 +129,25 @@ enum InertStyleDiagnostic {
     }
 
     /// Whether the card treatment is what this container renders — the
-    /// condition the `card*` family is named after.
-    var isCard: Bool { isGrid && tile == .card }
+    /// condition the `card*` family is named after. Exhaustive, like
+    /// `isShaped`: a new tile kind has to be ruled on here.
+    var isCard: Bool {
+      guard isGrid else { return false }
+      return switch tile {
+      case .card: true
+      case .plain, .image, .condensed: false
+      }
+    }
+
+    /// Whether this container renders a tile family with a shape and an
+    /// accessory slot.
+    var isShaped: Bool {
+      guard isGrid else { return false }
+      return switch tile {
+      case .image, .condensed: true
+      case .plain, .card: false
+      }
+    }
 
     /// The effective style, for the message — in the wire spelling the author
     /// types (`stringValue` is the generated enum's own mapping). `gridTile`

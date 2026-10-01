@@ -41,11 +41,23 @@ enum SectionPresentation: Equatable {
     return symbol
   }
 
+  /// The title a tile shelf draws as the list section's header; nil when
+  /// the image row's own text carries it — here, not in the CarPlay factory,
+  /// so the rule is testable off-device. CarPlay draws a chevron beside an
+  /// image row's text whether or not the row has a handler, so only a shelf
+  /// with a "view all" `path` keeps its title there.
+  ///
+  /// - Parameter supportsElements: whether the platform has the iOS 26
+  ///   element API; the legacy image row's text is not optional.
+  static func tileSectionHeader(_ section: Section, supportsElements: Bool) -> String? {
+    supportsElements && section.path == nil ? section.title : nil
+  }
+
   /// The element family a tile presentation renders on iOS 26+ — here, not
   /// in the CarPlay factory, so the style→family mapping is testable
-  /// off-device. `gridTile` picks the family (plain by default); the plain
-  /// single-line shelf keeps row elements, the one plain element with a
-  /// subtitle slot. Pre-26 has no element API at all: the treatment drops
+  /// off-device. `gridTile` picks the family (plain by default), in either
+  /// wrap mode: a plain tile is a row element (title + subtitle), an image
+  /// tile an image-grid element (title, shape, accessory). Pre-26 has no element API at all: the treatment drops
   /// with the legacy image row (decorations drop before layout).
   enum TileElementFamily: Equatable {
     case rowElements
@@ -54,11 +66,12 @@ enum SectionPresentation: Equatable {
     case condensedElements
   }
 
-  static func tileFamily(for style: SectionStyle?, singleLine: Bool) -> TileElementFamily {
+  static func tileFamily(for style: SectionStyle?) -> TileElementFamily {
     switch style?.gridTile {
+    case .image: .imageGridElements
     case .card: .cardElements
     case .condensed: .condensedElements
-    case .plain, nil: singleLine ? .rowElements : .imageGridElements
+    case .plain, nil: .rowElements
     }
   }
 }

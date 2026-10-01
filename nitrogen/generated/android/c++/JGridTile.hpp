@@ -45,6 +45,9 @@ namespace margelo::nitro::audiobrowser {
         case GridTile::PLAIN:
           static const auto fieldPLAIN = clazz->getStaticField<JGridTile>("PLAIN");
           return clazz->getStaticFieldValue(fieldPLAIN);
+        case GridTile::IMAGE:
+          static const auto fieldIMAGE = clazz->getStaticField<JGridTile>("IMAGE");
+          return clazz->getStaticFieldValue(fieldIMAGE);
         case GridTile::CARD:
           static const auto fieldCARD = clazz->getStaticField<JGridTile>("CARD");
           return clazz->getStaticFieldValue(fieldCARD);

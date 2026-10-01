@@ -521,9 +521,9 @@ Presentation lives in `style` blocks, separate from content, plus a few Track fi
 | `style` (same block)                             | a page                   | declaration for the whole page — a section overrides it for its own children      | all                 |
 | `style: { display: 'grid' }`                     | a browsable track        | the layout of the page it opens — Android Auto reads it from the parent item      | Android Auto / AAOS |
 | `style: { artworkRendering: 'stencil' }`         | a track / section / page | tint monochrome artwork to the surface appearance                                 | CarPlay             |
-| `style: { imageShape: 'circular' }`              | a track / section / page | crop grid-tile artwork circular (people) instead of rounded                       | CarPlay (iOS 26+)   |
-| `style: { accessorySymbol: 'lock.fill' }`        | a track / section / page | SF Symbol accessory on rows and tiles (`'none'` restores the derived one)         | CarPlay             |
-| `style: { gridTile: 'card' }`                    | a section / page         | the grid's tile kind: `'plain'` (default), `'card'`, or `'condensed'`             | CarPlay (iOS 26+)   |
+| `style: { imageShape: 'circular' }`              | a track / section / page | crop `'image'` and `'condensed'` tile artwork circular (people)                   | CarPlay (iOS 26+)   |
+| `style: { accessorySymbol: 'lock.fill' }`        | a track / section / page | SF Symbol accessory on rows and on `'image'` / `'condensed'` tiles                | CarPlay             |
+| `style: { gridTile: 'card' }`                    | a section / page         | the grid's tile kind: `'plain'` (default), `'image'`, `'card'`, or `'condensed'`  | CarPlay (iOS 26+)   |
 | `style: { cardTint: '#1e3a8a' }` (+ `cardImage`) | a track / section / page | card color and image mode (`'background'` fills the card full-height)             | CarPlay (iOS 26+)   |
 | `disabled: true`                                 | a track                  | unavailable: never plays; grayed where drawable, hidden elsewhere                 | all                 |
 | `artwork: 'sf:heart.fill'`                       | any item                 | SF Symbol icon (supports `?bg=…&fg=…`)                                            | iOS                 |
@@ -532,11 +532,11 @@ Presentation lives in `style` blocks, separate from content, plus a few Track fi
 | `albumPath` + `resolveAlbumPath`                 | track + config           | make the now-playing album line tappable                                          | CarPlay             |
 
 ::: info Caveats from the table
-**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Layouts render each platform's nearest supported form** — a single-line grid (`gridWrap: false`) on CarPlay shows the tiles that fit (roughly eight, width-dependent) and truncates the rest; a wrapping grid takes as many lines as it needs on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it shows more, never less. No car surface scrolls horizontally; an app UI typically renders `gridWrap: false` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). Item properties like `artworkRendering`, `imageShape`, and `accessorySymbol` are inherited — `track ?? section ?? page`, per property — so a section-wide value can be overridden per item; `accessorySymbol: 'none'` is the per-item escape from an inherited symbol, and where the accessory draws is the platform's choice per surface (trailing on list rows, leading the title on tiles). `display` is never inherited: it always describes the children of whatever it's set on. On a page or section it lays out that page or section; on a browsable track it declares the layout of the page that track opens — Android Auto needs it there, or that page renders as a list. `gridWrap` is inert unless `display` is `'grid'`. One AAOS caveat: AOSP-based Automotive units honor only the parent item's `display`, so a page mixing grid and list sections renders uniformly there — see [Android Auto → Browse display](/guide/android-auto#browse-display).
+**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Layouts render each platform's nearest supported form** — a single-line grid (`gridWrap: false`) on CarPlay shows the tiles that fit on one line (seven on a wide screen, or two condensed cells) and truncates the rest; a wrapping grid takes as many lines as it needs on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it shows more, never less. No car surface scrolls horizontally; an app UI typically renders `gridWrap: false` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). Item properties like `artworkRendering`, `imageShape`, and `accessorySymbol` are inherited — `track ?? section ?? page`, per property — so a section-wide value can be overridden per item; `accessorySymbol: 'none'` is the per-item escape from an inherited symbol, and where the accessory draws is the platform's choice per surface (trailing on list rows and condensed tiles, leading the title on image tiles). On an iOS 26 grid, which tile draws what is `gridTile`'s choice: `'plain'` has a subtitle but no shape and no accessory, `'image'` has a shape and an accessory but no subtitle, `'condensed'` has all three beside a small image, and `'card'` has a subtitle, a tint and an image mode. `display` is never inherited: it always describes the children of whatever it's set on. On a page or section it lays out that page or section; on a browsable track it declares the layout of the page that track opens — Android Auto needs it there, or that page renders as a list. `gridWrap` is inert unless `display` is `'grid'`. One AAOS caveat: AOSP-based Automotive units honor only the parent item's `display`, so a page mixing grid and list sections renders uniformly there — see [Android Auto → Browse display](/guide/android-auto#browse-display).
 :::
 
 ::: tip Inert declarations are logged in debug builds
-A combination that can never render — `gridWrap` or `gridTile` outside a grid, `cardTint` with no card treatment in scope, `imageShape` on a list or a card, `accessorySymbol` on a card, `display` on a track that renders playable — is inert, not an error, so nothing breaks. In a **debug build**, each one is logged once per page resolution (`Timber` on Android, `os.log` on iOS) naming the section, the effective style, and the fix:
+A combination that can never render — `gridWrap` or `gridTile` outside a grid, `cardTint` with no card treatment in scope, `imageShape` anywhere but an image or condensed grid, `accessorySymbol` on a plain or card grid, `display` on a track that renders playable — is inert, not an error, so nothing breaks. In a **debug build**, each one is logged once per page resolution (`Timber` on Android, `os.log` on iOS) naming the section, the effective style, and the fix:
 
 ```
 Inert style declaration on page '/home': `style.gridWrap` on section 'Featured'
@@ -557,6 +557,8 @@ A property a _surface_ can't draw is never reported — that's the aspirational 
   title: 'Home',
   sections: [
     { title: 'Popular', style: { display: 'grid', gridWrap: false }, path: '/popular', children: [...] },
+    // Round tiles for people: the image tile is the one with a shape.
+    { title: 'Artists', style: { display: 'grid', gridTile: 'image', imageShape: 'circular' }, children: [...] },
     { title: 'All stations', children: [...] }
   ]
 }
@@ -566,6 +568,10 @@ A property a _surface_ can't draw is never reported — that's the aspirational 
   artwork: 'sf:heart.fill?bg=#FF0090&fg=#fff'
 }
 ```
+
+::: tip See every style rendered
+The example app's **Style Lab** tab draws each `style` declaration on CarPlay: one page per `gridTile` value, plus pages for section headers and for inheritance from page to section to track. Every shelf is titled with the block it renders, so what you see on screen names what to copy. The pages are plain route data in [`style-lab.ts`](https://github.com/radio-garden/react-native-audio-browser/blob/main/apps/example-native/src/utils/style-lab.ts), with a comment on each example saying what it shows.
+:::
 
 Two config-level platform options round it out: `carPlayLoadingTitle` (localized "Loading…" on older CarPlay) and `androidControllerOfflineError`. The album-line tap needs both `albumPath` on the track and a `resolveAlbumPath` callback in the config that maps it to a browse path — see [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 

@@ -437,6 +437,19 @@
         color: var(--accent);
         text-decoration: none;
       }
+      figure.shot {
+        margin: 18px 0 26px;
+      }
+      figure.shot img {
+        display: block;
+        width: 100%;
+        border-radius: 10px;
+      }
+      figure.shot figcaption {
+        margin-top: 8px;
+        font-size: 13px;
+        opacity: 0.8;
+      }
     </style>
   </head>
   <body>
@@ -1060,12 +1073,11 @@
             not a style kind: density is an axis of the grid, with no
             cross-surface meaning. In the block model it is one value of the
             <code>gridTile</code> enum, mutually exclusive with
-            <code>'card'</code>. And <em>not</em> per-track: the item
-            initializers are homogeneous per element family (<code
-              >imageGridElements:</code
-            >
-            <em>or</em> <code>condensedElements:</code>) — one condensed cell
-            inside a regular grid cannot render. Shape is an element
+            <code>'image'</code> and <code>'card'</code>. And
+            <em>not</em> per-track: the item initializers are homogeneous per
+            element family (<code>imageGridElements:</code> <em>or</em>
+            <code>condensedElements:</code>) — one condensed cell inside a
+            regular grid cannot render. Shape is an element
             <em>parameter</em> (per-item legal); condensed is an element
             <em>class</em> (container-wide).</span
           >
@@ -1079,14 +1091,12 @@
           condensed elements take <code>imageShape</code> (the predicted
           widening of <code>style.imageShape</code>, arriving as a hint combo
           instead of a new style) and <code>accessorySymbolName</code> — and
-          they carry a <strong>subtitle</strong> slot, which regular
-          <code>grid</code> tiles lack, making this currently the only way a
-          wrapping grid can show subtitles. Note Apple documents
-          <em>only</em> the word “condensed”: no layout, density, or row count
-          is specified anywhere; wrapping is governed by the item-level
-          <code>allowsMultipleLines</code>. What it actually looks like is an
-          empirical lab question (the demo passes
-          <code>allowsMultipleLines: true</code>).
+          they carry a <strong>subtitle</strong> slot, which
+          <code>gridTile: 'image'</code> tiles lack: condensed is the one family
+          with a shape, an accessory and a subtitle together. Apple documents
+          <em>only</em> the word “condensed”; what it draws is in the
+          <a href="#stylelab">style lab verdicts</a>: a wide pill with a small
+          image, two to a line, and two cells on a single line.
         </p>
       </div>
 
@@ -1104,18 +1114,19 @@
           >
         </h3>
         <div class="meta">
-          Mask applied to grid/condensed tile images: rounded rectangle or
-          circle.
+          Mask applied to image-grid and condensed tile images: rounded
+          rectangle or circle.
         </div>
         <div class="scope">
           <span class="lbl">Applies to</span> <span class="chip on">grid</span
-          ><span class="chip off">single-line</span
+          ><span class="chip on">single-line</span
           ><span class="chip off">list</span>
           <span class="note"
-            >iOS 26 <code>grid</code> tiles (and
-            <code>gridTile: 'condensed'</code> tiles, whose elements also take a
-            shape) only — the <code>gridWrap: false</code> row element and the
-            pre-26 legacy image row have no shape parameter.</span
+            >iOS 26 <code>gridTile: 'image'</code> tiles
+            (<code>ImageGridElement</code>) and
+            <code>gridTile: 'condensed'</code> tiles, in either wrap mode — the
+            default <code>'plain'</code> tile (<code>RowElement</code>), the
+            card and the pre-26 legacy image row have no shape parameter.</span
           >
         </div>
         <div class="cols">
@@ -1123,12 +1134,12 @@
             <h4>How you’d use it</h4>
             <pre><code>{
   title: 'Results',
-  style: 'grid',
-  style.imageShape: 'circular',  // section default
+  style: { display: 'grid', gridTile: 'image',
+           imageShape: 'circular' },  // section default
   children: [
     { title: 'Miles Davis', ... },  // circular (inherits)
     { title: 'Kind of Blue',        // per-item override wins
-      style.imageShape: 'rounded-rectangle', ... }
+      style: { imageShape: 'rounded-rectangle' }, ... }
   ]
 }</code></pre>
             <p>
@@ -2298,6 +2309,444 @@
         (entitlement-blocked — presenting them throws). Known gap:
         per-tile-element <code>isEnabled</code>.
       </p>
+
+      <h2 id="stylelab">
+        9. Style lab verdicts <span class="n">· iOS 26</span>
+      </h2>
+      <p class="groupnote">
+        The example app's <strong>Style Lab</strong> tab
+        (<code>apps/example-native/src/utils/style-lab.ts</code>) renders every
+        <code>style</code> declaration that draws differently on CarPlay, one
+        page per <code>gridTile</code> value. The verdicts below were read off
+        the CarPlay screen on an iOS 26 runtime (1920 × 720, dark appearance, 30
+        September 2026). Each shelf's title is the declaration it renders.
+        <strong>The pre-26 pass was not run</strong>: how each shelf degrades
+        before iOS 26 is what the code says (a wrapping grid becomes a list, a
+        single-line grid the legacy image row, a disabled tile is hidden) and is
+        unverified on screen.
+      </p>
+
+      <table class="summary">
+        <tr>
+          <th>Question</th>
+          <th>Verdict</th>
+        </tr>
+        <tr>
+          <td>Wrapping, per family (<code>allowsMultipleLines: true</code>)</td>
+          <td>
+            Every family wraps. Plain, image and card tiles run seven to a line;
+            condensed cells two to a line. Nine tiles take two lines, or five
+            for condensed.
+          </td>
+        </tr>
+        <tr>
+          <td>Single line (<code>gridWrap: false</code>)</td>
+          <td>
+            Seven plain, image or card tiles; two condensed cells. The rest are
+            dropped, not scrolled.
+          </td>
+        </tr>
+        <tr>
+          <td>Condensed's layout</td>
+          <td>
+            A wide pill: a small image at the leading edge, title and subtitle
+            beside it, the accessory at the trailing edge. A wrapping condensed
+            shelf reads as a dense two-column list.
+          </td>
+        </tr>
+        <tr>
+          <td>Shape and accessory in single-line mode</td>
+          <td>
+            Both render, on <code>'image'</code> and on
+            <code>'condensed'</code>, as they do when wrapping. Per-track
+            overrides and the <code>'none'</code> sentinel hold in both modes.
+          </td>
+        </tr>
+        <tr>
+          <td>Accessory placement</td>
+          <td>
+            Leading the title on an image tile; at the trailing edge of a
+            condensed cell and of a list row.
+          </td>
+        </tr>
+        <tr>
+          <td>Tile size</td>
+          <td>
+            A plain tile (<code>RowElement</code>) is the largest, about 179 px
+            of the 1920 px screen; an image tile (<code>ImageGridElement</code>)
+            about 134 px, with more space between tiles.
+          </td>
+        </tr>
+        <tr>
+          <td><code>cardTint</code> and <code>cardImage</code></td>
+          <td>
+            On a normal card the tint fills the whole card and the image sits
+            inset on it. With <code>'background'</code> the image fills the card
+            and the tint fades in behind the labels. Apple's header describes
+            the two the other way round. <code>cardTint: 'none'</code> restores
+            the standard card color.
+          </td>
+        </tr>
+        <tr>
+          <td><code>artworkRendering: 'stencil'</code></td>
+          <td>
+            Renders on all four families and on list rows; a tile declaring
+            <code>'original'</code> keeps its own colors. It applies to fetched
+            bitmaps only: <code>sf:</code> artwork is drawn in its own
+            <code>bg</code> / <code>fg</code> colors and is never stencilled.
+            Transparent artwork sits on a faint frame on plain and image tiles.
+          </td>
+        </tr>
+        <tr>
+          <td>Disabled tiles</td>
+          <td>Dimmed, labels included, on every family.</td>
+        </tr>
+        <tr>
+          <td>Artwork-less tiles</td>
+          <td>
+            An empty frame in the tile's shape (circular where declared) with
+            the title, and the subtitle where the family has one.
+          </td>
+        </tr>
+        <tr>
+          <td>Artwork smaller than the tile</td>
+          <td>
+            Drawn at its own size, not scaled up: 180 px thumbnails filled about
+            two thirds of a plain tile. The library does not upscale; supply
+            artwork at the tile's size.
+          </td>
+        </tr>
+        <tr>
+          <td>Full-height cards and square artwork</td>
+          <td>
+            Stretched to the card's height (<a
+              href="https://github.com/radio-garden/react-native-audio-browser/issues/154"
+              >#154</a
+            >). <code>sf:</code> artwork is unaffected.
+          </td>
+        </tr>
+        <tr>
+          <td>Shelf header</td>
+          <td>
+            CarPlay draws a chevron beside an image row's own title whether or
+            not the row has a tap handler. The library therefore keeps the title
+            on the row only for a section with a <code>path</code>; a path-less
+            shelf's title is the list section's header, which has no chevron, a
+            hairline above it, and pins under the page title while its tiles
+            scroll. A section without a <code>title</code>
+            collapses its header. Apart from the second section-header shot, the
+            shots below predate this and show a chevron on every shelf.
+          </td>
+        </tr>
+      </table>
+
+      <h3>Style Lab index</h3>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-index-1.jpg" alt="" loading="lazy" />
+        <figcaption>
+          The index: one page per <code>gridTile</code> value, the
+          section-header page and the two inheritance pages.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-index-2.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ accessorySymbol: 'lock.fill' }</code> on a list section: row 1
+          inherits the lock, row 2 declares <code>'none'</code> and gets its
+          chevron back, row 3 declares <code>'star.fill'</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-index-3.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ artworkRendering: 'stencil' }</code> on a list section: glyphs
+          take the appearance color; row 2 declares <code>'original'</code> and
+          stays black.
+        </figcaption>
+      </figure>
+      <h3><code>gridTile: 'plain'</code></h3>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-plain-1.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid' }</code>: row elements wrap, seven to a line,
+          title and subtitle under each; the fifth tile has no artwork.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-plain-2.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridWrap: false }</code>: one line of seven,
+          the last two tiles dropped. Below it,
+          <code>{ display: 'grid', artworkRendering: 'stencil' }</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-plain-3.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', artworkRendering: 'stencil' }</code>: tile 2
+          declares <code>'original'</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-plain-4.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridWrap: false }</code> with tiles 2 and 3
+          <code>disabled</code>: dimmed, labels included.
+        </figcaption>
+      </figure>
+      <h3><code>gridTile: 'image'</code></h3>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-image-1.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'image' }</code>: image-grid
+          elements wrap, seven to a line; a centred title, no subtitle.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-image-2.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ …, gridWrap: false }</code>, then
+          <code
+            >{ display: 'grid', gridTile: 'image', imageShape: 'circular',
+            accessorySymbol: 'star.fill' }</code
+          >: tile 2 declares <code>'rounded-rectangle'</code>, tile 3
+          <code>accessorySymbol: 'none'</code>, tile 4 <code>'lock.fill'</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-image-3.jpg" alt="" loading="lazy" />
+        <figcaption>
+          The same block with <code>gridWrap: false</code>: shape and accessory
+          render on a single line too.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-image-4.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code
+            >{ display: 'grid', gridTile: 'image', artworkRendering: 'stencil'
+            }</code
+          >: tile 2 declares <code>'original'</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-image-5.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'image', gridWrap: false }</code>
+          with tiles 2 and 3 <code>disabled</code>.
+        </figcaption>
+      </figure>
+      <h3><code>gridTile: 'card'</code></h3>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-1.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'card' }</code>: cards wrap, seven
+          to a line; an inset image, title and subtitle on the standard card
+          color.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-2.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ …, gridWrap: false }</code>, and the top of the tinted shelf.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-3.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'card', cardTint: '#1e3a8a' }</code
+          >: the tint fills the card. Tile 2 declares
+          <code>cardImage: 'background'</code>, tile 3
+          <code>cardTint: '#9d174d'</code>, tile 4
+          <code>cardTint: 'none'</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-4.jpg" alt="" loading="lazy" />
+        <figcaption>
+          The same block with <code>gridWrap: false</code>, and the top of
+          <code>{ …, cardImage: 'background' }</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-5.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code
+            >{ display: 'grid', gridTile: 'card', gridWrap: false, cardTint:
+            '#1e3a8a', cardImage: 'background' }</code
+          >: the image fills the card and the tint fades in behind the labels.
+          Below it, the stencil shelf.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="carplay-sdk-audit/ios-26-card-6.jpg" alt="" loading="lazy" />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'card', gridWrap: false }</code>
+          with tiles 2 and 3 <code>disabled</code>.
+        </figcaption>
+      </figure>
+      <h3><code>gridTile: 'condensed'</code></h3>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-condensed-1.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          <code>{ display: 'grid', gridTile: 'condensed' }</code>: a cell is a
+          wide pill with a small image beside title and subtitle, two to a line;
+          nine tiles take five lines.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-condensed-2.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          <code>{ …, gridWrap: false }</code> draws two cells. Below it,
+          <code
+            >{ display: 'grid', gridTile: 'condensed', imageShape: 'circular',
+            accessorySymbol: 'star.fill' }</code
+          >
+          with the same three track overrides: the accessory sits at the
+          trailing edge.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-condensed-3.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          The same block with <code>gridWrap: false</code>, then
+          <code
+            >{ display: 'grid', gridTile: 'condensed', artworkRendering:
+            'stencil' }</code
+          >.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-condensed-4.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          The stencil shelf, and the top of the disabled shelf.
+        </figcaption>
+      </figure>
+      <h3>Section header</h3>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-header-1.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          A section with a <code>path</code>, then a section with no
+          <code>title</code>: its header collapses.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-header-2.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          A path-less shelf after the header change: its title is the section
+          header, with no chevron. Three tiles in a wrapping grid align to the
+          leading edge.
+        </figcaption>
+      </figure>
+      <h3>Inheritance · shape and accessory</h3>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-1.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          Page block
+          <code
+            >{ display: 'grid', gridTile: 'image', gridWrap: false, imageShape:
+            'circular', accessorySymbol: 'star.fill' }</code
+          >: a section with no style of its own, then a section declaring
+          <code>{ gridWrap: true }</code>.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-2.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          Sections declaring <code>{ gridTile: 'plain' }</code> (no shape, no
+          accessory) and
+          <code
+            >{ gridTile: 'condensed', imageShape: 'rounded-rectangle' }</code
+          >
+          (the page's star still inherits).
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-3.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          A section declaring <code>{ accessorySymbol: 'none' }</code>, then
+          track overrides on the page block.
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-4.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          A section declaring <code>{ display: 'list' }</code>: the inherited
+          star moves to the row's trailing edge, <code>'none'</code> restores
+          the chevron.
+        </figcaption>
+      </figure>
+      <h3>Inheritance · card and artwork</h3>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-card-1.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          Page block
+          <code
+            >{ display: 'grid', gridTile: 'card', gridWrap: false, cardTint:
+            '#1e3a8a', cardImage: 'background', artworkRendering: 'stencil'
+            }</code
+          >, then a section declaring
+          <code>{ cardImage: 'normal', cardTint: '#9d174d' }</code>. The square
+          glyphs of the first shelf are stretched to the card's height (#154).
+        </figcaption>
+      </figure>
+      <figure class="shot">
+        <img
+          src="carplay-sdk-audit/ios-26-inheritance-card-2.jpg"
+          alt=""
+          loading="lazy"
+        />
+        <figcaption>
+          A section declaring <code>{ artworkRendering: 'original' }</code>,
+          then track overrides: tile 2 <code>cardImage: 'normal'</code>, tile 3
+          <code>cardTint: 'none'</code>, tile 4
+          <code>artworkRendering: 'original'</code>.
+        </figcaption>
+      </figure>
 
       <p class="sub" style="margin-top: 40px">
         Audited August 2026 — SDK-header audit of iPhoneSimulator 26.2 vs

@@ -6,7 +6,8 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 # AudioBrowser requires iOS 16.0; track RN's floor but never go below 16.0
-platform :ios, [min_ios_version_supported.to_f, 16.0].max.to_s
+ios_deployment_target = [min_ios_version_supported.to_f, 16.0].max.to_s
+platform :ios, ios_deployment_target
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -46,6 +47,13 @@ target 'AudioBrowserExample' do
         # SwiftVerifyEmittedModuleInterface failures on Xcode 16+
         if target.name == 'Kingfisher'
           config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+        end
+
+        # Pod resource bundles declare their own, older deployment targets,
+        # below what Xcode supports
+        target_version = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if target_version && Gem::Version.new(target_version) < Gem::Version.new(ios_deployment_target)
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
         end
       end
     end
