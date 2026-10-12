@@ -137,13 +137,17 @@ final class BrowserManager {
   /// surfaces like the CarPlay now-playing heart can re-render.
   let favoritesChanged = Emitter<Void>()
 
-  /// Forwards to config.awaitTrackLoadHandler so callers don't need to
-  /// cross the MainActor boundary to access `config`.
+  /// Runs the app's `handleTrackLoad` for `event` and waits for it, both promise layers: a JS
+  /// callback returning `Promise<void>` arrives as `Promise<Promise<Void>>`. False when the app
+  /// set none.
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
-    // awaitTrackLoadHandler manages its own MainActor dispatch internally
-    nonisolated(unsafe) let cfg = config
-    nonisolated(unsafe) let evt = event
-    return await cfg.awaitTrackLoadHandler(event: evt)
+    guard let handler = config.handleTrackLoad else { return false }
+    do {
+      try await handler(event).await().await()
+    } catch {
+      logger.error("handleTrackLoad failed: \(error.localizedDescription)")
+    }
+    return true
   }
 
   // MARK: - Favorites
