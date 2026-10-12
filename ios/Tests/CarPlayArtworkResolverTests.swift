@@ -2,395 +2,99 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-// MARK: - SF Symbol Detection
-
-@Suite("SF symbol artwork")
-struct SFSymbolTests {
-  @Test func sfSymbolArtwork_returnsSfSymbolAction() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "sf:heart.fill",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
+@Suite("CarPlayArtworkResolver")
+struct CarPlayArtworkResolverTests {
+  private func action(
+    artwork: String? = nil,
+    artworkSource: ArtworkResolvedImage? = nil,
+    resolved: ArtworkResolvedImage? = nil,
+    stencil: Bool = false,
+  ) -> ArtworkLoadAction {
+    CarPlayArtworkResolver.action(
+      artwork: artwork, artworkSource: artworkSource, resolved: resolved, stencil: stencil, width: 40, height: 40,
     )
-    #expect(action == .sfSymbol(artwork: "sf:heart.fill", width: 40, height: 40))
   }
 
-  @Test func sfSymbolWithParams_returnsSfSymbolAction() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "sf:play.circle?bg=#000&fg=#fff",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 24, targetHeight: 24,
-      displayScale: 3.0,
-      urlResolver: nil,
-    )
-    #expect(action == .sfSymbol(artwork: "sf:play.circle?bg=#000&fg=#fff", width: 24, height: 24))
+  private func image(_ uri: String, headers: [String: String]? = nil) -> ArtworkResolvedImage {
+    ArtworkResolvedImage(uri: uri, headers: headers)
   }
 
-  @Test func sfSymbolTakesPriorityOverUrlResolver() async {
-    var resolverCalled = false
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "sf:music.note",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in
-        resolverCalled = true
-        return ArtworkResolvedImage(uri: "https://example.com/img.jpg", headers: nil)
-      },
+  @Test func anSFSymbolRendersAndIsNotResolved() {
+    #expect(!CarPlayArtworkResolver.needsResolve(artwork: "sf:star.fill?fg=#fff"))
+    #expect(CarPlayArtworkResolver.needsResolve(artwork: "https://example.com/a.jpg"))
+    #expect(CarPlayArtworkResolver.needsResolve(artwork: nil))
+    #expect(
+      action(artwork: "sf:star.fill?fg=#fff", resolved: image("https://example.com/r.jpg"))
+        == .sfSymbol(artwork: "sf:star.fill?fg=#fff", width: 40, height: 40),
     )
-    #expect(action == .sfSymbol(artwork: "sf:music.note", width: 40, height: 40))
-    #expect(!resolverCalled)
   }
 
-  @Test func sfSymbolInArtworkSource_usedAsFallback() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: nil,
-      artworkSource: ArtworkResolvedImage(uri: "sf:star.fill", headers: nil),
-      stencil: false,
-      targetWidth: 20, targetHeight: 20,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .sfSymbol(artwork: "sf:star.fill", width: 20, height: 20))
-  }
-}
-
-// MARK: - No Artwork
-
-@Suite("no artwork")
-struct NoArtworkTests {
-  @Test func noArtworkOrSource_returnsNone() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: nil,
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .none)
+  @Test func anSFSymbolArtworkSourceRendersAsTheFallback() {
+    #expect(action(artworkSource: image("sf:star.fill")) == .sfSymbol(artwork: "sf:star.fill", width: 40, height: 40))
   }
 
-  @Test func noArtworkOrSource_withResolver_returnsNone() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: nil,
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in nil },
-    )
-    #expect(action == .none)
-  }
-}
-
-// MARK: - URL Resolution
-
-@Suite("URL resolution")
-struct URLResolutionTests {
-  @Test func resolvedUrl_returnsFetchWithHeaders() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/art.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { pixelWidth, pixelHeight in
-        #expect(pixelWidth == 80)
-        #expect(pixelHeight == 80)
-        return ArtworkResolvedImage(
-          uri: "https://cdn.example.com/art_80x80.jpg",
-          headers: ["Authorization": "Bearer token"],
-        )
-      },
-    )
-    #expect(action == .fetch(
-      uri: "https://cdn.example.com/art_80x80.jpg",
-      headers: ["Authorization": "Bearer token"],
-      shouldTint: false,
-      isSvg: false,
-    ))
+  @Test func nothingToLoadIsNone() {
+    #expect(action() == .none)
   }
 
-  @Test func resolvedUrl_noHeaders_returnsFetchWithNilHeaders() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/art.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 24, targetHeight: 24,
-      displayScale: 3.0,
-      urlResolver: { _, _ in
-        ArtworkResolvedImage(uri: "https://cdn.example.com/resized.jpg", headers: nil)
-      },
+  @Test func theResolvedURLIsFetchedWithItsHeaders() {
+    #expect(
+      action(artwork: "https://example.com/a.jpg", resolved: image("https://cdn.example.com/r.jpg", headers: ["A": "1"]))
+        == .fetch(uri: "https://cdn.example.com/r.jpg", headers: ["A": "1"], shouldTint: false, isSvg: false),
     )
-    #expect(action == .fetch(
-      uri: "https://cdn.example.com/resized.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
   }
 
-  @Test func resolverReturnsNil_fallsBackToDirect() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/art.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in nil },
+  @Test func withoutAResolvedURLTheArtworkIsFetched() {
+    #expect(
+      action(artwork: "https://example.com/a.jpg")
+        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
     )
-    #expect(action == .fetch(
-      uri: "https://example.com/art.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
   }
 
-  @Test func resolvedInvalidUrl_fallsBackToDirect() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/fallback.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in
-        // Return an invalid URI that URL(string:) would reject
-        ArtworkResolvedImage(uri: "", headers: nil)
-      },
+  @Test func anInvalidResolvedURLFallsBackToTheArtwork() {
+    #expect(
+      action(artwork: "https://example.com/a.jpg", resolved: image(""))
+        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
     )
-    // Should fall back to direct artwork URL
-    #expect(action == .fetch(
-      uri: "https://example.com/fallback.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
   }
 
-  @Test func displayScale_appliedToPixelDimensions() async {
-    var receivedWidth: Double?
-    var receivedHeight: Double?
-    _ = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/art.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 50, targetHeight: 30,
-      displayScale: 2.5,
-      urlResolver: { w, h in
-        receivedWidth = w
-        receivedHeight = h
-        return ArtworkResolvedImage(uri: "https://cdn.example.com/art.jpg", headers: nil)
-      },
+  @Test func withoutArtworkTheArtworkSourceIsFetchedWithItsHeaders() {
+    #expect(
+      action(artworkSource: image("https://example.com/s.jpg", headers: ["Authorization": "Bearer t"]))
+        == .fetch(uri: "https://example.com/s.jpg", headers: ["Authorization": "Bearer t"], shouldTint: false, isSvg: false),
     )
-    #expect(receivedWidth == 125) // 50 * 2.5
-    #expect(receivedHeight == 75) // 30 * 2.5
-  }
-}
-
-// MARK: - Direct Fallback
-
-@Suite("direct fallback")
-struct DirectFallbackTests {
-  @Test func noResolver_usesArtworkUrl() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/artwork.png",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/artwork.png",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
   }
 
-  @Test func noArtwork_usesArtworkSourceWithItsHeaders() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: nil,
-      artworkSource: ArtworkResolvedImage(uri: "https://example.com/source.jpg", headers: ["Authorization": "Bearer t"]),
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
+  @Test func artworkWinsOverArtworkSourceWithoutItsHeaders() {
+    #expect(
+      action(
+        artwork: "https://example.com/a.jpg",
+        artworkSource: image("https://example.com/s.jpg", headers: ["Authorization": "Bearer t"]),
+      ) == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
     )
-    #expect(action == .fetch(
-      uri: "https://example.com/source.jpg",
-      headers: ["Authorization": "Bearer t"],
-      shouldTint: false,
-      isSvg: false,
-    ))
   }
 
-  @Test func artworkPreferredOverArtworkSource() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/artwork.jpg",
-      artworkSource: ArtworkResolvedImage(uri: "https://example.com/source.jpg", headers: ["Authorization": "Bearer t"]),
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/artwork.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
+  @Test func anInvalidDirectURLIsNone() {
+    #expect(action(artwork: "") == .none)
   }
 
-  @Test func invalidDirectUrl_returnsNone() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
+  @Test func anSVGPathIsMarkedCaseInsensitively() {
+    #expect(action(artwork: "https://example.com/i.svg") == .fetch(uri: "https://example.com/i.svg", headers: nil, shouldTint: false, isSvg: true))
+    #expect(action(artwork: "https://example.com/i.SVG") == .fetch(uri: "https://example.com/i.SVG", headers: nil, shouldTint: false, isSvg: true))
+    #expect(
+      action(resolved: image("https://cdn.example.com/i.svg"))
+        == .fetch(uri: "https://cdn.example.com/i.svg", headers: nil, shouldTint: false, isSvg: true),
     )
-    #expect(action == .none)
-  }
-}
-
-// MARK: - SVG Detection
-
-@Suite("SVG detection")
-struct SVGDetectionTests {
-  @Test func svgExtension_setsIsSvgTrue() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/icon.svg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/icon.svg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: true,
-    ))
   }
 
-  @Test func svgUppercase_setsIsSvgTrue() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/icon.SVG",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
+  @Test func aStencilTints() {
+    #expect(
+      action(artwork: "https://example.com/a.png", stencil: true)
+        == .fetch(uri: "https://example.com/a.png", headers: nil, shouldTint: true, isSvg: false),
     )
-    #expect(action == .fetch(
-      uri: "https://example.com/icon.SVG",
-      headers: nil,
-      shouldTint: false,
-      isSvg: true,
-    ))
-  }
-
-  @Test func resolvedSvgUrl_setsIsSvgTrue() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/art.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in
-        ArtworkResolvedImage(uri: "https://cdn.example.com/icon.svg", headers: nil)
-      },
+    #expect(
+      action(resolved: image("https://cdn.example.com/r.png"), stencil: true)
+        == .fetch(uri: "https://cdn.example.com/r.png", headers: nil, shouldTint: true, isSvg: false),
     )
-    #expect(action == .fetch(
-      uri: "https://cdn.example.com/icon.svg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: true,
-    ))
-  }
-
-  @Test func nonSvg_setsIsSvgFalse() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/photo.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/photo.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
-  }
-}
-
-// MARK: - Tinting
-
-@Suite("tinting")
-struct TintingTests {
-  @Test func stencilTrue_setsShouldTint() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/icon.png",
-      artworkSource: nil,
-      stencil: true,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/icon.png",
-      headers: nil,
-      shouldTint: true,
-      isSvg: false,
-    ))
-  }
-
-  @Test func stencilFalse_doesNotTint() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/photo.jpg",
-      artworkSource: nil,
-      stencil: false,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: nil,
-    )
-    #expect(action == .fetch(
-      uri: "https://example.com/photo.jpg",
-      headers: nil,
-      shouldTint: false,
-      isSvg: false,
-    ))
-  }
-
-  @Test func tintingPreservedThroughResolver() async {
-    let action = await CarPlayArtworkResolver.resolve(
-      artwork: "https://example.com/icon.png",
-      artworkSource: nil,
-      stencil: true,
-      targetWidth: 40, targetHeight: 40,
-      displayScale: 2.0,
-      urlResolver: { _, _ in
-        ArtworkResolvedImage(uri: "https://cdn.example.com/icon.png", headers: nil)
-      },
-    )
-    #expect(action == .fetch(
-      uri: "https://cdn.example.com/icon.png",
-      headers: nil,
-      shouldTint: true,
-      isSvg: false,
-    ))
   }
 }

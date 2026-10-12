@@ -91,27 +91,22 @@ final class CarPlayImageLoader {
       return
     }
 
-    // The annotation goes on the closure's return type, not the binding:
-    // @Sendable isn't inferred through `map`, and omitting it fails with
-    // "type of expression is ambiguous" — which doesn't mention @Sendable.
-    let urlResolver = browserManager.map { bm -> @Sendable (Double, Double) async -> ArtworkResolvedImage? in
-      { [weak bm] pixelWidth, pixelHeight in
-        guard let bm else { return nil }
-        let imageContext = ImageContext(width: pixelWidth, height: pixelHeight)
-        guard let source = await bm.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
-        return ArtworkResolvedImage(uri: source.uri, headers: source.headers)
-      }
-    }
-
+    let artwork = track.artwork?.url
     Task {
-      let action = await CarPlayArtworkResolver.resolve(
-        artwork: track.artwork?.url,
+      var resolved: ArtworkResolvedImage?
+      if CarPlayArtworkResolver.needsResolve(artwork: artwork), let browserManager = self.browserManager {
+        let scale = Double(self.carTraitCollection.displayScale)
+        let context = ImageContext(width: Double(size.width) * scale, height: Double(size.height) * scale)
+        resolved = await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: context)
+          .map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) }
+      }
+      let action = CarPlayArtworkResolver.action(
+        artwork: artwork,
         artworkSource: track.artworkSource.map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) },
+        resolved: resolved,
         stencil: (style ?? track.style)?.artworkRendering == .stencil,
-        targetWidth: Double(size.width),
-        targetHeight: Double(size.height),
-        displayScale: Double(self.carTraitCollection.displayScale),
-        urlResolver: urlResolver,
+        width: Double(size.width),
+        height: Double(size.height),
       )
 
       switch action {
