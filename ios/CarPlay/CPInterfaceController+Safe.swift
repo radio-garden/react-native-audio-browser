@@ -150,30 +150,6 @@ extension CPInterfaceController {
       }
     }
   }
-
-  func safePresent(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
-    presentTemplate(template, animated: animated) { presented, error in
-      if let error {
-        Self.stackLogger.error("presentTemplate \(Self.name(of: template)) failed: \(error.localizedDescription)")
-      }
-      completion?(presented, error)
-    }
-  }
-
-  /// Dismisses the presented template, skipping when nothing is presented.
-  func safeDismiss(animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
-    guard presentedTemplate != nil else {
-      Self.stackLogger.debug("dismiss skipped: no presented template")
-      completion?(false, nil)
-      return
-    }
-    dismissTemplate(animated: animated) { dismissed, error in
-      if let error {
-        Self.stackLogger.error("dismissTemplate failed: \(error.localizedDescription)")
-      }
-      completion?(dismissed, error)
-    }
-  }
 }
 
 /// The guarded pop and push a replacement is made of, so a push that still
