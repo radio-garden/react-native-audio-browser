@@ -54,3 +54,10 @@ extension NavigationError {
     return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
   }
 }
+
+extension NavigationErrorKind {
+  /// The kind of request a navigation error on `path` came from.
+  init(path: String) {
+    self = BrowserPathHelper.isSearchPath(path) ? .search : .browse
+  }
+}

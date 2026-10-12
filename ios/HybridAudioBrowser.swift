@@ -465,7 +465,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // Format the error (async if using JS callback, sync for defaults)
     let defaultFormatted = navError.defaultFormatted()
     if let formatter = onMainActor({ browserManager.config.formatNavigationError }) {
-      let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
+      let params = FormatNavigationErrorParams(
+        error: navError, defaultFormatted: defaultFormatted, path: path,
+        kind: NavigationErrorKind(path: path),
+      )
       // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes.
       // The result callbacks are @Sendable: a plain closure would inherit MainActor
       // isolation from this block, and Nitro resolves its promises synchronously on the

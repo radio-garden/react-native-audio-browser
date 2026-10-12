@@ -519,7 +519,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     val default = defaultFormattedError(error)
     val formatter = _configuration.formatNavigationError ?: return default
     return formattedOrDefault(mainScope, default) {
-      formatter(FormatNavigationErrorParams(error, default, path)).await()
+      formatter(
+          FormatNavigationErrorParams(
+            error,
+            default,
+            path,
+            BrowserPathHelper.navigationErrorKind(path),
+          )
+        )
+        .await()
     }
   }
 

@@ -24,6 +24,8 @@
 #include "JNavigationError.hpp"
 #include "NavigationErrorType.hpp"
 #include "JNavigationErrorType.hpp"
+#include "NavigationErrorKind.hpp"
+#include "JNavigationErrorKind.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
