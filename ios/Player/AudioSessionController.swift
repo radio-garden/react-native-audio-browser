@@ -25,12 +25,13 @@ final class AudioSessionController {
   let outputChanged = Emitter<Output>()
   let volumeChanged = Emitter<Double>()
 
+  /// Nil until `configure`: before setup the category is the host app's, not ours to restore.
   private var configuration: (
     category: AVAudioSession.Category,
     mode: AVAudioSession.Mode,
     policy: AVAudioSession.RouteSharingPolicy,
     options: AVAudioSession.CategoryOptions,
-  ) = (.playback, .default, .default, [])
+  )?
 
   private var releaseWork: DispatchWorkItem?
 
@@ -110,12 +111,12 @@ final class AudioSessionController {
     releaseWork = nil
   }
 
-  var volume: Double {
-    Double(session.outputVolume)
+  nonisolated static var volume: Double {
+    Double(AVAudioSession.sharedInstance().outputVolume)
   }
 
-  var currentOutput: Output? {
-    guard let output = session.currentRoute.outputs.first else { return nil }
+  nonisolated static var currentOutput: Output? {
+    guard let output = AVAudioSession.sharedInstance().currentRoute.outputs.first else { return nil }
     let (type, external): (OutputType, Bool) = switch output.portType {
     case .builtInSpeaker: (.speaker, false)
     case .builtInReceiver: (.receiver, false)
@@ -133,6 +134,7 @@ final class AudioSessionController {
   // MARK: - Private
 
   private func applyCategory() {
+    guard let configuration else { return }
     try? session.setCategory(
       configuration.category, mode: configuration.mode, policy: configuration.policy, options: configuration.options,
     )
@@ -170,6 +172,6 @@ final class AudioSessionController {
     if let reason, AVAudioSession.RouteChangeReason(rawValue: reason) == .oldDeviceUnavailable {
       player?.handleRouteDisconnected()
     }
-    if let output = currentOutput { outputChanged.emit(output) }
+    if let output = Self.currentOutput { outputChanged.emit(output) }
   }
 }

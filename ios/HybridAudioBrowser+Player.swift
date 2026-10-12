@@ -311,7 +311,7 @@ public extension HybridAudioBrowser {
   // MARK: - System Volume
 
   func getSystemVolume() throws -> Double {
-    onMainActor { audioSession.volume }
+    AudioSessionController.volume
   }
 
   func setSystemVolume(volume _: Double) throws {
@@ -323,7 +323,7 @@ public extension HybridAudioBrowser {
   // MARK: - External Audio Output
 
   func getOutput() throws -> Output? {
-    onMainActor { audioSession.currentOutput }
+    AudioSessionController.currentOutput
   }
 
   func supportsOutputSwitcher() throws -> Bool {
