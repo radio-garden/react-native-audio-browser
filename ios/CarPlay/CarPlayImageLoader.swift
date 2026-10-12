@@ -87,7 +87,7 @@ final class CarPlayImageLoader {
     Task {
       let action = await CarPlayArtworkResolver.resolve(
         artwork: track.artwork?.url,
-        artworkSourceUri: track.artworkSource?.uri,
+        artworkSource: track.artworkSource.map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) },
         stencil: (style ?? track.style)?.artworkRendering == .stencil,
         targetWidth: Double(size.width),
         targetHeight: Double(size.height),

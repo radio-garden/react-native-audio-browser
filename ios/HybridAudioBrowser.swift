@@ -318,11 +318,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public var onOutputChanged: (Output) -> Void = { _ in } {
-    didSet {
-      setupRouteChangeObserver()
-    }
-  }
+  public var onOutputChanged: (Output) -> Void = { _ in }
 
   // MARK: - Initialization
 
@@ -816,6 +812,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Observe audio-session interruptions so another app taking over audio
         // (or a phone call) reflects as a real pause rather than a stuck state.
         setupInterruptionObserver()
+
+        // Observe route changes: pause when the output disappears, and report the new output.
+        setupRouteChangeObserver()
 
         // Observe media-server resets so a long-running stream recovers instead
         // of going permanently silent.
@@ -1778,10 +1777,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     // Not exposed to JS currently
   }
 
-  public func playerDidUpdateDuration(_: Double) {
-    // Not exposed to JS currently
-  }
-
   public func remotePlay() {
     if let handler = handleRemotePlay {
       handler()
@@ -1875,28 +1870,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       onMainActor { player?.seekTo(position) }
     }
     onRemoteSeek(event)
-  }
-
-  public func remoteChangePlaybackPosition(position: Double) {
-    remoteSeek(position: position)
-  }
-
-  public func remotePlayId(id: String, index: Int?) {
-    let event = RemotePlayIdEvent(id: id, index: index.map { Double($0) })
-    if let handler = handleRemotePlayId {
-      handler(event)
-    } else {
-      onRemotePlayId(event)
-    }
-  }
-
-  public func remotePlaySearch(query: String) {
-    let event = RemotePlaySearchEvent(query: query)
-    if let handler = handleRemotePlaySearch {
-      handler(event)
-    } else {
-      onRemotePlaySearch(event)
-    }
   }
 
   /// Static so the Siri intent handler can call it before the shared instance
@@ -2009,10 +1982,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func remoteChangePlaybackRate(rate: Float) {
     // Apply the playback rate change from CarPlay/lock screen
     onMainActor { player?.rate = rate }
-  }
-
-  func playerDidChangeOptions(_: PlayerUpdateOptions) {
-    // TODO: Convert to Options type
   }
 }
 

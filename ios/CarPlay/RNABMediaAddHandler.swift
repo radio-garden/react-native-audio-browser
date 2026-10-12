@@ -28,24 +28,8 @@ class RNABMediaAddHandler: NSObject, INAddMediaIntentHandling {
     Self.logger.info("Add media — favorite current track")
 
     Task { @MainActor in
-      // "Add" targets the current track; if nothing is playing there's nothing
-      // to add, so the assistant reports failure rather than a silent no-op.
-      guard let browser = HybridAudioBrowser.shared,
-            browser.getPlayer()?.currentTrack != nil
-      else {
-        completion(INAddMediaIntentResponse(code: .failure, userActivity: nil))
-        return
-      }
-
-      // Add = favorite the currently-playing track (same path as the CarPlay
-      // favorite button / affinity "like"): flips the now-playing heart and
-      // fires `onFavoriteChanged` so the consumer persists it — no extra handler.
-      do {
-        try browser.setActiveTrackFavorited(favorited: true)
-        completion(INAddMediaIntentResponse(code: .success, userActivity: nil))
-      } catch {
-        completion(INAddMediaIntentResponse(code: .failure, userActivity: nil))
-      }
+      let applied = HybridAudioBrowser.favoriteCurrentTrack(true)
+      completion(INAddMediaIntentResponse(code: applied ? .success : .failure, userActivity: nil))
     }
   }
 

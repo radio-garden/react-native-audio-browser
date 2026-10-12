@@ -9,16 +9,6 @@ private func tracks(_ ids: String...) -> [Track] {
   ids.map { Track(id: $0) }
 }
 
-/// A delegate that records every `queueDidChangeTracks` callback.
-@MainActor
-private final class DelegateSpy: QueueManagerDelegate {
-  var calls: [[Track]] = []
-
-  func queueDidChangeTracks(_ tracks: [Track]) {
-    calls.append(tracks)
-  }
-}
-
 // MARK: - Navigation: next()
 
 @Suite("next()")
@@ -338,9 +328,9 @@ struct SetQueueTests {
     #expect(q.queueSourcePath == "/albums/123")
   }
 
-  @Test func returnsTrue() {
+  @Test func changesTracksAndCurrent() {
     let q = QueueManager()
-    #expect(q.setQueue(tracks("a")) == true)
+    #expect(q.setQueue(tracks("a")) == .tracksAndCurrent)
   }
 
   @Test func emptyArray_setsCurrentIndexToZero() {
@@ -373,9 +363,9 @@ struct SetQueueTests {
 @Suite("add()")
 @MainActor
 struct AddTests {
-  @Test func toEmptyQueue_returnsTrue_setsCurrentIndex() {
+  @Test func toEmptyQueue_changesCurrent_setsCurrentIndex() {
     let q = QueueManager()
-    let changed = q.add(tracks("a", "b"))
+    let changed = q.add(tracks("a", "b")).currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == 0)
     #expect(q.tracks.count == 2)
@@ -383,28 +373,28 @@ struct AddTests {
 
   @Test func toEmptyQueue_respectsInitialIndex() {
     let q = QueueManager()
-    let changed = q.add(tracks("a", "b", "c"), initialIndex: 2)
+    let changed = q.add(tracks("a", "b", "c"), initialIndex: 2).currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == 2)
   }
 
-  @Test func toNonEmpty_returnsFalse_currentIndexUnchanged() {
+  @Test func toNonEmpty_keepsCurrent_currentIndexUnchanged() {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    let changed = q.add(tracks("b", "c"))
+    let changed = q.add(tracks("b", "c")).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 0)
     #expect(q.tracks.count == 3)
   }
 
-  @Test func emptyArray_returnsFalse() {
+  @Test func emptyArray_changesNothing() {
     let q = QueueManager()
-    #expect(q.add([]) == false)
+    #expect(q.add([]) == .none)
   }
 
   @Test func toEmptyQueue_clampsInitialIndex() {
     let q = QueueManager()
-    let changed = q.add(tracks("a", "b"), initialIndex: 99)
+    let changed = q.add(tracks("a", "b"), initialIndex: 99).currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == 1)
   }
@@ -446,7 +436,7 @@ struct AddAtTests {
   @Test func beforeCurrent_shiftsCurrentIndex() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    let changed = try q.addAt(tracks("x", "y"), at: 0)
+    let changed = try q.addAt(tracks("x", "y"), at: 0).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 3) // was 1, shifted by 2
     #expect(q.tracks.count == 5)
@@ -455,15 +445,15 @@ struct AddAtTests {
   @Test func afterCurrent_currentIndexUnchanged() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let changed = try q.addAt(tracks("x"), at: 2)
+    let changed = try q.addAt(tracks("x"), at: 2).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 0)
     #expect(q.tracks.count == 4)
   }
 
-  @Test func toEmptyQueue_returnsTrue() throws {
+  @Test func toEmptyQueue_changesCurrent() throws {
     let q = QueueManager()
-    let changed = try q.addAt(tracks("a"), at: 0)
+    let changed = try q.addAt(tracks("a"), at: 0).currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == 0)
   }
@@ -496,16 +486,16 @@ struct AddAtTests {
     }
   }
 
-  @Test func emptyArray_returnsFalse() throws {
+  @Test func emptyArray_changesNothing() throws {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    #expect(try q.addAt([], at: 0) == false)
+    #expect(try q.addAt([], at: 0) == .none)
   }
 
   @Test func singleExistingTrack_insertBeforeCurrent_shifts() throws {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    let changed = try q.addAt(tracks("x"), at: 0)
+    let changed = try q.addAt(tracks("x"), at: 0).currentTrack
     #expect(changed == false)
     // The pointer follows the playing track — the old `tracks.count > 1`
     // guard silently swapped currentTrack to the inserted track while the
@@ -518,7 +508,7 @@ struct AddAtTests {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
     // currentIndex >= index (1 >= 1) triggers the shift
-    let changed = try q.addAt(tracks("x"), at: 1)
+    let changed = try q.addAt(tracks("x"), at: 1).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 2)
     // "b" should still be the current track
@@ -529,7 +519,7 @@ struct AddAtTests {
     let q = QueueManager()
     q.setQueue(tracks("a", "b"))
     // index == tracks.count is the valid append boundary
-    let changed = try q.addAt(tracks("x"), at: 2)
+    let changed = try q.addAt(tracks("x"), at: 2).currentTrack
     #expect(changed == false)
     #expect(q.tracks.count == 3)
     #expect(q.tracks[2].id == "x")
@@ -542,29 +532,29 @@ struct AddAtTests {
 @Suite("remove()")
 @MainActor
 struct RemoveTests {
-  @Test func currentTrack_returnsTrue_wrapsIndex() throws {
+  @Test func currentTrack_changesCurrent_wrapsIndex() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
-    let changed = try q.remove(2)
+    let changed = try q.remove(2).currentTrack
     #expect(changed == true)
     // After removing index 2, tracks has 2 items, currentIndex wraps: 2 % 2 = 0
     #expect(q.currentIndex == 0)
     #expect(q.tracks.count == 2)
   }
 
-  @Test func beforeCurrent_adjustsIndex_returnsFalse() throws {
+  @Test func beforeCurrent_adjustsIndex_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
-    let changed = try q.remove(0)
+    let changed = try q.remove(0).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 1) // was 2, decremented
     #expect(q.tracks.count == 2)
   }
 
-  @Test func afterCurrent_returnsFalse() throws {
+  @Test func afterCurrent_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let changed = try q.remove(2)
+    let changed = try q.remove(2).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 0)
     #expect(q.tracks.count == 2)
@@ -573,7 +563,7 @@ struct RemoveTests {
   @Test func lastRemaining_currentIndexBecomesMinusOne() throws {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    let changed = try q.remove(0)
+    let changed = try q.remove(0).currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == -1)
     #expect(q.tracks.isEmpty)
@@ -605,7 +595,7 @@ struct RemoveTests {
   @Test func currentAtMiddle_wrapsCorrectly() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    let changed = try q.remove(1)
+    let changed = try q.remove(1).currentTrack
     #expect(changed == true)
     // 1 % 2 = 1, pointing to what was "c"
     #expect(q.currentIndex == 1)
@@ -615,7 +605,7 @@ struct RemoveTests {
   @Test func currentAtZero_staysAtZero() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
-    let changed = try q.remove(0)
+    let changed = try q.remove(0).currentTrack
     #expect(changed == true)
     // 0 % 2 = 0
     #expect(q.currentIndex == 0)
@@ -643,16 +633,16 @@ struct MoveTests {
   @Test func currentTrack_pointerFollows() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let changed = try q.move(fromIndex: 0, toIndex: 2)
+    let changed = try q.move(fromIndex: 0, toIndex: 2).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 2)
     #expect(q.currentTrack?.id == "a")
   }
 
-  @Test func nonCurrent_returnsFalse() throws {
+  @Test func nonCurrent_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let changed = try q.move(fromIndex: 1, toIndex: 2)
+    let changed = try q.move(fromIndex: 1, toIndex: 2).currentTrack
     #expect(changed == false)
     #expect(q.currentIndex == 0)
   }
@@ -667,7 +657,7 @@ struct MoveTests {
   @Test func nonCurrent_acrossCurrent_keepsPointerOnSameTrack() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    let changed = try q.move(fromIndex: 0, toIndex: 2)
+    let changed = try q.move(fromIndex: 0, toIndex: 2).currentTrack
     #expect(changed == false)
     // [a,b,c] → [b,c,a]; "b" is now index 0.
     #expect(q.currentTrack?.id == "b")
@@ -677,7 +667,7 @@ struct MoveTests {
   @Test func nonCurrent_acrossCurrentBackwards_keepsPointerOnSameTrack() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    let changed = try q.move(fromIndex: 2, toIndex: 0)
+    let changed = try q.move(fromIndex: 2, toIndex: 0).currentTrack
     #expect(changed == false)
     // [a,b,c] → [c,a,b]; "b" is now index 2.
     #expect(q.currentTrack?.id == "b")
@@ -687,7 +677,7 @@ struct MoveTests {
   @Test func toIndexBeyondCount_clampsPointerToo() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let changed = try q.move(fromIndex: 0, toIndex: 99)
+    let changed = try q.move(fromIndex: 0, toIndex: 99).currentTrack
     #expect(changed == false)
     // remove(0): [b, c], insert at min(2, 99)=2: [b, c, a]
     #expect(q.tracks[2].id == "a")
@@ -719,19 +709,19 @@ struct MoveTests {
 @Suite("clear()")
 @MainActor
 struct ClearTests {
-  @Test func withTracks_returnsTrue_resetsToMinusOne() {
+  @Test func withTracks_changesCurrent_resetsToMinusOne() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b"))
-    let changed = q.clear()
+    let changed = q.clear().currentTrack
     #expect(changed == true)
     #expect(q.currentIndex == -1)
     #expect(q.tracks.isEmpty)
     #expect(q.queueSourcePath == nil)
   }
 
-  @Test func alreadyEmpty_returnsFalse() {
+  @Test func alreadyEmpty_changesNothing() {
     let q = QueueManager()
-    #expect(q.clear() == false)
+    #expect(q.clear() == .none)
   }
 
   /// clear() and removeUpcomingTracks() were the only mutations not
@@ -941,95 +931,74 @@ struct ComputedPropertyTests {
   }
 }
 
-// MARK: - Delegate
+// MARK: - QueueChange
 
-@Suite("delegate")
+@Suite("QueueChange")
 @MainActor
-struct DelegateTests {
-  @Test func queueDidChangeTracks_firesOnSetQueue() {
-    let q = QueueManager()
-    let spy = DelegateSpy()
-    q.delegate = spy
-    q.setQueue(tracks("a", "b"))
-    #expect(spy.calls.count == 1)
-    #expect(spy.calls[0].count == 2)
+struct QueueChangeTests {
+  @Test func setQueue_changesTracksAndCurrent() {
+    #expect(QueueManager().setQueue(tracks("a", "b")) == .tracksAndCurrent)
   }
 
-  @Test func queueDidChangeTracks_firesOnAdd() {
-    let q = QueueManager()
-    let spy = DelegateSpy()
-    q.delegate = spy
-    q.add(tracks("a"))
-    #expect(spy.calls.count == 1)
+  @Test func addToEmpty_changesTracksAndCurrent() {
+    #expect(QueueManager().add(tracks("a")) == .tracksAndCurrent)
   }
 
-  @Test func queueDidChangeTracks_firesOnRemove() throws {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b"))
-    let spy = DelegateSpy()
-    q.delegate = spy
-    try q.remove(1)
-    #expect(spy.calls.count == 1)
-    #expect(spy.calls[0].count == 1)
-  }
-
-  @Test func queueDidChangeTracks_firesOnClear() {
+  @Test func addToNonEmpty_changesTracksOnly() {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    let spy = DelegateSpy()
-    q.delegate = spy
-    q.clear()
-    #expect(spy.calls.count == 1)
-    #expect(spy.calls[0].isEmpty)
+    #expect(q.add(tracks("b")) == .tracksOnly)
   }
 
-  @Test func queueDidChangeTracks_firesOnMove() throws {
+  @Test func addAt_changesTracksOnly() throws {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b"))
+    #expect(try q.addAt(tracks("x"), at: 1) == .tracksOnly)
+    #expect(q.tracks.count == 3)
+  }
+
+  @Test func removeCurrent_changesTracksAndCurrent() throws {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b"))
+    #expect(try q.remove(0) == .tracksAndCurrent)
+  }
+
+  @Test func removeOther_changesTracksOnly() throws {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b"))
+    #expect(try q.remove(1) == .tracksOnly)
+  }
+
+  @Test func clear_changesTracksAndCurrent() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    #expect(q.clear() == .tracksAndCurrent)
+    #expect(q.tracks.isEmpty)
+  }
+
+  @Test func moveCurrent_changesTracksOnly() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
-    let spy = DelegateSpy()
-    q.delegate = spy
-    try q.move(fromIndex: 0, toIndex: 2)
-    #expect(spy.calls.count == 1)
+    #expect(try q.move(fromIndex: 0, toIndex: 2) == .tracksOnly)
   }
 
-  @Test func queueDidChangeTracks_firesOnReplace() throws {
+  @Test func replaceCurrent_changesTracksOnly() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b"))
-    let spy = DelegateSpy()
-    q.delegate = spy
-    try q.replace(0, Track(id: "A"))
-    #expect(spy.calls.count == 1)
+    #expect(try q.replace(0, Track(id: "A")) == .tracksOnly)
   }
 
-  @Test func queueDidChangeTracks_firesOnRemoveUpcomingTracks() {
+  @Test func removeUpcomingTracks_changesTracksOnly() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
-    let spy = DelegateSpy()
-    q.delegate = spy
-    q.removeUpcomingTracks()
-    #expect(spy.calls.count == 1)
-    #expect(spy.calls[0].count == 1)
+    #expect(q.removeUpcomingTracks() == .tracksOnly)
+    #expect(q.tracks.count == 1)
   }
 
-  @Test func queueDidChangeTracks_firesOnAddAt() throws {
+  @Test func removeUpcomingTracks_atEnd_changesNothing() {
     let q = QueueManager()
-    q.setQueue(tracks("a", "b"))
-    let spy = DelegateSpy()
-    q.delegate = spy
-    try q.addAt(tracks("x"), at: 1)
-    #expect(spy.calls.count == 1)
-    #expect(spy.calls[0].count == 3)
-  }
-
-  @Test func queueDidChangeTracks_doesNotFireOnNavigation() throws {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    let spy = DelegateSpy()
-    q.delegate = spy
-    _ = q.next()
-    _ = q.previous()
-    try q.skipTo(2)
-    #expect(spy.calls.isEmpty)
+    q.setQueue(tracks("a", "b"), initialIndex: 1)
+    #expect(q.removeUpcomingTracks() == .none)
   }
 }
 

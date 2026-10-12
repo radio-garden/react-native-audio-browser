@@ -84,9 +84,6 @@ class PlaybackCoordinator {
   /// Playback rate (1.0 = normal speed).
   var rate: Float = 1.0
 
-  /// Audio time pitch algorithm identifier (stored as a String to avoid AVFoundation import).
-  var audioTimePitchAlgorithm: String = "TimeDomain"
-
   // MARK: - Track State (for active track changed events)
 
   var lastIndex: Int = -1
@@ -193,8 +190,6 @@ class PlaybackCoordinator {
   init(errorHandler: PlaybackErrorHandler, sleepTimerManager: any SleepTimerHandling) {
     self.errorHandler = errorHandler
     self.sleepTimerManager = sleepTimerManager
-
-    queue.delegate = self
 
     // Configure sleep timer
     sleepTimerManager.onComplete = { [weak self] in
@@ -523,15 +518,14 @@ class PlaybackCoordinator {
   func load(_ track: Track, playWhenReady: Bool? = nil) {
     handlePlayWhenReady(playWhenReady) {
       if queue.currentIndex == -1 {
-        let changed = queue.add([track], initialIndex: 0)
-        if changed { handleCurrentTrackChanged() }
+        afterQueueMutation(queue.add([track], initialIndex: 0))
       } else {
         // `currentIndex` is invariantly -1 or in bounds, and -1 took the branch
         // above, so this cannot fail — but surface it rather than reloading the
         // old track if that invariant is ever broken.
         do {
           try queue.replace(queue.currentIndex, track)
-          handleCurrentTrackChanged()
+          afterQueueMutation(.tracksAndCurrent)
         } catch {
           logger.error("load: replace at \(self.queue.currentIndex) failed: \(error)")
         }
@@ -540,7 +534,7 @@ class PlaybackCoordinator {
   }
 
   func replace(_ index: Int, _ track: Track) throws {
-    try queue.replace(index, track)
+    try afterQueueMutation(queue.replace(index, track))
   }
 
   func setQueue(
@@ -555,8 +549,7 @@ class PlaybackCoordinator {
       return
     }
     handlePlayWhenReady(playWhenReady) {
-      queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath)
-      handleCurrentTrackChanged()
+      afterQueueMutation(queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath))
       // Start position is applied as part of the load: captured as a pending
       // seek that runs once the item is ready, deferring the ready/play
       // transition until it lands (no start-at-0 flash).
@@ -568,15 +561,12 @@ class PlaybackCoordinator {
 
   func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
     handlePlayWhenReady(playWhenReady) {
-      let changed = queue.add(tracks, initialIndex: initialIndex ?? 0)
-      if changed { handleCurrentTrackChanged() }
+      afterQueueMutation(queue.add(tracks, initialIndex: initialIndex ?? 0))
     }
   }
 
   func add(_ tracks: [Track], at index: Int) throws {
-    let changed = try queue.addAt(tracks, at: index)
-    if changed { handleCurrentTrackChanged() }
-    pushSkipAvailability() // didSet pushed pre-settlement state
+    try afterQueueMutation(queue.addAt(tracks, at: index))
   }
 
   func next() {
@@ -598,9 +588,7 @@ class PlaybackCoordinator {
   }
 
   func remove(_ index: Int) throws {
-    let changed = try queue.remove(index)
-    if changed { handleCurrentTrackChanged() }
-    pushSkipAvailability() // didSet pushed pre-settlement state
+    try afterQueueMutation(queue.remove(index))
   }
 
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
@@ -615,25 +603,30 @@ class PlaybackCoordinator {
   }
 
   func move(fromIndex: Int, toIndex: Int) throws {
-    let changed = try queue.move(fromIndex: fromIndex, toIndex: toIndex)
-    if changed { handleCurrentTrackChanged() }
-    // tracks.didSet pushed availability mid-mutation, before the pointer and
-    // shuffle order settled — re-push the real post-mutation state.
-    pushSkipAvailability()
+    try afterQueueMutation(queue.move(fromIndex: fromIndex, toIndex: toIndex))
   }
 
   func removeUpcomingTracks() {
-    queue.removeUpcomingTracks()
-    pushSkipAvailability() // didSet pushed pre-settlement state
+    afterQueueMutation(queue.removeUpcomingTracks())
   }
 
   func replay() {
     effectHandler?.replayCurrentTrack()
   }
 
+  /// The one place a settled queue mutation is published: the new track list, then the
+  /// current-track change, then next/previous availability.
+  private func afterQueueMutation(_ change: QueueChange) {
+    if change.tracks { callbacks?.playerDidChangeQueue(queue.tracks) }
+    if change.currentTrack {
+      handleCurrentTrackChanged()
+    } else if change.tracks {
+      pushSkipAvailability()
+    }
+  }
+
   func clear() {
-    let changed = queue.clear()
-    if changed { handleCurrentTrackChanged() }
+    afterQueueMutation(queue.clear())
     effectHandler?.unloadTrack()
     effectHandler?.clearNowPlaying()
   }
@@ -660,6 +653,7 @@ class PlaybackCoordinator {
   }
 
   func handleCurrentTrackChanged() {
+    defer { pushSkipAvailability() }
     sleepTimerManager.onTrackChanged()
 
     effectHandler?.cancelMediaLoading()
@@ -724,7 +718,6 @@ class PlaybackCoordinator {
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack
     lastIndex = currentIndex
-    pushSkipAvailability() // position moved → next/previous availability may change
   }
 
   // MARK: - Seek Completion (called by TrackPlayer after AVPlayer seek lands)
@@ -744,15 +737,6 @@ class PlaybackCoordinator {
 
   func setPlaybackIntervalEnabled(_ enabled: Bool) {
     intervalTimer.setInterval(enabled ? 1 : nil)
-  }
-}
-
-// MARK: - QueueManagerDelegate
-
-extension PlaybackCoordinator: QueueManagerDelegate {
-  func queueDidChangeTracks(_ tracks: [Track]) {
-    callbacks?.playerDidChangeQueue(tracks)
-    pushSkipAvailability() // queue contents changed → boundaries moved
   }
 }
 

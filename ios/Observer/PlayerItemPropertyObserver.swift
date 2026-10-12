@@ -15,7 +15,6 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 
   private(set) weak var observingAVItem: AVPlayerItem?
 
-  private let onDurationUpdate: @MainActor (Double) -> Void
   private let onPlaybackLikelyToKeepUpUpdate: @MainActor (Bool) -> Void
   private let onStatusChange: @MainActor (AVPlayerItem.Status, Error?) -> Void
   // Note: AVTimedMetadataGroup is not Sendable, but this callback is always invoked
@@ -23,12 +22,10 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
   private let onTimedMetadataReceived: @MainActor ([AVTimedMetadataGroup]) -> Void
 
   init(
-    onDurationUpdate: @escaping @MainActor (Double) -> Void,
     onPlaybackLikelyToKeepUpUpdate: @escaping @MainActor (Bool) -> Void,
     onStatusChange: @escaping @MainActor (AVPlayerItem.Status, Error?) -> Void,
     onTimedMetadataReceived: @escaping @MainActor ([AVTimedMetadataGroup]) -> Void,
   ) {
-    self.onDurationUpdate = onDurationUpdate
     self.onPlaybackLikelyToKeepUpUpdate = onPlaybackLikelyToKeepUpUpdate
     self.onStatusChange = onStatusChange
     self.onTimedMetadataReceived = onTimedMetadataReceived
@@ -45,24 +42,6 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
     observingAVItem = avItem
 
     observations = [
-      avItem.observe(\.duration, options: [.new]) { [weak self] item, _ in
-        let seconds = item.duration.seconds
-        let identity = ObjectIdentifier(item)
-        Task { @MainActor in
-          guard let self, self.isObserving(identity) else { return }
-          self.onDurationUpdate(seconds)
-        }
-      },
-      avItem.observe(\.loadedTimeRanges, options: [.new]) { [weak self] item, _ in
-        if let duration = item.loadedTimeRanges.first?.timeRangeValue.duration {
-          let seconds = duration.seconds
-          let identity = ObjectIdentifier(item)
-          Task { @MainActor in
-            guard let self, self.isObserving(identity) else { return }
-            self.onDurationUpdate(seconds)
-          }
-        }
-      },
       avItem.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] item, _ in
         let isLikely = item.isPlaybackLikelyToKeepUp
         let identity = ObjectIdentifier(item)

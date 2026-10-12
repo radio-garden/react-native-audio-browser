@@ -28,7 +28,7 @@ enum CarPlayArtworkResolver {
   ///
   /// - Parameters:
   ///   - artwork: The track's `artwork` field (may be an SF Symbol string or URL)
-  ///   - artworkSourceUri: The track's `artworkSource?.uri` field
+  ///   - artworkSource: The track's `artworkSource` URI and the headers to fetch it with
   ///   - stencil: Whether the artwork renders as a monochrome glyph tinted to
   ///     the surface appearance (`style.artworkRendering: 'stencil'`)
   ///   - targetWidth: Target width in points
@@ -37,7 +37,7 @@ enum CarPlayArtworkResolver {
   ///   - urlResolver: Optional closure that resolves artwork URLs (wraps BrowserManager)
   static func resolve(
     artwork: String?,
-    artworkSourceUri: String?,
+    artworkSource: ArtworkResolvedImage?,
     stencil: Bool,
     targetWidth: Double,
     targetHeight: Double,
@@ -57,7 +57,7 @@ enum CarPlayArtworkResolver {
         guard let resolvedUrl = URL(string: resolved.uri) else {
           return resolveDirectFallback(
             artwork: artwork,
-            artworkSourceUri: artworkSourceUri,
+            artworkSource: artworkSource,
             stencil: stencil,
             targetWidth: targetWidth,
             targetHeight: targetHeight,
@@ -76,7 +76,7 @@ enum CarPlayArtworkResolver {
     // 3. Direct fallback
     return resolveDirectFallback(
       artwork: artwork,
-      artworkSourceUri: artworkSourceUri,
+      artworkSource: artworkSource,
       stencil: stencil,
       targetWidth: targetWidth,
       targetHeight: targetHeight,
@@ -85,12 +85,13 @@ enum CarPlayArtworkResolver {
 
   private static func resolveDirectFallback(
     artwork: String?,
-    artworkSourceUri: String?,
+    artworkSource: ArtworkResolvedImage?,
     stencil: Bool,
     targetWidth: Double,
     targetHeight: Double,
   ) -> ArtworkLoadAction {
-    guard let directUri = artwork ?? artworkSourceUri else { return .none }
+    let headers = artwork == nil ? artworkSource?.headers : nil
+    guard let directUri = artwork ?? artworkSource?.uri else { return .none }
 
     if directUri.hasPrefix("sf:") {
       return .sfSymbol(artwork: directUri, width: targetWidth, height: targetHeight)
@@ -100,7 +101,7 @@ enum CarPlayArtworkResolver {
     let isSvg = directUrl.pathExtension.lowercased() == "svg"
     return .fetch(
       uri: directUri,
-      headers: nil,
+      headers: headers,
       shouldTint: stencil,
       isSvg: isSvg,
     )

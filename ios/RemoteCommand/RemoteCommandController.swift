@@ -449,12 +449,4 @@ class RemoteCommandController {
     }
     return MPRemoteCommandHandlerStatus.commandFailed
   }
-
-  private func getRemoteCommandHandlerStatus(forError error: Error)
-    -> MPRemoteCommandHandlerStatus
-  {
-    error is TrackPlayerError.QueueError
-      ? MPRemoteCommandHandlerStatus.noSuchContent
-      : MPRemoteCommandHandlerStatus.commandFailed
-  }
 }

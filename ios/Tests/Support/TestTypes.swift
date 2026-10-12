@@ -123,6 +123,8 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   var playingStateChanges: [PlayingState] = []
   var queueEndedEvents: [PlaybackQueueEndedEvent] = []
   var queueChanges: [[Track]] = []
+  /// The order in which the queue and active-track callbacks arrived.
+  var queueAndTrackOrder: [String] = []
   var repeatModeChanges: [RepeatModeChangedEvent] = []
   var shuffleEnabledChanges: [Bool] = []
   var errorEvents: [PlaybackErrorEvent] = []
@@ -135,6 +137,7 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
 
   func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     activeTrackChanges.append(event)
+    queueAndTrackOrder.append("activeTrack")
   }
 
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
@@ -159,6 +162,7 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
 
   func playerDidChangeQueue(_ tracks: [Track]) {
     queueChanges.append(tracks)
+    queueAndTrackOrder.append("queue")
   }
 
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {

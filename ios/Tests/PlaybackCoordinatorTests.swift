@@ -1132,9 +1132,8 @@ struct InterruptionTests {
 
 // MARK: - Skip availability freshness
 
-/// tracks.didSet pushes availability mid-mutation, while currentIndex and the
-/// shuffle order are still stale — the coordinator must re-push after the
-/// mutation settles or the lock-screen buttons keep the wrong state.
+/// A mutation pushes next/previous availability once, after currentIndex and the
+/// shuffle order have settled; an earlier push leaves the lock-screen buttons wrong.
 @Suite("PlaybackCoordinator - skip availability after mutations")
 struct MutationSkipAvailabilityTests {
   @Test @MainActor
@@ -1149,6 +1148,7 @@ struct MutationSkipAvailabilityTests {
     try c.move(fromIndex: 0, toIndex: 1)
 
     // Current track is now last: nothing to skip to.
+    #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
   }
 
@@ -1167,8 +1167,56 @@ struct MutationSkipAvailabilityTests {
     try c.remove(0)
 
     // Current settled at index 1 of 2: previous available, next not.
+    #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+}
+
+// MARK: - Queue publication
+
+@Suite("PlaybackCoordinator - queue publication")
+struct QueuePublicationTests {
+  @MainActor
+  private func threeTracks() -> [Track] {
+    ["a", "b", "c"].map { Track(id: $0, src: "https://example.com/\($0).mp3", title: $0) }
+  }
+
+  @Test @MainActor
+  func setQueue_publishesTheQueueBeforeTheActiveTrack() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    #expect(cb.queueChanges.map { $0.map(\.id) } == [["a", "b", "c"]])
+    #expect(cb.queueAndTrackOrder == ["queue", "activeTrack"])
+  }
+
+  @Test @MainActor
+  func move_publishesTheSettledQueueOnce() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    try c.move(fromIndex: 0, toIndex: 2)
+    #expect(cb.queueChanges.map { $0.map(\.id) } == [["b", "c", "a"]])
+  }
+
+  @Test @MainActor
+  func clear_publishesAnEmptyQueue() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.clear()
+    #expect(cb.queueChanges.map(\.count) == [0])
+  }
+
+  @Test @MainActor
+  func navigation_publishesNoQueue() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.next()
+    c.previous()
+    try c.skipTo(2)
+    #expect(cb.queueChanges.isEmpty)
   }
 }
 

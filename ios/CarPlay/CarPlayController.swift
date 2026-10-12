@@ -422,27 +422,6 @@ public final class RNABCarPlayController: NSObject {
     listenerRemovals.append { [weak audioBrowser] in
       audioBrowser?.showNowPlayingRequestedEmitter.removeListener(showNowPlayingToken)
     }
-
-    // Subscribe to navigation errors (from browser layer)
-    let navErrorToken = audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
-      Task { @MainActor in
-        self?.handleNavigationError(event)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.navigationErrorEmitter.removeListener(navErrorToken)
-    }
-  }
-
-  /// Handles navigation errors from the browser layer, displaying them in CarPlay
-  @MainActor
-  private func handleNavigationError(_ event: NavigationErrorEvent) {
-    guard let error = event.error else { return }
-    logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
-    // Derive the current path from the live top template (authoritative) rather
-    // than a hand-maintained stack that goes stale on back navigation.
-    let path = interfaceController.topTemplate.flatMap { getPath(from: $0) } ?? "/"
-    showNavigationError(error, path: path)
   }
 
   // MARK: - Initial Interface
@@ -1304,78 +1283,6 @@ public final class RNABCarPlayController: NSObject {
   }
 
   // MARK: - Error Handling
-
-  /// Shows a navigation error using CPActionSheetTemplate.
-  /// - Parameters:
-  ///   - error: The NavigationError to display
-  ///   - path: The path that was being navigated to when the error occurred
-  private func showNavigationError(_ error: NavigationError, path: String) {
-    let defaultFormatted = error.defaultFormatted()
-
-    // Check if custom formatter is configured
-    logger.debug("showNavigationError: formatNavigationError is \(self.config.formatNavigationError != nil ? "set" : "nil")")
-    if let formatter = config.formatNavigationError {
-      logger.debug("Calling formatNavigationError callback...")
-      // Call the JS callback and handle result
-      let params = FormatNavigationErrorParams(error: error, defaultFormatted: defaultFormatted, path: path)
-      // The result callbacks are @Sendable and hop back explicitly: Nitro resolves
-      // its promises synchronously on the JS thread, so a plain closure would
-      // inherit this type's MainActor isolation and trap on entry under Swift 6's
-      // dynamic isolation check — and would otherwise drive UIKit off the main
-      // thread. Same pattern as HybridAudioBrowser.handleNavigationError and
-      // NowPlayingUpdater.render.
-      formatter(params)
-        .then { @Sendable [weak self] customDisplay in
-          let description = String(describing: customDisplay)
-          Task { @MainActor in
-            guard let self else { return }
-            self.logger.debug("formatNavigationError returned: \(description)")
-            self.presentErrorActionSheet(customDisplay: customDisplay ?? defaultFormatted)
-          }
-        }
-        .catch { @Sendable [weak self] callbackError in
-          let message = callbackError.localizedDescription
-          Task { @MainActor in
-            guard let self else { return }
-            self.logger.error("formatNavigationError failed: \(message)")
-            // On error, fall back to defaults
-            self.presentErrorActionSheet(customDisplay: defaultFormatted)
-          }
-        }
-    } else {
-      presentErrorActionSheet(customDisplay: defaultFormatted)
-    }
-  }
-
-  /// Presents the error action sheet with the given display info.
-  /// - Parameter customDisplay: The formatted error to display
-  private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
-    // If another template is already presented, dismiss it first
-    if interfaceController.presentedTemplate != nil {
-      interfaceController.safeDismiss(animated: false) { [weak self] _, _ in
-        self?.showErrorActionSheet(customDisplay: customDisplay)
-      }
-    } else {
-      showErrorActionSheet(customDisplay: customDisplay)
-    }
-  }
-
-  /// Actually shows the error action sheet (called after safety checks)
-  private func showErrorActionSheet(customDisplay: FormattedNavigationError) {
-    // OK action - dismiss the action sheet (use system-localized "OK")
-    let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
-    let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
-      self?.interfaceController.safeDismiss(animated: true)
-    }
-
-    let actionSheet = CPActionSheetTemplate(
-      title: customDisplay.title,
-      message: customDisplay.message,
-      actions: [ok],
-    )
-
-    interfaceController.safePresent(actionSheet, animated: true)
-  }
 
   /// Shows an initialization failure as the root template — a centered empty
   /// view formatted via the app's `formatNavigationError` (path "/"), like every
