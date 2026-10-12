@@ -48,10 +48,8 @@ struct RemoteCommandTests {
     #expect(toDisable.count == RemoteCommand.all().count)
   }
 
-  /// `key` is the identity used both for the diff above and for the
-  /// `commandTargetPointers` slot each command's handler lives in. Two cases
-  /// sharing a key would silently share one slot: enabling one would remove the
-  /// other's handler.
+  /// `key` is the identity the diff above compares; two cases sharing a key would
+  /// disable each other.
   @Test func keysAreUnique() {
     let all = RemoteCommand.all()
     #expect(Set(all.map(\.key)).count == all.count)

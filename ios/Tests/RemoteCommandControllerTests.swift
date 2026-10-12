@@ -59,8 +59,6 @@ struct RemoteCommandControllerTests {
 
     #expect(center.skipForwardCommand.isEnabled)
     #expect(center.skipBackwardCommand.isEnabled)
-    #expect(controller.commandTargetPointers["skipForward"] != nil)
-    #expect(controller.commandTargetPointers["skipBackward"] != nil)
     #expect(center.skipForwardCommand.preferredIntervals == [30])
     #expect(center.skipBackwardCommand.preferredIntervals == [30])
   }
@@ -73,7 +71,6 @@ struct RemoteCommandControllerTests {
     controller.enable(commands: [.changePlaybackRate(supportedPlaybackRates: [1.0, 1.5, 2.0])])
 
     #expect(center.changePlaybackRateCommand.isEnabled)
-    #expect(controller.commandTargetPointers["changePlaybackRate"] != nil)
     #expect(center.changePlaybackRateCommand.supportedPlaybackRates == [1.0, 1.5, 2.0])
   }
 
@@ -87,9 +84,7 @@ struct RemoteCommandControllerTests {
     controller.enable(commands: [.play, .pause])
 
     #expect(!center.nextTrackCommand.isEnabled)
-    #expect(controller.commandTargetPointers["nextTrack"] == nil)
     #expect(center.playCommand.isEnabled)
-    #expect(controller.commandTargetPointers["play"] != nil)
   }
 
   @Test func disableAllClearsEveryTarget() {
@@ -99,24 +94,9 @@ struct RemoteCommandControllerTests {
     controller.enable(commands: [.play, .pause, .skipForward(preferredIntervals: [15])])
     controller.disableAll()
 
-    #expect(controller.commandTargetPointers.isEmpty)
     #expect(!center.playCommand.isEnabled)
     #expect(!center.pauseCommand.isEnabled)
     #expect(!center.skipForwardCommand.isEnabled)
-  }
-
-  /// Re-enabling the same set must not accumulate handlers: `enableRemoteCommand`
-  /// removes the previous target before adding the new one.
-  @Test func reEnablingKeepsOneTargetPerCommand() {
-    let (controller, _) = makeController()
-
-    controller.enable(commands: [.play, .pause])
-    let first = controller.commandTargetPointers["play"]
-    controller.enable(commands: [.play, .pause])
-    let second = controller.commandTargetPointers["play"]
-
-    #expect(controller.commandTargetPointers.count == 2)
-    #expect(first as AnyObject? !== second as AnyObject?)
   }
 
   /// `setSkipAvailability` greys out next/previous when the queue has nowhere to
@@ -136,15 +116,12 @@ struct RemoteCommandControllerTests {
     #expect(center.previousTrackCommand.isEnabled)
   }
 
-  /// The handler properties must not capture the controller strongly. Assigning a
-  /// bare method reference (`= handlePlayCommandDefault`) curries to
-  /// `{ [self] in self.method($0) }`, and storing that back on self is a permanent
-  /// cycle — one leaked controller per player instance, across every JS reload.
+  /// The command targets must not capture the controller strongly, or every player
+  /// instance leaks one across JS reloads.
   @Test func doesNotRetainItselfThroughHandlers() {
     weak var weakController: RemoteCommandController?
     autoreleasepool {
       let (controller, _) = makeController()
-      // Forces every lazy handler to initialize, which is what closes the cycle.
       controller.enable(commands: RemoteCommand.all())
       controller.disableAll()
       weakController = controller
@@ -167,6 +144,5 @@ struct RemoteCommandControllerTests {
     #expect(center.changeShuffleModeCommand.currentShuffleType == .items)
     #expect(center.changeRepeatModeCommand.currentRepeatType == .all)
     #expect(center.changeShuffleModeCommand.isEnabled)
-    #expect(controller.commandTargetPointers["changeShuffleMode"] != nil)
   }
 }
