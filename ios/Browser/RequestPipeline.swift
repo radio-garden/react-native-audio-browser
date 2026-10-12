@@ -75,9 +75,10 @@ final class RequestPipeline {
   /// survive into `request.query` even when a layer's transform "wins
   /// completely" (it is handed only the base, so the route config's own static
   /// query would otherwise be dropped). `routeConfig` is nil for the implicit
-  /// browse default; `kindConfig` is nil for kinds with no per-kind config.
+  /// browse default; `kind` names the per-kind layer, nil for kinds with none. The request and
+  /// kind layers come from one resolution, so a config change mid-request can't mix them.
   func buildApiRequest(
-    kind kindConfig: TransformableRequestConfig?,
+    kind: KeyPath<ResolvedLayers, TransformableRequestConfig?>?,
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
@@ -87,11 +88,12 @@ final class RequestPipeline {
       method: nil, path: path, baseUrl: nil, headers: nil,
       query: nil, body: nil, contentType: nil, userAgent: nil,
     )
-    merged = try await applyLayer(resolvedLayers().request, to: merged, params: params)
+    let layers = try await resolvedLayers()
+    merged = try await applyLayer(layers.request, to: merged, params: params)
     if let initialQuery, !initialQuery.isEmpty {
       merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
     }
-    merged = try await applyLayer(kindConfig, to: merged, params: params)
+    merged = try await applyLayer(kind.flatMap { layers[keyPath: $0] }, to: merged, params: params)
     merged = try await applyLayer(routeConfig, to: merged, params: params)
 
     guard merged.baseUrl != nil else {
@@ -115,7 +117,7 @@ final class RequestPipeline {
     params: [String: String],
   ) async throws -> ResolvedTrack {
     let request = try await buildApiRequest(
-      kind: resolvedLayers().browse, routeConfig, path: path, params: params,
+      kind: \.browse, routeConfig, path: path, params: params,
     )
 
     logger.debug("Resolving content from API")
