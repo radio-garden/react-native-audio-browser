@@ -22,7 +22,7 @@ public extension HybridAudioBrowser {
         // No-op on first setup.
         player?.destroy()
 
-        let newPlayer = TrackPlayer(callbacks: self, resolver: browserManager, networkMonitor: networkMonitor)
+        let newPlayer = TrackPlayer(callbacks: self, resolver: browserManager.requests, networkMonitor: networkMonitor)
         if let buffer = options.ios?.buffer { newPlayer.bufferDuration = buffer }
         if let retry = options.retry { newPlayer.retryConfig = retry }
         newPlayer.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true

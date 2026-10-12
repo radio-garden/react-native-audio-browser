@@ -131,7 +131,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Browser Properties
 
   public var path: String? {
-    get { onMainActor { browserManager.getPath() } }
+    get { onMainActor { browserManager.path } }
     set {
       guard let newPath = newValue else { return }
       navigate(newPath, clearError: false)
@@ -139,7 +139,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public var tabs: [Track]? {
-    get { onMainActor { browserManager.getTabs() } }
+    get { onMainActor { browserManager.tabs } }
     set { /* tabs are managed internally by browserManager */ }
   }
 

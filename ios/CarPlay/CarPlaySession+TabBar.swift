@@ -12,7 +12,7 @@ extension CarPlaySession {
     let build = beginRootBuild()
     isBuildingInitialInterface = true
     defer { isBuildingInitialInterface = false }
-    if let tabs = audioBrowser.browserManager.getTabs(), !tabs.isEmpty {
+    if let tabs = audioBrowser.browserManager.tabs, !tabs.isEmpty {
       await showTabBar(tabs)
       return
     }
@@ -103,14 +103,14 @@ extension CarPlaySession {
   func rebuildTabsIfAtRoot() -> Bool {
     guard needsTabRebuild, interfaceController.templates.count <= 1 else { return false }
     needsTabRebuild = false
-    spawn { await $0.showTabBar($0.audioBrowser.browserManager.getTabs() ?? []) }
+    spawn { await $0.showTabBar($0.audioBrowser.browserManager.tabs ?? []) }
     return true
   }
 
   /// The gate was set or cleared: pushed content must not stay reachable behind it, and a
   /// clear returns to the root.
   func gateChanged() {
-    let tabs = audioBrowser.browserManager.getTabs() ?? []
+    let tabs = audioBrowser.browserManager.tabs ?? []
     if tabs.isEmpty, !audioBrowser.browseGate.isActive {
       spawn { await $0.buildInitialInterface() }
     } else {

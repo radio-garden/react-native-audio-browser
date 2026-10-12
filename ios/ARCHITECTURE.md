@@ -38,7 +38,7 @@ subgraph CoordOwned["Coordinator-owned Managers"]
 end
 
 subgraph Browser["Browser System"]
-  BM["BrowserManager<br/>@MainActor<br/>Navigation, routing, caching<br/>URL resolution, favorites"]
+  BM["BrowserManager<br/>@MainActor<br/>State, caches, favorites, load<br/>owns PageResolver + RequestPipeline"]
   SR["SimpleRouter<br/>Route pattern matching<br/>{param}, *, ** wildcards"]
   BPH["BrowserPathHelper<br/>Contextual URLs, __trackId"]
   BC["BrowserConfig<br/>Config wrapper + JS handlers"]

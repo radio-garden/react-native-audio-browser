@@ -1,9 +1,151 @@
 import Foundation
 import NitroModules
+import os.log
 
-// MARK: - URL Resolution
+/// Builds and runs the browser's HTTP requests: the Request-Config Layers for browse, search,
+/// media and artwork, and the API fetches.
+@MainActor
+final class RequestPipeline {
+  let logger = Logger(subsystem: "com.audiobrowser", category: "RequestPipeline")
+  private let httpClient = HttpClient()
+  /// The request/browse thunks resolve once per content generation.
+  private let layers = GenerationMemo<ResolvedLayers>()
 
-extension BrowserManager {
+  /// Set by `BrowserManager`; a new config resolves the layers again.
+  var config = BrowserConfig() {
+    didSet { layers.invalidate() }
+  }
+
+  nonisolated init() {}
+
+  /// Resolves the request and browse layers again on next use (e.g. after a locale change).
+  func invalidateLayers() {
+    layers.invalidate()
+  }
+
+  struct ResolvedLayers {
+    let request: TransformableRequestConfig?
+    let browse: TransformableRequestConfig?
+  }
+
+  /// The request and browse layers of the current config: each resolver's result, or the
+  /// static layer when it has none. Both resolvers run at once, and a config change or
+  /// `clearContentCache` while they run resolves them again.
+  func resolvedLayers() async throws -> ResolvedLayers {
+    try await layers.value { [weak self] in
+      guard let self else { throw CancellationError() }
+      // Read on every run: a retry after a config change must resolve the new config's layers.
+      let config = self.config
+      // The resolver is Promise-only (the TS layer wraps a sync-or-async thunk in
+      // Promise.resolve), so its result is the JS promise behind the bridge promise.
+      let request = config.requestResolver?()
+      let browse = config.browseResolver?()
+      return try await ResolvedLayers(
+        request: request?.await().await() ?? config.request,
+        browse: browse?.await().await() ?? config.browse,
+      )
+    }
+  }
+
+  /// Applies one Request-Config Layer (request / browse / route) onto `base`: its transforms
+  /// (async, then sync) when it has any, else its static fields (`RequestLayer.apply`).
+  func applyLayer(
+    _ layer: TransformableRequestConfig?,
+    to base: RequestConfig,
+    params: [String: String],
+  ) async throws -> RequestConfig {
+    guard let layer else { return base }
+    var transforms: [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] = []
+    if let transform = layer.transform {
+      transforms.append { try await self.awaitAsyncConfig(transform($0, params)) }
+    }
+    if let transformSync = layer.transformSync {
+      transforms.append { try await self.awaitSyncConfig(transformSync($0, params)) }
+    }
+    let fields = RequestConfig(
+      method: layer.method, path: nil, baseUrl: layer.baseUrl, headers: layer.headers,
+      query: layer.query, body: layer.body, contentType: layer.contentType, userAgent: layer.userAgent,
+    )
+    return try await RequestLayer.apply(fields, transforms: transforms, to: base)
+  }
+
+  /// Builds the HTTP request for an API-backed route by layering
+  /// request → kind → route configs. `initialQuery` seeds request-level query
+  /// params (e.g. search q/mode/…) onto the base before the route layer, so they
+  /// survive into `request.query` even when a layer's transform "wins
+  /// completely" (it is handed only the base, so the route config's own static
+  /// query would otherwise be dropped). `routeConfig` is nil for the implicit
+  /// browse default; `kindConfig` is nil for kinds with no per-kind config.
+  func buildApiRequest(
+    kind kindConfig: TransformableRequestConfig?,
+    _ routeConfig: TransformableRequestConfig?,
+    path: String,
+    params: [String: String],
+    initialQuery: [String: String]? = nil,
+  ) async throws -> HttpClient.HttpRequest {
+    var merged = RequestConfig(
+      method: nil, path: path, baseUrl: nil, headers: nil,
+      query: nil, body: nil, contentType: nil, userAgent: nil,
+    )
+    merged = try await applyLayer(resolvedLayers().request, to: merged, params: params)
+    if let initialQuery, !initialQuery.isEmpty {
+      merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
+    }
+    merged = try await applyLayer(kindConfig, to: merged, params: params)
+    merged = try await applyLayer(routeConfig, to: merged, params: params)
+
+    guard merged.baseUrl != nil else {
+      throw BrowserError.invalidConfiguration("No URL configured for route")
+    }
+    return HttpClient.HttpRequest(
+      url: RequestLayer.buildUrl(merged, defaultPath: path),
+      method: merged.method?.stringValue ?? "GET",
+      headers: merged.headers,
+      body: merged.body,
+      contentType: merged.contentType ?? HttpClient.defaultContentType,
+      userAgent: merged.userAgent ?? HttpClient.defaultUserAgent,
+    )
+  }
+
+  /// Fetches a page object (`{title,path,children:[…]}`) through the request → browse → route
+  /// layers.
+  func fetchPage(
+    _ routeConfig: TransformableRequestConfig?,
+    path: String,
+    params: [String: String],
+  ) async throws -> ResolvedTrack {
+    let request = try await buildApiRequest(
+      kind: resolvedLayers().browse, routeConfig, path: path, params: params,
+    )
+
+    logger.debug("Resolving content from API")
+    logger.debug("  path: \(path)")
+    logger.debug("  url: \(request.url)")
+
+    let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
+    let nitroResult = result.toNitro()
+
+    logger.debug("Resolved: \(nitroResult.title)")
+    if let sections = nitroResult.normalizedSections {
+      logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
+    }
+
+    return nitroResult
+  }
+
+  /// Fetches a search route's bare Track array through the request → search route layers. The
+  /// search params go through `initialQuery`, so they reach the URL even when a transform wins;
+  /// the config's static path seeds the base, since a layer's static path never applies.
+  func fetchSearch(_ searchConfig: TransformableRequestConfig, params: SearchParams) async throws -> [Track] {
+    let request = try await buildApiRequest(
+      kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": params.query],
+      initialQuery: PageResolver.searchQueryParams(params),
+    )
+    logger.debug("Searching via API: \(request.url)")
+    let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
+    return jsonTracks.map { $0.toNitro() }
+  }
+
   // MARK: - Media URL Resolution
 
   /// Resolves a media URL using the configured media transform.
@@ -302,7 +444,7 @@ extension BrowserManager {
 
 extension RequestConfig: RequestFields {}
 
-extension BrowserManager: MediaResolving {
+extension RequestPipeline: MediaResolving {
   /// Runs the `nowPlayingArtwork` config for every playing track, id or not: an id-less track
   /// leaves an `{id}` token unfilled, so the request visibly fails rather than being skipped.
   func resolveNowPlayingArtwork(track: Track, imageContext: ImageContext?) async -> ImageSource? {

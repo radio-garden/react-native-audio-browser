@@ -97,7 +97,7 @@ final class CarPlayImageLoader {
       if CarPlayArtworkResolver.needsResolve(artwork: artwork), let browserManager = self.browserManager {
         let scale = Double(self.carTraitCollection.displayScale)
         let context = ImageContext(width: Double(size.width) * scale, height: Double(size.height) * scale)
-        resolved = await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: context)
+        resolved = await browserManager.requests.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: context)
           .map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) }
       }
       let action = CarPlayArtworkResolver.action(

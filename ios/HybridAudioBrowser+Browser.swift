@@ -12,7 +12,7 @@ public extension HybridAudioBrowser {
     if clearError { onMainActor { navigationError.clear() } }
     Task { @MainActor in
       do {
-        try await browserManager.navigate(path)
+        try await browserManager.load(path)
       } catch {
         await reportNavigationError(error, path: path)
       }
@@ -61,7 +61,7 @@ public extension HybridAudioBrowser {
   }
 
   func getContent() throws -> ResolvedTrack? {
-    onMainActor { browserManager.getContent() }
+    onMainActor { browserManager.content }
   }
 
   func getNavigationError() throws -> NavigationError? {
@@ -87,7 +87,7 @@ public extension HybridAudioBrowser {
     externalContentChangedEmitter.emit(path)
 
     // Re-resolve the path if it's the current browser path
-    if onMainActor({ browserManager.getPath() }) == path {
+    if onMainActor({ browserManager.path }) == path {
       navigate(path, clearError: false)
     }
   }
@@ -111,9 +111,9 @@ public extension HybridAudioBrowser {
     // Re-resolve the JS-facing current path with the cache cleared.
     Task { @MainActor in
       do {
-        try await browserManager.refresh()
+        try await browserManager.load(browserManager.path, bypassCache: true)
       } catch {
-        await reportNavigationError(error, path: browserManager.getPath())
+        await reportNavigationError(error, path: browserManager.path)
       }
     }
   }

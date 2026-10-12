@@ -106,8 +106,12 @@ ios/
 ├── TrackPlayerCallbacks.swift        # @MainActor callback protocol (extends PlaybackCoordinatorCallbacks)
 │                                     # Bridge between TrackPlayer events and HybridAudioBrowser
 ├── Browser/
-│   ├── BrowserManager.swift          # @MainActor navigation, routing, caching, favorites
-│   ├── BrowserManager+URLResolution.swift  # resolveMediaUrl / resolveArtworkUrl (layered transforms); MediaResolving
+│   ├── BrowserManager.swift          # @MainActor state (path/content/tabs), caches, favorites, load,
+│   │                                 #   search cache, queue expansion
+│   ├── PageResolver.swift            # @MainActor route match → source → normalized, stamped page;
+│   │                                 #   tabs and search routes
+│   ├── RequestPipeline.swift         # @MainActor request layers, API fetches, media/artwork URLs;
+│   │                                 #   MediaResolving
 │   ├── BrowseGate.swift              # @MainActor Browse Gate: mode, per-request decide, changed emitter
 │   ├── NavigationErrorState.swift    # @MainActor navigation error + display; a newer report wins
 │   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards)
@@ -281,7 +285,7 @@ var handleRemoteNext: (() -> Void)?
 Callbacks are set from:
 
 - `TrackPlayerCallbacks` protocol methods (player events)
-- `BrowserManager` callbacks (navigation events)
+- `BrowserManager` emitters (navigation events)
 - `NetworkMonitor.onChanged` (connectivity)
 - `SleepTimerManager.onChanged` (sleep timer)
 
