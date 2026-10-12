@@ -302,6 +302,7 @@ class TrackPlayer {
       (coordinator?.canNext ?? false, coordinator?.canPrevious ?? false)
     }
 
+    nowPlayingUpdater.source = self
     setupAVPlayer()
   }
 
@@ -1080,3 +1081,9 @@ extension TrackPlayer: MediaLoaderDelegate {
 }
 
 extension TrackPlayer: AudioSessionPlayer {}
+
+extension TrackPlayer: NowPlayingSource {
+  var nowPlayingError: PlaybackError? {
+    coordinator.nitroPlaybackError()
+  }
+}

@@ -62,17 +62,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browseGate = BrowseGate()
   private let trackSelector: TrackSelector
   @MainActor private(set) lazy var audioSession = AudioSessionController()
-  @MainActor private var nowPlayingOverride: NowPlayingUpdate?
-  /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
-  @MainActor private var nowPlayingMetadataEnabled = true
-  /// Customizes the now-playing title/subtitle from the track + live timed metadata + playback state.
-  @MainActor private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
   /// Initial player state staged before the player exists — from setup options or the imperative
   /// setters called pre-setup. Strict last-write-wins; consumed when the player comes up.
   @MainActor private var pendingPlayWhenReady: Bool?
   @MainActor private var pendingRepeatMode: RepeatMode?
-  /// Latest live timed (ICY/ID3) metadata, passed to the formatter. Cleared on track change.
-  @MainActor private var latestTimedMetadata: TimedMetadata?
   @MainActor private let playerOptions = PlayerUpdateOptions()
 
   /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
@@ -338,7 +331,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       browserManager.config = browserManager.config.strippingJSCallbacks()
     }
     resolveGate = Self.defaultResolveGate
-    nowPlayingMetadataFormatter = nil
+    player?.nowPlayingUpdater.formatter = nil
   }
 
   deinit {
@@ -599,7 +592,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           MainActor.assumeIsolated {
             guard let self else { return }
             self.onOnlineChanged(isOnline)
-            self.applyNowPlayingMetadata()
+            self.player?.nowPlayingUpdater.isOnline = isOnline
             if isOnline { self.player?.handleNetworkRestored() }
           }
         }
@@ -626,11 +619,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
         // Emit the JS `onNowPlayingChanged` event when the rendered text lines change. The updater
         // owns the system now-playing write; this shapes the JS metadata (elapsed time / artwork).
-        player?.nowPlayingUpdater.onChanged = { [weak self] track, title, artist, album in
-          guard let self else { return }
-          self.onNowPlayingChanged(
-            self.makeNowPlayingMetadata(track: track, title: title, artist: artist, album: album))
-        }
+        player?.nowPlayingUpdater.onChanged = { [weak self] in self?.onNowPlayingChanged($0) }
 
         // Configure sleep timer callback
         player?.sleepTimerManager.onChanged = { [weak self] state in
@@ -639,8 +628,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
         // Now-playing: whether to manage metadata, and the optional formatter that owns the
         // rendered lines.
-        nowPlayingMetadataEnabled = options.autoUpdateNowPlayingMetadata ?? true
-        nowPlayingMetadataFormatter = options.nowPlayingMetadataFormatter
+        player?.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
+        player?.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
+        player?.nowPlayingUpdater.isOnline = networkMonitor.isOnline
         // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
         // A terminal error resolves the playback state to *paused*
         // (PlaybackCoordinator.applySideEffects), the now-playing info is retained (never cleared
@@ -1027,111 +1017,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Now Playing
 
   public func updateNowPlaying(update: NowPlayingUpdate?) throws {
-    onMainActor {
-      nowPlayingOverride = update
-      applyNowPlayingMetadata()
-    }
+    onMainActor { player?.nowPlayingUpdater.setOverride(update) }
   }
 
-  /// Transient now-playing fields (e.g. feedback for a refused remote
-  /// command). Outranks the formatter and the override while active, so live
-  /// metadata can't stomp it mid-flash. Reverted by a NATIVE timer — JS
-  /// timers pause with a backgrounded host on Android, and the lock screen
-  /// is exactly the backgrounded case — and cleared early on track change.
-  @MainActor private var nowPlayingFlash: NowPlayingUpdate?
-  @MainActor private var nowPlayingFlashRevert: DispatchWorkItem?
-
   public func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
-    onMainActor {
-      nowPlayingFlashRevert?.cancel()
-      nowPlayingFlash = update
-      let revert = DispatchWorkItem { [weak self] in
-        guard let self else { return }
-        self.nowPlayingFlash = nil
-        self.nowPlayingFlashRevert = nil
-        self.applyNowPlayingMetadata()
-      }
-      nowPlayingFlashRevert = revert
-      DispatchQueue.main.asyncAfter(deadline: .now() + durationMs / 1000, execute: revert)
-      applyNowPlayingMetadata()
-    }
+    onMainActor { player?.nowPlayingUpdater.flash(update, durationMs: durationMs) }
   }
 
   public func clearNowPlayingFlash() throws {
-    onMainActor {
-      guard nowPlayingFlash != nil else { return }
-      cancelNowPlayingFlash()
-      applyNowPlayingMetadata()
-    }
-  }
-
-  @MainActor
-  private func cancelNowPlayingFlash() {
-    nowPlayingFlashRevert?.cancel()
-    nowPlayingFlashRevert = nil
-    nowPlayingFlash = nil
+    onMainActor { player?.nowPlayingUpdater.clearFlash() }
   }
 
   public func getNowPlaying() throws -> NowPlayingMetadata? {
-    onMainActor {
-      guard let track = player?.currentTrack else { return nil }
-      let flash = nowPlayingFlash
-      let override = nowPlayingOverride
-      return makeNowPlayingMetadata(
-        track: track,
-        title: flash?.title ?? override?.title ?? track.title,
-        artist: flash?.artist ?? override?.artist ?? track.artist,
-        album: flash?.album ?? override?.album ?? track.album,
-      )
-    }
-  }
-
-  /// Returns the artwork URI suitable for JS consumption.
-  /// Prefers the resolved artworkSource URI (e.g. file:// for rendered SF Symbols).
-  /// Falls back to the raw artwork string only if it's not an SF Symbol (which JS can't load).
-  private func nowPlayingArtwork(for track: Track) -> String? {
-    if let uri = track.artworkSource?.uri { return uri }
-    guard let artwork = track.artwork?.url else { return nil }
-    return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
-  }
-
-  /// Builds the JS-facing now-playing metadata for the given rendered text lines.
-  @MainActor
-  private func makeNowPlayingMetadata(
-    track: Track, title: String, artist: String?, album: String?,
-  ) -> NowPlayingMetadata {
-    NowPlayingMetadata(
-      elapsedTime: player?.currentTime,
-      title: title,
-      album: album,
-      artist: artist,
-      duration: track.duration,
-      artwork: nowPlayingArtwork(for: track),
-      description: track.description,
-      mediaId: track.src ?? track.path,
-      genre: track.genre,
-    )
-  }
-
-  /// Re-renders the now-playing surface via `NowPlayingUpdater`, handing it the current playback
-  /// signals, override, and formatter. Called on every track / metadata / playback-state change.
-  @MainActor
-  private func applyNowPlayingMetadata() {
-    guard let player, let track = player.currentTrack else { return }
-    // Classify a stall by connectivity so the formatter can show "No internet connection" vs
-    // "Reconnecting…" without a separate read. nil while not stalled.
-    let stalled: StallReason? =
-      player.isStalled ? (networkMonitor.isOnline ? .buffering : .offline) : nil
-    player.nowPlayingUpdater.render(
-      track: track,
-      timedMetadata: latestTimedMetadata,
-      playWhenReady: player.playWhenReady,
-      stalled: stalled,
-      error: player.coordinator.nitroPlaybackError(),
-      flash: nowPlayingFlash,
-      override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,
-      formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil,
-    )
+    onMainActor { player?.nowPlayingUpdater.nowPlaying }
   }
 
   // MARK: - Network
@@ -1271,17 +1169,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidChangePlayback(_ playback: Playback) {
     onPlaybackChanged(playback)
-    // Re-render so the formatter reflects the new state — notably the error line on a failure (the
-    // coordinator sets playbackError before this fires). Redundant updates are deduped on publish.
-    applyNowPlayingMetadata()
+    // The coordinator sets the error before this fires, so the error line renders.
+    player?.nowPlayingUpdater.render()
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    // Clear now playing override + flash + live metadata when track changes
-    // (matches Kotlin behavior; a flash must not carry over to a new track)
-    nowPlayingOverride = nil
-    cancelNowPlayingFlash()
-    latestTimedMetadata = nil
     // Hydrate the active track's `favorited` from the authoritative set so JS
     // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the
     // coordinator emits the raw queue track, whose flag isn't kept in sync.
@@ -1293,8 +1185,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       track: event.track.map(browserManager.hydrateFavorite),
     )
     activeTrackChangedEmitter.emit(hydrated)
-    // Also notify now playing changed when track changes
-    applyNowPlayingMetadata()
+    player?.nowPlayingUpdater.trackChanged()
   }
 
   public func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
@@ -1327,9 +1218,8 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       // audio (first-ever load failing on a dead stream).
       player?.nowPlayingInfoController.reactivateSessionIfNeeded()
     }
-    // Re-render so the formatter reacts to a stall starting or recovering (`stalled`) — a buffering
-    // flag change that may not transition the coordinator state.
-    applyNowPlayingMetadata()
+    // A stall starting or recovering may not change the coordinator state.
+    player?.nowPlayingUpdater.render()
   }
 
   public func playerShouldReleaseSession() {
@@ -1365,10 +1255,8 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
     for group in groups {
       if let metadata = TimedMetadata.from(items: group.items, icyCharset: player?.currentTrack?.icyCharset) {
-        latestTimedMetadata = metadata
         onTimedMetadata(metadata)
-        // Re-render the now-playing so the formatter can reflect the live song.
-        applyNowPlayingMetadata()
+        player?.nowPlayingUpdater.receivedTimedMetadata(metadata)
       }
     }
   }
