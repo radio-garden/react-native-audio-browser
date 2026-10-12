@@ -7,7 +7,7 @@ extension CarPlaySession {
   func select(_ track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
 
-    if track.src != nil, let identity = track.identity, player.currentTrack?.identity == identity {
+    if track.src != nil, let identity = track.identity, player?.currentTrack?.identity == identity {
       try? audioBrowser.play()
       nowPlaying.showNowPlaying()
       completion()
@@ -24,11 +24,12 @@ extension CarPlaySession {
     completion()
 
     spawn { session in
-      let result = await session.trackSelector.select(track: track, player: session.player)
+      guard let player = session.player else { return }
+      let result = await session.trackSelector.select(track: track, player: player)
       guard !Task.isCancelled else { return }
       switch result {
       case let .play(intent):
-        session.player.execute(intent)
+        session.player?.execute(intent)
         session.nowPlaying.showNowPlaying(popToFront: false)
       case .intercepted:
         session.nowPlaying.showNowPlaying(popToFront: false)

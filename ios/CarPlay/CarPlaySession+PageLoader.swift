@@ -26,10 +26,19 @@ extension CarPlaySession {
         NavigationError(code: .timeout, message: "", statusCode: nil, statusCodeSuccess: nil), path: path, on: template,
       )
     }
+    // Cancelled as soon as the resolve settles: formatting its error is a JS round trip the
+    // timeout must not overwrite.
     defer { watchdog.cancel() }
 
     do {
-      let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
+      let resolved: ResolvedTrack
+      do {
+        resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
+      } catch {
+        watchdog.cancel()
+        throw error
+      }
+      watchdog.cancel()
       guard !Task.isCancelled else { return }
       // An assistant cell is content in itself, even with no rows; a page of empty sections is
       // empty (ADR 0001).

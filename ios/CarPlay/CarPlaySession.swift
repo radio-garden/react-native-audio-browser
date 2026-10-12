@@ -11,7 +11,8 @@ final class CarPlaySession {
 
   let interfaceController: CPInterfaceController
   let audioBrowser: HybridAudioBrowser
-  let player: Player
+  /// Read on each use: a re-setup replaces the bridge's player.
+  var player: Player? { audioBrowser.getPlayer() }
   let trackSelector: TrackSelector
   let imageLoader: CarPlayImageLoader
   let listItemFactory: CarPlayListItemFactory
@@ -19,6 +20,7 @@ final class CarPlaySession {
 
   private var subscriptions: [Subscription] = []
   private var tasks: [UUID: Task<Void, Never>] = [:]
+  private var ended = false
 
   /// Paths whose pushed template has not appeared yet; guards a double tap, since
   /// `topTemplate` only shows a push once it lands.
@@ -45,25 +47,23 @@ final class CarPlaySession {
     audioBrowser.browserManager.config
   }
 
-  init(interfaceController: CPInterfaceController, audioBrowser: HybridAudioBrowser, player: Player) {
+  init(interfaceController: CPInterfaceController, audioBrowser: HybridAudioBrowser) {
     self.interfaceController = interfaceController
     self.audioBrowser = audioBrowser
-    self.player = player
     trackSelector = TrackSelector(browserManager: audioBrowser.browserManager)
     imageLoader = CarPlayImageLoader(
       carTraitCollection: interfaceController.carTraitCollection,
       browserManager: audioBrowser.browserManager,
     )
     listItemFactory = CarPlayListItemFactory(
-      isActiveTrack: { [weak player] identity in
-        identity != nil && player?.currentTrack?.identity == identity
+      isActiveTrack: { [weak audioBrowser] identity in
+        identity != nil && audioBrowser?.getPlayer()?.currentTrack?.identity == identity
       },
     )
     listItemFactory.imageLoader = imageLoader
     nowPlaying = CarPlayNowPlayingManager(
       interfaceController: interfaceController,
       audioBrowser: audioBrowser,
-      player: player,
       listItem: { [weak self] track, handler in
         self?.listItemFactory.createListItem(for: track, handler: handler) ?? CPListItem(text: track.title, detailText: nil)
       },
@@ -99,6 +99,7 @@ final class CarPlaySession {
   }
 
   func end() {
+    ended = true
     for task in tasks.values {
       task.cancel()
     }
@@ -109,6 +110,8 @@ final class CarPlaySession {
 
   /// Runs `work` as a task this session owns, cancelled by `end()`.
   func spawn(_ work: @escaping @MainActor (CarPlaySession) async -> Void) {
+    // A handler queued before `end()` can still call in; the next run owns the screen.
+    guard !ended else { return }
     let id = UUID()
     tasks[id] = Task { [weak self] in
       guard let self else { return }
@@ -173,7 +176,7 @@ final class CarPlaySession {
       for section in template.sections {
         for case let item as CPListItem in section.items {
           guard let identity = item.carPlayItemInfo?.identity else { continue }
-          let isPlaying = player.currentTrack?.identity == identity
+          let isPlaying = player?.currentTrack?.identity == identity
           if item.isPlaying != isPlaying {
             item.isPlaying = isPlaying
             changed = true

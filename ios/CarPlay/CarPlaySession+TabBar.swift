@@ -10,8 +10,6 @@ extension CarPlaySession {
 
   func buildInitialInterface() async {
     let build = beginRootBuild()
-    isBuildingInitialInterface = true
-    defer { isBuildingInitialInterface = false }
     if let tabs = audioBrowser.browserManager.tabs, !tabs.isEmpty {
       await showTabBar(tabs)
       return
@@ -21,7 +19,12 @@ extension CarPlaySession {
       interfaceController.safeSetRoot(CPListTemplate.loading(title: nil, path: nil, loadingTitle: loadingTitle), animated: false)
     }
     do {
+      // Only the query's own tabs event is this build's to skip: a change that arrives while the
+      // tab bar loads its first page must still reach `tabsChanged`.
+      isBuildingInitialInterface = true
+      defer { isBuildingInitialInterface = false }
       let tabs = try await audioBrowser.browserManager.queryTabs()
+      isBuildingInitialInterface = false
       guard isCurrent(build) else { return }
       await showTabBar(tabs)
     } catch {

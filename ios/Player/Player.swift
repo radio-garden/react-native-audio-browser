@@ -547,14 +547,6 @@ final class Player {
     Playback(state: state, error: errorStatus.nitroError)
   }
 
-  func getRepeatMode() -> RepeatMode {
-    repeatMode
-  }
-
-  func setRepeatMode(_ mode: RepeatMode) {
-    repeatMode = mode
-  }
-
   /// Handles the `playWhenReady` setting while executing a given action.
   func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     if playWhenReady == false { setPlayWhenReady(false) }

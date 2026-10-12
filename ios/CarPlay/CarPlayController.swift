@@ -51,14 +51,18 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Before the config loads, the app's loading title isn't known: the spinner only.
-    interfaceController.safeSetRoot(CPListTemplate.loading(title: nil, path: nil, loadingTitle: nil), animated: false)
+    let browserManager = HybridAudioBrowser.shared?.browserManager
+    let loadingTitle = browserManager?.isConfigured == true ? browserManager?.config.carPlayLoadingTitle : nil
+    interfaceController.safeSetRoot(
+      CPListTemplate.loading(title: nil, path: nil, loadingTitle: loadingTitle), animated: false,
+    )
 
     run = Task { [weak self] in
-      guard let (browser, player) = await playerAndConfiguredBrowser.wait(), !Task.isCancelled,
+      guard let (browser, _) = await playerAndConfiguredBrowser.wait(), !Task.isCancelled,
             let self
       else { return }
       let session = CarPlaySession(
-        interfaceController: interfaceController, audioBrowser: browser, player: player,
+        interfaceController: interfaceController, audioBrowser: browser,
       )
       self.session = session
       session.start()

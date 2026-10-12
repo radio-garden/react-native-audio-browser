@@ -10,7 +10,8 @@ final class CarPlayNowPlayingManager {
 
   private let interfaceController: CPInterfaceController
   private let audioBrowser: HybridAudioBrowser
-  private let player: Player
+  /// Read on each use: a re-setup replaces the bridge's player.
+  private var player: Player? { audioBrowser.getPlayer() }
   private let listItem: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
   /// Pushes a browse destination: the album line's.
   private let navigate: (_ path: String, _ title: String) -> Void
@@ -63,13 +64,11 @@ final class CarPlayNowPlayingManager {
   init(
     interfaceController: CPInterfaceController,
     audioBrowser: HybridAudioBrowser,
-    player: Player,
     listItem: @escaping (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem,
     navigate: @escaping (_ path: String, _ title: String) -> Void,
   ) {
     self.interfaceController = interfaceController
     self.audioBrowser = audioBrowser
-    self.player = player
     self.listItem = listItem
     self.navigate = navigate
   }
@@ -145,8 +144,8 @@ final class CarPlayNowPlayingManager {
     let row = BuiltButtonRow(
       types: buttons,
       favorited: buttons.contains(.favorite) ? audioBrowser.isActiveTrackFavorited() : nil,
-      shuffleSelected: buttons.contains(.shuffle) ? player.shuffleEnabled : nil,
-      repeatSelected: buttons.contains(.repeat) ? player.getRepeatMode() != .off : nil,
+      shuffleSelected: buttons.contains(.shuffle) ? player?.shuffleEnabled ?? false : nil,
+      repeatSelected: buttons.contains(.repeat) ? (player?.repeatMode ?? .off) != .off : nil,
     )
     guard row != builtRow else { return }
     builtRow = row
@@ -228,7 +227,7 @@ final class CarPlayNowPlayingManager {
 
     // The just-tapped track wins while its load is in flight: currentTrack
     // still points at the previous track (or nil) at push time.
-    guard let track = pendingAlbumArtistTrack ?? player.currentTrack else {
+    guard let track = pendingAlbumArtistTrack ?? player?.currentTrack else {
       logger.debug("AlbumArtist: no current track → disabled")
       setAlbumArtistDestination(nil)
       return
@@ -288,13 +287,15 @@ final class CarPlayNowPlayingManager {
   }
 
   private func handleShuffleButtonTapped() {
+    guard let player else { return }
     let newEnabled = !player.shuffleEnabled
     player.shuffleEnabled = newEnabled
     logger.info("CarPlay shuffle mode changed: \(newEnabled)")
   }
 
   private func handleRepeatButtonTapped() {
-    let currentMode = player.getRepeatMode()
+    guard let player else { return }
+    let currentMode = player.repeatMode
     let newMode: RepeatMode = switch currentMode {
     case .off:
       .track
@@ -304,7 +305,7 @@ final class CarPlayNowPlayingManager {
       .off
     }
 
-    player.setRepeatMode(newMode)
+    player.repeatMode = newMode
     logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
   }
 
@@ -319,7 +320,7 @@ final class CarPlayNowPlayingManager {
 
   private func handlePlaybackRateButtonTapped() {
     let rates = audioBrowser.playbackRates
-    guard !rates.isEmpty else { return }
+    guard !rates.isEmpty, let player else { return }
 
     let currentRate = Double(player.rate)
     let nextRate: Double
@@ -339,7 +340,7 @@ final class CarPlayNowPlayingManager {
 
   fileprivate func handleAlbumArtistButtonTapped() {
     guard let destination = albumArtistDestination else { return }
-    let track = pendingAlbumArtistTrack ?? player.currentTrack
+    let track = pendingAlbumArtistTrack ?? player?.currentTrack
     // The album line is what was tapped, so its text is the natural title for
     // the pushed destination (artist may be unset, or the live song).
     let title = track?.album ?? track?.artist ?? track?.title ?? ""
@@ -348,11 +349,11 @@ final class CarPlayNowPlayingManager {
   }
 
   private func updateUpNextButton() {
-    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.carPlayUpNextButton && player.tracks.count > 1
+    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.carPlayUpNextButton && (player?.tracks.count ?? 0) > 1
   }
 
   fileprivate func handleUpNextButtonTapped() {
-    let tracks = player.tracks
+    let tracks = player?.tracks ?? []
 
     guard !tracks.isEmpty else {
       logger.debug("No tracks in queue for Up Next")
@@ -386,7 +387,7 @@ final class CarPlayNowPlayingManager {
       listItem(track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
         do {
-          try self?.player.skipTo(index, playWhenReady: true)
+          try self?.player?.skipTo(index, playWhenReady: true)
         } catch {
           self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
         }
