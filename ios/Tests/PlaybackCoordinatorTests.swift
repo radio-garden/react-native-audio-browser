@@ -1132,9 +1132,8 @@ struct InterruptionTests {
 
 // MARK: - Skip availability freshness
 
-/// tracks.didSet pushes availability mid-mutation, while currentIndex and the
-/// shuffle order are still stale — the coordinator must re-push after the
-/// mutation settles or the lock-screen buttons keep the wrong state.
+/// A mutation pushes next/previous availability once, after currentIndex and the
+/// shuffle order have settled; an earlier push leaves the lock-screen buttons wrong.
 @Suite("PlaybackCoordinator - skip availability after mutations")
 struct MutationSkipAvailabilityTests {
   @Test @MainActor
@@ -1149,6 +1148,7 @@ struct MutationSkipAvailabilityTests {
     try c.move(fromIndex: 0, toIndex: 1)
 
     // Current track is now last: nothing to skip to.
+    #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
   }
 
@@ -1167,6 +1167,7 @@ struct MutationSkipAvailabilityTests {
     try c.remove(0)
 
     // Current settled at index 1 of 2: previous available, next not.
+    #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
   }
