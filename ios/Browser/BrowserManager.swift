@@ -71,11 +71,8 @@ final class BrowserManager {
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
-  // Resolver caching: request/browse thunks resolve once per content generation.
-  private var layerGeneration = 0
-  private var resolvedLayerGeneration = -1
-  var resolvedRequestLayer: TransformableRequestConfig?
-  private var resolvedBrowseLayer: TransformableRequestConfig?
+  // The request/browse thunks resolve once per content generation.
+  private let layers = GenerationMemo<ResolvedLayers>()
 
   // Set of favorited track identities (id when non-blank, else src).
   private var favoriteIds: Set<String> = []
@@ -125,8 +122,7 @@ final class BrowserManager {
   var config: BrowserConfig = .init() {
     didSet {
       isConfigured = true
-      // New config means the cached resolver results are stale.
-      layerGeneration += 1
+      layers.invalidate()
       onConfigChanged?(config)
     }
   }
@@ -273,7 +269,7 @@ final class BrowserManager {
   /// Runs from `invalidateAllContent`, so re-resolve the layer thunks too.
   func clearContentCache() {
     contentCache.clear()
-    layerGeneration += 1
+    layers.invalidate()
     // The search slot is content too: a locale switch or a re-auth changes
     // titles, src, artwork and availability, and nothing else ever evicts it,
     // so a repeated query returned pre-invalidation results forever.
@@ -417,13 +413,11 @@ final class BrowserManager {
     params: [String: String],
     initialQuery: [String: String]? = nil,
   ) async throws -> HttpClient.HttpRequest {
-    try await ensureLayersResolved()
-
     var merged = RequestConfig(
       method: nil, path: path, baseUrl: nil, headers: nil,
       query: nil, body: nil, contentType: nil, userAgent: nil,
     )
-    merged = try await applyLayer(resolvedRequestLayer, to: merged, params: params)
+    merged = try await applyLayer(resolvedLayers().request, to: merged, params: params)
     if let initialQuery, !initialQuery.isEmpty {
       merged = merged.copying(query: mergeDicts(merged.query, initialQuery))
     }
@@ -449,16 +443,14 @@ final class BrowserManager {
   }
 
   /// Resolves a browse route: a page object (`{title,path,children:[…]}`).
-  /// The browse kind layer is the cached resolved layer (`resolvedBrowseLayer`),
-  /// populated by `ensureLayersResolved()` inside `buildApiRequest`.
+  /// The browse kind layer is the resolved `browse` layer.
   private func resolveFromConfig(
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
   ) async throws -> ResolvedTrack {
-    try await ensureLayersResolved()
     let request = try await buildApiRequest(
-      kind: resolvedBrowseLayer, routeConfig, path: path, params: params,
+      kind: resolvedLayers().browse, routeConfig, path: path, params: params,
     )
 
     logger.debug("Resolving content from API")
@@ -518,31 +510,25 @@ final class BrowserManager {
 
   // MARK: - Layer Resolvers
 
-  /// Resolve one layer: invoke its resolver if present, else return the static
-  /// layer config unchanged. The resolver is Promise-only (the TS layer wraps a
-  /// sync-or-async thunk in Promise.resolve), so its result is the JS promise
-  /// behind the bridge promise — a double await.
-  private func resolveLayer(
-    config staticConfig: TransformableRequestConfig?,
-    resolver: (() -> Promise<Promise<TransformableRequestConfig>>)?,
-  ) async throws -> TransformableRequestConfig? {
-    guard let resolver else { return staticConfig }
-    return try await resolver().await().await()
+  struct ResolvedLayers {
+    let request: TransformableRequestConfig?
+    let browse: TransformableRequestConfig?
   }
 
-  /// Ensure request/browse resolvers are resolved for the current generation,
-  /// caching the results. Re-resolves after a generation bump (config change /
-  /// invalidateAllContent). Idempotent within a generation.
-  func ensureLayersResolved() async throws {
-    guard resolvedLayerGeneration != layerGeneration else { return }
-    let generation = layerGeneration
-    let req = try await resolveLayer(config: config.request, resolver: config.requestResolver)
-    let brw = try await resolveLayer(config: config.browse, resolver: config.browseResolver)
-    // Only commit if still current (a newer generation may have started during await).
-    guard generation == layerGeneration else { return }
-    resolvedRequestLayer = req
-    resolvedBrowseLayer = brw
-    resolvedLayerGeneration = generation
+  /// The request and browse layers of the current config: each resolver's result, or the
+  /// static layer when it has none. Both resolvers run at once, and a config change or
+  /// `clearContentCache` while they run resolves them again.
+  func resolvedLayers() async throws -> ResolvedLayers {
+    try await layers.value { [config] in
+      // The resolver is Promise-only (the TS layer wraps a sync-or-async thunk in
+      // Promise.resolve), so its result is the JS promise behind the bridge promise.
+      let request = config.requestResolver?()
+      let browse = config.browseResolver?()
+      return try await ResolvedLayers(
+        request: request?.await().await() ?? config.request,
+        browse: browse?.await().await() ?? config.browse,
+      )
+    }
   }
 
   // MARK: - Child Transformation

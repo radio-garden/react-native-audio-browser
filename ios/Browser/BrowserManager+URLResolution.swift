@@ -23,9 +23,8 @@ extension BrowserManager {
     // `media` config is present, so a relative src still gets baseUrl.
     let baseRequest: RequestConfig
     do {
-      try await ensureLayersResolved()
       baseRequest = try await applyLayer(
-        resolvedRequestLayer,
+        resolvedLayers().request,
         to: RequestConfig(
           method: nil, path: originalUrl, baseUrl: nil, headers: nil,
           query: nil, body: nil, contentType: nil, userAgent: nil,
@@ -176,9 +175,8 @@ extension BrowserManager {
       // Base config via the shared `request` layer (its transform runs for
       // artwork too), with track.artwork as the default path. Artwork then
       // shapes further via its own resolve / static fields / transform.
-      try await ensureLayersResolved()
       var mergedConfig = try await applyLayer(
-        resolvedRequestLayer,
+        resolvedLayers().request,
         to: RequestConfig(
           method: nil, path: track.artwork?.url, baseUrl: nil, headers: nil,
           query: nil, body: nil, contentType: nil, userAgent: nil,
