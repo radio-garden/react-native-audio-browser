@@ -61,13 +61,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browserManager = BrowserManager()
   let browseGate = BrowseGate()
   private let trackSelector: TrackSelector
-  private var volumeObservation: NSKeyValueObservation?
-  private var routeChangeObserver: NSObjectProtocol?
-  private var interruptionObserver: NSObjectProtocol?
-  private var mediaServicesResetObserver: NSObjectProtocol?
-  /// Re-applies our resolved audio-session category. Captured at setup so a
-  /// media-services reset (which clears the category) can restore it.
-  @MainActor private var applyAudioSessionCategory: () -> Void = {}
+  @MainActor private(set) lazy var audioSession = AudioSessionController()
   @MainActor private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
   @MainActor private var nowPlayingMetadataEnabled = true
@@ -280,11 +274,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onEqualizerChanged: (EqualizerSettings) -> Void = { _ in }
   public var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Void = { _ in }
   public var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Void = { _ in }
-  public var onSystemVolumeChanged: (Double) -> Void = { _ in } {
-    didSet {
-      setupVolumeObserver()
-    }
-  }
+  public var onSystemVolumeChanged: (Double) -> Void = { _ in }
 
   public var onOutputChanged: (Output) -> Void = { _ in }
 
@@ -303,6 +293,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared?.player?.destroy()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
+      audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
+      audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
       browseGate.resolve = { [weak self] request in
         guard let self else { throw CancellationError() }
         return try await resolveGate(request).await().await()
@@ -350,19 +342,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   deinit {
-    // Block-based notification observers are retained by the center until an
-    // explicit removeObserver — observer death isn't detected — so without this
-    // every JS reload strands another token + closure. They capture `self`
-    // weakly, so a stranded one no-ops rather than misbehaving; what accumulates
-    // is the tokens and a wasted main-queue dispatch per interruption / route
-    // change / media-services reset. (`volumeObservation` needs no counterpart:
-    // NSKeyValueObservation invalidates itself when this instance releases it.)
-    for observer in [interruptionObserver, routeChangeObserver, mediaServicesResetObserver]
-      .compactMap(\.self)
-    {
-      NotificationCenter.default.removeObserver(observer)
-    }
-
     // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
     let player = self.player
     if Thread.isMainThread {
@@ -579,33 +558,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
-      // Configure the audio session from the iOS setup options (category, mode, route policy, and
-      // options like `allowBluetooth` / `allowAirPlay`), but do NOT activate it here. Activating a
-      // non-mixable `.playback` session interrupts other apps' audio — so activating at setup
-      // pauses whatever the user is listening to (Safari, Spotify, a podcast) the instant our app
-      // launches, before they play anything. Setting the category is silent; only activation
-      // interrupts. The session is activated lazily when playback actually starts producing output
-      // (see `playerDidChangePlayingState`) and re-activated on interruption-end. Best-effort: a
-      // category-config failure must never brick setup.
-      let session = AVAudioSession.sharedInstance()
-      let cfg: (
-        category: AVAudioSession.Category,
-        mode: AVAudioSession.Mode,
-        policy: AVAudioSession.RouteSharingPolicy,
-        options: AVAudioSession.CategoryOptions,
-      ) = options.ios?.resolveAudioSessionConfig()
-        ?? (category: .playback, mode: .default, policy: .default, options: [])
-      // Capture category application once so a media-services reset (which
-      // clears the category) can restore the exact same config later.
-      let applyCategory: () -> Void = {
-        try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
-      }
-      applyCategory()
-
       // Create player and configure on main actor
       await MainActor.run { [weak self] in
         guard let self else { return }
-        self.applyAudioSessionCategory = applyCategory
+        // Set the category now, but activate only when playback produces output.
+        self.audioSession.configure(options.ios)
 
         // A re-setup REPLACES the player, so the outgoing one has to be torn down
         // and un-published first. `TrackPlayer` has no deinit: dropping the
@@ -615,6 +572,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
+        audioSession.player = player
 
         // Apply buffer duration from options (in ms)
         if let buffer = options.ios?.buffer {
@@ -645,17 +603,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
             if isOnline { self.player?.handleNetworkRestored() }
           }
         }
-
-        // Observe audio-session interruptions so another app taking over audio
-        // (or a phone call) reflects as a real pause rather than a stuck state.
-        setupInterruptionObserver()
-
-        // Observe route changes: pause when the output disappears, and report the new output.
-        setupRouteChangeObserver()
-
-        // Observe media-server resets so a long-running stream recovers instead
-        // of going permanently silent.
-        setupMediaServicesResetObserver()
 
         // Configure media URL resolver
         player?.mediaLoader.mediaUrlResolver = { [weak self] src, track in
@@ -1094,9 +1041,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor private var nowPlayingFlash: NowPlayingUpdate?
   @MainActor private var nowPlayingFlashRevert: DispatchWorkItem?
 
-  /// Pending debounced audio-session release (see `playerShouldReleaseSession`).
-  @MainActor private var sessionReleaseWork: DispatchWorkItem?
-
   public func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
     onMainActor {
       nowPlayingFlashRevert?.cancel()
@@ -1200,20 +1144,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - System Volume
 
-  /// Sets up KVO observer for system volume changes
-  private func setupVolumeObserver() {
-    // Remove existing observation if any
-    volumeObservation?.invalidate()
-
-    let audioSession = AVAudioSession.sharedInstance()
-    volumeObservation = audioSession.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
-      guard let newVolume = change.newValue else { return }
-      self?.onSystemVolumeChanged(Double(newVolume))
-    }
-  }
-
   public func getSystemVolume() throws -> Double {
-    Double(AVAudioSession.sharedInstance().outputVolume)
+    onMainActor { audioSession.volume }
   }
 
   public func setSystemVolume(volume _: Double) throws {
@@ -1224,147 +1156,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - External Audio Output
 
-  /// Observes audio-session interruptions (phone calls, or another app such as
-  /// Music/Spotify starting playback). iOS pauses our AVPlayer underneath us but
-  /// doesn't update our playback state, so without this the UI stays stuck on
-  /// "playing". On `.began` we reflect a real pause; on `.ended` we resume if we
-  /// were playing and the system says we should.
-  private func setupInterruptionObserver() {
-    if let observer = interruptionObserver {
-      NotificationCenter.default.removeObserver(observer)
-    }
-
-    interruptionObserver = NotificationCenter.default.addObserver(
-      forName: AVAudioSession.interruptionNotification,
-      object: nil,
-      queue: .main,
-    ) { [weak self] notification in
-      self?.handleAudioSessionInterruption(notification)
-    }
-  }
-
-  private func handleAudioSessionInterruption(_ notification: Notification) {
-    guard
-      let info = notification.userInfo,
-      let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
-      let type = AVAudioSession.InterruptionType(rawValue: typeValue)
-    else { return }
-
-    switch type {
-    case .began:
-      // iOS 17+ fires a `.began` (with no matching `.ended`) when an output
-      // route such as headphones disappears. Reflecting a pause here would
-      // strand resume-intent state with nothing to clear it, and the
-      // route-change observer already handles the output change — so ignore it.
-      if #available(iOS 17.0, *),
-         let reasonValue = info[AVAudioSessionInterruptionReasonKey] as? UInt,
-         AVAudioSession.InterruptionReason(rawValue: reasonValue) == .routeDisconnected
-      {
-        return
-      }
-      onMainActor { player?.handleInterruptionBegan() }
-    case .ended:
-      let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
-        .map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) }
-        ?? false
-      onMainActor {
-        // Reactivate the possibly-deactivated session before resuming — but
-        // only when a resume will happen: activating while staying paused
-        // grabs a non-mixable session with nothing to release it.
-        if shouldResume, player?.willResumeAfterInterruption == true {
-          try? AVAudioSession.sharedInstance().setActive(true)
-        }
-        player?.handleInterruptionEnded(shouldResume: shouldResume)
-      }
-    @unknown default:
-      break
-    }
-  }
-
-  /// Sets up observer for audio route changes
-  private func setupRouteChangeObserver() {
-    if let observer = routeChangeObserver {
-      NotificationCenter.default.removeObserver(observer)
-    }
-
-    routeChangeObserver = NotificationCenter.default.addObserver(
-      forName: AVAudioSession.routeChangeNotification,
-      object: nil,
-      queue: .main,
-    ) { [weak self] notification in
-      guard let self else { return }
-      // The previous output disappeared (headphones unplugged, a Bluetooth
-      // speaker powered off). Pause rather than abruptly resume out of the
-      // built-in speaker — the platform convention every media app follows.
-      // A deliberate pause (clears play intent), not an interruption: the user
-      // restarts playback themselves once they want it.
-      if let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-         AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable
-      {
-        // Also cancels a pending interruption auto-resume: unplugging during
-        // a call must not blast the built-in speaker when the call ends.
-        self.onMainActor { self.player?.handleRouteDisconnected() }
-      }
-      if let output = self.getCurrentOutput() {
-        self.onOutputChanged(output)
-      }
-    }
-  }
-
-  /// Observes audio-server (`mediaserverd`) resets. When it fires, the session
-  /// category is cleared and every AVPlayer/session handle is invalid — a
-  /// long-running stream would otherwise go permanently silent until the app
-  /// restarts.
-  private func setupMediaServicesResetObserver() {
-    if let observer = mediaServicesResetObserver {
-      NotificationCenter.default.removeObserver(observer)
-    }
-    mediaServicesResetObserver = NotificationCenter.default.addObserver(
-      forName: AVAudioSession.mediaServicesWereResetNotification,
-      object: nil,
-      queue: .main,
-    ) { [weak self] _ in
-      guard let self else { return }
-      // Re-apply our category (the reset cleared it), then have the player
-      // recreate itself and reconnect the current stream.
-      self.onMainActor {
-        self.applyAudioSessionCategory()
-        self.player?.handleMediaServicesReset()
-      }
-    }
-  }
-
-  /// Gets the current audio output info
-  private func getCurrentOutput() -> Output? {
-    let session = AVAudioSession.sharedInstance()
-    guard let output = session.currentRoute.outputs.first else { return nil }
-
-    let (outputType, external): (OutputType, Bool) = switch output.portType {
-    case .builtInSpeaker:
-      (.speaker, false)
-    case .builtInReceiver:
-      (.receiver, false)
-    case .airPlay:
-      (.airplay, true)
-    case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
-      (.bluetooth, true)
-    case .headphones:
-      (.headphones, true)
-    case .carAudio:
-      (.car, true)
-    case .HDMI:
-      (.hdmi, true)
-    case .usbAudio:
-      (.usb, true)
-    default:
-      (.other, true)
-    }
-
-    return Output(type: outputType, name: output.portName, external: external)
-  }
-
   public func getOutput() throws -> Output? {
-    getCurrentOutput()
+    onMainActor { audioSession.currentOutput }
   }
 
   public func supportsOutputSwitcher() throws -> Bool {
@@ -1514,7 +1307,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
     // Intent to play again is the earliest cancel signal for a pending session release.
-    if playWhenReady { cancelSessionRelease() }
+    if playWhenReady { audioSession.cancelRelease() }
     onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady: playWhenReady))
   }
 
@@ -1527,14 +1320,12 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     // can be set at setup (before any track) while output only begins here. Idempotent:
     // `setActive(true)` is a no-op when the session is already active.
     if state.playing || state.buffering {
-      try? AVAudioSession.sharedInstance().setActive(true)
+      audioSession.activate()
       // The now-playing session's activation request at link time predates this
       // (the audio session was still inactive, and the system may have declined);
       // re-request now so the surface can appear even if playback never produces
       // audio (first-ever load failing on a dead stream).
       player?.nowPlayingInfoController.reactivateSessionIfNeeded()
-      // Output resumed — cancel any pending release armed by an earlier stop.
-      cancelSessionRelease()
     }
     // Re-render so the formatter reacts to a stall starting or recovering (`stalled`) — a buffering
     // flag change that may not transition the coordinator state.
@@ -1542,27 +1333,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerShouldReleaseSession() {
-    // Release the audio session so other apps' audio (Spotify, a podcast) can resume — debounced,
-    // because iOS dislikes deactivating while our audio is still trailing off, and a quick
-    // pause→resume shouldn't thrash the session. The coordinator only requests this on a genuine
-    // stop (not an interruption, not mid-retry); a re-activation cancels it (see
-    // `playerDidChangePlayWhenReady` and the activation above). Mirrors the now-playing flash timer.
-    sessionReleaseWork?.cancel()
-    let release = DispatchWorkItem { [weak self] in
-      guard let self, self.player?.playWhenReady == false else { return }
-      self.sessionReleaseWork = nil
-      // `.notifyOthersOnDeactivation` signals other apps they may resume; without it the session
-      // is released but nobody is told, so the user's audio would not come back.
-      try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-    }
-    sessionReleaseWork = release
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
-  }
-
-  @MainActor
-  private func cancelSessionRelease() {
-    sessionReleaseWork?.cancel()
-    sessionReleaseWork = nil
+    audioSession.scheduleRelease()
   }
 
   public func playerDidEndQueue(_ event: PlaybackQueueEndedEvent) {

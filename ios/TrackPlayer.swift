@@ -1078,3 +1078,5 @@ extension TrackPlayer: MediaLoaderDelegate {
     callbacks?.playerDidReceiveTimedMetadata(groups)
   }
 }
+
+extension TrackPlayer: AudioSessionPlayer {}
