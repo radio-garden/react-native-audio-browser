@@ -10,8 +10,8 @@ import NitroModules
 /// All callbacks are called from the main actor since TrackPlayer is @MainActor.
 ///
 /// Extends PlaybackCoordinatorCallbacks for the state machine / coordinator callbacks
-/// and RemoteCommandCallbacks for the remote-command events, then adds the metadata,
-/// seek and duration callbacks that are TrackPlayer-specific.
+/// and RemoteCommandCallbacks for the remote-command events, then adds the metadata
+/// and seek callbacks that are TrackPlayer-specific.
 @MainActor
 protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallbacks {
   // MARK: - Metadata Events
@@ -29,7 +29,4 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallba
 
   /// Called when a seek operation completes.
   func playerDidCompleteSeek(position: Double, didFinish: Bool)
-
-  /// Called when the duration is updated.
-  func playerDidUpdateDuration(_ duration: Double)
 }

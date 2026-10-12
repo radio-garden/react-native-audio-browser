@@ -82,9 +82,6 @@ class TrackPlayer {
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
-    onDurationUpdate: { [weak self] duration in
-      self?.callbacks?.playerDidUpdateDuration(duration)
-    },
     onPlaybackLikelyToKeepUpUpdate: { [weak self] isLikely in
       self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
     },

@@ -1778,10 +1778,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     // Not exposed to JS currently
   }
 
-  public func playerDidUpdateDuration(_: Double) {
-    // Not exposed to JS currently
-  }
-
   public func remotePlay() {
     if let handler = handleRemotePlay {
       handler()
