@@ -17,7 +17,7 @@ let package = Package(
         "Browser/JsonModels.swift",
         "Browser/StyleResolver.swift",
         "Browser/InertStyleDiagnostic.swift",
-        "Browser/SectionPresentation.swift",
+        "CarPlay/SectionPresentation.swift",
         "Browser/SimpleRouter.swift",
         "Browser/TrackIdTemplate.swift",
         "Player/QueueManager.swift",
