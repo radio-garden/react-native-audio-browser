@@ -45,9 +45,8 @@ public extension HybridAudioBrowser {
         }
 
         // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
-        // A terminal error resolves the playback state to *paused*
-        // (Player.applySideEffects), the now-playing info is retained (never cleared
-        // on error), and next/previous stay enabled (gated on queue position, not state). So the
+        // A terminal error keeps the now-playing info (never cleared on error), and next/previous
+        // stay enabled (gated on queue position, not state). So the
         // session stays controllable through errors by default — the behavior Android achieves via
         // InterceptingPlayer is already the iOS norm.
 

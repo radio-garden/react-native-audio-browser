@@ -398,6 +398,9 @@ final class Player {
       // interruption auto-resume into silence. The setter also requests the
       // session release.
       setPlayWhenReady(false)
+      // The intent may already be off (an end-of-track sleep timer), so the setter saved nothing:
+      // the snapshot must still record the end, which resumes from 0.
+      persistence.save()
     default: break
     }
 
@@ -707,8 +710,9 @@ final class Player {
     if errorStatus != .none {
       errorStatus = .none
       // Already .loading, the .trackLoading transition below won't fire: publish the clear here,
-      // or the old track's error lingers over the new one's spinner.
-      publish()
+      // or the old track's error lingers over the new one's spinner. In any other state the
+      // transition publishes it, with the state it belongs to.
+      if state == .loading { publish() }
     }
 
     let lastPosition = engine.currentTime

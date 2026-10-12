@@ -225,3 +225,32 @@ struct PlayerRecoveringTests {
     #expect(!player.isStalled)
   }
 }
+
+@Suite("Player - review regressions", .serialized)
+@MainActor
+struct PlayerReviewRegressionTests {
+  /// An end-of-track sleep timer drops the intent while still .playing; the snapshot must still
+  /// be rewritten on entering .ended, or a cold resume seeks to the end and re-ends.
+  @Test func endingWithTheIntentAlreadyOffSavesPositionZero() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    player.pause()
+    player.transition(.trackEndedNaturally)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 0)
+  }
+
+  /// Leaving an errored track publishes the new track's loading state once, never an error
+  /// state without its error.
+  @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {
+    let (player, engine, callbacks) = makeLoading()
+    engine.emit(.unplayable)
+    callbacks.playbackChanges.removeAll()
+    callbacks.errorEvents.removeAll()
+    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    #expect(!callbacks.playbackChanges.contains { $0.state == .error })
+    #expect(callbacks.errorEvents.count == 1)
+  }
+}
