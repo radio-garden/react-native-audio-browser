@@ -83,10 +83,14 @@ This codebase is adapted from react-native-track-player. Key differences:
 
 ```
 ios/
-├── HybridAudioBrowser.swift          # Main Nitro entry point
-│                                     # Implements HybridAudioBrowserSpec & TrackPlayerCallbacks
-│                                     # ~50 callback properties + ~12 Emitters (browser, player, remote)
+├── HybridAudioBrowser.swift          # Main Nitro entry point: stored state, init, onMainActor
+│                                     # ~50 callback properties + Emitters (browser, player, remote)
 │                                     # Static `shared` reached by Siri intent handlers
+├── HybridAudioBrowser+Browser.swift  # Spec: navigation, search, gate, car connection
+├── HybridAudioBrowser+Options.swift  # Spec: setupPlayer, updateOptions
+├── HybridAudioBrowser+Player.swift   # Spec: playback, queue, sleep timer, now playing, output
+├── HybridAudioBrowser+Stubs.swift    # Spec: equalizer and battery (Android-only)
+├── HybridAudioBrowser+TrackPlayerCallbacks.swift  # TrackPlayer events → JS; remote dispatch
 ├── TrackPlayer.swift                 # AVPlayer bridge
 │                                     # Owns PlaybackCoordinator, observers, MediaLoader,
 │                                     #   NowPlayingUpdater, RemoteCommandController,
@@ -102,7 +106,9 @@ ios/
 │                                     # Bridge between TrackPlayer events and HybridAudioBrowser
 ├── Browser/
 │   ├── BrowserManager.swift          # @MainActor navigation, routing, caching, favorites
-│   ├── BrowserManager+URLResolution.swift  # resolveMediaUrl / resolveArtworkUrl (layered transforms)
+│   ├── BrowserManager+URLResolution.swift  # resolveMediaUrl / resolveArtworkUrl (layered transforms); MediaResolving
+│   ├── BrowseGate.swift              # @MainActor Browse Gate: mode, per-request decide, changed emitter
+│   ├── NavigationErrorState.swift    # @MainActor navigation error + display; a newer report wins
 │   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards)
 │   ├── BrowserConfig.swift           # Config wrapper + JS handlers (track load, nav error, album url)
 │   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding)
@@ -135,8 +141,10 @@ ios/
 │   ├── ShuffleOrder.swift            # Fisher-Yates shuffle ordering (value type)
 │   ├── MediaLoader.swift             # @MainActor URL resolution, AVURLAsset, metadata/playable loading
 │   ├── MediaLoaderDelegate.swift     # @MainActor protocol: item ready, errors, metadata callbacks
-│   ├── NowPlayingUpdater.swift       # @MainActor now-playing metadata + artwork (Kingfisher)
-│   │                                 # Updates NowPlayingInfoController (dynamics auto-published)
+│   ├── NowPlayingUpdater.swift       # @MainActor now-playing state (override, flash, formatter,
+│   │                                 #   timed metadata), lines + artwork; reads NowPlayingSource
+│   ├── AudioSessionController.swift  # @MainActor AVAudioSession: category, activate, release,
+│   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
 │   ├── LoadSeekCoordinator.swift     # Deferred seek state machine (idle/pendingSeek/seekInFlight)
 │   ├── SeekCompletionHandler.swift   # @MainActor protocol: handleSeekCompleted(to:didFinish:)
 │   ├── PlayingStateManager.swift     # Computes playing/buffering state
@@ -147,13 +155,11 @@ ios/
 │   ├── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
 │   └── MediaIntentCriteria.swift     # Siri INPlayMediaIntent → search criteria mapping
 ├── NowPlayingInfo/
-│   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo metadata
-│   ├── NowPlayingInfoKeyValue.swift  # Key-value protocol
-│   ├── MediaItemProperty.swift       # Track metadata properties
-│   └── NowPlayingInfoProperty.swift  # Playback state properties
+│   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo fields by key
+│   └── SilentAudioPrimer.swift       # Renders silence so iOS elects the app (ADR 0005)
 ├── RemoteCommand/
-│   └── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter handlers
-│                                     # Lazy handler properties; iOS 16+ session command-center switching
+│   └── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter: one handler for every command
+│                                     # Session command-center switching
 ├── CarPlay/
 │   ├── CarPlayController.swift       # @MainActor @objc(RNABCarPlayController)
 │   │                                 # CPTabBar/CPList templates, navigation
@@ -163,7 +169,9 @@ ios/
 │   ├── CarPlayImageLoader.swift      # @MainActor SF Symbols, artwork loading, adaptive tinting
 │   ├── CarPlayListItemFactory.swift  # @MainActor CPListItem / CPListSection builder
 │   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing, buttons, Up Next, NowPlayingObserver
-│   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent → handlePlayMediaIntent
+│   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent → MediaIntentPlayback
+│   ├── MediaIntentPlayback.swift     # Voice play funnel (ADR 0002): resume or search → queue → play
+│   ├── HybridAudioBrowser+IntentFavorite.swift  # favoriteCurrentTrack for the Siri handlers
 │   ├── RNABMediaAddHandler.swift     # Siri INAddMediaIntent → setActiveTrackFavorited(true)
 │   ├── RNABMediaAffinityHandler.swift # Siri INUpdateMediaAffinityIntent → like/dislike favorite
 │   ├── RNABAudioBrowser.h/.m         # ObjC glue: vends Siri intent handlers (handlerForIntent:)

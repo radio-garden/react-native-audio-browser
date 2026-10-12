@@ -196,7 +196,7 @@ CPIL -->|Uses| CPAR
 CPLF -->|weak imageLoader| CPIL
 CPNPM -->|weak audioBrowser| HAB
 CPNPM -->|Templates| CPT
-MIH -->|"handlePlayMediaIntent"| HAB
+MIH -->|"MediaIntentPlayback.play"| HAB
 MAH -->|"setActiveTrackFavorited"| HAB
 MAFH -->|"setActiveTrackFavorited"| HAB
 SK --> MIH
