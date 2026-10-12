@@ -13,7 +13,7 @@ let package = Package(
         "Browser/SectionScope.swift",
         "Browser/SearchDrillIn.swift",
         "Browser/TabBarEntries.swift",
-        "Browser/MediaResolveComposer.swift",
+        "Browser/RequestLayer.swift",
         "Browser/JsonModels.swift",
         "Browser/StyleResolver.swift",
         "Browser/InertStyleDiagnostic.swift",

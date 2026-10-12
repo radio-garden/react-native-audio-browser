@@ -113,7 +113,7 @@ ios/
 │   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards)
 │   ├── BrowserConfig.swift           # Config wrapper + JS handlers (track load, nav error, album url)
 │   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding)
-│   ├── MediaResolveComposer.swift    # Pure URL layer composition (Nitro-free, testable)
+│   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl (tested)
 │   ├── SearchDrillIn.swift           # Browsable-first drill-in for "play X" voice intents
 │   ├── TabBarEntries.swift           # Tab-bar churn suppression (same(old:new:))
 │   └── JsonModels.swift              # JSON Codable models for API responses

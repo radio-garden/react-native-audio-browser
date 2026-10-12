@@ -43,7 +43,7 @@ subgraph Browser["Browser System"]
   BPH["BrowserPathHelper<br/>Contextual URLs, __trackId"]
   BC["BrowserConfig<br/>Config wrapper + JS handlers"]
   LRU["LRUCache<br/>contentCache 20<br/>main actor"]
-  MRC["MediaResolveComposer<br/>Pure URL layer composition"]
+  MRC["RequestLayer<br/>Request-Config Layer rules (SwiftPM-tested)"]
   SDI["SearchDrillIn<br/>Browsable-first 'play X' drill-in"]
   TBE["TabBarEntries<br/>Tab churn suppression"]
 end

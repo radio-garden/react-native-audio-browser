@@ -11,7 +11,7 @@ extension BrowserManager {
   ///
   /// Resolution layers, least- to most-specific: shared `request` layer →
   /// `media` transform / static fields → `media.resolve(track)`. The final
-  /// `resolve` layer (if configured) is merged last via `mergeRequestConfig`,
+  /// `resolve` layer (if configured) is merged last,
   /// so its fields win. The `track` is only used to feed `resolve`; we do NOT
   /// auto-merge `track.request` here.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
@@ -55,8 +55,8 @@ extension BrowserManager {
       if let mediaConfig = config.media {
         merged = try await applyMediaLayer(mediaConfig, to: merged)
       }
-      merged = applyMediaResolveLayer(base: merged, resolve: resolveLayer)
-      let finalUrl = buildUrl(from: merged)
+      if let resolveLayer { merged = RequestLayer.merge(merged, resolveLayer) }
+      let finalUrl = RequestLayer.buildUrl(merged)
       logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
@@ -69,46 +69,21 @@ extension BrowserManager {
     }
   }
 
-  /// Media-kind Request-Config Layer application: a transform (async and/or sync)
-  /// wins completely — async first, then sync, each result copied out of the Nitro
-  /// bridge immediately (extractConfig, via awaitAsync/SyncConfig) — otherwise the
-  /// media config's static fields merge over the base with `path` carried from the
-  /// base (only a transform may change it). The same rule as `applyLayer`; matches
-  /// the web stub and Android.
+  /// The media kind's Request-Config Layer over `base`: its transforms, when it has any, else
+  /// its static fields (`RequestLayer.apply`).
   private func applyMediaLayer(_ media: MediaRequestConfig, to base: RequestConfig) async throws -> RequestConfig {
-    if media.transform != nil || media.transformSync != nil {
-      var result = base
-      if let transform = media.transform {
-        result = try await awaitAsyncConfig(transform(result, nil))
-      }
-      if let transformSync = media.transformSync {
-        result = try await awaitSyncConfig(transformSync(result, nil))
-      }
-      return result
+    var transforms: [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] = []
+    if let transform = media.transform {
+      transforms.append { try await self.awaitAsyncConfig(transform($0, nil)) }
     }
-    let staticMerged = mergeRequestConfig(
-      base: base,
-      override: RequestConfig(
-        method: media.method,
-        path: media.path,
-        baseUrl: media.baseUrl,
-        headers: media.headers,
-        query: media.query,
-        body: media.body,
-        contentType: media.contentType,
-        userAgent: media.userAgent,
-      ),
+    if let transformSync = media.transformSync {
+      transforms.append { try await self.awaitSyncConfig(transformSync($0, nil)) }
+    }
+    let fields = RequestConfig(
+      method: media.method, path: media.path, baseUrl: media.baseUrl, headers: media.headers,
+      query: media.query, body: media.body, contentType: media.contentType, userAgent: media.userAgent,
     )
-    return RequestConfig(
-      method: staticMerged.method,
-      path: base.path,
-      baseUrl: staticMerged.baseUrl,
-      headers: staticMerged.headers,
-      query: staticMerged.query,
-      body: staticMerged.body,
-      contentType: staticMerged.contentType,
-      userAgent: staticMerged.userAgent,
-    )
+    return try await RequestLayer.apply(fields, transforms: transforms, to: base)
   }
 
   /// Invokes the consumer-supplied `media.resolve`/`resolveSync(track)` and merges
@@ -121,17 +96,7 @@ extension BrowserManager {
     if let resolve = media.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
     var syncResolved: RequestConfig?
     if let resolveSync = media.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
-    return MediaResolveComposer.composeResolved(
-      async: asyncResolved, sync: syncResolved,
-      combine: { self.mergeRequestConfig(base: $0, override: $1) },
-    )
-  }
-
-  /// Merges the resolve layer (most specific, override-wins) over `base`.
-  /// A no-op when `resolve` is nil.
-  private func applyMediaResolveLayer(base: RequestConfig, resolve: RequestConfig?) -> RequestConfig {
-    guard let resolve else { return base }
-    return mergeRequestConfig(base: base, override: resolve)
+    return RequestLayer.mergeResolved(async: asyncResolved, sync: syncResolved)
   }
 
   // MARK: - Artwork URL Resolution
@@ -198,18 +163,15 @@ extension BrowserManager {
         contentType: artworkConfig.contentType,
         userAgent: artworkConfig.userAgent,
       )
-      mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
+      mergedConfig = RequestLayer.merge(mergedConfig, artworkStaticConfig)
 
       if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
         var asyncResolved: RequestConfig?
         if let resolve = artworkConfig.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
         var syncResolved: RequestConfig?
         if let resolveSync = artworkConfig.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
-        if let resolved = MediaResolveComposer.composeResolved(
-          async: asyncResolved, sync: syncResolved,
-          combine: { self.mergeRequestConfig(base: $0, override: $1) },
-        ) {
-          mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolved)
+        if let resolved = RequestLayer.mergeResolved(async: asyncResolved, sync: syncResolved) {
+          mergedConfig = RequestLayer.merge(mergedConfig, resolved)
         } else if track.artwork == nil {
           // A resolver ran but produced nothing, and there's no artwork URL either
           // → no artwork (matches the web stub).
@@ -230,20 +192,7 @@ extension BrowserManager {
 
         if !contextQuery.isEmpty {
           logger.debug("Adding image query params: \(contextQuery)")
-          var existingQuery = mergedConfig.query ?? [:]
-          for (key, value) in contextQuery {
-            existingQuery[key] = value
-          }
-          mergedConfig = RequestConfig(
-            method: mergedConfig.method,
-            path: mergedConfig.path,
-            baseUrl: mergedConfig.baseUrl,
-            headers: mergedConfig.headers,
-            query: existingQuery,
-            body: mergedConfig.body,
-            contentType: mergedConfig.contentType,
-            userAgent: mergedConfig.userAgent,
-          )
+          mergedConfig = mergedConfig.copying(query: RequestLayer.mergeDicts(mergedConfig.query, contextQuery))
         }
       }
 
@@ -274,7 +223,7 @@ extension BrowserManager {
         return nil
       }
 
-      let uri = buildUrl(from: mergedConfig)
+      let uri = RequestLayer.buildUrl(mergedConfig)
 
       // Build headers map, merging explicit headers with userAgent
       var headers = mergedConfig.headers ?? [:]
@@ -299,22 +248,6 @@ extension BrowserManager {
       // On error, return nil to avoid broken images
       return nil
     }
-  }
-
-  // MARK: - URL Building
-
-  private func buildUrl(from config: RequestConfig) -> String {
-    let path = config.path ?? ""
-    let baseUrl = config.baseUrl
-
-    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: path)
-
-    // Add query parameters if any
-    if let query = config.query, !query.isEmpty {
-      url = BrowserPathHelper.appendQuery(query, to: url)
-    }
-
-    return url
   }
 
   // MARK: - Config Utilities
@@ -365,21 +298,9 @@ extension BrowserManager {
       userAgent: config.userAgent,
     )
   }
-
-  /// Merges two RequestConfig objects, with override values taking precedence.
-  private func mergeRequestConfig(base: RequestConfig, override: RequestConfig) -> RequestConfig {
-    RequestConfig(
-      method: override.method ?? base.method,
-      path: override.path ?? base.path,
-      baseUrl: override.baseUrl ?? base.baseUrl,
-      headers: mergeDicts(base.headers, override.headers),
-      query: mergeDicts(base.query, override.query),
-      body: override.body ?? base.body,
-      contentType: override.contentType ?? base.contentType,
-      userAgent: override.userAgent ?? base.userAgent,
-    )
-  }
 }
+
+extension RequestConfig: RequestFields {}
 
 extension BrowserManager: MediaResolving {
   /// Runs the `nowPlayingArtwork` config for every playing track, id or not: an id-less track

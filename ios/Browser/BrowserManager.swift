@@ -416,21 +416,16 @@ final class BrowserManager {
     )
     merged = try await applyLayer(resolvedLayers().request, to: merged, params: params)
     if let initialQuery, !initialQuery.isEmpty {
-      merged = merged.copying(query: mergeDicts(merged.query, initialQuery))
+      merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
     }
     merged = try await applyLayer(kindConfig, to: merged, params: params)
     merged = try await applyLayer(routeConfig, to: merged, params: params)
 
-    guard let baseUrl = merged.baseUrl else {
+    guard merged.baseUrl != nil else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
-    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: merged.path ?? path)
-    if let query = merged.query, !query.isEmpty {
-      url = BrowserPathHelper.appendQuery(query, to: url)
-    }
-
     return HttpClient.HttpRequest(
-      url: url,
+      url: RequestLayer.buildUrl(merged, defaultPath: path),
       method: merged.method?.stringValue ?? "GET",
       headers: merged.headers,
       body: merged.body,
@@ -465,44 +460,26 @@ final class BrowserManager {
     return nitroResult
   }
 
-  /// Applies one request-config layer (request / browse / route) onto a base.
-  /// A transform (async and/or sync) wins completely: it receives the base and its
-  /// result replaces it. When both are set they run as a pipeline — async first,
-  /// then sync. Otherwise the layer's static fields merge over the base. `path` is
-  /// carried from the base (only a transform may change it).
+  /// Applies one Request-Config Layer (request / browse / route) onto `base`: its transforms
+  /// (async, then sync) when it has any, else its static fields (`RequestLayer.apply`).
   func applyLayer(
     _ layer: TransformableRequestConfig?,
     to base: RequestConfig,
     params: [String: String],
   ) async throws -> RequestConfig {
     guard let layer else { return base }
-    // Run-both transform: async first, then sync (each replaces the running config).
-    // The bridge await depth — the bug-prone part — is centralised in awaitAsync/SyncConfig.
-    if layer.transform != nil || layer.transformSync != nil {
-      var result = base
-      if let transform = layer.transform { result = try await awaitAsyncConfig(transform(result, params)) }
-      if let transformSync = layer.transformSync { result = try await awaitSyncConfig(transformSync(result, params)) }
-      return result
+    var transforms: [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] = []
+    if let transform = layer.transform {
+      transforms.append { try await self.awaitAsyncConfig(transform($0, params)) }
     }
-    return RequestConfig(
-      method: layer.method ?? base.method,
-      path: base.path,
-      baseUrl: layer.baseUrl ?? base.baseUrl,
-      headers: mergeDicts(base.headers, layer.headers),
-      query: mergeDicts(base.query, layer.query),
-      body: layer.body ?? base.body,
-      contentType: layer.contentType ?? base.contentType,
-      userAgent: layer.userAgent ?? base.userAgent,
+    if let transformSync = layer.transformSync {
+      transforms.append { try await self.awaitSyncConfig(transformSync($0, params)) }
+    }
+    let fields = RequestConfig(
+      method: layer.method, path: nil, baseUrl: layer.baseUrl, headers: layer.headers,
+      query: layer.query, body: layer.body, contentType: layer.contentType, userAgent: layer.userAgent,
     )
-  }
-
-  /// Merges two optional dictionaries, with override values taking precedence.
-  /// Delegates to the pure, unit-tested `MediaResolveComposer.mergeDicts`.
-  func mergeDicts(
-    _ base: [String: String]?,
-    _ override: [String: String]?,
-  ) -> [String: String]? {
-    MediaResolveComposer.mergeDicts(base, override)
+    return try await RequestLayer.apply(fields, transforms: transforms, to: base)
   }
 
   /// `error` as the app's `formatNavigationError` displays it, or its default display when
