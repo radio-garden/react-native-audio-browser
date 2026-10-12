@@ -41,7 +41,7 @@ let package = Package(
         "Model/RemoteCommand.swift",
         "RemoteCommand/RemoteCommandCallbacks.swift",
         "RemoteCommand/RemoteCommandController.swift",
-        "Player/MediaIntentCriteria.swift",
+        "CarPlay/MediaIntentCriteria.swift",
         "Player/PersistedPlaybackState.swift",
         "Player/PlaybackPersistence.swift",
         "Model/NitroTypeStubs.swift",

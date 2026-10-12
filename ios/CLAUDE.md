@@ -148,8 +148,7 @@ ios/
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track)
 │   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware
 │   ├── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
-│   ├── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
-│   └── MediaIntentCriteria.swift     # Siri INPlayMediaIntent → search criteria mapping
+│   └── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
 ├── NowPlayingInfo/
 │   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo fields by key
 │   └── SilentAudioPrimer.swift       # Renders silence so iOS elects the app (ADR 0005)
@@ -165,6 +164,7 @@ ios/
 │   ├── CarPlaySession+PageLoader.swift  # Lazy page loads, watchdog, error/empty messages
 │   ├── CarPlaySession+Navigator.swift   # Selection, push/gate/tab-select navigation
 │   ├── CarPlaySession+Refresher.swift   # Content refresh for a path / all displayed templates
+│   ├── MediaIntentCriteria.swift     # Siri INPlayMediaIntent → search criteria mapping
 │   ├── CarPlayTemplates.swift        # CarPlayTemplateInfo (userInfo), loading/message templates
 │   ├── SectionPresentation.swift     # Pure section rendering rules (SwiftPM-tested)
 │   ├── CarPlayArtworkResolver.swift   # Platform-independent artwork load strategy (enum)
