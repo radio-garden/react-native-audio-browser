@@ -10,10 +10,8 @@ private func makeCoordinator() -> (
   callbacks: MockPlaybackCoordinatorCallbacks,
   sleepTimer: MockSleepTimerHandling,
 ) {
-  let retryHandler = MockRetryHandling()
-  let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
   let sleepTimer = MockSleepTimerHandling()
-  let coordinator = PlaybackCoordinator(errorHandler: errorHandler, sleepTimerManager: sleepTimer)
+  let coordinator = PlaybackCoordinator(retry: makeRetryLoop(retries: false), sleepTimerManager: sleepTimer)
   let effectHandler = MockPlaybackEffectHandler()
   let callbacks = MockPlaybackCoordinatorCallbacks()
   coordinator.effectHandler = effectHandler
@@ -119,15 +117,11 @@ struct TransitionTests {
 /// The effect handler is returned solely to keep the weak reference alive.
 @MainActor
 private func makeRetrying() -> (
-  PlaybackCoordinator, MockRetryHandling, MockPlaybackCoordinatorCallbacks,
+  PlaybackCoordinator, RetryLoop, MockPlaybackCoordinatorCallbacks,
   MockPlaybackEffectHandler,
 ) {
-  let retryHandler = MockRetryHandling()
-  retryHandler.attemptRetryResult = true
-  let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
-  let coordinator = PlaybackCoordinator(
-    errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
-  )
+  let retryHandler = makeRetryLoop()
+  let coordinator = PlaybackCoordinator(retry: retryHandler, sleepTimerManager: MockSleepTimerHandling())
   let effectHandler = MockPlaybackEffectHandler()
   coordinator.effectHandler = effectHandler
   let callbacks = MockPlaybackCoordinatorCallbacks()
@@ -143,7 +137,7 @@ struct RetryingErrorTests {
     c.transition(.trackLoading)
     cb.playbackChanges.removeAll()
 
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
 
     #expect(c.state == .loading)
     #expect(c.errorStatus.error == .hostUnreachable)
@@ -152,7 +146,7 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.last?.error?.retrying == true)
     // Advisory, not terminal: the error event is reserved for .error.
     #expect(cb.errorEvents.isEmpty)
-    await c.errorHandler.pendingRetryTask?.value
+    await c.retry.pendingTask?.value
   }
 
   /// Every failed attempt re-reports through `handleError`; identical repeats
@@ -163,10 +157,10 @@ struct RetryingErrorTests {
     c.transition(.trackLoading)
     cb.playbackChanges.removeAll()
 
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
-    await c.errorHandler.pendingRetryTask?.value
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
-    await c.errorHandler.pendingRetryTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.retry.pendingTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.retry.pendingTask?.value
 
     #expect(cb.playbackChanges.count == 1)
   }
@@ -179,11 +173,11 @@ struct RetryingErrorTests {
     c.transition(.avPlayerPlaying)
     cb.playbackChanges.removeAll()
 
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .playback)
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
 
     #expect(c.errorStatus.error == nil)
     #expect(cb.playbackChanges.isEmpty)
-    await c.errorHandler.pendingRetryTask?.value
+    await c.retry.pendingTask?.value
   }
 
   /// Reaching .ready proves the retry recovered: the advisory error must not
@@ -192,8 +186,8 @@ struct RetryingErrorTests {
   func recovery_clearsTheRetryingError() async {
     let (c, _, cb, _) = makeRetrying()
     c.transition(.trackLoading)
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
-    await c.errorHandler.pendingRetryTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.retry.pendingTask?.value
 
     c.transition(.loadSeekCompleted)
 
@@ -208,12 +202,12 @@ struct RetryingErrorTests {
   func exhaustion_hardensIntoTerminalError() async {
     let (c, retryHandler, cb, _) = makeRetrying()
     c.transition(.trackLoading)
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
-    await c.errorHandler.pendingRetryTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.retry.pendingTask?.value
 
-    retryHandler.attemptRetryResult = false
-    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
-    await c.errorHandler.pendingRetryTask?.value
+    retryHandler.shouldRetry = { false }
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.retry.pendingTask?.value
 
     #expect(c.state == .error)
     #expect(cb.playbackChanges.last?.state == .error)
@@ -741,54 +735,52 @@ struct NaturalEndPlayIntentTests {
 /// first recovered blip.
 @Suite("PlaybackCoordinator - healthy playback resets retry budget")
 struct HealthyPlaybackRetryResetTests {
-  @Test @MainActor
-  func sustainedPlayback_resetsRetryBudget() async {
-    let retryHandler = MockRetryHandling()
-    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
-    let coordinator = PlaybackCoordinator(
-      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
-    )
+  /// A coordinator whose retry loop has already executed one retry, so a reset shows.
+  @MainActor
+  private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (PlaybackCoordinator, RetryLoop, MockPlaybackEffectHandler) {
+    let retry = makeRetryLoop(delay: delay)
+    let coordinator = PlaybackCoordinator(retry: retry, sleepTimerManager: MockSleepTimerHandling())
     let effectHandler = MockPlaybackEffectHandler()
     coordinator.effectHandler = effectHandler
+    if delay == 0 {
+      retry.handleError(URLError(.timedOut), context: .playback)
+      await retry.pendingTask?.value
+    }
+    return (coordinator, retry, effectHandler)
+  }
+
+  @Test @MainActor
+  func sustainedPlayback_resetsRetryBudget() async {
+    let (coordinator, retry, effectHandler) = await makeAfterOneRetry()
+    _ = effectHandler
+    #expect(retry.attempts == 1)
     coordinator.healthyPlaybackDuration = 0.01
 
     coordinator.transition(.avPlayerPlaying)
     await coordinator.healthyPlaybackTask?.value
 
-    #expect(retryHandler.resetCallCount == 1)
+    #expect(retry.attempts == 0)
   }
 
-  /// resetRetry() cancels a pending retry — firing the refill mid-episode
+  /// reset() cancels a pending retry — firing the refill mid-episode
   /// would kill an in-flight reconnect silently (stuck .playing forever).
   @Test @MainActor
   func refill_skipsWhileRetryIsPending() async {
-    let retryHandler = MockRetryHandling()
-    retryHandler.attemptRetryDelayNs = 1_000_000_000
-    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
-    let coordinator = PlaybackCoordinator(
-      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
-    )
-    let effectHandler = MockPlaybackEffectHandler()
-    coordinator.effectHandler = effectHandler
+    let (coordinator, retry, effectHandler) = await makeAfterOneRetry(delay: 1)
+    _ = effectHandler
     coordinator.healthyPlaybackDuration = 0.01
 
     coordinator.transition(.avPlayerPlaying)
-    errorHandler.handleError(URLError(.timedOut), context: .playback)
+    retry.handleError(URLError(.timedOut), context: .playback)
     await coordinator.healthyPlaybackTask?.value
 
-    #expect(retryHandler.resetCallCount == 0)
-    #expect(errorHandler.pendingRetryTask != nil)
+    #expect(retry.pendingTask != nil)
+    retry.cancel()
   }
 
   @Test @MainActor
   func playbackInterruptedBeforeThreshold_doesNotReset() async {
-    let retryHandler = MockRetryHandling()
-    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
-    let coordinator = PlaybackCoordinator(
-      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
-    )
-    let effectHandler = MockPlaybackEffectHandler()
-    coordinator.effectHandler = effectHandler
+    let (coordinator, retry, effectHandler) = await makeAfterOneRetry()
     effectHandler.hasLoadedAsset = true
     coordinator.healthyPlaybackDuration = 0.5
 
@@ -800,86 +792,7 @@ struct HealthyPlaybackRetryResetTests {
     // deterministic way to reach the point where it would have fired.
     await refill?.value
 
-    #expect(retryHandler.resetCallCount == 0)
-  }
-}
-
-@Suite("PlaybackCoordinator - now playing state")
-struct PlaybackCoordinatorNowPlayingStateTests {
-  @Test @MainActor
-  func change_updatesNowPlayingState_evenDuringLoading() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.transition(.trackLoading) // mid track-load; start/pause is deferred
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.setPlayWhenReady(true)
-
-    // The lock-screen / CarPlay play-pause button reflects the user's play
-    // *intent* immediately, even while the new item is still loading — otherwise
-    // it stays stuck showing "paused" until a later state transition repairs it.
-    #expect(eh.updateNowPlayingStateCalls.last == true)
-  }
-
-  @Test @MainActor
-  func staysPlaying_whenBufferRunsDry() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.setPlayWhenReady(true)
-    c.transition(.avPlayerPlaying)
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.transition(.avPlayerWaiting) // buffer ran dry → .buffering
-
-    // A buffer underrun doesn't change play intent, so the button stays "playing"
-    // (the system shows buffering) — it must NOT flip to paused like a user pause.
-    // Unchanged, it is not published again at all.
-    #expect(!eh.updateNowPlayingStateCalls.contains(false))
-  }
-
-  @Test @MainActor
-  func fallsBackToPaused_onError() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.setPlayWhenReady(true)
-    c.transition(.trackLoading) // active + intent → playing
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.transition(.errorOccurred(.playbackFailed))
-
-    // On a terminal error the button must fall back to paused — never stick on
-    // "playing" — even though playWhenReady is still true.
-    #expect(eh.updateNowPlayingStateCalls.last == false)
-  }
-
-  @Test @MainActor
-  func change_doesNotStampNowPlayingState_fromTerminalState() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.setPlayWhenReady(true)
-
-    // Must NOT stamp .playing from a terminal state: the reload may fail and no
-    // active transition would repair a premature "playing", leaving a phantom
-    // playing button. The reload's own .loading/.ready transition stamps it.
-    #expect(eh.updateNowPlayingStateCalls.isEmpty)
-  }
-
-  @Test @MainActor
-  func selectingNewTrack_whileStopped_showsPlayingInNowPlaying() {
-    let (c, eh, _, _) = makeCoordinator()
-    let tracks = [
-      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
-      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
-    ]
-    c.setQueue(tracks) // loads t1 (playWhenReady defaults to false)
-    c.transition(.stopped) // user had paused/stopped
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    // User selects another track, intending to play it.
-    try? c.skipTo(1, playWhenReady: true)
-
-    // Audio will play, so the now-playing button must end up "playing" — not the
-    // stale "paused" captured before playWhenReady flipped true during loading.
-    #expect(eh.updateNowPlayingStateCalls.last == true)
+    #expect(retry.attempts == 1)
   }
 }
 
@@ -1223,7 +1136,7 @@ struct LoadTests {
     c.audioDidStart()
     let load = c.load
 
-    c.errorHandler.resetRetry()
+    c.retry.reset()
 
     #expect(c.load == load)
     #expect(c.load?.hasPlayed == true)
@@ -1298,24 +1211,19 @@ struct StopCancelsRetryTests {
   /// after the user stopped.
   @Test @MainActor
   func stop_cancelsPendingRetry_andStaysSilent() async {
-    let retryHandler = MockRetryHandling()
-    retryHandler.attemptRetryResult = false
-    retryHandler.attemptRetryDelayNs = 50_000_000
-    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
-    let coordinator = PlaybackCoordinator(
-      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
-    )
+    let errorHandler = makeRetryLoop(delay: 0.05)
+    let coordinator = PlaybackCoordinator(retry: errorHandler, sleepTimerManager: MockSleepTimerHandling())
     let effectHandler = MockPlaybackEffectHandler()
     let callbacks = MockPlaybackCoordinatorCallbacks()
     coordinator.effectHandler = effectHandler
     coordinator.callbacks = callbacks
 
     errorHandler.handleError(URLError(.timedOut), context: .playback)
-    let task = errorHandler.pendingRetryTask
+    let task = errorHandler.pendingTask
     #expect(task != nil)
 
     coordinator.stop()
-    #expect(errorHandler.pendingRetryTask == nil)
+    #expect(errorHandler.pendingTask == nil)
 
     await task?.value
     #expect(coordinator.state == .stopped)

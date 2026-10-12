@@ -18,7 +18,7 @@ class PlaybackCoordinator {
   weak var callbacks: PlaybackCoordinatorCallbacks?
 
   let queue = QueueManager()
-  let errorHandler: PlaybackErrorHandler
+  let retry: RetryLoop
   let sleepTimerManager: any SleepTimerHandling
   let loadSeekCoordinator = LoadSeekCoordinator()
 
@@ -68,7 +68,7 @@ class PlaybackCoordinator {
   func beginLoad() {
     loadCount &+= 1
     load = Load(id: loadCount)
-    errorHandler.resetRetry()
+    retry.reset()
     loadSeekCoordinator.reset()
   }
 
@@ -200,8 +200,8 @@ class PlaybackCoordinator {
 
   // MARK: - Init
 
-  init(errorHandler: PlaybackErrorHandler, sleepTimerManager: any SleepTimerHandling) {
-    self.errorHandler = errorHandler
+  init(retry: RetryLoop, sleepTimerManager: any SleepTimerHandling) {
+    self.retry = retry
     self.sleepTimerManager = sleepTimerManager
 
     // Configure sleep timer
@@ -216,11 +216,10 @@ class PlaybackCoordinator {
       self?.volumeFader.cancel(restoringVolume: true)
     }
 
-    // Wire error handler to state machine
-    errorHandler.onError = { [weak self] error in
+    retry.onError = { [weak self] error in
       self?.transition(.errorOccurred(error))
     }
-    errorHandler.onRetryingError = { [weak self] error in
+    retry.onRetryingError = { [weak self] error in
       self?.reportRetryingError(error)
     }
   }
@@ -330,10 +329,10 @@ class PlaybackCoordinator {
         guard let self else { return }
         try? await Task.sleep(nanoseconds: UInt64(healthyPlaybackDuration * 1_000_000_000))
         guard !Task.isCancelled else { return }
-        // Refill only between episodes: resetRetry() cancels a pending retry,
+        // Refill only between episodes: reset() cancels a pending retry,
         // which would silently kill an in-flight reconnect.
-        guard errorHandler.pendingRetryTask == nil else { return }
-        errorHandler.resetRetry()
+        guard retry.pendingTask == nil else { return }
+        retry.reset()
       }
     } else if old == .playing {
       healthyPlaybackTask?.cancel()
@@ -395,12 +394,12 @@ class PlaybackCoordinator {
   }
 
   func avPlayerStatusDidFail(error: Error?, httpStatusCode: Int? = nil) {
-    errorHandler.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
+    retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
   }
 
   func avItemStatusDidChange(_ status: PlayerItemStatus, error: Error?, httpStatusCode: Int? = nil) {
     if status == .failed {
-      errorHandler.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
+      retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     }
   }
 
@@ -438,7 +437,7 @@ class PlaybackCoordinator {
   func stop() {
     // Cancel before the intent drop: a surviving retry would surface .error
     // over the stop, and a pending task blocks the session release below.
-    errorHandler.cancelPendingRetry()
+    retry.cancel()
     // A stop is terminal — interruption-end must not resume over it.
     shouldResumeAfterInterruption = false
     transition(.stopped)
@@ -498,7 +497,7 @@ class PlaybackCoordinator {
   private func evaluateSessionRelease() {
     guard !playWhenReady,
           !shouldResumeAfterInterruption,
-          errorHandler.pendingRetryTask == nil
+          retry.pendingTask == nil
     else { return }
     callbacks?.playerShouldReleaseSession()
   }

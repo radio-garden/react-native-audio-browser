@@ -59,7 +59,7 @@ final class NetworkMonitor: @unchecked Sendable {
     // update with a `currentPath` the monitor hasn't finished evaluating. Nothing
     // recovers from that: the handler has already fired, `onChanged` isn't wired
     // until setupPlayer, and the stale value then drives `getOnline()`, the JS
-    // event, and RetryManager's offline parking until the next genuine path
+    // event, and RetryLoop's offline parking until the next genuine path
     // change. Seeding first is a best-effort guess; the handler fires shortly
     // after `start` and is the authoritative last writer.
     let initialStatus = monitor.currentPath.status == .satisfied

@@ -16,7 +16,7 @@ class TrackPlayer {
 
   let nowPlayingInfoController: NowPlayingInfoController
   let remoteCommandController: RemoteCommandController
-  private let retryManager = RetryManager()
+  private let retryLoop = RetryLoop()
   private let playbackStateStore = PlaybackStateStore()
 
   // MARK: - Periodic Persist
@@ -27,7 +27,7 @@ class TrackPlayer {
   /// Retry configuration for load errors (network failures, timeouts, etc.)
   var retryConfig: Variant_Bool_RetryConfig? {
     didSet {
-      retryManager.updatePolicy(from: retryConfig)
+      retryLoop.updatePolicy(from: retryConfig)
     }
   }
 
@@ -58,7 +58,7 @@ class TrackPlayer {
     onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
     onFailedToPlayToEndTime: { [weak self] error in
       let effectiveError = error ?? self?.avPlayer.currentItem?.error
-      self?.coordinator.errorHandler.handleError(
+      self?.coordinator.retry.handleError(
         effectiveError,
         context: .playback,
         httpStatusCode: self?.currentItemHttpStatusCode,
@@ -144,7 +144,6 @@ class TrackPlayer {
 
   var queue: QueueManager { coordinator.queue }
   var loadSeekCoordinator: LoadSeekCoordinator { coordinator.loadSeekCoordinator }
-  var errorHandler: PlaybackErrorHandler { coordinator.errorHandler }
 
   var repeatMode: RepeatMode {
     get { coordinator.repeatMode }
@@ -293,8 +292,7 @@ class TrackPlayer {
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
     self.callbacks = callbacks
 
-    let errorHandler = PlaybackErrorHandler(retryHandler: retryManager)
-    coordinator = PlaybackCoordinator(errorHandler: errorHandler, sleepTimerManager: SleepTimerManager())
+    coordinator = PlaybackCoordinator(retry: retryLoop, sleepTimerManager: SleepTimerManager())
     coordinator.effectHandler = self
     coordinator.callbacks = callbacks
 
@@ -307,14 +305,14 @@ class TrackPlayer {
     }
     nowPlayingUpdater.onChanged = { [weak self] in self?.callbacks?.playerDidChangeNowPlaying($0) }
     coordinator.sleepTimerManager.onChanged = { [weak self] in self?.callbacks?.playerDidChangeSleepTimer($0) }
-    retryManager.networkMonitor = networkMonitor
-    retryManager.hasPlayed = { [weak coordinator] in coordinator?.load?.hasPlayed ?? false }
+    retryLoop.networkMonitor = networkMonitor
+    retryLoop.hasPlayed = { [weak coordinator] in coordinator?.load?.hasPlayed ?? false }
 
     // Configure retry manager
-    retryManager.shouldRetry = { [weak self] in
+    retryLoop.shouldRetry = { [weak self] in
       self?.playWhenReady ?? false
     }
-    retryManager.onRetry = { [weak self] startFromCurrentTime in
+    retryLoop.onRetry = { [weak self] startFromCurrentTime in
       // Re-resolve rather than replay the cached URL: a retry may be recovering
       // from an expired short-lived URL/token that only a fresh resolve fixes.
       self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
@@ -384,18 +382,18 @@ class TrackPlayer {
   ///
   /// AVPlayer doesn't reliably surface a mid-stream connectivity loss on a live stream as an item
   /// failure — it sits in `.waitingToPlayAtSpecifiedRate` (a buffering stall) with no error, so the
-  /// error-driven `RetryManager` never engages. Without this, the stream stays "reconnecting"
+  /// error-driven `RetryLoop` never engages. Without this, the stream stays "reconnecting"
   /// indefinitely after the network returns. Mirrors Android, where ExoPlayer surfaces the drop as a
   /// retryable load error and re-prepares on restore.
   ///
   /// Guards: reload only while actually stalled (`.buffering`) with play intent — so a user-initiated
   /// pause, or a retry that already gave up (`.error`, past the max retry duration) isn't surprisingly
-  /// resumed. Skipped when `RetryManager` is already parked waiting for the network: an error *did*
+  /// resumed. Skipped when `RetryLoop` is already parked waiting for the network: an error *did*
   /// schedule a retry that owns its own reload, so we'd otherwise load twice.
   func handleNetworkRestored() {
     guard playWhenReady,
           coordinator.state == .buffering,
-          !retryManager.isWaitingForNetwork
+          !retryLoop.isWaitingForNetwork
     else { return }
     logger.info("Connectivity restored while stalled — re-resolving to reconnect")
     // Re-resolve rather than replay the cached URL: a resolver that mints a short-lived URL/token
@@ -1036,7 +1034,7 @@ extension TrackPlayer: MediaLoaderDelegate {
   func mediaLoaderDidFailWithRetryableError(_ error: Error) {
     attachPublishingCarrierItemIfNeeded()
     primeNowPlayingElectionIfNeeded()
-    coordinator.errorHandler.handleError(error, context: .mediaLoad)
+    coordinator.retry.handleError(error, context: .mediaLoad)
   }
 
   func mediaLoaderDidFailWithUnplayableTrack() {

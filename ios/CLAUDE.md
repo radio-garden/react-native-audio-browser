@@ -29,15 +29,15 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mermaid dependency diagram.
 The playback core is split into two `@MainActor` types:
 
 - **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
-  `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryManager`, and
+  `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryLoop`, and
   `PlaybackStateStore`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
   AVPlayer), `MediaLoaderDelegate`, `SeekCompletionHandler`, `TrackSelectionPlayer`,
   `AudioSessionPlayer` and `NowPlayingSource`.
 - **PlaybackCoordinator** (owned by TrackPlayer) is the **state-machine hub**. It holds the
   `PlaybackState`, runs `transition(_ event:)`, applies side effects through the
   `PlaybackEffectHandler` (TrackPlayer), and fires JS-facing callbacks through
-  `PlaybackCoordinatorCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `PlaybackErrorHandler`,
-  `SleepTimerManager`, `LoadSeekCoordinator`, `VolumeFader`, `PlayingStateManager`, and two
+  `PlaybackCoordinatorCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `RetryLoop`,
+  `SleepTimerManager`, `LoadSeekCoordinator`, `VolumeFader`, and two
   `PlaybackTimer` instances (progress + interval).
 
 The state machine itself is a **pure function**: `nextPlaybackState(from:on:)` in
@@ -56,7 +56,7 @@ remote/config callbacks.
 3. **Browser → Player**: `navigateTrack()` uses TrackSelector to resolve track selection (contextual URL expansion, queue reuse, handler interception) and then executes the resulting PlaybackIntent
 4. **State Machine**: PlaybackEvent triggers a deterministic transition via `PlaybackCoordinator.transition(_ event)`; the coordinator queries `nextPlaybackState(from:on:)`, applies side effects through the `PlaybackEffectHandler` (TrackPlayer drives AVPlayer), updates timers/playing-state, and emits callbacks
 5. **Coordinator → Queue**: PlaybackCoordinator delegates queue operations to QueueManager (pure state, no AVPlayer knowledge); each mutation returns a `QueueChange`, which `afterQueueMutation` publishes
-6. **Coordinator → Error/Retry**: PlaybackErrorHandler classifies errors and orchestrates retries via `RetryHandling` (RetryManager), which is network-aware via NetworkMonitor
+6. **Coordinator → Error/Retry**: RetryLoop classifies each failure (`PlaybackFailure`) and either backs off and reloads or reports it, waiting out offline spells via NetworkMonitor
 7. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
 8. **Player → NowPlayingUpdater**: TrackPlayer calls NowPlayingUpdater for track metadata and artwork; NowPlayingUpdater updates NowPlayingInfoController (playback dynamics auto-publish via MPNowPlayingSession)
 9. **Coordinator → LoadSeekCoordinator**: deferred seeks that arrive before the AVPlayerItem is ready are captured and replayed; completion arrives via SeekCompletionHandler (TrackPlayer)
@@ -95,7 +95,7 @@ ios/
 ├── TrackPlayer.swift                 # AVPlayer bridge
 │                                     # Owns PlaybackCoordinator, observers, MediaLoader,
 │                                     #   NowPlayingUpdater, RemoteCommandController,
-│                                     #   NowPlayingInfoController, RetryManager, PlaybackStateStore
+│                                     #   NowPlayingInfoController, RetryLoop, PlaybackStateStore
 │                                     # Conforms to PlaybackEffectHandler, MediaLoaderDelegate,
 │                                     #   SeekCompletionHandler, TrackSelectionPlayer
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
@@ -129,14 +129,13 @@ ios/
 ├── Player/
 │   ├── PlaybackCoordinator.swift     # @MainActor state-machine hub (owned by TrackPlayer)
 │   │                                 # Holds PlaybackState, runs transition(_ event:), side effects
-│   │                                 # Owns QueueManager, PlaybackErrorHandler, SleepTimerManager,
-│   │                                 #   LoadSeekCoordinator, VolumeFader, PlayingStateManager,
+│   │                                 # Owns QueueManager, RetryLoop, SleepTimerManager,
+│   │                                 #   LoadSeekCoordinator, VolumeFader,
 │   │                                 #   progressTimer + intervalTimer (PlaybackTimer)
 │   │                                 # Drives AVPlayer via PlaybackEffectHandler; publishes QueueChange
 │   ├── PlaybackCoordinatorCallbacks.swift  # @MainActor protocol: coordinator → JS callbacks (Nitro types)
 │   ├── PlaybackStateMachine.swift    # Pure transition table nextPlaybackState(from:on:)
 │   ├── PlaybackEffectHandler.swift   # @MainActor protocol: AVPlayer side effects (impl: TrackPlayer)
-│   ├── PlaybackErrorHandler.swift    # @MainActor error classify + retry orchestration; RetryHandling protocol
 │   ├── PlaybackStateStore.swift      # UserDefaults cold-start resume persistence
 │   ├── PlaybackTimer.swift           # @MainActor interval timer (progress + playback interval)
 │   ├── VolumeFader.swift             # @MainActor sleep-timer fade-out
@@ -152,10 +151,9 @@ ios/
 │   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
 │   ├── LoadSeekCoordinator.swift     # Deferred seek state machine (idle/pendingSeek/seekInFlight)
 │   ├── SeekCompletionHandler.swift   # @MainActor protocol: handleSeekCompleted(to:didFinish:)
-│   ├── PlayingStateManager.swift     # Computes playing/buffering state
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track); SleepTimerHandling
 │   ├── SleepTimerHandling.swift      # Abstract sleep-timer protocol (coordinator dependency)
-│   ├── RetryManager.swift            # @MainActor exponential backoff, network-aware; RetryHandling
+│   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware
 │   ├── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
 │   ├── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
 │   └── MediaIntentCriteria.swift     # Siri INPlayMediaIntent → search criteria mapping

@@ -28,9 +28,7 @@ subgraph Queue["Queue Management"]
 end
 
 subgraph CoordOwned["Coordinator-owned Managers"]
-  PEH["PlaybackErrorHandler<br/>@MainActor<br/>Error classify + retry orchestration"]
-  RM["RetryManager<br/>@MainActor (RetryHandling)<br/>Backoff, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
-  PSM["PlayingStateManager<br/>playing / buffering flags"]
+  RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
   STM["SleepTimerManager<br/>@MainActor (SleepTimerHandling)<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
   VF["VolumeFader<br/>Sleep-timer fade out"]
@@ -131,7 +129,6 @@ TP -->|Owns| ML
 TP -->|Owns| NPU
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
-TP -->|Owns| RM
 TP -->|Owns| PStore
 TP -->|Owns| PSO
 TP -->|Owns| PTO
@@ -143,18 +140,16 @@ TP -.->|"Implements PlaybackEffectHandler"| PC
 
 %% Coordinator hub
 PC -->|Owns| QM
-PC -->|Owns| PEH
+PC -->|Owns| RTL
 PC -->|Owns| STM
 PC -->|Owns| LSC
 PC -->|Owns| VF
-PC -->|Owns| PSM
 PC -->|Owns| PTimer
 PC -->|"transition(event)"| PSMF
 PSMF --> PE
 PC -.->|"effectHandler: TrackPlayer"| TP
 PC -.->|"callbacks: HybridAudioBrowser"| HAB
 PC -->|"mutation → QueueChange"| QM
-PEH -.->|"retryHandler: RetryHandling"| RM
 QM --> SO
 
 %% Loaders
@@ -191,7 +186,7 @@ NPIC -->|linkPlayer| MPNS
 TP -->|Owns, primes on failed first load| SAP
 ASC -->|"setCategory, setActive"| AS
 ASC -.->|AudioSessionPlayer| TP
-RM -->|Monitors| NM
+RTL -->|Monitors| NM
 AIF --> SVG
 
 %% CarPlay
@@ -244,7 +239,7 @@ class HC browser
 class PSO,PTO,PINO,PIPO observer
 class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
-class PEH,RM,PSM,STM,PTimer,VF,LSC state
+class RTL,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util
 class MLD,SCH protocol
 class CPC,CPS,CPIL,CPAR,CPLF,CPNPM carplay

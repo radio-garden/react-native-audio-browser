@@ -215,21 +215,16 @@ final class MockSleepTimerHandling: SleepTimerHandling {
   func setToEndOfTrack() {}
 }
 
-// MARK: - Mock RetryHandling
+// MARK: - RetryLoop
 
+/// A RetryLoop for tests: enabled, with an instant backoff unless `delay`, whose attempts reload
+/// while `retries` and otherwise give up, as an exhausted budget does.
 @MainActor
-final class MockRetryHandling: RetryHandling {
-  var isEnabled = true
-  var attemptRetryResult = false
-  var attemptRetryDelayNs: UInt64 = 0
-  var resetCallCount = 0
-
-  func attemptRetry(startFromCurrentTime _: Bool) async -> Bool {
-    if attemptRetryDelayNs > 0 {
-      try? await Task.sleep(nanoseconds: attemptRetryDelayNs)
-    }
-    return attemptRetryResult
-  }
-
-  func reset() { resetCallCount += 1 }
+func makeRetryLoop(retries: Bool = true, delay: TimeInterval = 0) -> RetryLoop {
+  let loop = RetryLoop(sleep: { _ in
+    if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+  })
+  loop.updatePolicy(from: .first(true))
+  loop.shouldRetry = { retries }
+  return loop
 }
