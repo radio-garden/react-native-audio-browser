@@ -20,7 +20,7 @@ class PlaybackCoordinator {
   let queue = QueueManager()
   let retry: RetryLoop
   let sleepTimerManager: any SleepTimerHandling
-  let loadSeekCoordinator = LoadSeekCoordinator()
+  var deferredSeek = DeferredSeek()
 
   lazy var volumeFader = VolumeFader(
     getVolume: { [weak self] in self?.effectHandler?.volume ?? 1 },
@@ -69,7 +69,7 @@ class PlaybackCoordinator {
     loadCount &+= 1
     load = Load(id: loadCount)
     retry.reset()
-    loadSeekCoordinator.reset()
+    deferredSeek.reset()
   }
 
   /// True the first time this load asks, so the silent primer runs once per load.
@@ -414,7 +414,7 @@ class PlaybackCoordinator {
     guard playbackLikelyToKeepUp else { return }
     guard effectHandler?.hasLoadedAsset == true else { return }
 
-    if !loadSeekCoordinator.shouldDeferReadyTransition, state != .playing {
+    if !deferredSeek.defersReady, state != .playing {
       logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp → .ready")
       transition(.bufferingSufficient)
     }
@@ -562,7 +562,7 @@ class PlaybackCoordinator {
       // seek that runs once the item is ready, deferring the ready/play
       // transition until it lands (no start-at-0 flash).
       if let ms = startPositionMs, ms > 0 {
-        loadSeekCoordinator.capture(position: ms / 1000)
+        deferredSeek.capture(ms / 1000)
       }
     }
   }
@@ -721,9 +721,9 @@ class PlaybackCoordinator {
     lastIndex = currentIndex
   }
 
-  // MARK: - Seek Completion (called by TrackPlayer after AVPlayer seek lands)
+  // MARK: - Deferred Seek
 
-  func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
+  func deferredSeekDidLand(at seconds: TimeInterval, finished didFinish: Bool) {
     if state == .loading {
       logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(didFinish)) → .ready")
       transition(.loadSeekCompleted)

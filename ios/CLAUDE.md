@@ -31,13 +31,13 @@ The playback core is split into two `@MainActor` types:
 - **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
   `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryLoop`, and
   `PlaybackStateStore`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
-  AVPlayer), `MediaLoaderDelegate`, `SeekCompletionHandler`, `TrackSelectionPlayer`,
+  AVPlayer), `MediaLoaderDelegate`, `TrackSelectionPlayer`,
   `AudioSessionPlayer` and `NowPlayingSource`.
 - **PlaybackCoordinator** (owned by TrackPlayer) is the **state-machine hub**. It holds the
   `PlaybackState`, runs `transition(_ event:)`, applies side effects through the
   `PlaybackEffectHandler` (TrackPlayer), and fires JS-facing callbacks through
   `PlaybackCoordinatorCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `RetryLoop`,
-  `SleepTimerManager`, `LoadSeekCoordinator`, `VolumeFader`, and two
+  `SleepTimerManager`, `DeferredSeek`, `VolumeFader`, and two
   `PlaybackTimer` instances (progress + interval).
 
 The state machine itself is a **pure function**: `nextPlaybackState(from:on:)` in
@@ -59,7 +59,7 @@ remote/config callbacks.
 6. **Coordinator → Error/Retry**: RetryLoop classifies each failure (`PlaybackFailure`) and either backs off and reloads or reports it, waiting out offline spells via NetworkMonitor
 7. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
 8. **Player → NowPlayingUpdater**: TrackPlayer calls NowPlayingUpdater for track metadata and artwork; NowPlayingUpdater updates NowPlayingInfoController (playback dynamics auto-publish via MPNowPlayingSession)
-9. **Coordinator → LoadSeekCoordinator**: deferred seeks that arrive before the AVPlayerItem is ready are captured and replayed; completion arrives via SeekCompletionHandler (TrackPlayer)
+9. **Coordinator → DeferredSeek**: a seek that arrives before the AVPlayerItem is ready is held as pure state; TrackPlayer issues it once the item is ready and reports its landing, which lets the load become ready
 10. **Platform → Observers**: KVO and NotificationCenter feed back to TrackPlayer, which translates them into PlaybackEvents
 
 ### Thread Safety
@@ -97,7 +97,7 @@ ios/
 │                                     #   NowPlayingUpdater, RemoteCommandController,
 │                                     #   NowPlayingInfoController, RetryLoop, PlaybackStateStore
 │                                     # Conforms to PlaybackEffectHandler, MediaLoaderDelegate,
-│                                     #   SeekCompletionHandler, TrackSelectionPlayer
+│                                     #   TrackSelectionPlayer
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
 ├── TrackSelector.swift               # @MainActor shared track selection decision tree
 │                                     # Used by HybridAudioBrowser and CarPlaySession
@@ -130,7 +130,7 @@ ios/
 │   ├── PlaybackCoordinator.swift     # @MainActor state-machine hub (owned by TrackPlayer)
 │   │                                 # Holds PlaybackState, runs transition(_ event:), side effects
 │   │                                 # Owns QueueManager, RetryLoop, SleepTimerManager,
-│   │                                 #   LoadSeekCoordinator, VolumeFader,
+│   │                                 #   DeferredSeek, VolumeFader,
 │   │                                 #   progressTimer + intervalTimer (PlaybackTimer)
 │   │                                 # Drives AVPlayer via PlaybackEffectHandler; publishes QueueChange
 │   ├── PlaybackCoordinatorCallbacks.swift  # @MainActor protocol: coordinator → JS callbacks (Nitro types)
@@ -149,8 +149,7 @@ ios/
 │   │                                 #   timed metadata), lines + artwork; reads NowPlayingSource
 │   ├── AudioSessionController.swift  # @MainActor AVAudioSession: category, activate, release,
 │   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
-│   ├── LoadSeekCoordinator.swift     # Deferred seek state machine (idle/pendingSeek/seekInFlight)
-│   ├── SeekCompletionHandler.swift   # @MainActor protocol: handleSeekCompleted(to:didFinish:)
+│   ├── DeferredSeek.swift            # Pure state: a seek held while the item loads (idle/pending/inFlight)
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track); SleepTimerHandling
 │   ├── SleepTimerHandling.swift      # Abstract sleep-timer protocol (coordinator dependency)
 │   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware

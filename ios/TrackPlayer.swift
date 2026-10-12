@@ -143,7 +143,6 @@ class TrackPlayer {
   }
 
   var queue: QueueManager { coordinator.queue }
-  var loadSeekCoordinator: LoadSeekCoordinator { coordinator.loadSeekCoordinator }
 
   var repeatMode: RepeatMode {
     get { coordinator.repeatMode }
@@ -424,39 +423,55 @@ class TrackPlayer {
 
   func seekTo(_ seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void) {
     if state == .loading {
-      loadSeekCoordinator.capture(position: seconds)
+      coordinator.deferredSeek.capture(seconds)
       completion(false)
     } else if avPlayer.currentItem != nil {
-      let time = CMTime(seconds: seconds, preferredTimescale: 1000)
-      let seekSeconds = seconds
-      let generation = loadSeekCoordinator.generation
-      avPlayer
-        .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { [weak self] finished in
-          Task { @MainActor in
-            guard let self else {
-              completion(false)
-              return
-            }
-            // A completion from before a track change (reset() bumped the
-            // generation) belongs to the old item — delivering it would emit a
-            // bogus seek-completed and consume the new track's pending start seek.
-            guard self.loadSeekCoordinator.isCurrentGeneration(generation) else {
-              completion(false)
-              return
-            }
-            self.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
-            completion(finished)
-          }
-        }
+      seekCurrentItem(to: seconds, completion: completion)
     } else {
       completion(false)
+    }
+  }
+
+  /// Seeks the current item exactly. A completion arriving after a track change belongs to the
+  /// old item, and reports false without touching the new one's deferred seek.
+  private func seekCurrentItem(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void) {
+    let generation = coordinator.deferredSeek.generation
+    avPlayer.seek(
+      to: CMTime(seconds: seconds, preferredTimescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero,
+    ) { [weak self] finished in
+      Task { @MainActor in
+        guard let self, self.coordinator.deferredSeek.generation == generation else {
+          completion(false)
+          return
+        }
+        self.seekDidLand(at: seconds, finished: finished)
+        completion(finished)
+      }
+    }
+  }
+
+  /// Issues the deferred seek if one is pending; true when it did, so ready waits for it.
+  private func beginDeferredSeek() -> Bool {
+    guard let time = coordinator.deferredSeek.begin() else { return false }
+    seekCurrentItem(to: time) { _ in }
+    return true
+  }
+
+  private func seekDidLand(at seconds: TimeInterval, finished: Bool) {
+    switch coordinator.deferredSeek.land() {
+    case .done:
+      coordinator.deferredSeekDidLand(at: seconds, finished: finished)
+    case let .reseek(time):
+      seekCurrentItem(to: time) { _ in }
+    case .none:
+      break
     }
   }
 
   func seekBy(_ offset: TimeInterval) {
     let targetTime: TimeInterval
     if state == .loading {
-      targetTime = (loadSeekCoordinator.pendingTime ?? 0) + offset
+      targetTime = (coordinator.deferredSeek.target ?? 0) + offset
     } else if let currentItem = avPlayer.currentItem {
       targetTime = currentItem.currentTime().seconds + offset
     } else {
@@ -520,7 +535,7 @@ class TrackPlayer {
   func clearCurrentAVItem() {
     stopObservingAVPlayerItem()
     mediaLoader.clearAsset()
-    loadSeekCoordinator.reset()
+    coordinator.deferredSeek.reset()
     avPlayer.replaceCurrentItem(with: nil)
   }
 
@@ -742,17 +757,9 @@ class TrackPlayer {
     guard avPlayer.currentItem != nil else { return }
 
     // Execute any pending seek that arrived after MediaLoader completed
-    if loadSeekCoordinator.executeIfPending(on: avPlayer, delegate: self) {
-      return
-    }
+    if beginDeferredSeek() { return }
 
     coordinator.avItemDidUpdatePlaybackLikelyToKeepUp(playbackLikelyToKeepUp)
-  }
-
-  func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
-    if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
-      coordinator.handleSeekCompleted(to: seconds, didFinish: didFinish)
-    }
   }
 }
 
@@ -938,10 +945,6 @@ extension TrackPlayer: PlaybackEffectHandler {
   }
 }
 
-// MARK: - SeekCompletionHandler
-
-extension TrackPlayer: SeekCompletionHandler {}
-
 // MARK: - TrackSelectionPlayer
 
 extension TrackPlayer: TrackSelectionPlayer {}
@@ -1024,7 +1027,7 @@ extension TrackPlayer: MediaLoaderDelegate {
     startObservingAVPlayerItem(item)
     if playWhenReady { startPlayback() }
 
-    if !loadSeekCoordinator.executeIfPending(on: avPlayer, delegate: self) {
+    if !beginDeferredSeek() {
       if item.isPlaybackLikelyToKeepUp {
         avItemDidUpdatePlaybackLikelyToKeepUp(true)
       }

@@ -32,7 +32,7 @@ subgraph CoordOwned["Coordinator-owned Managers"]
   STM["SleepTimerManager<br/>@MainActor (SleepTimerHandling)<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
   VF["VolumeFader<br/>Sleep-timer fade out"]
-  LSC["LoadSeekCoordinator<br/>Deferred seek state machine<br/>idle / pendingSeek / seekInFlight"]
+  LSC["DeferredSeek<br/>Pure state: a seek held while the item loads<br/>idle / pending / inFlight"]
 end
 
 subgraph Browser["Browser System"]
@@ -76,7 +76,6 @@ subgraph Loaders["Media Loading"]
   ML["MediaLoader<br/>@MainActor<br/>URL resolution, AVURLAsset<br/>Metadata + playable loading"]
   MLD["MediaLoaderDelegate<br/>Protocol"]
   NPU["NowPlayingUpdater<br/>@MainActor<br/>Track metadata + artwork (Kingfisher)"]
-  SCH["SeekCompletionHandler<br/>Protocol"]
 end
 
 subgraph CarPlay["CarPlay"]
@@ -135,7 +134,6 @@ TP -->|Owns| PTO
 TP -->|Owns| PINO
 TP -->|Owns| PIPO
 TP -.->|Implements| MLD
-TP -.->|Implements| SCH
 TP -.->|"Implements PlaybackEffectHandler"| PC
 
 %% Coordinator hub
@@ -155,7 +153,6 @@ QM --> SO
 %% Loaders
 ML -.->|Delegate| MLD
 ML -->|delegate: TrackPlayer| TP
-LSC -.->|Delegate| SCH
 NPU -->|Updates| NPIC
 NPU -->|Loads artwork| AIF
 
@@ -241,7 +238,7 @@ class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
 class RTL,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util
-class MLD,SCH protocol
+class MLD protocol
 class CPC,CPS,CPIL,CPAR,CPLF,CPNPM carplay
 class SCN,RNAB,MIH,MAH,MAFH objc
 class QM,SO queue
