@@ -14,10 +14,9 @@ import timber.log.Timber
 
 /**
  * Outbound URL resolution for media and artwork — the Android analog of iOS
- * `BrowserManager+URLResolution.swift`. Owns how a Track's `src` / `artwork` becomes a fetchable
- * request: request layer (shared, incl. its transform) → kind config (media / artwork /
- * nowPlayingArtwork) → per-Track Resolve, with transform-wins semantics centralised in
- * [RequestConfigBuilder].
+ * `RequestPipeline.swift`. Owns how a Track's `src` / `artwork` becomes a fetchable request:
+ * request layer (shared, incl. its transform) → kind config (media / artwork / nowPlayingArtwork) →
+ * per-Track Resolve, with transform-wins semantics centralised in [RequestConfigBuilder].
  */
 
 /**

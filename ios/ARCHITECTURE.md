@@ -41,9 +41,11 @@ subgraph Browser["Browser System"]
   BM["BrowserManager<br/>@MainActor<br/>State, caches, favorites, load<br/>owns PageResolver + RequestPipeline"]
   SR["SimpleRouter<br/>Route pattern matching<br/>{param}, *, ** wildcards"]
   BPH["BrowserPathHelper<br/>Contextual URLs, __trackId"]
-  BC["BrowserConfig<br/>Config wrapper + JS handlers"]
+  BC["BrowserConfig<br/>Copy of the Nitro config"]
+  PR["PageResolver<br/>@MainActor<br/>Route → normalized, stamped page"]
+  RP["RequestPipeline<br/>@MainActor<br/>Request layers, API, media + artwork URLs"]
   LRU["LRUCache<br/>contentCache 20<br/>main actor"]
-  MRC["RequestLayer<br/>Request-Config Layer rules (SwiftPM-tested)"]
+  RL["RequestLayer<br/>Request-Config Layer rules (SwiftPM-tested)"]
   SDI["SearchDrillIn<br/>Browsable-first 'play X' drill-in"]
   TBE["TabBarEntries<br/>Tab churn suppression"]
 end
@@ -163,12 +165,15 @@ NPU -->|Updates| NPIC
 NPU -->|Loads artwork| AIF
 
 %% Browser internals
-BM --> SR
+BM -->|Owns| PR
+BM -->|Owns| RP
+PR --> SR
+PR --> RP
 BM --> BPH
 BM --> BC
-BM --> HC
+RP --> HC
 BM --> LRU
-BM --> MRC
+RP --> RL
 BM --> SDI
 BM --> TBE
 BM -->|Artwork resolve| SFR
@@ -234,7 +239,7 @@ class HAB nitro
 class TP,PC,PStore core
 class TS core
 class PSMF,PE state
-class BM,SR,BPH,BC,LRU,MRC,SDI,TBE browser
+class BM,SR,BPH,BC,LRU,RL,SDI,TBE browser
 class HC browser
 class PSO,PTO,PINO,PIPO observer
 class RCC,NPIC,SAP controller

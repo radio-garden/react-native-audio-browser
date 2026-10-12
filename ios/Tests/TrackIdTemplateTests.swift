@@ -2,7 +2,7 @@
 import Testing
 
 /// `{id}` template substitution used by artwork URL resolution
-/// (BrowserManager+URLResolution.substituteTrackId). A track without a non-blank id must leave
+/// (RequestPipeline.substituteTrackId). A track without a non-blank id must leave
 /// the token LITERALLY in place — never substitute an empty string, never skip — so the
 /// resulting request 404s with a self-describing URL (the resolver logs a warning keyed off
 /// `containsToken`). Mirrors Android's `substituteTrackId` / `configContainsIdToken`.

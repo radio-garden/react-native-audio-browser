@@ -15,8 +15,8 @@ import org.junit.Test
 
 /**
  * Tests browser/BrowserUrlResolution.kt — media/artwork URL resolution owned by BrowserManager (the
- * Kotlin analog of iOS BrowserManager+URLResolution.swift). Static configs only (Nitro Promises are
- * JNI-backed; see file-top note in BrowserManagerLayerResolutionTest).
+ * Kotlin analog of iOS RequestPipeline.swift). Static configs only (Nitro Promises are JNI-backed;
+ * see file-top note in BrowserManagerLayerResolutionTest).
  */
 class BrowserUrlResolutionTest {
 

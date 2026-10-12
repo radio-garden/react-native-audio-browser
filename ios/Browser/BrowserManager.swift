@@ -17,13 +17,8 @@ enum BrowserError: LocalizedError {
   }
 }
 
-/// Core browser manager that handles navigation, search, and media browsing.
-///
-/// This class contains the main business logic for:
-/// - Route resolution and path matching with parameter extraction
-/// - HTTP API requests and response processing
-/// - JavaScript callback invocation
-/// - Fallback handling and error management
+/// The browser's state (path, content, tabs, config), its content and search caches, favorites
+/// and events. Pages come from `PageResolver`; requests go through `RequestPipeline`.
 @MainActor
 final class BrowserManager {
   // Allow creation from nonisolated contexts (e.g. HybridAudioBrowser property default)
@@ -89,12 +84,14 @@ final class BrowserManager {
   /// Whether configureBrowser() has been called
   private(set) var isConfigured = false
 
-  /// Browser configuration containing routes, search, tabs, and request settings.
-  var config: BrowserConfig = .init() {
-    didSet {
+  /// Browser configuration containing routes, search, tabs, and request settings. Kept on
+  /// `requests`, which every request reads.
+  var config: BrowserConfig {
+    get { requests.config }
+    set {
       isConfigured = true
-      requests.config = config
-      configChanged.emit(config)
+      requests.config = newValue
+      configChanged.emit(newValue)
     }
   }
 
@@ -175,15 +172,20 @@ final class BrowserManager {
 
   // MARK: - Navigation
 
-  /// Loads `path` as the current page: from the cache unless `bypassCache`, which also keeps the
-  /// current content on screen while it reloads. A newer load supersedes this one, and its
+  /// Loads `path` as the current page. `bypassCache` reloads it from the network and keeps the
+  /// content on screen meanwhile, for refreshing the current path. A newer load supersedes this one, and its
   /// result or failure is dropped: every caller reports a throw, so a slow /a failing after a
   /// fast /b succeeded would otherwise show /a's error over /b's content.
   func load(_ path: String, bypassCache: Bool = false) async throws {
     currentNavigationId += 1
     let navigationId = currentNavigationId
     self.path = path
-    if !bypassCache { content = nil }
+    if bypassCache {
+      // A failed reload must not leave the stale page to be served from the cache.
+      contentCache.remove(path)
+    } else {
+      content = nil
+    }
     do {
       let resolved = try await resolve(path, useCache: !bypassCache)
       guard navigationId == currentNavigationId else { return }
@@ -348,7 +350,7 @@ final class BrowserManager {
 
   /// Query navigation tabs.
   func queryTabs() async throws -> [Track] {
-    let tabs = try await pages.tabs()
+    guard let tabs = try await pages.tabs() else { return [] }
     self.tabs = tabs
     return tabs
   }

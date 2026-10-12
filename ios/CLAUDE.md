@@ -115,7 +115,7 @@ ios/
 │   ├── BrowseGate.swift              # @MainActor Browse Gate: mode, per-request decide, changed emitter
 │   ├── NavigationErrorState.swift    # @MainActor navigation error + display; a newer report wins
 │   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards)
-│   ├── BrowserConfig.swift           # Config wrapper + JS handlers (track load, nav error, album url)
+│   ├── BrowserConfig.swift           # Swift-side copy of NativeBrowserConfiguration; JS-callback strip
 │   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding)
 │   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl (tested)
 │   ├── SearchDrillIn.swift           # Browsable-first drill-in for "play X" voice intents

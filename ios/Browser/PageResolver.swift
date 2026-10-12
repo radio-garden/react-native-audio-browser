@@ -60,9 +60,9 @@ final class PageResolver {
     return resolvedTrack
   }
 
-  /// The tabs: the `__tabs__` route's page, flattened. Empty without one.
-  func tabs() async throws -> [Track] {
-    guard let tabsEntry = config.routes?.first(where: { $0.path == Self.tabsRoutePath }) else { return [] }
+  /// The tabs: the `__tabs__` route's page, flattened. Nil when there is no such route.
+  func tabs() async throws -> [Track]? {
+    guard let tabsEntry = config.routes?.first(where: { $0.path == Self.tabsRoutePath }) else { return nil }
     let resolved = try await resolveRouteEntry(tabsEntry, path: Self.tabsRoutePath, params: [:])
     // Tabs are a flat list, not a page: a sectioned tabs source flattens.
     return resolved.flattenedChildren ?? []

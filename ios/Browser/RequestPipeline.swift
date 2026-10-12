@@ -222,7 +222,7 @@ final class RequestPipeline {
       transforms.append { try await self.awaitSyncConfig(transformSync($0, nil)) }
     }
     let fields = RequestConfig(
-      method: media.method, path: media.path, baseUrl: media.baseUrl, headers: media.headers,
+      method: media.method, path: nil, baseUrl: media.baseUrl, headers: media.headers,
       query: media.query, body: media.body, contentType: media.contentType, userAgent: media.userAgent,
     )
     return try await RequestLayer.apply(fields, transforms: transforms, to: base)
@@ -427,7 +427,6 @@ final class RequestPipeline {
 
   /// Extracts all values from a RequestConfig into a new instance to avoid
   /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.
-  /// Internal so `applyLayer` (in BrowserManager.swift) can copy transform results.
   func extractConfig(_ config: RequestConfig) -> RequestConfig {
     RequestConfig(
       method: config.method,

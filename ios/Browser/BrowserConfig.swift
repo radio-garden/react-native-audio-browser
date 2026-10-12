@@ -84,18 +84,17 @@ struct BrowserConfig {
   /// no-content path). See `HybridAudioBrowser.dropStaleJSCallbacks` for why
   /// invoking a stale callback is fatal.
   func strippingJSCallbacks() -> BrowserConfig {
-    var stripped = self
+    // Built up from empty, so a field added later is dropped unless it is copied here.
+    var stripped = BrowserConfig()
     stripped.request = request?.strippingJSCallbacks()
     stripped.browse = browse?.strippingJSCallbacks()
-    stripped.requestResolver = nil
-    stripped.browseResolver = nil
     stripped.media = media?.strippingJSCallbacks()
     stripped.artwork = artwork?.strippingJSCallbacks()
     stripped.nowPlayingArtwork = nowPlayingArtwork?.strippingJSCallbacks()
     stripped.routes = routes?.map { $0.strippingJSCallbacks() }
-    stripped.handleTrackLoad = nil
-    stripped.resolveAlbumPath = nil
-    stripped.formatNavigationError = nil
+    stripped.singleTrack = singleTrack
+    stripped.androidControllerOfflineError = androidControllerOfflineError
+    stripped.carPlayLoadingTitle = carPlayLoadingTitle
     return stripped
   }
 }

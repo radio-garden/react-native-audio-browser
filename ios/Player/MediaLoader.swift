@@ -207,7 +207,7 @@ final class MediaLoader {
 
   /// Builds AVURLAsset options, merging any explicit headers with a resolved
   /// User-Agent. An explicit `User-Agent` in `headers` wins (mirrors the artwork
-  /// path in BrowserManager+URLResolution). A nil/empty userAgent contributes
+  /// path in RequestPipeline). A nil/empty userAgent contributes
   /// nothing, so "no UA configured" still falls through to AVPlayer's default.
   nonisolated static func buildAssetOptions(
     headers: [String: String]?,
