@@ -1173,6 +1173,53 @@ struct MutationSkipAvailabilityTests {
   }
 }
 
+// MARK: - Queue publication
+
+@Suite("PlaybackCoordinator - queue publication")
+struct QueuePublicationTests {
+  @MainActor
+  private func threeTracks() -> [Track] {
+    ["a", "b", "c"].map { Track(id: $0, src: "https://example.com/\($0).mp3", title: $0) }
+  }
+
+  @Test @MainActor
+  func setQueue_publishesTheQueueBeforeTheActiveTrack() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    #expect(cb.queueChanges.map { $0.map(\.id) } == [["a", "b", "c"]])
+    #expect(cb.queueAndTrackOrder == ["queue", "activeTrack"])
+  }
+
+  @Test @MainActor
+  func move_publishesTheSettledQueueOnce() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    try c.move(fromIndex: 0, toIndex: 2)
+    #expect(cb.queueChanges.map { $0.map(\.id) } == [["b", "c", "a"]])
+  }
+
+  @Test @MainActor
+  func clear_publishesAnEmptyQueue() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.clear()
+    #expect(cb.queueChanges.map(\.count) == [0])
+  }
+
+  @Test @MainActor
+  func navigation_publishesNoQueue() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.next()
+    c.previous()
+    try c.skipTo(2)
+    #expect(cb.queueChanges.isEmpty)
+  }
+}
+
 // MARK: - Stop cancels pending retry
 
 @Suite("PlaybackCoordinator - stop cancels pending retry")

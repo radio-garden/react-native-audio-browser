@@ -328,7 +328,7 @@ struct SetQueueTests {
     #expect(q.queueSourcePath == "/albums/123")
   }
 
-  @Test func returnsTrue() {
+  @Test func changesTracksAndCurrent() {
     let q = QueueManager()
     #expect(q.setQueue(tracks("a")) == .tracksAndCurrent)
   }
@@ -363,7 +363,7 @@ struct SetQueueTests {
 @Suite("add()")
 @MainActor
 struct AddTests {
-  @Test func toEmptyQueue_returnsTrue_setsCurrentIndex() {
+  @Test func toEmptyQueue_changesCurrent_setsCurrentIndex() {
     let q = QueueManager()
     let changed = q.add(tracks("a", "b")).currentTrack
     #expect(changed == true)
@@ -378,7 +378,7 @@ struct AddTests {
     #expect(q.currentIndex == 2)
   }
 
-  @Test func toNonEmpty_returnsFalse_currentIndexUnchanged() {
+  @Test func toNonEmpty_keepsCurrent_currentIndexUnchanged() {
     let q = QueueManager()
     q.setQueue(tracks("a"))
     let changed = q.add(tracks("b", "c")).currentTrack
@@ -387,7 +387,7 @@ struct AddTests {
     #expect(q.tracks.count == 3)
   }
 
-  @Test func emptyArray_returnsFalse() {
+  @Test func emptyArray_changesNothing() {
     let q = QueueManager()
     #expect(q.add([]) == .none)
   }
@@ -451,7 +451,7 @@ struct AddAtTests {
     #expect(q.tracks.count == 4)
   }
 
-  @Test func toEmptyQueue_returnsTrue() throws {
+  @Test func toEmptyQueue_changesCurrent() throws {
     let q = QueueManager()
     let changed = try q.addAt(tracks("a"), at: 0).currentTrack
     #expect(changed == true)
@@ -486,7 +486,7 @@ struct AddAtTests {
     }
   }
 
-  @Test func emptyArray_returnsFalse() throws {
+  @Test func emptyArray_changesNothing() throws {
     let q = QueueManager()
     q.setQueue(tracks("a"))
     #expect(try q.addAt([], at: 0) == .none)
@@ -532,7 +532,7 @@ struct AddAtTests {
 @Suite("remove()")
 @MainActor
 struct RemoveTests {
-  @Test func currentTrack_returnsTrue_wrapsIndex() throws {
+  @Test func currentTrack_changesCurrent_wrapsIndex() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
     let changed = try q.remove(2).currentTrack
@@ -542,7 +542,7 @@ struct RemoveTests {
     #expect(q.tracks.count == 2)
   }
 
-  @Test func beforeCurrent_adjustsIndex_returnsFalse() throws {
+  @Test func beforeCurrent_adjustsIndex_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
     let changed = try q.remove(0).currentTrack
@@ -551,7 +551,7 @@ struct RemoveTests {
     #expect(q.tracks.count == 2)
   }
 
-  @Test func afterCurrent_returnsFalse() throws {
+  @Test func afterCurrent_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
     let changed = try q.remove(2).currentTrack
@@ -639,7 +639,7 @@ struct MoveTests {
     #expect(q.currentTrack?.id == "a")
   }
 
-  @Test func nonCurrent_returnsFalse() throws {
+  @Test func nonCurrent_keepsCurrent() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
     let changed = try q.move(fromIndex: 1, toIndex: 2).currentTrack
@@ -709,7 +709,7 @@ struct MoveTests {
 @Suite("clear()")
 @MainActor
 struct ClearTests {
-  @Test func withTracks_returnsTrue_resetsToMinusOne() {
+  @Test func withTracks_changesCurrent_resetsToMinusOne() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b"))
     let changed = q.clear().currentTrack
@@ -719,7 +719,7 @@ struct ClearTests {
     #expect(q.queueSourcePath == nil)
   }
 
-  @Test func alreadyEmpty_returnsFalse() {
+  @Test func alreadyEmpty_changesNothing() {
     let q = QueueManager()
     #expect(q.clear() == .none)
   }
