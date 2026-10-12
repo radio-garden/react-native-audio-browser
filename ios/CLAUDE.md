@@ -31,7 +31,8 @@ The playback core is split into two `@MainActor` types:
 - **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
   `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryManager`, and
   `PlaybackStateStore`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
-  AVPlayer), `MediaLoaderDelegate`, `SeekCompletionHandler`, and `TrackSelectionPlayer`.
+  AVPlayer), `MediaLoaderDelegate`, `SeekCompletionHandler`, `TrackSelectionPlayer`,
+  `AudioSessionPlayer` and `NowPlayingSource`.
 - **PlaybackCoordinator** (owned by TrackPlayer) is the **state-machine hub**. It holds the
   `PlaybackState`, runs `transition(_ event:)`, applies side effects through the
   `PlaybackEffectHandler` (TrackPlayer), and fires JS-facing callbacks through

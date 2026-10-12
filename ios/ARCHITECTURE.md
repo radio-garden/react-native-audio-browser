@@ -14,6 +14,10 @@ subgraph PlaybackCore["Playback Core"]
   PSMF["nextPlaybackState()<br/>PlaybackStateMachine.swift<br/>Pure transition table"]
   PE["PlaybackEvent enum<br/>Transition triggers"]
   PStore["PlaybackStateStore<br/>UserDefaults cold-start resume"]
+  ASC["AudioSessionController<br/>@MainActor<br/>category, activation, session observers"]
+  BG["BrowseGate<br/>@MainActor<br/>per-request gate decision"]
+  NES["NavigationErrorState<br/>@MainActor<br/>error + display; newer report wins"]
+  MIP["MediaIntentPlayback<br/>voice play funnel (ADR 0002)"]
 end
 
 TS["TrackSelector<br/>@MainActor<br/>Shared track selection decision tree<br/>SelectionResult / PlaybackIntent"]
@@ -107,7 +111,9 @@ HAB -->|Owns| BM
 HAB -->|Owns| TS
 HAB -->|Owns| NM
 HAB -->|Owns| EM
-HAB -->|Owns| PStore
+HAB -->|Owns| ASC
+HAB -->|Owns| BG
+HAB -->|Owns| NES
 HAB -.->|"~50 callbacks to JS"| JS
 
 %% Track selection
@@ -177,7 +183,8 @@ PIPO -->|KVO + metadata output| AVP
 RCC -->|addTarget| MPRC
 NPIC -->|linkPlayer| MPNS
 TP -->|Owns, primes on failed first load| SAP
-TP -->|setCategory| AS
+ASC -->|"setCategory, setActive"| AS
+ASC -.->|AudioSessionPlayer| TP
 RM -->|Monitors| NM
 AIF --> SVG
 
@@ -196,9 +203,12 @@ CPIL -->|Uses| CPAR
 CPLF -->|weak imageLoader| CPIL
 CPNPM -->|weak audioBrowser| HAB
 CPNPM -->|Templates| CPT
-MIH -->|"MediaIntentPlayback.play"| HAB
-MAH -->|"setActiveTrackFavorited"| HAB
-MAFH -->|"setActiveTrackFavorited"| HAB
+MIH --> MIP
+MIP -->|"resume / search → queue → play"| TP
+MIP -->|"decide (search)"| BG
+MAH -->|"favoriteCurrentTrack"| HAB
+MAFH -->|"favoriteCurrentTrack"| HAB
+CPC -->|decide| BG
 SK --> MIH
 SK --> MAH
 SK --> MAFH

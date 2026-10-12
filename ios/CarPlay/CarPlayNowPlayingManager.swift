@@ -24,7 +24,7 @@ final class CarPlayNowPlayingManager {
   private weak var upNextTemplate: CPListTemplate?
   /// Everything the built button row renders — button types, the heart's
   /// favorited state, and the shuffle/repeat `isSelected` state. Rebuilds are
-  /// skipped while this is unchanged (`onConfigChanged` fires on unrelated
+  /// skipped while this is unchanged (`configChanged` fires on unrelated
   /// churn, and every `updateNowPlayingButtons` call re-renders ALL buttons).
   ///
   /// shuffle/repeat selected state is part of the snapshot because CarPlay

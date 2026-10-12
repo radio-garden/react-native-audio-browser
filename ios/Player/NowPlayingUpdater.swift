@@ -167,7 +167,7 @@ final class NowPlayingUpdater {
     playWhenReady: Bool,
     stalled: StallReason?,
     error: PlaybackError?,
-    flash: NowPlayingUpdate? = nil,
+    flash: NowPlayingUpdate?,
     override: NowPlayingUpdate?,
     formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
   ) {

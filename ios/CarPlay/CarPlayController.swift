@@ -27,6 +27,8 @@ public final class RNABCarPlayController: NSObject {
 
   /// Track content subscriptions
   private var listenerRemovals: [() -> Void] = []
+  /// Subscriptions for the current run, ended by `stop()`.
+  private var subscriptions: [Subscription] = []
 
   /// The current `start()` run, cancelled by `stop()`; nil while stopped.
   private var run: Task<Void, Never>?
@@ -227,6 +229,7 @@ public final class RNABCarPlayController: NSObject {
       removal()
     }
     listenerRemovals.removeAll()
+    subscriptions.removeAll()
 
     nowPlayingManager.teardown()
     listItemFactory = nil
@@ -278,15 +281,12 @@ public final class RNABCarPlayController: NSObject {
 
     // Subscribe to config changes (for Now Playing buttons and per-track
     // button state — e.g. resolveAlbumPath appearing/disappearing)
-    let configToken = audioBrowser.browserManager.configChanged.addListener { [weak self] _ in
+    subscriptions.append(audioBrowser.browserManager.configChanged.subscribe { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
         self?.nowPlayingManager.updateNowPlayingButtonStates()
       }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.browserManager.configChanged.removeListener(configToken)
-    }
+    })
 
     // Now-playing buttons + Up Next + the list playing-indicator location are
     // runtime-updatable via updateOptions(); refresh them when player options
@@ -314,14 +314,11 @@ public final class RNABCarPlayController: NSObject {
     // webview). The favorite/active-track emitters only fire for the player's
     // own toggles, so without this an in-app favorite leaves the CarPlay heart
     // stale.
-    let favoritesToken = audioBrowser.browserManager.favoritesChanged.addListener { [weak self] in
+    subscriptions.append(audioBrowser.browserManager.favoritesChanged.subscribe { [weak self] in
       Task { @MainActor in
         self?.nowPlayingManager.updateFavoriteButtonState()
       }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.browserManager.favoritesChanged.removeListener(favoritesToken)
-    }
+    })
 
     // Subscribe to favorite changes (for Now Playing button)
     let favoriteToken = audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in

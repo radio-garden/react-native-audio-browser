@@ -184,7 +184,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// JS-side Promise, the inner to the decision.
   ///
   /// Default fails CLOSED (`gated: true`). This default is only consulted in the
-  /// init window where `hasResolver` was already recorded true but JS hasn't
+  /// init window where the gate is already `.resolved` but JS hasn't
   /// (re)bound the real resolver yet (JS reload / instance churn re-seeding gate
   /// state, e.g. CarPlay re-seeding `isGated` at scene connect). Serving content
   /// in that window would be a fail-open leak — same direction as the
@@ -325,7 +325,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// reverts to the fail-closed default it documents for exactly this window.
   /// One-shot: on a normal reload both triggers hit the same dying instance
   /// (the reload notification, then the replacement's `init`), and the second
-  /// strip would re-fire the config-setter cascade — another `onConfigChanged`
+  /// strip would re-fire the config-setter cascade — another `configChanged`
   /// → CarPlay now-playing button rebuild — for nothing.
   @MainActor private var didDropJSCallbacks = false
 
