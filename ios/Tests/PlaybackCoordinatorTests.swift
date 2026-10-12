@@ -77,19 +77,19 @@ struct TransitionTests {
     c.transition(.errorOccurred(.playbackFailed))
 
     #expect(c.state == .error)
-    #expect(c.playbackError == .playbackFailed)
+    #expect(c.errorStatus.error == .playbackFailed)
   }
 
   @Test @MainActor
   func leavingError_clearsPlaybackError() {
     let (c, _, _, _) = makeCoordinator()
     c.transition(.errorOccurred(.playbackFailed))
-    #expect(c.playbackError == .playbackFailed)
+    #expect(c.errorStatus.error == .playbackFailed)
 
     c.transition(.trackLoading)
 
     #expect(c.state == .loading)
-    #expect(c.playbackError == nil)
+    #expect(c.errorStatus.error == nil)
   }
 
   @Test @MainActor
@@ -103,7 +103,7 @@ struct TransitionTests {
 
     // State stays .error but error is updated
     #expect(c.state == .error)
-    #expect(c.playbackError == .notConnectedToInternet)
+    #expect(c.errorStatus.error == .notConnectedToInternet)
     #expect(cb.playbackChanges.count == 1)
     #expect(cb.errorEvents.count == 1)
   }
@@ -146,7 +146,7 @@ struct RetryingErrorTests {
     c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
 
     #expect(c.state == .loading)
-    #expect(c.playbackError == .hostUnreachable)
+    #expect(c.errorStatus.error == .hostUnreachable)
     #expect(cb.playbackChanges.count == 1)
     #expect(cb.playbackChanges.last?.state == .loading)
     #expect(cb.playbackChanges.last?.error?.retrying == true)
@@ -181,7 +181,7 @@ struct RetryingErrorTests {
 
     c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .playback)
 
-    #expect(c.playbackError == nil)
+    #expect(c.errorStatus.error == nil)
     #expect(cb.playbackChanges.isEmpty)
     await c.errorHandler.pendingRetryTask?.value
   }
@@ -198,7 +198,7 @@ struct RetryingErrorTests {
     c.transition(.loadSeekCompleted)
 
     #expect(c.state == .ready)
-    #expect(c.playbackError == nil)
+    #expect(c.errorStatus.error == nil)
     #expect(cb.playbackChanges.last?.error == nil)
   }
 
@@ -547,12 +547,12 @@ struct HandleCurrentTrackChangedTests {
     let (c, eh, _, _) = makeCoordinator()
     eh.hasLoadedAsset = true
     c.transition(.errorOccurred(.playbackFailed))
-    #expect(c.playbackError != nil)
+    #expect(c.errorStatus.error != nil)
 
     loadTrack(c)
 
     // After loading a track, the error should be cleared
-    #expect(c.playbackError == nil)
+    #expect(c.errorStatus.error == nil)
   }
 
   @Test @MainActor
@@ -574,7 +574,7 @@ struct HandleCurrentTrackChangedTests {
     c.setQueue([track])
 
     #expect(c.state == .error)
-    #expect(c.playbackError == .invalidSourceUrl("nil"))
+    #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
     #expect(cb.errorEvents.count >= 1)
   }
 

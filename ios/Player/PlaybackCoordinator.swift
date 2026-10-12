@@ -53,16 +53,7 @@ class PlaybackCoordinator {
   // MARK: - State
 
   private(set) var state: PlaybackState = .none
-  var playbackError: TrackPlayerError.PlaybackError?
-  /// True while `playbackError` is advisory — the retry loop is still working
-  /// on it and the state stays non-terminal. Terminal errors (state == .error)
-  /// always carry false.
-  private(set) var isRetryingError = false
-
-  /// The JS-facing form of `playbackError`, carrying the retrying flag.
-  func nitroPlaybackError() -> PlaybackError? {
-    playbackError?.toNitroError(retrying: isRetryingError)
-  }
+  private(set) var errorStatus: ErrorStatus = .none
 
   /// Whether playback should resume when the current audio-session interruption
   /// ends — set to the play intent captured at interruption start, so we only
@@ -223,12 +214,9 @@ class PlaybackCoordinator {
     // terminal/stopped state must not regain an advisory error.
     guard state == .loading || state == .buffering || state == .paused else { return }
     // Each failed attempt re-reports; identical repeats add nothing.
-    if isRetryingError, playbackError == error { return }
-    playbackError = error
-    isRetryingError = true
-    callbacks?.playerDidChangePlayback(
-      Playback(state: state, error: nitroPlaybackError()),
-    )
+    guard errorStatus != .retrying(error) else { return }
+    errorStatus = .retrying(error)
+    callbacks?.playerDidChangePlayback(Playback(state: state, error: errorStatus.nitroError))
   }
 
   // MARK: - Playback State Machine
@@ -239,14 +227,9 @@ class PlaybackCoordinator {
     // Allow error-to-error transitions to update the error and emit callbacks,
     // even though the state enum value doesn't change.
     if newState == state, case let .errorOccurred(error) = event {
-      playbackError = error
-      isRetryingError = false
-      callbacks?.playerDidChangePlayback(
-        Playback(state: state, error: nitroPlaybackError()),
-      )
-      callbacks?.playerDidError(
-        PlaybackErrorEvent(error: nitroPlaybackError()),
-      )
+      errorStatus = .terminal(error)
+      callbacks?.playerDidChangePlayback(Playback(state: state, error: errorStatus.nitroError))
+      callbacks?.playerDidError(PlaybackErrorEvent(error: errorStatus.nitroError))
       return
     }
 
@@ -258,21 +241,14 @@ class PlaybackCoordinator {
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState, event: PlaybackEvent) {
-    // Error lifecycle
-    if old == .error, new != .error {
-      playbackError = nil
-    }
-    // A retrying error rides along through loading/buffering, but any state
-    // that proves recovery (.ready/.playing — data flowed) or abandons the
-    // attempt (.stopped/.none/.ended) clears it. Runs before emitStateChange,
-    // so the emitted Playback is already clean.
-    if isRetryingError, new != .loading, new != .buffering, new != .paused {
-      playbackError = nil
-      isRetryingError = false
-    }
+    // Error lifecycle. A retrying error rides along through loading/buffering, but any state
+    // that proves recovery (.ready/.playing: data flowed) or abandons the attempt
+    // (.stopped/.none/.ended) clears it. Runs before emitStateChange, so the emitted Playback
+    // is already clean.
     if case let .errorOccurred(error) = event {
-      playbackError = error
-      isRetryingError = false
+      errorStatus = .terminal(error)
+    } else if old == .error || (errorStatus.isRetrying && new != .loading && new != .buffering && new != .paused) {
+      errorStatus = .none
     }
 
     // Retry-budget refill: sustained audible playback proves the stream
@@ -325,15 +301,11 @@ class PlaybackCoordinator {
 
   private func emitStateChange(old: PlaybackState, new: PlaybackState) {
     // Playback state change — always emitted
-    callbacks?.playerDidChangePlayback(
-      Playback(state: new, error: nitroPlaybackError()),
-    )
+    callbacks?.playerDidChangePlayback(Playback(state: new, error: errorStatus.nitroError))
 
     // Error callback — emitted when entering or leaving error state
     if new == .error || (old == .error && new != .error) {
-      callbacks?.playerDidError(
-        PlaybackErrorEvent(error: nitroPlaybackError()),
-      )
+      callbacks?.playerDidError(PlaybackErrorEvent(error: errorStatus.nitroError))
     }
 
     // Queue ended — when playback ends on the last track. Repeat modes never
@@ -489,7 +461,7 @@ class PlaybackCoordinator {
   }
 
   func getPlayback() -> Playback {
-    Playback(state: state, error: nitroPlaybackError())
+    Playback(state: state, error: errorStatus.nitroError)
   }
 
   func getRepeatMode() -> RepeatMode {
@@ -661,16 +633,14 @@ class PlaybackCoordinator {
 
     errorHandler.resetRetry()
 
-    if playbackError != nil {
-      playbackError = nil
-      // A retrying error can be cleared while already .loading — the
-      // .trackLoading transition below then won't fire, so emit the clear
-      // here or the old track's error lingers over the new one's spinner.
-      if isRetryingError, state == .loading {
-        isRetryingError = false
+    if errorStatus != .none {
+      let wasRetrying = errorStatus.isRetrying
+      errorStatus = .none
+      // Already .loading, the .trackLoading transition below won't fire: emit the clear here, or
+      // the old track's error lingers over the new one's spinner.
+      if wasRetrying, state == .loading {
         callbacks?.playerDidChangePlayback(Playback(state: state, error: nil))
       }
-      isRetryingError = false
     }
 
     let lastPosition = effectHandler?.currentTime ?? 0

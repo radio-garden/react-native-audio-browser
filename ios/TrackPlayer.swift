@@ -103,11 +103,6 @@ class TrackPlayer {
   // MARK: - Coordinator Forwarding Properties
 
   var state: PlaybackState { coordinator.state }
-  var playbackError: TrackPlayerError.PlaybackError? {
-    get { coordinator.playbackError }
-    set { coordinator.playbackError = newValue }
-  }
-
   var lastIndex: Int {
     get { coordinator.lastIndex }
     set { coordinator.lastIndex = newValue }
@@ -549,7 +544,6 @@ class TrackPlayer {
   }
 
   private func recreateAVPlayer() {
-    coordinator.playbackError = nil
     playerTimeObserver.unregisterForBoundaryTimeEvents()
     playerObserver.stopObserving()
     stopObservingAVPlayerItem()
@@ -1118,7 +1112,7 @@ extension TrackPlayer: AudioSessionPlayer {}
 
 extension TrackPlayer: NowPlayingSource {
   var nitroPlaybackError: PlaybackError? {
-    coordinator.nitroPlaybackError()
+    coordinator.errorStatus.nitroError
   }
 }
 
