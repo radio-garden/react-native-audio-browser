@@ -854,7 +854,6 @@ extension TrackPlayer: PlaybackEffectHandler {
   }
 
   func updateNowPlayingState(playWhenReady: Bool) {
-    nowPlayingInfoController.setPlaybackState(playing: playWhenReady)
     if playWhenReady {
       startPeriodicSave()
     } else {

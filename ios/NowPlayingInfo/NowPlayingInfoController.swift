@@ -11,18 +11,15 @@ extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
 /// A `MPNowPlayingSession` bound to the linked AVPlayer publishes now-playing info
 /// automatically: the system derives elapsed time, playback rate, and duration from
 /// the player, so the per-second clock stays out of our code (it extrapolates the
-/// scrubber). We supply the two things automatic publishing does NOT provide:
-/// metadata (title/artist/artwork), attached to `AVPlayerItem.nowPlayingInfo` (the
-/// supported channel under automatic publishing); and the explicit `playbackState`
-/// that CarPlay / Control Center read for their play/pause button (see `setPlaybackState`).
+/// scrubber). We supply what automatic publishing does not: metadata (title/artist/
+/// artwork), attached to `AVPlayerItem.nowPlayingInfo` (the supported channel under
+/// automatic publishing). An explicit `playbackState` would be dropped: iOS ignores it
+/// without a private entitlement (ADR 0005).
 @MainActor
 class NowPlayingInfoController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
 
   private var _info: [String: Any] = [:]
-
-  /// Last play/pause state pushed to the session's center, to skip redundant writes.
-  private var _playbackState: MPNowPlayingPlaybackState?
 
   /// The session bound to the linked AVPlayer; held so it stays alive while publishing.
   private var nowPlayingSession: MPNowPlayingSession?
@@ -49,7 +46,6 @@ class NowPlayingInfoController {
 
     let session = MPNowPlayingSession(players: [player])
     nowPlayingSession = session
-    _playbackState = nil // new center starts at .unknown; force the next write
     remoteCommandCenter = session.remoteCommandCenter
 
     session.automaticallyPublishesNowPlayingInfo = true
@@ -84,7 +80,6 @@ class NowPlayingInfoController {
     linkedPlayer = nil
     nowPlayingSession?.automaticallyPublishesNowPlayingInfo = false
     nowPlayingSession = nil
-    _playbackState = nil
 
     remoteCommandCenter = MPRemoteCommandCenter.shared()
     onRemoteCommandCenterChanged?(remoteCommandCenter)
@@ -150,16 +145,5 @@ class NowPlayingInfoController {
     _info = [:]
     linkedPlayer?.currentItem?.nowPlayingInfo = nil
     nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = nil
-  }
-
-  /// Sets the play/pause state CarPlay / Control Center show for their transport
-  /// button. Automatic publishing fills the info dict (metadata/elapsed/rate) but
-  /// not the explicit `playbackState`, so the coordinator pushes the user's
-  /// play/pause intent here on intent/state changes.
-  func setPlaybackState(playing: Bool) {
-    let state: MPNowPlayingPlaybackState = playing ? .playing : .paused
-    guard state != _playbackState else { return }
-    _playbackState = state
-    nowPlayingSession?.nowPlayingInfoCenter.playbackState = state
   }
 }
