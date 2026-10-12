@@ -11,7 +11,7 @@ import NitroModules
 ///
 /// Extends PlaybackCoordinatorCallbacks for the state machine / coordinator callbacks
 /// and RemoteCommandCallbacks for the remote-command events, then adds the metadata
-/// and seek callbacks that are TrackPlayer-specific.
+/// callbacks, which carry AVFoundation types.
 @MainActor
 protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallbacks {
   // MARK: - Metadata Events
@@ -24,9 +24,4 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallba
 
   /// Called when chapter metadata is received.
   func playerDidReceiveChapterMetadata(_ metadata: [AVTimedMetadataGroup])
-
-  // MARK: - Playback Events
-
-  /// Called when a seek operation completes.
-  func playerDidCompleteSeek(position: Double, didFinish: Bool)
 }

@@ -735,7 +735,6 @@ class TrackPlayer {
     if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
       coordinator.handleSeekCompleted(to: seconds, didFinish: didFinish)
     }
-    callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
   }
 }
 

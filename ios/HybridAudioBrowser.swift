@@ -1766,103 +1766,63 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     onChapterMetadata(chapters)
   }
 
-  public func playerDidCompleteSeek(position _: Double, didFinish _: Bool) {
-    // Not exposed to JS currently
-  }
-
   public func remotePlay() {
-    if let handler = handleRemotePlay {
-      handler()
-    } else {
-      // Default behavior: play the player
-      onMainActor { player?.play() }
-    }
-    onRemotePlay()
+    dispatchRemote(handler: handleRemotePlay, report: onRemotePlay) { player?.play() }
   }
 
   public func remotePause() {
-    if let handler = handleRemotePause {
-      handler()
-    } else {
-      // Default behavior: pause the player
-      onMainActor { player?.pause() }
-    }
-    onRemotePause()
+    dispatchRemote(handler: handleRemotePause, report: onRemotePause) { player?.pause() }
   }
 
   public func remoteStop() {
-    if let handler = handleRemoteStop {
-      handler()
-    } else {
-      // Default behavior: stop the player
-      onMainActor { player?.stop() }
-    }
-    onRemoteStop()
+    dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { player?.stop() }
   }
 
   public func remotePlayPause() {
-    // Toggle based on current state
-    let isPlaying = onMainActor { player?.playWhenReady == true }
-    if isPlaying {
-      remotePause()
-    } else {
-      remotePlay()
-    }
+    if player?.playWhenReady == true { remotePause() } else { remotePlay() }
   }
 
   public func remoteNext() {
-    if let handler = handleRemoteNext {
-      handler()
-    } else {
-      // Default behavior: skip to next track
-      onMainActor { player?.next() }
-    }
-    onRemoteNext()
+    dispatchRemote(handler: handleRemoteNext, report: onRemoteNext) { player?.next() }
   }
 
   public func remotePrevious() {
-    if let handler = handleRemotePrevious {
-      handler()
-    } else {
-      // Default behavior: skip to previous track
-      onMainActor { player?.previous() }
-    }
-    onRemotePrevious()
+    dispatchRemote(handler: handleRemotePrevious, report: onRemotePrevious) { player?.previous() }
   }
 
   public func remoteJumpForward(interval: Double) {
-    let event = RemoteJumpForwardEvent(interval: interval)
-    if let handler = handleRemoteJumpForward {
-      handler(event)
-    } else {
-      // Default behavior: seek forward by interval
-      onMainActor { player?.seekBy(interval) }
-    }
-    onRemoteJumpForward(event)
+    dispatchRemote(
+      RemoteJumpForwardEvent(interval: interval), handler: handleRemoteJumpForward, report: onRemoteJumpForward,
+    ) { player?.seekBy(interval) }
   }
 
   public func remoteJumpBackward(interval: Double) {
-    let event = RemoteJumpBackwardEvent(interval: interval)
-    if let handler = handleRemoteJumpBackward {
-      handler(event)
-    } else {
-      // Default behavior: seek backward by interval
-      onMainActor { player?.seekBy(-interval) }
-    }
-    onRemoteJumpBackward(event)
+    dispatchRemote(
+      RemoteJumpBackwardEvent(interval: interval), handler: handleRemoteJumpBackward, report: onRemoteJumpBackward,
+    ) { player?.seekBy(-interval) }
   }
 
   public func remoteSeek(position: Double) {
-    logger.info("remoteSeek called with position: \(position)")
-    let event = RemoteSeekEvent(position: position)
-    if let handler = handleRemoteSeek {
-      handler(event)
-    } else {
-      // Default behavior: seek to position
-      logger.info("remoteSeek: calling player.seekTo(\(position))")
-      onMainActor { player?.seekTo(position) }
+    dispatchRemote(RemoteSeekEvent(position: position), handler: handleRemoteSeek, report: onRemoteSeek) {
+      player?.seekTo(position)
     }
-    onRemoteSeek(event)
+  }
+
+  /// Runs JS's override for a remote command when it set one, else `fallback`, then reports
+  /// the command to JS.
+  private func dispatchRemote(handler: (() -> Void)?, report: () -> Void, fallback: () -> Void) {
+    if let handler { handler() } else { fallback() }
+    report()
+  }
+
+  private func dispatchRemote<Event>(
+    _ event: Event,
+    handler: ((Event) -> Void)?,
+    report: (Event) -> Void,
+    fallback: () -> Void,
+  ) {
+    if let handler { handler(event) } else { fallback() }
+    report(event)
   }
 
   /// Static so the Siri intent handler can call it before the shared instance
@@ -1973,8 +1933,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func remoteChangePlaybackRate(rate: Float) {
-    // Apply the playback rate change from CarPlay/lock screen
-    onMainActor { player?.rate = rate }
+    player?.rate = rate
   }
 }
 
