@@ -936,6 +936,15 @@ extension TrackPlayer: TrackSelectionPlayer {}
 // MARK: - Queue Methods (thin forwarders)
 
 extension TrackPlayer {
+  /// Puts the active track back in the queue carrying `favorited`, since hydration never
+  /// overrides a track's own value. Returns the updated track; nil when nothing is playing.
+  func setActiveTrackFavorited(_ favorited: Bool) throws -> Track? {
+    guard let track = currentTrack, currentIndex >= 0 else { return nil }
+    let updated = track.copying(favorited: favorited)
+    try replace(currentIndex, updated)
+    return updated
+  }
+
   func replace(_ index: Int, _ track: Track) throws {
     try coordinator.replace(index, track)
   }

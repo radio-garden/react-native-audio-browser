@@ -9,12 +9,9 @@ extension HybridAudioBrowser {
   /// identity to favorite, or the change throws.
   @MainActor
   static func favoriteCurrentTrack(_ favorited: Bool) -> Bool {
-    guard let browser = shared, browser.getPlayer()?.currentTrack?.identity != nil else {
-      return false
-    }
+    guard let browser = shared else { return false }
     do {
-      try browser.setActiveTrackFavorited(favorited: favorited)
-      return true
+      return try browser.favoriteActiveTrack(favorited)
     } catch {
       logger.error("favoriteCurrentTrack(\(favorited)) failed: \(error.localizedDescription)")
       return false
