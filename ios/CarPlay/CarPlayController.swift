@@ -49,9 +49,9 @@ public final class RNABCarPlayController: NSObject {
   private var pendingTabs: [Track]?
 
   /// Whether a gate is active. While set, tabs keep their tab-bar entries but
-  /// each path is resolved per-request via `gateDecision(for:)`: a gated path
+  /// each path is resolved per-request via `BrowseGate.decide`: a gated path
   /// renders the gate page instead of content; an allowed path shows real
-  /// content. Mirrors `audioBrowser.isGateActive`; seeded in start() so a gate
+  /// content. Mirrors `BrowseGate.isActive`; seeded in start() so a gate
   /// set before the scene connects renders at connect.
   private var isGated = false
 
@@ -60,7 +60,7 @@ public final class RNABCarPlayController: NSObject {
   /// paths: each bumps and captures this at entry and bails before any
   /// `setRootTemplate` / `updateTemplates` once it's been bumped past their
   /// captured value. A build suspends the main actor at its `await` points
-  /// (per-tab `gateDecision` when gated, first-tab `loadContent` when not), so a
+  /// (per-tab `BrowseGate.decide` when gated, first-tab `loadContent` when not), so a
   /// gate change can interleave a build of the opposite kind — most importantly a
   /// `clearGate` kicking the non-gated build while a gated build is mid-await.
   /// Covering both paths with one token means that clear-vs-gated interleave is
@@ -185,7 +185,7 @@ public final class RNABCarPlayController: NSObject {
       guard let (browser, _) = await playerAndConfiguredBrowser.wait(), !Task.isCancelled else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
-      self.isGated = browser.isGateActive
+      self.isGated = browser.browseGate.isActive
       self.trackSelector = TrackSelector(browserManager: browser.browserManager)
 
       // Create image loader with CarPlay display traits
@@ -370,13 +370,13 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to gate changes (set / in-place update / clear)
-    let gateToken = audioBrowser.gateChangedEmitter.addListener { [weak self] active in
+    let gateToken = audioBrowser.browseGate.changed.addListener { [weak self] active in
       Task { @MainActor in
         self?.handleGateChanged(active)
       }
     }
     listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.gateChangedEmitter.removeListener(gateToken)
+      audioBrowser?.browseGate.changed.removeListener(gateToken)
     }
 
     // Subscribe to active track changes (for playing indicator in lists)
@@ -465,7 +465,7 @@ public final class RNABCarPlayController: NSObject {
     // Serialize concurrent tab-bar builds across BOTH the gated and non-gated
     // paths with one shared generation token: bump at entry, capture, and bail
     // before any template mutation once a newer build supersedes us. Both paths
-    // suspend the main actor at `await` points (per-tab `gateDecision` when
+    // suspend the main actor at `await` points (per-tab `BrowseGate.decide` when
     // gated, first-tab `loadContent` when not), so a gate change can interleave
     // a build of the opposite kind — a `clearGate` kicking the non-gated build
     // while a gated build is mid-await, or vice versa. A single token covers the
@@ -525,7 +525,7 @@ public final class RNABCarPlayController: NSObject {
   }
 
   /// Builds the tab bar while a gate is active. Each tab's path is run through
-  /// the single gate choke point (`gateDecision(for:)`): a gated tab becomes a
+  /// the single gate choke point (`BrowseGate.decide`): a gated tab becomes a
   /// gate page carrying that decision's chrome (and fires `onGate`); an allowed
   /// tab becomes a normal content shell that lazy-loads. With a static gate (no
   /// resolver) every tab is gated with the default chrome — today's behaviour.
@@ -540,9 +540,7 @@ public final class RNABCarPlayController: NSObject {
     guard !tabs.isEmpty else {
       // Tabs unknown (config not loaded yet, or none) — resolve the root path
       // and show a single gate page.
-      let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: nil, search: nil),
-      )
+      let outcome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: .browse, path: nil, search: nil))
       guard gateBuildGeneration == generation else { return } // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
@@ -561,9 +559,7 @@ public final class RNABCarPlayController: NSObject {
     let limitedTabs = Array(tabs.prefix(CPTabBarTemplate.maximumTabCount))
     var templates: [CPListTemplate] = []
     for tab in limitedTabs {
-      let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: tab.path, search: nil),
-      )
+      let outcome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: .browse, path: tab.path, search: nil))
       guard gateBuildGeneration == generation else { return } // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
@@ -814,9 +810,7 @@ public final class RNABCarPlayController: NSObject {
     // blocks indirect entries like the Now Playing album line. An allowed path
     // browses normally even while a gate is active.
     if isGated, let audioBrowser {
-      let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: path, search: nil),
-      )
+      let outcome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: .browse, path: path, search: nil))
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         if let top = interfaceController.topTemplate, getPath(from: top) == path { return }
@@ -1179,7 +1173,7 @@ public final class RNABCarPlayController: NSObject {
   // MARK: - Gate
 
   /// Applies a gate state change: set or clear. The per-request chrome is
-  /// obtained at render time via `gateDecision(for:)`, so this just tears down
+  /// obtained at render time via `BrowseGate.decide`, so this just tears down
   /// any pushed navigation and rebuilds the tab bar — `showTabBar` routes to the
   /// gated build while a gate is active and to the normal build once cleared.
   /// Custom Now Playing buttons (e.g. favorite) hide while gated and return on
@@ -1219,7 +1213,7 @@ public final class RNABCarPlayController: NSObject {
   private func makeGateTemplate(gate gateChrome: Gate?, tab: Track?) -> CPListTemplate {
     // A gated decision with neither an override nor a stored default chrome
     // (resolver-only `true`) falls back to the built-in minimal gate.
-    let gate = gateChrome ?? HybridAudioBrowser.builtInGate
+    let gate = gateChrome ?? BrowseGate.builtInChrome
     let template = CPListTemplate(title: gate.title, sections: [])
     // Set at creation — the timing CarPlay renders the empty view reliably
     // (see replaceWithMessage).

@@ -59,6 +59,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
+  let browseGate = BrowseGate()
   private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
@@ -108,10 +109,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
   public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
-  /// Signals that the gate's active state changed (set or cleared). Carries
-  /// the active flag; per-request chrome is obtained at each serve site via
-  /// `gateDecision(for:)`, so the emitter only tells surfaces to re-render.
-  public let gateChangedEmitter = Emitter<Bool>()
   /// Fired when a voice media intent (`MediaIntentPlayback`) successfully
   /// starts playback. CarPlay surfaces the Now Playing template in response, so
   /// the user lands on the playing station (with the rest of the results in Up
@@ -206,7 +203,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// (re)bound the real resolver yet (JS reload / instance churn re-seeding gate
   /// state, e.g. CarPlay re-seeding `isGated` at scene connect). Serving content
   /// in that window would be a fail-open leak — same direction as the
-  /// resolver-error path in `gateDecision`. Matches Android's default.
+  /// resolver-error path in `BrowseGate.decide`. Matches Android's default.
   public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = HybridAudioBrowser.defaultResolveGate
 
   // Computed, not stored: a nonisolated static holding a non-Sendable closure
@@ -306,6 +303,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared?.player?.destroy()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
+      browseGate.resolve = { [weak self] request in
+        guard let self else { throw CancellationError() }
+        return try await resolveGate(request).await().await()
+      }
       // Tell connected external controllers (CarPlay) to re-subscribe against
       // this instance. Unconditional: `shared` is weak, so on a JS reload the
       // old instance may already be gone — "shared was nil" does not mean no
@@ -539,76 +540,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Gate
 
-  /// The gate's default chrome, if one was set. Served when the resolver
-  /// returns a gated decision with no per-request override, and for the static
-  /// gate (no resolver). May be nil for a resolver-only gate.
-  private(set) var defaultChrome: Gate?
-
-  /// Whether JS installed a per-request resolver. When false the gate is static
-  /// — every request is gated with `defaultChrome` and the JS hop is skipped.
-  private(set) var hasResolver = false
-
-  /// True once `setGate` runs, until `clearGate`. While active, external
-  /// surfaces (CarPlay) keep their tabs visible but consult `gateDecision(for:)`
-  /// per request, rendering the gate chrome where gated and refusing
-  /// external-surface search. Playback, the queue and Now Playing are
-  /// unaffected — a gate blocks finding content, never hearing it.
-  private(set) var isGateActive = false
-
-  /// The minimal built-in gate served when a request is gated but neither a
-  /// per-request override nor a stored default chrome exists (resolver-only
-  /// gate returning `true`).
-  static let builtInGate = Gate(title: "Unavailable", message: nil)
-
-  /// The outcome of a single gate decision: whether to gate, and (if so) the
-  /// chrome to render.
-  struct GateOutcome {
-    let gated: Bool
-    let chrome: Gate?
-  }
-
   public func setGate(gate: Gate?, hasResolver: Bool) throws {
-    onMainActor {
-      defaultChrome = gate
-      self.hasResolver = hasResolver
-      isGateActive = true
-      gateChangedEmitter.emit(true)
-    }
+    onMainActor { browseGate.set(chrome: gate, hasResolver: hasResolver) }
   }
 
   public func clearGate() throws {
-    onMainActor {
-      guard isGateActive else { return }
-      defaultChrome = nil
-      hasResolver = false
-      isGateActive = false
-      gateChangedEmitter.emit(false)
-    }
-  }
-
-  /// The single choke point for every gate enforcement site. Asks whether
-  /// `request` should be gated and, if so, with what chrome (override → stored
-  /// default → built-in). When no resolver is installed the gate is static and
-  /// resolves without a JS hop.
-  ///
-  /// Resolver errors **fail CLOSED by design**: a thrown/rejected resolver, or a
-  /// rejection at either `.await()` layer (bridge tear-down on JS reload, the JS
-  /// runtime mid-reload, a serialization error) cannot prove the request is
-  /// allowed — and a gate exists to withhold content, so serving on error would
-  /// be a content leak (a paywall bypass). On error we gate with the stored
-  /// default / built-in chrome so the user still sees a coherent gate page. A
-  /// *successful* resolver returning `gated: false` still allows the request.
-  @MainActor
-  func gateDecision(for request: NativeGateRequest) async -> GateOutcome {
-    guard isGateActive else { return GateOutcome(gated: false, chrome: nil) }
-    if !hasResolver { return GateOutcome(gated: true, chrome: defaultChrome ?? Self.builtInGate) }
-    guard let decision = try? await resolveGate(request).await().await() else {
-      // Resolver error: fail CLOSED (see doc comment) — gate with the default /
-      // built-in so the gate page still renders rather than leaking content.
-      return GateOutcome(gated: true, chrome: defaultChrome ?? Self.builtInGate)
-    }
-    guard decision.gated else { return GateOutcome(gated: false, chrome: nil) } // explicit allow
-    return GateOutcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInGate)
+    onMainActor { browseGate.clear() }
   }
 
   // MARK: - Car Connection (CarPlay)

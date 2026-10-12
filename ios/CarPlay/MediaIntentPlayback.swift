@@ -43,7 +43,7 @@ enum MediaIntentPlayback {
       playlist: criteria.playlist,
       reference: criteria.reference == .my ? .my : .unknown,
     )
-    let outcome = await browser.gateDecision(for: NativeGateRequest(reason: .search, path: nil, search: params))
+    let outcome = await browser.browseGate.decide(NativeGateRequest(reason: .search, path: nil, search: params))
     guard !outcome.gated else {
       logger.info("search refused — gated")
       browser.onGate(GateEvent(reason: .search))
