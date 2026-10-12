@@ -120,3 +120,32 @@ struct ListenerCountTests {
     #expect(emitter.listenerCount == 0)
   }
 }
+
+// MARK: - subscribe
+
+@Suite("subscribe")
+struct SubscribeTests {
+  @Test func receivesUntilCancelled() {
+    let emitter = Emitter<Int>()
+    var received: [Int] = []
+    let subscription = emitter.subscribe { received.append($0) }
+    emitter.emit(1)
+    subscription.cancel()
+    emitter.emit(2)
+    #expect(received == [1])
+    #expect(emitter.listenerCount == 0)
+  }
+
+  @Test func releasingTheSubscriptionRemovesTheListener() {
+    let emitter = Emitter<Int>()
+    var received: [Int] = []
+    do {
+      let subscription = emitter.subscribe { received.append($0) }
+      emitter.emit(1)
+      _ = subscription
+    }
+    emitter.emit(2)
+    #expect(received == [1])
+    #expect(emitter.listenerCount == 0)
+  }
+}

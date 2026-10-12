@@ -89,7 +89,7 @@ final class BrowserManager {
   private(set) var path: String = "/" {
     didSet {
       if oldValue != path {
-        onPathChanged?(path)
+        pathChanged.emit(path)
       }
     }
   }
@@ -97,7 +97,7 @@ final class BrowserManager {
   private(set) var content: ResolvedTrack? {
     didSet {
       // Note: Can't compare ResolvedTrack directly, always fire callback
-      onContentChanged?(content)
+      contentChanged.emit(content)
     }
   }
 
@@ -108,7 +108,7 @@ final class BrowserManager {
       // titles in a new locale), and an unchanged result must not churn the
       // CarPlay tab bar or reset its selection.
       if let tabs, !TabBarEntries.same(oldValue, tabs) {
-        onTabsChanged?(tabs)
+        tabsChanged.emit(tabs)
       }
     }
   }
@@ -123,21 +123,19 @@ final class BrowserManager {
     didSet {
       isConfigured = true
       layers.invalidate()
-      onConfigChanged?(config)
+      configChanged.emit(config)
     }
   }
 
-  // MARK: - Callbacks
+  // MARK: - Events (emitted on the main actor)
 
-  var onPathChanged: ((String) -> Void)?
-  var onContentChanged: ((ResolvedTrack?) -> Void)?
-  var onTabsChanged: (([Track]) -> Void)?
-  var onConfigChanged: ((BrowserConfig) -> Void)?
-  /// Fired when the favorite id set changes (e.g. an app/webview-originated
-  /// favorite). Lets surfaces like the CarPlay now-playing heart re-render —
-  /// they otherwise only learn of their own toggles via favorite/active-track
-  /// events, never an external change routed through `setFavorites`.
-  var onFavoritesChanged: (() -> Void)?
+  let pathChanged = Emitter<String>()
+  let contentChanged = Emitter<ResolvedTrack?>()
+  let tabsChanged = Emitter<[Track]>()
+  let configChanged = Emitter<BrowserConfig>()
+  /// The favorite id set changed, however it changed (e.g. from the app or a webview), so
+  /// surfaces like the CarPlay now-playing heart can re-render.
+  let favoritesChanged = Emitter<Void>()
 
   /// Forwards to config.awaitTrackLoadHandler so callers don't need to
   /// cross the MainActor boundary to access `config`.
@@ -155,7 +153,7 @@ final class BrowserManager {
     let newIds = Set(favorites)
     guard newIds != favoriteIds else { return }
     favoriteIds = newIds
-    onFavoritesChanged?()
+    favoritesChanged.emit(())
   }
 
   /// Enables/disables favoriting (propagated from the `favorite` capability).

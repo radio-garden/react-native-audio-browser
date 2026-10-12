@@ -87,8 +87,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Multi-Listener Emitters
 
   /// Emitters allow multiple listeners for each event type, avoiding callback hijacking
-  public let tabsChangedEmitter = Emitter<[Track]>()
-  public let contentChangedEmitter = Emitter<ResolvedTrack?>()
   public let favoriteChangedEmitter = Emitter<FavoriteChangedEvent>()
   public let activeTrackChangedEmitter = Emitter<PlaybackActiveTrackChangedEvent>()
   public let queueChangedEmitter = Emitter<[Track]>()
@@ -299,7 +297,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.instanceChangedEmitter.emit(())
     }
     setupEmitterToNitroForwarding()
-    setupBrowserCallbacks()
   }
 
   /// Drops every JS-provided callback that native code can invoke on its own
@@ -351,13 +348,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Sets up automatic forwarding from emitters to Nitro callbacks
   private func setupEmitterToNitroForwarding() {
-    tabsChangedEmitter.addListener { [weak self] tabs in
-      self?.onTabsChanged(tabs)
-    }
-
-    contentChangedEmitter.addListener { [weak self] content in
-      self?.onContentChanged(content)
-    }
+    browserManager.pathChanged.addListener { [weak self] in self?.onPathChanged($0) }
+    browserManager.tabsChanged.addListener { [weak self] in self?.onTabsChanged($0) }
+    browserManager.contentChanged.addListener { [weak self] in self?.onContentChanged($0) }
 
     favoriteChangedEmitter.addListener { [weak self] event in
       self?.onFavoriteChanged(event)
@@ -377,20 +370,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     repeatModeChangedEmitter.addListener { [weak self] event in
       self?.onPlaybackRepeatModeChanged(event)
-    }
-  }
-
-  private func setupBrowserCallbacks() {
-    onMainActor {
-      browserManager.onPathChanged = { [weak self] path in
-        self?.onPathChanged(path)
-      }
-      browserManager.onContentChanged = { [weak self] content in
-        self?.contentChangedEmitter.emit(content)
-      }
-      browserManager.onTabsChanged = { [weak self] tabs in
-        self?.tabsChangedEmitter.emit(tabs)
-      }
     }
   }
 

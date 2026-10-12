@@ -66,3 +66,29 @@ public final class Emitter<T>: @unchecked Sendable {
     return snapshot.count
   }
 }
+
+/// A listener registration that ends when cancelled or released.
+final class Subscription {
+  private var cancelHandler: (() -> Void)?
+
+  init(cancel: @escaping () -> Void) {
+    cancelHandler = cancel
+  }
+
+  func cancel() {
+    cancelHandler?()
+    cancelHandler = nil
+  }
+
+  deinit {
+    cancelHandler?()
+  }
+}
+
+extension Emitter {
+  /// Adds `listener` until the returned subscription is cancelled or released.
+  func subscribe(_ listener: @escaping (T) -> Void) -> Subscription {
+    let token = addListener(listener)
+    return Subscription { [weak self] in self?.removeListener(token) }
+  }
+}

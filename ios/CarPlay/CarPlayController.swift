@@ -228,10 +228,6 @@ public final class RNABCarPlayController: NSObject {
     }
     listenerRemovals.removeAll()
 
-    // Clear config callback
-    audioBrowser?.browserManager.onConfigChanged = nil
-    audioBrowser?.browserManager.onFavoritesChanged = nil
-
     nowPlayingManager.teardown()
     listItemFactory = nil
 
@@ -261,32 +257,35 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to tab changes
-    let tabsToken = audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
+    let tabsToken = audioBrowser.browserManager.tabsChanged.addListener { [weak self] tabs in
       Task { @MainActor in
         self?.handleTabsChanged(tabs)
       }
     }
     listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.tabsChangedEmitter.removeListener(tabsToken)
+      audioBrowser?.browserManager.tabsChanged.removeListener(tabsToken)
     }
 
     // Subscribe to content changes
-    let contentToken = audioBrowser.contentChangedEmitter.addListener { [weak self] content in
+    let contentToken = audioBrowser.browserManager.contentChanged.addListener { [weak self] content in
       Task { @MainActor in
         self?.handleContentChanged(content)
       }
     }
     listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.contentChangedEmitter.removeListener(contentToken)
+      audioBrowser?.browserManager.contentChanged.removeListener(contentToken)
     }
 
     // Subscribe to config changes (for Now Playing buttons and per-track
     // button state — e.g. resolveAlbumPath appearing/disappearing)
-    audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
+    let configToken = audioBrowser.browserManager.configChanged.addListener { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
         self?.nowPlayingManager.updateNowPlayingButtonStates()
       }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.browserManager.configChanged.removeListener(configToken)
     }
 
     // Now-playing buttons + Up Next + the list playing-indicator location are
@@ -315,10 +314,13 @@ public final class RNABCarPlayController: NSObject {
     // webview). The favorite/active-track emitters only fire for the player's
     // own toggles, so without this an in-app favorite leaves the CarPlay heart
     // stale.
-    audioBrowser.browserManager.onFavoritesChanged = { [weak self] in
+    let favoritesToken = audioBrowser.browserManager.favoritesChanged.addListener { [weak self] in
       Task { @MainActor in
         self?.nowPlayingManager.updateFavoriteButtonState()
       }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.browserManager.favoritesChanged.removeListener(favoritesToken)
     }
 
     // Subscribe to favorite changes (for Now Playing button)
