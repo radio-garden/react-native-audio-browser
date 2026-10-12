@@ -13,7 +13,7 @@ enum PlaybackFailure {
   /// Classifies a failure. AVFoundation reports HTTP failures as opaque CoreMedia errors, so
   /// `httpStatusCode` comes from the item's error log, passed in by the caller.
   ///
-  /// The two answers rank the evidence differently, on purpose:
+  /// Both read the error and the errors it wraps, but rank the evidence differently, on purpose:
   /// - The error: a transport failure first (no response arrived, so a status left in the log
   ///   describes an earlier attempt), then a non-2xx status, then media that cannot be decoded.
   /// - Retrying: a status first (a retry cannot conjure content the server refused), then the
@@ -44,8 +44,9 @@ enum PlaybackFailure {
     httpStatusCode: Int?,
     fallback: TrackPlayerError.PlaybackError,
   ) -> TrackPlayerError.PlaybackError {
+    let chain = error.map(errorChain) ?? []
     // `as?` bridges a plain NSError in NSURLErrorDomain too, AVFoundation's usual form.
-    if let urlError = error as? URLError {
+    for case let urlError as URLError in chain {
       switch urlError.code {
       case .notConnectedToInternet:
         return .notConnectedToInternet
@@ -53,18 +54,17 @@ enum PlaybackFailure {
            .secureConnectionFailed:
         return .hostUnreachable
       default:
-        break
+        continue
       }
     }
     if let httpStatusCode, !(200 ... 299).contains(httpStatusCode) {
       return .httpStatus(httpStatusCode)
     }
-    if let nsError = error as NSError?, nsError.domain == AVFoundationErrorDomain,
-       unplayableAVErrorCodes.contains(nsError.code)
-    {
-      return .trackWasUnplayable
+    let unplayable = chain.contains {
+      let nsError = $0 as NSError
+      return nsError.domain == AVFoundationErrorDomain && unplayableAVErrorCodes.contains(nsError.code)
     }
-    return fallback
+    return unplayable ? .trackWasUnplayable : fallback
   }
 
   /// The stream arrived but cannot be decoded: unknown container, unsupported codec, or no

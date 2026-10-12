@@ -148,6 +148,22 @@ struct PlaybackFailureRetryTests {
     #expect(retryable(wrappingTransient))
   }
 
+  /// The report reads the same chain as the retry decision, so a wrapped cause that stops
+  /// retrying is also what is reported.
+  @Test func aWrappedCauseIsWhatIsReported() {
+    let wrappedUnplayable = NSError(
+      domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue,
+      userInfo: [NSUnderlyingErrorKey: avError(.contentIsUnavailable)],
+    )
+    #expect(!retryable(wrappedUnplayable))
+    #expect(reported(wrappedUnplayable) == .trackWasUnplayable)
+    let wrappedOffline = NSError(
+      domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue,
+      userInfo: [NSUnderlyingErrorKey: URLError(.notConnectedToInternet)],
+    )
+    #expect(reported(wrappedOffline) == .notConnectedToInternet)
+  }
+
   @Test func nothingToClassifyDoesNotRetry() {
     #expect(!retryable(nil))
   }
