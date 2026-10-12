@@ -188,33 +188,6 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   }
 }
 
-// MARK: - Mock SleepTimerHandling
-
-@MainActor
-final class MockSleepTimerHandling: SleepTimerHandling {
-  var onComplete: (() -> Void)?
-  var onFadeStart: ((_ duration: TimeInterval) -> Void)?
-  var onFadeCancel: (() -> Void)?
-  var onChanged: ((SleepTimerState) -> Void)?
-  var trackChangedCallCount = 0
-  var trackPlayedToEndCallCount = 0
-  var clearCallCount = 0
-
-  @discardableResult func clear() -> Bool {
-    clearCallCount += 1
-    return true
-  }
-
-  func onTrackChanged() { trackChangedCallCount += 1 }
-  func onTrackPlayedToEnd() { trackPlayedToEndCallCount += 1 }
-
-  // Consumer-facing surface — unused by the coordinator tests, present only to
-  // satisfy the protocol. Add recorders alongside the tests that need them.
-  func get() -> SleepTimerState? { nil }
-  func set(seconds _: TimeInterval, fadeDuration _: TimeInterval?) {}
-  func setToEndOfTrack() {}
-}
-
 // MARK: - RetryLoop
 
 /// A RetryLoop for tests: enabled, with an instant backoff unless `delay`, whose attempts reload

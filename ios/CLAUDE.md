@@ -31,7 +31,7 @@ The playback core is split into two `@MainActor` types:
 - **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
   `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryLoop`, and
   `PlaybackPersistence`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
-  AVPlayer), `MediaLoaderDelegate`, `TrackSelectionPlayer`,
+  AVPlayer), `TrackSelectionPlayer`,
   `AudioSessionPlayer` and `NowPlayingSource`.
 - **PlaybackCoordinator** (owned by TrackPlayer) is the **state-machine hub**. It holds the
   `PlaybackState`, runs `transition(_ event:)`, applies side effects through the
@@ -57,7 +57,7 @@ remote/config callbacks.
 4. **State Machine**: PlaybackEvent triggers a deterministic transition via `PlaybackCoordinator.transition(_ event)`; the coordinator queries `nextPlaybackState(from:on:)`, applies side effects through the `PlaybackEffectHandler` (TrackPlayer drives AVPlayer), updates timers/playing-state, and emits callbacks
 5. **Coordinator → Queue**: PlaybackCoordinator delegates queue operations to QueueManager (pure state, no AVPlayer knowledge); each mutation returns a `QueueChange`, which `afterQueueMutation` publishes
 6. **Coordinator → Error/Retry**: RetryLoop classifies each failure (`PlaybackFailure`) and either backs off and reloads or reports it, waiting out offline spells via NetworkMonitor
-7. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
+7. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives its results as `MediaLoader.Event`s
 8. **Player → NowPlayingUpdater**: TrackPlayer calls NowPlayingUpdater for track metadata and artwork; NowPlayingUpdater updates NowPlayingInfoController (playback dynamics auto-publish via MPNowPlayingSession)
 9. **Coordinator → DeferredSeek**: a seek that arrives before the AVPlayerItem is ready is held as pure state; TrackPlayer issues it once the item is ready and reports its landing, which lets the load become ready
 10. **Platform → Observers**: KVO and NotificationCenter feed back to TrackPlayer, which translates them into PlaybackEvents
@@ -96,7 +96,7 @@ ios/
 │                                     # Owns PlaybackCoordinator, observers, MediaLoader,
 │                                     #   NowPlayingUpdater, RemoteCommandController,
 │                                     #   NowPlayingInfoController, RetryLoop, PlaybackPersistence
-│                                     # Conforms to PlaybackEffectHandler, MediaLoaderDelegate,
+│                                     # Conforms to PlaybackEffectHandler,
 │                                     #   TrackSelectionPlayer
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
 ├── TrackSelector.swift               # @MainActor shared track selection decision tree
@@ -144,14 +144,12 @@ ios/
 │   │                                 # Mutations return QueueChange
 │   ├── ShuffleOrder.swift            # Fisher-Yates shuffle ordering (value type)
 │   ├── MediaLoader.swift             # @MainActor URL resolution, AVURLAsset, metadata/playable loading
-│   ├── MediaLoaderDelegate.swift     # @MainActor protocol: item ready, errors, metadata callbacks
 │   ├── NowPlayingUpdater.swift       # @MainActor now-playing state (override, flash, formatter,
 │   │                                 #   timed metadata), lines + artwork; reads NowPlayingSource
 │   ├── AudioSessionController.swift  # @MainActor AVAudioSession: category, activate, release,
 │   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
 │   ├── DeferredSeek.swift            # Pure state: a seek held while the item loads (idle/pending/inFlight)
-│   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track); SleepTimerHandling
-│   ├── SleepTimerHandling.swift      # Abstract sleep-timer protocol (coordinator dependency)
+│   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track)
 │   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware
 │   ├── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
 │   ├── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection

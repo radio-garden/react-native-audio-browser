@@ -19,7 +19,7 @@ class PlaybackCoordinator {
 
   let queue = QueueManager()
   let retry: RetryLoop
-  let sleepTimerManager: any SleepTimerHandling
+  let sleepTimerManager: SleepTimerManager
   var deferredSeek = DeferredSeek()
 
   lazy var volumeFader = VolumeFader(
@@ -200,7 +200,7 @@ class PlaybackCoordinator {
 
   // MARK: - Init
 
-  init(retry: RetryLoop, sleepTimerManager: any SleepTimerHandling) {
+  init(retry: RetryLoop, sleepTimerManager: SleepTimerManager) {
     self.retry = retry
     self.sleepTimerManager = sleepTimerManager
 
@@ -392,14 +392,14 @@ class PlaybackCoordinator {
     }
   }
 
-  func avPlayerStatusDidFail(error: Error?, httpStatusCode: Int? = nil) {
-    retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
+  /// A failure the retry loop classifies, then reloads from or reports.
+  func playbackDidFail(_ error: Error?, context: PlaybackErrorContext, httpStatusCode: Int? = nil) {
+    retry.handleError(error, context: context, httpStatusCode: httpStatusCode)
   }
 
-  func avItemStatusDidChange(_ status: PlayerItemStatus, error: Error?, httpStatusCode: Int? = nil) {
-    if status == .failed {
-      retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
-    }
+  /// A failure no retry can fix.
+  func playbackDidFail(terminal error: TrackPlayerError.PlaybackError) {
+    transition(.errorOccurred(error))
   }
 
   func audioDidStart() {

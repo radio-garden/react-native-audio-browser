@@ -29,7 +29,7 @@ end
 
 subgraph CoordOwned["Coordinator-owned Managers"]
   RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
-  STM["SleepTimerManager<br/>@MainActor (SleepTimerHandling)<br/>Time & end-of-track"]
+  STM["SleepTimerManager<br/>@MainActor<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
   VF["VolumeFader<br/>Sleep-timer fade out"]
   LSC["DeferredSeek<br/>Pure state: a seek held while the item loads<br/>idle / pending / inFlight"]
@@ -74,7 +74,6 @@ end
 
 subgraph Loaders["Media Loading"]
   ML["MediaLoader<br/>@MainActor<br/>URL resolution, AVURLAsset<br/>Metadata + playable loading"]
-  MLD["MediaLoaderDelegate<br/>Protocol"]
   NPU["NowPlayingUpdater<br/>@MainActor<br/>Track metadata + artwork (Kingfisher)"]
 end
 
@@ -133,7 +132,6 @@ TP -->|Owns| PSO
 TP -->|Owns| PTO
 TP -->|Owns| PINO
 TP -->|Owns| PIPO
-TP -.->|Implements| MLD
 TP -.->|"Implements PlaybackEffectHandler"| PC
 
 %% Coordinator hub
@@ -151,7 +149,7 @@ PC -->|"mutation → QueueChange"| QM
 QM --> SO
 
 %% Loaders
-ML -.->|Delegate| MLD
+ML -.->|"onEvent: MediaLoader.Event"| TP
 ML -->|delegate: TrackPlayer| TP
 NPU -->|Updates| NPIC
 NPU -->|Loads artwork| AIF
@@ -221,7 +219,6 @@ classDef controller fill:#fff3e1,stroke:#333,stroke-width:2px
 classDef platform fill:#f0f0f0,stroke:#333,stroke-width:2px
 classDef state fill:#e8f5e9,stroke:#333,stroke-width:2px
 classDef util fill:#fafafa,stroke:#333,stroke-width:2px
-classDef protocol fill:#fff8e1,stroke:#333,stroke-width:1px,stroke-dasharray:5 5
 classDef carplay fill:#e1f0ff,stroke:#333,stroke-width:2px
 classDef objc fill:#ffe1f0,stroke:#333,stroke-width:2px
 classDef queue fill:#fce4ec,stroke:#333,stroke-width:2px
@@ -238,7 +235,6 @@ class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
 class RTL,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util
-class MLD protocol
 class CPC,CPS,CPIL,CPAR,CPLF,CPNPM carplay
 class SCN,RNAB,MIH,MAH,MAFH objc
 class QM,SO queue

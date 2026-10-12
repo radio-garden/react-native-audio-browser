@@ -6,49 +6,28 @@ import Testing
 // MARK: - Test Spy
 
 @MainActor
-private final class MediaLoaderDelegateSpy: MediaLoaderDelegate {
+private final class MediaLoaderSpy {
   var preparedItems: [AVPlayerItem] = []
   var unplayableCount = 0
   var retryableErrors: [Error] = []
   var playbackErrors: [TrackPlayerError.PlaybackError] = []
-  var commonMetadata: [[AVMetadataItem]] = []
-  var chapterMetadata: [[AVTimedMetadataGroup]] = []
-  var timedMetadata: [[AVTimedMetadataGroup]] = []
 
-  func mediaLoaderDidPrepareItem(_ item: AVPlayerItem) {
-    preparedItems.append(item)
-  }
-
-  func mediaLoaderDidFailWithUnplayableTrack() {
-    unplayableCount += 1
-  }
-
-  func mediaLoaderDidFailWithRetryableError(_ error: Error) {
-    retryableErrors.append(error)
-  }
-
-  func mediaLoaderDidFailWithError(_ error: TrackPlayerError.PlaybackError) {
-    playbackErrors.append(error)
-  }
-
-  func mediaLoaderDidReceiveCommonMetadata(_ items: [AVMetadataItem]) {
-    commonMetadata.append(items)
-  }
-
-  func mediaLoaderDidReceiveChapterMetadata(_ groups: [AVTimedMetadataGroup]) {
-    chapterMetadata.append(groups)
-  }
-
-  func mediaLoaderDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
-    timedMetadata.append(groups)
+  func record(_ event: MediaLoader.Event) {
+    switch event {
+    case let .prepared(item): preparedItems.append(item)
+    case .unplayable: unplayableCount += 1
+    case let .failed(error): retryableErrors.append(error)
+    case let .invalidSource(url): playbackErrors.append(.invalidSourceUrl(url))
+    case .commonMetadata, .chapterMetadata, .timedMetadata: break
+    }
   }
 }
 
 @MainActor
-private func makeLoader() -> (MediaLoader, MediaLoaderDelegateSpy) {
+private func makeLoader() -> (MediaLoader, MediaLoaderSpy) {
   let loader = MediaLoader()
-  let spy = MediaLoaderDelegateSpy()
-  loader.delegate = spy
+  let spy = MediaLoaderSpy()
+  loader.onEvent = { spy.record($0) }
   return (loader, spy)
 }
 

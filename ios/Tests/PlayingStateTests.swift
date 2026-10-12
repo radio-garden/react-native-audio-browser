@@ -33,7 +33,7 @@ struct PlayingStateTests {
   @Test func aChangeIsPublishedOnce() {
     let callbacks = MockPlaybackCoordinatorCallbacks()
     let coordinator = PlaybackCoordinator(
-      retry: makeRetryLoop(), sleepTimerManager: MockSleepTimerHandling(),
+      retry: makeRetryLoop(), sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()),
     )
     coordinator.callbacks = callbacks
     coordinator.transition(.avPlayerPlaying)

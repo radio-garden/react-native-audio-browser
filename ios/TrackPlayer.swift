@@ -58,14 +58,7 @@ class TrackPlayer {
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
     onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
-    onFailedToPlayToEndTime: { [weak self] error in
-      let effectiveError = error ?? self?.avPlayer.currentItem?.error
-      self?.coordinator.retry.handleError(
-        effectiveError,
-        context: .playback,
-        httpStatusCode: self?.currentItemHttpStatusCode,
-      )
-    },
+    onFailedToPlayToEndTime: { [weak self] error in self?.playbackDidFail(error) },
     // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
     // genuine drop is recovered by the retry / network-restore paths.
     onPlaybackStalled: { [weak self] in self?.recoverFromStall(reconnectIfLive: false) },
@@ -76,7 +69,7 @@ class TrackPlayer {
       self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
     },
     onStatusChange: { [weak self] status, error in
-      self?.avItemStatusDidChange(status, error: error)
+      if status == .failed { self?.playbackDidFail(error) }
     },
     onTimedMetadataReceived: { [weak self] groups in
       self?.callbacks?.playerDidReceiveTimedMetadata(groups)
@@ -116,7 +109,7 @@ class TrackPlayer {
   var previousTracks: [Track] { coordinator.previousTracks }
   var isLastInPlaybackOrder: Bool { coordinator.isLastInPlaybackOrder }
   var playbackActive: Bool { coordinator.playbackActive }
-  var sleepTimerManager: any SleepTimerHandling { coordinator.sleepTimerManager }
+  var sleepTimerManager: SleepTimerManager { coordinator.sleepTimerManager }
 
   var sleepTimer: SleepTimer? { sleepTimerManager.get() }
 
@@ -297,7 +290,7 @@ class TrackPlayer {
     coordinator.effectHandler = self
     coordinator.callbacks = callbacks
 
-    mediaLoader.delegate = self
+    mediaLoader.onEvent = { [weak self] in self?.mediaLoaderDidEmit($0) }
     mediaLoader.mediaUrlResolver = { [weak resolver] src, track in
       await resolver?.resolveMediaUrl(src, track: track) ?? MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
@@ -717,26 +710,14 @@ class TrackPlayer {
   }
 
   private func avPlayerStatusDidChange(_ status: AVPlayer.Status) {
-    if status == .failed {
-      coordinator.avPlayerStatusDidFail(
-        error: avPlayer.currentItem?.error,
-        httpStatusCode: currentItemHttpStatusCode,
-      )
-    }
+    if status == .failed { playbackDidFail(nil) }
   }
 
-  private func avItemStatusDidChange(_ status: AVPlayerItem.Status, error: Error?) {
-    let mapped: PlayerItemStatus
-    switch status {
-    case .unknown: mapped = .unknown
-    case .readyToPlay: mapped = .readyToPlay
-    case .failed: mapped = .failed
-    @unknown default: return
-    }
-    coordinator.avItemStatusDidChange(
-      mapped,
-      error: error ?? avPlayer.currentItem?.error,
-      httpStatusCode: currentItemHttpStatusCode,
+  /// The player or its current item failed. The item's own error stands in when the report
+  /// carried none, and its error log supplies the HTTP status.
+  private func playbackDidFail(_ error: Error?) {
+    coordinator.playbackDidFail(
+      error ?? avPlayer.currentItem?.error, context: .playback, httpStatusCode: currentItemHttpStatusCode,
     )
   }
 
@@ -977,10 +958,36 @@ extension TrackPlayer {
   }
 }
 
-// MARK: - MediaLoaderDelegate
+// MARK: - MediaLoader Events
 
-extension TrackPlayer: MediaLoaderDelegate {
-  func mediaLoaderDidPrepareItem(_ item: AVPlayerItem) {
+extension TrackPlayer {
+  private func mediaLoaderDidEmit(_ event: MediaLoader.Event) {
+    switch event {
+    case let .prepared(item):
+      mediaLoaderDidPrepareItem(item)
+    case let .failed(error):
+      attachPublishingCarrierItemIfNeeded()
+      primeNowPlayingElectionIfNeeded()
+      coordinator.playbackDidFail(error, context: .mediaLoad)
+    case .unplayable:
+      attachPublishingCarrierItemIfNeeded()
+      primeNowPlayingElectionIfNeeded()
+      coordinator.playbackDidFail(terminal: .trackWasUnplayable)
+    case let .invalidSource(url):
+      // No carrier: an invalid src never produced an asset. The direct-center publish still
+      // carries the metadata once elected.
+      primeNowPlayingElectionIfNeeded()
+      coordinator.playbackDidFail(terminal: .invalidSourceUrl(url))
+    case let .commonMetadata(items):
+      callbacks?.playerDidReceiveCommonMetadata(items)
+    case let .chapterMetadata(groups):
+      callbacks?.playerDidReceiveChapterMetadata(groups)
+    case let .timedMetadata(groups):
+      callbacks?.playerDidReceiveTimedMetadata(groups)
+    }
+  }
+
+  private func mediaLoaderDidPrepareItem(_ item: AVPlayerItem) {
     nowPlayingInfoController.prepareItem(item)
     avPlayer.replaceCurrentItem(with: item)
     startObservingAVPlayerItem(item)
@@ -991,18 +998,6 @@ extension TrackPlayer: MediaLoaderDelegate {
         avItemDidUpdatePlaybackLikelyToKeepUp(true)
       }
     }
-  }
-
-  func mediaLoaderDidFailWithRetryableError(_ error: Error) {
-    attachPublishingCarrierItemIfNeeded()
-    primeNowPlayingElectionIfNeeded()
-    coordinator.retry.handleError(error, context: .mediaLoad)
-  }
-
-  func mediaLoaderDidFailWithUnplayableTrack() {
-    attachPublishingCarrierItemIfNeeded()
-    primeNowPlayingElectionIfNeeded()
-    transition(.errorOccurred(.trackWasUnplayable))
   }
 
   /// `MPNowPlayingSession` publishes only through the linked player's current item, so
@@ -1031,25 +1026,6 @@ extension TrackPlayer: MediaLoaderDelegate {
   private func primeNowPlayingElectionIfNeeded() {
     guard playWhenReady, coordinator.claimNowPlayingPrime() else { return }
     silentAudioPrimer.prime()
-  }
-
-  func mediaLoaderDidFailWithError(_ error: TrackPlayerError.PlaybackError) {
-    // No carrier here: an invalid/missing src never produced an asset. The
-    // direct-center publish still carries the metadata once elected.
-    primeNowPlayingElectionIfNeeded()
-    transition(.errorOccurred(error))
-  }
-
-  func mediaLoaderDidReceiveCommonMetadata(_ items: [AVMetadataItem]) {
-    callbacks?.playerDidReceiveCommonMetadata(items)
-  }
-
-  func mediaLoaderDidReceiveChapterMetadata(_ groups: [AVTimedMetadataGroup]) {
-    callbacks?.playerDidReceiveChapterMetadata(groups)
-  }
-
-  func mediaLoaderDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
-    callbacks?.playerDidReceiveTimedMetadata(groups)
   }
 }
 

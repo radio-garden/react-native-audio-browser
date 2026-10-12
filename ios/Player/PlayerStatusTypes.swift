@@ -3,7 +3,3 @@
 enum PlayerTimeControlStatus {
   case paused, waitingToPlayAtSpecifiedRate, playing
 }
-
-enum PlayerItemStatus {
-  case unknown, readyToPlay, failed
-}

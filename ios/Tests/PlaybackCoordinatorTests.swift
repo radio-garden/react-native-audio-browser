@@ -8,9 +8,9 @@ private func makeCoordinator() -> (
   coordinator: PlaybackCoordinator,
   effectHandler: MockPlaybackEffectHandler,
   callbacks: MockPlaybackCoordinatorCallbacks,
-  sleepTimer: MockSleepTimerHandling,
+  sleepTimer: SleepTimerManager,
 ) {
-  let sleepTimer = MockSleepTimerHandling()
+  let sleepTimer = SleepTimerManager(scheduler: ManualSleepTimerScheduler())
   let coordinator = PlaybackCoordinator(retry: makeRetryLoop(retries: false), sleepTimerManager: sleepTimer)
   let effectHandler = MockPlaybackEffectHandler()
   let callbacks = MockPlaybackCoordinatorCallbacks()
@@ -121,7 +121,7 @@ private func makeRetrying() -> (
   MockPlaybackEffectHandler,
 ) {
   let retryHandler = makeRetryLoop()
-  let coordinator = PlaybackCoordinator(retry: retryHandler, sleepTimerManager: MockSleepTimerHandling())
+  let coordinator = PlaybackCoordinator(retry: retryHandler, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
   let effectHandler = MockPlaybackEffectHandler()
   coordinator.effectHandler = effectHandler
   let callbacks = MockPlaybackCoordinatorCallbacks()
@@ -739,7 +739,7 @@ struct HealthyPlaybackRetryResetTests {
   @MainActor
   private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (PlaybackCoordinator, RetryLoop, MockPlaybackEffectHandler) {
     let retry = makeRetryLoop(delay: delay)
-    let coordinator = PlaybackCoordinator(retry: retry, sleepTimerManager: MockSleepTimerHandling())
+    let coordinator = PlaybackCoordinator(retry: retry, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
     let effectHandler = MockPlaybackEffectHandler()
     coordinator.effectHandler = effectHandler
     if delay == 0 {
@@ -862,11 +862,12 @@ struct SleepTimerFadeTests {
     let (c, _, _, st) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
+    st.set(seconds: 60, fadeDuration: 10)
 
     st.onFadeStart?(10)
     c.pause()
 
-    #expect(st.clearCallCount == 1)
+    #expect(st.get() == nil)
   }
 
   @Test @MainActor
@@ -874,10 +875,11 @@ struct SleepTimerFadeTests {
     let (c, _, _, st) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
+    st.set(seconds: 60, fadeDuration: 10)
 
     c.pause()
 
-    #expect(st.clearCallCount == 0)
+    #expect(st.get() != nil)
   }
 }
 
@@ -1212,7 +1214,7 @@ struct StopCancelsRetryTests {
   @Test @MainActor
   func stop_cancelsPendingRetry_andStaysSilent() async {
     let errorHandler = makeRetryLoop(delay: 0.05)
-    let coordinator = PlaybackCoordinator(retry: errorHandler, sleepTimerManager: MockSleepTimerHandling())
+    let coordinator = PlaybackCoordinator(retry: errorHandler, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
     let effectHandler = MockPlaybackEffectHandler()
     let callbacks = MockPlaybackCoordinatorCallbacks()
     coordinator.effectHandler = effectHandler
