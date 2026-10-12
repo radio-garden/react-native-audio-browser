@@ -524,48 +524,54 @@ final class BrowserManager {
     parentPath: String,
     routeEntry: NativeRouteEntry?,
   ) async throws -> [Section] {
-    var transformed: [Section] = []
     // The contextual index is the flat page position — children concatenated
     // in section order (ADR 0009/0010).
     var flatIndex = 0
-
+    var pageTracks: [[Track]] = []
     for section in sections {
-      var transformedChildren: [Track] = []
-
+      var tracks: [Track] = []
       for track in section.children {
         let index = flatIndex
         flatIndex += 1
-
-        // Validate track has stable identifier.
         if track.path == nil, track.src == nil {
           throw BrowserError.invalidConfiguration(
             "Track must have either 'path' or 'src' for stable identification: \(track.title)",
           )
         }
-
-        var transformedTrack = track
-
         if track.src != nil, track.path == nil {
           // src != nil guarantees a non-nil identity (id when non-blank, else src).
           // The flat page position rides along as a duplicate-identity tie-breaker.
           let contextualPath = BrowserPathHelper.build(
             parentPath: parentPath, trackId: track.identity!, index: index,
           )
-          transformedTrack = track.copying(path: contextualPath)
+          tracks.append(track.copying(path: contextualPath))
+        } else {
+          tracks.append(track)
         }
-
-        // Resolve artwork URL at browse-time (no size context)
-        let artworkConfig = routeEntry?.artwork ?? config.artwork
-        if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
-          transformedTrack = transformedTrack.copying(artworkSource: imageSource)
-        }
-
-        transformedChildren.append(transformedTrack)
       }
-
-      transformed.append(section.copying(children: transformedChildren))
+      pageTracks.append(tracks)
     }
 
+    // Every track's browse-time artwork (no size context) resolves at once.
+    let artworkConfig = routeEntry?.artwork ?? config.artwork
+    let artworkLoads = pageTracks.map { tracks in
+      tracks.map { track in
+        Task<ImageSource?, Never> { @MainActor in
+          await self.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
+        }
+      }
+    }
+
+    var transformed: [Section] = []
+    for sectionIndex in sections.indices {
+      var children: [Track] = []
+      for trackIndex in pageTracks[sectionIndex].indices {
+        let track = pageTracks[sectionIndex][trackIndex]
+        let artwork = await artworkLoads[sectionIndex][trackIndex].value
+        children.append(artwork.map { track.copying(artworkSource: $0) } ?? track)
+      }
+      transformed.append(sections[sectionIndex].copying(children: children))
+    }
     return transformed
   }
 
