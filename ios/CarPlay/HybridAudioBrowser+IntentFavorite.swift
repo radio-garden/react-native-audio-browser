@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaIntent")
+private let intentLogger = Logger(subsystem: "com.audiobrowser", category: "MediaIntent")
 
 extension HybridAudioBrowser {
   /// Sets the favorite state of the playing track for a Siri intent, through the same path as
@@ -13,7 +13,7 @@ extension HybridAudioBrowser {
     do {
       return try browser.favoriteActiveTrack(favorited)
     } catch {
-      logger.error("favoriteCurrentTrack(\(favorited)) failed: \(error.localizedDescription)")
+      intentLogger.error("favoriteCurrentTrack(\(favorited)) failed: \(error.localizedDescription)")
       return false
     }
   }
