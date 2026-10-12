@@ -20,7 +20,6 @@ final class NowPlayingUpdater {
   var onChanged: (@MainActor (_ track: Track, _ title: String, _ artist: String?, _ album: String?) -> Void)?
 
   private var artworkLoadTask: Task<Void, Never>?
-  private var artworkGeneration: UInt = 0
 
   /// Last published text lines, to dedupe redundant writes (render runs on every transition).
   private struct Published: Equatable {
@@ -35,12 +34,13 @@ final class NowPlayingUpdater {
   /// `clearNowPlaying()` — never separately.
   private var lastPublished: Published?
 
-  /// Empties the now-playing surface and the dedupe baseline that describes it.
-  /// One call, because clearing the dict without the baseline makes the next
-  /// publish of the SAME track dedupe against a dict that no longer holds it —
-  /// artwork lands (never deduped) but the text doesn't, and `onChanged`
-  /// never fires.
+  /// Empties the now-playing surface and the dedupe baseline that describes it, and drops an
+  /// artwork fetch still in flight. One call, because clearing the dict without the baseline
+  /// makes the next publish of the SAME track dedupe against a dict that no longer holds it —
+  /// artwork lands (never deduped) but the text doesn't, and `onChanged` never fires.
   func clearNowPlaying() {
+    artworkLoadTask?.cancel()
+    artworkLoadTask = nil
     nowPlayingInfoController.clear()
     lastPublished = nil
     formattedTrackId = nil
@@ -207,8 +207,6 @@ final class NowPlayingUpdater {
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 
     artworkLoadTask?.cancel()
-    artworkGeneration &+= 1
-    let expectedGeneration = artworkGeneration
     artworkLoadTask = Task {
       let image: UIImage?
 
@@ -216,11 +214,11 @@ final class NowPlayingUpdater {
       if let resolver = artworkUrlResolver,
          let imageSource = await resolver(track, nowPlayingSize)
       {
-        guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+        guard !Task.isCancelled else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
         image = await ArtworkImageFetcher.fetchImage(from: imageSource)
       } else {
-        guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+        guard !Task.isCancelled else { return }
         if let source = track.artworkImageSource {
           image = await ArtworkImageFetcher.fetchImage(from: source)
         } else {
@@ -228,7 +226,7 @@ final class NowPlayingUpdater {
         }
       }
 
-      guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+      guard !Task.isCancelled else { return }
 
       if let image {
         logger.debug("loadArtwork: loaded image \(image.size.width)x\(image.size.height)")
