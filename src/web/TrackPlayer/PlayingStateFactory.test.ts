@@ -3,7 +3,7 @@ import type { PlaybackState } from '../../features'
 import { derivePlayingState } from './PlayingStateFactory'
 
 // Ported from the native truth table (android PlayingStateFactoryTest.kt /
-// ios PlayingStateManager) so web derives PlayingState identically.
+// ios Player.playingState) so web derives PlayingState identically.
 const ALL_STATES: PlaybackState[] = [
   'none',
   'ready',

@@ -26,9 +26,6 @@ final class AVPlayerEngine: PlayerEngine {
   private var rate: Float = 1
   private var skipAvailability = (canNext: false, canPrevious: false)
 
-  /// Applied to each item as it loads.
-  var audioTimePitchAlgorithm: AVAudioTimePitchAlgorithm = .timeDomain
-
   var remoteCommands: [RemoteCommand] = [] {
     didSet { remoteCommandController.enable(commands: remoteCommands) }
   }
@@ -81,19 +78,6 @@ final class AVPlayerEngine: PlayerEngine {
       avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
       mediaLoader.bufferDuration = bufferDuration
     }
-  }
-
-  var automaticallyWaitsToMinimizeStalling: Bool {
-    get { avPlayer.automaticallyWaitsToMinimizeStalling }
-    set {
-      if newValue { bufferDuration = 0 }
-      avPlayer.automaticallyWaitsToMinimizeStalling = newValue
-    }
-  }
-
-  var isMuted: Bool {
-    get { avPlayer.isMuted }
-    set { avPlayer.isMuted = newValue }
   }
 
   // MARK: - The Current Item
@@ -224,7 +208,7 @@ final class AVPlayerEngine: PlayerEngine {
   }
 
   func applyTimePitchAlgorithm() {
-    avPlayer.currentItem?.audioTimePitchAlgorithm = audioTimePitchAlgorithm
+    avPlayer.currentItem?.audioTimePitchAlgorithm = .timeDomain
   }
 
   // MARK: - Now Playing and Remote Commands

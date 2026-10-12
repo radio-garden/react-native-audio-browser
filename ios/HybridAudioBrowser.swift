@@ -189,7 +189,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Default fails CLOSED (`gated: true`). This default is only consulted in the
   /// init window where the gate is already `.resolved` but JS hasn't
   /// (re)bound the real resolver yet (JS reload / instance churn re-seeding gate
-  /// state, e.g. CarPlay re-seeding `isGated` at scene connect). Serving content
+  /// state, e.g. CarPlay deciding its tabs at scene connect). Serving content
   /// in that window would be a fail-open leak — same direction as the
   /// resolver-error path in `BrowseGate.decide`. Matches Android's default.
   public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = HybridAudioBrowser.defaultResolveGate

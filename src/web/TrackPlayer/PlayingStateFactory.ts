@@ -5,7 +5,7 @@ import type { PlaybackState, PlayingState } from '../../features'
  * player's intent (`playWhenReady`) and its current {@link PlaybackState}.
  *
  * A faithful port of the native derivations (android `PlayingStateFactory.derive`,
- * ios `PlayingStateManager.update`) so all platforms agree on what "playing" and
+ * ios `Player.playingState`) so all platforms agree on what "playing" and
  * "buffering" mean for the now-playing UI.
  */
 export function derivePlayingState(

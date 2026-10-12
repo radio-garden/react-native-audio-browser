@@ -328,7 +328,7 @@ export class NativeAudioBrowser
    * Re-derives the playing state and emits on change. Called from both of its
    * inputs' change points — the state setter and the playWhenReady setter —
    * with a dedupe so identical derivations don't double-emit (parity with
-   * Android's refreshPlayingState / iOS's PlayingStateManager).
+   * Android's refreshPlayingState / iOS's Player.playingState).
    */
   private refreshPlayingState(): void {
     const next = derivePlayingState(this._playWhenReady, this.state.state)

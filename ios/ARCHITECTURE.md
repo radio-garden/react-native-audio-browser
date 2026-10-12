@@ -5,7 +5,7 @@ graph TB
 JS["React Native Layer<br/>JavaScript"]
 
 subgraph Nitro["Nitro Hybrid Object"]
-  HAB["HybridAudioBrowser<br/>@MainActor<br/>Implements TrackPlayerCallbacks<br/>~50 callbacks + ~12 Emitters<br/>Static shared (Siri/CarPlay reach)"]
+  HAB["HybridAudioBrowser<br/>main-actor work via onMainActor<br/>Implements PlayerCallbacks + AVPlayerEngineCallbacks<br/>~50 callbacks + ~12 Emitters<br/>Static shared (Siri/CarPlay reach)"]
 end
 
 subgraph PlaybackCore["Playback Core"]

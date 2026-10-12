@@ -275,7 +275,7 @@ var handleRemoteNext: (() -> Void)?
 
 Callbacks are set from:
 
-- `TrackPlayerCallbacks` protocol methods (player events)
+- `PlayerCallbacks` and `AVPlayerEngineCallbacks` protocol methods (player and engine events)
 - `BrowserManager` emitters (navigation events)
 - `NetworkMonitor.onChanged` (connectivity)
 - `SleepTimerManager.onChanged` (sleep timer)
