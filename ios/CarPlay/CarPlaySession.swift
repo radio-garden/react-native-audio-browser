@@ -11,7 +11,7 @@ final class CarPlaySession {
 
   let interfaceController: CPInterfaceController
   let audioBrowser: HybridAudioBrowser
-  let player: TrackPlayer
+  let player: Player
   let trackSelector: TrackSelector
   let imageLoader: CarPlayImageLoader
   let listItemFactory: CarPlayListItemFactory
@@ -45,7 +45,7 @@ final class CarPlaySession {
     audioBrowser.browserManager.config
   }
 
-  init(interfaceController: CPInterfaceController, audioBrowser: HybridAudioBrowser, player: TrackPlayer) {
+  init(interfaceController: CPInterfaceController, audioBrowser: HybridAudioBrowser, player: Player) {
     self.interfaceController = interfaceController
     self.audioBrowser = audioBrowser
     self.player = player

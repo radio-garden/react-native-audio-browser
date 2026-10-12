@@ -10,7 +10,7 @@ final class CarPlayNowPlayingManager {
 
   private let interfaceController: CPInterfaceController
   private let audioBrowser: HybridAudioBrowser
-  private let player: TrackPlayer
+  private let player: Player
   private let listItem: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
   /// Pushes a browse destination: the album line's.
   private let navigate: (_ path: String, _ title: String) -> Void
@@ -63,7 +63,7 @@ final class CarPlayNowPlayingManager {
   init(
     interfaceController: CPInterfaceController,
     audioBrowser: HybridAudioBrowser,
-    player: TrackPlayer,
+    player: Player,
     listItem: @escaping (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem,
     navigate: @escaping (_ path: String, _ title: String) -> Void,
   ) {

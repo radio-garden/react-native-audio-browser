@@ -1,0 +1,227 @@
+@testable import AudioBrowserTestable
+import Foundation
+import Testing
+
+/// The decisions the Player makes over its engine: seeking, reloading, recovering, and what an
+/// engine event leads to.
+@MainActor
+private func makeLoading(
+  src: String? = "https://example.com/a.mp3",
+  live: Bool = false,
+) -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retries: false)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
+  return (player, engine, callbacks)
+}
+
+/// Loaded and playing: the item is in place and audio has started.
+@MainActor
+private func makePlaying(live: Bool = false) -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let (player, engine, callbacks) = makeLoading(live: live)
+  player.setPlayWhenReady(true)
+  engine.hasItem = true
+  engine.hasLoadedAsset = true
+  engine.emit(.itemPrepared(likelyToKeepUp: true))
+  player.transition(.avPlayerPlaying)
+  return (player, engine, callbacks)
+}
+
+@Suite("Player - seeking")
+@MainActor
+struct PlayerSeekingTests {
+  @Test func aSeekWhileLoadingWaitsForTheItem_andHoldsReadyUntilItLands() {
+    let (player, engine, _) = makeLoading()
+    engine.seekResult = nil
+    player.seek(to: 30)
+    #expect(engine.seekCalls.isEmpty)
+
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls == [30])
+    #expect(player.state == .loading)
+  }
+
+  @Test func theLoadBecomesReadyWhenTheDeferredSeekLands() {
+    let (player, engine, _) = makeLoading()
+    player.seek(to: 30)
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: false))
+    #expect(engine.seekCalls == [30])
+    #expect(player.state == .ready)
+  }
+
+  @Test func seekByWhileLoadingOffsetsTheDeferredTarget() {
+    let (player, _, _) = makeLoading()
+    player.seek(to: 30)
+    player.seek(by: 15)
+    #expect(player.deferredSeek.target == 45)
+  }
+
+  /// A completion from before a track change belongs to the old item: it reports false and
+  /// leaves the new track's start position pending.
+  @Test func aCompletionFromBeforeATrackChangeIsDropped() {
+    let (player, engine, _) = makePlaying()
+    engine.seekResult = nil
+    var landed: [Bool] = []
+    player.seek(to: 10) { landed.append($0) }
+
+    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")], startPositionMs: 25000)
+    engine.completeSeeks(true)
+
+    #expect(landed == [false])
+    #expect(player.deferredSeek.target == 25)
+    #expect(player.state == .loading)
+  }
+
+  @Test func theLiveEdgeIsTheSeekableWindowsEnd_orAReconnectWithoutOne() {
+    let (player, engine, _) = makePlaying(live: true)
+    engine.liveEdge = 120
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [120])
+
+    engine.liveEdge = nil
+    player.seekToLiveEdge()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+  }
+}
+
+@Suite("Player - engine events")
+@MainActor
+struct PlayerEngineEventTests {
+  @Test func aFailedLoadPrimesNowPlayingOncePerLoad() {
+    let (player, engine, _) = makeLoading()
+    player.setPlayWhenReady(true)
+    player.retry.shouldRetry = { true }
+    engine.emit(.loadFailed(URLError(.timedOut)))
+    engine.emit(.loadFailed(URLError(.timedOut)))
+    #expect(engine.primeCount == 1)
+
+    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    engine.emit(.loadFailed(URLError(.timedOut)))
+    #expect(engine.primeCount == 2)
+  }
+
+  @Test func aFailedLoadWithoutIntentDoesNotPrime() async {
+    let (player, engine, _) = makeLoading()
+    engine.emit(.loadFailed(URLError(.timedOut)))
+    await player.retry.pendingTask?.value
+    #expect(engine.primeCount == 0)
+    #expect(player.state == .error)
+  }
+
+  @Test func anUnplayableAssetIsTerminal() {
+    let (player, engine, _) = makeLoading()
+    engine.emit(.unplayable)
+    #expect(player.state == .error)
+    #expect(player.errorStatus == .terminal(.trackWasUnplayable))
+  }
+
+  @Test func anInvalidSourceIsTerminal() {
+    let (player, engine, _) = makeLoading()
+    engine.emit(.invalidSource("::"))
+    #expect(player.errorStatus == .terminal(.invalidSourceUrl("::")))
+  }
+
+  @Test func aPlayerFailureCarriesItsHTTPStatus() {
+    let (player, engine, _) = makePlaying()
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    #expect(player.errorStatus == .terminal(.httpStatus(404)))
+  }
+
+  @Test func aGenuineEndAdvances_aLiveEndReconnects() {
+    let (player, engine, _) = makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    engine.emit(.playedToEnd)
+    #expect(player.state == .ended)
+
+    let (live, liveEngine, _) = makePlaying(live: true)
+    liveEngine.emit(.playedToEnd)
+    #expect(live.state == .loading)
+    #expect(liveEngine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aStallNudgesPlayback_onlyWithIntent() {
+    let (player, engine, _) = makePlaying()
+    engine.startPlaybackCallCount = 0
+    engine.emit(.stalled)
+    #expect(engine.startPlaybackCallCount == 1)
+
+    player.pause()
+    engine.startPlaybackCallCount = 0
+    engine.emit(.stalled)
+    #expect(engine.startPlaybackCallCount == 0)
+  }
+
+  @Test func anAirPlayStrandingIsNudged() {
+    let (player, engine, _) = makePlaying()
+    engine.isAirPlayRoute = true
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: true))
+    engine.startPlaybackCallCount = 0
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.startPlaybackCallCount == 1)
+    #expect(player.playWhenReady)
+  }
+}
+
+@Suite("Player - recovering")
+@MainActor
+struct PlayerRecoveringTests {
+  @Test func theNetworkReturningReconnectsAStalledStream() {
+    let (player, engine, _) = makePlaying()
+    player.transition(.avPlayerWaiting)
+    #expect(player.state == .buffering)
+    player.networkDidReturn()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() {
+    let (player, engine, _) = makePlaying()
+    player.networkDidReturn()
+    player.pause()
+    player.networkDidReturn()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aMediaServicesResetReloadsOnANewPlayer() {
+    let (player, engine, _) = makePlaying()
+    player.mediaServicesWereReset()
+    #expect(engine.recreateCount == 1)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.playWhenReady)
+  }
+
+  @Test func aStopRewindsAFiniteTrack_notALiveOne() {
+    let (player, engine, _) = makePlaying()
+    player.stop()
+    #expect(engine.seekCalls == [0])
+
+    let (live, liveEngine, _) = makePlaying(live: true)
+    live.stop()
+    #expect(liveEngine.seekCalls.isEmpty)
+  }
+
+  @Test func aNonPositiveRateIsRefused() {
+    let (player, engine, _) = makePlaying()
+    player.rate = 1.5
+    player.rate = 0
+    #expect(player.rate == 1.5)
+    #expect(engine.rates.map(\.rate) == [1.5])
+    #expect(engine.rates.last?.playing == true)
+  }
+
+  @Test func isStalledNeedsProgressIntentAndAThinBuffer() {
+    let (player, engine, _) = makePlaying()
+    engine.currentTime = 10
+    engine.isPlaybackLikelyToKeepUp = false
+    #expect(player.isStalled)
+    engine.currentTime = 0.2
+    #expect(!player.isStalled)
+  }
+}

@@ -2,7 +2,7 @@ import Foundation
 import NitroModules
 
 /**
- * Update options for the TrackPlayer that can be changed at runtime.
+ * Update options for the player that can be changed at runtime.
  * These options control player behavior and capabilities that can be modified during playback.
  */
 class PlayerUpdateOptions {

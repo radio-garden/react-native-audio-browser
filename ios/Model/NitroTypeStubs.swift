@@ -330,7 +330,7 @@
     }
   }
 
-  // MARK: - Playback Event Types (used by PlaybackCoordinator)
+  // MARK: - Playback Event Types (used by Player)
 
   /// Public to match the generated Nitro enum, which `TrackPlayerError`
   /// exposes from a public property.

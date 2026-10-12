@@ -17,17 +17,20 @@ public extension HybridAudioBrowser {
         self.audioSession.configure(options.ios)
 
         // A re-setup REPLACES the player, so the outgoing one has to be torn down
-        // and un-published first. `TrackPlayer` has no deinit: dropping the
-        // reference alone would leave its AVPlayer and MPNowPlayingSession alive.
-        // No-op on first setup.
-        player?.destroy()
+        // and un-published first. No-op on first setup.
+        destroyPlayer()
 
-        let newPlayer = TrackPlayer(callbacks: self, resolver: browserManager.requests, networkMonitor: networkMonitor)
-        if let buffer = options.ios?.buffer { newPlayer.bufferDuration = buffer }
-        if let retry = options.retry { newPlayer.retryConfig = retry }
-        newPlayer.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
-        newPlayer.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
-        newPlayer.nowPlayingUpdater.isOnline = networkMonitor.isOnline
+        let newEngine = AVPlayerEngine(callbacks: self, resolver: browserManager.requests)
+        if let buffer = options.ios?.buffer { newEngine.bufferDuration = buffer }
+        newEngine.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
+        newEngine.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
+        newEngine.nowPlayingUpdater.isOnline = networkMonitor.isOnline
+        let newPlayer = Player(engine: newEngine)
+        newPlayer.callbacks = self
+        newPlayer.retry.networkMonitor = networkMonitor
+        if let retry = options.retry { newPlayer.retry.updatePolicy(from: retry) }
+        newEngine.nowPlayingUpdater.source = newPlayer
+        engine = newEngine
         player = newPlayer
         audioSession.player = newPlayer
 
@@ -36,13 +39,14 @@ public extension HybridAudioBrowser {
         networkMonitor.onChanged = { [weak self] isOnline in
           MainActor.assumeIsolated {
             self?.onOnlineChanged(isOnline)
-            self?.player?.networkDidChange(isOnline: isOnline)
+            self?.engine?.nowPlayingUpdater.isOnline = isOnline
+            if isOnline { self?.player?.networkDidReturn() }
           }
         }
 
         // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
         // A terminal error resolves the playback state to *paused*
-        // (PlaybackCoordinator.applySideEffects), the now-playing info is retained (never cleared
+        // (Player.applySideEffects), the now-playing info is retained (never cleared
         // on error), and next/previous stay enabled (gated on queue position, not state). So the
         // session stays controllable through errors by default — the behavior Android achieves via
         // InterceptingPlayer is already the iOS norm.
@@ -85,7 +89,7 @@ public extension HybridAudioBrowser {
       pendingRepeatMode = nil
     }
     if let intent = pendingPlayWhenReady {
-      player.playWhenReady = intent
+      player.setPlayWhenReady(intent)
       pendingPlayWhenReady = nil
     }
   }
@@ -117,7 +121,7 @@ public extension HybridAudioBrowser {
   /// Converts capabilities to remote commands and applies them to the player
   @MainActor
   private func applyRemoteCommands() {
-    guard let player else { return }
+    guard let engine else { return }
 
     let remoteCommands = playerOptions.capabilities.buildRemoteCommands(
       forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
@@ -125,7 +129,7 @@ public extension HybridAudioBrowser {
       playbackRates: playerOptions.playbackRates,
     )
 
-    player.remoteCommands = remoteCommands
+    engine.remoteCommands = remoteCommands
   }
 
   func getOptions() throws -> Options {

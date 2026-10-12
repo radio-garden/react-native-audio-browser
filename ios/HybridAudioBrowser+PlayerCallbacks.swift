@@ -5,19 +5,19 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-// MARK: - TrackPlayerCallbacks
+// MARK: - PlayerCallbacks, AVPlayerEngineCallbacks
 
-extension HybridAudioBrowser: TrackPlayerCallbacks {
+extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   public func playerDidChangePlayback(_ playback: Playback) {
     onPlaybackChanged(playback)
-    // The coordinator sets the error before this fires, so the error line renders.
-    player?.nowPlayingUpdater.render()
+    // The Player sets the error before this fires, so the error line renders.
+    engine?.nowPlayingUpdater.render()
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     // Hydrate the active track's `favorited` from the authoritative set so JS
     // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the
-    // coordinator emits the raw queue track, whose flag isn't kept in sync.
+    // Player emits the raw queue track, whose flag isn't kept in sync.
     let hydrated = PlaybackActiveTrackChangedEvent(
       lastIndex: event.lastIndex,
       lastTrack: event.lastTrack,
@@ -26,7 +26,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       track: event.track.map(browserManager.hydrateFavorite),
     )
     activeTrackChangedEmitter.emit(hydrated)
-    player?.nowPlayingUpdater.trackChanged()
+    engine?.nowPlayingUpdater.trackChanged()
   }
 
   public func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
@@ -57,10 +57,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       // (the audio session was still inactive, and the system may have declined);
       // re-request now so the surface can appear even if playback never produces
       // audio (first-ever load failing on a dead stream).
-      player?.reactivateNowPlayingSession()
+      engine?.reactivateNowPlayingSession()
     }
-    // A stall starting or recovering may not change the coordinator state.
-    player?.nowPlayingUpdater.render()
+    // A stall starting or recovering may not change the Player state.
+    engine?.nowPlayingUpdater.render()
   }
 
   public func playerShouldReleaseSession() {
@@ -105,7 +105,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     for group in groups {
       if let metadata = TimedMetadata.from(items: group.items, icyCharset: player?.currentTrack?.icyCharset) {
         onTimedMetadata(metadata)
-        player?.nowPlayingUpdater.receivedTimedMetadata(metadata)
+        engine?.nowPlayingUpdater.receivedTimedMetadata(metadata)
       }
     }
   }
@@ -142,18 +142,18 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func remoteJumpForward(interval: Double) {
     dispatchRemote(
       RemoteJumpForwardEvent(interval: interval), handler: handleRemoteJumpForward, report: onRemoteJumpForward,
-    ) { player?.seekBy(interval) }
+    ) { player?.seek(by: interval) }
   }
 
   public func remoteJumpBackward(interval: Double) {
     dispatchRemote(
       RemoteJumpBackwardEvent(interval: interval), handler: handleRemoteJumpBackward, report: onRemoteJumpBackward,
-    ) { player?.seekBy(-interval) }
+    ) { player?.seek(by: -interval) }
   }
 
   public func remoteSeek(position: Double) {
     dispatchRemote(RemoteSeekEvent(position: position), handler: handleRemoteSeek, report: onRemoteSeek) {
-      player?.seekTo(position)
+      player?.seek(to: position)
     }
   }
 

@@ -5,7 +5,7 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-@MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, TrackPlayer)> {
+@MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, Player)> {
   guard let browser = HybridAudioBrowser.shared,
         browser.browserManager.isConfigured,
         let player = browser.getPlayer() else { return nil }
@@ -56,7 +56,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Main-confined by convention, not annotation: `deinit` reads it as a
   /// safety net and can't hop. Reach it from `onMainActor` / `@MainActor`.
-  var player: TrackPlayer?
+  var player: Player?
+  /// The media stack under `player`, for what only AVFoundation has: now playing, buffering,
+  /// volume and the remote commands.
+  var engine: AVPlayerEngine?
   let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
   let browseGate = BrowseGate()
@@ -294,7 +297,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // Statics are lazy — touch the observer so it's installed from the first
       // instance onward.
       _ = HybridAudioBrowser.reloadObserver
-      HybridAudioBrowser.shared?.player?.destroy()
+      HybridAudioBrowser.shared?.destroyPlayer()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
       audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
@@ -341,22 +344,38 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       browserManager.config = browserManager.config.strippingJSCallbacks()
     }
     resolveGate = Self.defaultResolveGate
-    player?.nowPlayingUpdater.formatter = nil
+    engine?.nowPlayingUpdater.formatter = nil
   }
 
   deinit {
     // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
-    let player = self.player
+    let player = self.player, engine = self.engine
     if Thread.isMainThread {
-      MainActor.assumeIsolated { player?.destroy() }
+      MainActor.assumeIsolated {
+        player?.clear()
+        engine?.destroy()
+      }
     } else {
-      DispatchQueue.main.async { MainActor.assumeIsolated { player?.destroy() } }
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          player?.clear()
+          engine?.destroy()
+        }
+      }
     }
   }
 
-  /// Returns the TrackPlayer instance, if setup has been called.
-  func getPlayer() -> TrackPlayer? {
+  /// Returns the player, if setup has been called.
+  func getPlayer() -> Player? {
     player
+  }
+
+  /// Stops the player and releases its media stack: the AVPlayer and the now-playing session
+  /// outlive a dropped reference otherwise.
+  @MainActor
+  func destroyPlayer() {
+    player?.clear()
+    engine?.destroy()
   }
 
   /// Sets up automatic forwarding from emitters to Nitro callbacks

@@ -40,7 +40,7 @@ public extension HybridAudioBrowser {
   func setPlayWhenReady(playWhenReady: Bool) throws {
     onMainActor {
       // Pre-setup this stages the intent for the player to come up with — never a no-op.
-      if let player { player.playWhenReady = playWhenReady }
+      if let player { player.setPlayWhenReady(playWhenReady) }
       else { pendingPlayWhenReady = playWhenReady }
     }
   }
@@ -50,11 +50,11 @@ public extension HybridAudioBrowser {
   }
 
   func seekTo(position: Double) throws {
-    onMainActor { player?.seekTo(position) }
+    onMainActor { player?.seek(to: position) }
   }
 
   func seekBy(offset: Double) throws {
-    onMainActor { player?.seekBy(offset) }
+    onMainActor { player?.seek(by: offset) }
   }
 
   func seekToLiveEdge() throws {
@@ -62,11 +62,11 @@ public extension HybridAudioBrowser {
   }
 
   func setVolume(level: Double) throws {
-    onMainActor { player?.volume = Float(level) }
+    onMainActor { engine?.volume = Float(level) }
   }
 
   func getVolume() throws -> Double {
-    onMainActor { Double(player?.volume ?? 1.0) }
+    onMainActor { Double(engine?.volume ?? 1.0) }
   }
 
   func setRate(rate: Double) throws {
@@ -81,8 +81,8 @@ public extension HybridAudioBrowser {
     onMainActor {
       Progress(
         position: player?.currentTime ?? 0,
-        duration: player?.duration ?? 0,
-        buffered: player?.bufferedPosition ?? 0,
+        duration: engine?.duration ?? 0,
+        buffered: engine?.bufferedPosition ?? 0,
       )
     }
   }
@@ -93,7 +93,7 @@ public extension HybridAudioBrowser {
 
   func getPlayingState() throws -> PlayingState {
     onMainActor {
-      player?.coordinator.playingState ?? PlayingState(playing: false, buffering: false)
+      player?.playingState ?? PlayingState(playing: false, buffering: false)
     }
   }
 
@@ -137,19 +137,19 @@ public extension HybridAudioBrowser {
 
   func setSleepTimer(seconds: Double, fadeDuration: Double?) throws {
     onMainActor {
-      player?.setSleepTimer(seconds: seconds, fadeDuration: fadeDuration)
+      player?.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
     }
   }
 
   func setSleepTimerToEndOfTrack() throws {
     onMainActor {
-      player?.setSleepTimerToEndOfTrack()
+      player?.sleepTimerManager.setToEndOfTrack()
     }
   }
 
   func clearSleepTimer() throws -> Bool {
     onMainActor {
-      player?.clearSleepTimer() ?? false
+      player?.sleepTimerManager.clear() ?? false
     }
   }
 
@@ -190,7 +190,7 @@ public extension HybridAudioBrowser {
     try onMainActor {
       try player?.skipTo(Int(index))
       if let position = initialPosition {
-        player?.seekTo(position)
+        player?.seek(to: position)
       }
     }
   }
@@ -199,7 +199,7 @@ public extension HybridAudioBrowser {
     onMainActor {
       player?.next()
       if let position = initialPosition {
-        player?.seekTo(position)
+        player?.seek(to: position)
       }
     }
   }
@@ -208,7 +208,7 @@ public extension HybridAudioBrowser {
     onMainActor {
       player?.previous()
       if let position = initialPosition {
-        player?.seekTo(position)
+        player?.seek(to: position)
       }
     }
   }
@@ -223,9 +223,11 @@ public extension HybridAudioBrowser {
   @discardableResult
   internal func favoriteActiveTrack(_ favorited: Bool) throws -> Bool {
     try onMainActor {
-      guard let player, let identity = player.currentTrack?.identity else { return false }
+      guard let player, let track = player.currentTrack, let identity = track.identity else { return false }
       browserManager.setFavorited(identity: identity, favorited: favorited)
-      guard let updated = try player.setActiveTrackFavorited(favorited) else { return false }
+      // Back in the queue carrying the flag, since hydration never overrides a track's own value.
+      let updated = track.copying(favorited: favorited)
+      try player.replace(player.currentIndex, updated)
       // The only emit: a favorite toggle mutates the active track in place, so
       // onPlaybackActiveTrackChanged stays transition-only.
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updated, favorited: favorited))
@@ -285,19 +287,19 @@ public extension HybridAudioBrowser {
   // MARK: - Now Playing
 
   func updateNowPlaying(update: NowPlayingUpdate?) throws {
-    onMainActor { player?.nowPlayingUpdater.setOverride(update) }
+    onMainActor { engine?.nowPlayingUpdater.setOverride(update) }
   }
 
   func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
-    onMainActor { player?.nowPlayingUpdater.flash(update, durationMs: durationMs) }
+    onMainActor { engine?.nowPlayingUpdater.flash(update, durationMs: durationMs) }
   }
 
   func clearNowPlayingFlash() throws {
-    onMainActor { player?.nowPlayingUpdater.clearFlash() }
+    onMainActor { engine?.nowPlayingUpdater.clearFlash() }
   }
 
   func getNowPlaying() throws -> NowPlayingMetadata? {
-    onMainActor { player?.nowPlayingUpdater.nowPlaying }
+    onMainActor { engine?.nowPlayingUpdater.nowPlaying }
   }
 
   // MARK: - Network

@@ -20,6 +20,10 @@ _Avoid_: Navigation, MediaBrowser (the Android platform class).
 The playback subsystem within AudioBrowser. Receives Playable Tracks and streams them.
 _Avoid_: Engine, AudioEngine.
 
+**PlayerEngine**:
+The media stack under the **Player** on iOS: the AVPlayer and its items, media loading, now playing and the remote commands. It carries out what the Player decides and reports what it observes; it holds no playback policy. Not a name for the Player itself. See ADR 0012.
+_Avoid_: backend, driver, effect handler.
+
 ### Navigation
 
 **Path**:
@@ -181,6 +185,10 @@ _Avoid_: request, attempt (an attempt is one try _within_ a load).
 **Advisory (retrying) error**:
 A classified PlaybackError surfaced _while automatic retry is still working on it_ — `retrying: true`, attached via `onPlaybackChanged` to a non-terminal playback state, so UIs can show the cause over a spinner. Provisional by definition: it clears when playback recovers, or hardens into a terminal error (state `error`, `retrying` absent) when the retry budget runs out. Terminal errors alone fire `onPlaybackError`.
 _Avoid_: warning, soft error, pending error.
+
+**ErrorStatus**:
+The Player's one record of what is wrong with the current **Load**: none, an **Advisory (retrying) error**, or a terminal error. Retrying and terminal are states of one value rather than a flag beside an error, so an error can't be cleared or hardened without the change being published.
+_Avoid_: isRetrying, error flag.
 
 **First-connect budget** / **Recovery budget**:
 The two duration bounds on automatic retry, selected per load by whether it has ever rendered audio (**hasPlayed**): a short budget (default 12s, counting only a contiguous online stretch) for a load that never played, the long one (default 2 min) once playback has proven the source works. Durations bound the give-up promise; attempt counts only pace the backoff. See ADR 0004.

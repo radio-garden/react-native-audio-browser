@@ -26,7 +26,7 @@ enum QueueNavigationResult {
 }
 
 /// Pure queue logic: tracks, indices, shuffle, repeat.
-/// Has no knowledge of AVPlayer or playback — TrackPlayer owns that.
+/// Has no knowledge of AVPlayer or playback — Player and its engine own that.
 @MainActor
 class QueueManager {
   // MARK: - Stored Properties

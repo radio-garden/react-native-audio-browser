@@ -17,7 +17,7 @@ extension CarPlaySession {
     // A playable track always lands on Now Playing, so it is pushed now with the tapped
     // track's fields: the queue expansion and media resolve may both hit the network.
     if track.src != nil {
-      player.loadNowPlayingMetadata(for: track)
+      audioBrowser.engine?.loadNowPlayingMetadata(for: track)
       nowPlaying.prepare(for: track)
       nowPlaying.showNowPlaying()
     }

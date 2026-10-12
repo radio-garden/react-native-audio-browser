@@ -9,7 +9,7 @@ protocol AudioSessionPlayer: AnyObject {
   func handleInterruptionBegan()
   func handleInterruptionEnded(shouldResume: Bool)
   func handleRouteDisconnected()
-  func handleMediaServicesReset()
+  func mediaServicesWereReset()
 }
 
 /// Owns the app's `AVAudioSession`: its category, activation and release, and the interruption,
@@ -64,7 +64,7 @@ final class AudioSessionController {
         MainActor.assumeIsolated {
           // The reset cleared the category and invalidated every player and session handle.
           self?.applyCategory()
-          self?.player?.handleMediaServicesReset()
+          self?.player?.mediaServicesWereReset()
         }
       },
     ]

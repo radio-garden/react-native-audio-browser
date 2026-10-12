@@ -2,38 +2,37 @@
 import Foundation
 import Testing
 
-/// Helper to build a coordinator with mocks for testing.
+/// Helper to build a player with mocks for testing.
 @MainActor
 private func makeCoordinator() -> (
-  coordinator: PlaybackCoordinator,
-  effectHandler: MockPlaybackEffectHandler,
-  callbacks: MockPlaybackCoordinatorCallbacks,
+  player: Player,
+  engine: MockPlayerEngine,
+  callbacks: MockPlayerCallbacks,
   sleepTimer: SleepTimerManager,
 ) {
   let sleepTimer = SleepTimerManager(scheduler: ManualSleepTimerScheduler())
-  let coordinator = PlaybackCoordinator(retry: makeRetryLoop(retries: false), sleepTimerManager: sleepTimer)
-  let effectHandler = MockPlaybackEffectHandler()
-  let callbacks = MockPlaybackCoordinatorCallbacks()
-  coordinator.effectHandler = effectHandler
-  coordinator.callbacks = callbacks
-  return (coordinator, effectHandler, callbacks, sleepTimer)
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retries: false, sleepTimer: sleepTimer)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  return (player, engine, callbacks, sleepTimer)
 }
 
-/// Helper to load a track into the coordinator's queue so it has a currentTrack.
+/// Helper to load a track into the player's queue so it has a currentTrack.
 @MainActor
 private func loadTrack(
-  _ coordinator: PlaybackCoordinator,
+  _ player: Player,
   id: String = "t1",
   src: String? = "https://example.com/audio.mp3",
   title: String = "Test Track",
 ) {
   let track = Track(id: id, src: src, title: title)
-  coordinator.setQueue([track])
+  player.setQueue([track])
 }
 
 // MARK: - Transition + Side Effects
 
-@Suite("PlaybackCoordinator - transition + side effects")
+@Suite("Player - transition + side effects")
 struct TransitionTests {
   @Test @MainActor
   func toReady_startsPlayback_whenPlayWhenReady() {
@@ -112,24 +111,21 @@ struct TransitionTests {
 /// Advisory errors from the retry loop: attached to the current non-terminal
 /// state via `playerDidChangePlayback`, never a state transition and never a
 /// `playerDidError`.
-/// Builds a coordinator whose retry handler will accept the error and
-/// pretend the (instant) retry succeeded, so only the advisory path runs.
-/// The effect handler is returned solely to keep the weak reference alive.
+/// Builds a player whose retries reload at once, so the advisory path is what shows.
 @MainActor
 private func makeRetrying() -> (
-  PlaybackCoordinator, RetryLoop, MockPlaybackCoordinatorCallbacks,
-  MockPlaybackEffectHandler,
+  Player, RetryLoop, MockPlayerCallbacks,
+  MockPlayerEngine,
 ) {
   let retryHandler = makeRetryLoop()
-  let coordinator = PlaybackCoordinator(retry: retryHandler, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
-  let effectHandler = MockPlaybackEffectHandler()
-  coordinator.effectHandler = effectHandler
-  let callbacks = MockPlaybackCoordinatorCallbacks()
-  coordinator.callbacks = callbacks
-  return (coordinator, retryHandler, callbacks, effectHandler)
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: retryHandler)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  return (player, retryHandler, callbacks, engine)
 }
 
-@Suite("PlaybackCoordinator - retrying errors")
+@Suite("Player - retrying errors")
 struct RetryingErrorTests {
   @Test @MainActor
   func retryingError_attachesToCurrentState() async {
@@ -218,7 +214,7 @@ struct RetryingErrorTests {
 
 // MARK: - emitStateChange
 
-@Suite("PlaybackCoordinator - emitStateChange")
+@Suite("Player - emitStateChange")
 struct EmitStateChangeTests {
   @Test @MainActor
   func alwaysEmits_playerDidChangePlayback() {
@@ -268,7 +264,7 @@ struct EmitStateChangeTests {
 
 // MARK: - Observer Guards
 
-@Suite("PlaybackCoordinator - observer guards")
+@Suite("Player - observer guards")
 struct ObserverGuardTests {
   @Test @MainActor
   func timeControlStatus_paused_nearTrackEnd_ignored() {
@@ -407,28 +403,34 @@ struct ObserverGuardTests {
 
 // MARK: - playWhenReady
 
-@Suite("PlaybackCoordinator - playWhenReady")
+@Suite("Player - playWhenReady")
 struct PlayWhenReadyTests {
   @Test @MainActor
   func true_fromError_triggersReload() {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.errorOccurred(.playbackFailed))
+    eh.resumePosition = 42
 
     c.setPlayWhenReady(true)
 
-    #expect(eh.reloadTrackCalls.count == 1)
-    #expect(eh.reloadTrackCalls.first == true) // startFromCurrentTime for error
+    // A restart from .error is a new Load on a new AVPlayer, resuming where it failed.
+    #expect(eh.recreateCount == 1)
+    #expect(eh.loadResolvedCount == 1)
+    #expect(c.state == .loading)
+    #expect(c.deferredSeek.target == 42)
   }
 
   @Test @MainActor
   func true_fromStopped_triggersReload() {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.stopped)
+    eh.resumePosition = 42
 
     c.setPlayWhenReady(true)
 
-    #expect(eh.reloadTrackCalls.count == 1)
-    #expect(eh.reloadTrackCalls.first == false) // startFromCurrentTime for stopped
+    #expect(eh.recreateCount == 0)
+    #expect(eh.loadResolvedCount == 1)
+    #expect(c.deferredSeek.target == nil) // a stop restarts from the start
   }
 
   @Test @MainActor
@@ -480,7 +482,7 @@ struct PlayWhenReadyTests {
 
 // MARK: - Skip availability (next/previous greying)
 
-@Suite("PlaybackCoordinator - skip availability")
+@Suite("Player - skip availability")
 struct SkipAvailabilityCoordinatorTests {
   private static func multiTrack() -> [Track] {
     [
@@ -534,7 +536,7 @@ struct SkipAvailabilityCoordinatorTests {
 
 // MARK: - handleCurrentTrackChanged
 
-@Suite("PlaybackCoordinator - handleCurrentTrackChanged")
+@Suite("Player - handleCurrentTrackChanged")
 struct HandleCurrentTrackChangedTests {
   @Test @MainActor
   func clearsError_beforeTransition() {
@@ -588,19 +590,19 @@ struct HandleCurrentTrackChangedTests {
 
 // MARK: - handleTrackDidPlayToEndTime
 
-@Suite("PlaybackCoordinator - handleTrackDidPlayToEndTime")
+@Suite("Player - handleTrackDidPlayToEndTime")
 struct HandleTrackDidPlayToEndTimeTests {
   @Test @MainActor
   func repeatTrack_replays() {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c)
+    startPlaying(c, eh)
     c.repeatMode = .track
-    c.setPlayWhenReady(true)
+    eh.startPlaybackCallCount = 0
 
     c.handleTrackDidPlayToEndTime()
 
-    // replay delegates to effectHandler.replayCurrentTrack (seek to 0 + play)
-    #expect(eh.replayCurrentTrackCallCount == 1)
+    #expect(eh.seekCalls == [0])
+    #expect(eh.startPlaybackCallCount == 1)
   }
 
   /// The end-of-track sleep timer pauses (clears intent) just before this
@@ -618,14 +620,13 @@ struct HandleTrackDidPlayToEndTimeTests {
     c.handleTrackDidPlayToEndTime()
 
     #expect(cb.queueEndedEvents.isEmpty)
-    #expect(eh.replayCurrentTrackCallCount == 0)
+    #expect(eh.seekCalls.isEmpty)
     #expect(c.state == .ended)
   }
 
   @Test @MainActor
   func lastTrack_noRepeat_transitionsToEnded() {
     let (c, eh, cb, _) = makeCoordinator()
-    _ = eh // retain weak effectHandler
     loadTrack(c)
     c.repeatMode = .off
 
@@ -659,7 +660,7 @@ struct HandleTrackDidPlayToEndTimeTests {
 /// `playWhenReady` must not stay true. Keeping it inverted the play/pause
 /// toggle, held the audio session forever, armed interruption auto-resume into
 /// silence, and made play-from-ended a silent no-op.
-@Suite("PlaybackCoordinator - natural end drops play intent")
+@Suite("Player - natural end drops play intent")
 struct NaturalEndPlayIntentTests {
   @Test @MainActor
   func naturalEnd_clearsPlayWhenReady() {
@@ -690,11 +691,13 @@ struct NaturalEndPlayIntentTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     c.handleTrackDidPlayToEndTime()
-    eh.reloadTrackCalls.removeAll()
+    eh.resumePosition = 300
+    let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.play()
 
-    #expect(eh.reloadTrackCalls == [false])
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
+    #expect(c.deferredSeek.target == nil)
   }
 
   /// The cleared intent opens the call-site `!playWhenReady` gate, so a stray
@@ -717,13 +720,13 @@ struct NaturalEndPlayIntentTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     c.handleTrackDidPlayToEndTime()
-    eh.reloadTrackCalls.removeAll()
+    let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.handleInterruptionBegan()
     c.handleInterruptionEnded(shouldResume: true)
 
     #expect(c.playWhenReady == false) // nothing was playing — never resume
-    #expect(eh.reloadTrackCalls.isEmpty)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
   }
 }
 
@@ -733,31 +736,29 @@ struct NaturalEndPlayIntentTests {
 /// window/attempt counters must refill (mirrors Android's healthy-playback
 /// refill) — otherwise a long-lived stream permanently loses retry after its
 /// first recovered blip.
-@Suite("PlaybackCoordinator - healthy playback resets retry budget")
+@Suite("Player - healthy playback resets retry budget")
 struct HealthyPlaybackRetryResetTests {
-  /// A coordinator whose retry loop has already executed one retry, so a reset shows.
+  /// A player whose retry loop has already executed one retry, so a reset shows.
   @MainActor
-  private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (PlaybackCoordinator, RetryLoop, MockPlaybackEffectHandler) {
+  private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (Player, RetryLoop, MockPlayerEngine) {
     let retry = makeRetryLoop(delay: delay)
-    let coordinator = PlaybackCoordinator(retry: retry, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
-    let effectHandler = MockPlaybackEffectHandler()
-    coordinator.effectHandler = effectHandler
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: retry)
     if delay == 0 {
       retry.handleError(URLError(.timedOut), context: .playback)
       await retry.pendingTask?.value
     }
-    return (coordinator, retry, effectHandler)
+    return (player, retry, engine)
   }
 
   @Test @MainActor
   func sustainedPlayback_resetsRetryBudget() async {
-    let (coordinator, retry, effectHandler) = await makeAfterOneRetry()
-    _ = effectHandler
+    let (player, retry, _) = await makeAfterOneRetry()
     #expect(retry.attempts == 1)
-    coordinator.healthyPlaybackDuration = 0.01
+    player.healthyPlaybackDuration = 0.01
 
-    coordinator.transition(.avPlayerPlaying)
-    await coordinator.healthyPlaybackTask?.value
+    player.transition(.avPlayerPlaying)
+    await player.healthyPlaybackTask?.value
 
     #expect(retry.attempts == 0)
   }
@@ -766,13 +767,12 @@ struct HealthyPlaybackRetryResetTests {
   /// would kill an in-flight reconnect silently (stuck .playing forever).
   @Test @MainActor
   func refill_skipsWhileRetryIsPending() async {
-    let (coordinator, retry, effectHandler) = await makeAfterOneRetry(delay: 1)
-    _ = effectHandler
-    coordinator.healthyPlaybackDuration = 0.01
+    let (player, retry, _) = await makeAfterOneRetry(delay: 1)
+    player.healthyPlaybackDuration = 0.01
 
-    coordinator.transition(.avPlayerPlaying)
+    player.transition(.avPlayerPlaying)
     retry.handleError(URLError(.timedOut), context: .playback)
-    await coordinator.healthyPlaybackTask?.value
+    await player.healthyPlaybackTask?.value
 
     #expect(retry.pendingTask != nil)
     retry.cancel()
@@ -780,13 +780,13 @@ struct HealthyPlaybackRetryResetTests {
 
   @Test @MainActor
   func playbackInterruptedBeforeThreshold_doesNotReset() async {
-    let (coordinator, retry, effectHandler) = await makeAfterOneRetry()
-    effectHandler.hasLoadedAsset = true
-    coordinator.healthyPlaybackDuration = 0.5
+    let (player, retry, engine) = await makeAfterOneRetry()
+    engine.hasLoadedAsset = true
+    player.healthyPlaybackDuration = 0.5
 
-    coordinator.transition(.avPlayerPlaying)
-    let refill = coordinator.healthyPlaybackTask
-    coordinator.transition(.avPlayerWaiting) // stalls before the threshold
+    player.transition(.avPlayerPlaying)
+    let refill = player.healthyPlaybackTask
+    player.transition(.avPlayerWaiting) // stalls before the threshold
 
     // Leaving .playing cancels the refill; awaiting the cancelled task is the
     // deterministic way to reach the point where it would have fired.
@@ -798,7 +798,7 @@ struct HealthyPlaybackRetryResetTests {
 
 // MARK: - Sleep Timer Fade
 
-@Suite("PlaybackCoordinator - sleep timer fade")
+@Suite("Player - sleep timer fade")
 struct SleepTimerFadeTests {
   @Test @MainActor
   func fadeStart_capturesPreFadeVolume() {
@@ -885,16 +885,17 @@ struct SleepTimerFadeTests {
 
 // MARK: - Audio Session Interruptions
 
-/// Helper to drive the coordinator into an actively-playing state.
+/// Helper to drive the player into an actively-playing state.
 @MainActor
-private func startPlaying(_ c: PlaybackCoordinator, _ eh: MockPlaybackEffectHandler) {
+private func startPlaying(_ c: Player, _ eh: MockPlayerEngine) {
   loadTrack(c)
   eh.hasLoadedAsset = true
+  eh.hasItem = true
   c.setPlayWhenReady(true)
   c.transition(.avPlayerPlaying)
 }
 
-@Suite("PlaybackCoordinator - audio session interruptions")
+@Suite("Player - audio session interruptions")
 struct InterruptionTests {
   @Test @MainActor
   func began_whilePlaying_pauses() {
@@ -1004,13 +1005,14 @@ struct InterruptionTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     c.handleInterruptionBegan()
+    let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.stop()
     c.handleInterruptionEnded(shouldResume: true)
 
     #expect(c.state == .stopped)
     #expect(c.playWhenReady == false)
-    #expect(eh.reloadTrackCalls.isEmpty)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
   }
 
   /// A user who plays then pauses during the interruption has taken ownership
@@ -1048,7 +1050,7 @@ struct InterruptionTests {
 
 /// A mutation pushes next/previous availability once, after currentIndex and the
 /// shuffle order have settled; an earlier push leaves the lock-screen buttons wrong.
-@Suite("PlaybackCoordinator - skip availability after mutations")
+@Suite("Player - skip availability after mutations")
 struct MutationSkipAvailabilityTests {
   @Test @MainActor
   func move_pushesPostMutationAvailability() throws {
@@ -1089,7 +1091,7 @@ struct MutationSkipAvailabilityTests {
 
 // MARK: - Publishing
 
-@Suite("PlaybackCoordinator - publishing")
+@Suite("Player - publishing")
 struct PublishingTests {
   /// A natural end clears the intent as a side effect of entering .ended; the state change still
   /// goes out first, and each change once.
@@ -1108,7 +1110,7 @@ struct PublishingTests {
 
 // MARK: - Load
 
-@Suite("PlaybackCoordinator - Load")
+@Suite("Player - Load")
 struct LoadTests {
   @MainActor
   private func track(_ id: String) -> Track {
@@ -1159,7 +1161,7 @@ struct LoadTests {
 
 // MARK: - Queue publication
 
-@Suite("PlaybackCoordinator - queue publication")
+@Suite("Player - queue publication")
 struct QueuePublicationTests {
   @MainActor
   private func threeTracks() -> [Track] {
@@ -1206,7 +1208,7 @@ struct QueuePublicationTests {
 
 // MARK: - Stop cancels pending retry
 
-@Suite("PlaybackCoordinator - stop cancels pending retry")
+@Suite("Player - stop cancels pending retry")
 struct StopCancelsRetryTests {
   /// A retry surviving stop() gives up later (intent dropped) and surfaced
   /// .errorOccurred over the deliberate stop — the UI showed an error seconds
@@ -1214,28 +1216,27 @@ struct StopCancelsRetryTests {
   @Test @MainActor
   func stop_cancelsPendingRetry_andStaysSilent() async {
     let errorHandler = makeRetryLoop(delay: 0.05)
-    let coordinator = PlaybackCoordinator(retry: errorHandler, sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()))
-    let effectHandler = MockPlaybackEffectHandler()
-    let callbacks = MockPlaybackCoordinatorCallbacks()
-    coordinator.effectHandler = effectHandler
-    coordinator.callbacks = callbacks
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: errorHandler)
+    let callbacks = MockPlayerCallbacks()
+    player.callbacks = callbacks
 
     errorHandler.handleError(URLError(.timedOut), context: .playback)
     let task = errorHandler.pendingTask
     #expect(task != nil)
 
-    coordinator.stop()
+    player.stop()
     #expect(errorHandler.pendingTask == nil)
 
     await task?.value
-    #expect(coordinator.state == .stopped)
+    #expect(player.state == .stopped)
     #expect(callbacks.errorEvents.isEmpty)
   }
 }
 
 // MARK: - Audio session release (#60)
 
-@Suite("PlaybackCoordinator - audio session release")
+@Suite("Player - audio session release")
 struct SessionReleaseTests {
   @Test @MainActor
   func deliberatePause_requestsRelease() {

@@ -2,10 +2,8 @@
   import NitroModules
 #endif
 
-/// Subset of TrackPlayerCallbacks containing only the callbacks the coordinator fires.
-/// Uses Nitro types (no AVFoundation). TrackPlayerCallbacks extends this protocol
-/// so HybridAudioBrowser implements both automatically.
-@MainActor protocol PlaybackCoordinatorCallbacks: AnyObject {
+/// What the Player reports, in Nitro types. HybridAudioBrowser implements it.
+@MainActor protocol PlayerCallbacks: AnyObject {
   func playerDidChangePlayback(_ playback: Playback)
   func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent)
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent)
@@ -21,4 +19,5 @@
   /// (those resume), and no retry is pending (a live-stream reconnect must keep the session). The
   /// host may release the audio session (debounced) so other apps' audio can resume.
   func playerShouldReleaseSession()
+  func playerDidChangeSleepTimer(_ state: SleepTimerState?)
 }

@@ -2,11 +2,11 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-@Suite("PlaybackCoordinator.playingState")
+@Suite("Player.playingState")
 @MainActor
 struct PlayingStateTests {
   private func state(_ playWhenReady: Bool, _ state: PlaybackState) -> PlayingState {
-    PlaybackCoordinator.playingState(playWhenReady: playWhenReady, state: state)
+    Player.playingState(playWhenReady: playWhenReady, state: state)
   }
 
   @Test func playingWithIntentInAnActiveState() {
@@ -31,14 +31,12 @@ struct PlayingStateTests {
   }
 
   @Test func aChangeIsPublishedOnce() {
-    let callbacks = MockPlaybackCoordinatorCallbacks()
-    let coordinator = PlaybackCoordinator(
-      retry: makeRetryLoop(), sleepTimerManager: SleepTimerManager(scheduler: ManualSleepTimerScheduler()),
-    )
-    coordinator.callbacks = callbacks
-    coordinator.transition(.avPlayerPlaying)
-    coordinator.setPlayWhenReady(true)
-    coordinator.setPlayWhenReady(true)
+    let callbacks = MockPlayerCallbacks()
+    let player = makePlayer()
+    player.callbacks = callbacks
+    player.transition(.avPlayerPlaying)
+    player.setPlayWhenReady(true)
+    player.setPlayWhenReady(true)
     #expect(callbacks.playingStateChanges.count == 1)
   }
 }

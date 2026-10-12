@@ -9,8 +9,8 @@ subgraph Nitro["Nitro Hybrid Object"]
 end
 
 subgraph PlaybackCore["Playback Core"]
-  TP["TrackPlayer<br/>@MainActor<br/>AVPlayer bridge + observers<br/>Owns coordinator, loaders, controllers"]
-  PC["PlaybackCoordinator<br/>@MainActor<br/>State machine hub + side effects<br/>Owns queue, timers, sleep, fade"]
+  TP["AVPlayerEngine<br/>@MainActor (PlayerEngine)<br/>AVPlayer, observers, loader<br/>now playing, remote commands; no policy"]
+  PC["Player<br/>@MainActor façade<br/>State machine, Load, ErrorStatus<br/>every playback decision (SwiftPM-tested)"]
   PSMF["nextPlaybackState()<br/>PlaybackStateMachine.swift<br/>Pure transition table"]
   PE["PlaybackEvent enum<br/>Transition triggers"]
   PStore["PlaybackPersistence<br/>@MainActor<br/>UserDefaults cold-start resume<br/>periodic save while playing"]
@@ -27,7 +27,7 @@ subgraph Queue["Queue Management"]
   SO["ShuffleOrder<br/>Fisher-Yates shuffle"]
 end
 
-subgraph CoordOwned["Coordinator-owned Managers"]
+subgraph CoordOwned["Player-owned Managers"]
   RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
   STM["SleepTimerManager<br/>@MainActor<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
@@ -59,7 +59,7 @@ subgraph Platform["Apple Platform APIs"]
   SK["SiriKit Intents<br/>INPlayMedia / Add / Affinity"]
 end
 
-subgraph Observers["Observer Layer (report to TrackPlayer)"]
+subgraph Observers["Observer Layer (report to AVPlayerEngine)"]
   PSO["PlayerObserver<br/>One per AVPlayer<br/>status, timeControlStatus, audio start (1ms)"]
   PIPO["ItemObserver<br/>One per AVPlayerItem<br/>status, buffering, end / fail / stalled, timed metadata"]
 end
@@ -103,7 +103,8 @@ end
 
 %% Entry point ownership
 JS -->|"Direct sync/async calls"| HAB
-HAB -->|Owns| TP
+HAB -->|Owns| PC
+HAB -->|"engine: AV-only settings"| TP
 HAB -->|Owns| BM
 HAB -->|Owns| TS
 HAB -->|Owns| NM
@@ -115,22 +116,22 @@ HAB -.->|"~50 callbacks to JS"| JS
 
 %% Track selection
 TS -->|"Queue reuse, expand, intercept"| BM
-TS -.->|"player: TrackSelectionPlayer"| TP
+TS -.->|"player: TrackSelectionPlayer"| PC
 CPS -->|Owns| TS
 
-%% TrackPlayer ownership
-TP -->|Owns| PC
+%% Engine ownership
+PC -->|"Owns engine: PlayerEngine"| TP
+TP -.->|"onEvent: EngineEvent"| PC
 TP -->|Controls| AVP
 TP -->|Owns| ML
 TP -->|Owns| NPU
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
-TP -->|Owns| PStore
+PC -->|Owns| PStore
 TP -->|Owns| PSO
 TP -->|Owns| PIPO
-TP -.->|"Implements PlaybackEffectHandler"| PC
 
-%% Coordinator hub
+%% Player hub
 PC -->|Owns| QM
 PC -->|Owns| RTL
 PC -->|Owns| STM
@@ -139,14 +140,12 @@ PC -->|Owns| VF
 PC -->|Owns| PTimer
 PC -->|"transition(event)"| PSMF
 PSMF --> PE
-PC -.->|"effectHandler: TrackPlayer"| TP
 PC -.->|"callbacks: HybridAudioBrowser"| HAB
 PC -->|"mutation → QueueChange"| QM
 QM --> SO
 
 %% Loaders
 ML -.->|"onEvent: MediaLoader.Event"| TP
-ML -->|delegate: TrackPlayer| TP
 NPU -->|Updates| NPIC
 NPU -->|Loads artwork| AIF
 
@@ -174,7 +173,7 @@ RCC -->|addTarget| MPRC
 NPIC -->|linkPlayer| MPNS
 TP -->|Owns, primes on failed first load| SAP
 ASC -->|"setCategory, setActive"| AS
-ASC -.->|AudioSessionPlayer| TP
+ASC -.->|AudioSessionPlayer| PC
 RTL -->|Monitors| NM
 AIF --> SVG
 
@@ -195,7 +194,7 @@ CPLF -->|weak imageLoader| CPIL
 CPNPM -->|audioBrowser, player| HAB
 CPNPM -->|Templates| CPT
 MIH --> MIP
-MIP -->|"resume / search → queue → play"| TP
+MIP -->|"resume / search → queue → play"| PC
 MIP -->|"decide (search)"| BG
 MAH -->|"favoriteCurrentTrack"| HAB
 MAFH -->|"favoriteCurrentTrack"| HAB

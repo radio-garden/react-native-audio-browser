@@ -17,7 +17,7 @@ final class MediaLoader {
   /// consumer-supplied `media.resolve(track)` as the final media layer.
   var mediaUrlResolver: ((String, Track?) async -> MediaResolvedUrl)?
 
-  /// Internal access so TrackPlayer can read it for observer guards.
+  /// Internal access so AVPlayerEngine can read it.
   private(set) var asset: AVURLAsset?
 
   /// Milliseconds; applied to AVPlayerItem's preferredForwardBufferDuration.

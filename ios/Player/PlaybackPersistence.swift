@@ -5,6 +5,8 @@ import Foundation
 /// every `saveInterval`. Swift counterpart of Android's `PlaybackStateStore.kt`.
 @MainActor
 final class PlaybackPersistence {
+  static let standardDefaults = UserDefaults(suiteName: "com.audiobrowser.playback") ?? .standard
+
   private let defaults: UserDefaults
   private let key = "playbackState.v1"
   private let saveInterval: Duration
@@ -13,7 +15,7 @@ final class PlaybackPersistence {
 
   /// - Parameter snapshot: The state to save; nil when there is nothing to resume.
   init(
-    defaults: UserDefaults = UserDefaults(suiteName: "com.audiobrowser.playback") ?? .standard,
+    defaults: UserDefaults = standardDefaults,
     saveInterval: Duration = .seconds(5),
     snapshot: @escaping @MainActor () -> PersistedPlaybackState?,
   ) {
