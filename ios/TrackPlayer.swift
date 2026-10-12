@@ -298,11 +298,8 @@ class TrackPlayer {
       self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
     }
 
-    // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
-    nowPlayingInfoController.onRemoteCommandCenterChanged = { [weak self] newCommandCenter in
-      MainActor.assumeIsolated {
-        self?.remoteCommandController.switchCommandCenter(newCommandCenter)
-      }
+    remoteCommandController.skipAvailability = { [weak coordinator] in
+      (coordinator?.canNext ?? false, coordinator?.canPrevious ?? false)
     }
 
     setupAVPlayer()
@@ -451,11 +448,6 @@ class TrackPlayer {
 
   func enableRemoteCommands(_ commands: [RemoteCommand]) {
     remoteCommandController.enable(commands: commands)
-    // Apply current next/previous availability so re-/late-configured commands
-    // start in the correct enabled state (not unconditionally enabled).
-    remoteCommandController.setSkipAvailability(
-      canNext: coordinator.canNext, canPrevious: coordinator.canPrevious,
-    )
   }
 
   /// Empties the queue and the published now-playing info. Unlinking the
@@ -468,7 +460,7 @@ class TrackPlayer {
   func destroy() {
     clear()
     // The player is going away for good — now the session must go with it.
-    nowPlayingInfoController.unlinkPlayer()
+    remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
     // An AVPlayer retains its time observers: one left registered is still attached when the
     // player is released, and outlives this object.
     playerTimeObserver.unregisterForBoundaryTimeEvents()
@@ -528,7 +520,7 @@ class TrackPlayer {
     stopObservingAVPlayerItem()
     clearCurrentAVItem()
 
-    nowPlayingInfoController.unlinkPlayer()
+    remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
 
     avPlayer = AVPlayer()
     setupAVPlayer()
@@ -554,7 +546,7 @@ class TrackPlayer {
     playerTimeObserver.avPlayer = avPlayer
     playerTimeObserver.registerForBoundaryTimeEvents()
 
-    nowPlayingInfoController.linkPlayer(avPlayer)
+    remoteCommandController.switchCommandCenter(nowPlayingInfoController.linkPlayer(avPlayer))
 
     // Stage the rate unconditionally, so a freshly recreated player carries it
     // before anything plays — `rate`'s setter holds the same invariant, and on
@@ -887,8 +879,8 @@ extension TrackPlayer: PlaybackEffectHandler {
     persistPlaybackState()
   }
 
-  func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
-    remoteCommandController.setSkipAvailability(canNext: canNext, canPrevious: canPrevious)
+  func updateSkipAvailability(canNext _: Bool, canPrevious _: Bool) {
+    remoteCommandController.refreshSkipAvailability()
   }
 }
 

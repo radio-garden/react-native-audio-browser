@@ -99,14 +99,18 @@ struct RemoteCommandControllerTests {
     #expect(!center.skipForwardCommand.isEnabled)
   }
 
-  /// `setSkipAvailability` greys out next/previous when the queue has nowhere to
-  /// go, and the state must survive a later `enable(commands:)`.
-  @Test func skipAvailabilitySurvivesReEnable() {
+  /// Next/previous follow `skipAvailability` when refreshed and whenever they are enabled.
+  @Test func skipAvailabilityAppliesOnRefreshAndEnable() {
     let (controller, _) = makeController()
     let center = MPRemoteCommandCenter.shared()
+    var availability = (canNext: true, canPrevious: true)
+    controller.skipAvailability = { availability }
 
     controller.enable(commands: [.next, .previous])
-    controller.setSkipAvailability(canNext: false, canPrevious: true)
+    #expect(center.nextTrackCommand.isEnabled)
+
+    availability = (false, true)
+    controller.refreshSkipAvailability()
     #expect(!center.nextTrackCommand.isEnabled)
     #expect(center.previousTrackCommand.isEnabled)
 

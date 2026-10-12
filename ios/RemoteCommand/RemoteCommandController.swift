@@ -41,10 +41,11 @@ final class RemoteCommandController {
 
   private var enabledCommands: [RemoteCommand] = []
 
-  /// Next/previous availability and the shuffle/repeat display state, kept so they survive a
-  /// re-enable and a switch to a new command center, which starts with everything off.
-  private var canNext = true
-  private var canPrevious = true
+  /// Whether the queue has a next / previous track; read whenever those commands are enabled.
+  var skipAvailability: @MainActor () -> (canNext: Bool, canPrevious: Bool) = { (true, true) }
+
+  /// The shuffle/repeat display state, kept so it survives a switch to a new command center,
+  /// which starts with both off.
   private var shuffleEnabled = false
   private var repeatMode: RepeatMode = .off
 
@@ -91,10 +92,9 @@ final class RemoteCommandController {
     center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
   }
 
-  /// Greys out next/previous when the queue has nowhere to skip.
-  func setSkipAvailability(canNext: Bool, canPrevious: Bool) {
-    self.canNext = canNext
-    self.canPrevious = canPrevious
+  /// Greys out next/previous when `skipAvailability` says the queue has nowhere to skip.
+  func refreshSkipAvailability() {
+    let (canNext, canPrevious) = skipAvailability()
     if enabledCommands.contains(.next) { center.nextTrackCommand.isEnabled = canNext }
     if enabledCommands.contains(.previous) { center.previousTrackCommand.isEnabled = canPrevious }
   }
@@ -131,8 +131,8 @@ final class RemoteCommandController {
       self?.handle(event, for: command) ?? .commandFailed
     }
     mpCommand.isEnabled = switch command {
-    case .next: canNext
-    case .previous: canPrevious
+    case .next: skipAvailability().canNext
+    case .previous: skipAvailability().canPrevious
     default: true
     }
   }

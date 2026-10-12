@@ -3,9 +3,6 @@ import Foundation
 @preconcurrency import MediaPlayer
 import os.log
 
-// MPRemoteCommandCenter is not Sendable, but we only use it on the main thread
-extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
-
 /// Controller for managing Now Playing info.
 ///
 /// A `MPNowPlayingSession` bound to the linked AVPlayer publishes now-playing info
@@ -27,34 +24,24 @@ class NowPlayingInfoController {
   /// The linked AVPlayer — metadata is attached to its current item.
   private weak var linkedPlayer: AVPlayer?
 
-  /// The current remote command center - the session's while linked, else the shared one.
-  private(set) var remoteCommandCenter: MPRemoteCommandCenter = .shared()
-
   required init() {}
 
-  /// Callback invoked when the remote command center changes (session created/destroyed).
-  var onRemoteCommandCenterChanged: ((MPRemoteCommandCenter) -> Void)?
-
-  /// Binds an AVPlayer to a new auto-publishing `MPNowPlayingSession`.
-  ///
-  /// - Important: This creates an `MPNowPlayingSession` with its own `remoteCommandCenter`;
-  ///   the `onRemoteCommandCenterChanged` callback is invoked with the new command center.
-  func linkPlayer(_ player: AVPlayer) {
+  /// Binds an AVPlayer to a new auto-publishing `MPNowPlayingSession`, and returns the session's
+  /// own remote command center, which remote commands must now be enabled on.
+  func linkPlayer(_ player: AVPlayer) -> MPRemoteCommandCenter {
     logger.notice("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
 
     linkedPlayer = player
 
     let session = MPNowPlayingSession(players: [player])
     nowPlayingSession = session
-    remoteCommandCenter = session.remoteCommandCenter
 
     session.automaticallyPublishesNowPlayingInfo = true
 
     session.becomeActiveIfPossible { success in
       self.logger.notice("MPNowPlayingSession becomeActiveIfPossible: \(success)")
     }
-
-    onRemoteCommandCenterChanged?(remoteCommandCenter)
+    return session.remoteCommandCenter
   }
 
   /// Re-requests now-playing activation for the linked session.
@@ -73,16 +60,15 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Unlinks the AVPlayer, tearing down the session and restoring the shared command center.
-  func unlinkPlayer() {
+  /// Unlinks the AVPlayer and tears down the session; returns the shared command center, which
+  /// remote commands fall back to.
+  func unlinkPlayer() -> MPRemoteCommandCenter {
     logger.info("Unlinking AVPlayer from MPNowPlayingSession")
 
     linkedPlayer = nil
     nowPlayingSession?.automaticallyPublishesNowPlayingInfo = false
     nowPlayingSession = nil
-
-    remoteCommandCenter = MPRemoteCommandCenter.shared()
-    onRemoteCommandCenterChanged?(remoteCommandCenter)
+    return MPRemoteCommandCenter.shared()
   }
 
   /// Keys the session derives from the player itself — we never set these manually,
