@@ -731,32 +731,12 @@ public final class RNABCarPlayController: NSObject {
     path: String,
     on template: CPListTemplate,
   ) async {
-    let formatted = await formattedNavigationError(navError, path: path)
+    let formatted = await audioBrowser?.browserManager.formatted(navError, path: path) ?? navError.defaultFormatted()
     showMessage(
       on: template,
       title: formatted.title,
       subtitle: formatted.message.flatMap { $0.isEmpty ? nil : $0 },
     )
-  }
-
-  /// Resolves a navigation error to its display form via the app's
-  /// `formatNavigationError` callback, falling back to the default if unset/failed.
-  @MainActor
-  private func formattedNavigationError(
-    _ navError: NavigationError,
-    path: String,
-  ) async -> FormattedNavigationError {
-    let fallback = navError.defaultFormatted()
-    guard let formatter = config.formatNavigationError else { return fallback }
-    let params = FormatNavigationErrorParams(
-      error: navError, defaultFormatted: fallback, path: path,
-    )
-    do {
-      let custom = try await formatter(params).await()
-      return custom ?? fallback
-    } catch {
-      return fallback
-    }
   }
 
   // MARK: - Selection Handling
@@ -1278,7 +1258,7 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func showRootNavigationError(_ navError: NavigationError) async {
     let generation = gateBuildGeneration
-    let formatted = await formattedNavigationError(navError, path: "/")
+    let formatted = await audioBrowser?.browserManager.formatted(navError, path: "/") ?? navError.defaultFormatted()
     guard gateBuildGeneration == generation else { return }
     let template = CPListTemplate(title: nil, sections: [])
     template.emptyViewTitleVariants = [formatted.title]

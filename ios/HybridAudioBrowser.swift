@@ -91,25 +91,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     playerOptions.carPlayPlayingIndicatorLocation
   }
 
-  /// Written from the JS thread, the cooperative pool and MainActor, with a
-  /// `didSet` that calls back into Nitro. MainActor-isolated so the compiler
-  /// requires an `onMainActor` hop at every access.
-  @MainActor private var lastNavigationError: NavigationError? {
-    didSet {
-      // Skip if both nil (no real change)
-      guard oldValue != nil || lastNavigationError != nil else { return }
-      navigationErrorEmitter.emit(NavigationErrorEvent(error: lastNavigationError))
-    }
-  }
-
-  /// Isolated for the same reason as ``lastNavigationError``.
-  @MainActor private var lastFormattedNavigationError: FormattedNavigationError? {
-    didSet {
-      // Skip if both nil (no real change)
-      guard oldValue != nil || lastFormattedNavigationError != nil else { return }
-      onFormattedNavigationError(lastFormattedNavigationError)
-    }
-  }
+  @MainActor private lazy var navigationError = NavigationErrorState(
+    onErrorChanged: { [weak self] in self?.navigationErrorEmitter.emit(NavigationErrorEvent(error: $0)) },
+    onFormattedChanged: { [weak self] in self?.onFormattedNavigationError($0) },
+  )
 
   // MARK: - Multi-Listener Emitters
 
@@ -167,13 +152,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     get { onMainActor { browserManager.getPath() } }
     set {
       guard let newPath = newValue else { return }
-      Task {
-        do {
-          try await browserManager.navigate(newPath)
-        } catch {
-          handleNavigationError(error, path: newPath)
-        }
-      }
+      navigate(newPath, clearError: false)
     }
   }
 
@@ -203,14 +182,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       Task {
         let tabs = try? await browserManager.queryTabs()
         // Navigate to configured path, first tab, or "/"
-        let initialPath = configuredPath ?? tabs?.first?.path ?? "/"
-        // Clear error before navigation (matches Kotlin clearNavigationError())
-        clearNavigationError()
-        do {
-          try await browserManager.navigate(initialPath)
-        } catch {
-          handleNavigationError(error, path: initialPath)
-        }
+        navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
       }
     }
   }
@@ -449,60 +421,30 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  private func handleNavigationError(_ error: Error, path: String) {
-    let navError = NavigationError.from(error)
-
-    onMainActor { lastNavigationError = navError }
-
-    // Format the error (async if using JS callback, sync for defaults)
-    let defaultFormatted = navError.defaultFormatted()
-    if let formatter = onMainActor({ browserManager.config.formatNavigationError }) {
-      let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
-      // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes.
-      // The result callbacks are @Sendable: a plain closure would inherit MainActor
-      // isolation from this block, and Nitro resolves its promises synchronously on the
-      // JS thread — Swift 6.2's dynamic isolation check then traps on closure entry.
-      // They therefore hop back explicitly, like every other writer.
-      DispatchQueue.main.async { [weak self] in
-        formatter(params)
-          .then { @Sendable [weak self] customDisplay in
-            self?.setFormattedNavigationError(customDisplay ?? defaultFormatted)
-          }
-          .catch { @Sendable [weak self] _ in
-            self?.setFormattedNavigationError(defaultFormatted)
-          }
+  /// Navigates the in-app browser, reporting a failure as the navigation error. A clear is
+  /// synchronous: JS hears it before the navigation that may set the error again.
+  private func navigate(_ path: String, clearError: Bool) {
+    if clearError { onMainActor { navigationError.clear() } }
+    Task { @MainActor in
+      do {
+        try await browserManager.navigate(path)
+      } catch {
+        await reportNavigationError(error, path: path)
       }
-    } else {
-      setFormattedNavigationError(defaultFormatted)
     }
   }
 
-  /// Callable from any thread — the Nitro promise callbacks below resolve on
-  /// the JS thread.
-  private func setFormattedNavigationError(_ formatted: FormattedNavigationError?) {
-    onMainActor { lastFormattedNavigationError = formatted }
-  }
-
-  /// Synchronous on purpose: the `didSet`s notify JS, which has to happen
-  /// before the navigation that may set them again.
-  private func clearNavigationError() {
-    onMainActor {
-      lastNavigationError = nil
-      lastFormattedNavigationError = nil
+  @MainActor
+  private func reportNavigationError(_ error: Error, path: String) async {
+    await navigationError.report(NavigationError.from(error)) { [browserManager] in
+      await browserManager.formatted($0, path: path)
     }
   }
 
   // MARK: - Browser Methods
 
   public func navigatePath(path: String) throws {
-    clearNavigationError()
-    Task {
-      do {
-        try await browserManager.navigate(path)
-      } catch {
-        handleNavigationError(error, path: path)
-      }
-    }
+    navigate(path, clearError: true)
   }
 
   public func navigateTrack(track: Track) throws {
@@ -518,20 +460,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       case .intercepted:
         break
       case let .browse(path):
-        navigateToBrowsablePath(path)
+        navigate(path, clearError: true)
       case .none:
         break
-      }
-    }
-  }
-
-  private func navigateToBrowsablePath(_ path: String) {
-    clearNavigationError()
-    Task {
-      do {
-        try await browserManager.navigate(path)
-      } catch {
-        handleNavigationError(error, path: path)
       }
     }
   }
@@ -549,11 +480,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getNavigationError() throws -> NavigationError? {
-    onMainActor { lastNavigationError }
+    onMainActor { navigationError.error }
   }
 
   public func getFormattedNavigationError() throws -> FormattedNavigationError? {
-    onMainActor { lastFormattedNavigationError }
+    onMainActor { navigationError.formatted }
   }
 
   /// Internal signal sent on `externalContentChangedEmitter` to tell CarPlay to
@@ -572,13 +503,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     // Re-resolve the path if it's the current browser path
     if onMainActor({ browserManager.getPath() }) == path {
-      Task {
-        do {
-          try await browserManager.navigate(path)
-        } catch {
-          handleNavigationError(error, path: path)
-        }
-      }
+      navigate(path, clearError: false)
     }
   }
 
@@ -599,11 +524,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
 
     // Re-resolve the JS-facing current path with the cache cleared.
-    Task {
+    Task { @MainActor in
       do {
         try await browserManager.refresh()
       } catch {
-        handleNavigationError(error, path: onMainActor { browserManager.getPath() })
+        await reportNavigationError(error, path: browserManager.getPath())
       }
     }
   }

@@ -507,6 +507,15 @@ final class BrowserManager {
     MediaResolveComposer.mergeDicts(base, override)
   }
 
+  /// `error` as the app's `formatNavigationError` displays it, or its default display when
+  /// there is no formatter or it fails.
+  func formatted(_ error: NavigationError, path: String) async -> FormattedNavigationError {
+    let fallback = error.defaultFormatted()
+    guard let formatter = config.formatNavigationError else { return fallback }
+    let params = FormatNavigationErrorParams(error: error, defaultFormatted: fallback, path: path)
+    return await (try? formatter(params).await()) ?? fallback
+  }
+
   // MARK: - Layer Resolvers
 
   struct ResolvedLayers {
