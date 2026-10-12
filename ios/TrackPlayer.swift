@@ -770,10 +770,52 @@ extension TrackPlayer {
   /// queue-changed event, as on Android). An unrecognized repeat mode restores
   /// as `.off` rather than failing the whole resume over one field; a
   /// non-positive speed is rejected by `rate`'s own setter.
-  func restorePlaybackSettings(from state: PersistedPlaybackState) {
+  private func restorePlaybackSettings(from state: PersistedPlaybackState) {
     repeatMode = RepeatMode(fromString: state.repeatMode) ?? .off
     shuffleEnabled = state.shuffleEnabled
     rate = state.playbackSpeed
+  }
+
+  /// Plays the last persisted session (a cold-start resume): its settings, then its queue —
+  /// `expandQueue`'s expansion of the track's contextual path, or the track alone. False when
+  /// nothing was persisted, or the track has since become `disabled`, which never plays.
+  func resumePersisted(
+    expandQueue: (_ path: String) async -> (tracks: [Track], selectedIndex: Int)?,
+  ) async -> Bool {
+    guard let state = playbackStateStore.load() else {
+      logger.error("resume: nothing persisted")
+      return false
+    }
+    let track = state.track.toNitro()
+    guard track.disabled != true else {
+      logger.info("resume: persisted track is disabled — refusing")
+      return false
+    }
+    logger.info("resume: cold — restoring persisted track")
+    restorePlaybackSettings(from: state)
+    let startMs = track.live == true ? nil : state.positionMs
+    if let path = state.track.path, let expanded = await expandQueue(path) {
+      setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
+    } else {
+      setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+    }
+    return true
+  }
+
+  /// Plays what `TrackSelector` resolved a picked track to.
+  func execute(_ intent: TrackSelector.PlaybackIntent) {
+    switch intent {
+    case let .skipTo(index):
+      do {
+        try skipTo(index, playWhenReady: true)
+      } catch {
+        logger.error("Failed to skip to track at index \(index): \(error)")
+      }
+    case let .setQueue(tracks, startIndex, sourcePath):
+      setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
+    case let .loadTrack(track):
+      load(track, playWhenReady: true)
+    }
   }
 
   /// Start a 5 s repeating save while playback is active. A previous task is

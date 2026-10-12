@@ -58,7 +58,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// safety net and can't hop. Reach it from `onMainActor` / `@MainActor`.
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
-  private let playbackStateStore = PlaybackStateStore()
   let browserManager = BrowserManager()
   private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
@@ -128,7 +127,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// the active flag; per-request chrome is obtained at each serve site via
   /// `gateDecision(for:)`, so the emitter only tells surfaces to re-render.
   public let gateChangedEmitter = Emitter<Bool>()
-  /// Fired when a voice media intent (`handlePlayMediaIntent`) successfully
+  /// Fired when a voice media intent (`MediaIntentPlayback`) successfully
   /// starts playback. CarPlay surfaces the Now Playing template in response, so
   /// the user lands on the playing station (with the rest of the results in Up
   /// Next) rather than the screen they invoked Siri from. No-op where unobserved.
@@ -515,30 +514,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       let result = await trackSelector.select(track: track, player: player)
       switch result {
       case let .play(intent):
-        executePlayback(intent)
+        player.execute(intent)
       case .intercepted:
         break
       case let .browse(path):
         navigateToBrowsablePath(path)
       case .none:
         break
-      }
-    }
-  }
-
-  private func executePlayback(_ intent: TrackSelector.PlaybackIntent) {
-    onMainActor {
-      switch intent {
-      case let .skipTo(index):
-        do {
-          try player?.skipTo(index, playWhenReady: true)
-        } catch {
-          logger.error("Failed to skip to track at index \(index): \(error)")
-        }
-      case let .setQueue(tracks, startIndex, sourcePath):
-        player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-      case let .loadTrack(track):
-        player?.load(track, playWhenReady: true)
       }
     }
   }
@@ -1823,103 +1805,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   ) {
     if let handler { handler(event) } else { fallback() }
     report(event)
-  }
-
-  /// Static so the Siri intent handler can call it before the shared instance
-  /// exists: it waits on the `playerAndConfiguredBrowser` gate, which resolves
-  /// once RN boots. Uses the resolved `browser`, never `self`.
-  static func handlePlayMediaIntent(criteria: MediaIntentCriteria, completion: @escaping @Sendable (Bool) -> Void) {
-    Task { @MainActor in
-      guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
-        Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
-          .error("handlePlayMediaIntent: browser/player not ready within budget")
-        completion(false)
-        return
-      }
-      // No-criteria intent ("play «app»") → resume. The gate must NOT block
-      // this: the gate blocks *finding* content, never *hearing* the active or
-      // persisted track. The gate is checked below, for the search branch only.
-      if criteria.isResume {
-        if player.currentTrack != nil {
-          browser.logger.info("resume: warm — playing current track")
-          player.play()
-          browser.showNowPlayingRequestedEmitter.emit(())
-          completion(true)
-        } else if let state = browser.playbackStateStore.load() {
-          let track = state.track.toNitro()
-          // The persisted track can carry `disabled` — it became unavailable
-          // after it was saved. A disabled track never plays, resumption
-          // included (Track.disabled).
-          if track.disabled == true {
-            browser.logger.info("resume: persisted track is disabled — refusing")
-            completion(false)
-            return
-          }
-          browser.logger.info("resume: cold — restoring persisted track")
-          // Repeat / shuffle / speed come back before the queue is built — see
-          // `restorePlaybackSettings(from:)` for why that ordering matters.
-          player.restorePlaybackSettings(from: state)
-          let startMs = (track.live == true) ? nil : state.positionMs
-          // Match Android resume: re-expand the full queue from the track's contextual
-          // path (parent container → siblings + selected index). Fall back to the single
-          // track when the path isn't contextual or expansion fails.
-          if let path = state.track.path,
-             let expanded = try? await browser.browserManager.expandQueueFromContextualPath(path)
-          {
-            player.setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
-          } else {
-            player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
-          }
-          browser.showNowPlayingRequestedEmitter.emit(())
-          completion(true)
-        } else {
-          browser.logger.error("resume: nothing playing and nothing persisted → no-op")
-          completion(false) // nothing playing and nothing persisted
-        }
-        return
-      }
-
-      // Assemble the Nitro SearchParams here (MainActor) from the criteria's
-      // Sendable fields, so the structured mode/genre/… reach the request like
-      // Android. Today the API still text-searches `q`; the rest is forward-compat.
-      let params = SearchParams(
-        mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
-        query: criteria.query,
-        genre: criteria.genre,
-        artist: criteria.artist,
-        album: criteria.album,
-        title: criteria.title,
-        playlist: criteria.playlist,
-        // .currentlyPlaying can't reach here — isResume routed it to resume.
-        reference: criteria.reference == .my ? .my : .unknown,
-      )
-
-      // Search is *finding* new content — refused when the gate decides this
-      // request is gated (resume above is unaffected: the gate never blocks
-      // hearing, and the gate check stays after the resume check).
-      let outcome = await browser.gateDecision(
-        for: NativeGateRequest(reason: .search, path: nil, search: params),
-      )
-      guard !outcome.gated else {
-        browser.logger.info("handlePlayMediaIntent: search refused — gated")
-        browser.onGate(GateEvent(reason: .search))
-        completion(false)
-        return
-      }
-
-      do {
-        guard let tracks = try await browser.browserManager.searchPlayable(params) else {
-          completion(false)
-          return
-        }
-        player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
-        browser.showNowPlayingRequestedEmitter.emit(())
-        completion(true)
-      } catch {
-        browser.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
-        completion(false)
-      }
-    }
   }
 
   public func remoteChangeRepeatMode(mode: RepeatMode) {

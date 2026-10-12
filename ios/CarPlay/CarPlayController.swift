@@ -807,7 +807,7 @@ public final class RNABCarPlayController: NSObject {
       guard let self else { return }
       switch result {
       case let .play(intent):
-        self.executePlayback(intent, player: player)
+        player.execute(intent)
         self.nowPlayingManager.showNowPlaying(popToFront: false)
       case .intercepted:
         self.nowPlayingManager.showNowPlaying(popToFront: false)
@@ -816,17 +816,6 @@ public final class RNABCarPlayController: NSObject {
       case .none:
         break
       }
-    }
-  }
-
-  private func executePlayback(_ intent: TrackSelector.PlaybackIntent, player: TrackPlayer) {
-    switch intent {
-    case let .skipTo(index):
-      try? player.skipTo(index, playWhenReady: true)
-    case let .setQueue(tracks, startIndex, sourcePath):
-      player.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-    case let .loadTrack(track):
-      player.load(track, playWhenReady: true)
     }
   }
 

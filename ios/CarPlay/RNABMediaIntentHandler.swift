@@ -25,9 +25,8 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     )
     Self.logger.info("Play media intent — query=\(criteria.query) matchesApp=\(criteria.matchesAppName) resume=\(criteria.isResume)")
 
-    // Static + gate-waiting, so it works even before the shared instance exists
-    // (background intent launch, RN not booted yet).
-    HybridAudioBrowser.handlePlayMediaIntent(criteria: criteria) { success in
+    Task { @MainActor in
+      let success = await MediaIntentPlayback.play(criteria: criteria)
       completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
     }
   }
