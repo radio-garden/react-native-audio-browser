@@ -10,19 +10,10 @@ import Testing
 private final class MockRetryHandler: RetryHandling {
   var isEnabled = true
   var hasPlayed = false
-  var retryableErrors: Set<Int> = []
   var attemptRetryResult = false
   var attemptRetryCallCount = 0
   var lastStartFromCurrentTime: Bool?
-  var lastHTTPStatusCode: Int??
   var resetCallCount = 0
-
-  func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool {
-    lastHTTPStatusCode = .some(httpStatusCode)
-    guard let error else { return false }
-    let code = (error as NSError).code
-    return retryableErrors.contains(code)
-  }
 
   var attemptRetryDelayNs: UInt64 = 0
 
@@ -40,160 +31,6 @@ private final class MockRetryHandler: RetryHandling {
   }
 }
 
-// MARK: - Error Classification
-
-@Suite("PlaybackErrorHandler.classify")
-@MainActor
-struct ClassifyTests {
-  @Test func internetError_returnsNotConnectedToInternet() {
-    let error = URLError(.notConnectedToInternet)
-    let result = PlaybackErrorHandler.classify(error: error, fallback: .playbackFailed)
-    #expect(result == .notConnectedToInternet)
-  }
-
-  /// `.badURL` rather than `.timedOut`: timeouts now classify as
-  /// `.hostUnreachable`, so they no longer exercise the fallback path. Both
-  /// fallbacks are asserted to pin that `fallback` is plumbed, not hardcoded.
-  @Test func unclassifiableError_returnsFallback() {
-    #expect(
-      PlaybackErrorHandler.classify(error: URLError(.badURL), fallback: .playbackFailed)
-        == .playbackFailed,
-    )
-    #expect(
-      PlaybackErrorHandler.classify(error: URLError(.badURL), fallback: .failedToLoadKeyValue)
-        == .failedToLoadKeyValue,
-    )
-  }
-
-  @Test(arguments: [
-    URLError.Code.timedOut,
-    .cannotFindHost,
-    // A TLS failure counts as unreachable: we never got a usable connection.
-    .secureConnectionFailed,
-  ])
-  func transportError_returnsHostUnreachable(code: URLError.Code) {
-    let result = PlaybackErrorHandler.classify(error: URLError(code), fallback: .playbackFailed)
-    #expect(result == .hostUnreachable)
-  }
-
-  /// AVFoundation hands back plain `NSError`s rather than bridged `URLError`s.
-  /// `as?` covers this, but only for `NSURLErrorDomain` — worth pinning, since
-  /// losing it would silently downgrade every real timeout to the fallback.
-  @Test func unbridgedUrlDomainError_isClassified() {
-    let error = NSError(domain: NSURLErrorDomain, code: URLError.Code.cannotFindHost.rawValue)
-    let result = PlaybackErrorHandler.classify(error: error, fallback: .playbackFailed)
-    #expect(result == .hostUnreachable)
-  }
-
-  @Test func httpStatus_isSurfaced() {
-    let result = PlaybackErrorHandler.classify(
-      error: nil,
-      fallback: .failedToLoadKeyValue,
-      httpStatusCode: 404,
-    )
-    #expect(result == .httpStatus(404))
-  }
-
-  /// Also covers the nil-error path: with no error and no usable status, the
-  /// context fallback is all that is left.
-  @Test func successStatus_returnsFallback() {
-    #expect(
-      PlaybackErrorHandler.classify(
-        error: nil,
-        fallback: .failedToLoadKeyValue,
-        httpStatusCode: 200,
-      ) == .failedToLoadKeyValue,
-    )
-    #expect(
-      PlaybackErrorHandler.classify(error: nil, fallback: .playbackFailed) == .playbackFailed,
-    )
-  }
-
-  /// A transport failure means no response arrived, so a status left over in
-  /// the item's error log must not outrank it.
-  @Test func transportError_outranksHttpStatus() {
-    let result = PlaybackErrorHandler.classify(
-      error: URLError(.notConnectedToInternet),
-      fallback: .playbackFailed,
-      httpStatusCode: 500,
-    )
-    #expect(result == .notConnectedToInternet)
-  }
-
-  /// A `URLError` we can't classify must fall *through* to the status check,
-  /// not short-circuit to the fallback.
-  @Test func unclassifiableTransportError_stillUsesHttpStatus() {
-    let result = PlaybackErrorHandler.classify(
-      error: URLError(.badURL),
-      fallback: .playbackFailed,
-      httpStatusCode: 500,
-    )
-    #expect(result == .httpStatus(500))
-  }
-
-  /// The server's own answer is better evidence than "the decoder choked",
-  /// which is a downstream symptom of being handed an error page.
-  @Test func httpStatus_outranksUnplayableMedia() {
-    let error = NSError(
-      domain: AVFoundationErrorDomain,
-      code: AVError.fileFormatNotRecognized.rawValue,
-    )
-    let result = PlaybackErrorHandler.classify(
-      error: error,
-      fallback: .playbackFailed,
-      httpStatusCode: 404,
-    )
-    #expect(result == .httpStatus(404))
-  }
-
-  @Test func unplayableMedia_returnsTrackWasUnplayable() {
-    let error = NSError(
-      domain: AVFoundationErrorDomain,
-      code: AVError.fileFormatNotRecognized.rawValue,
-    )
-    let result = PlaybackErrorHandler.classify(error: error, fallback: .playbackFailed)
-    #expect(result == .trackWasUnplayable)
-  }
-
-  /// Being in `AVFoundationErrorDomain` is not enough — `AVError.unknown` is
-  /// in-domain but tells us nothing.
-  @Test func unrelatedAVError_returnsFallback() {
-    let error = NSError(domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue)
-    let result = PlaybackErrorHandler.classify(error: error, fallback: .playbackFailed)
-    #expect(result == .playbackFailed)
-  }
-}
-
-// MARK: - Error Log Status Extraction
-
-/// The sole source of every `.httpStatus` classification in production.
-@Suite("PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes:)")
-@MainActor
-struct ErrorLogStatusTests {
-  /// `errorStatusCode` carries negative OSStatus values in the same field.
-  @Test func skipsNonHttpStatusCodes() {
-    #expect(PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes: [-12939, -1008]) == nil)
-    #expect(PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes: [-12939, 404]) == 404)
-  }
-
-  /// A live stream reconnects; older entries describe attempts that are no
-  /// longer why we are failing.
-  @Test func prefersTheNewestInRangeStatus() {
-    #expect(PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes: [500, 404]) == 404)
-    #expect(PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes: [404, 500, -12939]) == 500)
-  }
-
-  @Test func nilWhenNothingQualifies() {
-    #expect(PlaybackErrorHandler.httpStatusCode(fromErrorStatusCodes: []) == nil)
-  }
-}
-
-// MARK: - Cross-platform Kind Mapping
-
-/// Only the HTTP table is tested: the `kind` switch is exhaustive with no
-/// `default`, so the compiler already forces every new case to be classified
-/// deliberately, and asserting the other arms would just retype the switch.
-/// The status ranges are different — `404, 410` must precede `400...499`.
 @Suite("PlaybackError.kind")
 @MainActor
 struct PlaybackErrorKindTests {
@@ -245,7 +82,7 @@ struct HandleErrorTests {
 
   @Test func nonRetryableInternetError_classifiesCorrectly() {
     let mock = MockRetryHandler()
-    // Not in retryableErrors set, so isRetryable returns false
+    mock.isEnabled = false
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var surfacedError: TrackPlayerError.PlaybackError?
     handler.onError = { surfacedError = $0 }
@@ -262,7 +99,6 @@ struct HandleErrorTests {
   /// completed task blocked audio-session release for the rest of the track.
   @Test func retryableError_triggersRetry() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
     mock.attemptRetryResult = true
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var surfaced: [TrackPlayerError.PlaybackError] = []
@@ -288,7 +124,6 @@ struct HandleErrorTests {
   /// deliberate stop.
   @Test func cancelledRetry_staysSilent() async throws {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
     mock.attemptRetryResult = false
     mock.attemptRetryDelayNs = 50_000_000
     let handler = PlaybackErrorHandler(retryHandler: mock)
@@ -309,7 +144,6 @@ struct HandleErrorTests {
   /// the handle belonging to the retry that replaced it.
   @Test func supersedingError_cancelsTheInFlightRetry() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
     mock.attemptRetryResult = true
     mock.attemptRetryDelayNs = 20_000_000
     let handler = PlaybackErrorHandler(retryHandler: mock)
@@ -333,7 +167,6 @@ struct HandleErrorTests {
   /// classification the terminal path would produce.
   @Test func retryableError_reportsRetryingErrorBeforeTheRetryResolves() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
     mock.attemptRetryResult = true
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var retrying: [TrackPlayerError.PlaybackError] = []
@@ -356,7 +189,6 @@ struct HandleErrorTests {
   /// the advisory does not consume it.
   @Test func retryExhausted_reportsRetryingThenTerminal() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
     mock.attemptRetryResult = false
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var retrying: [TrackPlayerError.PlaybackError] = []
@@ -376,7 +208,6 @@ struct HandleErrorTests {
   @Test func retryDisabled_skipsTheRetryingReport() {
     let mock = MockRetryHandler()
     mock.isEnabled = false
-    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var retrying: [TrackPlayerError.PlaybackError] = []
     var surfacedError: TrackPlayerError.PlaybackError?
@@ -407,7 +238,6 @@ struct HandleErrorTests {
   /// The same, on the retry-exhausted path.
   @Test func retryExhausted_forwardsHttpStatusCode() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.badURL.rawValue]
     mock.attemptRetryResult = false
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var surfacedError: TrackPlayerError.PlaybackError?
@@ -419,18 +249,17 @@ struct HandleErrorTests {
     #expect(surfacedError == .httpStatus(503))
   }
 
-  /// `.badURL` keeps this focused on the retry-exhaustion path: it is
-  /// unclassifiable, so the surfaced error is the context fallback and not a
-  /// classification the error itself carried.
+  /// An opaque CoreMedia failure keeps this focused on the retry-exhaustion
+  /// path: it is retried but unclassifiable, so the surfaced error is the
+  /// context fallback and not a classification the error itself carried.
   @Test func retryExhausted_surfacesClassifiedError() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.badURL.rawValue]
     mock.attemptRetryResult = false
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var surfacedError: TrackPlayerError.PlaybackError?
     handler.onError = { surfacedError = $0 }
 
-    let error = URLError(.badURL)
+    let error = NSError(domain: "CoreMediaErrorDomain", code: -12939)
     handler.handleError(error, context: .mediaLoad)
 
     await handler.pendingRetryTask?.value
@@ -442,7 +271,6 @@ struct HandleErrorTests {
 
   @Test func retryExhausted_internetError_classifiesCorrectly() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.notConnectedToInternet.rawValue]
     mock.attemptRetryResult = false
     let handler = PlaybackErrorHandler(retryHandler: mock)
     var surfacedError: TrackPlayerError.PlaybackError?
@@ -485,7 +313,6 @@ struct ErrorHandlerResetTests {
   /// nil` assertion passes even if `resetRetry` drops its `cancelPendingRetry`.
   @Test func resetCancelsAndResetsHandler() async {
     let mock = MockRetryHandler()
-    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
     mock.attemptRetryResult = true
     mock.attemptRetryDelayNs = 20_000_000
     let handler = PlaybackErrorHandler(retryHandler: mock)

@@ -745,11 +745,11 @@ class TrackPlayer {
   /// `AVPlayerItem.error` never carries it — a 404 arrives as an opaque
   /// CoreMedia error — so the error log is the only place it surfaces. The log
   /// is per-item, so its entries belong to the track that just failed; picking
-  /// among them is `PlaybackErrorHandler`'s job, where it is testable
+  /// among them is `PlaybackFailure`'s job, where it is testable
   /// (`AVPlayerItemErrorLogEvent` cannot be constructed).
   private var currentItemHttpStatusCode: Int? {
     guard let events = avPlayer.currentItem?.errorLog()?.events else { return nil }
-    return PlaybackErrorHandler.httpStatusCode(
+    return PlaybackFailure.httpStatusCode(
       fromErrorStatusCodes: events.map(\.errorStatusCode),
     )
   }

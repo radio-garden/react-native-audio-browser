@@ -123,7 +123,6 @@ private func makeRetrying() -> (
   MockPlaybackEffectHandler,
 ) {
   let retryHandler = MockRetryHandling()
-  retryHandler.isRetryableResult = true
   retryHandler.attemptRetryResult = true
   let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
   let coordinator = PlaybackCoordinator(
@@ -764,7 +763,6 @@ struct HealthyPlaybackRetryResetTests {
   @Test @MainActor
   func refill_skipsWhileRetryIsPending() async {
     let retryHandler = MockRetryHandling()
-    retryHandler.isRetryableResult = true
     retryHandler.attemptRetryDelayNs = 1_000_000_000
     let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
     let coordinator = PlaybackCoordinator(
@@ -1230,7 +1228,6 @@ struct StopCancelsRetryTests {
   @Test @MainActor
   func stop_cancelsPendingRetry_andStaysSilent() async {
     let retryHandler = MockRetryHandling()
-    retryHandler.isRetryableResult = true
     retryHandler.attemptRetryResult = false
     retryHandler.attemptRetryDelayNs = 50_000_000
     let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)

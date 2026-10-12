@@ -215,12 +215,10 @@ final class MockSleepTimerHandling: SleepTimerHandling {
 final class MockRetryHandling: RetryHandling {
   var isEnabled = true
   var hasPlayed = false
-  var isRetryableResult = false
   var attemptRetryResult = false
   var attemptRetryDelayNs: UInt64 = 0
   var resetCallCount = 0
 
-  func isRetryable(_: Error?, httpStatusCode _: Int?) -> Bool { isRetryableResult }
   func attemptRetry(startFromCurrentTime _: Bool) async -> Bool {
     if attemptRetryDelayNs > 0 {
       try? await Task.sleep(nanoseconds: attemptRetryDelayNs)

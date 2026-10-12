@@ -27,6 +27,7 @@ let package = Package(
         "Player/MediaLoader.swift",
         "Player/MediaLoaderDelegate.swift",
         "Player/PlaybackErrorHandler.swift",
+        "Player/PlaybackFailure.swift",
         "Player/RetryManager.swift",
         "Player/PlaybackStateMachine.swift",
         "Player/PlayerStatusTypes.swift",

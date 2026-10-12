@@ -8,7 +8,6 @@ import os.log
   var isEnabled: Bool { get }
   /// Whether the current load has produced audio — selects the retry budget.
   var hasPlayed: Bool { get set }
-  func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool
   func reset()
 }
@@ -62,10 +61,9 @@ public enum PlaybackErrorContext {
       logger.error("[\(String(describing: context))] failure with nil error")
     }
 
-    if retryHandler.isEnabled, retryHandler.isRetryable(error, httpStatusCode: httpStatusCode) {
-      onRetryingError?(PlaybackErrorHandler.classify(
-        error: error, fallback: context.fallbackError, httpStatusCode: httpStatusCode,
-      ))
+    let failure = PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError)
+    if retryHandler.isEnabled, failure.retryable {
+      onRetryingError?(failure.error)
       pendingRetryTask?.cancel()
       pendingRetryTask = Task { [weak self] in
         guard let self else { return }
@@ -75,8 +73,7 @@ public enum PlaybackErrorContext {
         // track or a deliberate stop to .error. The canceller owns the handle.
         if Task.isCancelled { return }
         if !retried {
-          let classified = PlaybackErrorHandler.classify(error: error, fallback: context.fallbackError, httpStatusCode: httpStatusCode)
-          self.onError?(classified)
+          self.onError?(failure.error)
         }
         // Clear the handle: session release is gated on no pending retry.
         pendingRetryTask = nil
@@ -84,9 +81,8 @@ public enum PlaybackErrorContext {
       return
     }
 
-    logger.warning("Error not retryable, surfacing \(String(describing: context.fallbackError))")
-    let classified = PlaybackErrorHandler.classify(error: error, fallback: context.fallbackError, httpStatusCode: httpStatusCode)
-    onError?(classified)
+    logger.warning("Error not retryable, surfacing \(String(describing: failure.error))")
+    onError?(failure.error)
   }
 
   func cancelPendingRetry() {
@@ -106,70 +102,5 @@ public enum PlaybackErrorContext {
   func resetForNewLoad() {
     resetRetry()
     retryHandler.hasPlayed = false
-  }
-
-  /// Classifies an error into the narrowest case the evidence supports, so JS
-  /// receives a real `kind` rather than a context fallback.
-  ///
-  /// Order matters: a transport failure means we never got a response, so it
-  /// outranks any status left in the item's error log. AVFoundation reports
-  /// HTTP failures as opaque CoreMedia errors, which is why `httpStatusCode`
-  /// is passed in separately by the caller rather than read off `error`.
-  public static func classify(
-    error: Error?,
-    fallback: TrackPlayerError.PlaybackError,
-    httpStatusCode: Int? = nil,
-  ) -> TrackPlayerError.PlaybackError {
-    // `as?` bridges plain `NSError`s in `NSURLErrorDomain` too, which is the
-    // form AVFoundation usually hands back.
-    if let urlError = error as? URLError {
-      switch urlError.code {
-      case .notConnectedToInternet:
-        return .notConnectedToInternet
-      case .timedOut,
-           .cannotFindHost,
-           .cannotConnectToHost,
-           .networkConnectionLost,
-           .dnsLookupFailed,
-           .secureConnectionFailed:
-        return .hostUnreachable
-      default:
-        break
-      }
-    }
-
-    if let httpStatusCode, !(200 ... 299).contains(httpStatusCode) {
-      return .httpStatus(httpStatusCode)
-    }
-
-    if isUnplayableMedia(error) {
-      return .trackWasUnplayable
-    }
-
-    return fallback
-  }
-
-  /// Picks the HTTP status out of an `AVPlayerItem` error log's status codes.
-  ///
-  /// `errorStatusCode` is a mixed space — negative OSStatus values share it
-  /// with HTTP statuses — so only in-range values count, and the newest wins:
-  /// a live stream reconnects, and older entries describe earlier attempts.
-  public static func httpStatusCode(fromErrorStatusCodes codes: [Int]) -> Int? {
-    codes.last { (100 ... 599).contains($0) }
-  }
-
-  /// The stream was fetched but cannot be decoded — unknown container,
-  /// unsupported codec, or a decoder that refused it.
-  private static func isUnplayableMedia(_ error: Error?) -> Bool {
-    guard let nsError = error as NSError? else { return false }
-    guard nsError.domain == AVFoundationErrorDomain else { return false }
-    return [
-      AVError.fileFormatNotRecognized,
-      AVError.failedToParse,
-      AVError.decoderNotFound,
-      AVError.decoderTemporarilyUnavailable,
-      AVError.formatUnsupported,
-      AVError.contentIsUnavailable,
-    ].contains { $0.rawValue == nsError.code }
   }
 }
