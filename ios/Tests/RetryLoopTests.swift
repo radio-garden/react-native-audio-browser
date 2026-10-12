@@ -195,21 +195,76 @@ struct RetryLoopHandleErrorTests {
     #expect(record.errors == [.failedToLoadKeyValue])
   }
 
-  @Test func resetDropsTheRetryAndTheBudgets() async {
-    let (loop, record) = makeLoop()
+  @Test func resetRefillsTheBudgets() async {
+    let (loop, _) = makeLoop()
     loop.handleError(URLError(.timedOut), context: .playback)
     await loop.pendingTask?.value
     #expect(loop.attempts == 1)
-
-    let delayed = makeRetryLoop(delay: 0.02)
-    delayed.handleError(URLError(.timedOut), context: .playback)
-    let task = delayed.pendingTask
-    delayed.reset()
     loop.reset()
-
-    #expect(delayed.pendingTask == nil)
     #expect(loop.attempts == 0)
-    #expect(record.errors.isEmpty)
-    await task?.value
   }
+
+  @Test func resetDropsTheRetryInFlightSilently() async {
+    let (loop, record) = makeLoop(delay: 0.02)
+    loop.handleError(URLError(.timedOut), context: .playback)
+    let task = loop.pendingTask
+    loop.reset()
+    #expect(loop.pendingTask == nil)
+    await task?.value
+    #expect(record.errors.isEmpty)
+    #expect(record.reloads.isEmpty)
+  }
+
+  /// A loop whose backoff waits until cancelled, reporting when it starts waiting.
+  private func makeWaitingLoop() -> (RetryLoop, Record, () -> Bool) {
+    var waiting = false
+    let loop = RetryLoop(sleep: { _ in
+      await MainActor.run { waiting = true }
+      try await Task.sleep(for: .seconds(60))
+    })
+    loop.updatePolicy(from: .first(true))
+    loop.shouldRetry = { true }
+    let record = Record()
+    loop.onError = { record.errors.append($0) }
+    loop.onRetry = { record.reloads.append($0) }
+    return (loop, record, { waiting })
+  }
+
+  @Test func aCancelDuringTheBackoffStaysSilent() async {
+    let (loop, record, isWaiting) = makeWaitingLoop()
+    loop.handleError(URLError(.timedOut), context: .playback)
+    let task = loop.pendingTask
+    while !isWaiting() {
+      await Task.yield()
+    }
+    loop.cancel()
+    await task?.value
+    #expect(record.errors.isEmpty)
+    #expect(record.reloads.isEmpty)
+  }
+
+  /// A cancel that lands as the backoff completes (the sleep itself returning normally) still
+  /// stops the reload.
+  @Test func aCancelAsTheBackoffEndsStopsTheReload() async {
+    let holder = LoopHolder()
+    let loop = RetryLoop(sleep: { _ in
+      await holder.loop?.cancel()
+    })
+    holder.loop = loop
+    loop.updatePolicy(from: .first(true))
+    loop.shouldRetry = { true }
+    let record = Record()
+    loop.onError = { record.errors.append($0) }
+    loop.onRetry = { record.reloads.append($0) }
+    loop.handleError(URLError(.timedOut), context: .playback)
+    let task = loop.pendingTask
+    await task?.value
+    #expect(record.reloads.isEmpty)
+    #expect(record.errors.isEmpty)
+  }
+}
+
+@MainActor
+private final class LoopHolder {
+  weak var loop: RetryLoop?
 }

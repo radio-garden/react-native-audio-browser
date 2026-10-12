@@ -189,6 +189,34 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
+  /// A restart from a terminal error is a new Load: fresh retry budgets, unproven playback, the
+  /// primer allowed again; a retry within a Load keeps its Load.
+  @Test func aRestartFromAnErrorBeginsANewLoad() async {
+    let (player, engine, _) = makePlaying()
+    engine.emit(.audioDidStart)
+    let first = player.load
+    #expect(first?.hasPlayed == true)
+
+    engine.emit(.unplayable)
+    #expect(player.state == .error)
+    player.play()
+
+    #expect(player.load?.id != first?.id)
+    #expect(player.load?.hasPlayed == false)
+    #expect(player.load?.primedNowPlaying == false)
+    #expect(engine.recreateCount == 1)
+  }
+
+  @Test func aRetryKeepsItsLoad() async {
+    let (player, engine, _) = makePlaying()
+    player.retry.shouldRetry = { true }
+    let first = player.load
+    engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    await player.retry.pendingTask?.value
+    #expect(player.load?.id == first?.id)
+    #expect(engine.recreateCount == 0)
+  }
+
   @Test func aMediaServicesResetReloadsOnANewPlayer() {
     let (player, engine, _) = makePlaying()
     player.mediaServicesWereReset()
