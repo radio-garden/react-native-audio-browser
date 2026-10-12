@@ -131,7 +131,11 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   var playbackIntervalFiredCount = 0
   var releaseSessionCount = 0
 
+  /// The order playback, intent and playing-state changes arrived in.
+  var publishOrder: [String] = []
+
   func playerDidChangePlayback(_ playback: Playback) {
+    publishOrder.append("playback")
     playbackChanges.append(playback)
   }
 
@@ -149,10 +153,12 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   }
 
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
+    publishOrder.append("playWhenReady")
     playWhenReadyChanges.append(playWhenReady)
   }
 
   func playerDidChangePlayingState(_ state: PlayingState) {
+    publishOrder.append("playingState")
     playingStateChanges.append(state)
   }
 

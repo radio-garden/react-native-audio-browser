@@ -93,7 +93,7 @@ public extension HybridAudioBrowser {
 
   func getPlayingState() throws -> PlayingState {
     onMainActor {
-      player?.playingStateManager.toPlayingState() ?? PlayingState(playing: false, buffering: false)
+      player?.coordinator.playingState ?? PlayingState(playing: false, buffering: false)
     }
   }
 

@@ -40,7 +40,6 @@ let package = Package(
         "Player/SleepTimerHandling.swift",
         "Player/SleepTimerManager.swift",
         "Player/VolumeFader.swift",
-        "Player/PlayingStateManager.swift",
         "Player/PlaybackTimer.swift",
         "Model/TrackPlayerError.swift",
         "Model/RemoteCommand.swift",

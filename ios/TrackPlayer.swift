@@ -144,7 +144,6 @@ class TrackPlayer {
 
   var queue: QueueManager { coordinator.queue }
   var loadSeekCoordinator: LoadSeekCoordinator { coordinator.loadSeekCoordinator }
-  var playingStateManager: PlayingStateManager { coordinator.playingStateManager }
   var errorHandler: PlaybackErrorHandler { coordinator.errorHandler }
 
   var repeatMode: RepeatMode {
@@ -159,7 +158,7 @@ class TrackPlayer {
 
   var playWhenReady: Bool {
     get { coordinator.playWhenReady }
-    set { coordinator.playWhenReady = newValue }
+    set { coordinator.setPlayWhenReady(newValue) }
   }
 
   /// Time playback must have progressed before a buffer dip counts as a stall, so the initial

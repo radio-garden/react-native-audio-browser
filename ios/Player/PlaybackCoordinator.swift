@@ -27,10 +27,6 @@ class PlaybackCoordinator {
     setVolume: { [weak self] level in self?.effectHandler?.volume = level },
   )
 
-  lazy var playingStateManager: PlayingStateManager = PlayingStateManager { [weak self] state in
-    self?.callbacks?.playerDidChangePlayingState(state)
-  }
-
   private lazy var progressTimer = PlaybackTimer(
     isActive: { $0 == .loading || $0 == .buffering || $0 == .playing },
   ) { [weak self] in
@@ -154,46 +150,44 @@ class PlaybackCoordinator {
 
   // MARK: - playWhenReady
 
-  var playWhenReady: Bool = false {
-    didSet {
-      // A play during an interruption takes ownership of the intent — the
-      // user's subsequent pause must not be overridden by auto-resume.
-      // (handleInterruptionEnded consumes its flag before its own play().)
-      if playWhenReady { shouldResumeAfterInterruption = false }
+  /// The intent to play, applied through `setPlayWhenReady`.
+  private(set) var playWhenReady = false
 
-      // Terminal states need a reload, not a bare play(): the item is gone
-      // (.stopped/.error) or parked at its end (.ended), where startPlayback()
-      // is a silent no-op. Only .error resumes from the last position.
-      if playWhenReady == true, state == .error || state == .stopped || state == .ended {
-        effectHandler?.reloadTrack(startFromCurrentTime: state == .error)
-      }
-      if state != .loading {
-        if playWhenReady {
-          effectHandler?.startPlayback()
-        } else {
-          effectHandler?.pausePlayback()
-        }
-      }
+  func setPlayWhenReady(_ newValue: Bool) {
+    let changed = newValue != playWhenReady
+    playWhenReady = newValue
+    // A play during an interruption takes ownership of the intent: the user's later pause must
+    // not be overridden by auto-resume. (handleInterruptionEnded consumes its flag first.)
+    if newValue { shouldResumeAfterInterruption = false }
 
-      if oldValue != playWhenReady {
-        // An explicit pause during the sleep fade is the timer's goal arriving
-        // early: clear the timer (restores the pre-fade volume via onFadeCancel).
-        if !playWhenReady, volumeFader.isActive {
-          sleepTimerManager.clear()
-        }
-        callbacks?.playerDidChangePlayWhenReady(playWhenReady)
-        playingStateManager.update(playWhenReady: playWhenReady, state: state)
-        // Reflect play/pause intent immediately — even while the new item is
-        // still loading. Auto-publishing doesn't set the explicit now-playing
-        // playback state, and the player's timeControlStatus can't report
-        // "playing" yet during loading. Guarded to active states so a play()
-        // from a terminal state doesn't leave a phantom "playing" button.
-        if playbackActive {
-          effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
-        }
-        evaluateSessionRelease()
-      }
+    // Terminal states need a reload, not a bare play(): the item is gone (.stopped/.error) or
+    // parked at its end (.ended), where startPlayback() is a silent no-op. Only .error resumes
+    // from the last position.
+    if newValue, state == .error || state == .stopped || state == .ended {
+      effectHandler?.reloadTrack(startFromCurrentTime: state == .error)
     }
+    if state != .loading {
+      if newValue { effectHandler?.startPlayback() } else { effectHandler?.pausePlayback() }
+    }
+
+    guard changed else { return }
+    // An explicit pause during the sleep fade is the timer's goal arriving early: clear the
+    // timer (restores the pre-fade volume via onFadeCancel).
+    if !newValue, volumeFader.isActive { sleepTimerManager.clear() }
+    publish()
+    evaluateSessionRelease()
+  }
+
+  /// Playing with intent, in a state that can play; buffering while loading or rebuffering.
+  static func playingState(playWhenReady: Bool, state: PlaybackState) -> PlayingState {
+    PlayingState(
+      playing: playWhenReady && ![.error, .ended, .none, .stopped].contains(state),
+      buffering: playWhenReady && (state == .loading || state == .buffering),
+    )
+  }
+
+  var playingState: PlayingState {
+    Self.playingState(playWhenReady: playWhenReady, state: state)
   }
 
   var playbackActive: Bool {
@@ -242,9 +236,8 @@ class PlaybackCoordinator {
     // terminal/stopped state must not regain an advisory error.
     guard state == .loading || state == .buffering || state == .paused else { return }
     // Each failed attempt re-reports; identical repeats add nothing.
-    guard errorStatus != .retrying(error) else { return }
     errorStatus = .retrying(error)
-    callbacks?.playerDidChangePlayback(Playback(state: state, error: errorStatus.nitroError))
+    publish()
   }
 
   // MARK: - Playback State Machine
@@ -256,8 +249,7 @@ class PlaybackCoordinator {
     // even though the state enum value doesn't change.
     if newState == state, case let .errorOccurred(error) = event {
       errorStatus = .terminal(error)
-      callbacks?.playerDidChangePlayback(Playback(state: state, error: errorStatus.nitroError))
-      callbacks?.playerDidError(PlaybackErrorEvent(error: errorStatus.nitroError))
+      publish()
       return
     }
 
@@ -265,13 +257,63 @@ class PlaybackCoordinator {
     let oldState = state
     state = newState
     applySideEffects(old: oldState, new: newState, event: event)
-    emitStateChange(old: oldState, new: newState)
+    publish()
+    // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
+    // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
+    if newState == .ended, isLastInPlaybackOrder, repeatMode == .off, let effectHandler {
+      callbacks?.playerDidEndQueue(
+        PlaybackQueueEndedEvent(track: Double(currentIndex), position: effectHandler.currentTime),
+      )
+    }
+  }
+
+  private struct Published: Equatable {
+    var state = PlaybackState.none
+    var errorStatus = ErrorStatus.none
+    var playWhenReady = false
+    var playing = false
+    var buffering = false
+    /// The now-playing surface shows "playing": play intent in a state that is not terminal.
+    var nowPlayingActive = false
+  }
+
+  private var published = Published()
+
+  /// Emits what changed since the last publish, in order: the playback (state and error), the
+  /// terminal error, the play intent, the playing state, the now-playing play state. The one
+  /// place these leave the coordinator, so each goes out once per change.
+  private func publish() {
+    let playing = playingState
+    let now = Published(
+      state: state, errorStatus: errorStatus, playWhenReady: playWhenReady,
+      playing: playing.playing, buffering: playing.buffering,
+      nowPlayingActive: playbackActive && playWhenReady,
+    )
+    let old = published
+    guard now != old else { return }
+    published = now
+    if now.state != old.state || now.errorStatus != old.errorStatus {
+      callbacks?.playerDidChangePlayback(Playback(state: now.state, error: now.errorStatus.nitroError))
+    }
+    let erred = now.state == .error, wasErred = old.state == .error
+    if erred != wasErred || (erred && now.errorStatus != old.errorStatus) {
+      callbacks?.playerDidError(PlaybackErrorEvent(error: now.errorStatus.nitroError))
+    }
+    if now.playWhenReady != old.playWhenReady {
+      callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
+    }
+    if now.playing != old.playing || now.buffering != old.buffering {
+      callbacks?.playerDidChangePlayingState(playing)
+    }
+    if now.nowPlayingActive != old.nowPlayingActive {
+      effectHandler?.updateNowPlayingState(playWhenReady: now.nowPlayingActive)
+    }
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState, event: PlaybackEvent) {
     // Error lifecycle. A retrying error rides along through loading/buffering, but any state
     // that proves recovery (.ready/.playing: data flowed) or abandons the attempt
-    // (.stopped/.none/.ended) clears it. Runs before emitStateChange, so the emitted Playback
+    // (.stopped/.none/.ended) clears it. Runs before publish, so the emitted Playback
     // is already clean.
     if case let .errorOccurred(error) = event {
       errorStatus = .terminal(error)
@@ -311,40 +353,12 @@ class PlaybackCoordinator {
       // the audio session forever (release is intent-gated), and arm
       // interruption auto-resume into silence. The setter also requests the
       // session release.
-      playWhenReady = false
+      setPlayWhenReady(false)
     default: break
     }
 
-    // Reflect play/pause (auto-publishing doesn't set the explicit now-playing
-    // playback state). Active states show the user's intent — incl. .loading, so
-    // the button flips to "playing" the moment a play-intent load begins; terminal
-    // states (error/stopped/ended) resolve to paused so the button never sticks on
-    // "playing" after playback fails or stops.
-    effectHandler?.updateNowPlayingState(playWhenReady: playbackActive && playWhenReady)
-
     progressTimer.onPlaybackStateChanged(new)
     intervalTimer.onPlaybackStateChanged(new)
-    playingStateManager.update(playWhenReady: playWhenReady, state: new)
-  }
-
-  private func emitStateChange(old: PlaybackState, new: PlaybackState) {
-    // Playback state change — always emitted
-    callbacks?.playerDidChangePlayback(Playback(state: new, error: errorStatus.nitroError))
-
-    // Error callback — emitted when entering or leaving error state
-    if new == .error || (old == .error && new != .error) {
-      callbacks?.playerDidError(PlaybackErrorEvent(error: errorStatus.nitroError))
-    }
-
-    // Queue ended — when playback ends on the last track. Repeat modes never
-    // conceptually end the queue (matches web's endsQueue()): a repeat-track
-    // pause at the track boundary (e.g. the end-of-track sleep timer) must not
-    // read as "playlist over".
-    if new == .ended, isLastInPlaybackOrder, repeatMode == .off, let effectHandler {
-      callbacks?.playerDidEndQueue(
-        PlaybackQueueEndedEvent(track: Double(currentIndex), position: effectHandler.currentTime),
-      )
-    }
   }
 
   // MARK: - Observer Context Guards
@@ -410,15 +424,15 @@ class PlaybackCoordinator {
   // MARK: - Player Actions
 
   func play() {
-    playWhenReady = true
+    setPlayWhenReady(true)
   }
 
   func pause() {
-    playWhenReady = false
+    setPlayWhenReady(false)
   }
 
   func togglePlayback() {
-    playWhenReady = !playWhenReady
+    setPlayWhenReady(!playWhenReady)
   }
 
   func stop() {
@@ -428,7 +442,7 @@ class PlaybackCoordinator {
     // A stop is terminal — interruption-end must not resume over it.
     shouldResumeAfterInterruption = false
     transition(.stopped)
-    playWhenReady = false
+    setPlayWhenReady(false)
   }
 
   // MARK: - Audio Session Interruptions
@@ -503,15 +517,9 @@ class PlaybackCoordinator {
 
   /// Handles the `playWhenReady` setting while executing a given action.
   func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
-    if playWhenReady == false {
-      self.playWhenReady = false
-    }
-
+    if playWhenReady == false { setPlayWhenReady(false) }
     try action()
-
-    if playWhenReady == true {
-      self.playWhenReady = true
-    }
+    if playWhenReady == true { setPlayWhenReady(true) }
   }
 
   // MARK: - Queue Methods
@@ -661,13 +669,10 @@ class PlaybackCoordinator {
     beginLoad()
 
     if errorStatus != .none {
-      let wasRetrying = errorStatus.isRetrying
       errorStatus = .none
-      // Already .loading, the .trackLoading transition below won't fire: emit the clear here, or
-      // the old track's error lingers over the new one's spinner.
-      if wasRetrying, state == .loading {
-        callbacks?.playerDidChangePlayback(Playback(state: state, error: nil))
-      }
+      // Already .loading, the .trackLoading transition below won't fire: publish the clear here,
+      // or the old track's error lingers over the new one's spinner.
+      publish()
     }
 
     let lastPosition = effectHandler?.currentTime ?? 0
@@ -681,7 +686,7 @@ class PlaybackCoordinator {
       transition(.trackLoading)
 
       // Ensure playWhenReady is set before loading to preserve playback state
-      playWhenReady = shouldContinuePlayback
+      setPlayWhenReady(shouldContinuePlayback)
 
       effectHandler?.loadNowPlayingMetadata(for: currentTrack)
 

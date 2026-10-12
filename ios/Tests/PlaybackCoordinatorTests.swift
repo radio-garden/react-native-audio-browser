@@ -41,7 +41,7 @@ struct TransitionTests {
   func toReady_startsPlayback_whenPlayWhenReady() {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     eh.startPlaybackCallCount = 0 // reset from playWhenReady setter
 
     c.transition(.bufferingSufficient)
@@ -311,7 +311,7 @@ struct ObserverGuardTests {
     eh.hasLoadedAsset = true
     eh.currentTime = 10
     eh.duration = 100
-    c.playWhenReady = false
+    c.setPlayWhenReady(false)
 
     c.avPlayerDidChangeTimeControlStatus(.paused)
 
@@ -325,7 +325,7 @@ struct ObserverGuardTests {
     eh.hasLoadedAsset = true
     eh.currentTime = 10
     eh.duration = 100
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     c.avPlayerDidChangeTimeControlStatus(.paused)
 
@@ -420,7 +420,7 @@ struct PlayWhenReadyTests {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.errorOccurred(.playbackFailed))
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     #expect(eh.reloadTrackCalls.count == 1)
     #expect(eh.reloadTrackCalls.first == true) // startFromCurrentTime for error
@@ -431,7 +431,7 @@ struct PlayWhenReadyTests {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.stopped)
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     #expect(eh.reloadTrackCalls.count == 1)
     #expect(eh.reloadTrackCalls.first == false) // startFromCurrentTime for stopped
@@ -442,7 +442,7 @@ struct PlayWhenReadyTests {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.bufferingSufficient) // .ready state
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     #expect(eh.startPlaybackCallCount >= 1)
   }
@@ -451,10 +451,10 @@ struct PlayWhenReadyTests {
   func false_notLoading_pausesPlayback() {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.avPlayerPlaying)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     eh.pausePlaybackCallCount = 0
 
-    c.playWhenReady = false
+    c.setPlayWhenReady(false)
 
     #expect(eh.pausePlaybackCallCount == 1)
   }
@@ -466,7 +466,7 @@ struct PlayWhenReadyTests {
     eh.startPlaybackCallCount = 0
     eh.pausePlaybackCallCount = 0
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     // During loading, should NOT call start/pause
     #expect(eh.startPlaybackCallCount == 0)
@@ -477,7 +477,7 @@ struct PlayWhenReadyTests {
   func emitsCallback_onChange() {
     let (c, _, cb, _) = makeCoordinator()
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     #expect(cb.playWhenReadyChanges.count == 1)
     #expect(cb.playWhenReadyChanges.first == true)
@@ -558,7 +558,7 @@ struct HandleCurrentTrackChangedTests {
   @Test @MainActor
   func preservesPlayWhenReady_acrossLoading() {
     let (c, _, _, _) = makeCoordinator()
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     loadTrack(c)
 
@@ -601,7 +601,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
     c.repeatMode = .track
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     c.handleTrackDidPlayToEndTime()
 
@@ -619,7 +619,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     let (c, eh, cb, _) = makeCoordinator()
     loadTrack(c)
     c.repeatMode = .track
-    c.playWhenReady = false
+    c.setPlayWhenReady(false)
 
     c.handleTrackDidPlayToEndTime()
 
@@ -812,7 +812,7 @@ struct PlaybackCoordinatorNowPlayingStateTests {
     c.transition(.trackLoading) // mid track-load; start/pause is deferred
     eh.updateNowPlayingStateCalls.removeAll()
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     // The lock-screen / CarPlay play-pause button reflects the user's play
     // *intent* immediately, even while the new item is still loading — otherwise
@@ -823,7 +823,7 @@ struct PlaybackCoordinatorNowPlayingStateTests {
   @Test @MainActor
   func staysPlaying_whenBufferRunsDry() {
     let (c, eh, _, _) = makeCoordinator()
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     c.transition(.avPlayerPlaying)
     eh.updateNowPlayingStateCalls.removeAll()
 
@@ -831,13 +831,14 @@ struct PlaybackCoordinatorNowPlayingStateTests {
 
     // A buffer underrun doesn't change play intent, so the button stays "playing"
     // (the system shows buffering) — it must NOT flip to paused like a user pause.
-    #expect(eh.updateNowPlayingStateCalls.last == true)
+    // Unchanged, it is not published again at all.
+    #expect(!eh.updateNowPlayingStateCalls.contains(false))
   }
 
   @Test @MainActor
   func fallsBackToPaused_onError() {
     let (c, eh, _, _) = makeCoordinator()
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     c.transition(.trackLoading) // active + intent → playing
     eh.updateNowPlayingStateCalls.removeAll()
 
@@ -854,7 +855,7 @@ struct PlaybackCoordinatorNowPlayingStateTests {
     c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
     eh.updateNowPlayingStateCalls.removeAll()
 
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     // Must NOT stamp .playing from a terminal state: the reload may fail and no
     // active transition would repair a premature "playing", leaving a phantom
@@ -901,7 +902,7 @@ struct SleepTimerFadeTests {
   func completion_pausesThenRestoresPreFadeVolume() {
     let (c, eh, _, st) = makeCoordinator()
     loadTrack(c)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     c.transition(.bufferingSufficient) // leave .loading so pause reaches the player
     eh.pausePlaybackCallCount = 0
 
@@ -920,7 +921,7 @@ struct SleepTimerFadeTests {
   func completion_withoutFade_justPauses() {
     let (c, eh, _, st) = makeCoordinator()
     loadTrack(c)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
     eh.volume = 0.8
 
     st.onComplete?()
@@ -947,7 +948,7 @@ struct SleepTimerFadeTests {
   func pauseDuringFade_clearsSleepTimer() {
     let (c, _, _, st) = makeCoordinator()
     loadTrack(c)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     st.onFadeStart?(10)
     c.pause()
@@ -959,7 +960,7 @@ struct SleepTimerFadeTests {
   func pauseWithoutFade_leavesSleepTimerAlone() {
     let (c, _, _, st) = makeCoordinator()
     loadTrack(c)
-    c.playWhenReady = true
+    c.setPlayWhenReady(true)
 
     c.pause()
 
@@ -974,7 +975,7 @@ struct SleepTimerFadeTests {
 private func startPlaying(_ c: PlaybackCoordinator, _ eh: MockPlaybackEffectHandler) {
   loadTrack(c)
   eh.hasLoadedAsset = true
-  c.playWhenReady = true
+  c.setPlayWhenReady(true)
   c.transition(.avPlayerPlaying)
 }
 
@@ -1117,7 +1118,7 @@ struct InterruptionTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     // Pause before the interruption (e.g. user already paused).
-    c.playWhenReady = false
+    c.setPlayWhenReady(false)
     c.avPlayerDidChangeTimeControlStatus(.paused)
     #expect(c.state == .paused)
 
@@ -1168,6 +1169,25 @@ struct MutationSkipAvailabilityTests {
     #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+}
+
+// MARK: - Publishing
+
+@Suite("PlaybackCoordinator - publishing")
+struct PublishingTests {
+  /// A natural end clears the intent as a side effect of entering .ended; the state change still
+  /// goes out first, and each change once.
+  @Test @MainActor
+  func endingPublishesTheStateBeforeTheIntent() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setPlayWhenReady(true)
+    c.transition(.avPlayerPlaying)
+    cb.publishOrder.removeAll()
+
+    c.transition(.trackEndedNaturally)
+
+    #expect(cb.publishOrder == ["playback", "playWhenReady", "playingState"])
   }
 }
 
