@@ -89,7 +89,7 @@ subgraph CarPlay["CarPlay"]
 end
 
 subgraph ObjC["Objective-C Glue"]
-  SCN["RNABCarPlaySceneDelegate<br/>CPTemplateApplicationSceneDelegate<br/>Owns CarPlayController"]
+  SCN["RNABCarPlaySceneDelegate<br/>CPTemplateApplicationSceneDelegate<br/>Owns RNABCarPlayController"]
   RNAB["RNABAudioBrowser<br/>Vends Siri intent handlers"]
   MIH["RNABMediaIntentHandler<br/>INPlayMediaIntent"]
   MAH["RNABMediaAddHandler<br/>INAddMediaIntent"]

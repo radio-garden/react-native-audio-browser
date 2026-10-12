@@ -14,7 +14,7 @@ import os.log
 }
 
 /// Encapsulates the shared track selection decision tree used by both
-/// HybridAudioBrowser and CarPlayController.
+/// HybridAudioBrowser and CarPlaySession.
 ///
 /// Resolves a track selection to a concrete `SelectionResult` describing
 /// what the caller should do. Each caller then executes the action in its

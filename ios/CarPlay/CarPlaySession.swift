@@ -31,6 +31,9 @@ final class CarPlaySession {
   /// down the pushed stack, so it waits until they are back at the root.
   var needsTabRebuild = false
 
+  /// True while `buildInitialInterface` queries the tabs, whose change event it handles itself.
+  var isBuildingInitialInterface = false
+
   /// Bumped by every root build (initial interface, tab bar, root error). A build that
   /// suspended and finds it bumped has been superseded, and leaves the root alone.
   private var rootBuildGeneration: UInt = 0

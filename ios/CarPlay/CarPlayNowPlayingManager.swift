@@ -105,6 +105,8 @@ final class CarPlayNowPlayingManager {
     nowPlayingObserver = nil
     subscriptions = []
     pendingAlbumArtistTrack = nil
+    // A resolve still in flight must not set the shared template for the next session.
+    albumArtistGeneration &+= 1
   }
 
   /// Re-renders Up Next availability, the custom buttons and the album line's destination.
@@ -201,7 +203,7 @@ final class CarPlayNowPlayingManager {
   /// stack but buried under templates pushed on top of it (Up Next, the album
   /// line's browse destination): a user-initiated surface (tap, voice play)
   /// pops back to it, while the deferred post-resolve calls in
-  /// `handleItemSelection` pass `false` — they run seconds after the tap, and
+  /// `CarPlaySession.select` pass `false` — they run seconds after the tap, and
   /// popping then would yank away a screen the user navigated to meanwhile.
   func showNowPlaying(popToFront: Bool = true) {
     refresh()

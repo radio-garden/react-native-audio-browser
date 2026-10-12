@@ -42,7 +42,7 @@ extension CPListTemplate {
   }
 
   /// An empty list template showing a centered message. CarPlay renders an empty view reliably
-  /// only as a template's initial state, so a message is a new template, never a mutation.
+  /// only as a template's initial state, so a pushed page's message is a new template.
   static func message(
     _ title: String,
     subtitle: String?,

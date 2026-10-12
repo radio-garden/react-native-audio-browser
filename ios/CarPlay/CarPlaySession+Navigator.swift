@@ -24,7 +24,9 @@ extension CarPlaySession {
     completion()
 
     spawn { session in
-      switch await session.trackSelector.select(track: track, player: session.player) {
+      let result = await session.trackSelector.select(track: track, player: session.player)
+      guard !Task.isCancelled else { return }
+      switch result {
       case let .play(intent):
         session.player.execute(intent)
         session.nowPlaying.showNowPlaying(popToFront: false)
