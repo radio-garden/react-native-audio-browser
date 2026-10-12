@@ -60,10 +60,8 @@ subgraph Platform["Apple Platform APIs"]
 end
 
 subgraph Observers["Observer Layer (report to TrackPlayer)"]
-  PSO["PlayerStateObserver<br/>KVO status, timeControlStatus"]
-  PTO["PlayerTimeObserver<br/>Audio-start boundary (1ms)"]
-  PINO["PlayerItemNotificationObserver<br/>End / fail / stalled"]
-  PIPO["PlayerItemPropertyObserver<br/>Duration, buffering, timed metadata"]
+  PSO["PlayerObserver<br/>One per AVPlayer<br/>status, timeControlStatus, audio start (1ms)"]
+  PIPO["ItemObserver<br/>One per AVPlayerItem<br/>status, buffering, end / fail / stalled, timed metadata"]
 end
 
 subgraph Controllers["Controllers"]
@@ -129,8 +127,6 @@ TP -->|Owns| RCC
 TP -->|Owns| NPIC
 TP -->|Owns| PStore
 TP -->|Owns| PSO
-TP -->|Owns| PTO
-TP -->|Owns| PINO
 TP -->|Owns| PIPO
 TP -.->|"Implements PlaybackEffectHandler"| PC
 
@@ -170,10 +166,8 @@ BM -->|Artwork resolve| SFR
 BM -->|Artwork fetch| AIF
 
 %% Observers → AVPlayer
-PSO -->|KVO| AVP
-PTO -->|Boundary observer| AVP
-PINO -->|NotificationCenter| AVP
-PIPO -->|KVO + metadata output| AVP
+PSO -->|KVO + boundary observer| AVP
+PIPO -->|KVO + NotificationCenter + metadata output| AVP
 
 %% Platform
 RCC -->|addTarget| MPRC
@@ -230,7 +224,7 @@ class TS core
 class PSMF,PE state
 class BM,SR,BPH,BC,LRU,RL,SDI,TBE browser
 class HC browser
-class PSO,PTO,PINO,PIPO observer
+class PSO,PIPO observer
 class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
 class RTL,STM,PTimer,VF,LSC state

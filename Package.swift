@@ -61,7 +61,8 @@ let package = Package(
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/LRUCache.swift",
-        "Observer/PlayerTimeObserver.swift",
+        "Observer/PlayerObserver.swift",
+        "Observer/ItemObserver.swift",
       ]
     ),
     .testTarget(

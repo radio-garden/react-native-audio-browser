@@ -43,38 +43,8 @@ class TrackPlayer {
 
   var avPlayer = AVPlayer()
 
-  private lazy var playerObserver: PlayerStateObserver = .init(
-    onStatusChange: { [weak self] status in
-      self?.avPlayerStatusDidChange(status)
-    },
-    onTimeControlStatusChange: { [weak self] status in
-      self?.avPlayerDidChangeTimeControlStatus(status)
-    },
-  )
-
-  private lazy var playerTimeObserver: PlayerTimeObserver = .init(
-    onAudioDidStart: { [weak self] in self?.coordinator.audioDidStart() },
-  )
-
-  private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
-    onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
-    onFailedToPlayToEndTime: { [weak self] error in self?.playbackDidFail(error) },
-    // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
-    // genuine drop is recovered by the retry / network-restore paths.
-    onPlaybackStalled: { [weak self] in self?.recoverFromStall(reconnectIfLive: false) },
-  )
-
-  private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
-    onPlaybackLikelyToKeepUpUpdate: { [weak self] isLikely in
-      self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
-    },
-    onStatusChange: { [weak self] status, error in
-      if status == .failed { self?.playbackDidFail(error) }
-    },
-    onTimedMetadataReceived: { [weak self] groups in
-      self?.callbacks?.playerDidReceiveTimedMetadata(groups)
-    },
-  )
+  private var playerObserver: PlayerObserver?
+  private var itemObserver: ItemObserver?
 
   // MARK: - Now-Playing Election
 
@@ -492,10 +462,8 @@ class TrackPlayer {
     clear()
     // The player is going away for good — now the session must go with it.
     remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
-    // An AVPlayer retains its time observers: one left registered is still attached when the
-    // player is released, and outlives this object.
-    playerTimeObserver.unregisterForBoundaryTimeEvents()
-    playerObserver.stopObserving()
+    playerObserver?.invalidate()
+    playerObserver = nil
     stopObservingAVPlayerItem()
     remoteCommandController.disableAll()
   }
@@ -535,19 +503,17 @@ class TrackPlayer {
   }
 
   func startObservingAVPlayerItem(_ avItem: AVPlayerItem) {
-    playerItemObserver.startObserving(item: avItem)
-    playerItemNotificationObserver.startObserving(item: avItem)
+    itemObserver?.invalidate()
+    itemObserver = ItemObserver(item: avItem) { [weak self] in self?.itemDidEmit($0) }
   }
 
   func stopObservingAVPlayerItem() {
-    playerItemObserver.stopObservingCurrentItem()
-    playerItemNotificationObserver.stopObservingCurrentItem()
+    itemObserver?.invalidate()
+    itemObserver = nil
   }
 
   private func recreateAVPlayer() {
-    playerTimeObserver.unregisterForBoundaryTimeEvents()
-    playerObserver.stopObserving()
-    stopObservingAVPlayerItem()
+    playerObserver?.invalidate()
     clearCurrentAVItem()
 
     remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
@@ -570,11 +536,7 @@ class TrackPlayer {
   private func setupAVPlayer() {
     avPlayer.allowsExternalPlayback = false
 
-    playerObserver.avPlayer = avPlayer
-    playerObserver.startObserving()
-
-    playerTimeObserver.avPlayer = avPlayer
-    playerTimeObserver.registerForBoundaryTimeEvents()
+    playerObserver = PlayerObserver(player: avPlayer) { [weak self] in self?.playerDidEmit($0) }
 
     remoteCommandController.switchCommandCenter(nowPlayingInfoController.linkPlayer(avPlayer))
 
@@ -635,6 +597,26 @@ class TrackPlayer {
   }
 
   // MARK: - Observer Callbacks (map AVFoundation → coordinator)
+
+  private func playerDidEmit(_ event: PlayerObserver.Event) {
+    switch event {
+    case let .status(status): avPlayerStatusDidChange(status)
+    case let .timeControlStatus(status): avPlayerDidChangeTimeControlStatus(status)
+    case .audioDidStart: coordinator.audioDidStart()
+    }
+  }
+
+  private func itemDidEmit(_ event: ItemObserver.Event) {
+    switch event {
+    case let .likelyToKeepUp(isLikely): avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
+    case let .failed(error), let .failedToPlayToEnd(error): playbackDidFail(error)
+    case .playedToEnd: handleDidPlayToEndTime()
+    // Nudge the player, but don't reconnect: a genuine drop is recovered by the retry and
+    // network-restore paths.
+    case .stalled: recoverFromStall(reconnectIfLive: false)
+    case let .timedMetadata(groups): callbacks?.playerDidReceiveTimedMetadata(groups)
+    }
+  }
 
   /// Resolve an end-of-item notification: a genuine end advances the queue; a
   /// dropped live stream or a mid-stream underrun reported as EOF is recovered

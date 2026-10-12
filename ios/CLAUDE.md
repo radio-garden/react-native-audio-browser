@@ -28,7 +28,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mermaid dependency diagram.
 
 The playback core is split into two `@MainActor` types:
 
-- **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
+- **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, its `PlayerObserver` and the current item's `ItemObserver`, `MediaLoader`,
   `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryLoop`, and
   `PlaybackPersistence`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
   AVPlayer), `TrackSelectionPlayer`,
@@ -122,10 +122,8 @@ ios/
 │   ├── TabBarEntries.swift           # Tab-bar churn suppression (same(old:new:))
 │   └── JsonModels.swift              # JSON Codable models for API responses
 ├── Observer/
-│   ├── PlayerStateObserver.swift     # @MainActor KVO: AVPlayer.status, timeControlStatus
-│   ├── PlayerTimeObserver.swift      # Audio-start boundary observer (1ms)
-│   ├── PlayerItemNotificationObserver.swift  # Track end/fail/stalled notifications
-│   └── PlayerItemPropertyObserver.swift      # Duration, buffering, timed metadata (+ metadata output)
+│   ├── PlayerObserver.swift          # One per AVPlayer: status, timeControlStatus, audio start (1ms)
+│   └── ItemObserver.swift            # One per AVPlayerItem: status, buffering, end/fail/stalled, timed metadata
 ├── Player/
 │   ├── PlaybackCoordinator.swift     # @MainActor state-machine hub (owned by TrackPlayer)
 │   │                                 # Holds PlaybackState, runs transition(_ event:), side effects
