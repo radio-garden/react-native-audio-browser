@@ -92,3 +92,19 @@ extension Emitter {
     return Subscription { [weak self] in self?.removeListener(token) }
   }
 }
+
+extension Emitter {
+  /// Like `subscribe`, but `handler` runs on the main actor after the emit returns, whichever
+  /// thread emitted.
+  func subscribeOnMain(_ handler: @escaping @MainActor (T) -> Void) -> Subscription {
+    subscribe { value in
+      let event = MainActorHop(value: value)
+      Task { @MainActor in handler(event.value) }
+    }
+  }
+}
+
+/// Carries an emitted value to the main actor, where it is only read.
+private struct MainActorHop<T>: @unchecked Sendable {
+  let value: T
+}

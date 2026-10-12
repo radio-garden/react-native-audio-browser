@@ -64,6 +64,17 @@ extension CPInterfaceController {
     }
   }
 
+  /// Replaces `expected` with `template` while `expected` is still the top template, restoring
+  /// it if the push fails; a no-op once the user has moved on.
+  func safeReplaceTop(_ expected: CPTemplate, with template: CPTemplate, animated: Bool) {
+    whenStackSettled { controller in
+      guard controller.topTemplate === expected else { return }
+      controller.topReplacer.push(
+        template, replacingTopOf: GuardedTemplateStack(controller: controller), animated: animated,
+      )
+    }
+  }
+
   /// Pushes `template`, skipping the raise cases (already in the hierarchy,
   /// stack at the depth limit).
   fileprivate func guardedPush(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)?) {

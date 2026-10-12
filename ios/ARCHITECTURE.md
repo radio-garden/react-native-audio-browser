@@ -80,7 +80,8 @@ subgraph Loaders["Media Loading"]
 end
 
 subgraph CarPlay["CarPlay"]
-  CPC["CarPlayController<br/>@MainActor @objc(RNABCarPlayController)<br/>Tab bar, list, navigation"]
+  CPC["RNABCarPlayController<br/>@MainActor @objc<br/>Waits for player + browser"]
+  CPS["CarPlaySession<br/>@MainActor<br/>Tab bar, pages, navigation, refresh"]
   CPIL["CarPlayImageLoader<br/>@MainActor<br/>SF Symbols, artwork, tinting"]
   CPAR["CarPlayArtworkResolver<br/>Artwork load strategy (enum)"]
   CPLF["CarPlayListItemFactory<br/>@MainActor<br/>CPListItem / CPListSection builder"]
@@ -119,7 +120,7 @@ HAB -.->|"~50 callbacks to JS"| JS
 %% Track selection
 TS -->|"Queue reuse, expand, intercept"| BM
 TS -.->|"player: TrackSelectionPlayer"| TP
-CPC -->|Owns| TS
+CPS -->|Owns| TS
 
 %% TrackPlayer ownership
 TP -->|Owns| PC
@@ -193,22 +194,23 @@ SCN -->|"didConnect → start()"| CPC
 RNAB -->|handlerForIntent| MIH
 RNAB -->|handlerForIntent| MAH
 RNAB -->|handlerForIntent| MAFH
-CPC -->|Owns| CPIL
-CPC -->|Owns| CPLF
-CPC -->|Owns| CPNPM
-CPC -->|"weak audioBrowser"| HAB
-CPC -->|Templates| CPT
+CPC -->|"Owns, per run"| CPS
+CPS -->|Owns| CPIL
+CPS -->|Owns| CPLF
+CPS -->|Owns| CPNPM
+CPS -->|audioBrowser| HAB
+CPS -->|Templates| CPT
 CPIL -->|weak browserManager| BM
 CPIL -->|Uses| CPAR
 CPLF -->|weak imageLoader| CPIL
-CPNPM -->|weak audioBrowser| HAB
+CPNPM -->|audioBrowser, player| HAB
 CPNPM -->|Templates| CPT
 MIH --> MIP
 MIP -->|"resume / search → queue → play"| TP
 MIP -->|"decide (search)"| BG
 MAH -->|"favoriteCurrentTrack"| HAB
 MAFH -->|"favoriteCurrentTrack"| HAB
-CPC -->|decide| BG
+CPS -->|decide| BG
 SK --> MIH
 SK --> MAH
 SK --> MAFH
@@ -240,7 +242,7 @@ class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
 class PEH,RM,PSM,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util
 class MLD,SCH protocol
-class CPC,CPIL,CPAR,CPLF,CPNPM carplay
+class CPC,CPS,CPIL,CPAR,CPLF,CPNPM carplay
 class SCN,RNAB,MIH,MAH,MAFH objc
 class QM,SO queue
 class ML,NPU loader

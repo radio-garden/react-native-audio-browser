@@ -54,3 +54,10 @@ extension NavigationError {
     return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
   }
 }
+
+extension NavigationError {
+  /// A code-only error: the copy comes from the app's `formatNavigationError` (ADR 0001).
+  static func code(_ code: NavigationErrorType) -> NavigationError {
+    NavigationError(code: code, message: "", statusCode: nil, statusCodeSuccess: nil)
+  }
+}

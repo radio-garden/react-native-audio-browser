@@ -100,7 +100,7 @@ ios/
 │                                     #   SeekCompletionHandler, TrackSelectionPlayer
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
 ├── TrackSelector.swift               # @MainActor shared track selection decision tree
-│                                     # Used by HybridAudioBrowser and CarPlayController
+│                                     # Used by HybridAudioBrowser and CarPlaySession
 │                                     # Returns SelectionResult enum (play/intercepted/browse/none)
 │                                     # Handles contextual URL expansion, queue reuse, handler interception
 ├── TrackPlayerCallbacks.swift        # @MainActor callback protocol (extends PlaybackCoordinatorCallbacks)
@@ -162,21 +162,28 @@ ios/
 │   └── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter: one handler for every command
 │                                     # Session command-center switching
 ├── CarPlay/
-│   ├── CarPlayController.swift       # @MainActor @objc(RNABCarPlayController)
-│   │                                 # CPTabBar/CPList templates, navigation
-│   │                                 # Owns CarPlayImageLoader, CarPlayListItemFactory,
-│   │                                 #   CarPlayNowPlayingManager, TrackSelector
+│   ├── CarPlayController.swift       # @MainActor @objc(RNABCarPlayController): shell that waits for
+│   │                                 #   the player + configured browser, then runs a CarPlaySession
+│   ├── CarPlaySession.swift          # @MainActor one run: dependencies, subscriptions, owned tasks,
+│   │                                 #   root-build generation, playing indicators
+│   ├── CarPlaySession+TabBar.swift   # Initial interface, tab bar (gate decisions concurrent), gate
+│   ├── CarPlaySession+PageLoader.swift  # Lazy page loads, watchdog, error/empty messages
+│   ├── CarPlaySession+Navigator.swift   # Selection, push/gate/tab-select navigation
+│   ├── CarPlaySession+Refresher.swift   # Content refresh for a path / all displayed templates
+│   ├── CarPlayTemplates.swift        # CarPlayTemplateInfo (userInfo), loading/message templates
+│   ├── SectionPresentation.swift     # Pure section rendering rules (SwiftPM-tested)
 │   ├── CarPlayArtworkResolver.swift   # Platform-independent artwork load strategy (enum)
 │   ├── CarPlayImageLoader.swift      # @MainActor SF Symbols, artwork loading, adaptive tinting
 │   ├── CarPlayListItemFactory.swift  # @MainActor CPListItem / CPListSection builder
-│   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing, buttons, Up Next, NowPlayingObserver
+│   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing: buttons, album line, Up Next;
+│   │                                 #   owns its subscriptions; refresh() / prepare(for:)
 │   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent → MediaIntentPlayback
 │   ├── MediaIntentPlayback.swift     # Voice play funnel (ADR 0002): resume or search → queue → play
 │   ├── HybridAudioBrowser+IntentFavorite.swift  # favoriteCurrentTrack for the Siri handlers
 │   ├── RNABMediaAddHandler.swift     # Siri INAddMediaIntent → setActiveTrackFavorited(true)
 │   ├── RNABMediaAffinityHandler.swift # Siri INUpdateMediaAffinityIntent → like/dislike favorite
 │   ├── RNABAudioBrowser.h/.m         # ObjC glue: vends Siri intent handlers (handlerForIntent:)
-│   └── RNABCarPlaySceneDelegate.h/.m # ObjC CPTemplateApplicationSceneDelegate; owns CarPlayController
+│   └── RNABCarPlaySceneDelegate.h/.m # ObjC CPTemplateApplicationSceneDelegate; owns RNABCarPlayController
 ├── Http/
 │   └── HttpClient.swift              # URLSession wrapper (JSON decoding with detailed errors)
 ├── Model/
@@ -195,7 +202,7 @@ ios/
 │   ├── ChapterMetadata+AVFoundation.swift  # AVTimedMetadataGroup → ChapterMetadata
 │   ├── TimedMetadata+AVFoundation.swift    # AVTimedMetadataGroup → TimedMetadata
 │   ├── TrackMetadata+AVFoundation.swift    # AVMetadataItem → TrackMetadata
-│   ├── NavigationError+Conversion.swift   # Error → NavigationError (shared by HAB & CarPlayController)
+│   ├── NavigationError+Conversion.swift   # Error → NavigationError; NavigationError.code(_:)
 │   └── CxxVectorConformances.swift   # Nitro C++ vector type conformances
 ├── Option/
 │   └── SessionCategories.swift       # Audio session categories
@@ -315,7 +322,6 @@ formatter(params)
 This is the same reason the artwork callback in `NowPlayingUpdater` is `@Sendable`. A direct
 `self?.someMainActorMethod(...)` call inside `.then` only _appears_ to work when that particular
 promise happens to resolve on main — it's a latent crash otherwise.
-**`CarPlayController.showNavigationError` currently has that latent shape; don't copy it.**
 
 ### Logging
 

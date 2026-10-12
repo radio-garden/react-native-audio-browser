@@ -12,12 +12,6 @@ final class BrowseGate {
     case resolved(default: Gate?)
   }
 
-  /// Whether to gate a request and, if so, the chrome to render.
-  struct Outcome {
-    let gated: Bool
-    let chrome: Gate?
-  }
-
   /// Served when a request is gated with no chrome from JS or `setGate`.
   static let builtInChrome = Gate(title: "Unavailable", message: nil)
 
@@ -46,20 +40,19 @@ final class BrowseGate {
     changed.emit(false)
   }
 
-  /// Decides `request`. A resolver that fails cannot prove the request allowed, so it is gated:
-  /// a gate exists to withhold content, and serving on an error would leak it.
-  func decide(_ request: NativeGateRequest) async -> Outcome {
+  /// The chrome to show if `request` is gated; nil when it is allowed. A resolver that fails
+  /// cannot prove the request allowed, so it is gated: a gate exists to withhold content, and
+  /// serving on an error would leak it.
+  func decide(_ request: NativeGateRequest) async -> Gate? {
     switch mode {
     case .off:
-      return Outcome(gated: false, chrome: nil)
+      return nil
     case let .fixed(chrome):
-      return Outcome(gated: true, chrome: chrome ?? Self.builtInChrome)
+      return chrome ?? Self.builtInChrome
     case let .resolved(defaultChrome):
-      guard let decision = try? await resolve(request) else {
-        return Outcome(gated: true, chrome: defaultChrome ?? Self.builtInChrome)
-      }
-      guard decision.gated else { return Outcome(gated: false, chrome: nil) }
-      return Outcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInChrome)
+      guard let decision = try? await resolve(request) else { return defaultChrome ?? Self.builtInChrome }
+      guard decision.gated else { return nil }
+      return decision.gate ?? defaultChrome ?? Self.builtInChrome
     }
   }
 }
