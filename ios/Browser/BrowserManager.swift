@@ -247,7 +247,9 @@ final class BrowserManager {
   func formatted(_ error: NavigationError, path: String) async -> FormattedNavigationError {
     let fallback = error.defaultFormatted()
     guard let formatter = config.formatNavigationError else { return fallback }
-    let params = FormatNavigationErrorParams(error: error, defaultFormatted: fallback, path: path)
+    let params = FormatNavigationErrorParams(
+      error: error, defaultFormatted: fallback, path: path, kind: NavigationErrorKind(path: path),
+    )
     return await (try? formatter(params).await()) ?? fallback
   }
 

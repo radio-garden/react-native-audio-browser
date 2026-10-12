@@ -32,10 +32,13 @@
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
+// Forward declaration of `NavigationErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorKind; }
 
 #include "NavigationError.hpp"
 #include "FormattedNavigationError.hpp"
 #include <string>
+#include "NavigationErrorKind.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -47,10 +50,11 @@ namespace margelo::nitro::audiobrowser {
     NavigationError error     SWIFT_PRIVATE;
     FormattedNavigationError defaultFormatted     SWIFT_PRIVATE;
     std::string path     SWIFT_PRIVATE;
+    NavigationErrorKind kind     SWIFT_PRIVATE;
 
   public:
     FormatNavigationErrorParams() = default;
-    explicit FormatNavigationErrorParams(NavigationError error, FormattedNavigationError defaultFormatted, std::string path): error(error), defaultFormatted(defaultFormatted), path(path) {}
+    explicit FormatNavigationErrorParams(NavigationError error, FormattedNavigationError defaultFormatted, std::string path, NavigationErrorKind kind): error(error), defaultFormatted(defaultFormatted), path(path), kind(kind) {}
 
   public:
     friend bool operator==(const FormatNavigationErrorParams& lhs, const FormatNavigationErrorParams& rhs) = default;
@@ -68,7 +72,8 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::FormatNavigationErrorParams(
         JSIConverter<margelo::nitro::audiobrowser::NavigationError>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "error"))),
         JSIConverter<margelo::nitro::audiobrowser::FormattedNavigationError>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "defaultFormatted"))),
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path"))),
+        JSIConverter<margelo::nitro::audiobrowser::NavigationErrorKind>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "kind")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::FormatNavigationErrorParams& arg) {
@@ -76,6 +81,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "error"), JSIConverter<margelo::nitro::audiobrowser::NavigationError>::toJSI(runtime, arg.error));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "defaultFormatted"), JSIConverter<margelo::nitro::audiobrowser::FormattedNavigationError>::toJSI(runtime, arg.defaultFormatted));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "path"), JSIConverter<std::string>::toJSI(runtime, arg.path));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "kind"), JSIConverter<margelo::nitro::audiobrowser::NavigationErrorKind>::toJSI(runtime, arg.kind));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -89,6 +95,7 @@ namespace margelo::nitro {
       if (!JSIConverter<margelo::nitro::audiobrowser::NavigationError>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "error")))) return false;
       if (!JSIConverter<margelo::nitro::audiobrowser::FormattedNavigationError>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "defaultFormatted")))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))) return false;
+      if (!JSIConverter<margelo::nitro::audiobrowser::NavigationErrorKind>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "kind")))) return false;
       return true;
     }
   };

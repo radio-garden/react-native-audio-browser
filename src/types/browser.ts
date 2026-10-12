@@ -1093,6 +1093,9 @@ export type FormattedNavigationError = {
   message?: string
 }
 
+/** What was being requested when a navigation error occurred. */
+export type NavigationErrorKind = 'browse' | 'search'
+
 /**
  * Parameters passed to the formatNavigationError callback.
  */
@@ -1103,6 +1106,8 @@ export type FormatNavigationErrorParams = {
   defaultFormatted: FormattedNavigationError
   /** The path that was being navigated to when the error occurred */
   path: string
+  /** Whether the failed request was a browse or a search */
+  kind: NavigationErrorKind
 }
 
 /**
@@ -1115,7 +1120,10 @@ export type FormatNavigationErrorParams = {
  * @example
  * ```typescript
  * // Override only specific error types or routes
- * formatNavigationError: ({ error, defaultFormatted, path }) => {
+ * formatNavigationError: ({ error, defaultFormatted, path, kind }) => {
+ *   if (error.code === 'empty-content' && kind === 'search') {
+ *     return { title: 'No results found' }
+ *   }
  *   // Custom message for local server routes
  *   if (error.code === 'network-error' && path.startsWith('/errors')) {
  *     return {

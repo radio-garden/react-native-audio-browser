@@ -57,3 +57,10 @@ extension NavigationError {
     NavigationError(code: code, message: "", statusCode: nil, statusCodeSuccess: nil)
   }
 }
+
+extension NavigationErrorKind {
+  /// The kind of request a navigation error on `path` came from.
+  init(path: String) {
+    self = BrowserPathHelper.isSearchPath(path) ? .search : .browse
+  }
+}

@@ -104,6 +104,8 @@ namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `NavigationErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorKind; }
 // Forward declaration of `NavigationErrorType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 // Forward declaration of `NavigationError` to properly resolve imports.
@@ -257,6 +259,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NativeUpdateOptions.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
+#include "NavigationErrorKind.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NitroIOSUpdateOptions.hpp"

@@ -13,8 +13,10 @@
 #include "FormattedNavigationError.hpp"
 #include "JFormattedNavigationError.hpp"
 #include "JNavigationError.hpp"
+#include "JNavigationErrorKind.hpp"
 #include "JNavigationErrorType.hpp"
 #include "NavigationError.hpp"
+#include "NavigationErrorKind.hpp"
 #include "NavigationErrorType.hpp"
 #include <optional>
 #include <string>
@@ -44,10 +46,13 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JFormattedNavigationError> defaultFormatted = this->getFieldValue(fieldDefaultFormatted);
       static const auto fieldPath = clazz->getField<jni::JString>("path");
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
+      static const auto fieldKind = clazz->getField<JNavigationErrorKind>("kind");
+      jni::local_ref<JNavigationErrorKind> kind = this->getFieldValue(fieldKind);
       return FormatNavigationErrorParams(
         error->toCpp(),
         defaultFormatted->toCpp(),
-        path->toStdString()
+        path->toStdString(),
+        kind->toCpp()
       );
     }
 
@@ -57,14 +62,15 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JFormatNavigationErrorParams::javaobject> fromCpp(const FormatNavigationErrorParams& value) {
-      using JSignature = JFormatNavigationErrorParams(jni::alias_ref<JNavigationError>, jni::alias_ref<JFormattedNavigationError>, jni::alias_ref<jni::JString>);
+      using JSignature = JFormatNavigationErrorParams(jni::alias_ref<JNavigationError>, jni::alias_ref<JFormattedNavigationError>, jni::alias_ref<jni::JString>, jni::alias_ref<JNavigationErrorKind>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JNavigationError::fromCpp(value.error),
         JFormattedNavigationError::fromCpp(value.defaultFormatted),
-        jni::make_jstring(value.path)
+        jni::make_jstring(value.path),
+        JNavigationErrorKind::fromCpp(value.kind)
       );
     }
   };
