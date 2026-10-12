@@ -84,9 +84,6 @@ class PlaybackCoordinator {
   /// Playback rate (1.0 = normal speed).
   var rate: Float = 1.0
 
-  /// Audio time pitch algorithm identifier (stored as a String to avoid AVFoundation import).
-  var audioTimePitchAlgorithm: String = "TimeDomain"
-
   // MARK: - Track State (for active track changed events)
 
   var lastIndex: Int = -1

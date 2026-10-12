@@ -1877,28 +1877,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     onRemoteSeek(event)
   }
 
-  public func remoteChangePlaybackPosition(position: Double) {
-    remoteSeek(position: position)
-  }
-
-  public func remotePlayId(id: String, index: Int?) {
-    let event = RemotePlayIdEvent(id: id, index: index.map { Double($0) })
-    if let handler = handleRemotePlayId {
-      handler(event)
-    } else {
-      onRemotePlayId(event)
-    }
-  }
-
-  public func remotePlaySearch(query: String) {
-    let event = RemotePlaySearchEvent(query: query)
-    if let handler = handleRemotePlaySearch {
-      handler(event)
-    } else {
-      onRemotePlaySearch(event)
-    }
-  }
-
   /// Static so the Siri intent handler can call it before the shared instance
   /// exists: it waits on the `playerAndConfiguredBrowser` gate, which resolves
   /// once RN boots. Uses the resolved `browser`, never `self`.
@@ -2009,10 +1987,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func remoteChangePlaybackRate(rate: Float) {
     // Apply the playback rate change from CarPlay/lock screen
     onMainActor { player?.rate = rate }
-  }
-
-  func playerDidChangeOptions(_: PlayerUpdateOptions) {
-    // TODO: Convert to Options type
   }
 }
 

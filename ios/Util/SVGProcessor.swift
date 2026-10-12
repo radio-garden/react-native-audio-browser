@@ -51,13 +51,3 @@ struct SVGProcessor: ImageProcessor {
     return svg.rasterize(size: renderSize, scale: scale)
   }
 }
-
-// MARK: - Kingfisher Options Extension
-
-extension KingfisherOptionsInfoItem {
-  /// Returns an SVG processor option for Kingfisher.
-  @MainActor
-  static func svgProcessor(size: CGSize? = nil, scale: CGFloat? = nil) -> KingfisherOptionsInfoItem {
-    .processor(SVGProcessor(size: size, scale: scale))
-  }
-}
