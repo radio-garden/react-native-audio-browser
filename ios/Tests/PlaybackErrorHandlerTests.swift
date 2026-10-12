@@ -9,7 +9,6 @@ import Testing
 @MainActor
 private final class MockRetryHandler: RetryHandling {
   var isEnabled = true
-  var hasPlayed = false
   var attemptRetryResult = false
   var attemptRetryCallCount = 0
   var lastStartFromCurrentTime: Bool?
@@ -295,20 +294,6 @@ struct HandleErrorTests {
 @Suite("resetRetry")
 @MainActor
 struct ErrorHandlerResetTests {
-  /// A restart from terminal error must reset budgets AND mark playback
-  /// unproven — keeping `hasPlayed` would grant the tap a 2-minute recovery
-  /// window at the one moment the listener is definitely watching.
-  @Test func resetForNewLoad_clearsBudgetsAndHasPlayed() {
-    let mock = MockRetryHandler()
-    mock.hasPlayed = true
-    let handler = PlaybackErrorHandler(retryHandler: mock)
-
-    handler.resetForNewLoad()
-
-    #expect(mock.resetCallCount == 1)
-    #expect(mock.hasPlayed == false)
-  }
-
   /// A retry is started first: with no pending task the `pendingRetryTask ==
   /// nil` assertion passes even if `resetRetry` drops its `cancelPendingRetry`.
   @Test func resetCancelsAndResetsHandler() async {

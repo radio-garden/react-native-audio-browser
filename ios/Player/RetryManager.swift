@@ -44,11 +44,10 @@ class RetryManager {
   /// Bounds retries of a load that has never produced audio, while online.
   private var firstConnectMaxRetryDuration: TimeInterval = defaultFirstConnectMaxRetryDurationMs / 1000
 
-  /// True once the current load has produced audio; selects between the
-  /// first-connect and recovery budgets. Set by the owner when audio starts and
-  /// cleared by the owner when a new track loads — deliberately NOT cleared in
-  /// `reset()`, which the healthy-playback budget refill also calls mid-play.
-  var hasPlayed = false
+  /// Whether the current Load has produced audio; selects between the first-connect and
+  /// recovery budgets. Read from the Load, which a mid-play `reset()` (the healthy-playback
+  /// refill) leaves alone.
+  var hasPlayed: () -> Bool = { false }
 
   /// First failure observed while online for the current load — the
   /// first-connect budget's clock. Never set while offline, and wiped by any
@@ -142,7 +141,7 @@ class RetryManager {
     if let start = firstRetryTime, now.timeIntervalSince(start) >= maxRetryDuration {
       return "max retry duration (\(maxRetryDuration)s)"
     }
-    if !hasPlayed, isOnline, let start = firstOnlineRetryTime,
+    if !hasPlayed(), isOnline, let start = firstOnlineRetryTime,
        now.timeIntervalSince(start) >= firstConnectMaxRetryDuration
     {
       return "first-connect retry duration (\(firstConnectMaxRetryDuration)s)"

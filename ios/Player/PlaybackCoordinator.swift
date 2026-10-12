@@ -55,6 +55,34 @@ class PlaybackCoordinator {
   private(set) var state: PlaybackState = .none
   private(set) var errorStatus: ErrorStatus = .none
 
+  /// One track's playback session, which automatic retry reloads keep (glossary: Load).
+  struct Load: Equatable {
+    let id: UInt
+    /// Audio has rendered: retries get the recovery budget, not the first-connect one (ADR 0004).
+    var hasPlayed = false
+    /// The silent primer has run for this load's first failure (ADR 0005).
+    var primedNowPlaying = false
+  }
+
+  private(set) var load: Load?
+  private var loadCount: UInt = 0
+
+  /// Starts a Load: a track becoming current, or a restart of this one from a terminal error.
+  /// Fresh retry budgets, no pending seek, unproven playback.
+  func beginLoad() {
+    loadCount &+= 1
+    load = Load(id: loadCount)
+    errorHandler.resetRetry()
+    loadSeekCoordinator.reset()
+  }
+
+  /// True the first time this load asks, so the silent primer runs once per load.
+  func claimNowPlayingPrime() -> Bool {
+    guard load?.primedNowPlaying == false else { return false }
+    load?.primedNowPlaying = true
+    return true
+  }
+
   /// Whether playback should resume when the current audio-session interruption
   /// ends — set to the play intent captured at interruption start, so we only
   /// auto-resume if we were actually playing when interrupted.
@@ -363,6 +391,7 @@ class PlaybackCoordinator {
   }
 
   func audioDidStart() {
+    load?.hasPlayed = true
     // Don't override loading state
     if state == .loading { return }
     transition(.audioFrameDecoded)
@@ -629,9 +658,7 @@ class PlaybackCoordinator {
     sleepTimerManager.onTrackChanged()
 
     effectHandler?.cancelMediaLoading()
-    loadSeekCoordinator.reset()
-
-    errorHandler.resetRetry()
+    beginLoad()
 
     if errorStatus != .none {
       let wasRetrying = errorStatus.isRetrying

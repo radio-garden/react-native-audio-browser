@@ -52,7 +52,7 @@ struct RetryManagerBudgetTests {
   @Test func playedLoad_ignoresTheFirstConnectBudget() async {
     let (manager, network) = makeManager(firstConnectMs: 500, online: true)
     _ = network
-    manager.hasPlayed = true
+    manager.hasPlayed = { true }
 
     #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
     #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
@@ -77,20 +77,4 @@ struct RetryManagerBudgetTests {
     #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
     #expect(await manager.attemptRetry(startFromCurrentTime: false) == false)
   }
-
-  /// `reset()` (track change / budget refill) restarts the clocks but must NOT
-  /// touch `hasPlayed` — the refill runs mid-play, and clearing the flag there
-  /// would hand a playing stream the short budget on its next drop.
-  @Test func reset_keepsHasPlayed() {
-    let manager = RetryManager()
-    manager.hasPlayed = true
-    manager.reset()
-    #expect(manager.hasPlayed == true)
-  }
 }
-
-/// Which failures earn another attempt. The reference is Android's
-/// `RetryLoadErrorHandlingPolicy.classifyError`: same HTTP set, and the same
-/// default of treating an unrecognized failure as transient. Defaulting the
-/// other way made `retry: true` largely inert on iOS, since AVFoundation
-/// reports most stream failures as opaque CoreMedia errors, not `URLError`.

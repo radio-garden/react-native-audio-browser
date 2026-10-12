@@ -1171,6 +1171,57 @@ struct MutationSkipAvailabilityTests {
   }
 }
 
+// MARK: - Load
+
+@Suite("PlaybackCoordinator - Load")
+struct LoadTests {
+  @MainActor
+  private func track(_ id: String) -> Track {
+    Track(id: id, src: "https://example.com/\(id).mp3", title: id)
+  }
+
+  @Test @MainActor
+  func aNewTrackStartsAnUnprovenLoad() {
+    let (c, _, _, _) = makeCoordinator()
+    c.setQueue([track("a"), track("b")])
+    let first = c.load
+    c.audioDidStart()
+    #expect(c.load?.hasPlayed == true)
+
+    c.next()
+
+    #expect(c.load != nil && c.load?.id != first?.id)
+    #expect(c.load?.hasPlayed == false)
+  }
+
+  /// The healthy-playback refill resets the retry budgets mid-play; the load, and with it the
+  /// recovery budget, must survive it.
+  @Test @MainActor
+  func aRetryResetKeepsTheLoad() {
+    let (c, _, _, _) = makeCoordinator()
+    c.setQueue([track("a")])
+    c.audioDidStart()
+    let load = c.load
+
+    c.errorHandler.resetRetry()
+
+    #expect(c.load == load)
+    #expect(c.load?.hasPlayed == true)
+  }
+
+  @Test @MainActor
+  func theNowPlayingPrimeRunsOncePerLoad() {
+    let (c, _, _, _) = makeCoordinator()
+    c.setQueue([track("a")])
+    #expect(c.claimNowPlayingPrime())
+    #expect(!c.claimNowPlayingPrime())
+
+    c.beginLoad()
+
+    #expect(c.claimNowPlayingPrime())
+  }
+}
+
 // MARK: - Queue publication
 
 @Suite("PlaybackCoordinator - queue publication")
