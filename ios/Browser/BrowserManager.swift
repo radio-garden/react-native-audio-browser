@@ -223,9 +223,8 @@ final class BrowserManager {
       content = resolved
     } catch {
       // A superseded navigation's failure is not the current page's failure.
-      // Every caller reports a throw unconditionally (and CarPlay presents it as
-      // a modal action sheet), so without this a slow /a that fails after a fast
-      // /b succeeded would show /a's error over /b's content.
+      // Every caller reports a throw unconditionally, so without this a slow /a
+      // that fails after a fast /b succeeded would show /a's error over /b's content.
       guard navigationId == currentNavigationId else { return }
       throw error
     }
@@ -519,7 +518,10 @@ final class BrowserManager {
   /// static layer when it has none. Both resolvers run at once, and a config change or
   /// `clearContentCache` while they run resolves them again.
   func resolvedLayers() async throws -> ResolvedLayers {
-    try await layers.value { [config] in
+    try await layers.value { [weak self] in
+      guard let self else { throw CancellationError() }
+      // Read on every run: a retry after a config change must resolve the new config's layers.
+      let config = self.config
       // The resolver is Promise-only (the TS layer wraps a sync-or-async thunk in
       // Promise.resolve), so its result is the JS promise behind the bridge promise.
       let request = config.requestResolver?()

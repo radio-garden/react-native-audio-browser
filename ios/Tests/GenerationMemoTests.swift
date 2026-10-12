@@ -106,4 +106,16 @@ struct GenerationMemoTests {
     gate.release()
     #expect(try await result.value == 4)
   }
+
+  @Test func aCancelledCallerStopsRetrying() async throws {
+    let memo = GenerationMemo<Int>()
+    let gate = Gate()
+    let result = Task { try await memo.value { await gate.run() } }
+    await gate.waitForRuns(1)
+    memo.invalidate()
+    result.cancel()
+    gate.release()
+    await #expect(throws: CancellationError.self) { try await result.value }
+    #expect(gate.runs == 1)
+  }
 }

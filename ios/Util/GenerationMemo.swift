@@ -1,8 +1,9 @@
 /// A value computed at most once per generation and shared by every caller of that generation.
 ///
 /// `invalidate()` starts a new generation. A caller whose computation finishes or fails after
-/// an invalidation computes again, so `value(_:)` never returns a stale result. A failure is
-/// not kept: the next caller of the same generation tries again.
+/// an invalidation computes again, so `value(_:)` never returns a stale result; `compute` must
+/// therefore read the state it depends on when it runs, not capture it. A failure is not kept:
+/// the next caller of the same generation tries again. A cancelled caller stops retrying.
 @MainActor
 final class GenerationMemo<Value: Sendable> {
   private var generation = 0
@@ -14,6 +15,7 @@ final class GenerationMemo<Value: Sendable> {
 
   func value(_ compute: @escaping @MainActor () async throws -> Value) async throws -> Value {
     while true {
+      try Task.checkCancellation()
       let generation = generation
       let task: Task<Value, Error>
       if let current, current.generation == generation {
