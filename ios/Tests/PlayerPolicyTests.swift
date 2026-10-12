@@ -242,6 +242,20 @@ struct PlayerReviewRegressionTests {
     #expect(saved?.positionMs == 0)
   }
 
+  /// A track change while paused saves the new track at its start, not at the old item's
+  /// position, which the engine still reports until the new item is prepared.
+  @Test func skippingWhilePausedSavesTheNewTrackAtItsStart() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = makePlaying()
+    player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    player.pause()
+    engine.currentTime = 1800
+    player.next()
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.track.id == "t2")
+    #expect(saved?.positionMs == 0)
+  }
+
   /// Leaving an errored track publishes the new track's loading state once, never an error
   /// state without its error.
   @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {

@@ -115,7 +115,9 @@ final class Player {
   private lazy var persistence = PlaybackPersistence(defaults: persistenceDefaults) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        of: $0, state: state, position: engine.currentTime, repeatMode: repeatMode,
+        // While loading, the engine still reports the previous item's position.
+        of: $0, state: state, position: state == .loading ? deferredSeek.target ?? 0 : engine.currentTime,
+        repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
     }
@@ -294,6 +296,7 @@ final class Player {
     // even though the state enum value doesn't change.
     if newState == state, case let .errorOccurred(error) = event {
       errorStatus = .terminal(error)
+      published.errorStatus = .none // each terminal report reaches JS, a repeat included
       publish()
       return
     }
@@ -303,6 +306,9 @@ final class Player {
     state = newState
     applySideEffects(old: oldState, new: newState, event: event)
     publish()
+    // While nothing plays, no periodic save runs: every transition rewrites the snapshot, so it
+    // never keeps a position from before a track change or a seek.
+    if !(playbackActive && playWhenReady) { persistence.save() }
     // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
     // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
     if newState == .ended, isLastInPlaybackOrder, repeatMode == .off {
@@ -323,9 +329,9 @@ final class Player {
 
   private var published = Published()
 
-  /// Emits what changed since the last publish, in order: the playback (state and error), the
-  /// terminal error, the play intent, the playing state, the active play intent. The one
-  /// place these leave the Player, so each goes out once per change.
+  /// Emits what changed since the last publish, in order: the play intent, the playing state,
+  /// the playback (state and error), the terminal error, the active play intent. The one place
+  /// these leave the Player, so each goes out once per change.
   private func publish() {
     let playing = playingState
     let now = Published(
@@ -336,18 +342,18 @@ final class Player {
     let old = published
     guard now != old else { return }
     published = now
+    if now.playWhenReady != old.playWhenReady {
+      callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
+    }
+    if now.playing != old.playing || now.buffering != old.buffering {
+      callbacks?.playerDidChangePlayingState(playing)
+    }
     if now.state != old.state || now.errorStatus != old.errorStatus {
       callbacks?.playerDidChangePlayback(Playback(state: now.state, error: now.errorStatus.nitroError))
     }
     let erred = now.state == .error, wasErred = old.state == .error
     if erred != wasErred || (erred && now.errorStatus != old.errorStatus) {
       callbacks?.playerDidError(PlaybackErrorEvent(error: now.errorStatus.nitroError))
-    }
-    if now.playWhenReady != old.playWhenReady {
-      callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
-    }
-    if now.playing != old.playing || now.buffering != old.buffering {
-      callbacks?.playerDidChangePlayingState(playing)
     }
     if now.playIntentActive != old.playIntentActive {
       persistence.playIntentDidChange(active: now.playIntentActive)
@@ -398,9 +404,6 @@ final class Player {
       // interruption auto-resume into silence. The setter also requests the
       // session release.
       setPlayWhenReady(false)
-      // The intent may already be off (an end-of-track sleep timer), so the setter saved nothing:
-      // the snapshot must still record the end, which resumes from 0.
-      persistence.save()
     default: break
     }
 

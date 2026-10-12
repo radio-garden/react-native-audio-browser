@@ -1093,10 +1093,10 @@ struct MutationSkipAvailabilityTests {
 
 @Suite("Player - publishing")
 struct PublishingTests {
-  /// A natural end clears the intent as a side effect of entering .ended; the state change still
-  /// goes out first, and each change once.
+  /// The order JS has always seen: the intent, then the playing state, then the playback. A
+  /// natural end clears the intent on the way in; each change still goes out once.
   @Test @MainActor
-  func endingPublishesTheStateBeforeTheIntent() {
+  func endingPublishesTheIntentThenThePlayingStateThenThePlayback() {
     let (c, _, cb, _) = makeCoordinator()
     c.setPlayWhenReady(true)
     c.transition(.avPlayerPlaying)
@@ -1104,7 +1104,27 @@ struct PublishingTests {
 
     c.transition(.trackEndedNaturally)
 
-    #expect(cb.publishOrder == ["playback", "playWhenReady", "playingState"])
+    #expect(cb.publishOrder == ["playWhenReady", "playingState", "playback"])
+  }
+
+  @Test @MainActor
+  func aTransitionPublishesThePlayingStateBeforeThePlayback() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.setPlayWhenReady(true)
+    cb.publishOrder.removeAll()
+
+    c.transition(.avPlayerPlaying)
+
+    #expect(cb.publishOrder == ["playingState", "playback"])
+  }
+
+  @Test @MainActor
+  func aRepeatedTerminalErrorIsReportedAgain() {
+    let (c, _, cb, _) = makeCoordinator()
+    c.transition(.errorOccurred(.playbackFailed))
+    c.transition(.errorOccurred(.playbackFailed))
+
+    #expect(cb.errorEvents.count == 2)
   }
 }
 
