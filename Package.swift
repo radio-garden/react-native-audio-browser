@@ -45,7 +45,7 @@ let package = Package(
         "RemoteCommand/RemoteCommandController.swift",
         "Player/MediaIntentCriteria.swift",
         "Player/PersistedPlaybackState.swift",
-        "Player/PlaybackStateStore.swift",
+        "Player/PlaybackPersistence.swift",
         "Model/NitroTypeStubs.swift",
         "PlaybackEvent.swift",
         "TrackSelector.swift",

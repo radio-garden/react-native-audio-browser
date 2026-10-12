@@ -30,7 +30,7 @@ The playback core is split into two `@MainActor` types:
 
 - **TrackPlayer** is the AVPlayer bridge. It owns the `AVPlayer`, the four observers, `MediaLoader`,
   `NowPlayingUpdater`, `RemoteCommandController`, `NowPlayingInfoController`, `RetryLoop`, and
-  `PlaybackStateStore`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
+  `PlaybackPersistence`. It conforms to `PlaybackEffectHandler` (so the coordinator can drive
   AVPlayer), `MediaLoaderDelegate`, `TrackSelectionPlayer`,
   `AudioSessionPlayer` and `NowPlayingSource`.
 - **PlaybackCoordinator** (owned by TrackPlayer) is the **state-machine hub**. It holds the
@@ -66,7 +66,7 @@ remote/config callbacks.
 
 - `HybridAudioBrowser.onMainActor()` ensures player operations run on main thread
 - `TrackPlayer`, `PlaybackCoordinator`, `BrowserManager`, `TrackSelector`, all observers, controllers, and coordinator-owned managers are `@MainActor`
-- `PlaybackStateStore`, `ShuffleOrder`, and the judgement/criteria value types are plain (non-`@MainActor`) value/data types
+- `DeferredSeek`, `ShuffleOrder`, and the judgement/criteria value types are plain (non-`@MainActor`) value/data types
 - `LRUCache` is main-actor isolated; `HttpClient` and `NetworkMonitor` are `@unchecked Sendable`
 - `UncheckedSendableBox` wrapper for non-Sendable return types from `onMainActor()` calls
 
@@ -95,7 +95,7 @@ ios/
 ├── TrackPlayer.swift                 # AVPlayer bridge
 │                                     # Owns PlaybackCoordinator, observers, MediaLoader,
 │                                     #   NowPlayingUpdater, RemoteCommandController,
-│                                     #   NowPlayingInfoController, RetryLoop, PlaybackStateStore
+│                                     #   NowPlayingInfoController, RetryLoop, PlaybackPersistence
 │                                     # Conforms to PlaybackEffectHandler, MediaLoaderDelegate,
 │                                     #   TrackSelectionPlayer
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
@@ -136,7 +136,7 @@ ios/
 │   ├── PlaybackCoordinatorCallbacks.swift  # @MainActor protocol: coordinator → JS callbacks (Nitro types)
 │   ├── PlaybackStateMachine.swift    # Pure transition table nextPlaybackState(from:on:)
 │   ├── PlaybackEffectHandler.swift   # @MainActor protocol: AVPlayer side effects (impl: TrackPlayer)
-│   ├── PlaybackStateStore.swift      # UserDefaults cold-start resume persistence
+│   ├── PlaybackPersistence.swift     # @MainActor cold-start resume state: snapshot, save, periodic save
 │   ├── PlaybackTimer.swift           # @MainActor interval timer (progress + playback interval)
 │   ├── VolumeFader.swift             # @MainActor sleep-timer fade-out
 │   ├── PlayerStatusTypes.swift       # Player status value types

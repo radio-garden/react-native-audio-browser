@@ -17,12 +17,14 @@ class TrackPlayer {
   let nowPlayingInfoController: NowPlayingInfoController
   let remoteCommandController: RemoteCommandController
   private let retryLoop = RetryLoop()
-  private let playbackStateStore = PlaybackStateStore()
-
-  // MARK: - Periodic Persist
-
-  /// Cancelled when playback stops; recreated when it starts.
-  private var periodicSaveTask: Task<Void, Never>?
+  private lazy var persistence = PlaybackPersistence { [unowned self] in
+    currentTrack.map {
+      PlaybackPersistence.snapshot(
+        of: $0, state: state, position: currentTime, repeatMode: repeatMode, shuffleEnabled: shuffleEnabled,
+        rate: rate,
+      )
+    }
+  }
 
   /// Retry configuration for load errors (network failures, timeouts, etc.)
   var retryConfig: Variant_Bool_RetryConfig? {
@@ -271,7 +273,7 @@ class TrackPlayer {
       if playWhenReady { avPlayer.rate = newValue }
       // Same reason as the repeat/shuffle edges below — a speed changed while
       // paused would otherwise not reach the snapshot the cold resume restores.
-      persistPlaybackState()
+      persistence.save()
     }
   }
 
@@ -766,28 +768,8 @@ class TrackPlayer {
 // MARK: - Playback State Persistence
 
 extension TrackPlayer {
-  /// Snapshot the current player state to UserDefaults so a cold-start resume
-  /// can restore it without the JS runtime. Live streams persist `positionMs = nil`.
-  private func persistPlaybackState() {
-    guard let track = currentTrack else { return }
-    // At .ended the position equals the duration — persisting it would make a
-    // cold-start resume seek to the end and instantly re-end (Android twin:
-    // savePositionZero).
-    let positionMs: Double? =
-      (track.live == true) ? nil : (state == .ended ? 0 : currentTime * 1000)
-    playbackStateStore.save(
-      PersistedPlaybackState(
-        track: JsonTrack(from: track),
-        positionMs: positionMs,
-        repeatMode: repeatMode.stringValue,
-        shuffleEnabled: shuffleEnabled,
-        playbackSpeed: rate,
-      ),
-    )
-  }
-
   /// Applies the player settings a snapshot carries — the inverse of
-  /// `persistPlaybackState()`, and the twin of the Kotlin store's `restore()`.
+  /// `PlaybackPersistence.snapshot`, and the twin of the Kotlin store's `restore()`.
   ///
   /// Call BEFORE building the queue: `setQueue` rebuilds the shuffle order
   /// pinned to the starting track, so shuffle has to be set for that order to
@@ -807,7 +789,7 @@ extension TrackPlayer {
   func resumePersisted(
     expandQueue: (_ path: String) async -> (tracks: [Track], selectedIndex: Int)?,
   ) async -> Bool {
-    guard let state = playbackStateStore.load() else {
+    guard let state = persistence.load() else {
       logger.error("resume: nothing persisted")
       return false
     }
@@ -841,24 +823,6 @@ extension TrackPlayer {
     case let .loadTrack(track):
       load(track, playWhenReady: true)
     }
-  }
-
-  /// Start a 5 s repeating save while playback is active. A previous task is
-  /// cancelled first so there is never more than one running at a time.
-  private func startPeriodicSave() {
-    periodicSaveTask?.cancel()
-    periodicSaveTask = Task { @MainActor [weak self] in
-      while !Task.isCancelled {
-        try? await Task.sleep(nanoseconds: 5_000_000_000)
-        guard !Task.isCancelled else { return }
-        self?.persistPlaybackState()
-      }
-    }
-  }
-
-  private func stopPeriodicSave() {
-    periodicSaveTask?.cancel()
-    periodicSaveTask = nil
   }
 }
 
@@ -906,18 +870,13 @@ extension TrackPlayer: PlaybackEffectHandler {
     }
   }
 
-  func updateNowPlayingState(playWhenReady: Bool) {
-    if playWhenReady {
-      startPeriodicSave()
-    } else {
-      stopPeriodicSave()
-      persistPlaybackState()
-    }
+  func playIntentDidChange(active: Bool) {
+    persistence.playIntentDidChange(active: active)
   }
 
   func loadNowPlayingMetadata(for track: Track) {
     nowPlayingUpdater.loadMetaValues(for: track)
-    persistPlaybackState()
+    persistence.save()
   }
 
   func clearNowPlaying() {
@@ -932,12 +891,12 @@ extension TrackPlayer: PlaybackEffectHandler {
   // coordinator only calls them on a real change.
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     remoteCommandController.updateRepeatMode(mode)
-    persistPlaybackState()
+    persistence.save()
   }
 
   func updateRemoteShuffleMode(_ enabled: Bool) {
     remoteCommandController.updateShuffleMode(enabled)
-    persistPlaybackState()
+    persistence.save()
   }
 
   func updateSkipAvailability(canNext _: Bool, canPrevious _: Bool) {

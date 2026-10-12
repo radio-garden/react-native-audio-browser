@@ -83,15 +83,15 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   // Now Playing
   var loadNowPlayingMetadataCalls: [Track] = []
   var clearNowPlayingCallCount = 0
-  var updateNowPlayingStateCalls: [Bool] = []
+  var playIntentCalls: [Bool] = []
 
   func loadNowPlayingMetadata(for track: Track) {
     loadNowPlayingMetadataCalls.append(track)
   }
 
   func clearNowPlaying() { clearNowPlayingCallCount += 1 }
-  func updateNowPlayingState(playWhenReady: Bool) {
-    updateNowPlayingStateCalls.append(playWhenReady)
+  func playIntentDidChange(active: Bool) {
+    playIntentCalls.append(active)
   }
 
   // Remote commands

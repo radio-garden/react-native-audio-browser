@@ -272,21 +272,20 @@ class PlaybackCoordinator {
     var playWhenReady = false
     var playing = false
     var buffering = false
-    /// The now-playing surface shows "playing": play intent in a state that is not terminal.
-    var nowPlayingActive = false
+    var playIntentActive = false
   }
 
   private var published = Published()
 
   /// Emits what changed since the last publish, in order: the playback (state and error), the
-  /// terminal error, the play intent, the playing state, the now-playing play state. The one
+  /// terminal error, the play intent, the playing state, the active play intent. The one
   /// place these leave the coordinator, so each goes out once per change.
   private func publish() {
     let playing = playingState
     let now = Published(
       state: state, errorStatus: errorStatus, playWhenReady: playWhenReady,
       playing: playing.playing, buffering: playing.buffering,
-      nowPlayingActive: playbackActive && playWhenReady,
+      playIntentActive: playbackActive && playWhenReady,
     )
     let old = published
     guard now != old else { return }
@@ -304,8 +303,8 @@ class PlaybackCoordinator {
     if now.playing != old.playing || now.buffering != old.buffering {
       callbacks?.playerDidChangePlayingState(playing)
     }
-    if now.nowPlayingActive != old.nowPlayingActive {
-      effectHandler?.updateNowPlayingState(playWhenReady: now.nowPlayingActive)
+    if now.playIntentActive != old.playIntentActive {
+      effectHandler?.playIntentDidChange(active: now.playIntentActive)
     }
   }
 

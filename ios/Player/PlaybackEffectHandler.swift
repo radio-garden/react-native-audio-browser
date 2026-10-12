@@ -41,9 +41,8 @@
   // only metadata and the explicit play/pause state flow through here.
   func loadNowPlayingMetadata(for track: Track)
   func clearNowPlaying()
-  /// Reflects play/pause intent in the now-playing center. Auto-publishing fills
-  /// the info dict but not the explicit playback state CarPlay reads for its button.
-  func updateNowPlayingState(playWhenReady: Bool)
+  /// True while a track is meant to be playing: play intent in a state that is not terminal.
+  func playIntentDidChange(active: Bool)
 
   // Remote commands (behind protocol to avoid MediaPlayer import)
   func updateRemoteRepeatMode(_ mode: RepeatMode)
