@@ -380,3 +380,11 @@ extension BrowserManager {
     )
   }
 }
+
+extension BrowserManager: MediaResolving {
+  /// Runs the `nowPlayingArtwork` config for every playing track, id or not: an id-less track
+  /// leaves an `{id}` token unfilled, so the request visibly fails rather than being skipped.
+  func resolveNowPlayingArtwork(track: Track, imageContext: ImageContext?) async -> ImageSource? {
+    await resolveArtworkUrl(track: track, perRouteConfig: config.nowPlayingArtwork, imageContext: imageContext)
+  }
+}

@@ -10,7 +10,7 @@ protocol NowPlayingSource: AnyObject {
   var currentTime: Double { get }
   var playWhenReady: Bool { get }
   var isStalled: Bool { get }
-  var nowPlayingError: PlaybackError? { get }
+  var nitroPlaybackError: PlaybackError? { get }
 }
 
 /// Owns the now-playing surface: publishes a track's static fields + artwork, and renders the
@@ -101,7 +101,7 @@ final class NowPlayingUpdater {
       timedMetadata: timedMetadata,
       playWhenReady: source.playWhenReady,
       stalled: source.isStalled ? (isOnline ? .buffering : .offline) : nil,
-      error: source.nowPlayingError,
+      error: source.nitroPlaybackError,
       flash: flash,
       override: enabled ? override : nil,
       formatter: enabled ? formatter : nil,

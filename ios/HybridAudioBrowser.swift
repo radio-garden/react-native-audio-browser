@@ -542,74 +542,24 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // No-op on first setup.
         player?.destroy()
 
-        // Create player with self as callbacks delegate
-        player = TrackPlayer(callbacks: self)
-        audioSession.player = player
+        let newPlayer = TrackPlayer(callbacks: self, resolver: browserManager, networkMonitor: networkMonitor)
+        if let buffer = options.ios?.buffer { newPlayer.bufferDuration = buffer }
+        if let retry = options.retry { newPlayer.retryConfig = retry }
+        newPlayer.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
+        newPlayer.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
+        newPlayer.nowPlayingUpdater.isOnline = networkMonitor.isOnline
+        player = newPlayer
+        audioSession.player = newPlayer
 
-        // Apply buffer duration from options (in ms)
-        if let buffer = options.ios?.buffer {
-          player?.bufferDuration = buffer
-        }
-
-        // Apply retry configuration (top-level, cross-platform)
-        if let retry = options.retry {
-          player?.retryConfig = retry
-        }
-
-        // Wire up network monitor for accelerated retries when connectivity is restored
-        player?.networkMonitor = networkMonitor
-
-        // Central fan-out for connectivity changes (wired once here, idempotent on re-setup, and
-        // independent of any JS subscription):
-        //  - bridge to the JS `onOnlineChanged` event (no-op default until JS subscribes);
-        //  - re-render now-playing so the formatter's offline/online label updates immediately on a
-        //    connectivity change, not only on the next playback transition (fixes the stall-entry
-        //    race where the device goes offline after the buffering line was already rendered);
-        //  - reconnect a stalled stream when connectivity returns (see TrackPlayer.handleNetworkRestored).
-        // The monitor only mutates state on the main thread, so this fires main-isolated.
+        // Connectivity fans out here, whether or not JS subscribes: the JS event, the
+        // now-playing stall line, and reconnecting a stalled stream. The monitor mutates on main.
         networkMonitor.onChanged = { [weak self] isOnline in
           MainActor.assumeIsolated {
-            guard let self else { return }
-            self.onOnlineChanged(isOnline)
-            self.player?.nowPlayingUpdater.isOnline = isOnline
-            if isOnline { self.player?.handleNetworkRestored() }
+            self?.onOnlineChanged(isOnline)
+            self?.player?.networkDidChange(isOnline: isOnline)
           }
         }
 
-        // Configure media URL resolver
-        player?.mediaLoader.mediaUrlResolver = { [weak self] src, track in
-          guard let self else {
-            return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
-          }
-          return await browserManager.resolveMediaUrl(src, track: track)
-        }
-
-        // Configure artwork URL resolver for Now Playing (with size context). The
-        // `nowPlayingArtwork` config runs for EVERY playing track, id or not — an id-less track
-        // leaves any `{id}` token unfilled (resolveArtworkUrl warns and the request visibly
-        // 404s) rather than skipping the config.
-        player?.nowPlayingUpdater.artworkUrlResolver = { [weak self] track, imageContext in
-          guard let self else { return nil }
-          return await browserManager.resolveArtworkUrl(
-            track: track, perRouteConfig: browserManager.config.nowPlayingArtwork,
-            imageContext: imageContext,
-          )
-        }
-
-        // Emit the JS `onNowPlayingChanged` event when the rendered text lines change. The updater
-        // owns the system now-playing write; this shapes the JS metadata (elapsed time / artwork).
-        player?.nowPlayingUpdater.onChanged = { [weak self] in self?.onNowPlayingChanged($0) }
-
-        // Configure sleep timer callback
-        player?.sleepTimerManager.onChanged = { [weak self] state in
-          self?.onSleepTimerChanged(state)
-        }
-
-        // Now-playing: whether to manage metadata, and the optional formatter that owns the
-        // rendered lines.
-        player?.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
-        player?.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
-        player?.nowPlayingUpdater.isOnline = networkMonitor.isOnline
         // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
         // A terminal error resolves the playback state to *paused*
         // (PlaybackCoordinator.applySideEffects), the now-playing info is retained (never cleared
@@ -826,7 +776,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getPlaybackError() throws -> PlaybackError? {
-    onMainActor { player?.coordinator.nitroPlaybackError() }
+    onMainActor { player?.nitroPlaybackError }
   }
 
   public func retry() throws {
@@ -839,28 +789,25 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func getSleepTimer() throws -> SleepTimer {
     onMainActor {
-      if let state = player?.sleepTimerManager.get() {
-        return state
-      }
-      return .first(NullType.null)
+      player?.sleepTimer ?? .first(NullType.null)
     }
   }
 
   public func setSleepTimer(seconds: Double, fadeDuration: Double?) throws {
     onMainActor {
-      player?.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
+      player?.setSleepTimer(seconds: seconds, fadeDuration: fadeDuration)
     }
   }
 
   public func setSleepTimerToEndOfTrack() throws {
     onMainActor {
-      player?.sleepTimerManager.setToEndOfTrack()
+      player?.setSleepTimerToEndOfTrack()
     }
   }
 
   public func clearSleepTimer() throws -> Bool {
     onMainActor {
-      player?.sleepTimerManager.clear() ?? false
+      player?.clearSleepTimer() ?? false
     }
   }
 
@@ -1195,7 +1142,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       // (the audio session was still inactive, and the system may have declined);
       // re-request now so the surface can appear even if playback never produces
       // audio (first-ever load failing on a dead stream).
-      player?.nowPlayingInfoController.reactivateSessionIfNeeded()
+      player?.reactivateNowPlayingSession()
     }
     // A stall starting or recovering may not change the coordinator state.
     player?.nowPlayingUpdater.render()
@@ -1224,6 +1171,14 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidError(_ event: PlaybackErrorEvent) {
     onPlaybackError(event)
+  }
+
+  public func playerDidChangeSleepTimer(_ state: SleepTimer?) {
+    onSleepTimerChanged(state)
+  }
+
+  public func playerDidChangeNowPlaying(_ metadata: NowPlayingMetadata) {
+    onNowPlayingChanged(metadata)
   }
 
   public func playerDidReceiveCommonMetadata(_ items: [AVMetadataItem]) {

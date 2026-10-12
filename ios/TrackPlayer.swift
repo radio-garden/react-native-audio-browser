@@ -31,13 +31,6 @@ class TrackPlayer {
     }
   }
 
-  /// Network monitor for accelerating retries when connectivity is restored.
-  weak var networkMonitor: NetworkMonitor? {
-    didSet {
-      retryManager.networkMonitor = networkMonitor
-    }
-  }
-
   /// Handles media URL resolution, asset creation, and async loading.
   let mediaLoader = MediaLoader()
 
@@ -134,6 +127,33 @@ class TrackPlayer {
   var isLastInPlaybackOrder: Bool { coordinator.isLastInPlaybackOrder }
   var playbackActive: Bool { coordinator.playbackActive }
   var sleepTimerManager: any SleepTimerHandling { coordinator.sleepTimerManager }
+
+  var sleepTimer: SleepTimer? { sleepTimerManager.get() }
+
+  func setSleepTimer(seconds: Double, fadeDuration: Double?) {
+    sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
+  }
+
+  func setSleepTimerToEndOfTrack() {
+    sleepTimerManager.setToEndOfTrack()
+  }
+
+  func clearSleepTimer() -> Bool {
+    sleepTimerManager.clear()
+  }
+
+  /// Connectivity changed: re-render the stall line, and reconnect a stalled stream on return.
+  func networkDidChange(isOnline: Bool) {
+    nowPlayingUpdater.isOnline = isOnline
+    if isOnline { handleNetworkRestored() }
+  }
+
+  /// Re-requests the now-playing election, which the system may have declined at link time while
+  /// the audio session was still inactive.
+  func reactivateNowPlayingSession() {
+    nowPlayingInfoController.reactivateSessionIfNeeded()
+  }
+
   var queue: QueueManager { coordinator.queue }
   var loadSeekCoordinator: LoadSeekCoordinator { coordinator.loadSeekCoordinator }
   var playingStateManager: PlayingStateManager { coordinator.playingStateManager }
@@ -272,9 +292,14 @@ class TrackPlayer {
 
   // MARK: - Init
 
+  /// - Parameters:
+  ///   - resolver: Resolves media URLs and now-playing artwork.
+  ///   - networkMonitor: Lets a retry waiting for the network resume as soon as it returns.
   init(
+    callbacks: TrackPlayerCallbacks?,
+    resolver: MediaResolving?,
+    networkMonitor: NetworkMonitor?,
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
-    callbacks: TrackPlayerCallbacks? = nil,
   ) {
     self.nowPlayingInfoController = nowPlayingInfoController
     nowPlayingUpdater = NowPlayingUpdater(nowPlayingInfoController: nowPlayingInfoController)
@@ -287,6 +312,15 @@ class TrackPlayer {
     coordinator.callbacks = callbacks
 
     mediaLoader.delegate = self
+    mediaLoader.mediaUrlResolver = { [weak resolver] src, track in
+      await resolver?.resolveMediaUrl(src, track: track) ?? MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+    }
+    nowPlayingUpdater.artworkUrlResolver = { [weak resolver] track, imageContext in
+      await resolver?.resolveNowPlayingArtwork(track: track, imageContext: imageContext)
+    }
+    nowPlayingUpdater.onChanged = { [weak self] in self?.callbacks?.playerDidChangeNowPlaying($0) }
+    coordinator.sleepTimerManager.onChanged = { [weak self] in self?.callbacks?.playerDidChangeSleepTimer($0) }
+    retryManager.networkMonitor = networkMonitor
 
     // Configure retry manager
     retryManager.shouldRetry = { [weak self] in
@@ -1083,7 +1117,14 @@ extension TrackPlayer: MediaLoaderDelegate {
 extension TrackPlayer: AudioSessionPlayer {}
 
 extension TrackPlayer: NowPlayingSource {
-  var nowPlayingError: PlaybackError? {
+  var nitroPlaybackError: PlaybackError? {
     coordinator.nitroPlaybackError()
   }
+}
+
+/// Resolves the URLs the player fetches.
+@MainActor
+protocol MediaResolving: AnyObject {
+  func resolveMediaUrl(_ src: String, track: Track?) async -> MediaResolvedUrl
+  func resolveNowPlayingArtwork(track: Track, imageContext: ImageContext?) async -> ImageSource?
 }

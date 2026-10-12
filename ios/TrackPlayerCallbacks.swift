@@ -24,4 +24,11 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallba
 
   /// Called when chapter metadata is received.
   func playerDidReceiveChapterMetadata(_ metadata: [AVTimedMetadataGroup])
+
+  // MARK: - Player State Events
+
+  func playerDidChangeSleepTimer(_ state: SleepTimer?)
+
+  /// The now-playing lines or track changed; carries the metadata JS sees.
+  func playerDidChangeNowPlaying(_ metadata: NowPlayingMetadata)
 }
