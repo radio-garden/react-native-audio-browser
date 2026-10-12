@@ -8,10 +8,6 @@ extension NavigationError {
       switch browserError {
       case .contentNotFound:
         NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
-      case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
         NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .callbackError:

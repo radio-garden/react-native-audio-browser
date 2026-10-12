@@ -3,33 +3,16 @@ import NitroModules
 import os.log
 
 /// Custom browser errors.
-enum BrowserError: Error {
+enum BrowserError: LocalizedError {
   case contentNotFound(path: String)
-  case httpError(code: Int, body: String)
-  case networkError(Error)
   case invalidConfiguration(String)
   case callbackError(String)
 
-  var localizedDescription: String {
+  var errorDescription: String? {
     switch self {
-    case .contentNotFound:
-      return "Content not found"
-    case let .httpError(code, body):
-      // Try to extract error message from JSON response: { "error": "message" }
-      if let data = body.data(using: .utf8),
-         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-         let errorMessage = json["error"] as? String
-      {
-        return errorMessage
-      }
-      // Fall back to localized HTTP status description
-      return HTTPURLResponse.localizedString(forStatusCode: code)
-    case let .networkError(error):
-      return "Network error: \(error.localizedDescription)"
-    case let .invalidConfiguration(message):
-      return "Invalid configuration: \(message)"
-    case let .callbackError(message):
-      return message
+    case .contentNotFound: "Content not found"
+    case let .invalidConfiguration(message): "Invalid configuration: \(message)"
+    case let .callbackError(message): message
     }
   }
 }
