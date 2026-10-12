@@ -66,7 +66,7 @@ remote/config callbacks.
 - `HybridAudioBrowser.onMainActor()` ensures player operations run on main thread
 - `TrackPlayer`, `PlaybackCoordinator`, `BrowserManager`, `TrackSelector`, all observers, controllers, and coordinator-owned managers are `@MainActor`
 - `PlaybackStateStore`, `ShuffleOrder`, and the judgement/criteria value types are plain (non-`@MainActor`) value/data types
-- `LRUCache` uses NSLock for thread-safe access; `HttpClient` and `NetworkMonitor` are `@unchecked Sendable`
+- `LRUCache` is main-actor isolated; `HttpClient` and `NetworkMonitor` are `@unchecked Sendable`
 - `UncheckedSendableBox` wrapper for non-Sendable return types from `onMainActor()` calls
 
 ### Relationship to RNTP
@@ -191,7 +191,7 @@ ios/
 ├── Option/
 │   └── SessionCategories.swift       # Audio session categories
 ├── Util/
-│   ├── LRUCache.swift                # Thread-safe LRU cache (O(1) get/set, doubly-linked list)
+│   ├── LRUCache.swift                # Small main-actor LRU cache
 │   ├── Emitter.swift                 # Generic multi-listener event emitter
 │   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
