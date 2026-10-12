@@ -112,22 +112,18 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Sets key-values and immediately updates Now Playing.
-  /// Playback-dynamics keys (elapsed/duration/rate) are owned by the session and skipped.
-  func set(keyValues: [NowPlayingInfoKeyValue]) {
+  /// Sets now-playing fields, keyed by their `MPMediaItemProperty*` / `MPNowPlayingInfoProperty*`
+  /// names (nil removes one), and publishes when any changed. Elapsed time, duration and rate
+  /// are the session's to publish and are ignored. Returns whether anything changed.
+  @discardableResult
+  func set(_ fields: [String: Any?]) -> Bool {
     var changed = false
-    for kv in keyValues where !Self.autoPublishedKeys.contains(kv.key) && !valueUnchanged(kv.key, kv.value) {
-      _info[kv.key] = kv.value
+    for (key, value) in fields where !Self.autoPublishedKeys.contains(key) && !valueUnchanged(key, value) {
+      _info[key] = value
       changed = true
     }
     if changed { performUpdate() }
-  }
-
-  /// Sets a single key-value and immediately updates Now Playing.
-  func set(keyValue: NowPlayingInfoKeyValue) {
-    guard !Self.autoPublishedKeys.contains(keyValue.key), !valueUnchanged(keyValue.key, keyValue.value) else { return }
-    _info[keyValue.key] = keyValue.value
-    performUpdate()
+    return changed
   }
 
   /// Attaches metadata to the current item — the supported channel under automatic publishing.

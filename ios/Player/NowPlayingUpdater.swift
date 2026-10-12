@@ -21,26 +21,15 @@ final class NowPlayingUpdater {
 
   private var artworkLoadTask: Task<Void, Never>?
 
-  /// Last published text lines, to dedupe redundant writes (render runs on every transition).
-  private struct Published: Equatable {
-    let trackId: String?
-    let title: String?
-    let artist: String?
-    let album: String?
-  }
+  /// The track `onChanged` last reported, so a new track with the same text still reports.
+  private var publishedTrackId: String?
 
-  /// Dedupe baseline for `applyFields`. Only meaningful while it describes the
-  /// controller's current info dict, so the two are cleared together in
-  /// `clearNowPlaying()` — never separately.
-  private var lastPublished: Published?
-
-  /// Empties the now-playing surface, the dedupe baseline that describes it, and any artwork
-  /// fetch in flight; the three are cleared together so a re-publish of the same track lands.
+  /// Empties the now-playing surface and drops any artwork fetch in flight.
   func clearNowPlaying() {
     artworkLoadTask?.cancel()
     artworkLoadTask = nil
     nowPlayingInfoController.clear()
-    lastPublished = nil
+    publishedTrackId = nil
     formattedTrackId = nil
   }
 
@@ -77,9 +66,7 @@ final class NowPlayingUpdater {
   /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
   /// renders).
   func loadMetaValues(for track: Track) {
-    nowPlayingInfoController.set(keyValues: [
-      NowPlayingInfoProperty.isLiveStream(track.live),
-    ])
+    nowPlayingInfoController.set([MPNowPlayingInfoPropertyIsLiveStream: track.live])
     applyFields(track: track, title: track.title, artist: track.artist, album: track.album)
     loadArtwork(for: track)
   }
@@ -172,26 +159,20 @@ final class NowPlayingUpdater {
 
   // MARK: - Private
 
-  /// Stamps the title/artist/album (each falling back to the track's own) onto
-  /// NowPlayingInfoCenter, deduped against the last publish, and notifies `onChanged`.
+  /// Stamps the title/artist/album (each falling back to the track's own) onto the now-playing
+  /// surface, and notifies `onChanged` when the text or the track changed.
   private func applyFields(track: Track, title: String?, artist: String?, album: String?) {
     let resolvedTitle = title ?? track.title
     let resolvedArtist = artist ?? track.artist
     let resolvedAlbum = album ?? track.album
-    let published = Published(
-      trackId: track.identity ?? track.path,
-      title: resolvedTitle,
-      artist: resolvedArtist,
-      album: resolvedAlbum,
-    )
-    guard published != lastPublished else { return }
-    lastPublished = published
-
-    nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.title(resolvedTitle),
-      MediaItemProperty.artist(resolvedArtist),
-      MediaItemProperty.albumTitle(resolvedAlbum),
+    let textChanged = nowPlayingInfoController.set([
+      MPMediaItemPropertyTitle: resolvedTitle,
+      MPMediaItemPropertyArtist: resolvedArtist,
+      MPMediaItemPropertyAlbumTitle: resolvedAlbum,
     ])
+    let trackId = track.identity ?? track.path
+    guard textChanged || trackId != publishedTrackId else { return }
+    publishedTrackId = trackId
     onChanged?(track, resolvedTitle, resolvedArtist, resolvedAlbum)
   }
 
@@ -233,10 +214,10 @@ final class NowPlayingUpdater {
         let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
           return image
         }
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
+        nowPlayingInfoController.set([MPMediaItemPropertyArtwork: artwork])
       } else {
         logger.debug("loadArtwork: no image loaded")
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
+        nowPlayingInfoController.set([MPMediaItemPropertyArtwork: nil])
       }
     }
   }
