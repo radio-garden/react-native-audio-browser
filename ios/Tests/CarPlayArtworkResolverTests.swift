@@ -9,7 +9,7 @@ struct SFSymbolTests {
   @Test func sfSymbolArtwork_returnsSfSymbolAction() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:heart.fill",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -21,7 +21,7 @@ struct SFSymbolTests {
   @Test func sfSymbolWithParams_returnsSfSymbolAction() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:play.circle?bg=#000&fg=#fff",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 24, targetHeight: 24,
       displayScale: 3.0,
@@ -34,7 +34,7 @@ struct SFSymbolTests {
     var resolverCalled = false
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "sf:music.note",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -50,7 +50,7 @@ struct SFSymbolTests {
   @Test func sfSymbolInArtworkSource_usedAsFallback() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
-      artworkSourceUri: "sf:star.fill",
+      artworkSource: ArtworkResolvedImage(uri: "sf:star.fill", headers: nil),
       stencil: false,
       targetWidth: 20, targetHeight: 20,
       displayScale: 2.0,
@@ -67,7 +67,7 @@ struct NoArtworkTests {
   @Test func noArtworkOrSource_returnsNone() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -79,7 +79,7 @@ struct NoArtworkTests {
   @Test func noArtworkOrSource_withResolver_returnsNone() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -96,7 +96,7 @@ struct URLResolutionTests {
   @Test func resolvedUrl_returnsFetchWithHeaders() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -120,7 +120,7 @@ struct URLResolutionTests {
   @Test func resolvedUrl_noHeaders_returnsFetchWithNilHeaders() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 24, targetHeight: 24,
       displayScale: 3.0,
@@ -139,7 +139,7 @@ struct URLResolutionTests {
   @Test func resolverReturnsNil_fallsBackToDirect() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -156,7 +156,7 @@ struct URLResolutionTests {
   @Test func resolvedInvalidUrl_fallsBackToDirect() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/fallback.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -179,7 +179,7 @@ struct URLResolutionTests {
     var receivedHeight: Double?
     _ = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 50, targetHeight: 30,
       displayScale: 2.5,
@@ -201,7 +201,7 @@ struct DirectFallbackTests {
   @Test func noResolver_usesArtworkUrl() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/artwork.png",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -215,10 +215,10 @@ struct DirectFallbackTests {
     ))
   }
 
-  @Test func noArtwork_usesArtworkSourceUri() async {
+  @Test func noArtwork_usesArtworkSourceWithItsHeaders() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: nil,
-      artworkSourceUri: "https://example.com/source.jpg",
+      artworkSource: ArtworkResolvedImage(uri: "https://example.com/source.jpg", headers: ["Authorization": "Bearer t"]),
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -226,7 +226,7 @@ struct DirectFallbackTests {
     )
     #expect(action == .fetch(
       uri: "https://example.com/source.jpg",
-      headers: nil,
+      headers: ["Authorization": "Bearer t"],
       shouldTint: false,
       isSvg: false,
     ))
@@ -235,7 +235,7 @@ struct DirectFallbackTests {
   @Test func artworkPreferredOverArtworkSource() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/artwork.jpg",
-      artworkSourceUri: "https://example.com/source.jpg",
+      artworkSource: ArtworkResolvedImage(uri: "https://example.com/source.jpg", headers: ["Authorization": "Bearer t"]),
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -252,7 +252,7 @@ struct DirectFallbackTests {
   @Test func invalidDirectUrl_returnsNone() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -269,7 +269,7 @@ struct SVGDetectionTests {
   @Test func svgExtension_setsIsSvgTrue() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.svg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -286,7 +286,7 @@ struct SVGDetectionTests {
   @Test func svgUppercase_setsIsSvgTrue() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.SVG",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -303,7 +303,7 @@ struct SVGDetectionTests {
   @Test func resolvedSvgUrl_setsIsSvgTrue() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/art.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -322,7 +322,7 @@ struct SVGDetectionTests {
   @Test func nonSvg_setsIsSvgFalse() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/photo.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -344,7 +344,7 @@ struct TintingTests {
   @Test func stencilTrue_setsShouldTint() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.png",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: true,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -361,7 +361,7 @@ struct TintingTests {
   @Test func stencilFalse_doesNotTint() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/photo.jpg",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
@@ -378,7 +378,7 @@ struct TintingTests {
   @Test func tintingPreservedThroughResolver() async {
     let action = await CarPlayArtworkResolver.resolve(
       artwork: "https://example.com/icon.png",
-      artworkSourceUri: nil,
+      artworkSource: nil,
       stencil: true,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
