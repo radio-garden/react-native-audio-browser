@@ -54,7 +54,7 @@ remote/config callbacks.
 2. **Native → JS**: Callback properties invoked from native code (TrackPlayer/coordinator events route through HybridAudioBrowser)
 3. **Browser → Player**: `navigateTrack()` uses TrackSelector to resolve track selection (contextual URL expansion, queue reuse, handler interception) and then executes the resulting PlaybackIntent
 4. **State Machine**: PlaybackEvent triggers a deterministic transition via `PlaybackCoordinator.transition(_ event)`; the coordinator queries `nextPlaybackState(from:on:)`, applies side effects through the `PlaybackEffectHandler` (TrackPlayer drives AVPlayer), updates timers/playing-state, and emits callbacks
-5. **Coordinator → Queue**: PlaybackCoordinator delegates queue operations to QueueManager (pure state, no AVPlayer knowledge) and conforms to `QueueManagerDelegate`
+5. **Coordinator → Queue**: PlaybackCoordinator delegates queue operations to QueueManager (pure state, no AVPlayer knowledge); each mutation returns a `QueueChange`, which `afterQueueMutation` publishes
 6. **Coordinator → Error/Retry**: PlaybackErrorHandler classifies errors and orchestrates retries via `RetryHandling` (RetryManager), which is network-aware via NetworkMonitor
 7. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
 8. **Player → NowPlayingUpdater**: TrackPlayer calls NowPlayingUpdater for track metadata and artwork; NowPlayingUpdater updates NowPlayingInfoController (playback dynamics auto-publish via MPNowPlayingSession)
@@ -121,7 +121,7 @@ ios/
 │   │                                 # Owns QueueManager, PlaybackErrorHandler, SleepTimerManager,
 │   │                                 #   LoadSeekCoordinator, VolumeFader, PlayingStateManager,
 │   │                                 #   progressTimer + intervalTimer (PlaybackTimer)
-│   │                                 # Drives AVPlayer via PlaybackEffectHandler; conforms to QueueManagerDelegate
+│   │                                 # Drives AVPlayer via PlaybackEffectHandler; publishes QueueChange
 │   ├── PlaybackCoordinatorCallbacks.swift  # @MainActor protocol: coordinator → JS callbacks (Nitro types)
 │   ├── PlaybackStateMachine.swift    # Pure transition table nextPlaybackState(from:on:)
 │   ├── PlaybackEffectHandler.swift   # @MainActor protocol: AVPlayer side effects (impl: TrackPlayer)
@@ -131,7 +131,7 @@ ios/
 │   ├── VolumeFader.swift             # @MainActor sleep-timer fade-out
 │   ├── PlayerStatusTypes.swift       # Player status value types
 │   ├── QueueManager.swift            # @MainActor queue state, navigation, repeat, shuffle
-│   │                                 # Delegate: QueueManagerDelegate (impl: PlaybackCoordinator)
+│   │                                 # Mutations return QueueChange
 │   ├── ShuffleOrder.swift            # Fisher-Yates shuffle ordering (value type)
 │   ├── MediaLoader.swift             # @MainActor URL resolution, AVURLAsset, metadata/playable loading
 │   ├── MediaLoaderDelegate.swift     # @MainActor protocol: item ready, errors, metadata callbacks
@@ -189,14 +189,12 @@ ios/
 │   ├── NavigationError+Conversion.swift   # Error → NavigationError (shared by HAB & CarPlayController)
 │   └── CxxVectorConformances.swift   # Nitro C++ vector type conformances
 ├── Option/
-│   ├── PitchAlgorithms.swift         # AVAudioTimePitchAlgorithm mapping
-│   ├── TimeEventFrequency.swift      # Event frequency enum
 │   └── SessionCategories.swift       # Audio session categories
 ├── Util/
 │   ├── LRUCache.swift                # Thread-safe LRU cache (O(1) get/set, doubly-linked list)
-│   ├── MetadataAdapter.swift         # AVMetadataItem parsing
 │   ├── Emitter.swift                 # Generic multi-listener event emitter
 │   ├── OnceValue.swift               # One-time async initialization gate (cold start)
+│   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
 │   ├── NetworkMonitor.swift          # NWPathMonitor wrapper
 │   ├── ArtworkImageFetcher.swift     # @MainActor Kingfisher fetch (SVG / headers support)
 │   ├── SFSymbolRenderer.swift        # SF Symbol → file:// image rendering
@@ -205,8 +203,6 @@ ios/
 │   │                                 #   state machine, coordinator, error handler, judgements, etc.)
 │   └── Support/
 │       └── TestTypes.swift           # Test support types
-└── Support/
-    └── RNTrackPlayer-Bridging-Header.h  # Objective-C bridging header
 ```
 
 ## Type Mapping

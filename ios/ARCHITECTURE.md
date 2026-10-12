@@ -144,7 +144,7 @@ PC -->|"transition(event)"| PSMF
 PSMF --> PE
 PC -.->|"effectHandler: TrackPlayer"| TP
 PC -.->|"callbacks: HybridAudioBrowser"| HAB
-PC -.->|Implements QueueManagerDelegate| QM
+PC -->|"mutation → QueueChange"| QM
 PEH -.->|"retryHandler: RetryHandling"| RM
 QM --> SO
 

@@ -34,10 +34,8 @@ final class NowPlayingUpdater {
   /// `clearNowPlaying()` — never separately.
   private var lastPublished: Published?
 
-  /// Empties the now-playing surface and the dedupe baseline that describes it, and drops an
-  /// artwork fetch still in flight. One call, because clearing the dict without the baseline
-  /// makes the next publish of the SAME track dedupe against a dict that no longer holds it —
-  /// artwork lands (never deduped) but the text doesn't, and `onChanged` never fires.
+  /// Empties the now-playing surface, the dedupe baseline that describes it, and any artwork
+  /// fetch in flight; the three are cleared together so a re-publish of the same track lands.
   func clearNowPlaying() {
     artworkLoadTask?.cancel()
     artworkLoadTask = nil
