@@ -1,3 +1,5 @@
+import type { NavigationErrorKind } from '../../types/browser'
+
 /**
  * Utility for handling browser paths and contextual URLs in the media browser system.
  * Mirrors Android's BrowserPathHelper.kt
@@ -27,6 +29,13 @@ export const BrowserPathHelper = {
 
   /** Query parameter name for the tapped child's page position (tie-breaker) */
   CONTEXTUAL_INDEX_PARAM: '__index',
+
+  /**
+   * Whether a navigation error on this path came from a browse or a search
+   */
+  navigationErrorKind(path: string): NavigationErrorKind {
+    return path.startsWith(`${this.SEARCH_PATH_PREFIX}?`) ? 'search' : 'browse'
+  },
 
   /**
    * Create a search path for a given query

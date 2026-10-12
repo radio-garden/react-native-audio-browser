@@ -5,6 +5,7 @@ import type {
   NavigationErrorEvent
 } from '../../features'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
+import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
 const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'network-error': 'Network Error',
@@ -91,7 +92,8 @@ export class NavigationErrorManager {
         const customFormatted = this.formatCallback({
           error: navError,
           defaultFormatted,
-          path
+          path,
+          kind: BrowserPathHelper.navigationErrorKind(path)
         })
         this._formattedNavigationError = customFormatted || defaultFormatted
       } catch (error) {

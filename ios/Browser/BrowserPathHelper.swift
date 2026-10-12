@@ -44,8 +44,12 @@ enum BrowserPathHelper {
 
   /// Check if a path is a special system path (not a regular navigation path)
   static func isSpecialPath(_ path: String) -> Bool {
-    path == rootPath ||
-      path.hasPrefix("\(searchPathPrefix)?")
+    path == rootPath || isSearchPath(path)
+  }
+
+  /// Check if a path is a search path (`/__search?q=…`)
+  static func isSearchPath(_ path: String) -> Bool {
+    path.hasPrefix("\(searchPathPrefix)?")
   }
 
   /// Create a search path for a given query

@@ -166,3 +166,14 @@ import Testing
 @Test func isContextualReturnsTrueWithAmpersandSeparator() {
   #expect(BrowserPathHelper.isContextual("/lib?q=1&__trackId=x") == true)
 }
+
+// MARK: - isSearchPath
+
+@Test func isSearchPathMatchesCreatedSearchPaths() {
+  #expect(BrowserPathHelper.isSearchPath(BrowserPathHelper.createSearchPath("jazz")) == true)
+}
+
+@Test func isSearchPathRejectsBrowsePaths() {
+  #expect(BrowserPathHelper.isSearchPath("/search?q=jazz") == false)
+  #expect(BrowserPathHelper.isSearchPath("/__searchable") == false)
+}

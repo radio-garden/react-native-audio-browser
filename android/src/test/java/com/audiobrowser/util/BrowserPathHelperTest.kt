@@ -1,5 +1,6 @@
 package com.audiobrowser.util
 
+import com.margelo.nitro.audiobrowser.NavigationErrorKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -49,5 +50,18 @@ class BrowserPathHelperTest {
     assertNull(BrowserPathHelper.extractIndex("/library"))
     assertNull(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=x"))
     assertNull(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=-1"))
+  }
+
+  @Test
+  fun `a search path is a search, anything else a browse`() {
+    assertEquals(
+      NavigationErrorKind.SEARCH,
+      BrowserPathHelper.navigationErrorKind(BrowserPathHelper.createSearchPath("jazz")),
+    )
+    assertEquals(
+      NavigationErrorKind.BROWSE,
+      BrowserPathHelper.navigationErrorKind("/search?q=jazz"),
+    )
+    assertEquals(NavigationErrorKind.BROWSE, BrowserPathHelper.navigationErrorKind("/__searchable"))
   }
 }
