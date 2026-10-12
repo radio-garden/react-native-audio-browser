@@ -61,7 +61,7 @@ let package = Package(
         "Extension/TimedMetadata+AVFoundation.swift",
         "Extension/ChapterMetadata+AVFoundation.swift",
         "Util/Emitter.swift",
-        "Util/OnceValue.swift",
+        "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/LRUCache.swift",
         "Observer/PlayerTimeObserver.swift",

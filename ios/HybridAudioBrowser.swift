@@ -5,7 +5,7 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-@MainActor let playerAndConfiguredBrowser = OnceValue<(HybridAudioBrowser, TrackPlayer)> {
+@MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, TrackPlayer)> {
   guard let browser = HybridAudioBrowser.shared,
         browser.browserManager.isConfigured,
         let player = browser.getPlayer() else { return nil }
@@ -326,17 +326,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     trackSelector = TrackSelector(browserManager: browserManager)
     super.init()
 
-    // Clean up the previous instance (e.g., on JS runtime reload).
-    // The old HybridAudioBrowser may still be retained by the global
-    // playerAndConfiguredBrowser OnceValue, so we must explicitly stop
-    // its player to prevent two audio streams running simultaneously.
+    // Clean up the previous instance (e.g., on JS runtime reload): stop its
+    // player so two audio streams never run at once.
     onMainActor {
       // Statics are lazy — touch the observer so it's installed from the first
       // instance onward.
       _ = HybridAudioBrowser.reloadObserver
       HybridAudioBrowser.shared?.player?.destroy()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
-      playerAndConfiguredBrowser.reset()
       HybridAudioBrowser.shared = self
       // Tell connected external controllers (CarPlay) to re-subscribe against
       // this instance. Unconditional: `shared` is weak, so on a JS reload the
@@ -769,12 +766,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // A re-setup REPLACES the player, so the outgoing one has to be torn down
         // and un-published first. `TrackPlayer` has no deinit: dropping the
         // reference alone would leave its AVPlayer and MPNowPlayingSession alive.
-        // And `playerAndConfiguredBrowser` holds the old player strongly — its
-        // `resolve` is a one-shot, so without the reset the gate would keep
-        // handing the dead player to the CarPlay controller and Siri intents,
-        // which both await it. No-op on first setup.
+        // No-op on first setup.
         player?.destroy()
-        playerAndConfiguredBrowser.reset()
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)

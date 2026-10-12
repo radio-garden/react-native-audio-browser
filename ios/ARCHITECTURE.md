@@ -94,7 +94,7 @@ end
 subgraph Utilities["Utilities"]
   NM["NetworkMonitor<br/>NWPathMonitor"]
   EM["Emitter<br/>Multi-listener events"]
-  OV["OnceValue<br/>Async init gate (cold start)"]
+  OV["ReadyValue<br/>Waits for the player and configured browser"]
   AIF["ArtworkImageFetcher<br/>Kingfisher + SVG/headers"]
   SFR["SFSymbolRenderer<br/>SF Symbol → file:// image"]
   SVG["SVGProcessor<br/>SVG → UIImage (SwiftDraw)"]

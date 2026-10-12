@@ -28,19 +28,10 @@ public final class RNABCarPlayController: NSObject {
   /// Track content subscriptions
   private var listenerRemovals: [() -> Void] = []
 
-  /// Identifies the current `start()` run; nil while stopped.
-  ///
-  /// A run needs an identity, not just a flag, because `start()` parks an
-  /// untracked Task on the uncancellable `playerAndConfiguredBrowser.wait()`,
-  /// which stays queued across a `reset()` and resumes every waiter. `restart()`
-  /// is `stop(); start()`, so a boolean is `true` again by the time the old
-  /// waiter resumes and both runs proceed — duplicate subscriptions and a leaked
-  /// `NowPlayingObserver` for the session. Comparing the captured run against
-  /// this answers "still running?" and "still me?" in one condition.
-  private var currentRun: UInt?
-  private var runCounter: UInt = 0
+  /// The current `start()` run, cancelled by `stop()`; nil while stopped.
+  private var run: Task<Void, Never>?
 
-  private var isStarted: Bool { currentRun != nil }
+  private var isStarted: Bool { run != nil }
 
   /// Paths whose loading template has been pushed but not yet appeared. Guards a
   /// rapid double-tap from pushing the same destination twice (the first push is
@@ -166,9 +157,6 @@ public final class RNABCarPlayController: NSObject {
   @objc
   public func start() {
     guard !isStarted else { return }
-    runCounter &+= 1
-    currentRun = runCounter
-    let run = runCounter
 
     logger.info("Starting CarPlay controller")
 
@@ -193,10 +181,8 @@ public final class RNABCarPlayController: NSObject {
     showLoadingTemplate()
 
     // Wait for both browser and player to be ready
-    Task { @MainActor in
-      let (browser, _) = await playerAndConfiguredBrowser.wait()
-      // Answers "still running?" and "still this run?" at once.
-      guard self.currentRun == run else { return }
+    run = Task { @MainActor in
+      guard let (browser, _) = await playerAndConfiguredBrowser.wait(), !Task.isCancelled else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
       self.isGated = browser.isGateActive
@@ -231,7 +217,8 @@ public final class RNABCarPlayController: NSObject {
   @objc
   public func stop() {
     guard isStarted else { return }
-    currentRun = nil
+    run?.cancel()
+    run = nil
 
     logger.info("Stopping CarPlay controller")
 

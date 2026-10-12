@@ -193,7 +193,7 @@ ios/
 ├── Util/
 │   ├── LRUCache.swift                # Thread-safe LRU cache (O(1) get/set, doubly-linked list)
 │   ├── Emitter.swift                 # Generic multi-listener event emitter
-│   ├── OnceValue.swift               # One-time async initialization gate (cold start)
+│   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
 │   ├── NetworkMonitor.swift          # NWPathMonitor wrapper
 │   ├── ArtworkImageFetcher.swift     # @MainActor Kingfisher fetch (SVG / headers support)
