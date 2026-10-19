@@ -284,6 +284,71 @@ struct PlayerReviewRegressionTests {
     #expect(saved?.positionMs == 0)
   }
 
+  /// A reload while paused holds its resume position before the loading transition saves the
+  /// snapshot.
+  @Test func aRetryWhilePausedSavesWhereItWas() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = makePlaying()
+    player.pause()
+    engine.currentTime = 120
+    engine.resumePosition = 120
+    player.reloadResolving(startFromCurrentTime: true)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 120_000)
+    #expect(player.deferredSeek.target == 120)
+  }
+
+  /// A skip whose load fails leaves the previous item in the engine: the snapshot and the restart
+  /// from the error start the new track at its start, not at the old one's position.
+  @Test func aFailedSkipKeepsTheNewTrackAtItsStart() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = makePlaying()
+    player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    engine.currentTime = 1800
+    engine.resumePosition = 1800
+    player.next()
+    engine.emit(.unplayable)
+    #expect(player.state == .error)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.track.id == "t2")
+    #expect(saved?.positionMs == 0)
+
+    player.play()
+    #expect(player.state == .loading)
+    #expect(player.deferredSeek.target == nil)
+  }
+
+  /// While nothing plays, a transition alone rewrites the snapshot.
+  @Test func anErrorWhilePausedSavesWhereItStopped() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = makePlaying()
+    player.pause()
+    engine.currentTime = 42
+    engine.emit(.failed(nil, httpStatusCode: nil))
+    #expect(player.state == .error)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 42000)
+  }
+
+  /// An active play intent saves the snapshot periodically.
+  @Test func playingSavesPeriodically() async throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false, saveInterval: .milliseconds(10))
+    player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    player.transition(.avPlayerPlaying)
+    engine.currentTime = 7
+    let persistence = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }
+    for _ in 0 ..< 100 where persistence.load()?.positionMs != 7000 {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(persistence.load()?.positionMs == 7000)
+    player.pause()
+  }
+
   /// Leaving an errored track publishes the new track's loading state once, never an error
   /// state without its error.
   @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {

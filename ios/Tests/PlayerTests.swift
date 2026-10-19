@@ -408,14 +408,17 @@ struct PlayWhenReadyTests {
   @Test @MainActor
   func true_fromError_triggersReload() {
     let (c, eh, _, _) = makeCoordinator()
+    loadTrack(c)
+    eh.emit(.itemPrepared(likelyToKeepUp: false))
     c.transition(.errorOccurred(.playbackFailed))
     eh.resumePosition = 42
+    let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.setPlayWhenReady(true)
 
     // A restart from .error is a new Load on a new AVPlayer, resuming where it failed.
     #expect(eh.recreateCount == 1)
-    #expect(eh.loadResolvedCount == 1)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
     #expect(c.state == .loading)
     #expect(c.deferredSeek.target == 42)
   }

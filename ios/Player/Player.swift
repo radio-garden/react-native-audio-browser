@@ -59,6 +59,8 @@ final class Player {
     var hasPlayed = false
     /// The silent primer has run for this load's first failure (ADR 0005).
     var primedNowPlaying = false
+    /// One of this load's items is in the engine; until then it reports the previous one's position.
+    var itemPrepared = false
   }
 
   private(set) var load: Load?
@@ -112,15 +114,28 @@ final class Player {
   }
 
   private let persistenceDefaults: UserDefaults
-  private lazy var persistence = PlaybackPersistence(defaults: persistenceDefaults) { [unowned self] in
+  private let persistenceSaveInterval: Duration
+  private lazy var persistence = PlaybackPersistence(
+    defaults: persistenceDefaults, saveInterval: persistenceSaveInterval,
+  ) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        // While loading, the engine still reports the previous item's position.
-        of: $0, state: state, position: state == .loading ? deferredSeek.target ?? 0 : engine.currentTime,
+        of: $0, state: state, position: enginePositionIsCurrent ? engine.currentTime : deferredSeek.target ?? 0,
         repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
     }
+  }
+
+  /// Whether the engine reports this Load's position: not before one of its items is prepared,
+  /// nor while one reloads.
+  private var enginePositionIsCurrent: Bool {
+    state != .loading && load?.itemPrepared == true
+  }
+
+  /// Where a reload resumes this Load.
+  private var resumePosition: TimeInterval? {
+    enginePositionIsCurrent ? engine.resumePosition : deferredSeek.target
   }
 
   // MARK: - Track State (for active track changed events)
@@ -232,17 +247,21 @@ final class Player {
 
   // MARK: - Init
 
-  /// - Parameter persistenceDefaults: Where the resume snapshot is kept.
+  /// - Parameters:
+  ///   - persistenceDefaults: Where the resume snapshot is kept.
+  ///   - persistenceSaveInterval: How often the snapshot is saved while the play intent is active.
   init(
     engine: any PlayerEngine,
     retry: RetryLoop = RetryLoop(),
     sleepTimerManager: SleepTimerManager = SleepTimerManager(),
     persistenceDefaults: UserDefaults = PlaybackPersistence.standardDefaults,
+    persistenceSaveInterval: Duration = .seconds(5),
   ) {
     self.engine = engine
     self.retry = retry
     self.sleepTimerManager = sleepTimerManager
     self.persistenceDefaults = persistenceDefaults
+    self.persistenceSaveInterval = persistenceSaveInterval
     engine.onEvent = { [weak self] in self?.engineDidEmit($0) }
 
     // Configure sleep timer
@@ -831,10 +850,8 @@ final class Player {
 
   /// Loads the current track again from its resolved URL.
   func reload(startFromCurrentTime: Bool) {
-    let time = startFromCurrentTime ? engine.resumePosition : nil
-    prepareForReload()
+    prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)
     engine.loadResolved()
-    if let time { seek(to: time) }
   }
 
   /// Loads the current track again, re-running the media-URL resolver, so a consumer whose
@@ -845,15 +862,14 @@ final class Player {
       reload(startFromCurrentTime: startFromCurrentTime)
       return
     }
-    let time = startFromCurrentTime ? engine.resumePosition : nil
-    prepareForReload()
+    prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)
     engine.resolveAndLoad(src: src, track: track)
-    if let time { seek(to: time) }
   }
 
   /// A restart from a terminal error begins a new Load on a new AVPlayer; automatic retries
-  /// never get here in .error, since the retry loop keeps the state non-terminal.
-  private func prepareForReload() {
+  /// never get here in .error, since the retry loop keeps the state non-terminal. `time` is held
+  /// as the deferred seek before the loading transition saves the snapshot.
+  private func prepareForReload(resumingAt time: TimeInterval?) {
     if state == .error {
       beginLoad()
       clearItem()
@@ -863,6 +879,7 @@ final class Player {
       engine.dropAsset()
       engine.pause()
     }
+    if let time { deferredSeek.capture(time) }
     transition(.trackLoading)
   }
 
@@ -892,6 +909,7 @@ final class Player {
   private func engineDidEmit(_ event: EngineEvent) {
     switch event {
     case let .itemPrepared(likelyToKeepUp):
+      load?.itemPrepared = true
       if playWhenReady { engine.play() }
       if !beginDeferredSeek(), likelyToKeepUp { avItemDidUpdatePlaybackLikelyToKeepUp(true) }
     case let .loadFailed(error):

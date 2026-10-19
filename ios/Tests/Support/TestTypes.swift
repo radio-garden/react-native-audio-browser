@@ -121,10 +121,11 @@ func makePlayer(
   retry: RetryLoop = makeRetryLoop(),
   retries: Bool = true,
   sleepTimer: SleepTimerManager = SleepTimerManager(scheduler: ManualSleepTimerScheduler()),
+  saveInterval: Duration = .seconds(5),
 ) -> Player {
   let player = Player(
     engine: engine, retry: retry, sleepTimerManager: sleepTimer,
-    persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!,
+    persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
   retry.shouldRetry = { retries }
   return player
