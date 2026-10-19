@@ -20,7 +20,7 @@ final class CarPlaySession {
 
   private var subscriptions: [Subscription] = []
   private var tasks: [UUID: Task<Void, Never>] = [:]
-  private var ended = false
+  private(set) var ended = false
 
   /// Paths whose pushed template has not appeared yet; guards a double tap, since
   /// `topTemplate` only shows a push once it lands.

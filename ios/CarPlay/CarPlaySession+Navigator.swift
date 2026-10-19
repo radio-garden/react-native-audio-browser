@@ -6,6 +6,11 @@ extension CarPlaySession {
   /// pushes its destination and fills it in, and playback owns its loading state on Now Playing.
   func select(_ track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
+    // A tap queued before `end()`: the next run owns the screen.
+    guard !ended else {
+      completion()
+      return
+    }
 
     if track.src != nil, let identity = track.identity, player?.currentTrack?.identity == identity {
       try? audioBrowser.play()
@@ -26,7 +31,10 @@ extension CarPlaySession {
     spawn { session in
       guard let player = session.player else { return }
       let result = await session.trackSelector.select(track: track, player: player)
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled else {
+        if track.src != nil { session.restoreNowPlaying() }
+        return
+      }
       switch result {
       case let .play(intent):
         session.player?.execute(intent)
@@ -38,6 +46,17 @@ extension CarPlaySession {
       case .none:
         break
       }
+    }
+  }
+
+  /// Puts the current track back on the now-playing surface, over a tapped one that won't play.
+  private func restoreNowPlaying() {
+    guard let engine = audioBrowser.engine else { return }
+    if let current = player?.currentTrack {
+      engine.loadNowPlayingMetadata(for: current)
+      engine.nowPlayingUpdater.render()
+    } else {
+      engine.clearNowPlaying()
     }
   }
 
