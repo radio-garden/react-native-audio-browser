@@ -33,8 +33,9 @@ final class CarPlaySession {
   /// down the pushed stack, so it waits until they are back at the root.
   var needsTabRebuild = false
 
-  /// True while `buildInitialInterface` queries the tabs, whose change event it handles itself.
-  var isBuildingInitialInterface = false
+  /// The tabs the current root was built from; their change event, which the browser delivers
+  /// after the build has begun, has nothing left to change.
+  var builtTabs: [Track]?
 
   /// Bumped by every root build (initial interface, tab bar, root error). A build that
   /// suspended and finds it bumped has been superseded, and leaves the root alone.
@@ -124,6 +125,7 @@ final class CarPlaySession {
 
   /// Starts a root build; pass the result to `isCurrent(_:)` after every suspension.
   func beginRootBuild() -> UInt {
+    builtTabs = nil
     rootBuildGeneration &+= 1
     return rootBuildGeneration
   }

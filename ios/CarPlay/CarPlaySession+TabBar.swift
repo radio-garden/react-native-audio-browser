@@ -19,12 +19,7 @@ extension CarPlaySession {
       interfaceController.safeSetRoot(CPListTemplate.loading(title: nil, path: nil, loadingTitle: loadingTitle), animated: false)
     }
     do {
-      // Only the query's own tabs event is this build's to skip: a change that arrives while the
-      // tab bar loads its first page must still reach `tabsChanged`.
-      isBuildingInitialInterface = true
-      defer { isBuildingInitialInterface = false }
       let tabs = try await audioBrowser.browserManager.queryTabs()
-      isBuildingInitialInterface = false
       guard isCurrent(build) else { return }
       await showTabBar(tabs)
     } catch {
@@ -37,6 +32,7 @@ extension CarPlaySession {
   /// gated tab becomes its gate page, an allowed one shows content.
   func showTabBar(_ allTabs: [Track]) async {
     let build = beginRootBuild()
+    builtTabs = allTabs
     let tabs = Array(Self.visibleTabs(allTabs).prefix(CPTabBarTemplate.maximumTabCount))
     let gated = audioBrowser.browseGate.isActive
 
@@ -83,8 +79,7 @@ extension CarPlaySession {
   /// The tabs changed: restamp their entries in place when the paths are the same, else
   /// rebuild, once the user is back at the root.
   func tabsChanged(_ tabs: [Track]) {
-    // The initial build queried these tabs and builds from them itself.
-    guard !isBuildingInitialInterface else { return }
+    guard !TabBarEntries.same(builtTabs, tabs) else { return }
     let visible = Self.visibleTabs(tabs)
     if !audioBrowser.browseGate.isActive,
        let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
@@ -94,6 +89,7 @@ extension CarPlaySession {
       for (template, tab) in zip(tabBar.templates, visible) {
         applyTabBarEntry(to: template, for: tab)
       }
+      builtTabs = tabs
       needsTabRebuild = false
       return
     }
