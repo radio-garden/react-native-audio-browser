@@ -108,8 +108,9 @@ final class NowPlayingUpdater {
     )
   }
 
-  /// Empties the now-playing surface and drops any artwork fetch in flight.
+  /// Empties the now-playing surface and drops any artwork fetch or formatter result in flight.
   func clearNowPlaying() {
+    renderGeneration &+= 1
     artworkLoadTask?.cancel()
     artworkLoadTask = nil
     nowPlayingInfoController.clear()
