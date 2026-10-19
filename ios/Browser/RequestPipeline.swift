@@ -29,8 +29,9 @@ final class RequestPipeline {
   }
 
   /// The request and browse layers of the current config: each resolver's result, or the
-  /// static layer when it has none. Both resolvers run at once, and a config change or
-  /// `clearContentCache` while they run resolves them again.
+  /// static layer when it has none. The resolvers run one after the other, request first, as on
+  /// Android and web, and a config change or `clearContentCache` while they run resolves them
+  /// again.
   func resolvedLayers() async throws -> ResolvedLayers {
     try await layers.value { [weak self] in
       guard let self else { throw CancellationError() }
@@ -38,12 +39,9 @@ final class RequestPipeline {
       let config = self.config
       // The resolver is Promise-only (the TS layer wraps a sync-or-async thunk in
       // Promise.resolve), so its result is the JS promise behind the bridge promise.
-      let request = config.requestResolver?()
-      let browse = config.browseResolver?()
-      return try await ResolvedLayers(
-        request: request?.await().await() ?? config.request,
-        browse: browse?.await().await() ?? config.browse,
-      )
+      let request = try await config.requestResolver?().await().await() ?? config.request
+      let browse = try await config.browseResolver?().await().await() ?? config.browse
+      return ResolvedLayers(request: request, browse: browse)
     }
   }
 
@@ -76,7 +74,7 @@ final class RequestPipeline {
   /// completely" (it is handed only the base, so the route config's own static
   /// query would otherwise be dropped). `routeConfig` is nil for the implicit
   /// browse default; `kind` names the per-kind layer, nil for kinds with none. The request and
-  /// kind layers come from one resolution, so a config change mid-request can't mix them.
+  /// kind layers come from one resolution; `routeConfig` from the caller's config.
   func buildApiRequest(
     kind: KeyPath<ResolvedLayers, TransformableRequestConfig?>?,
     _ routeConfig: TransformableRequestConfig?,
