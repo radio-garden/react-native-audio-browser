@@ -8,7 +8,8 @@ private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaInten
 /// search → queue → play, then surface Now Playing.
 enum MediaIntentPlayback {
   /// Callable before the bridge exists: it waits, within the assistant's budget, for the player
-  /// and a configured browser, which come up once React Native boots.
+  /// and a configured browser, which come up once React Native boots. Each await may outlive the
+  /// player (a JS reload replaces it), so it is looked up again after one.
   @MainActor
   static func play(criteria: MediaIntentCriteria) async -> Bool {
     guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
@@ -22,10 +23,13 @@ enum MediaIntentPlayback {
         logger.info("resume: warm — playing current track")
         player.play()
       } else {
-        let resumed = await player.resumePersisted { path in
-          try? await browser.browserManager.expandQueueFromContextualPath(path)
+        guard let session = player.persistedSession() else { return false }
+        var expanded: (tracks: [Track], selectedIndex: Int)?
+        if let path = session.track.path {
+          expanded = try? await browser.browserManager.expandQueueFromContextualPath(path)
         }
-        guard resumed else { return false }
+        guard let player = browser.getPlayer() else { return false }
+        player.resume(session, queue: expanded)
       }
       browser.showNowPlayingRequestedEmitter.emit(())
       return true
@@ -49,7 +53,8 @@ enum MediaIntentPlayback {
       return false
     }
     do {
-      guard let tracks = try await browser.browserManager.searchPlayable(params) else { return false }
+      guard let tracks = try await browser.browserManager.searchPlayable(params),
+            let player = browser.getPlayer() else { return false }
       player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
       browser.showNowPlayingRequestedEmitter.emit(())
       return true

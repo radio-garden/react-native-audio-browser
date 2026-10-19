@@ -349,6 +349,37 @@ struct PlayerReviewRegressionTests {
     player.pause()
   }
 
+  /// A persisted session resumes its settings, then its track at the saved position.
+  @Test func aPersistedSessionResumesWhereItWasSaved() throws {
+    let defaults = UserDefaults(suiteName: "PlayerTests")!
+    defaults.removePersistentDomain(forName: "PlayerTests")
+    let saved = PersistedPlaybackState(
+      track: JsonTrack(from: Track(id: "t1", src: "https://example.com/a.mp3", title: "A")),
+      positionMs: 30000, repeatMode: "queue", shuffleEnabled: false, playbackSpeed: 1.5,
+    )
+    PlaybackPersistence(defaults: defaults) { saved }.save()
+
+    let player = makePlayer(retries: false)
+    let session = try #require(player.persistedSession())
+    player.resume(session, queue: nil)
+    #expect(player.currentTrack?.id == "t1")
+    #expect(player.deferredSeek.target == 30)
+    #expect(player.repeatMode == .queue)
+    #expect(player.rate == 1.5)
+    #expect(player.playWhenReady)
+  }
+
+  @Test func aDisabledPersistedTrackIsNotResumed() {
+    let defaults = UserDefaults(suiteName: "PlayerTests")!
+    defaults.removePersistentDomain(forName: "PlayerTests")
+    let saved = PersistedPlaybackState(
+      track: JsonTrack(from: Track(id: "t1", src: "https://example.com/a.mp3", title: "A", disabled: true)),
+      positionMs: nil, repeatMode: "off", shuffleEnabled: false, playbackSpeed: 1,
+    )
+    PlaybackPersistence(defaults: defaults) { saved }.save()
+    #expect(makePlayer(retries: false).persistedSession() == nil)
+  }
+
   /// Leaving an errored track publishes the new track's loading state once, never an error
   /// state without its error.
   @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {

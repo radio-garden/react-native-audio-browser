@@ -1019,21 +1019,24 @@ final class Player {
 
   // MARK: - Resume
 
-  /// Plays the last persisted session (a cold-start resume): its settings, then its queue —
-  /// `expandQueue`'s expansion of the track's contextual path, or the track alone. False when
-  /// nothing was persisted, or the track has since become `disabled`, which never plays.
-  func resumePersisted(
-    expandQueue: (_ path: String) async -> (tracks: [Track], selectedIndex: Int)?,
-  ) async -> Bool {
+  /// The last persisted session; nil when nothing was persisted, or its track has since become
+  /// `disabled`, which never plays.
+  func persistedSession() -> PersistedPlaybackState? {
     guard let snapshot = persistence.load() else {
       logger.error("resume: nothing persisted")
-      return false
+      return nil
     }
-    let track = snapshot.track.toNitro()
-    guard track.disabled != true else {
+    guard snapshot.track.disabled != true else {
       logger.info("resume: persisted track is disabled — refusing")
-      return false
+      return nil
     }
+    return snapshot
+  }
+
+  /// Plays a persisted session (a cold-start resume): its settings, then its queue — `expanded`,
+  /// the expansion of the track's contextual path, or the track alone.
+  func resume(_ snapshot: PersistedPlaybackState, queue expanded: (tracks: [Track], selectedIndex: Int)?) {
+    let track = snapshot.track.toNitro()
     logger.info("resume: cold — restoring persisted track")
     // Settings first: `setQueue` builds the shuffle order, and the mode events then precede the
     // queue change, as on Android.
@@ -1041,12 +1044,11 @@ final class Player {
     shuffleEnabled = snapshot.shuffleEnabled
     rate = snapshot.playbackSpeed
     let startMs = track.live == true ? nil : snapshot.positionMs
-    if let path = snapshot.track.path, let expanded = await expandQueue(path) {
+    if let expanded {
       setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
     } else {
       setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
     }
-    return true
   }
 
   /// Plays what `TrackSelector` resolved a picked track to.
