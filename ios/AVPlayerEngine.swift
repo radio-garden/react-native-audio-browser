@@ -58,11 +58,11 @@ final class AVPlayerEngine: PlayerEngine {
   /// Releases the player for good: the now-playing session, the observers and the remote
   /// commands go with it.
   func destroy() {
-    remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
+    remoteCommandController.disableAll()
+    nowPlayingInfoController.unlinkPlayer()
     playerObserver?.invalidate()
     playerObserver = nil
     stopObservingItem()
-    remoteCommandController.disableAll()
   }
 
   /// Re-requests the now-playing election, which the system may have declined at link time while
@@ -169,7 +169,7 @@ final class AVPlayerEngine: PlayerEngine {
 
   func recreate() {
     playerObserver?.invalidate()
-    remoteCommandController.switchCommandCenter(nowPlayingInfoController.unlinkPlayer())
+    nowPlayingInfoController.unlinkPlayer()
     avPlayer = AVPlayer()
     setUpAVPlayer()
   }

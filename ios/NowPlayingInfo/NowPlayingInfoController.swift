@@ -60,15 +60,14 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Unlinks the AVPlayer and tears down the session; returns the shared command center, which
-  /// remote commands fall back to.
-  func unlinkPlayer() -> MPRemoteCommandCenter {
+  /// Unlinks the AVPlayer and tears down the session with its command center. Remote commands
+  /// never fall back to the shared center, whose targets belong to the host app.
+  func unlinkPlayer() {
     logger.info("Unlinking AVPlayer from MPNowPlayingSession")
 
     linkedPlayer = nil
     nowPlayingSession?.automaticallyPublishesNowPlayingInfo = false
     nowPlayingSession = nil
-    return MPRemoteCommandCenter.shared()
   }
 
   /// Keys the session derives from the player itself — we never set these manually,
