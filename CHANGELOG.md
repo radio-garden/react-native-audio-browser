@@ -1,3 +1,9 @@
+## [0.2.0-next.24](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.23...v0.2.0-next.24) (2026-10-19)
+
+### Features
+
+* pass the request kind to formatNavigationError ([765dc5c](https://github.com/radio-garden/react-native-audio-browser/commit/765dc5cffd460cd76a5bd65e80d70fbca485c25e))
+
 ## [0.2.0-next.23](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.22...v0.2.0-next.23) (2026-10-01)
 
 ### Bug Fixes
