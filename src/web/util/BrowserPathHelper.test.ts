@@ -50,3 +50,19 @@ describe('BrowserPathHelper contextual URL round-trip', () => {
     ).toBeUndefined()
   })
 })
+
+describe('BrowserPathHelper.navigationErrorKind', () => {
+  it('is a search for a search path and a browse for anything else', () => {
+    expect(
+      BrowserPathHelper.navigationErrorKind(
+        BrowserPathHelper.createSearchPath('jazz')
+      )
+    ).toBe('search')
+    expect(BrowserPathHelper.navigationErrorKind('/search?q=jazz')).toBe(
+      'browse'
+    )
+    expect(BrowserPathHelper.navigationErrorKind('/__searchable')).toBe(
+      'browse'
+    )
+  })
+})

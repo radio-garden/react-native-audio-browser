@@ -77,6 +77,8 @@ namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `NavigationErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorKind; }
 // Forward declaration of `GateDecision` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct GateDecision; }
 // Forward declaration of `NativeGateRequest` to properly resolve imports.
@@ -305,6 +307,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "FormatNavigationErrorParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
 #include "JFormatNavigationErrorParams.hpp"
+#include "NavigationErrorKind.hpp"
+#include "JNavigationErrorKind.hpp"
 #include "GateDecision.hpp"
 #include "NativeGateRequest.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest.hpp"

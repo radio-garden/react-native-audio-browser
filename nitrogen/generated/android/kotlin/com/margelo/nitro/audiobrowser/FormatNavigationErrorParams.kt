@@ -25,7 +25,10 @@ data class FormatNavigationErrorParams(
   val defaultFormatted: FormattedNavigationError,
   @DoNotStrip
   @Keep
-  val path: String
+  val path: String,
+  @DoNotStrip
+  @Keep
+  val kind: NavigationErrorKind
 ) {
   /* primary constructor */
 
@@ -37,8 +40,8 @@ data class FormatNavigationErrorParams(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(error: NavigationError, defaultFormatted: FormattedNavigationError, path: String): FormatNavigationErrorParams {
-      return FormatNavigationErrorParams(error, defaultFormatted, path)
+    private fun fromCpp(error: NavigationError, defaultFormatted: FormattedNavigationError, path: String, kind: NavigationErrorKind): FormatNavigationErrorParams {
+      return FormatNavigationErrorParams(error, defaultFormatted, path, kind)
     }
   }
 }

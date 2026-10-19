@@ -2,6 +2,7 @@ package com.audiobrowser.util
 
 import android.net.Uri
 import androidx.core.net.toUri
+import com.margelo.nitro.audiobrowser.NavigationErrorKind
 import java.net.URLEncoder
 
 /**
@@ -48,6 +49,11 @@ object BrowserPathHelper {
 
   // Query parameter name for the tapped child's page position (tie-breaker)
   private const val CONTEXTUAL_INDEX_PARAM = "__index"
+
+  /** Whether a navigation error on this path came from a browse or a search */
+  fun navigationErrorKind(path: String): NavigationErrorKind =
+    if (path.startsWith("$SEARCH_PATH_PREFIX?")) NavigationErrorKind.SEARCH
+    else NavigationErrorKind.BROWSE
 
   /** Check if a path is a special system path (not a regular navigation path) */
   fun isSpecialPath(path: String): Boolean {

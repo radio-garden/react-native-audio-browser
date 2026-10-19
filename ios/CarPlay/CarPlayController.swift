@@ -784,6 +784,7 @@ public final class RNABCarPlayController: NSObject {
     guard let formatter = config.formatNavigationError else { return fallback }
     let params = FormatNavigationErrorParams(
       error: navError, defaultFormatted: fallback, path: path,
+      kind: NavigationErrorKind(path: path),
     )
     do {
       let custom = try await formatter(params).await()
@@ -1317,7 +1318,10 @@ public final class RNABCarPlayController: NSObject {
     if let formatter = config.formatNavigationError {
       logger.debug("Calling formatNavigationError callback...")
       // Call the JS callback and handle result
-      let params = FormatNavigationErrorParams(error: error, defaultFormatted: defaultFormatted, path: path)
+      let params = FormatNavigationErrorParams(
+        error: error, defaultFormatted: defaultFormatted, path: path,
+        kind: NavigationErrorKind(path: path),
+      )
       // The result callbacks are @Sendable and hop back explicitly: Nitro resolves
       // its promises synchronously on the JS thread, so a plain closure would
       // inherit this type's MainActor isolation and trap on entry under Swift 6's
