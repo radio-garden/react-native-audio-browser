@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class TrackLoadEvent(
   val startIndex: Double
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TrackLoadEvent) return false
+    return Objects.deepEquals(this.track, other.track)
+      && Objects.deepEquals(this.queue, other.queue)
+      && Objects.deepEquals(this.startIndex, other.startIndex)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      track,
+      queue,
+      startIndex
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class Output(
   val external: Boolean
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is Output) return false
+    return Objects.deepEquals(this.type, other.type)
+      && Objects.deepEquals(this.name, other.name)
+      && Objects.deepEquals(this.external, other.external)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      type,
+      name,
+      external
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

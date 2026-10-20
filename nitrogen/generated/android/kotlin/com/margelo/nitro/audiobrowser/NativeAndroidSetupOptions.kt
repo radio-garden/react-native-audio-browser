@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.NullType
 
 /**
@@ -49,6 +50,36 @@ data class NativeAndroidSetupOptions(
   val wakeMode: AndroidPlayerWakeMode?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeAndroidSetupOptions) return false
+    return Objects.deepEquals(this.minBuffer, other.minBuffer)
+      && Objects.deepEquals(this.audioOffload, other.audioOffload)
+      && Objects.deepEquals(this.maxBuffer, other.maxBuffer)
+      && Objects.deepEquals(this.backBuffer, other.backBuffer)
+      && Objects.deepEquals(this.playBuffer, other.playBuffer)
+      && Objects.deepEquals(this.rebufferBuffer, other.rebufferBuffer)
+      && Objects.deepEquals(this.maxCacheSize, other.maxCacheSize)
+      && Objects.deepEquals(this.audioContentType, other.audioContentType)
+      && Objects.deepEquals(this.handleAudioBecomingNoisy, other.handleAudioBecomingNoisy)
+      && Objects.deepEquals(this.wakeMode, other.wakeMode)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      minBuffer,
+      audioOffload,
+      maxBuffer,
+      backBuffer,
+      playBuffer,
+      rebufferBuffer,
+      maxCacheSize,
+      audioContentType,
+      handleAudioBecomingNoisy,
+      wakeMode
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

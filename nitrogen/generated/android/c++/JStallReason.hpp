@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "StallReason" and the the Kotlin enum "StallReason".
+   * The C++ JNI bridge between the C++ enum "StallReason" and the Kotlin enum "StallReason".
    */
   struct JStallReason final: public jni::JavaClass<JStallReason> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/StallReason;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/StallReason;";
 
   public:
     /**

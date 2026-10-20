@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_std__vector_Track__cxx: Func_void_std__vector_Track_ {
   override fun invoke(tabs: Array<Track>): Unit
     = invoke_cxx(tabs)
 
-  @FastNative
   private external fun invoke_cxx(tabs: Array<Track>): Unit
 }
 

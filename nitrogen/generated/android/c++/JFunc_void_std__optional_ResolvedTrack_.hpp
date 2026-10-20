@@ -59,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__optional_ResolvedTrack_: public jni::JavaClass<JFunc_void_std__optional_ResolvedTrack_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack_;";
 
   public:
     /**
@@ -95,7 +95,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack__cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack__cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_std__optional_ResolvedTrack__cxx::invoke_cxx)});
     }

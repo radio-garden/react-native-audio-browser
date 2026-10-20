@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -34,6 +35,26 @@ data class FormatNowPlayingParams(
   val error: PlaybackError?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is FormatNowPlayingParams) return false
+    return Objects.deepEquals(this.track, other.track)
+      && Objects.deepEquals(this.timedMetadata, other.timedMetadata)
+      && Objects.deepEquals(this.playWhenReady, other.playWhenReady)
+      && Objects.deepEquals(this.stalled, other.stalled)
+      && Objects.deepEquals(this.error, other.error)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      track,
+      timedMetadata,
+      playWhenReady,
+      stalled,
+      error
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

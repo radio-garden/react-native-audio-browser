@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.Promise
 
 /**
@@ -62,6 +63,42 @@ data class ArtworkRequestConfig(
    */
   constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, resolveSync: ((track: Track) -> Promise<RequestConfig>)?, transform: ((params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, transformSync: ((params: MediaTransformParams) -> Promise<RequestConfig>)?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
          this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, resolveSync?.let { Func_std__shared_ptr_Promise_RequestConfig___Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_java(it) }, transformSync?.let { Func_std__shared_ptr_Promise_RequestConfig___MediaTransformParams_java(it) }, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ArtworkRequestConfig) return false
+    return Objects.deepEquals(this.resolve, other.resolve)
+      && Objects.deepEquals(this.resolveSync, other.resolveSync)
+      && Objects.deepEquals(this.transform, other.transform)
+      && Objects.deepEquals(this.transformSync, other.transformSync)
+      && Objects.deepEquals(this.imageQueryParams, other.imageQueryParams)
+      && Objects.deepEquals(this.method, other.method)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.baseUrl, other.baseUrl)
+      && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.query, other.query)
+      && Objects.deepEquals(this.body, other.body)
+      && Objects.deepEquals(this.contentType, other.contentType)
+      && Objects.deepEquals(this.userAgent, other.userAgent)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      resolve,
+      resolveSync,
+      transform,
+      transformSync,
+      imageQueryParams,
+      method,
+      path,
+      baseUrl,
+      headers,
+      query,
+      body,
+      contentType,
+      userAgent
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

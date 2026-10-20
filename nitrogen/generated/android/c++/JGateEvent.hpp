@@ -18,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "GateEvent" and the the Kotlin data class "GateEvent".
+   * The C++ JNI bridge between the C++ struct "GateEvent" and the Kotlin data class "GateEvent".
    */
   struct JGateEvent final: public jni::JavaClass<JGateEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/GateEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/GateEvent;";
 
   public:
     /**

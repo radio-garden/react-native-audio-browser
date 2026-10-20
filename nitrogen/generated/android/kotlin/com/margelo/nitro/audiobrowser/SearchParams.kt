@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -43,6 +44,32 @@ data class SearchParams(
   val reference: MediaReference
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is SearchParams) return false
+    return Objects.deepEquals(this.mode, other.mode)
+      && Objects.deepEquals(this.query, other.query)
+      && Objects.deepEquals(this.genre, other.genre)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.playlist, other.playlist)
+      && Objects.deepEquals(this.reference, other.reference)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      mode,
+      query,
+      genre,
+      artist,
+      album,
+      title,
+      playlist,
+      reference
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

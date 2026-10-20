@@ -24,7 +24,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JVariant_String_ArtworkVariants: public jni::JavaClass<JVariant_String_ArtworkVariants> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants;";
 
     static jni::local_ref<JVariant_String_ArtworkVariants> create_0(jni::alias_ref<jni::JString> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JVariant_String_ArtworkVariants(jni::alias_ref<jni::JString>)>("create");
@@ -49,7 +49,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JVariant_String_ArtworkVariants_impl {
     class First final: public jni::JavaClass<First, JVariant_String_ArtworkVariants> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants$First;";
     
       [[nodiscard]] jni::local_ref<jni::JString> getValue() const {
         static const auto field = javaClassStatic()->getField<jni::JString>("value");
@@ -59,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JVariant_String_ArtworkVariants> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_String_ArtworkVariants$Second;";
     
       [[nodiscard]] jni::local_ref<JArtworkVariants> getValue() const {
         static const auto field = javaClassStatic()->getField<JArtworkVariants>("value");

@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "PlaybackErrorKind" and the the Kotlin enum "PlaybackErrorKind".
+   * The C++ JNI bridge between the C++ enum "PlaybackErrorKind" and the Kotlin enum "PlaybackErrorKind".
    */
   struct JPlaybackErrorKind final: public jni::JavaClass<JPlaybackErrorKind> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackErrorKind;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackErrorKind;";
 
   public:
     /**

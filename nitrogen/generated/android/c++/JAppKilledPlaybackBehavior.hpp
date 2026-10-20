@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "AppKilledPlaybackBehavior" and the the Kotlin enum "AppKilledPlaybackBehavior".
+   * The C++ JNI bridge between the C++ enum "AppKilledPlaybackBehavior" and the Kotlin enum "AppKilledPlaybackBehavior".
    */
   struct JAppKilledPlaybackBehavior final: public jni::JavaClass<JAppKilledPlaybackBehavior> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AppKilledPlaybackBehavior;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AppKilledPlaybackBehavior;";
 
   public:
     /**

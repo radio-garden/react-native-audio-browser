@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -46,6 +47,34 @@ data class NowPlayingMetadata(
   val genre: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NowPlayingMetadata) return false
+    return Objects.deepEquals(this.elapsedTime, other.elapsedTime)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.duration, other.duration)
+      && Objects.deepEquals(this.artwork, other.artwork)
+      && Objects.deepEquals(this.description, other.description)
+      && Objects.deepEquals(this.mediaId, other.mediaId)
+      && Objects.deepEquals(this.genre, other.genre)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      elapsedTime,
+      title,
+      album,
+      artist,
+      duration,
+      artwork,
+      description,
+      mediaId,
+      genre
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

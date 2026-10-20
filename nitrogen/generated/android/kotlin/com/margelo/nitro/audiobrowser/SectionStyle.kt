@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -43,6 +44,32 @@ data class SectionStyle(
   val cardImage: CardImage?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is SectionStyle) return false
+    return Objects.deepEquals(this.gridWrap, other.gridWrap)
+      && Objects.deepEquals(this.gridTile, other.gridTile)
+      && Objects.deepEquals(this.display, other.display)
+      && Objects.deepEquals(this.artworkRendering, other.artworkRendering)
+      && Objects.deepEquals(this.imageShape, other.imageShape)
+      && Objects.deepEquals(this.accessorySymbol, other.accessorySymbol)
+      && Objects.deepEquals(this.cardTint, other.cardTint)
+      && Objects.deepEquals(this.cardImage, other.cardImage)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      gridWrap,
+      gridTile,
+      display,
+      artworkRendering,
+      imageShape,
+      accessorySymbol,
+      cardTint,
+      cardImage
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

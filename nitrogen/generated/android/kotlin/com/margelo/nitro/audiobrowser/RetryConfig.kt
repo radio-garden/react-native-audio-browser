@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class RetryConfig(
   val firstConnectMaxRetryDurationMs: Double?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is RetryConfig) return false
+    return Objects.deepEquals(this.maxRetries, other.maxRetries)
+      && Objects.deepEquals(this.maxRetryDurationMs, other.maxRetryDurationMs)
+      && Objects.deepEquals(this.firstConnectMaxRetryDurationMs, other.firstConnectMaxRetryDurationMs)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      maxRetries,
+      maxRetryDurationMs,
+      firstConnectMaxRetryDurationMs
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

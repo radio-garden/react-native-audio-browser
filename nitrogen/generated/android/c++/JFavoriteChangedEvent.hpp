@@ -41,11 +41,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "FavoriteChangedEvent" and the the Kotlin data class "FavoriteChangedEvent".
+   * The C++ JNI bridge between the C++ struct "FavoriteChangedEvent" and the Kotlin data class "FavoriteChangedEvent".
    */
   struct JFavoriteChangedEvent final: public jni::JavaClass<JFavoriteChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FavoriteChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FavoriteChangedEvent;";
 
   public:
     /**

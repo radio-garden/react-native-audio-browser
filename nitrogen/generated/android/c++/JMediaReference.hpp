@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "MediaReference" and the the Kotlin enum "MediaReference".
+   * The C++ JNI bridge between the C++ enum "MediaReference" and the Kotlin enum "MediaReference".
    */
   struct JMediaReference final: public jni::JavaClass<JMediaReference> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaReference;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaReference;";
 
   public:
     /**

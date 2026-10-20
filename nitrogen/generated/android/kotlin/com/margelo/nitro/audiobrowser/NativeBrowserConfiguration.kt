@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.Promise
 
 /**
@@ -71,6 +72,48 @@ data class NativeBrowserConfiguration(
    */
   constructor(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?, androidControllerOfflineError: Boolean?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((track: Track) -> Promise<String?>)?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
          this(path, request, requestResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, browse, browseResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_java(it) }, androidControllerOfflineError, viewMoreTitle?.let { Func_std__shared_ptr_Promise_std__string___java(it) }, carPlayLoadingTitle, resolveAlbumPath?.let { Func_std__shared_ptr_Promise_std__optional_std__string____Track_java(it) }, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeBrowserConfiguration) return false
+    return Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.request, other.request)
+      && Objects.deepEquals(this.requestResolver, other.requestResolver)
+      && Objects.deepEquals(this.browse, other.browse)
+      && Objects.deepEquals(this.browseResolver, other.browseResolver)
+      && Objects.deepEquals(this.media, other.media)
+      && Objects.deepEquals(this.artwork, other.artwork)
+      && Objects.deepEquals(this.nowPlayingArtwork, other.nowPlayingArtwork)
+      && Objects.deepEquals(this.routes, other.routes)
+      && Objects.deepEquals(this.singleTrack, other.singleTrack)
+      && Objects.deepEquals(this.handleTrackLoad, other.handleTrackLoad)
+      && Objects.deepEquals(this.androidControllerOfflineError, other.androidControllerOfflineError)
+      && Objects.deepEquals(this.viewMoreTitle, other.viewMoreTitle)
+      && Objects.deepEquals(this.carPlayLoadingTitle, other.carPlayLoadingTitle)
+      && Objects.deepEquals(this.resolveAlbumPath, other.resolveAlbumPath)
+      && Objects.deepEquals(this.formatNavigationError, other.formatNavigationError)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      path,
+      request,
+      requestResolver,
+      browse,
+      browseResolver,
+      media,
+      artwork,
+      nowPlayingArtwork,
+      routes,
+      singleTrack,
+      handleTrackLoad,
+      androidControllerOfflineError,
+      viewMoreTitle,
+      carPlayLoadingTitle,
+      resolveAlbumPath,
+      formatNavigationError
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

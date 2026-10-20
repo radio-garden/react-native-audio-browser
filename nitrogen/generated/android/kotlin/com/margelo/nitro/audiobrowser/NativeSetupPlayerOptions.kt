@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.Promise
 
 /**
@@ -50,6 +51,34 @@ data class NativeSetupPlayerOptions(
    */
   constructor(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?):
          this(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter?.let { Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_java(it) }, playWhenReady, repeatMode, retry, keepSessionAliveOnError)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeSetupPlayerOptions) return false
+    return Objects.deepEquals(this.android, other.android)
+      && Objects.deepEquals(this.ios, other.ios)
+      && Objects.deepEquals(this.options, other.options)
+      && Objects.deepEquals(this.autoUpdateNowPlayingMetadata, other.autoUpdateNowPlayingMetadata)
+      && Objects.deepEquals(this.nowPlayingMetadataFormatter, other.nowPlayingMetadataFormatter)
+      && Objects.deepEquals(this.playWhenReady, other.playWhenReady)
+      && Objects.deepEquals(this.repeatMode, other.repeatMode)
+      && Objects.deepEquals(this.retry, other.retry)
+      && Objects.deepEquals(this.keepSessionAliveOnError, other.keepSessionAliveOnError)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      android,
+      ios,
+      options,
+      autoUpdateNowPlayingMetadata,
+      nowPlayingMetadataFormatter,
+      playWhenReady,
+      repeatMode,
+      retry,
+      keepSessionAliveOnError
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

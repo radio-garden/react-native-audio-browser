@@ -39,11 +39,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "Track" and the the Kotlin data class "Track".
+   * The C++ JNI bridge between the C++ struct "Track" and the Kotlin data class "Track".
    */
   struct JTrack final: public jni::JavaClass<JTrack> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Track;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Track;";
 
   public:
     /**

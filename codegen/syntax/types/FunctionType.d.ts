@@ -7,6 +7,7 @@ export interface GetFunctionCodeOptions extends GetCodeOptions {
 export declare class FunctionType implements Type {
     readonly returnType: Type;
     readonly parameters: NamedType[];
+    readonly isSync: boolean;
     constructor(returnType: Type, parameters: NamedType[], isSync?: boolean);
     get specializationName(): string;
     get jsName(): string;

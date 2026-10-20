@@ -42,11 +42,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "TrackLoadEvent" and the the Kotlin data class "TrackLoadEvent".
+   * The C++ JNI bridge between the C++ struct "TrackLoadEvent" and the Kotlin data class "TrackLoadEvent".
    */
   struct JTrackLoadEvent final: public jni::JavaClass<JTrackLoadEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TrackLoadEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TrackLoadEvent;";
 
   public:
     /**
@@ -64,16 +64,16 @@ namespace margelo::nitro::audiobrowser {
       double startIndex = this->getFieldValue(fieldStartIndex);
       return TrackLoadEvent(
         track->toCpp(),
-        [&]() {
-          size_t __size = queue->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = queue->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }(),
+        }(queue),
         startIndex
       );
     }
@@ -90,16 +90,16 @@ namespace margelo::nitro::audiobrowser {
       return create(
         clazz,
         JTrack::fromCpp(value.track),
-        [&]() {
-          size_t __size = value.queue.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.queue[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JTrack::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }(),
+        }(value.queue),
         value.startIndex
       );
     }

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.NullType
 
 /**
@@ -37,6 +38,28 @@ data class Options(
   val ios: IOSOptions?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is Options) return false
+    return Objects.deepEquals(this.android, other.android)
+      && Objects.deepEquals(this.forwardJumpInterval, other.forwardJumpInterval)
+      && Objects.deepEquals(this.backwardJumpInterval, other.backwardJumpInterval)
+      && Objects.deepEquals(this.progressUpdateEventInterval, other.progressUpdateEventInterval)
+      && Objects.deepEquals(this.capabilities, other.capabilities)
+      && Objects.deepEquals(this.ios, other.ios)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      android,
+      forwardJumpInterval,
+      backwardJumpInterval,
+      progressUpdateEventInterval,
+      capabilities,
+      ios
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

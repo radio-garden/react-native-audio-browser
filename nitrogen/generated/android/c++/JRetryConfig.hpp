@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "RetryConfig" and the the Kotlin data class "RetryConfig".
+   * The C++ JNI bridge between the C++ struct "RetryConfig" and the Kotlin data class "RetryConfig".
    */
   struct JRetryConfig final: public jni::JavaClass<JRetryConfig> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RetryConfig;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RetryConfig;";
 
   public:
     /**

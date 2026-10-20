@@ -28,11 +28,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "SectionStyle" and the the Kotlin data class "SectionStyle".
+   * The C++ JNI bridge between the C++ struct "SectionStyle" and the Kotlin data class "SectionStyle".
    */
   struct JSectionStyle final: public jni::JavaClass<JSectionStyle> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SectionStyle;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SectionStyle;";
 
   public:
     /**

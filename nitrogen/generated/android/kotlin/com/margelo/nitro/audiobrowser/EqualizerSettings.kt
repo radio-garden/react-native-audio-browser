@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -43,6 +44,32 @@ data class EqualizerSettings(
   val upperBandLevelLimit: Double
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is EqualizerSettings) return false
+    return Objects.deepEquals(this.activePreset, other.activePreset)
+      && Objects.deepEquals(this.bandCount, other.bandCount)
+      && Objects.deepEquals(this.bandLevels, other.bandLevels)
+      && Objects.deepEquals(this.centerBandFrequencies, other.centerBandFrequencies)
+      && Objects.deepEquals(this.enabled, other.enabled)
+      && Objects.deepEquals(this.lowerBandLevelLimit, other.lowerBandLevelLimit)
+      && Objects.deepEquals(this.presets, other.presets)
+      && Objects.deepEquals(this.upperBandLevelLimit, other.upperBandLevelLimit)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      activePreset,
+      bandCount,
+      bandLevels,
+      centerBandFrequencies,
+      enabled,
+      lowerBandLevelLimit,
+      presets,
+      upperBandLevelLimit
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

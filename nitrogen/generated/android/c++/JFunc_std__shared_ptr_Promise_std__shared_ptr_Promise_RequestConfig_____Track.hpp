@@ -52,7 +52,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track: public jni::JavaClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track;";
 
   public:
     /**
@@ -134,7 +134,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::invoke_cxx)});
     }

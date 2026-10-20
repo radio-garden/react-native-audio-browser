@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class FormatNavigationErrorParams(
   val kind: NavigationErrorKind
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is FormatNavigationErrorParams) return false
+    return Objects.deepEquals(this.error, other.error)
+      && Objects.deepEquals(this.defaultFormatted, other.defaultFormatted)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.kind, other.kind)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      error,
+      defaultFormatted,
+      path,
+      kind
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

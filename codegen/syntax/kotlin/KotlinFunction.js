@@ -67,7 +67,6 @@ package ${packageName}
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 ${extraImports.join('\n')}
 
 /**
@@ -116,7 +115,6 @@ class ${name}_cxx: ${name} {
   override fun invoke(${kotlinParams.join(', ')}): ${kotlinReturnType}
     = invoke_cxx(${kotlinParamsForward.join(',')})
 
-  @FastNative
   private external fun invoke_cxx(${kotlinParams.join(', ')}): ${kotlinReturnType}
 }
 
@@ -177,7 +175,7 @@ class ${name}_java(private val function: ${lambdaSignature}): ${name} {
     let jniCallBody;
     if (functionType.returnType.kind === 'void') {
         // It returns void
-        cppCallBody = `_func(${indent(paramsForward.join(', '), '      ')});`;
+        cppCallBody = `_func(${paramsForward.join(', ')});`;
         jniCallBody = `
 static const auto method = javaClassStatic()->getMethod<${jniSignature}>("invoke");
 method(${jniParamsForward.join(', ')});
@@ -186,7 +184,7 @@ method(${jniParamsForward.join(', ')});
     else {
         // It returns a type!
         cppCallBody = `
-${functionType.returnType.getCode('c++')} __result = _func(${indent(paramsForward.join(', '), '      ')});
+${functionType.returnType.getCode('c++')} __result = _func(${paramsForward.join(', ')});
 return ${bridgedReturn.parseFromCppToKotlin('__result', 'c++')};
 `.trim();
         jniCallBody = `
@@ -359,7 +357,7 @@ namespace ${cxxNamespace} {
    */
   struct J${name}: public jni::JavaClass<J${name}> {
   public:
-    static auto constexpr kJavaDescriptor = "L${jniInterfaceDescriptor};";
+    static constexpr auto kJavaDescriptor = "L${jniInterfaceDescriptor};";
 
   public:
     /**
@@ -394,7 +392,7 @@ namespace ${cxxNamespace} {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "L${jniClassDescriptor};";
+    static constexpr auto kJavaDescriptor = "L${jniClassDescriptor};";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", J${name}_cxx::invoke_cxx)});
     }

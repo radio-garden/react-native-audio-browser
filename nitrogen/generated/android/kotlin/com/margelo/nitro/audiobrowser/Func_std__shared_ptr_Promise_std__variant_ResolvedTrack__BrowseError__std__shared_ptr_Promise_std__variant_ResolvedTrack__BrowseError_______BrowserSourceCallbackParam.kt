@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
 
 /**
@@ -59,7 +58,6 @@ class Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std_
   override fun invoke(param: BrowserSourceCallbackParam): Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>
     = invoke_cxx(param)
 
-  @FastNative
   private external fun invoke_cxx(param: BrowserSourceCallbackParam): Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>
 }
 
