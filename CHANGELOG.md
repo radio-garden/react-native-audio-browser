@@ -1,3 +1,10 @@
+## [0.2.0-next.27](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.26...v0.2.0-next.27) (2026-10-20)
+
+### Other changes
+
+* regenerate specs with the new vendored nitrogen ([24124e1](https://github.com/radio-garden/react-native-audio-browser/commit/24124e17bf2617a74939b8598f9850984f0c893c))
+* vendor nitrogen 0.37.1 with only the Swift traversal fix (margelo/nitro[#1387](https://github.com/radio-garden/react-native-audio-browser/issues/1387)) ([8b76540](https://github.com/radio-garden/react-native-audio-browser/commit/8b76540543557cfeb4982222b383b9a1966785b5)), closes [margelo/nitro#1232](https://github.com/margelo/nitro/issues/1232) [#1232](https://github.com/radio-garden/react-native-audio-browser/issues/1232) [#1232](https://github.com/radio-garden/react-native-audio-browser/issues/1232)
+
 ## [0.2.0-next.26](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.25...v0.2.0-next.26) (2026-10-20)
 
 ### Other changes
