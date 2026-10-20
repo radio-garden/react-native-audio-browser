@@ -1,3 +1,9 @@
+## [0.2.0-next.28](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.27...v0.2.0-next.28) (2026-10-20)
+
+### Bug Fixes
+
+* **android:** reject setupPlayer when the service bind failed ([bf3d211](https://github.com/radio-garden/react-native-audio-browser/commit/bf3d211f803fc42b124259dbe68a0fa7d516e63c)), closes [#157](https://github.com/radio-garden/react-native-audio-browser/issues/157)
+
 ## [0.2.0-next.27](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.26...v0.2.0-next.27) (2026-10-20)
 
 ### Other changes
