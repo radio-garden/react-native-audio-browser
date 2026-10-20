@@ -1,3 +1,9 @@
+## [0.2.0-next.25](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.24...v0.2.0-next.25) (2026-10-20)
+
+### Bug Fixes
+
+* **android:** answer without a player instead of throwing, as iOS does ([f975163](https://github.com/radio-garden/react-native-audio-browser/commit/f975163eb715de553c13922195e074fe23f5ba5e))
+
 ## [0.2.0-next.24](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.23...v0.2.0-next.24) (2026-10-19)
 
 ### Features
