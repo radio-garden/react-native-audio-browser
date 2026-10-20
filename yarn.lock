@@ -10249,10 +10249,10 @@ __metadata:
     react: "npm:19.3.0"
     react-native: "npm:0.88.0"
     react-native-audio-browser: "workspace:*"
-    react-native-mmkv: "npm:4.2.0"
+    react-native-mmkv: "npm:4.3.2"
     react-native-monorepo-config: "npm:^0.3.0"
     react-native-nitro-modules: "npm:0.37.1"
-    react-native-safe-area-context: "npm:^5.6.2"
+    react-native-safe-area-context: "npm:^5.10.1"
     typescript: "npm:^5.9.3"
   languageName: unknown
   linkType: soft
@@ -17095,14 +17095,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-mmkv@npm:4.2.0":
-  version: 4.2.0
-  resolution: "react-native-mmkv@npm:4.2.0"
+"react-native-mmkv@npm:4.3.2":
+  version: 4.3.2
+  resolution: "react-native-mmkv@npm:4.3.2"
   peerDependencies:
     react: "*"
     react-native: "*"
     react-native-nitro-modules: "*"
-  checksum: 10/8f0e919eb3add26d47a9d5e171672928c322c89ef92108375ffcc2829d40a5d1727f6b9bed771d1fc7abf76f80695e522d47699c8a891c36a98b04afd3a8d1d1
+  checksum: 10/200eac3939d89cc2182851a2cf7c2bfda519f78c870ed962b70c2873924d77a17e18eb3ecbe817670b01bdc6848eb2c093b4defc79c1aac0f3f0bee3d5408cdb
   languageName: node
   linkType: hard
 
@@ -17123,6 +17123,16 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10/eba28d88427c2b3a113d4bf992c4c2bf6ca79cec65e72e7f84fc675b6d5c482d0a1e3db92dc5ca349c8ebd284cbb5263846ecd4edc8f0993568bca2880a83dba
+  languageName: node
+  linkType: hard
+
+"react-native-safe-area-context@npm:^5.10.1":
+  version: 5.10.1
+  resolution: "react-native-safe-area-context@npm:5.10.1"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10/832537389e03bf2705de77ec2eff9400be543b5b244c0a74723ef678894d4c43def97a55e80c1d575fae3a0c7c6f30085dc90c8c216a2a74ee888c128b16e244
   languageName: node
   linkType: hard
 
