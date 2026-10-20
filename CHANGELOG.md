@@ -1,3 +1,10 @@
+## [0.2.0-next.26](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.25...v0.2.0-next.26) (2026-10-20)
+
+### Other changes
+
+* **example:** move the native example to react-native 0.88 ([a7d0059](https://github.com/radio-garden/react-native-audio-browser/commit/a7d0059400b7b962f16dde8152daa8f9858144f7))
+* upgrade to react-native 0.88 and nitro 0.37, regenerate specs ([b11069b](https://github.com/radio-garden/react-native-audio-browser/commit/b11069bd5182c7d86624df4b50cf05b35994fdc4)), closes [mrousavy/nitro#1232](https://github.com/mrousavy/nitro/issues/1232)
+
 ## [0.2.0-next.25](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.24...v0.2.0-next.25) (2026-10-20)
 
 ### Bug Fixes
