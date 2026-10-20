@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PlaybackQueueEndedEvent" and the the Kotlin data class "PlaybackQueueEndedEvent".
+   * The C++ JNI bridge between the C++ struct "PlaybackQueueEndedEvent" and the Kotlin data class "PlaybackQueueEndedEvent".
    */
   struct JPlaybackQueueEndedEvent final: public jni::JavaClass<JPlaybackQueueEndedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackQueueEndedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackQueueEndedEvent;";
 
   public:
     /**

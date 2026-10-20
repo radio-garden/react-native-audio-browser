@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class IOSOptions(
   val carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is IOSOptions) return false
+    return Objects.deepEquals(this.playbackRates, other.playbackRates)
+      && Objects.deepEquals(this.carPlayUpNextButton, other.carPlayUpNextButton)
+      && Objects.deepEquals(this.carPlayNowPlayingButtons, other.carPlayNowPlayingButtons)
+      && Objects.deepEquals(this.carPlayPlayingIndicatorLocation, other.carPlayPlayingIndicatorLocation)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      playbackRates,
+      carPlayUpNextButton,
+      carPlayNowPlayingButtons,
+      carPlayPlayingIndicatorLocation
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

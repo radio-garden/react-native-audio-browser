@@ -516,29 +516,29 @@ namespace margelo::nitro::audiobrowser {
   std::optional<std::vector<Track>> JHybridAudioBrowserSpec::getTabs() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JTrack>>()>("getTabs");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() {
-      size_t __size = __result->size();
+    return __result != nullptr ? std::make_optional([&](auto&& __input) {
+      size_t __size = __input->size();
       std::vector<Track> __vector;
       __vector.reserve(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        auto __element = __result->getElement(__i);
+        auto __element = __input->getElement(__i);
         __vector.push_back(__element->toCpp());
       }
       return __vector;
-    }()) : std::nullopt;
+    }(__result)) : std::nullopt;
   }
   void JHybridAudioBrowserSpec::setTabs(const std::optional<std::vector<Track>>& tabs) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tabs */)>("setTabs");
-    method(_javaPart, tabs.has_value() ? [&]() {
-      size_t __size = tabs.value().size();
+    method(_javaPart, tabs.has_value() ? [&](auto&& __input) {
+      size_t __size = __input.size();
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = tabs.value()[__i];
+        const auto& __element = __input[__i];
         auto __elementJni = JTrack::fromCpp(__element);
         __array->setElement(__i, *__elementJni);
       }
       return __array;
-    }() : nullptr);
+    }(tabs.value()) : nullptr);
   }
   std::function<void(const std::string& /* path */)> JHybridAudioBrowserSpec::getOnPathChanged() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__string::javaobject>()>("getOnPathChanged_cxx");
@@ -1484,16 +1484,16 @@ namespace margelo::nitro::audiobrowser {
       auto __promise = Promise<std::vector<Track>>::create();
       __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
         auto __result = jni::static_ref_cast<jni::JArrayClass<JTrack>>(__boxedResult);
-        __promise->resolve([&]() {
-          size_t __size = __result->size();
+        __promise->resolve([&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = __result->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }());
+        }(__result));
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
         jni::JniException __jniError(__throwable);
@@ -1527,16 +1527,16 @@ namespace margelo::nitro::audiobrowser {
   }
   void JHybridAudioBrowserSpec::setFavorites(const std::vector<std::string>& favorites) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<jni::JString>> /* favorites */)>("setFavorites");
-    method(_javaPart, [&]() {
-      size_t __size = favorites.size();
+    method(_javaPart, [&](auto&& __input) {
+      size_t __size = __input.size();
       jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = favorites[__i];
+        const auto& __element = __input[__i];
         auto __elementJni = jni::make_jstring(__element);
         __array->setElement(__i, *__elementJni);
       }
       return __array;
-    }());
+    }(favorites));
   }
   void JHybridAudioBrowserSpec::setGate(const std::optional<Gate>& gate, bool hasResolver) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JGate> /* gate */, jboolean /* hasResolver */)>("setGate");
@@ -1704,16 +1704,16 @@ namespace margelo::nitro::audiobrowser {
   }
   void JHybridAudioBrowserSpec::add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* insertBeforeIndex */)>("add");
-    method(_javaPart, [&]() {
-      size_t __size = tracks.size();
+    method(_javaPart, [&](auto&& __input) {
+      size_t __size = __input.size();
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = tracks[__i];
+        const auto& __element = __input[__i];
         auto __elementJni = JTrack::fromCpp(__element);
         __array->setElement(__i, *__elementJni);
       }
       return __array;
-    }(), insertBeforeIndex.has_value() ? jni::JDouble::valueOf(insertBeforeIndex.value()) : nullptr);
+    }(tracks), insertBeforeIndex.has_value() ? jni::JDouble::valueOf(insertBeforeIndex.value()) : nullptr);
   }
   void JHybridAudioBrowserSpec::move(double fromIndex, double toIndex) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* fromIndex */, double /* toIndex */)>("move");
@@ -1754,30 +1754,30 @@ namespace margelo::nitro::audiobrowser {
   }
   void JHybridAudioBrowserSpec::setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */, jni::alias_ref<jni::JDouble> /* startPosition */)>("setQueue");
-    method(_javaPart, [&]() {
-      size_t __size = tracks.size();
+    method(_javaPart, [&](auto&& __input) {
+      size_t __size = __input.size();
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = tracks[__i];
+        const auto& __element = __input[__i];
         auto __elementJni = JTrack::fromCpp(__element);
         __array->setElement(__i, *__elementJni);
       }
       return __array;
-    }(), startIndex.has_value() ? jni::JDouble::valueOf(startIndex.value()) : nullptr, startPosition.has_value() ? jni::JDouble::valueOf(startPosition.value()) : nullptr);
+    }(tracks), startIndex.has_value() ? jni::JDouble::valueOf(startIndex.value()) : nullptr, startPosition.has_value() ? jni::JDouble::valueOf(startPosition.value()) : nullptr);
   }
   std::vector<Track> JHybridAudioBrowserSpec::getQueue() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JTrack>>()>("getQueue");
     auto __result = method(_javaPart);
-    return [&]() {
-      size_t __size = __result->size();
+    return [&](auto&& __input) {
+      size_t __size = __input->size();
       std::vector<Track> __vector;
       __vector.reserve(__size);
       for (size_t __i = 0; __i < __size; __i++) {
-        auto __element = __result->getElement(__i);
+        auto __element = __input->getElement(__i);
         __vector.push_back(__element->toCpp());
       }
       return __vector;
-    }();
+    }(__result);
   }
   std::optional<Track> JHybridAudioBrowserSpec::getTrack(double index) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JTrack>(double /* index */)>("getTrack");

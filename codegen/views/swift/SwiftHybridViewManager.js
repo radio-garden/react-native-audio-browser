@@ -10,22 +10,22 @@ export function createSwiftHybridViewManager(spec) {
     const namespace = spec.config.getCxxNamespace('c++');
     const swiftNamespace = spec.config.getIosModuleName();
     const { HybridTSpec, HybridTSpecSwift, HybridTSpecCxx } = getHybridObjectName(spec.name);
-    const { component, descriptorClassName, propsClassName } = getViewComponentNames(spec);
-    const autolinking = spec.config.getAutolinkedHybridObjects();
-    const viewImplementation = autolinking[spec.name]?.swift;
-    if (viewImplementation == null) {
-        throw new Error(`Cannot create Swift HybridView ViewManager for ${spec.name} - it is not autolinked in nitro.json!`);
+    const { component, descriptorClassName, propsClassName, shadowNodeClassName, } = getViewComponentNames(spec);
+    const implementation = spec.config.getIosAutolinkedImplementation(spec.name);
+    if (implementation?.language !== 'swift') {
+        throw new Error(`Cannot create Swift HybridView ViewManager for ${spec.name} - it must be autolinked with a Swift iOS implementation in nitro.json!`);
     }
     const propAssignments = spec.properties.map((p) => {
         const name = escapeCppName(p.name);
         const setter = p.getSetterName('swift');
         const bridge = new SwiftCxxBridgedType(p.type, false);
-        const parse = bridge.parseFromCppToSwift(`newViewProps.${name}.value`, 'c++');
+        const parse = bridge.parseFromCppToSwift(`newViewProps.${name}.get()`, 'c++');
         return `
 // ${p.jsSignature}
-if (newViewProps.${name}.isDirty) {
+if (oldViewProps == nullptr
+      ? newViewProps.${name}.isProvided()
+      : !newViewProps.${name}.hasSameValue(oldViewProps->${name})) {
   swiftPart.${setter}(${indent(parse, '  ')});
-  newViewProps.${name}.isDirty = false;
 }
 `.trim();
     });
@@ -44,6 +44,13 @@ ${createFileMetadataString(`${component}.mm`)}
 #import "${HybridTSpecSwift}.hpp"
 #import "${getUmbrellaHeaderName()}"
 
+#if __has_include(<cxxreact/ReactNativeVersion.h>)
+#include <cxxreact/ReactNativeVersion.h>
+#if REACT_NATIVE_VERSION_MINOR >= 82
+#define ENABLE_RCT_COMPONENT_VIEW_INVALIDATE
+#endif
+#endif
+
 using namespace facebook;
 using namespace ${namespace};
 using namespace ${namespace}::views;
@@ -57,6 +64,7 @@ using namespace ${namespace}::views;
 
 @implementation ${component} {
   std::shared_ptr<${HybridTSpecSwift}> _hybridView;
+  BOOL _didDropView;
 }
 
 + (void) load {
@@ -70,6 +78,7 @@ using namespace ${namespace}::views;
 
 - (instancetype) init {
   if (self = [super init]) {
+    _props = ${shadowNodeClassName}::defaultSharedProps();
     std::shared_ptr<${HybridTSpec}> hybridView = ${getHybridObjectConstructorCall(spec.name)}
     _hybridView = std::dynamic_pointer_cast<${HybridTSpecSwift}>(hybridView);
     [self updateView];
@@ -89,31 +98,50 @@ using namespace ${namespace}::views;
   [self setContentView:view];
 }
 
+- (void) notifyOnDropView {
+  // A recycled component can later be invalidated. Notify only once per mount.
+  if (_didDropView) {
+    return;
+  }
+  ${swiftNamespace}::${HybridTSpecCxx}& swiftPart = _hybridView->getSwiftPart();
+  swiftPart.onDropView();
+  _didDropView = YES;
+}
+
 - (void) updateProps:(const std::shared_ptr<const react::Props>&)props
             oldProps:(const std::shared_ptr<const react::Props>&)oldProps {
+  // A props update marks a newly mounted or still-active component.
+  _didDropView = NO;
+
   // 1. Downcast props
-  const auto& newViewPropsConst = *std::static_pointer_cast<${propsClassName} const>(props);
-  auto& newViewProps = const_cast<${propsClassName}&>(newViewPropsConst);
+  const auto& newViewProps = *std::static_pointer_cast<const ${propsClassName}>(props);
+  const auto* oldViewProps = static_cast<const ${propsClassName}*>(oldProps.get());
   ${swiftNamespace}::${HybridTSpecCxx}& swiftPart = _hybridView->getSwiftPart();
 
-  // 2. Update each prop individually
-  swiftPart.beforeUpdate();
+  // 2. Update only props that differ from the previous Props snapshot.
+  const bool hasTransactionPropChanges = oldViewProps == nullptr
+      ? newViewProps.hasAnyProvidedProps()
+      : !newViewProps.hasSameProps(*oldViewProps);
+  if (hasTransactionPropChanges) {
+    swiftPart.beforeUpdate();
 
-  ${indent(propAssignments.join('\n'), '  ')}
+    ${indent(propAssignments.join('\n'), '    ')}
 
-  swiftPart.afterUpdate();
-
-  // 3. Update hybridRef if it changed
-  if (newViewProps.hybridRef.isDirty) {
-    // hybridRef changed - call it with new this
-    const auto& maybeFunc = newViewProps.hybridRef.value;
-    if (maybeFunc.has_value()) {
-      maybeFunc.value()(_hybridView);
+    // Update hybridRef if it changed
+    if (oldViewProps == nullptr
+          ? newViewProps.hybridRef.isProvided()
+          : !newViewProps.hybridRef.hasSameValue(oldViewProps->hybridRef)) {
+      // hybridRef changed - call it with new this
+      const auto& maybeFunc = newViewProps.hybridRef.get();
+      if (maybeFunc.has_value()) {
+        maybeFunc.value()(_hybridView);
+      }
     }
-    newViewProps.hybridRef.isDirty = false;
+
+    swiftPart.afterUpdate();
   }
 
-  // 4. Continue in base class
+  // 3. Continue in base class
   [super updateProps:props oldProps:oldProps];
 }
 
@@ -122,10 +150,18 @@ using namespace ${namespace}::views;
 }
 
 - (void)prepareForRecycle {
+  [self notifyOnDropView];
   [super prepareForRecycle];
   ${swiftNamespace}::${HybridTSpecCxx}& swiftPart = _hybridView->getSwiftPart();
   swiftPart.maybePrepareForRecycle();
 }
+
+#ifdef ENABLE_RCT_COMPONENT_VIEW_INVALIDATE
+- (void)invalidate {
+  [self notifyOnDropView];
+  [super invalidate];
+}
+#endif
 
 @end
   `;

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class TrackRequest(
   val query: Map<String, String>?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TrackRequest) return false
+    return Objects.deepEquals(this.userAgent, other.userAgent)
+      && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.query, other.query)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      userAgent,
+      headers,
+      query
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

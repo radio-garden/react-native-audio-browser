@@ -41,11 +41,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PlaybackActiveTrackChangedEvent" and the the Kotlin data class "PlaybackActiveTrackChangedEvent".
+   * The C++ JNI bridge between the C++ struct "PlaybackActiveTrackChangedEvent" and the Kotlin data class "PlaybackActiveTrackChangedEvent".
    */
   struct JPlaybackActiveTrackChangedEvent final: public jni::JavaClass<JPlaybackActiveTrackChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackActiveTrackChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackActiveTrackChangedEvent;";
 
   public:
     /**

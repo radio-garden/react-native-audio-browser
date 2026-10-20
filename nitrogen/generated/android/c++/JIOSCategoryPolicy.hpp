@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "IOSCategoryPolicy" and the the Kotlin enum "IOSCategoryPolicy".
+   * The C++ JNI bridge between the C++ enum "IOSCategoryPolicy" and the Kotlin enum "IOSCategoryPolicy".
    */
   struct JIOSCategoryPolicy final: public jni::JavaClass<JIOSCategoryPolicy> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/IOSCategoryPolicy;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/IOSCategoryPolicy;";
 
   public:
     /**

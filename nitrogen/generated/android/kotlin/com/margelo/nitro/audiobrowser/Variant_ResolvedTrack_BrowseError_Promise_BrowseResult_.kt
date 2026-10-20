@@ -23,6 +23,24 @@ sealed class Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_ {
   @DoNotStrip
   data class Third(@DoNotStrip val value: Promise<BrowseResult>): Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_()
 
+  inline fun <reified T> asType(): T? {
+    return when (this) {
+      is First -> (value) as? T
+      is Second -> (value) as? T
+      is Third -> (value) as? T
+    }
+  }
+  inline fun <reified T> isType(): Boolean {
+    return asType<T>() != null
+  }
+  inline fun <R> match(first: (ResolvedTrack) -> R, second: (BrowseError) -> R, third: (Promise<BrowseResult>) -> R): R {
+    return when (this) {
+      is First -> first(value)
+      is Second -> second(value)
+      is Third -> third(value)
+    }
+  }
+
   val isFirst: Boolean
     get() = this is First
   val isSecond: Boolean
@@ -41,14 +59,6 @@ sealed class Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_ {
   fun asThirdOrNull(): Promise<BrowseResult>? {
     val value = (this as? Third)?.value ?: return null
     return value
-  }
-
-  inline fun <R> match(first: (ResolvedTrack) -> R, second: (BrowseError) -> R, third: (Promise<BrowseResult>) -> R): R {
-    return when (this) {
-      is First -> first(value)
-      is Second -> second(value)
-      is Third -> third(value)
-    }
   }
 
   companion object {

@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "SearchMode" and the the Kotlin enum "SearchMode".
+   * The C++ JNI bridge between the C++ enum "SearchMode" and the Kotlin enum "SearchMode".
    */
   struct JSearchMode final: public jni::JavaClass<JSearchMode> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SearchMode;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SearchMode;";
 
   public:
     /**

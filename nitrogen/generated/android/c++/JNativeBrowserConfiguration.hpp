@@ -110,11 +110,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NativeBrowserConfiguration" and the the Kotlin data class "NativeBrowserConfiguration".
+   * The C++ JNI bridge between the C++ struct "NativeBrowserConfiguration" and the Kotlin data class "NativeBrowserConfiguration".
    */
   struct JNativeBrowserConfiguration final: public jni::JavaClass<JNativeBrowserConfiguration> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NativeBrowserConfiguration;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NativeBrowserConfiguration;";
 
   public:
     /**
@@ -181,16 +181,16 @@ namespace margelo::nitro::audiobrowser {
         media != nullptr ? std::make_optional(media->toCpp()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
         nowPlayingArtwork != nullptr ? std::make_optional(nowPlayingArtwork->toCpp()) : std::nullopt,
-        routes != nullptr ? std::make_optional([&]() {
-          size_t __size = routes->size();
+        routes != nullptr ? std::make_optional([&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<NativeRouteEntry> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = routes->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()) : std::nullopt,
+        }(routes)) : std::nullopt,
         singleTrack != nullptr ? std::make_optional(static_cast<bool>(singleTrack->value())) : std::nullopt,
         handleTrackLoad != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)> {
           if (handleTrackLoad->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::javaClassStatic())) [[likely]] {
@@ -252,16 +252,16 @@ namespace margelo::nitro::audiobrowser {
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
         value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr,
         value.nowPlayingArtwork.has_value() ? JArtworkRequestConfig::fromCpp(value.nowPlayingArtwork.value()) : nullptr,
-        value.routes.has_value() ? [&]() {
-          size_t __size = value.routes.value().size();
+        value.routes.has_value() ? [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JNativeRouteEntry>> __array = jni::JArrayClass<JNativeRouteEntry>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.routes.value()[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JNativeRouteEntry::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }() : nullptr,
+        }(value.routes.value()) : nullptr,
         value.singleTrack.has_value() ? jni::JBoolean::valueOf(value.singleTrack.value()) : nullptr,
         value.handleTrackLoad.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::fromCpp(value.handleTrackLoad.value()) : nullptr,
         value.androidControllerOfflineError.has_value() ? jni::JBoolean::valueOf(value.androidControllerOfflineError.value()) : nullptr,

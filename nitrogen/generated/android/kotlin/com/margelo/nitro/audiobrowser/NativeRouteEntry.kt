@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.Promise
 
 /**
@@ -47,6 +48,32 @@ data class NativeRouteEntry(
    */
   constructor(path: String, browseCallback: ((param: BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((params: SearchParams) -> Promise<Promise<Array<Track>>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?):
          this(path, browseCallback?.let { Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_java(it) }, browseConfig, browseStatic, searchCallback?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_java(it) }, searchConfig, media, artwork)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeRouteEntry) return false
+    return Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.browseCallback, other.browseCallback)
+      && Objects.deepEquals(this.browseConfig, other.browseConfig)
+      && Objects.deepEquals(this.browseStatic, other.browseStatic)
+      && Objects.deepEquals(this.searchCallback, other.searchCallback)
+      && Objects.deepEquals(this.searchConfig, other.searchConfig)
+      && Objects.deepEquals(this.media, other.media)
+      && Objects.deepEquals(this.artwork, other.artwork)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      path,
+      browseCallback,
+      browseConfig,
+      browseStatic,
+      searchCallback,
+      searchConfig,
+      media,
+      artwork
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

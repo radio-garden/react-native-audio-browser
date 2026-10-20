@@ -78,6 +78,10 @@ val ${name}: ${type.getTypeCode('kotlin', false)}
         .map((i) => `import ${i.name}`)
         .filter(isNotDuplicate);
     const secondaryConstructor = createKotlinConstructor(structType);
+    const equalityComparators = structType.properties.map((p) => `Objects.deepEquals(this.${p.escapedName}, other.${p.escapedName})`);
+    const propertiesList = structType.properties
+        .map((p) => p.escapedName)
+        .join(',\n');
     const code = `
 ${createFileMetadataString(`${structType.structName}.kt`)}
 
@@ -85,6 +89,7 @@ package ${packageName}
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 ${extraImports.join('\n')}
 
 /**
@@ -96,6 +101,18 @@ data class ${structType.structName}(
   ${indent(properties, '  ')}
 ) {
   ${indent(secondaryConstructor, '  ')}
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ${structType.structName}) return false
+    return ${equalityComparators.join(`\n      && `)}
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      ${indent(propertiesList, '      ')}
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -233,11 +250,11 @@ namespace ${cxxNamespace} {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "${structType.structName}" and the the Kotlin data class "${structType.structName}".
+   * The C++ JNI bridge between the C++ struct "${structType.structName}" and the Kotlin data class "${structType.structName}".
    */
   struct J${structType.structName} final: public jni::JavaClass<J${structType.structName}> {
   public:
-    static auto constexpr kJavaDescriptor = "L${jniClassDescriptor};";
+    static constexpr auto kJavaDescriptor = "L${jniClassDescriptor};";
 
   public:
     /**

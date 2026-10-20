@@ -27,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JSleepTimer: public jni::JavaClass<JSleepTimer> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer;";
 
     static jni::local_ref<JSleepTimer> create_0(jni::alias_ref<JNull> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JSleepTimer(jni::alias_ref<JNull>)>("create");
@@ -57,7 +57,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JSleepTimer_impl {
     class First final: public jni::JavaClass<First, JSleepTimer> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$First;";
     
       [[nodiscard]] jni::local_ref<JNull> getValue() const {
         static const auto field = javaClassStatic()->getField<JNull>("value");
@@ -67,7 +67,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JSleepTimer> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$Second;";
     
       [[nodiscard]] jni::local_ref<JSleepTimerTime> getValue() const {
         static const auto field = javaClassStatic()->getField<JSleepTimerTime>("value");
@@ -77,7 +77,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Third final: public jni::JavaClass<Third, JSleepTimer> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$Third;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimer$Third;";
     
       [[nodiscard]] jni::local_ref<JSleepTimerEndOfTrack> getValue() const {
         static const auto field = javaClassStatic()->getField<JSleepTimerEndOfTrack>("value");

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -34,6 +35,26 @@ data class PlaybackError(
   val retrying: Boolean?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is PlaybackError) return false
+    return Objects.deepEquals(this.kind, other.kind)
+      && Objects.deepEquals(this.code, other.code)
+      && Objects.deepEquals(this.message, other.message)
+      && Objects.deepEquals(this.statusCode, other.statusCode)
+      && Objects.deepEquals(this.retrying, other.retrying)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      kind,
+      code,
+      message,
+      statusCode,
+      retrying
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

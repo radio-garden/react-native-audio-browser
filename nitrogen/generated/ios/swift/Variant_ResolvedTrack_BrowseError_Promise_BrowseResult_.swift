@@ -17,3 +17,16 @@ public indirect enum Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_ {
   case second(BrowseError)
   case third(Promise<BrowseResult>)
 }
+
+public extension Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_ {
+  func asType<T>(_ type: T.Type = T.self) -> T? {
+    switch self {
+      case .first(let value): return value as? T
+      case .second(let value): return value as? T
+      case .third(let value): return value as? T
+    }
+  }
+  func isType<T>(_ type: T.Type = T.self) -> Bool {
+    return self.asType(type) != nil
+  }
+}

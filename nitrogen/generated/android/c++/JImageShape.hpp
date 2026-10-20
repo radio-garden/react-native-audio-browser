@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "ImageShape" and the the Kotlin enum "ImageShape".
+   * The C++ JNI bridge between the C++ enum "ImageShape" and the Kotlin enum "ImageShape".
    */
   struct JImageShape final: public jni::JavaClass<JImageShape> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageShape;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageShape;";
 
   public:
     /**

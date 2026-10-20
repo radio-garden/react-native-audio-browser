@@ -29,7 +29,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JVariant_NullType_RemoteButtonLayout: public jni::JavaClass<JVariant_NullType_RemoteButtonLayout> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout;";
 
     static jni::local_ref<JVariant_NullType_RemoteButtonLayout> create_0(jni::alias_ref<JNull> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JVariant_NullType_RemoteButtonLayout(jni::alias_ref<JNull>)>("create");
@@ -54,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JVariant_NullType_RemoteButtonLayout_impl {
     class First final: public jni::JavaClass<First, JVariant_NullType_RemoteButtonLayout> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout$First;";
     
       [[nodiscard]] jni::local_ref<JNull> getValue() const {
         static const auto field = javaClassStatic()->getField<JNull>("value");
@@ -64,7 +64,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JVariant_NullType_RemoteButtonLayout> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_NullType_RemoteButtonLayout$Second;";
     
       [[nodiscard]] jni::local_ref<JRemoteButtonLayout> getValue() const {
         static const auto field = javaClassStatic()->getField<JRemoteButtonLayout>("value");

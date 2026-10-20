@@ -26,11 +26,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NativeIOSSetupOptions" and the the Kotlin data class "NativeIOSSetupOptions".
+   * The C++ JNI bridge between the C++ struct "NativeIOSSetupOptions" and the Kotlin data class "NativeIOSSetupOptions".
    */
   struct JNativeIOSSetupOptions final: public jni::JavaClass<JNativeIOSSetupOptions> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NativeIOSSetupOptions;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NativeIOSSetupOptions;";
 
   public:
     /**
@@ -54,16 +54,16 @@ namespace margelo::nitro::audiobrowser {
         buffer != nullptr ? std::make_optional(buffer->value()) : std::nullopt,
         category != nullptr ? std::make_optional(category->toCpp()) : std::nullopt,
         categoryMode != nullptr ? std::make_optional(categoryMode->toCpp()) : std::nullopt,
-        categoryOptions != nullptr ? std::make_optional([&]() {
-          size_t __size = categoryOptions->size();
+        categoryOptions != nullptr ? std::make_optional([&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<IOSCategoryOptions> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = categoryOptions->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()) : std::nullopt,
+        }(categoryOptions)) : std::nullopt,
         categoryPolicy != nullptr ? std::make_optional(categoryPolicy->toCpp()) : std::nullopt
       );
     }
@@ -82,16 +82,16 @@ namespace margelo::nitro::audiobrowser {
         value.buffer.has_value() ? jni::JDouble::valueOf(value.buffer.value()) : nullptr,
         value.category.has_value() ? JIOSCategory::fromCpp(value.category.value()) : nullptr,
         value.categoryMode.has_value() ? JIOSCategoryMode::fromCpp(value.categoryMode.value()) : nullptr,
-        value.categoryOptions.has_value() ? [&]() {
-          size_t __size = value.categoryOptions.value().size();
+        value.categoryOptions.has_value() ? [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JIOSCategoryOptions>> __array = jni::JArrayClass<JIOSCategoryOptions>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.categoryOptions.value()[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JIOSCategoryOptions::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }() : nullptr,
+        }(value.categoryOptions.value()) : nullptr,
         value.categoryPolicy.has_value() ? JIOSCategoryPolicy::fromCpp(value.categoryPolicy.value()) : nullptr
       );
     }

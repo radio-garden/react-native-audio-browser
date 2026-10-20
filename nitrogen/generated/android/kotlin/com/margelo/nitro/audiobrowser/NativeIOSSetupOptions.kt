@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -34,6 +35,26 @@ data class NativeIOSSetupOptions(
   val categoryPolicy: IOSCategoryPolicy?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeIOSSetupOptions) return false
+    return Objects.deepEquals(this.buffer, other.buffer)
+      && Objects.deepEquals(this.category, other.category)
+      && Objects.deepEquals(this.categoryMode, other.categoryMode)
+      && Objects.deepEquals(this.categoryOptions, other.categoryOptions)
+      && Objects.deepEquals(this.categoryPolicy, other.categoryPolicy)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      buffer,
+      category,
+      categoryMode,
+      categoryOptions,
+      categoryPolicy
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

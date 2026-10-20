@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "CardImage" and the the Kotlin enum "CardImage".
+   * The C++ JNI bridge between the C++ enum "CardImage" and the Kotlin enum "CardImage".
    */
   struct JCardImage final: public jni::JavaClass<JCardImage> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/CardImage;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/CardImage;";
 
   public:
     /**

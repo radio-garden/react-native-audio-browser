@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.NullType
 
 /**
@@ -59,7 +58,6 @@ class Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__Slee
   override fun invoke(data: SleepTimer?): Unit
     = invoke_cxx(data)
 
-  @FastNative
   private external fun invoke_cxx(data: SleepTimer?): Unit
 }
 

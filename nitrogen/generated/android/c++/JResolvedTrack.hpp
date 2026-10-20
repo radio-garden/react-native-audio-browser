@@ -50,11 +50,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "ResolvedTrack" and the the Kotlin data class "ResolvedTrack".
+   * The C++ JNI bridge between the C++ struct "ResolvedTrack" and the Kotlin data class "ResolvedTrack".
    */
   struct JResolvedTrack final: public jni::JavaClass<JResolvedTrack> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ResolvedTrack;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ResolvedTrack;";
 
   public:
     /**
@@ -111,26 +111,26 @@ namespace margelo::nitro::audiobrowser {
       return ResolvedTrack(
         path->toStdString(),
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt,
-        sections != nullptr ? std::make_optional([&]() {
-          size_t __size = sections->size();
+        sections != nullptr ? std::make_optional([&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Section> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = sections->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()) : std::nullopt,
-        children != nullptr ? std::make_optional([&]() {
-          size_t __size = children->size();
+        }(sections)) : std::nullopt,
+        children != nullptr ? std::make_optional([&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = children->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()) : std::nullopt,
+        }(children)) : std::nullopt,
         carPlaySiriListButton != nullptr ? std::make_optional(carPlaySiriListButton->toCpp()) : std::nullopt,
         id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
@@ -165,26 +165,26 @@ namespace margelo::nitro::audiobrowser {
         clazz,
         jni::make_jstring(value.path),
         value.style.has_value() ? JSectionStyle::fromCpp(value.style.value()) : nullptr,
-        value.sections.has_value() ? [&]() {
-          size_t __size = value.sections.value().size();
+        value.sections.has_value() ? [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JSection>> __array = jni::JArrayClass<JSection>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.sections.value()[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JSection::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }() : nullptr,
-        value.children.has_value() ? [&]() {
-          size_t __size = value.children.value().size();
+        }(value.sections.value()) : nullptr,
+        value.children.has_value() ? [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.children.value()[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JTrack::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }() : nullptr,
+        }(value.children.value()) : nullptr,
         value.carPlaySiriListButton.has_value() ? JCarPlaySiriListButtonPosition::fromCpp(value.carPlaySiriListButton.value()) : nullptr,
         value.id.has_value() ? jni::make_jstring(value.id.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,

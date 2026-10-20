@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -76,6 +77,54 @@ data class Track(
   val icyCharset: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is Track) return false
+    return Objects.deepEquals(this.id, other.id)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.src, other.src)
+      && Objects.deepEquals(this.artwork, other.artwork)
+      && Objects.deepEquals(this.artworkSource, other.artworkSource)
+      && Objects.deepEquals(this.request, other.request)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.subtitle, other.subtitle)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.albumPath, other.albumPath)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.description, other.description)
+      && Objects.deepEquals(this.genre, other.genre)
+      && Objects.deepEquals(this.duration, other.duration)
+      && Objects.deepEquals(this.style, other.style)
+      && Objects.deepEquals(this.disabled, other.disabled)
+      && Objects.deepEquals(this.favorited, other.favorited)
+      && Objects.deepEquals(this.live, other.live)
+      && Objects.deepEquals(this.icyCharset, other.icyCharset)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      id,
+      path,
+      src,
+      artwork,
+      artworkSource,
+      request,
+      title,
+      subtitle,
+      artist,
+      albumPath,
+      album,
+      description,
+      genre,
+      duration,
+      style,
+      disabled,
+      favorited,
+      live,
+      icyCharset
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

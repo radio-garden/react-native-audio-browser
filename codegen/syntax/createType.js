@@ -1,4 +1,4 @@
-import { ts, Type as TSMorphType } from 'ts-morph';
+import { Node, ts, Type as TSMorphType } from 'ts-morph';
 import { BooleanType } from './types/BooleanType.js';
 import { NumberType } from './types/NumberType.js';
 import { StringType } from './types/StringType.js';
@@ -45,11 +45,48 @@ function getFunctionCallSignature(func) {
     }
     return callSignature;
 }
+/**
+ * Whether the given type is optional (`T | undefined`) or not.
+ *
+ * Note that `null` is a separate type in Nitro (`NullType`) - only `undefined`
+ * (or a `?`) makes a type optional.
+ */
+function isOptionalType(type) {
+    return type.getUnionTypes().some((t) => t.isUndefined());
+}
 function removeDuplicates(types) {
     return types.filter((t1, index, array) => {
         const firstIndexOfType = array.findIndex((t2) => t1.getCode('c++') === t2.getCode('c++'));
         return firstIndexOfType === index;
     });
+}
+function getAliasTypeNode(type) {
+    const symbol = type.getNonNullableType().getAliasSymbol();
+    const declaration = symbol?.getDeclarations()[0];
+    if (declaration != null && Node.isTypeAliasDeclaration(declaration)) {
+        return declaration.getTypeNode();
+    }
+    return undefined;
+}
+function getUnionTypeNodes(type, typeNode) {
+    if (typeNode != null && Node.isUnionTypeNode(typeNode)) {
+        return typeNode.getTypeNodes();
+    }
+    const aliasTypeNode = getAliasTypeNode(type);
+    if (aliasTypeNode != null && Node.isUnionTypeNode(aliasTypeNode)) {
+        return aliasTypeNode.getTypeNodes();
+    }
+    return undefined;
+}
+function getUnionConstituents(type, typeNode) {
+    const typeNodes = getUnionTypeNodes(type, typeNode);
+    if (typeNodes != null) {
+        return typeNodes.map((node) => ({
+            type: node.getType(),
+            typeNode: node,
+        }));
+    }
+    return type.getUnionTypes().map((unionType) => ({ type: unionType }));
 }
 function getArguments(type, typename, count) {
     const typeArguments = type.getTypeArguments();
@@ -62,11 +99,11 @@ function getArguments(type, typename, count) {
     }
     throw new Error(`Type ${type.getText()} looks like a ${typename}, but has ${typeArguments.length} or ${aliasTypeArguments.length} type arguments instead of ${count}!`);
 }
-export function createNamedType(language, name, type, isOptional) {
+export function createNamedType(language, name, type, isOptional, typeNode) {
     if (name.startsWith('__')) {
         throw new Error(`Name cannot start with two underscores (__) as this is reserved syntax for Nitrogen! (In ${type.getText()})`);
     }
-    return new NamedWrappingType(name, createType(language, type, isOptional));
+    return new NamedWrappingType(name, createType(language, type, isOptional, typeNode));
 }
 export function createVoidType() {
     return new VoidType();
@@ -169,7 +206,7 @@ export function addKnownType(key, type, language) {
 /**
  * Create a new type (or return it from cache if it is already known)
  */
-export function createType(language, type, isOptional) {
+export function createType(language, type, isOptional, typeNode) {
     const key = getTypeId(type, isOptional);
     // Check if we already have this type, but only if it's not a struct that might be cyclic.
     // For structs, we need to go through createStructWithCycleDetection to detect cycles.
@@ -183,7 +220,7 @@ export function createType(language, type, isOptional) {
     }
     const get = () => {
         if (isOptional) {
-            const wrapping = createType(language, type, false);
+            const wrapping = createType(language, type, false, typeNode);
             return new OptionalType(wrapping);
         }
         if (type.isNull()) {
@@ -221,7 +258,7 @@ export function createType(language, type, isOptional) {
         else if (type.isArray()) {
             // Arrays are reference types - struct references inside are allowed
             const arrayElementType = type.getArrayElementTypeOrThrow();
-            const elementType = createTypeInsideReference(language, arrayElementType, false);
+            const elementType = createTypeInsideReference(language, arrayElementType, isOptionalType(arrayElementType));
             return new ArrayType(elementType);
         }
         else if (type.isTuple()) {
@@ -234,10 +271,7 @@ export function createType(language, type, isOptional) {
             // It's a function! Functions are reference types - struct references inside are allowed
             const callSignature = getFunctionCallSignature(type);
             const funcReturnType = callSignature.getReturnType();
-            const isReturnOptional = funcReturnType
-                .getUnionTypes()
-                .some((t) => t.isUndefined());
-            const returnType = createTypeInsideReference(language, funcReturnType, isReturnOptional);
+            const returnType = createTypeInsideReference(language, funcReturnType, isOptionalType(funcReturnType));
             const parameters = callSignature.getParameters().map((p) => {
                 const declaration = p.getValueDeclarationOrThrow();
                 const parameterType = p.getTypeAtLocation(declaration);
@@ -258,10 +292,7 @@ export function createType(language, type, isOptional) {
         else if (isPromise(type)) {
             // It's a Promise! Promises are reference types - struct references inside are allowed
             const [promiseResolvingType] = getArguments(type, 'Promise', 1);
-            const isResolvingOptional = promiseResolvingType
-                .getUnionTypes()
-                .some((t) => t.isUndefined());
-            const resolvingType = createTypeInsideReference(language, promiseResolvingType, isResolvingOptional);
+            const resolvingType = createTypeInsideReference(language, promiseResolvingType, isOptionalType(promiseResolvingType));
             return new PromiseType(resolvingType);
         }
         else if (isRecord(type)) {
@@ -269,7 +300,7 @@ export function createType(language, type, isOptional) {
             // Records are reference types - struct references inside are allowed
             const [keyTypeT, valueTypeT] = getArguments(type, 'Record', 2);
             const keyType = createTypeInsideReference(language, keyTypeT, false);
-            const valueType = createTypeInsideReference(language, valueTypeT, false);
+            const valueType = createTypeInsideReference(language, valueTypeT, isOptionalType(valueTypeT));
             return new RecordType(keyType, valueType);
         }
         else if (isArrayBuffer(type)) {
@@ -305,8 +336,9 @@ export function createType(language, type, isOptional) {
             // - of string literals (then it's an enum)
             // - of type `T | undefined` (then it's just optional `T`)
             // - of different types (then it's a variant `A | B | C`)
-            const types = type.getUnionTypes();
-            const nonNullTypes = types.filter((t) => !t.isNull() && !t.isUndefined() && !t.isVoid());
+            const nonNullTypes = type
+                .getUnionTypes()
+                .filter((t) => !t.isNull() && !t.isUndefined() && !t.isVoid());
             const isEnumUnion = nonNullTypes.every((t) => t.isStringLiteral());
             if (isEnumUnion) {
                 // It consists only of string literaly - that means it's describing an enum!
@@ -321,11 +353,11 @@ export function createType(language, type, isOptional) {
             }
             else {
                 // It consists of different types - that means it's a variant!
-                let variants = type
-                    .getUnionTypes()
+                const unionConstituents = getUnionConstituents(type, typeNode);
+                let variants = unionConstituents
                     // Filter out any undefineds/voids, as those are already treated as `isOptional`.
-                    .filter((t) => !t.isUndefined() && !t.isVoid())
-                    .map((t) => createType(language, t, false))
+                    .filter(({ type: t }) => !t.isUndefined() && !t.isVoid())
+                    .map(({ type: t, typeNode: node }) => createType(language, t, false, node))
                     .toSorted(compareLooselyness);
                 variants = removeDuplicates(variants);
                 if (variants.length === 1) {

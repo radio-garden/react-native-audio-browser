@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "RemoteJumpForwardEvent" and the the Kotlin data class "RemoteJumpForwardEvent".
+   * The C++ JNI bridge between the C++ struct "RemoteJumpForwardEvent" and the Kotlin data class "RemoteJumpForwardEvent".
    */
   struct JRemoteJumpForwardEvent final: public jni::JavaClass<JRemoteJumpForwardEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteJumpForwardEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteJumpForwardEvent;";
 
   public:
     /**

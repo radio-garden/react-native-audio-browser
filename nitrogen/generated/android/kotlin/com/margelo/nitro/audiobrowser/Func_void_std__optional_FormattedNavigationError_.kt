@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_std__optional_FormattedNavigationError__cxx: Func_void_std__opti
   override fun invoke(formattedError: FormattedNavigationError?): Unit
     = invoke_cxx(formattedError)
 
-  @FastNative
   private external fun invoke_cxx(formattedError: FormattedNavigationError?): Unit
 }
 

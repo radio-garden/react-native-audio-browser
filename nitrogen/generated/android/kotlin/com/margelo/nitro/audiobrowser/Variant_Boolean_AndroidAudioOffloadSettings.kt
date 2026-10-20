@@ -21,6 +21,22 @@ sealed class Variant_Boolean_AndroidAudioOffloadSettings {
   @DoNotStrip
   data class Second(@DoNotStrip val value: AndroidAudioOffloadSettings): Variant_Boolean_AndroidAudioOffloadSettings()
 
+  inline fun <reified T> asType(): T? {
+    return when (this) {
+      is First -> (value) as? T
+      is Second -> (value) as? T
+    }
+  }
+  inline fun <reified T> isType(): Boolean {
+    return asType<T>() != null
+  }
+  inline fun <R> match(first: (Boolean) -> R, second: (AndroidAudioOffloadSettings) -> R): R {
+    return when (this) {
+      is First -> first(value)
+      is Second -> second(value)
+    }
+  }
+
   val isFirst: Boolean
     get() = this is First
   val isSecond: Boolean
@@ -33,13 +49,6 @@ sealed class Variant_Boolean_AndroidAudioOffloadSettings {
   fun asSecondOrNull(): AndroidAudioOffloadSettings? {
     val value = (this as? Second)?.value ?: return null
     return value
-  }
-
-  inline fun <R> match(first: (Boolean) -> R, second: (AndroidAudioOffloadSettings) -> R): R {
-    return when (this) {
-      is First -> first(value)
-      is Second -> second(value)
-    }
   }
 
   companion object {

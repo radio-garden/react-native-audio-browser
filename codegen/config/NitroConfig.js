@@ -88,6 +88,38 @@ export class NitroConfig {
     getAutolinkedHybridObjects() {
         return this.config.autolinking;
     }
+    getPlatformAutolinkedImplementation(hybridObjectName, platform) {
+        const objectConfig = this.config.autolinking[hybridObjectName];
+        if (objectConfig == null) {
+            return undefined;
+        }
+        // "all" applies to every platform and should automatically include
+        // future platforms without having to expand explicit key lists here.
+        if (objectConfig.all != null) {
+            return objectConfig.all;
+        }
+        return objectConfig[platform];
+    }
+    getIosAutolinkedImplementation(hybridObjectName) {
+        const objectConfig = this.config.autolinking[hybridObjectName];
+        if (objectConfig == null) {
+            return undefined;
+        }
+        if (objectConfig.all != null) {
+            return objectConfig.all;
+        }
+        return objectConfig.ios;
+    }
+    getAndroidAutolinkedImplementation(hybridObjectName) {
+        const objectConfig = this.config.autolinking[hybridObjectName];
+        if (objectConfig == null) {
+            return undefined;
+        }
+        if (objectConfig.all != null) {
+            return objectConfig.all;
+        }
+        return objectConfig.android;
+    }
     /**
      * Get the paths that will be ignored when loading the TypeScript project.
      * In most cases, this just contains `node_modules/`.

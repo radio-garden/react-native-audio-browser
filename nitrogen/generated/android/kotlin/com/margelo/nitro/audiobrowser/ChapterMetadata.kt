@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class ChapterMetadata(
   val url: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ChapterMetadata) return false
+    return Objects.deepEquals(this.startTime, other.startTime)
+      && Objects.deepEquals(this.endTime, other.endTime)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.url, other.url)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      startTime,
+      endTime,
+      title,
+      url
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

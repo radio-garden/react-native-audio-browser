@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -67,6 +68,48 @@ data class TrackMetadata(
   val url: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TrackMetadata) return false
+    return Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.albumTitle, other.albumTitle)
+      && Objects.deepEquals(this.subtitle, other.subtitle)
+      && Objects.deepEquals(this.description, other.description)
+      && Objects.deepEquals(this.artworkUri, other.artworkUri)
+      && Objects.deepEquals(this.trackNumber, other.trackNumber)
+      && Objects.deepEquals(this.composer, other.composer)
+      && Objects.deepEquals(this.conductor, other.conductor)
+      && Objects.deepEquals(this.genre, other.genre)
+      && Objects.deepEquals(this.compilation, other.compilation)
+      && Objects.deepEquals(this.station, other.station)
+      && Objects.deepEquals(this.mediaType, other.mediaType)
+      && Objects.deepEquals(this.creationDate, other.creationDate)
+      && Objects.deepEquals(this.creationYear, other.creationYear)
+      && Objects.deepEquals(this.url, other.url)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      title,
+      artist,
+      albumTitle,
+      subtitle,
+      description,
+      artworkUri,
+      trackNumber,
+      composer,
+      conductor,
+      genre,
+      compilation,
+      station,
+      mediaType,
+      creationDate,
+      creationYear,
+      url
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

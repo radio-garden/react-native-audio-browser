@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_std__optional_ResolvedTrack__cxx: Func_void_std__optional_Resolv
   override fun invoke(content: ResolvedTrack?): Unit
     = invoke_cxx(content)
 
-  @FastNative
   private external fun invoke_cxx(content: ResolvedTrack?): Unit
 }
 

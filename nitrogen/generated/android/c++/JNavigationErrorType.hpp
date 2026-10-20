@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "NavigationErrorType" and the the Kotlin enum "NavigationErrorType".
+   * The C++ JNI bridge between the C++ enum "NavigationErrorType" and the Kotlin enum "NavigationErrorType".
    */
   struct JNavigationErrorType final: public jni::JavaClass<JNavigationErrorType> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorType;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorType;";
 
   public:
     /**

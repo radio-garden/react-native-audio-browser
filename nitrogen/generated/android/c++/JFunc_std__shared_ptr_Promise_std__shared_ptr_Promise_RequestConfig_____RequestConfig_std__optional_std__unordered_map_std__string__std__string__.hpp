@@ -32,7 +32,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__: public jni::JavaClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__;";
 
   public:
     /**
@@ -88,13 +88,13 @@ namespace margelo::nitro::audiobrowser {
      */
     jni::local_ref<JPromise::javaobject> invoke_cxx(jni::alias_ref<JRequestConfig> request, jni::alias_ref<jni::JMap<jni::JString, jni::JString>> routeParams) {
       std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> __result = _func(request->toCpp(), routeParams != nullptr ? std::make_optional([&]() {
-              std::unordered_map<std::string, std::string> __map;
-              __map.reserve(routeParams->size());
-              for (const auto& __entry : *routeParams) {
-                __map.emplace(__entry.first->toStdString(), __entry.second->toStdString());
-              }
-              return __map;
-            }()) : std::nullopt);
+        std::unordered_map<std::string, std::string> __map;
+        __map.reserve(routeParams->size());
+        for (const auto& __entry : *routeParams) {
+          __map.emplace(__entry.first->toStdString(), __entry.second->toStdString());
+        }
+        return __map;
+      }()) : std::nullopt);
       return [&]() {
         jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
         jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
@@ -127,7 +127,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::invoke_cxx)});
     }
