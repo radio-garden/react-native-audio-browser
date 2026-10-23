@@ -1,3 +1,22 @@
+## [0.2.0-next.34](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.33...v0.2.0-next.34) (2026-10-23)
+
+### Code Refactors
+
+* **ios:** apply the player options in one idempotent applyOptions ([8d0ff6d](https://github.com/radio-garden/react-native-audio-browser/commit/8d0ff6dd8e88111ee6f4690eec50853966d3211a))
+* **ios:** ask the track-load handler once in TrackSelector ([cb9dc51](https://github.com/radio-garden/react-native-audio-browser/commit/cb9dc514e40471a99b403f2038ee1f01943c120d))
+* **ios:** build the player from init parameters; NetworkMonitor emits ([49eced8](https://github.com/radio-garden/react-native-audio-browser/commit/49eced83589b6e2a2b6434f86e3577e6dc489543))
+* **ios:** call JS where the bridge's own events are emitted ([3b01910](https://github.com/radio-garden/react-native-audio-browser/commit/3b01910adcdd2af42f788142eda1aa71865a0c34))
+* **ios:** cut the bridge's comments to what the code cannot say ([f470ad0](https://github.com/radio-garden/react-native-audio-browser/commit/f470ad00db87fa0a596e59fe517a757343f5d976))
+* **ios:** delete the bridge's dead code and identity wrappers ([728ee2a](https://github.com/radio-garden/react-native-audio-browser/commit/728ee2a64405e30c275ccae5c2c12bf4b3f17311))
+* **ios:** drive the publish's media-stack effects through the PlayerEngine ([e195dc0](https://github.com/radio-garden/react-native-audio-browser/commit/e195dc0c4127a668d8931e56e80db4042f247234))
+* **ios:** drop RemoteCommand's payloads ([a670e3f](https://github.com/radio-garden/react-native-audio-browser/commit/a670e3f2aa6e8ee5b1893683bcbc9bf0d7f25d18))
+* **ios:** fold the bridge's small repetitions ([d852704](https://github.com/radio-garden/react-native-audio-browser/commit/d852704d9e463e28a70d7509289bc554ca79a479))
+* **ios:** route invalidateAll's failed reload through the bridge's one report ([2d60288](https://github.com/radio-garden/react-native-audio-browser/commit/2d60288be7b74d6a79ed15defa2038564c3a44e9))
+
+### Documentation
+
+* **ios:** describe the bridge's new seams ([56b5a3a](https://github.com/radio-garden/react-native-audio-browser/commit/56b5a3ad6986080c305edae4be67d90e6515bd26))
+
 ## [0.2.0-next.33](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.32...v0.2.0-next.33) (2026-10-23)
 
 ### Bug Fixes
