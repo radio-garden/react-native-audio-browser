@@ -267,9 +267,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
       // From the first setup on, whether or not JS subscribes: JS, then the player.
       networkMonitor.changed.addListener { [weak self] isOnline in
+        guard let self else { return }
         MainActor.assumeIsolated {
-          guard let self, let player else { return }
-          onOnlineChanged(isOnline)
+          guard let player = self.player else { return }
+          self.onOnlineChanged(isOnline)
           player.networkStatusDidChange(isOnline: isOnline)
         }
       }

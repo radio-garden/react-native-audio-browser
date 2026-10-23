@@ -31,15 +31,18 @@ The playback core is two `@MainActor` types, split by what SwiftPM can compile:
 - **Player** (`Player/Player.swift`) is the façade the bridge, CarPlay and Siri call, and holds
   every playback decision. It holds the `PlaybackState`, the play intent, the `ErrorStatus` and
   the current **Load**, runs `transition(_ event:)`, and publishes each change once through
-  `publish()` to `PlayerCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `RetryLoop`
+  `publish()` to `PlayerCallbacks` (HybridAudioBrowser), driving the audio-session and
+  now-playing effects of each change through its engine. It owns `QueueManager`, `RetryLoop`
   (with the healthy-playback refill), `SleepTimerManager` with its `VolumeFader`, `DeferredSeek`,
   `PlaybackPersistence` and two `PlaybackTimer`s. Seeking, reloading, stall and network recovery, the end-of-item judgement and
   the cold-start resume are all here, fully SwiftPM-tested against a mock engine.
 - **AVPlayerEngine** (`AVPlayerEngine.swift`) implements `PlayerEngine`, the Player's one seam to
   the media stack. It owns the `AVPlayer`, its `PlayerObserver` and the current item's
   `ItemObserver`, `MediaLoader`, `SilentAudioPrimer`, `NowPlayingInfoController`,
-  `NowPlayingUpdater` and `RemoteCommandController`. It carries out what the Player decides and
-  reports what it observes as `EngineEvent`s; it holds no playback policy.
+  `NowPlayingUpdater` and `RemoteCommandController`, and activates and releases the
+  `AudioSessionController` it is given. It carries out what the Player decides and reports what it
+  observes as `EngineEvent`s (timed metadata among them, decoded with the loaded track's ICY
+  charset); it holds no playback policy.
 
 HybridAudioBrowser keeps both: `player` for playback, `engine` for what only AVFoundation has
 (now playing, buffering, volume, remote commands).
@@ -50,8 +53,9 @@ State-related guards live in the table; context-related guards (`asset != nil`, 
 live at the call site that decides whether to fire the event.
 
 HybridAudioBrowser implements `PlayerCallbacks` (the Player's Nitro-typed events) and
-`AVPlayerEngineCallbacks` (remote commands, metadata and now-playing changes, which carry
-AVFoundation types).
+`AVPlayerEngineCallbacks` (remote commands, track and chapter metadata, which carry AVFoundation
+types, and now-playing changes). Both forward to JS. The bridge's own events call JS where they
+are emitted; their emitters are for native listeners (CarPlay).
 
 ### Data Flow
 
@@ -192,7 +196,7 @@ ios/
 │   └── HttpClient.swift              # URLSession wrapper (JSON decoding with detailed errors)
 ├── Model/
 │   ├── TrackPlayerError.swift        # PlaybackError, QueueError
-│   ├── RemoteCommand.swift           # Remote command enum with config
+│   ├── RemoteCommand.swift           # Remote command enum (intervals and rates passed beside it)
 │   ├── PlayerUpdateOptions.swift     # Update options struct
 │   └── NitroTypeStubs.swift          # Nitro type stubs
 ├── Extension/
@@ -215,7 +219,8 @@ ios/
 │   ├── Emitter.swift                 # Generic multi-listener event emitter
 │   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
-│   ├── NetworkMonitor.swift          # NWPathMonitor wrapper
+│   ├── NetworkMonitor.swift          # NWPathMonitor wrapper; `changed` emitter
+│   ├── OutputPicker.swift            # @MainActor system audio route picker
 │   ├── ArtworkImageFetcher.swift     # @MainActor Kingfisher fetch (SVG / headers support)
 │   ├── SFSymbolRenderer.swift        # SF Symbol → file:// image rendering
 │   └── SVGProcessor.swift            # SVG → UIImage (SwiftDraw Kingfisher processor)
@@ -286,7 +291,7 @@ Callbacks are set from:
 
 - `PlayerCallbacks` and `AVPlayerEngineCallbacks` protocol methods (player and engine events)
 - `BrowserManager` emitters (navigation events)
-- `NetworkMonitor.onChanged` (connectivity)
+- `NetworkMonitor.changed` (connectivity, once a player exists)
 - `SleepTimerManager.onChanged` (sleep timer)
 
 ### Promises
