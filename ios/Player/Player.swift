@@ -296,12 +296,7 @@ final class Player {
   /// Not a state transition — the state machine never sees it — and not a
   /// `playerDidError`, which stays reserved for terminal errors.
   private func reportRetryingError(_ error: TrackPlayerError.PlaybackError) {
-    // Only attach while the failure is what the listener is looking at (matches
-    // Android). During .playing buffered audio is still audibly fine — the
-    // advisory would replace the song line over working sound — and a
-    // terminal/stopped state must not regain an advisory error.
-    guard state == .loading || state == .buffering || state == .paused else { return }
-    // Each failed attempt re-reports; identical repeats add nothing.
+    guard state.carriesAdvisoryError else { return }
     errorStatus = .retrying(error)
     publish()
   }
@@ -310,20 +305,14 @@ final class Player {
 
   func transition(_ event: PlaybackEvent) {
     guard let newState = nextPlaybackState(from: state, on: event) else { return }
-
-    // Allow error-to-error transitions to update the error and emit callbacks,
-    // even though the state enum value doesn't change.
-    if newState == state, case let .errorOccurred(error) = event {
-      errorStatus = .terminal(error)
-      published.errorStatus = .none // each terminal report reaches JS, a repeat included
+    let oldState = state
+    errorStatus = errorStatus.after(event: event, from: oldState, to: newState)
+    guard newState != oldState else {
       publish()
       return
     }
-
-    guard newState != state else { return }
-    let oldState = state
     state = newState
-    applySideEffects(old: oldState, new: newState, event: event)
+    applySideEffects(old: oldState, new: newState)
     publish()
     // While nothing plays, no periodic save runs: every transition rewrites the snapshot, so it
     // never keeps a position from before a track change or a seek.
@@ -379,17 +368,7 @@ final class Player {
     }
   }
 
-  private func applySideEffects(old: PlaybackState, new: PlaybackState, event: PlaybackEvent) {
-    // Error lifecycle. A retrying error rides along through loading/buffering, but any state
-    // that proves recovery (.ready/.playing: data flowed) or abandons the attempt
-    // (.stopped/.none/.ended) clears it. Runs before publish, so the emitted Playback
-    // is already clean.
-    if case let .errorOccurred(error) = event {
-      errorStatus = .terminal(error)
-    } else if old == .error || (errorStatus.isRetrying && new != .loading && new != .buffering && new != .paused) {
-      errorStatus = .none
-    }
-
+  private func applySideEffects(old: PlaybackState, new: PlaybackState) {
     // Retry-budget refill: sustained audible playback proves the stream
     // recovered, so the next error starts a fresh retry window. Leaving
     // .playing before the threshold cancels the pending refill.
@@ -672,13 +651,8 @@ final class Player {
     beginLoad()
     if let start { deferredSeek.capture(start) }
 
-    if errorStatus != .none {
-      errorStatus = .none
-      // Already .loading, the .trackLoading transition below won't fire: publish the clear here,
-      // or the old track's error lingers over the new one's spinner. In any other state the
-      // transition publishes it, with the state it belongs to.
-      if state == .loading { publish() }
-    }
+    // Published by the .trackLoading or .trackUnloaded transition below, even when it is a no-op.
+    errorStatus = .none
 
     let lastPosition = engine.currentTime
     let shouldContinuePlayback = playWhenReady

@@ -119,19 +119,19 @@ struct PlayerEngineEventTests {
     let (player, engine, _) = makeLoading()
     engine.emit(.unplayable)
     #expect(player.state == .error)
-    #expect(player.errorStatus == .terminal(.trackWasUnplayable))
+    #expect(player.errorStatus == .terminal(.trackWasUnplayable, report: 1))
   }
 
   @Test func anInvalidSourceIsTerminal() {
     let (player, engine, _) = makeLoading()
     engine.emit(.invalidSource("::"))
-    #expect(player.errorStatus == .terminal(.invalidSourceUrl("::")))
+    #expect(player.errorStatus == .terminal(.invalidSourceUrl("::"), report: 1))
   }
 
   @Test func aPlayerFailureCarriesItsHTTPStatus() {
     let (player, engine, _) = makePlaying()
     engine.emit(.failed(nil, httpStatusCode: 404))
-    #expect(player.errorStatus == .terminal(.httpStatus(404)))
+    #expect(player.errorStatus == .terminal(.httpStatus(404), report: 1))
   }
 
   @Test func aGenuineEndAdvances_aLiveEndReconnects() {
