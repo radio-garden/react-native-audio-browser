@@ -114,61 +114,51 @@ extension JsonStyle {
   /// maps to nil, so "no declaration" has one shape on every platform
   /// (Android's lenient mapper makes the same collapse).
   func toTrackStyle() -> TrackStyle? {
-    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
-    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
-    // The 'none' sentinel is a legitimate value; only emptiness collapses.
-    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
-    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
-    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil || imageShape != nil
-      || accessorySymbol != nil || cardTint != nil || cardImage != nil
-    else { return nil }
-    return TrackStyle(
-      display: display,
-      artworkRendering: artworkRendering,
-      imageShape: imageShape,
-      accessorySymbol: accessorySymbol,
-      cardTint: cardTint,
-      cardImage: cardImage,
-    )
+    let declarations = trackDeclarations
+    return Self.declaresAnything(declarations) ? declarations : nil
   }
 
   func toSectionStyle() -> SectionStyle? {
-    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
+    let declarations = trackDeclarations
     let gridTile = gridTile.flatMap { GridTile(fromString: $0.lowercased()) }
-    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
-    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
-    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
-    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil || gridWrap != nil
-      || gridTile != nil || imageShape != nil || accessorySymbol != nil
-      || cardTint != nil || cardImage != nil
-    else { return nil }
+    guard Self.declaresAnything(declarations) || gridWrap != nil || gridTile != nil else { return nil }
     // Argument order is the generated init's (own properties before
     // inherited ones — Nitro flattens `extends` own-props-first).
     return SectionStyle(
       gridWrap: gridWrap,
       gridTile: gridTile,
-      display: display,
-      artworkRendering: artworkRendering,
-      imageShape: imageShape,
-      accessorySymbol: accessorySymbol,
-      cardTint: cardTint,
-      cardImage: cardImage,
+      display: declarations.display,
+      artworkRendering: declarations.artworkRendering,
+      imageShape: declarations.imageShape,
+      accessorySymbol: declarations.accessorySymbol,
+      cardTint: declarations.cardTint,
+      cardImage: declarations.cardImage,
     )
+  }
+
+  /// The declarations a section shares with a track, each nil when absent or unknown.
+  private var trackDeclarations: TrackStyle {
+    TrackStyle(
+      display: display.flatMap { StyleDisplay(fromString: $0.lowercased()) },
+      artworkRendering: artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) },
+      imageShape: imageShape.flatMap { ImageShape(fromString: $0.lowercased()) },
+      // The 'none' sentinel is a legitimate value; only emptiness collapses.
+      accessorySymbol: accessorySymbol?.isEmpty == false ? accessorySymbol : nil,
+      cardTint: cardTint?.isEmpty == false ? cardTint : nil,
+      cardImage: cardImage.flatMap { CardImage(fromString: $0.lowercased()) },
+    )
+  }
+
+  private static func declaresAnything(_ style: TrackStyle) -> Bool {
+    style.display != nil || style.artworkRendering != nil || style.imageShape != nil
+      || style.accessorySymbol != nil || style.cardTint != nil || style.cardImage != nil
   }
 
   /// Snapshot a live track block back to its JSON model (for persistence).
   /// An all-nil block snapshots as no block — the decoders collapse it to
   /// "no declaration" anyway, so never persist the distinction.
   init?(_ style: TrackStyle?) {
-    guard let style,
-          style.display != nil || style.artworkRendering != nil
-          || style.imageShape != nil || style.accessorySymbol != nil
-          || style.cardTint != nil || style.cardImage != nil
-    else { return nil }
+    guard let style, Self.declaresAnything(style) else { return nil }
     self.init(
       display: Self.string(style.display),
       artworkRendering: Self.string(style.artworkRendering),
