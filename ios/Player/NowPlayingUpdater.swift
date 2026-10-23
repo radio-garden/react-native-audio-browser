@@ -317,11 +317,11 @@ final class NowPlayingUpdater {
       {
         guard !Task.isCancelled else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
-        image = await ArtworkImageFetcher.fetchImage(from: imageSource)
+        image = await ArtworkImageFetcher.fetchImage(from: imageSource, waitsForConnectivity: true)
       } else {
         guard !Task.isCancelled else { return }
         if let source = track.artworkImageSource {
-          image = await ArtworkImageFetcher.fetchImage(from: source)
+          image = await ArtworkImageFetcher.fetchImage(from: source, waitsForConnectivity: true)
         } else {
           image = nil
         }

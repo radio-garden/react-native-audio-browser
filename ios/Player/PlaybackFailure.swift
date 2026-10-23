@@ -102,15 +102,7 @@ enum PlaybackFailure {
     guard let error else { return false }
     // AVFoundation routinely wraps the real cause (a URLError, a CoreMedia code) in an AVError.
     for candidate in errorChain(error) {
-      if let urlError = candidate as? URLError {
-        switch urlError.code {
-        case .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost, .cannotFindHost,
-             .dnsLookupFailed:
-          return true
-        default:
-          return false
-        }
-      }
+      if let urlError = candidate as? URLError { return urlError.isConnectivity }
       let nsError = candidate as NSError
       if nsError.domain == AVFoundationErrorDomain, fatalAVErrorCodes.contains(nsError.code) {
         return false

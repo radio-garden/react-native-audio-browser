@@ -57,6 +57,7 @@ let package = Package(
         "Extension/String+IcyCharset.swift",
         "Extension/TimedMetadata+AVFoundation.swift",
         "Extension/ChapterMetadata+AVFoundation.swift",
+        "Extension/URLError+Connectivity.swift",
         "Util/Emitter.swift",
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
