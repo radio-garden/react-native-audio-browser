@@ -609,13 +609,10 @@ final class Player {
       return
     }
     handlePlayWhenReady(playWhenReady) {
-      afterQueueMutation(queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath))
-      // Start position is applied as part of the load: captured as a pending
-      // seek that runs once the item is ready, deferring the ready/play
-      // transition until it lands (no start-at-0 flash).
-      if let ms = startPositionMs, ms > 0 {
-        deferredSeek.capture(ms / 1000)
-      }
+      afterQueueMutation(
+        queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath),
+        startingAt: startPositionMs.flatMap { $0 > 0 ? $0 / 1000 : nil },
+      )
     }
   }
 
@@ -678,10 +675,10 @@ final class Player {
 
   /// The one place a settled queue mutation is published: the new track list, then the
   /// current-track change, then next/previous availability.
-  private func afterQueueMutation(_ change: QueueChange) {
+  private func afterQueueMutation(_ change: QueueChange, startingAt start: TimeInterval? = nil) {
     if change.tracks { callbacks?.playerDidChangeQueue(queue.tracks) }
     if change.currentTrack {
-      handleCurrentTrackChanged()
+      handleCurrentTrackChanged(startingAt: start)
     } else if change.tracks {
       pushSkipAvailability()
     }
@@ -714,12 +711,15 @@ final class Player {
     }
   }
 
-  func handleCurrentTrackChanged() {
+  /// Loads the new current track. `start` is held as the deferred seek, so the ready transition
+  /// waits for it (no flash at 0) and the snapshot saved on the way records it.
+  func handleCurrentTrackChanged(startingAt start: TimeInterval? = nil) {
     defer { pushSkipAvailability() }
     sleepTimerManager.onTrackChanged()
 
     engine.cancelLoading()
     beginLoad()
+    if let start { deferredSeek.capture(start) }
 
     if errorStatus != .none {
       errorStatus = .none

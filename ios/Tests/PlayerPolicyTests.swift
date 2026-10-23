@@ -318,6 +318,17 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == nil)
   }
 
+  /// A queue's start position is in the snapshot the track change saves, not only in the next
+  /// periodic save.
+  @Test func aStartPositionIsSavedWithTheTrackChange() {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let player = makePlayer(retries: false)
+    player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")], startPositionMs: 30000)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 30000)
+    #expect(player.deferredSeek.target == 30)
+  }
+
   /// While nothing plays, a transition alone rewrites the snapshot.
   @Test func anErrorWhilePausedSavesWhereItStopped() {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
