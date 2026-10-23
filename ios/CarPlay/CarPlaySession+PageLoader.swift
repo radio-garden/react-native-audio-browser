@@ -26,19 +26,18 @@ extension CarPlaySession {
         NavigationError(code: .timeout, message: "", statusCode: nil, statusCodeSuccess: nil), path: path, on: template,
       )
     }
-    // Cancelled as soon as the resolve settles: formatting its error is a JS round trip the
-    // timeout must not overwrite.
-    defer { watchdog.cancel() }
-
+    let outcome: Result<ResolvedTrack, Error>
     do {
-      let resolved: ResolvedTrack
-      do {
-        resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
-      } catch {
-        watchdog.cancel()
-        throw error
-      }
-      watchdog.cancel()
+      outcome = try await .success(audioBrowser.browserManager.resolve(path, useCache: true))
+    } catch {
+      outcome = .failure(error)
+    }
+    // As soon as the resolve settles: formatting its error is a JS round trip the timeout must
+    // not overwrite.
+    watchdog.cancel()
+
+    switch outcome {
+    case let .success(resolved):
       guard !Task.isCancelled else { return }
       // An assistant cell is content in itself, even with no rows; a page of empty sections is
       // empty (ADR 0001).
@@ -48,7 +47,7 @@ extension CarPlaySession {
       } else {
         await showNavigationError(.code(.emptyContent), path: path, on: template)
       }
-    } catch {
+    case let .failure(error):
       logger.error("Failed to load content for \(path): \(error.localizedDescription)")
       await showNavigationError(NavigationError.from(error), path: path, on: template)
     }
