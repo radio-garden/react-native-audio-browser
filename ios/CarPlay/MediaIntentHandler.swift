@@ -10,7 +10,7 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
-    let criteria = MediaIntentCriteria.from(
+    let criteria = MediaIntentCriteria(
       mediaName: s?.mediaName,
       genreNames: s?.genreNames ?? [],
       artistName: s?.artistName,

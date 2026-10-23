@@ -12,19 +12,16 @@ public struct MediaIntentCriteria: Sendable {
 
   let query: String
   let reference: Reference
-  let hasGenres: Bool
   let hasMediaType: Bool
-  /// True when `query` is effectively the host app's own name. Siri turns
-  /// "Play «app»" into a search for a word in the app name — e.g. "Play Radio
-  /// Garden" arrives as mediaName "Garden" (+ radio mediaType). That's an
-  /// app-open/resume, not a station search.
+  /// True when `query` is effectively the host app's own name. Siri turns "Play «App Name»"
+  /// into a search for a word of it ("Name", with a radio media type): an app-open or resume,
+  /// not a search.
   let matchesAppName: Bool
 
-  // Structured search payload, mirroring the shared `SearchParams`. Plain
-  // Sendable strings so this type stays in the unit-testable target; the Nitro
-  // `SearchParams` is assembled in the funnel.
-  /// The container-vertical `SearchMode` name, or nil. Comes ONLY from the
-  /// intent's media type — never derived from which filter field is set.
+  // Structured search payload, mirroring `SearchParams` in plain strings so this type stays in
+  // the SwiftPM target; the funnel builds the Nitro `SearchParams`.
+  /// The container-vertical `SearchMode` name, or nil. Comes only from the intent's media type,
+  /// never from which filter field is set.
   let searchMode: String?
   let genre: String?
   let artist: String?
@@ -32,30 +29,40 @@ public struct MediaIntentCriteria: Sendable {
   let title: String?
   let playlist: String?
 
+  /// Builds criteria from the raw fields of a media-search intent.
+  ///
+  /// `mediaTypeMode` is the `SearchMode` string for the intent's container vertical ("station",
+  /// "podcast", "song", …), or nil for a filter-only or unclassified type.
   init(
-    query: String,
+    mediaName: String?,
+    genreNames: [String],
+    artistName: String?,
+    albumName: String?,
+    mediaTypeMode: String?,
     reference: Reference,
-    hasGenres: Bool,
     hasMediaType: Bool,
-    matchesAppName: Bool,
-    searchMode: String? = nil,
-    genre: String? = nil,
-    artist: String? = nil,
-    album: String? = nil,
-    title: String? = nil,
-    playlist: String? = nil,
+    appName: String?,
   ) {
-    self.query = query
+    let name = (mediaName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedNonEmpty: (String?) -> String? = {
+      let t = ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      return t.isEmpty ? nil : t
+    }
+
+    genre = genreNames.isEmpty ? nil : genreNames.joined(separator: " ")
+    artist = trimmedNonEmpty(artistName)
+    album = trimmedNonEmpty(albumName)
+    // song/playlist carry their spoken name into a dedicated field.
+    title = mediaTypeMode == "song" ? (name.isEmpty ? nil : name) : nil
+    playlist = mediaTypeMode == "playlist" ? (name.isEmpty ? nil : name) : nil
+
+    // Always populated, so search works before the API honours `mode`: the spoken name, else a
+    // structured value.
+    query = name.isEmpty ? (genre ?? artist ?? album ?? title ?? playlist ?? "") : name
     self.reference = reference
-    self.hasGenres = hasGenres
     self.hasMediaType = hasMediaType
-    self.matchesAppName = matchesAppName
-    self.searchMode = searchMode
-    self.genre = genre
-    self.artist = artist
-    self.album = album
-    self.title = title
-    self.playlist = playlist
+    matchesAppName = Self.queryMatchesAppName(query, appName: appName)
+    searchMode = mediaTypeMode
   }
 
   /// Resume vs search, by reference:
@@ -69,59 +76,10 @@ public struct MediaIntentCriteria: Sendable {
     case .unknown:
       let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
       // "Play «app»": no search term and no other filter → resume.
-      if q.isEmpty { return !hasGenres && !hasMediaType }
+      if q.isEmpty { return genre == nil && !hasMediaType }
       // "Play «app-name»": resume — unless a real filter signals a search.
-      return matchesAppName && !hasGenres
+      return matchesAppName && genre == nil
     }
-  }
-
-  /// Builds criteria from the raw fields of a media-search intent. Pure (no
-  /// `Intents`/`Bundle` dependency) so the whole Siri-phrase → search decision
-  /// is unit-testable.
-  ///
-  /// `mediaTypeMode` is the already-collapsed `SearchMode` string for the
-  /// intent's container vertical (e.g. "station"/"podcast"/"song"), or nil for
-  /// a filter-only / unclassified type. `reference` is the mapped axis.
-  static func from(
-    mediaName: String?,
-    genreNames: [String],
-    artistName: String?,
-    albumName: String?,
-    mediaTypeMode: String?,
-    reference: Reference,
-    hasMediaType: Bool,
-    appName: String?,
-  ) -> MediaIntentCriteria {
-    let name = (mediaName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    let trimmedNonEmpty: (String?) -> String? = {
-      let t = ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-      return t.isEmpty ? nil : t
-    }
-
-    let genre = genreNames.isEmpty ? nil : genreNames.joined(separator: " ")
-    let artist = trimmedNonEmpty(artistName)
-    let album = trimmedNonEmpty(albumName)
-    // song/playlist carry their spoken name into a dedicated field.
-    let title = mediaTypeMode == "song" ? (name.isEmpty ? nil : name) : nil
-    let playlist = mediaTypeMode == "playlist" ? (name.isEmpty ? nil : name) : nil
-
-    // `query` is always populated so search works even before the API honours
-    // `mode`: prefer the spoken name, else fall back to a structured value.
-    let query = name.isEmpty ? (genre ?? artist ?? album ?? title ?? playlist ?? "") : name
-
-    return MediaIntentCriteria(
-      query: query,
-      reference: reference,
-      hasGenres: !genreNames.isEmpty,
-      hasMediaType: hasMediaType,
-      matchesAppName: queryMatchesAppName(query, appName: appName),
-      searchMode: mediaTypeMode, // mode is the vertical, verbatim — no derivation
-      genre: genre,
-      artist: artist,
-      album: album,
-      title: title,
-      playlist: playlist,
-    )
   }
 
   /// Whether `query` is effectively the host app's own name. Case- and
