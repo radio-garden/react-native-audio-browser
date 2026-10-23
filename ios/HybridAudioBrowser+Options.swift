@@ -53,23 +53,12 @@ public extension HybridAudioBrowser {
         // The bundled runtime options and initial state are part of the atomic launch
         // description. Stage the state first so setup options and earlier pre-setup setter
         // calls resolve by strict last-write-wins, then apply everything to the live player.
-        if let bundled = options.options {
-          updateOptions(options: bundled)
-        } else {
-          // updateOptions applies remote commands itself; without bundled options, apply the
-          // defaults (play, pause, next, previous, seekTo) here.
-          applyRemoteCommands()
-        }
+        if let bundled = options.options { updateOptions(options: bundled) }
         if let mode = options.repeatMode { pendingRepeatMode = mode }
         if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
         applyPendingPlayerState()
-
-        // Push the resolved event cadence unconditionally. `updateOptions` applies
-        // the interval only when it *differs* from the stored one, but the store
-        // outlives the player — so on a re-setup with unchanged options the new
-        // player would come up with no progress timer at all.
-        player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
-        player?.setPlaybackIntervalEnabled(playbackIntervalEnabled)
+        // The stored options outlive the player, so a re-setup applies them to the new one.
+        applyOptions()
 
         // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
@@ -95,40 +84,25 @@ public extension HybridAudioBrowser {
 
   func updateOptions(options: NativeUpdateOptions) {
     onMainActor {
-      let previousInterval = playerOptions.progressUpdateEventInterval
-
-      // Update stored options
       playerOptions.update(from: options)
-
-      // Propagate the favorite flag to the browser so it can hydrate
-      // row hearts (the `favorite` capability is the single favoriting switch).
-      browserManager.setFavoriteEnabled(playerOptions.capabilities.favoriteEnabled)
-
-      // Apply remote commands to player
-      applyRemoteCommands()
-
-      // Apply progress update interval if changed
-      if playerOptions.progressUpdateEventInterval != previousInterval {
-        player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
-      }
-
+      applyOptions()
       onOptionsChanged(playerOptions.toOptions())
       playerOptionsChangedEmitter.emit(())
     }
   }
 
-  /// Converts capabilities to remote commands and applies them to the player
+  /// Applies the stored options to the browser, the player and its engine. Idempotent.
   @MainActor
-  private func applyRemoteCommands() {
-    guard let engine else { return }
-
-    let remoteCommands = playerOptions.capabilities.buildRemoteCommands(
+  private func applyOptions() {
+    // The `favorite` capability is the one favoriting switch: it also drives the row hearts.
+    browserManager.setFavoriteEnabled(playerOptions.capabilities.favoriteEnabled)
+    engine?.remoteCommands = playerOptions.capabilities.buildRemoteCommands(
       forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
       backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
       playbackRates: playerOptions.playbackRates,
     )
-
-    engine.remoteCommands = remoteCommands
+    player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
+    player?.setPlaybackIntervalEnabled(playerOptions.playbackIntervalEnabled)
   }
 
   func getOptions() throws -> Options {
@@ -137,7 +111,7 @@ public extension HybridAudioBrowser {
 
   func setPlaybackIntervalEnabled(enabled: Bool) {
     onMainActor {
-      playbackIntervalEnabled = enabled
+      playerOptions.playbackIntervalEnabled = enabled
       player?.setPlaybackIntervalEnabled(enabled)
     }
   }

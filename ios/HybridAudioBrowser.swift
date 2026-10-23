@@ -280,11 +280,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  /// Stored so a re-setup can re-apply it: unlike the other runtime options this
-  /// one has no home in `playerOptions`, and the player it was pushed to does not
-  /// survive `setupPlayer`.
-  @MainActor var playbackIntervalEnabled = false
-
   // MARK: - Initialization
 
   override public init() {

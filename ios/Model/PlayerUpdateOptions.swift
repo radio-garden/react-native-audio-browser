@@ -12,6 +12,8 @@ class PlayerUpdateOptions {
   var forwardJumpInterval: Double = 15.0
   var backwardJumpInterval: Double = 15.0
   var progressUpdateEventInterval: Double?
+  /// Set by `setPlaybackIntervalEnabled`, not by `update(from:)`; not reported in `toOptions()`.
+  var playbackIntervalEnabled = false
 
   /// Player capabilities - most enabled by default, only false values disable
   /// Exceptions: jumpForward, jumpBackward default to false
