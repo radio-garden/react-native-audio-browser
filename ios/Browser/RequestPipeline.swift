@@ -99,7 +99,7 @@ final class RequestPipeline {
     }
     return HttpClient.HttpRequest(
       url: RequestLayer.buildUrl(merged, defaultPath: path),
-      method: merged.method?.stringValue ?? "GET",
+      method: merged.method ?? .get,
       headers: merged.headers,
       body: merged.body,
       contentType: merged.contentType ?? HttpClient.defaultContentType,

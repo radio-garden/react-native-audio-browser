@@ -3,7 +3,7 @@ import Foundation
 /// Utility for handling browser paths and contextual URLs in the media browser system.
 ///
 /// Handles two types of special paths:
-/// 1. System paths (prefixed with `/__`): root, search, and offline paths
+/// 1. Search paths (`/__search?q=…`)
 /// 2. Contextual URLs: Embed parent context in track identifiers for playback integration
 ///
 /// Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}`
@@ -18,14 +18,8 @@ import Foundation
 /// - Cache lookup to work consistently
 /// - Parent context to be preserved for queue restoration
 enum BrowserPathHelper {
-  /// Root path for media browsing
-  static let rootPath = "/__root"
-
   /// Search path prefix (full path is /__search?q=query)
   static let searchPathPrefix = "/__search"
-
-  /// Offline error placeholder media ID
-  static let offlinePath = "/__offline"
 
   /// Character set for percent-encoding query parameter keys and values.
   /// Starts from `.urlQueryAllowed` but removes characters that have special
@@ -41,11 +35,6 @@ enum BrowserPathHelper {
 
   /// Query parameter name for the tapped child's page position (tie-breaker)
   private static let contextualIndexParam = "__index"
-
-  /// Check if a path is a special system path (not a regular navigation path)
-  static func isSpecialPath(_ path: String) -> Bool {
-    path == rootPath || isSearchPath(path)
-  }
 
   /// Check if a path is a search path (`/__search?q=…`)
   static func isSearchPath(_ path: String) -> Bool {

@@ -36,9 +36,6 @@ struct BrowserConfig {
   /// Behavior: single track playback vs queue expansion
   var singleTrack: Bool = false
 
-  /// Behavior: show offline error in Android Auto controller
-  var androidControllerOfflineError: Bool = true
-
   // MARK: - CarPlay Options
 
   /// App-localized title for CarPlay loading screens (shown as the centered
@@ -70,7 +67,6 @@ struct BrowserConfig {
     routes = config.routes
     singleTrack = config.singleTrack ?? false
     handleTrackLoad = config.handleTrackLoad
-    androidControllerOfflineError = config.androidControllerOfflineError ?? true
     carPlayLoadingTitle = config.carPlayLoadingTitle
     resolveAlbumPath = config.resolveAlbumPath
     formatNavigationError = config.formatNavigationError
@@ -93,7 +89,6 @@ struct BrowserConfig {
     stripped.nowPlayingArtwork = nowPlayingArtwork?.strippingJSCallbacks()
     stripped.routes = routes?.map { $0.strippingJSCallbacks() }
     stripped.singleTrack = singleTrack
-    stripped.androidControllerOfflineError = androidControllerOfflineError
     stripped.carPlayLoadingTitle = carPlayLoadingTitle
     return stripped
   }
