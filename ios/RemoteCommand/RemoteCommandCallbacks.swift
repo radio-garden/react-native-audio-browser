@@ -17,9 +17,6 @@
   /// Called when stop is triggered remotely.
   func remoteStop()
 
-  /// Called when toggle play/pause is triggered remotely.
-  func remotePlayPause()
-
   /// Called when next is triggered remotely.
   func remoteNext()
 

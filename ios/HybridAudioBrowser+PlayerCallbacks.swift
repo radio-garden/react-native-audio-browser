@@ -97,10 +97,6 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { player?.stop() }
   }
 
-  public func remotePlayPause() {
-    if player?.playWhenReady == true { remotePause() } else { remotePlay() }
-  }
-
   public func remoteNext() {
     dispatchRemote(handler: handleRemoteNext, report: onRemoteNext) { player?.next() }
   }

@@ -29,10 +29,6 @@ final class AVPlayerEngine: PlayerEngine {
   /// The charset of the track last loaded, for its ICY titles.
   private var icyCharset: String?
 
-  var remoteCommands: [RemoteCommand] = [] {
-    didSet { remoteCommandController.enable(commands: remoteCommands) }
-  }
-
   /// - Parameter resolver: Resolves media URLs and now-playing artwork.
   init(
     callbacks: AVPlayerEngineCallbacks?,

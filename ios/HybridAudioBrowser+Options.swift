@@ -96,9 +96,10 @@ public extension HybridAudioBrowser {
   private func applyOptions() {
     // The `favorite` capability is the one favoriting switch: it also drives the row hearts.
     browserManager.setFavoriteEnabled(playerOptions.capabilities.favoriteEnabled)
-    engine?.remoteCommands = playerOptions.capabilities.buildRemoteCommands(
-      forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
-      backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
+    engine?.remoteCommandController.enable(
+      commands: playerOptions.capabilities.remoteCommands,
+      forwardJumpInterval: playerOptions.forwardJumpInterval,
+      backwardJumpInterval: playerOptions.backwardJumpInterval,
       playbackRates: playerOptions.playbackRates,
     )
     player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
