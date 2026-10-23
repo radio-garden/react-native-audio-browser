@@ -52,12 +52,11 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     // can be set at setup (before any track) while output only begins here. Idempotent:
     // `setActive(true)` is a no-op when the session is already active.
     if state.playing || state.buffering {
-      audioSession.activate()
       // The now-playing session's activation request at link time predates this
       // (the audio session was still inactive, and the system may have declined);
-      // re-request now so the surface can appear even if playback never produces
-      // audio (first-ever load failing on a dead stream).
-      engine?.reactivateNowPlayingSession()
+      // re-request once the audio session is active, so the surface can appear even if
+      // playback never produces audio (first-ever load failing on a dead stream).
+      audioSession.activate { [weak self] in self?.engine?.reactivateNowPlayingSession() }
     }
     // A stall starting or recovering may not change the Player state.
     engine?.nowPlayingUpdater.render()

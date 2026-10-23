@@ -35,6 +35,11 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
 
+  /// Where `setActive` runs: it blocks until the system has changed the session, which can take
+  /// long enough to stall the main thread. Serial, so a release and a quick re-activation keep
+  /// their order.
+  private let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
+
   /// Touched only by `init` and `deinit`.
   private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
   private var volumeObservation: NSKeyValueObservation?
@@ -86,10 +91,14 @@ final class AudioSessionController {
     applyCategory()
   }
 
-  /// Activates the session for output and cancels a pending release.
-  func activate() {
-    try? session.setActive(true)
+  /// Activates the session for output and cancels a pending release. `then` runs on the main
+  /// actor once the activation has run, whether or not it succeeded.
+  func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
+    activationQueue.async {
+      try? AVAudioSession.sharedInstance().setActive(true)
+      if let then { Task { @MainActor in then() } }
+    }
   }
 
   /// Releases the session after 3 s unless playback resumes, so other apps' audio can come back.
@@ -100,7 +109,9 @@ final class AudioSessionController {
     let release = DispatchWorkItem { [weak self] in
       guard let self, player?.playWhenReady == false else { return }
       releaseWork = nil
-      try? session.setActive(false, options: .notifyOthersOnDeactivation)
+      activationQueue.async {
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+      }
     }
     releaseWork = release
     DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
@@ -155,12 +166,13 @@ final class AudioSessionController {
       player?.handleInterruptionBegan()
     case .ended:
       let shouldResume = options.map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) } ?? false
-      // Reactivate only when a resume follows: activating while staying paused would hold a
-      // non-mixable session with nothing to release it.
+      // Reactivate only when a resume follows, and resume once it is active: activating while
+      // staying paused would hold a non-mixable session with nothing to release it.
       if shouldResume, player?.willResumeAfterInterruption == true {
-        try? session.setActive(true)
+        activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
+      } else {
+        player?.handleInterruptionEnded(shouldResume: shouldResume)
       }
-      player?.handleInterruptionEnded(shouldResume: shouldResume)
     @unknown default:
       break
     }
