@@ -8,14 +8,14 @@ private func makeCoordinator() -> (
   player: Player,
   engine: MockPlayerEngine,
   callbacks: MockPlayerCallbacks,
-  sleepTimer: SleepTimerManager,
+  clock: ManualSleepTimerScheduler,
 ) {
-  let sleepTimer = SleepTimerManager(scheduler: ManualSleepTimerScheduler())
+  let clock = ManualSleepTimerScheduler()
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retries: false, sleepTimer: sleepTimer)
+  let player = makePlayer(engine: engine, retries: false, sleepTimerScheduler: clock)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
-  return (player, engine, callbacks, sleepTimer)
+  return (player, engine, callbacks, clock)
 }
 
 /// Helper to load a track into the player's queue so it has a currentTrack.
@@ -806,44 +806,54 @@ struct HealthyPlaybackRetryResetTests {
 
 @Suite("Player - sleep timer fade")
 struct SleepTimerFadeTests {
+  /// A 20 s timer whose 10 s fade has begun.
+  @MainActor
+  private func startFade(_ c: Player, _ clock: ManualSleepTimerScheduler) {
+    c.sleepTimerManager.set(seconds: 20, fadeDuration: 10)
+    clock.advance(to: 10)
+  }
+
   @Test @MainActor
   func fadeStart_capturesPreFadeVolume() {
-    let (c, eh, _, st) = makeCoordinator()
+    let (c, eh, _, clock) = makeCoordinator()
     eh.volume = 0.8
 
-    st.onFadeStart?(10)
+    startFade(c, clock)
+    eh.volume = 0.1 // mid-fade
 
-    #expect(c.volumeFader.isActive)
-    #expect(c.volumeFader.originalVolume == 0.8)
+    #expect(c.sleepTimerManager.isFading)
+    c.sleepTimerManager.clear()
+    #expect(eh.volume == 0.8)
   }
 
   @Test @MainActor
   func completion_pausesThenRestoresPreFadeVolume() {
-    let (c, eh, _, st) = makeCoordinator()
+    let (c, eh, _, clock) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
     c.transition(.bufferingSufficient) // leave .loading so pause reaches the player
     eh.pausePlaybackCallCount = 0
 
-    st.onFadeStart?(10)
+    startFade(c, clock)
     eh.volume = 0.2 // mid-fade
 
-    st.onComplete?()
+    clock.advance(to: 20)
 
     #expect(c.playWhenReady == false)
     #expect(eh.pausePlaybackCallCount == 1)
     #expect(eh.volume == 1.0)
-    #expect(!c.volumeFader.isActive)
+    #expect(!c.sleepTimerManager.isFading)
   }
 
   @Test @MainActor
   func completion_withoutFade_justPauses() {
-    let (c, eh, _, st) = makeCoordinator()
+    let (c, eh, _, clock) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
     eh.volume = 0.8
+    c.sleepTimerManager.set(seconds: 20)
 
-    st.onComplete?()
+    clock.advance(to: 20)
 
     #expect(c.playWhenReady == false)
     #expect(eh.volume == 0.8) // untouched — no fade ran
@@ -851,41 +861,40 @@ struct SleepTimerFadeTests {
 
   @Test @MainActor
   func fadeCancel_restoresPreFadeVolume() {
-    let (c, eh, _, st) = makeCoordinator()
+    let (c, eh, _, clock) = makeCoordinator()
     eh.volume = 0.8
 
-    st.onFadeStart?(10)
+    startFade(c, clock)
     eh.volume = 0.1 // mid-fade
 
-    st.onFadeCancel?()
+    c.sleepTimerManager.set(seconds: 60)
 
     #expect(eh.volume == 0.8)
-    #expect(!c.volumeFader.isActive)
+    #expect(!c.sleepTimerManager.isFading)
   }
 
   @Test @MainActor
   func pauseDuringFade_clearsSleepTimer() {
-    let (c, _, _, st) = makeCoordinator()
+    let (c, _, _, clock) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
-    st.set(seconds: 60, fadeDuration: 10)
 
-    st.onFadeStart?(10)
+    startFade(c, clock)
     c.pause()
 
-    #expect(st.get() == nil)
+    #expect(c.sleepTimerManager.get() == nil)
   }
 
   @Test @MainActor
   func pauseWithoutFade_leavesSleepTimerAlone() {
-    let (c, _, _, st) = makeCoordinator()
+    let (c, _, _, _) = makeCoordinator()
     loadTrack(c)
     c.setPlayWhenReady(true)
-    st.set(seconds: 60, fadeDuration: 10)
+    c.sleepTimerManager.set(seconds: 60, fadeDuration: 10)
 
     c.pause()
 
-    #expect(st.get() != nil)
+    #expect(c.sleepTimerManager.get() != nil)
   }
 }
 

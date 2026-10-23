@@ -44,14 +44,20 @@ final class SleepTimerManager {
   // MARK: - Properties
 
   private let scheduler: any SleepTimerScheduling
+  /// Fades the volume out before a time-based timer's deadline.
+  private let fader: VolumeFader
 
   // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
   private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
   private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
 
-  init(scheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler()) {
+  init(fader: VolumeFader, scheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler()) {
+    self.fader = fader
     self.scheduler = scheduler
   }
+
+  /// Whether the fade before the deadline is running.
+  var isFading: Bool { fader.isActive }
 
   /// The time when playback should stop (seconds since epoch), or -1 if inactive
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -73,16 +79,8 @@ final class SleepTimerManager {
     }
   }
 
-  /// Callback invoked when the sleep timer fires
+  /// Halts playback when the timer fires; the pre-fade volume is restored after it returns.
   var onComplete: (() -> Void)?
-
-  /// Callback invoked when the fade-out window of a time-based timer begins
-  var onFadeStart: ((_ duration: TimeInterval) -> Void)?
-
-  /// Callback invoked when a timer is cancelled/replaced while its fade may be
-  /// running — the listener restores the pre-fade volume. Not invoked on
-  /// completion: there the pause lands first, then the volume is restored.
-  var onFadeCancel: (() -> Void)?
 
   /// Callback invoked when the sleep timer state changes
   var onChanged: ((SleepTimerState) -> Void)?
@@ -97,7 +95,7 @@ final class SleepTimerManager {
     if !hasSleepTimer { return false }
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
-    onFadeCancel?()
+    fader.cancel(restoringVolume: true)
     onChanged?(.first(NullType.null))
     return true
   }
@@ -129,7 +127,7 @@ final class SleepTimerManager {
   ///     deadline (clamped to `seconds`); silence lands exactly at the deadline
   func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
-    onFadeCancel?()
+    fader.cancel(restoringVolume: true)
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
     sleepTimerJob = scheduler.schedule(after: seconds) { [weak self] in
       self?.complete()
@@ -137,7 +135,7 @@ final class SleepTimerManager {
     if let fadeDuration, fadeDuration > 0 {
       let fade = min(fadeDuration, seconds)
       fadeJob = scheduler.schedule(after: seconds - fade) { [weak self] in
-        self?.onFadeStart?(fade)
+        self?.fader.start(duration: fade)
       }
     }
     if let state = get() { onChanged?(state) }
@@ -148,7 +146,7 @@ final class SleepTimerManager {
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
     if changed {
-      onFadeCancel?()
+      fader.cancel(restoringVolume: true)
       if let state = get() { onChanged?(state) }
     }
   }
@@ -182,7 +180,7 @@ final class SleepTimerManager {
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
     onChanged?(.first(NullType.null))
-    onComplete?()
+    fader.resolve { onComplete?() }
   }
 
   deinit {

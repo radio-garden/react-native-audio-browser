@@ -23,11 +23,6 @@ final class Player {
   let sleepTimerManager: SleepTimerManager
   var deferredSeek = DeferredSeek()
 
-  lazy var volumeFader = VolumeFader(
-    getVolume: { [weak self] in self?.engine.volume ?? 1 },
-    setVolume: { [weak self] level in self?.engine.volume = level },
-  )
-
   private lazy var progressTimer = PlaybackTimer(
     isActive: { $0 == .loading || $0 == .buffering || $0 == .playing },
   ) { [weak self] in
@@ -207,8 +202,8 @@ final class Player {
 
     guard changed else { return }
     // An explicit pause during the sleep fade is the timer's goal arriving early: clear the
-    // timer (restores the pre-fade volume via onFadeCancel).
-    if !newValue, volumeFader.isActive { sleepTimerManager.clear() }
+    // timer, which restores the pre-fade volume.
+    if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
     evaluateSessionRelease()
   }
@@ -241,28 +236,25 @@ final class Player {
   init(
     engine: any PlayerEngine,
     retry: RetryLoop = RetryLoop(),
-    sleepTimerManager: SleepTimerManager = SleepTimerManager(),
+    sleepTimerScheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler(),
     persistenceDefaults: UserDefaults = PlaybackPersistence.standardDefaults,
     persistenceSaveInterval: Duration = .seconds(5),
   ) {
     self.engine = engine
     self.retry = retry
-    self.sleepTimerManager = sleepTimerManager
+    sleepTimerManager = SleepTimerManager(
+      fader: VolumeFader(
+        getVolume: { [weak engine] in engine?.volume ?? 1 },
+        setVolume: { [weak engine] in engine?.volume = $0 },
+      ),
+      scheduler: sleepTimerScheduler,
+    )
     self.persistenceDefaults = persistenceDefaults
     self.persistenceSaveInterval = persistenceSaveInterval
     engine.onEvent = { [weak self] in self?.engineDidEmit($0) }
 
     // Configure sleep timer
-    sleepTimerManager.onComplete = { [weak self] in
-      guard let self else { return }
-      self.volumeFader.resolve { self.pause() }
-    }
-    sleepTimerManager.onFadeStart = { [weak self] duration in
-      self?.volumeFader.start(duration: duration)
-    }
-    sleepTimerManager.onFadeCancel = { [weak self] in
-      self?.volumeFader.cancel(restoringVolume: true)
-    }
+    sleepTimerManager.onComplete = { [weak self] in self?.pause() }
     sleepTimerManager.onChanged = { [weak self] in self?.callbacks?.playerDidChangeSleepTimer($0) }
 
     retry.onError = { [weak self] error in
