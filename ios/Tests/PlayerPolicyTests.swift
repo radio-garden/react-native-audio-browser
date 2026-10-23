@@ -329,6 +329,21 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == 30)
   }
 
+  /// Play on a track without a source fails as an invalid source; it never reloads the media
+  /// loader's last URL, which belongs to an earlier track.
+  @Test func playOnATrackWithoutASourceFailsInsteadOfReloading() {
+    let (player, engine, _) = makePlaying()
+    player.setQueue([Track(id: "t2", src: nil, title: "No source")])
+    #expect(player.state == .error)
+    let resolves = engine.resolveAndLoadCalls.count
+
+    player.play()
+
+    #expect(player.state == .error)
+    #expect(player.nitroPlaybackError?.code == TrackPlayerError.PlaybackError.invalidSourceUrl("nil").code)
+    #expect(engine.resolveAndLoadCalls.count == resolves)
+  }
+
   /// While nothing plays, a transition alone rewrites the snapshot.
   @Test func anErrorWhilePausedSavesWhereItStopped() {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")

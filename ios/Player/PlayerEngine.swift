@@ -54,8 +54,6 @@ enum EngineEvent {
   /// Runs the media-URL resolver for `track`, so a short-lived URL is minted afresh, and loads
   /// the result.
   func resolveAndLoad(src: String, track: Track)
-  /// Loads the last resolved URL again.
-  func loadResolved()
   func cancelLoading()
   /// Drops the asset and stops observing the item, leaving it in place for the reload.
   func dropAsset()

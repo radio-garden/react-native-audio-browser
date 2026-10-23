@@ -43,8 +43,6 @@ final class MediaLoader {
   private(set) var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
-  private var url: URL?
-  private var urlOptions: [String: Any]?
 
   // MARK: - Public API
 
@@ -98,14 +96,8 @@ final class MediaLoader {
     }
   }
 
-  func loadAsset() {
-    guard let url else {
-      // Callers (reload-from-terminal) have already transitioned to .loading;
-      // a silent return would strand that state with no load in flight.
-      onEvent?(.invalidSource("nil"))
-      return
-    }
-    let pendingAsset = AVURLAsset(url: url, options: urlOptions)
+  private func loadAsset(url: URL, options: [String: Any]?) {
+    let pendingAsset = AVURLAsset(url: url, options: options)
     asset = pendingAsset
 
     // Separate from playable loading to allow playback to start faster
@@ -205,8 +197,6 @@ final class MediaLoader {
     playableLoadTask = nil
   }
 
-  /// Preserves `url` and `urlOptions` so that `loadAsset()` can recreate the asset
-  /// (used by `reload()` → `loadAVPlayer()` without a preceding `resolveAndLoad`).
   func clearAsset() {
     guard let currentAsset = asset else { return }
 
@@ -243,12 +233,12 @@ final class MediaLoader {
     }
 
     let isLocalFile = mediaUrl.isFileURL
-    url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
-    urlOptions = Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent)
-
     logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
     logger.debug("  isLocalFile: \(isLocalFile)")
 
-    loadAsset()
+    loadAsset(
+      url: isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl,
+      options: Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent),
+    )
   }
 }

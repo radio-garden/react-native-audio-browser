@@ -848,18 +848,13 @@ final class Player {
 
   // MARK: - Reloading
 
-  /// Loads the current track again from its resolved URL.
-  func reload(startFromCurrentTime: Bool) {
-    prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)
-    engine.loadResolved()
-  }
-
   /// Loads the current track again, re-running the media-URL resolver, so a consumer whose
-  /// resolver mints short-lived URLs or tokens recovers once they expire. Falls back to
-  /// `reload` when the track has no `src` to resolve.
+  /// resolver mints short-lived URLs or tokens recovers once they expire. A track without a `src`
+  /// fails as an invalid source; with no current track, nothing loads.
   func reloadResolving(startFromCurrentTime: Bool) {
-    guard let track = currentTrack, let src = track.src else {
-      reload(startFromCurrentTime: startFromCurrentTime)
+    guard let track = currentTrack else { return }
+    guard let src = track.src else {
+      transition(.errorOccurred(.invalidSourceUrl("nil")))
       return
     }
     prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)

@@ -144,10 +144,6 @@ final class AVPlayerEngine: PlayerEngine {
     mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
-  func loadResolved() {
-    mediaLoader.loadAsset()
-  }
-
   func cancelLoading() {
     mediaLoader.cancelAll()
   }
