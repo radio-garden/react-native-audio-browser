@@ -183,16 +183,23 @@ final class BrowserManager {
     contentCache.remove(path)
   }
 
-  /// Clears the entire content cache (e.g. on a locale change).
-  /// Runs from `invalidateAllContent`, so re-resolve the layer thunks too.
-  func clearContentCache() {
+  /// Clears the content cache, the search cache and the resolved request layers (e.g. on a
+  /// locale change), then re-queries the tabs and reloads the current path from the network.
+  /// The two are independent: a failed reload goes to `reloadFailed` with its path and neither
+  /// waits for nor cancels the tabs, and a failed tabs re-query keeps the current tabs.
+  func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
     contentCache.clear()
     requests.invalidateLayers()
-    // The search slot is content too: a locale switch or a re-auth changes
-    // titles, src, artwork and availability, and nothing else ever evicts it,
-    // so a repeated query returned pre-invalidation results forever.
     lastSearchKey = nil
     lastSearchResults = nil
+    Task { _ = try? await queryTabs() }
+    Task {
+      do {
+        try await load(path, bypassCache: true)
+      } catch {
+        await reloadFailed(error, path)
+      }
+    }
   }
 
   /// `error` as the app's `formatNavigationError` displays it, or its default display when

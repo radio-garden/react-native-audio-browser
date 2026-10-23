@@ -30,7 +30,7 @@ final class RequestPipeline {
 
   /// The request and browse layers of the current config: each resolver's result, or the
   /// static layer when it has none. The resolvers run one after the other, request first, as on
-  /// Android and web, and a config change or `clearContentCache` while they run resolves them
+  /// Android and web, and a config change or `invalidateAll` while they run resolves them
   /// again.
   func resolvedLayers() async throws -> ResolvedLayers {
     try await layers.value { [weak self] in

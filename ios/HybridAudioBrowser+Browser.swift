@@ -93,29 +93,13 @@ public extension HybridAudioBrowser {
   }
 
   func invalidateAllContent() throws {
-    onMainActor { browserManager.clearContentCache() }
-
-    // Tell external controllers (CarPlay) to refresh every displayed template.
-    externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
-
-    // Re-query the tabs source too: a callback source can resolve to new
-    // titles after an invalidation (e.g. a locale switch). BrowserManager
-    // emits tabsChanged only when the result actually differs, and a failed
-    // re-query keeps the current tabs. (Android needs no equivalent — its
-    // root re-query already runs queryTabs(); the web stub re-queries tabs on
-    // the re-navigation.)
-    Task {
-      _ = try? await browserManager.queryTabs()
-    }
-
-    // Re-resolve the JS-facing current path with the cache cleared.
-    Task { @MainActor in
-      do {
-        try await browserManager.load(browserManager.path, bypassCache: true)
-      } catch {
-        await reportNavigationError(error, path: browserManager.path)
+    onMainActor {
+      browserManager.invalidateAll { error, path in
+        await self.reportNavigationError(error, path: path)
       }
     }
+    // Tell external controllers (CarPlay) to refresh every displayed template.
+    externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
   }
 
   func setFavorites(favorites: [String]) throws {
