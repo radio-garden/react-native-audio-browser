@@ -28,6 +28,8 @@
     var query: [String: String]?
   }
 
+  /// Every property of the generated type, in its init's order, so the shared conversions in
+  /// JsonModels compile against both.
   struct Track: Equatable {
     var id: String?
     var path: String?
@@ -36,11 +38,16 @@
     var artworkSource: ImageSource?
     var request: TrackRequest?
     var title: String = ""
+    var subtitle: String?
     var artist: String?
     var albumPath: String?
     var album: String?
+    var description: String?
+    var genre: String?
+    var duration: Double?
     var style: TrackStyle?
     var disabled: Bool?
+    var favorited: Bool?
     var live: Bool?
     var icyCharset: String?
   }

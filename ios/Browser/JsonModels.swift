@@ -258,11 +258,9 @@ struct JsonTrackRequest: Codable {
   let headers: [String: String]?
   let query: [String: String]?
 
-  #if canImport(NitroModules)
-    func toNitro() -> TrackRequest {
-      TrackRequest(userAgent: userAgent, headers: headers, query: query)
-    }
-  #endif
+  func toNitro() -> TrackRequest {
+    TrackRequest(userAgent: userAgent, headers: headers, query: query)
+  }
 }
 
 /// JSON model for resolved track (container with children).
@@ -391,191 +389,104 @@ struct JsonTrack: Codable {
 
 // MARK: - Snapshot live Nitro types back to JSON models (for persistence)
 
-#if canImport(NitroModules)
-
-  extension JsonTrackRequest {
-    /// Snapshot a live TrackRequest back to its JSON model.
-    init(from request: TrackRequest) {
-      self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
-    }
+extension JsonTrackRequest {
+  /// Snapshot a live TrackRequest back to its JSON model.
+  init(from request: TrackRequest) {
+    self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
   }
+}
 
-  extension JsonTrack {
-    /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
-    /// The track's own declared style block and `disabled` persist (ADR 0011);
-    /// section/page-inherited values are never stamped onto tracks and
-    /// re-resolve at render, exactly as they do live.
-    init(from track: Track) {
-      self.init(
-        id: track.id,
-        path: track.path,
-        title: track.title,
-        subtitle: track.subtitle,
-        artwork: JsonArtwork(track.artwork),
-        artist: track.artist,
-        albumPath: track.albumPath,
-        album: track.album,
-        description: track.description,
-        genre: track.genre,
-        duration: track.duration,
-        src: track.src,
-        request: track.request.map(JsonTrackRequest.init(from:)),
-        style: JsonStyle(track.style),
-        disabled: track.disabled,
-        live: track.live,
-        icyCharset: track.icyCharset,
-      )
-    }
+extension JsonTrack {
+  /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
+  /// The track's own declared style block and `disabled` persist (ADR 0011);
+  /// section/page-inherited values are never stamped onto tracks and
+  /// re-resolve at render, exactly as they do live.
+  init(from track: Track) {
+    self.init(
+      id: track.id,
+      path: track.path,
+      title: track.title,
+      subtitle: track.subtitle,
+      artwork: JsonArtwork(track.artwork),
+      artist: track.artist,
+      albumPath: track.albumPath,
+      album: track.album,
+      description: track.description,
+      genre: track.genre,
+      duration: track.duration,
+      src: track.src,
+      request: track.request.map(JsonTrackRequest.init(from:)),
+      style: JsonStyle(track.style),
+      disabled: track.disabled,
+      live: track.live,
+      icyCharset: track.icyCharset,
+    )
   }
-
-#else
-
-  extension JsonTrackRequest {
-    /// Snapshot a live TrackRequest back to its JSON model (SPM test-target stub).
-    init(from request: TrackRequest) {
-      self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
-    }
-  }
-
-  extension JsonTrack {
-    /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
-    /// SPM test-target stub — only fields present on the minimal `Track` stub.
-    init(from track: Track) {
-      self.init(
-        id: track.id,
-        path: track.path,
-        title: track.title,
-        artwork: JsonArtwork(track.artwork),
-        artist: track.artist,
-        albumPath: track.albumPath,
-        album: track.album,
-        src: track.src,
-        request: track.request.map(JsonTrackRequest.init(from:)),
-        style: JsonStyle(track.style),
-        disabled: track.disabled,
-        live: track.live,
-        icyCharset: track.icyCharset,
-      )
-    }
-  }
-
-#endif
+}
 
 // MARK: - Convert JSON models to Nitro types
 
-#if canImport(NitroModules)
-
-  extension JsonSection {
-    func toNitro() -> Section {
-      Section(
-        title: title,
-        style: style?.toSectionStyle(),
-        path: path,
-        children: children.map { $0.toNitro() },
-      )
-    }
+extension JsonSection {
+  func toNitro() -> Section {
+    Section(
+      title: title,
+      style: style?.toSectionStyle(),
+      path: path,
+      children: children.map { $0.toNitro() },
+    )
   }
+}
 
-  extension JsonResolvedTrack {
-    func toNitro() -> ResolvedTrack {
-      ResolvedTrack(
-        path: path,
-        style: style?.toSectionStyle(),
-        sections: sections?.map { $0.toNitro() },
-        children: children?.map { $0.toNitro() },
-        carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
-        id: id,
-        src: src,
-        artwork: artwork?.toNitro(),
-        artworkSource: nil, request: nil,
-        title: title,
-        subtitle: subtitle,
-        artist: artist,
-        albumPath: albumPath,
-        album: album,
-        description: description,
-        genre: genre,
-        duration: duration,
-        disabled: disabled,
-        favorited: nil,
-        live: live,
-        icyCharset: icyCharset,
-      )
-    }
+extension JsonResolvedTrack {
+  func toNitro() -> ResolvedTrack {
+    ResolvedTrack(
+      path: path,
+      style: style?.toSectionStyle(),
+      sections: sections?.map { $0.toNitro() },
+      children: children?.map { $0.toNitro() },
+      carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
+      id: id,
+      src: src,
+      artwork: artwork?.toNitro(),
+      artworkSource: nil, request: nil,
+      title: title,
+      subtitle: subtitle,
+      artist: artist,
+      albumPath: albumPath,
+      album: album,
+      description: description,
+      genre: genre,
+      duration: duration,
+      disabled: disabled,
+      favorited: nil,
+      live: live,
+      icyCharset: icyCharset,
+    )
   }
+}
 
-  extension JsonTrack {
-    func toNitro() -> Track {
-      Track(
-        id: id,
-        path: path,
-        src: src,
-        artwork: artwork?.toNitro(),
-        artworkSource: nil,
-        request: request?.toNitro(),
-        title: title,
-        subtitle: subtitle,
-        artist: artist,
-        albumPath: albumPath,
-        album: album,
-        description: description,
-        genre: genre,
-        duration: duration,
-        style: style?.toTrackStyle(),
-        disabled: disabled,
-        favorited: nil,
-        live: live,
-        icyCharset: icyCharset,
-      )
-    }
+extension JsonTrack {
+  func toNitro() -> Track {
+    Track(
+      id: id,
+      path: path,
+      src: src,
+      artwork: artwork?.toNitro(),
+      artworkSource: nil,
+      request: request?.toNitro(),
+      title: title,
+      subtitle: subtitle,
+      artist: artist,
+      albumPath: albumPath,
+      album: album,
+      description: description,
+      genre: genre,
+      duration: duration,
+      style: style?.toTrackStyle(),
+      disabled: disabled,
+      favorited: nil,
+      live: live,
+      icyCharset: icyCharset,
+    )
   }
-
-#else
-
-  // Test-only path: construct minimal stubs for SPM test builds.
-  extension JsonTrack {
-    func toNitro() -> Track {
-      Track(
-        id: id ?? "",
-        path: path,
-        src: src,
-        artwork: artwork?.toNitro(),
-        request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
-        title: title,
-        artist: artist,
-        albumPath: albumPath,
-        album: album,
-        style: style?.toTrackStyle(),
-        disabled: disabled,
-        live: live,
-        icyCharset: icyCharset,
-      )
-    }
-  }
-
-  extension JsonSection {
-    func toNitro() -> Section {
-      Section(
-        title: title,
-        style: style?.toSectionStyle(),
-        path: path,
-        children: children.map { $0.toNitro() },
-      )
-    }
-  }
-
-  extension JsonResolvedTrack {
-    func toNitro() -> ResolvedTrack {
-      ResolvedTrack(
-        path: path,
-        style: style?.toSectionStyle(),
-        sections: sections?.map { $0.toNitro() },
-        children: children?.map { $0.toNitro() },
-        artwork: artwork?.toNitro(),
-        title: title,
-        disabled: disabled,
-      )
-    }
-  }
-
-#endif
+}
