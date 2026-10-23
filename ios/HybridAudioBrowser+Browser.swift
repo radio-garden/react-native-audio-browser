@@ -15,13 +15,18 @@ public extension HybridAudioBrowser {
 
   /// Loads `path` into the browser, reporting a failure as the navigation error.
   @MainActor
-  private func loadPath(_ path: String, bypassCache: Bool = false) async {
+  private func loadPath(_ path: String) async {
     do {
-      try await browserManager.load(path, bypassCache: bypassCache)
+      try await browserManager.load(path)
     } catch {
-      await navigationError.report(NavigationError.from(error)) { [browserManager] in
-        await browserManager.formatted($0, path: path)
-      }
+      await reportNavigationError(error, path: path)
+    }
+  }
+
+  @MainActor
+  private func reportNavigationError(_ error: Error, path: String) async {
+    await navigationError.report(NavigationError.from(error)) { [browserManager] in
+      await browserManager.formatted($0, path: path)
     }
   }
 
