@@ -131,16 +131,9 @@ final class CarPlayNowPlayingManager {
   private func refreshButtons() {
     // A gate hides the custom buttons; the transport controls stay, as a gate never blocks
     // playback.
-    let configured = audioBrowser.browseGate.isActive ? [] : audioBrowser.playerOptions.carPlayNowPlayingButtons
-    // The template caps custom buttons at 5 (CPNowPlayingTemplate.h) and says
-    // nothing about overflow — unlike lists (trim) or the tab bar (throw). The
-    // config comes straight from JS, where duplicates and excess are
-    // representable, so dedupe (order preserved) and clamp here.
-    var deduped: [CarPlayNowPlayingButton] = []
-    for button in configured where !deduped.contains(button) {
-      deduped.append(button)
-    }
-    let buttons = Array(deduped.prefix(5))
+    let buttons = NowPlayingButtonRules.buttons(
+      audioBrowser.browseGate.isActive ? [] : audioBrowser.playerOptions.carPlayNowPlayingButtons,
+    )
     let row = BuiltButtonRow(
       types: buttons,
       favorited: buttons.contains(.favorite) ? audioBrowser.isActiveTrackFavorited() : nil,
@@ -296,15 +289,7 @@ final class CarPlayNowPlayingManager {
   private func handleRepeatButtonTapped() {
     guard let player else { return }
     let currentMode = player.repeatMode
-    let newMode: RepeatMode = switch currentMode {
-    case .off:
-      .track
-    case .track:
-      .queue
-    case .queue:
-      .off
-    }
-
+    let newMode = NowPlayingButtonRules.repeatMode(after: currentMode)
     player.repeatMode = newMode
     logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
   }
@@ -319,19 +304,9 @@ final class CarPlayNowPlayingManager {
   }
 
   private func handlePlaybackRateButtonTapped() {
-    let rates = audioBrowser.playerOptions.playbackRates
-    guard !rates.isEmpty, let player else { return }
-
+    guard let player else { return }
     let currentRate = Double(player.rate)
-    let nextRate: Double
-
-    if let currentIndex = rates.firstIndex(where: { (currentRate - $0).magnitude < 0.01 }) {
-      let nextIndex = (currentIndex + 1) % rates.count
-      nextRate = rates[nextIndex]
-    } else {
-      nextRate = rates.first { $0 > currentRate } ?? rates[0]
-    }
-
+    guard let nextRate = NowPlayingButtonRules.rate(after: currentRate, in: audioBrowser.playerOptions.playbackRates) else { return }
     player.rate = Float(nextRate)
     logger.info("CarPlay playback rate changed: \(currentRate) → \(nextRate)")
   }
