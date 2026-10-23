@@ -11,6 +11,7 @@ let package = Package(
       sources: [
         "Browser/BrowserPathHelper.swift",
         "Browser/BrowserError.swift",
+        "Browser/FavoriteSet.swift",
         "Browser/SectionScope.swift",
         "Browser/SearchDrillIn.swift",
         "Browser/TabBarEntries.swift",
