@@ -1,3 +1,18 @@
+## [0.2.0-next.35](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.34...v0.2.0-next.35) (2026-10-23)
+
+### Code Refactors
+
+* **ios:** build MediaIntentCriteria from the intent's fields alone ([f144079](https://github.com/radio-garden/react-native-audio-browser/commit/f144079c057a0cfda61b3491f15512f44e74f576))
+* **ios:** cancel the CarPlay page watchdog in one place ([6022e94](https://github.com/radio-garden/react-native-audio-browser/commit/6022e94ae42d02b0dd81e1746c02c6365452d538))
+* **ios:** cut CarPlay's list item and Now Playing comments to what the code cannot say ([dd5d49f](https://github.com/radio-garden/react-native-audio-browser/commit/dd5d49f4851e85b2f9a48611cd2df7539d52f5f9))
+* **ios:** drop the unused CPInterfaceController.safePop(animated:) ([43a744e](https://github.com/radio-garden/react-native-audio-browser/commit/43a744e2fa5d06ada0edcb6162b98a852a02427e))
+* **ios:** keep a cancelled CarPlay refresh out of the error log ([b1dde4f](https://github.com/radio-garden/react-native-audio-browser/commit/b1dde4f30e08094389c0bfdce1c7f2d6c19a0332))
+* **ios:** load CarPlay artwork as session tasks ([91a8017](https://github.com/radio-garden/react-native-audio-browser/commit/91a8017425671fa1cacec92d7fc340289cc36617))
+* **ios:** make CarPlay's concurrent gate decisions and refreshes child tasks ([f0071ae](https://github.com/radio-garden/react-native-audio-browser/commit/f0071aed671d9510466b6302966e8ff6b8858569))
+* **ios:** move CarPlay's Now Playing button rules into a tested file ([01ee965](https://github.com/radio-garden/react-native-audio-browser/commit/01ee96541d724d40618300e9cad67e16e7b7db9d))
+* **ios:** preview a tapped track on Now Playing through the Player ([368869a](https://github.com/radio-garden/react-native-audio-browser/commit/368869aa386cfaaf59ce86988682f876703ecf98))
+* **ios:** vend the Siri handlers from one Swift switch ([8f902ce](https://github.com/radio-garden/react-native-audio-browser/commit/8f902ce6cb60885de5e44817767572f276b2c1cd))
+
 ## [0.2.0-next.34](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.33...v0.2.0-next.34) (2026-10-23)
 
 ### Code Refactors
