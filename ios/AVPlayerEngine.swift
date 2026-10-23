@@ -318,10 +318,6 @@ final class AVPlayerEngine: PlayerEngine {
   }
 }
 
-extension Player: AudioSessionPlayer {}
-
-extension Player: NowPlayingSource {}
-
 /// Resolves the URLs the player fetches.
 @MainActor
 protocol MediaResolving: AnyObject {

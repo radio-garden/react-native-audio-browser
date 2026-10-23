@@ -131,7 +131,7 @@ public extension HybridAudioBrowser {
 
   func getSleepTimer() throws -> SleepTimer {
     onMainActor {
-      player?.sleepTimer ?? .first(NullType.null)
+      player?.sleepTimerManager.get() ?? .first(NullType.null)
     }
   }
 
@@ -227,7 +227,7 @@ public extension HybridAudioBrowser {
       browserManager.setFavorited(identity: identity, favorited: favorited)
       // Back in the queue carrying the flag, since hydration never overrides a track's own value.
       let updated = track.copying(favorited: favorited)
-      try player.replace(player.currentIndex, updated)
+      try player.replace(player.queue.currentIndex, updated)
       // The only emit: a favorite toggle mutates the active track in place, so
       // onPlaybackActiveTrackChanged stays transition-only.
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updated, favorited: favorited))
@@ -271,7 +271,7 @@ public extension HybridAudioBrowser {
 
   func getActiveTrackIndex() throws -> Double? {
     onMainActor {
-      guard let index = player?.currentIndex, index >= 0 else { return nil }
+      guard let index = player?.queue.currentIndex, index >= 0 else { return nil }
       return Double(index)
     }
   }

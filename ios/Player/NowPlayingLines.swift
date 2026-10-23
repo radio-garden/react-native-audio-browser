@@ -24,3 +24,13 @@ struct NowPlayingLines: Equatable {
     )
   }
 }
+
+/// What the now-playing surface renders from: the player's track and state.
+@MainActor
+protocol NowPlayingSource: AnyObject {
+  var currentTrack: Track? { get }
+  var currentTime: Double { get }
+  var playWhenReady: Bool { get }
+  var isStalled: Bool { get }
+  var nitroPlaybackError: PlaybackError? { get }
+}

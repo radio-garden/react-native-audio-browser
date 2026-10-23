@@ -3,16 +3,6 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-/// What the now-playing surface renders from: the player's track and state.
-@MainActor
-protocol NowPlayingSource: AnyObject {
-  var currentTrack: Track? { get }
-  var currentTime: Double { get }
-  var playWhenReady: Bool { get }
-  var isStalled: Bool { get }
-  var nitroPlaybackError: PlaybackError? { get }
-}
-
 /// Owns the now-playing surface: publishes a track's static fields + artwork, and renders the
 /// title/artist line — a flash, else the formatter's result, else the override or the track's own
 /// fields. Holds that state (override, flash, latest timed metadata, formatter) and reports each

@@ -654,7 +654,7 @@ struct HandleTrackDidPlayToEndTimeTests {
 
     eh.emit(.playedToEnd)
 
-    #expect(c.currentIndex == 1)
+    #expect(c.queue.currentIndex == 1)
     #expect(cb.activeTrackChanges.count == 1)
     #expect(cb.activeTrackChanges.first?.track?.id == "t2")
   }

@@ -26,9 +26,9 @@ final class Player {
   private lazy var progressTimer = PlaybackTimer(
     isActive: { $0 == .loading || $0 == .buffering || $0 == .playing },
   ) { [weak self] in
-    guard let self, currentIndex >= 0 else { return }
+    guard let self, queue.currentIndex >= 0 else { return }
     let progressEvent = PlaybackProgressUpdatedEvent(
-      track: Double(currentIndex),
+      track: Double(queue.currentIndex),
       position: engine.currentTime,
       duration: engine.duration,
       buffered: engine.bufferedPosition,
@@ -126,20 +126,13 @@ final class Player {
   private var lastIndex: Int = -1
   private var lastTrack: Track?
 
-  // MARK: - Queue Forwarding Properties
+  // MARK: - TrackSelectionPlayer and NowPlayingSource
 
   var tracks: [Track] { queue.tracks }
-  var currentIndex: Int { queue.currentIndex }
-  var currentTrack: Track? { queue.currentTrack }
   var queueSourcePath: String? { queue.queueSourcePath }
-  var nextTracks: [Track] { queue.nextTracks }
-  var previousTracks: [Track] { queue.previousTracks }
-  var isLastInPlaybackOrder: Bool { queue.isLastInPlaybackOrder }
-  var canNext: Bool { queue.canNext }
+  var currentTrack: Track? { queue.currentTrack }
   var currentTime: Double { engine.currentTime }
   var nitroPlaybackError: PlaybackError? { errorStatus.nitroError }
-  var sleepTimer: SleepTimerState? { sleepTimerManager.get() }
-  var canPrevious: Bool { queue.canPrevious }
 
   /// The repeat mode for the queue player.
   var repeatMode: RepeatMode {
@@ -299,9 +292,9 @@ final class Player {
     if !(playbackActive && playWhenReady) { persistence.save() }
     // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
     // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
-    if newState == .ended, isLastInPlaybackOrder, repeatMode == .off {
+    if newState == .ended, queue.isLastInPlaybackOrder, repeatMode == .off {
       callbacks?.playerDidEndQueue(
-        PlaybackQueueEndedEvent(track: Double(currentIndex), position: engine.currentTime),
+        PlaybackQueueEndedEvent(track: Double(queue.currentIndex), position: engine.currentTime),
       )
     }
   }
@@ -464,7 +457,7 @@ final class Player {
   }
 
   /// Handles the `playWhenReady` setting while executing a given action.
-  func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
+  private func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     if playWhenReady == false { setPlayWhenReady(false) }
     try action()
     if playWhenReady == true { setPlayWhenReady(true) }
@@ -601,7 +594,7 @@ final class Player {
       } else {
         transition(.trackEndedNaturally)
       }
-    } else if repeatMode == .queue || !isLastInPlaybackOrder {
+    } else if repeatMode == .queue || !queue.isLastInPlaybackOrder {
       next()
     } else {
       transition(.trackEndedNaturally)
@@ -661,12 +654,12 @@ final class Player {
       lastIndex: lastIndex == -1 ? nil : Double(lastIndex),
       lastTrack: lastTrack,
       lastPosition: lastPosition,
-      index: currentIndex == -1 ? nil : Double(currentIndex),
+      index: queue.currentIndex == -1 ? nil : Double(queue.currentIndex),
       track: currentTrack,
     )
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack
-    lastIndex = currentIndex
+    lastIndex = queue.currentIndex
   }
 
   // MARK: - Seeking
@@ -991,6 +984,4 @@ final class Player {
   }
 }
 
-// MARK: - TrackSelectionPlayer
-
-extension Player: TrackSelectionPlayer {}
+extension Player: TrackSelectionPlayer, NowPlayingSource {}
