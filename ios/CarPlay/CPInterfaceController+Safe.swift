@@ -111,13 +111,6 @@ extension CPInterfaceController {
     }
   }
 
-  /// Pops the top template, skipping the raise case (nothing above the root).
-  func safePop(animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
-    whenStackSettled { controller in
-      controller.guardedPop(animated: animated, completion: completion)
-    }
-  }
-
   /// Pops back to `template`, skipping the raise case (not in the hierarchy).
   /// A no-op success when it is already the top template.
   func safePop(to template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
