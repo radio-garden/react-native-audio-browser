@@ -1,3 +1,9 @@
+## [0.2.0-next.31](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.30...v0.2.0-next.31) (2026-10-23)
+
+### Bug Fixes
+
+* **ios:** activate and release the audio session off the main thread ([63f58ce](https://github.com/radio-garden/react-native-audio-browser/commit/63f58cee5b44ec68d3c4b8d62ee9faeeee4eade9)), closes [#163](https://github.com/radio-garden/react-native-audio-browser/issues/163)
+
 ## [0.2.0-next.30](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.29...v0.2.0-next.30) (2026-10-23)
 
 ### Bug Fixes
