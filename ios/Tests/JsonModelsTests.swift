@@ -219,3 +219,33 @@ struct JsonStyleTests {
     #expect(snapshot?.cardImage == "background")
   }
 }
+
+@Suite("JsonTrack persistence")
+struct JsonTrackPersistenceTests {
+  /// The snapshot a resume restores keeps every field a track persists.
+  @Test func aTrackSurvivesTheRoundTripThroughItsSnapshot() throws {
+    let track = Track(
+      id: "t1", path: "/station/1", src: "https://example.com/a.mp3",
+      artwork: .first("https://example.com/a.jpg"),
+      request: TrackRequest(userAgent: "Agent", headers: ["X": "1"], query: ["q": "2"]),
+      title: "Title", subtitle: "Subtitle", artist: "Artist", albumPath: "/album/1", album: "Album",
+      description: "Description", genre: "Genre", duration: 123,
+      disabled: false, live: true, icyCharset: "windows-1251",
+    )
+    let data = try JSONEncoder().encode(JsonTrack(from: track))
+    let restored = try JSONDecoder().decode(JsonTrack.self, from: data).toNitro()
+    #expect(restored == track)
+  }
+
+  /// A favorite is the app's state, never persisted with the track; neither is the resolved artwork.
+  @Test func favoritedAndTheResolvedArtworkAreNotPersisted() throws {
+    let track = Track(
+      id: "t1", src: "https://example.com/a.mp3",
+      artworkSource: ImageSource(uri: "https://example.com/r.jpg", method: nil, headers: nil, body: nil),
+      title: "Title", favorited: true,
+    )
+    let restored = JsonTrack(from: track).toNitro()
+    #expect(restored.favorited == nil)
+    #expect(restored.artworkSource == nil)
+  }
+}
