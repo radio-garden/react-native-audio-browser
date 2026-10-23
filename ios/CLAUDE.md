@@ -119,7 +119,8 @@ ios/
 │   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding),
 │   │                                 #   contextual-path stamping of a page
 │   ├── BrowserError.swift            # Browser errors (content not found, invalid config, callback)
-│   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl (tested)
+│   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl, and the
+│   │                                 #   artwork request order (tested)
 │   ├── SearchDrillIn.swift           # Browsable-first drill-in for "play X" voice intents
 │   ├── TabBarEntries.swift           # Tab-bar churn suppression (same(old:new:))
 │   └── JsonModels.swift              # JSON Codable models for API responses

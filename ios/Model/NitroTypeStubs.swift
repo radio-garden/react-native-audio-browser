@@ -110,6 +110,16 @@
     case options
   }
 
+  struct ImageContext {
+    var width: Double?
+    var height: Double?
+  }
+
+  struct ImageQueryParams {
+    var width: String?
+    var height: String?
+  }
+
   struct ImageSource: Equatable {
     var uri: String
     var method: HttpMethod?

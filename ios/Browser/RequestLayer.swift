@@ -1,7 +1,10 @@
 import Foundation
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
-/// A request config's fields: the Nitro `RequestConfig` in the app, a plain struct in tests.
-protocol RequestFields {
+/// A request config's fields, as every config kind (request, browse, media, artwork) has them.
+protocol RequestFieldValues<Method> {
   associatedtype Method
   var method: Method? { get }
   var path: String? { get }
@@ -11,7 +14,10 @@ protocol RequestFields {
   var body: String? { get }
   var contentType: String? { get }
   var userAgent: String? { get }
+}
 
+/// A request config the layers build: the Nitro `RequestConfig` in the app, a plain struct in tests.
+protocol RequestFields: RequestFieldValues {
   init(
     method: Method?,
     path: String?,
@@ -22,6 +28,21 @@ protocol RequestFields {
     contentType: String?,
     userAgent: String?,
   )
+}
+
+extension RequestFields {
+  /// The config a layer stack starts from: only `path` set.
+  static func base(path: String?) -> Self {
+    Self(method: nil, path: path, baseUrl: nil, headers: nil, query: nil, body: nil, contentType: nil, userAgent: nil)
+  }
+
+  /// `fields`' values, copied.
+  init(fieldsOf fields: some RequestFieldValues<Method>) {
+    self.init(
+      method: fields.method, path: fields.path, baseUrl: fields.baseUrl, headers: fields.headers,
+      query: fields.query, body: fields.body, contentType: fields.contentType, userAgent: fields.userAgent,
+    )
+  }
 }
 
 /// How Request-Config Layers compose, least specific first, each over the one before. The one
@@ -86,5 +107,76 @@ enum RequestLayer {
     guard let base else { return override }
     guard let override else { return base }
     return base.merging(override) { _, new in new }
+  }
+
+  // MARK: - Artwork
+
+  /// An artwork request, in order: `artwork`'s static fields over `base`, path included; the
+  /// per-track config `resolve` produces; `sizeQuery`; the transforms, each handed the result of
+  /// the one before; then the track's `id` for `{id}`. Nil when `resolve` produces nothing for a
+  /// track without artwork, or when no path remains.
+  nonisolated(nonsending) static func artwork<C: RequestFields>(
+    _ artwork: C,
+    over base: C,
+    resolve: (nonisolated(nonsending)() async throws -> C?)?,
+    trackHasArtwork: Bool,
+    sizeQuery: [String: String],
+    transforms: [nonisolated(nonsending)(C) async throws -> C],
+    id: String?,
+  ) async throws -> C? {
+    var request = merge(base, artwork)
+    if let resolve {
+      if let resolved = try await resolve() {
+        request = merge(request, resolved)
+      } else if !trackHasArtwork {
+        return nil
+      }
+    }
+    if !sizeQuery.isEmpty {
+      request = merge(request, C(
+        method: nil, path: nil, baseUrl: nil, headers: nil,
+        query: sizeQuery, body: nil, contentType: nil, userAgent: nil,
+      ))
+    }
+    for transform in transforms {
+      request = try await transform(request)
+    }
+    request = C(
+      method: request.method,
+      path: TrackIdTemplate.substitute(request.path, id: id),
+      baseUrl: request.baseUrl,
+      headers: TrackIdTemplate.substitute(request.headers, id: id),
+      query: TrackIdTemplate.substitute(request.query, id: id),
+      body: request.body,
+      contentType: request.contentType,
+      userAgent: request.userAgent,
+    )
+    return request.path == nil ? nil : request
+  }
+
+  /// The image-size query `params` names for `context`'s width and height, in whole pixels.
+  static func sizeQuery(_ params: ImageQueryParams?, _ context: ImageContext?) -> [String: String] {
+    guard let params, let context else { return [:] }
+    var query: [String: String] = [:]
+    if let key = params.width, let width = context.width { query[key] = String(Int(width)) }
+    if let key = params.height, let height = context.height { query[key] = String(Int(height)) }
+    return query
+  }
+
+  /// Whether `request` still carries an `{id}` token: the track had no id to fill it.
+  static func hasUnfilledIdToken(_ request: some RequestFieldValues) -> Bool {
+    TrackIdTemplate.containsToken(request.path)
+      || TrackIdTemplate.containsToken(request.query)
+      || TrackIdTemplate.containsToken(request.headers)
+  }
+
+  /// The headers an image load sends: `request.headers`, plus `userAgent` as `User-Agent` unless
+  /// a header sets it. Nil when there are none.
+  static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
+    var headers = request.headers ?? [:]
+    if let userAgent = request.userAgent, headers["User-Agent"] == nil {
+      headers["User-Agent"] = userAgent
+    }
+    return headers.isEmpty ? nil : headers
   }
 }
