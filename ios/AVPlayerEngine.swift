@@ -17,7 +17,7 @@ final class AVPlayerEngine: PlayerEngine {
   let nowPlayingInfoController: NowPlayingInfoController
   let nowPlayingUpdater: NowPlayingUpdater
   let remoteCommandController: RemoteCommandController
-  private let mediaLoader = MediaLoader()
+  private let mediaLoader: MediaLoader
   private let silentAudioPrimer = SilentAudioPrimer()
 
   private var avPlayer = AVPlayer()
@@ -40,11 +40,11 @@ final class AVPlayerEngine: PlayerEngine {
     self.nowPlayingInfoController = nowPlayingInfoController
     nowPlayingUpdater = NowPlayingUpdater(nowPlayingInfoController: nowPlayingInfoController)
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
-
-    mediaLoader.onEvent = { [weak self] in self?.mediaLoaderDidEmit($0) }
-    mediaLoader.mediaUrlResolver = { [weak resolver] src, track in
+    mediaLoader = MediaLoader { [weak resolver] src, track in
       await resolver?.resolveMediaUrl(src, track: track) ?? MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
+
+    mediaLoader.onEvent = { [weak self] in self?.mediaLoaderDidEmit($0) }
     nowPlayingUpdater.artworkUrlResolver = { [weak resolver] track, imageContext in
       await resolver?.resolveNowPlayingArtwork(track: track, imageContext: imageContext)
     }
