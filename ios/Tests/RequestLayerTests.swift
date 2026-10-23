@@ -213,4 +213,16 @@ struct RequestLayerTests {
     #expect(RequestLayer.imageHeaders(Config(userAgent: "UA")) == ["User-Agent": "UA"])
     #expect(RequestLayer.imageHeaders(Config(headers: ["User-Agent": "mine"], userAgent: "UA")) == ["User-Agent": "mine"])
   }
+
+  @Test func imageHeadersAddTheContentTypeUnlessAHeaderSetsIt() {
+    #expect(RequestLayer.imageHeaders(Config(contentType: "image/png")) == ["Content-Type": "image/png"])
+    #expect(
+      RequestLayer.imageHeaders(Config(headers: ["Content-Type": "mine"], contentType: "image/png"))
+        == ["Content-Type": "mine"],
+    )
+    #expect(
+      RequestLayer.imageHeaders(Config(contentType: "image/png", userAgent: "UA"))
+        == ["Content-Type": "image/png", "User-Agent": "UA"],
+    )
+  }
 }

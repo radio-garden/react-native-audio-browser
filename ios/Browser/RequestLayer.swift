@@ -170,12 +170,15 @@ enum RequestLayer {
       || TrackIdTemplate.containsToken(request.headers)
   }
 
-  /// The headers an image load sends: `request.headers`, plus `userAgent` as `User-Agent` unless
-  /// a header sets it. Nil when there are none.
+  /// The headers an image load sends: `request.headers`, plus `userAgent` as `User-Agent` and
+  /// `contentType` as `Content-Type` unless a header sets them. Nil when there are none.
   static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
     var headers = request.headers ?? [:]
     if let userAgent = request.userAgent, headers["User-Agent"] == nil {
       headers["User-Agent"] = userAgent
+    }
+    if let contentType = request.contentType, headers["Content-Type"] == nil {
+      headers["Content-Type"] = contentType
     }
     return headers.isEmpty ? nil : headers
   }
