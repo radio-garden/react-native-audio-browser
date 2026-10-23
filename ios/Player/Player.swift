@@ -61,6 +61,13 @@ final class Player {
     var primedNowPlaying = false
     /// One of this load's items is in the engine; until then it reports the previous one's position.
     var itemPrepared = false
+
+    /// True the first time it is asked, so the silent primer runs once per load.
+    mutating func claimNowPlayingPrime() -> Bool {
+      guard !primedNowPlaying else { return false }
+      primedNowPlaying = true
+      return true
+    }
   }
 
   private(set) var load: Load?
@@ -68,18 +75,11 @@ final class Player {
 
   /// Starts a Load: a track becoming current, or a restart of this one from a terminal error.
   /// Fresh retry budgets, no pending seek, unproven playback.
-  func beginLoad() {
+  private func beginLoad() {
     loadCount &+= 1
     load = Load(id: loadCount)
     retry.reset()
     deferredSeek.reset()
-  }
-
-  /// True the first time this load asks, so the silent primer runs once per load.
-  func claimNowPlayingPrime() -> Bool {
-    guard load?.primedNowPlaying == false else { return false }
-    load?.primedNowPlaying = true
-    return true
   }
 
   /// Whether playback should resume when the current audio-session interruption
@@ -140,8 +140,8 @@ final class Player {
 
   // MARK: - Track State (for active track changed events)
 
-  var lastIndex: Int = -1
-  var lastTrack: Track?
+  private var lastIndex: Int = -1
+  private var lastTrack: Track?
 
   // MARK: - Queue Forwarding Properties
 
@@ -915,7 +915,7 @@ final class Player {
   /// A failed load renders no audio, and without it iOS never elects the app onto the
   /// now-playing surfaces (ADR 0005). Once per load: one burst either elects it or never will.
   private func primeNowPlayingIfNeeded() {
-    guard playWhenReady, claimNowPlayingPrime() else { return }
+    guard playWhenReady, load?.claimNowPlayingPrime() == true else { return }
     engine.primeNowPlaying()
   }
 

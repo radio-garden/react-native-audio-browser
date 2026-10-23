@@ -1172,16 +1172,13 @@ struct LoadTests {
     #expect(c.load?.hasPlayed == true)
   }
 
-  @Test @MainActor
-  func theNowPlayingPrimeRunsOncePerLoad() {
-    let (c, _, _, _) = makeCoordinator()
-    c.setQueue([track("a")])
-    #expect(c.claimNowPlayingPrime())
-    #expect(!c.claimNowPlayingPrime())
-
-    c.beginLoad()
-
-    #expect(c.claimNowPlayingPrime())
+  @Test
+  func theNowPlayingPrimeIsClaimedOnce() {
+    var load = Player.Load(id: 1)
+    let first = load.claimNowPlayingPrime()
+    let second = load.claimNowPlayingPrime()
+    #expect(first)
+    #expect(!second)
   }
 }
 
