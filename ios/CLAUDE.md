@@ -185,12 +185,12 @@ ios/
 │   ├── CarPlayListItemFactory.swift  # @MainActor CPListItem / CPListSection builder
 │   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing: buttons, album line, Up Next;
 │   │                                 #   owns its subscriptions; refresh() / prepare(for:)
-│   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent → MediaIntentPlayback
+│   ├── IntentHandlers.swift          # @objc(RNABIntentHandlers) handler(for:): the Siri handler per
+│   │                                 #   intent; FavoriteIntentHandler (INAddMedia, INUpdateMediaAffinity
+│   │                                 #   → favoriteActiveTrack)
+│   ├── MediaIntentHandler.swift      # Siri INPlayMediaIntent → MediaIntentPlayback
 │   ├── MediaIntentPlayback.swift     # Voice play funnel (ADR 0002): resume or search → queue → play
-│   ├── HybridAudioBrowser+IntentFavorite.swift  # favoriteCurrentTrack for the Siri handlers
-│   ├── RNABMediaAddHandler.swift     # Siri INAddMediaIntent → setActiveTrackFavorited(true)
-│   ├── RNABMediaAffinityHandler.swift # Siri INUpdateMediaAffinityIntent → like/dislike favorite
-│   ├── RNABAudioBrowser.h/.m         # ObjC glue: vends Siri intent handlers (handlerForIntent:)
+│   ├── RNABAudioBrowser.h/.m         # ObjC glue: handlerForIntent: → IntentHandlers
 │   └── RNABCarPlaySceneDelegate.h/.m # ObjC CPTemplateApplicationSceneDelegate; owns RNABCarPlayController
 ├── Http/
 │   └── HttpClient.swift              # URLSession wrapper (JSON decoding with detailed errors)

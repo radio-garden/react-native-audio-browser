@@ -8,12 +8,6 @@ import os.log
 @MainActor
 @objc(RNABCarPlayController)
 public final class RNABCarPlayController: NSObject {
-  /// The Siri handlers `RNABAudioBrowser.m` looks up by name, referenced so a static link
-  /// keeps them.
-  @objc public static let siriIntentHandlerClasses: [AnyClass] = [
-    RNABMediaIntentHandler.self, RNABMediaAffinityHandler.self, RNABMediaAddHandler.self,
-  ]
-
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayController")
   private let interfaceController: CPInterfaceController
   private var interfaceDelegate: InterfaceControllerDelegate?
