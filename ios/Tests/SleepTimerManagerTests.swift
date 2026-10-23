@@ -37,6 +37,7 @@ struct SleepTimerManagerTests {
 
     clock.advance(to: 0.22) // inside the fade window
     #expect(manager.isFading)
+    #expect(fader.duration == 0.15)
     #expect(fader.originalVolume == 0.8)
     #expect(completes == 0)
     volume.level = 0.1 // mid-fade
@@ -51,12 +52,13 @@ struct SleepTimerManagerTests {
 
   @Test @MainActor
   func fadeLongerThanTimer_clampsAndStartsImmediately() {
-    let (manager, clock, _, _) = makeManager()
+    let (manager, clock, _, fader) = makeManager()
 
     manager.set(seconds: 0.2, fadeDuration: 5)
 
     clock.advance(to: 0.1) // fade should have begun
     #expect(manager.isFading)
+    #expect(fader.duration == 0.2)
   }
 
   @Test @MainActor

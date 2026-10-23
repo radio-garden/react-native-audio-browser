@@ -406,6 +406,22 @@ struct PlayerReviewRegressionTests {
     #expect(makePlayer(retries: false).persistedSession() == nil)
   }
 
+  /// A track change while the old track loads with a retrying error publishes the new track's
+  /// loading state without that error.
+  @Test func aTrackChangeClearsTheRetryingErrorOfTheTrackItLeaves() async {
+    let (player, engine, callbacks) = makeLoading()
+    player.retry.shouldRetry = { true }
+    player.setPlayWhenReady(true)
+    engine.emit(.loadFailed(URLError(.timedOut)))
+    #expect(callbacks.playbackChanges.last?.error != nil)
+
+    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+
+    #expect(callbacks.playbackChanges.last?.state == .loading)
+    #expect(callbacks.playbackChanges.last?.error == nil)
+    player.retry.cancel()
+  }
+
   /// Leaving an errored track publishes the new track's loading state once, never an error
   /// state without its error.
   @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {

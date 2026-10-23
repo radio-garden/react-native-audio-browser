@@ -19,6 +19,9 @@ final class VolumeFader {
 
   var isActive: Bool { originalVolume != nil }
 
+  /// The length of the running fade.
+  private(set) var duration: TimeInterval?
+
   init(getVolume: @escaping () -> Float, setVolume: @escaping (Float) -> Void) {
     self.getVolume = getVolume
     self.setVolume = setVolume
@@ -30,6 +33,7 @@ final class VolumeFader {
     let baseVolume = originalVolume ?? getVolume()
     cancel(restoringVolume: false)
     originalVolume = baseVolume
+    self.duration = duration
     guard duration > 0 else { return }
 
     let startDate = Date()
@@ -57,6 +61,7 @@ final class VolumeFader {
     timer = nil
     guard let originalVolume else { return }
     self.originalVolume = nil
+    duration = nil
     if restoringVolume { setVolume(originalVolume) }
   }
 
