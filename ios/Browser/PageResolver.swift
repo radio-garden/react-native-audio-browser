@@ -7,17 +7,7 @@ import os.log
 /// artwork). Also resolves the tabs and search routes.
 @MainActor
 final class PageResolver {
-  /// Internal path used for the default/root browse source
-  static let defaultRoutePath = "__default__"
-
-  /// Internal path used for navigation tabs
-  static let tabsRoutePath = "__tabs__"
-
-  /// Internal path used for search
-  static let searchRoutePath = "__search__"
-
   let logger = Logger(subsystem: "com.audiobrowser", category: "PageResolver")
-  private let router = SimpleRouter()
   private let requests: RequestPipeline
 
   private var config: BrowserConfig {
@@ -32,7 +22,7 @@ final class PageResolver {
   func resolve(_ path: String) async throws -> ResolvedTrack {
     // Match an explicit route (or the '*' default). With no match, fall back to
     // the implicit default: fetch the path via the request + browse config.
-    let routeEntry = (config.routes).flatMap { findBestRouteMatch(path: path, routes: $0) }
+    let routeEntry = config.routes.flatMap { SimpleRouter.browseRoute(for: path, in: $0) }
 
     let resolvedTrack: ResolvedTrack = if let (entry, routeMatch) = routeEntry {
       try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
@@ -62,16 +52,16 @@ final class PageResolver {
 
   /// The tabs: the `__tabs__` route's page, flattened. Nil when there is no such route.
   func tabs() async throws -> [Track]? {
-    guard let tabsEntry = config.routes?.first(where: { $0.path == Self.tabsRoutePath }) else { return nil }
-    let resolved = try await resolveRouteEntry(tabsEntry, path: Self.tabsRoutePath, params: [:])
+    guard let tabsEntry = config.routes?.first(where: { $0.path == SimpleRouter.tabsRoutePath }) else { return nil }
+    let resolved = try await resolveRouteEntry(tabsEntry, path: SimpleRouter.tabsRoutePath, params: [:])
     // Tabs are a flat list, not a page: a sectioned tabs source flattens.
     return resolved.flattenedChildren ?? []
   }
 
   /// The `__search__` route's results for `params`, unhydrated.
   func search(_ params: SearchParams) async throws -> [Track] {
-    guard let searchEntry = config.routes?.first(where: { $0.path == Self.searchRoutePath }) else {
-      throw BrowserError.contentNotFound(path: Self.searchRoutePath)
+    guard let searchEntry = config.routes?.first(where: { $0.path == SimpleRouter.searchRoutePath }) else {
+      throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
     }
     if let callback = searchEntry.searchCallback {
       return try await callback(params).await().await()
@@ -79,7 +69,7 @@ final class PageResolver {
     if let searchConfig = searchEntry.searchConfig {
       return try await requests.fetchSearch(searchConfig, params: params)
     }
-    throw BrowserError.contentNotFound(path: Self.searchRoutePath)
+    throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
   }
 
   /// The query params a structured search sends: `q` plus whichever filters are
@@ -102,30 +92,6 @@ final class PageResolver {
   }
 
   // MARK: - Route Resolution
-
-  private func findBestRouteMatch(
-    path: String,
-    routes: [NativeRouteEntry],
-  ) -> (NativeRouteEntry, RouteMatch)? {
-    // Filter out special routes
-    let browseRoutes = routes.filter {
-      $0.path != Self.tabsRoutePath &&
-        $0.path != Self.searchRoutePath &&
-        $0.path != Self.defaultRoutePath
-    }
-
-    // Try to find a matching route
-    if let match = router.findBestMatch(path: path, routes: browseRoutes) {
-      return match
-    }
-
-    // Fall back to __default__ if present
-    if let defaultRoute = routes.first(where: { $0.path == Self.defaultRoutePath }) {
-      return (defaultRoute, RouteMatch(params: ["path": path]))
-    }
-
-    return nil
-  }
 
   private func resolveRouteEntry(
     _ entry: NativeRouteEntry,
