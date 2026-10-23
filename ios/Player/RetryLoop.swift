@@ -101,7 +101,11 @@ final class RetryLoop {
   private let sleep: @Sendable (TimeInterval) async throws -> Void
 
   /// - Parameter sleep: Waits out a backoff or a connectivity poll; tests make it instant.
-  init(sleep: @escaping @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) }) {
+  init(
+    networkMonitor: (any NetworkStatusProviding)? = nil,
+    sleep: @escaping @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) },
+  ) {
+    self.networkMonitor = networkMonitor
     self.sleep = sleep
   }
 

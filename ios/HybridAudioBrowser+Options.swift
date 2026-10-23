@@ -20,29 +20,21 @@ public extension HybridAudioBrowser {
         // and un-published first. No-op on first setup.
         destroyPlayer()
 
-        let newEngine = AVPlayerEngine(callbacks: self, resolver: browserManager.requests, audioSession: audioSession)
-        if let buffer = options.ios?.buffer { newEngine.bufferDuration = buffer }
-        newEngine.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
-        newEngine.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter
-        newEngine.nowPlayingUpdater.isOnline = networkMonitor.isOnline
-        let newPlayer = Player(engine: newEngine)
-        newPlayer.callbacks = self
-        newPlayer.retry.networkMonitor = networkMonitor
+        let newEngine = AVPlayerEngine(
+          callbacks: self,
+          resolver: browserManager.requests,
+          audioSession: audioSession,
+          networkStatus: networkMonitor,
+          bufferDuration: options.ios?.buffer ?? 0,
+          nowPlayingEnabled: options.autoUpdateNowPlayingMetadata ?? true,
+          nowPlayingFormatter: options.nowPlayingMetadataFormatter,
+        )
+        let newPlayer = Player(engine: newEngine, callbacks: self, retry: RetryLoop(networkMonitor: networkMonitor))
         if let retry = options.retry { newPlayer.retry.updatePolicy(from: retry) }
         newEngine.nowPlayingUpdater.source = newPlayer
         engine = newEngine
         player = newPlayer
         audioSession.player = newPlayer
-
-        // Connectivity fans out here, whether or not JS subscribes: the JS event, the
-        // now-playing stall line, and reconnecting a stalled stream. The monitor mutates on main.
-        networkMonitor.onChanged = { [weak self] isOnline in
-          MainActor.assumeIsolated {
-            self?.onOnlineChanged(isOnline)
-            self?.engine?.nowPlayingUpdater.isOnline = isOnline
-            if isOnline { self?.player?.networkDidReturn() }
-          }
-        }
 
         // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
         // A terminal error keeps the now-playing info (never cleared on error), and next/previous

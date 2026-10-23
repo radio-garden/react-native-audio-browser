@@ -216,12 +216,14 @@ final class Player {
   ///   - persistenceSaveInterval: How often the snapshot is saved while the play intent is active.
   init(
     engine: any PlayerEngine,
+    callbacks: PlayerCallbacks? = nil,
     retry: RetryLoop = RetryLoop(),
     sleepTimerScheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler(),
     persistenceDefaults: UserDefaults = PlaybackPersistence.standardDefaults,
     persistenceSaveInterval: Duration = .seconds(5),
   ) {
     self.engine = engine
+    self.callbacks = callbacks
     self.retry = retry
     sleepTimerManager = SleepTimerManager(
       fader: VolumeFader(
@@ -851,13 +853,15 @@ final class Player {
 
   // MARK: - Connectivity
 
-  /// Re-establishes a stalled stream when connectivity returns. AVPlayer doesn't reliably report
-  /// a live stream's mid-stream drop as a failure: it waits with no error, so the retry loop
-  /// never engages. Only while stalled (.buffering) with play intent, so a pause or a retry that
-  /// gave up isn't resumed; and not while the retry loop is itself waiting for the network,
-  /// which owns that reload.
-  func networkDidReturn() {
-    guard playWhenReady, state == .buffering, !retry.isWaitingForNetwork else { return }
+  /// Re-renders the now-playing lines, whose stall line tells offline from buffering, and when
+  /// connectivity returns re-establishes a stalled stream. AVPlayer doesn't reliably report a
+  /// live stream's mid-stream drop as a failure: it waits with no error, so the retry loop never
+  /// engages. Only while stalled (.buffering) with play intent, so a pause or a retry that gave up
+  /// isn't resumed; and not while the retry loop is itself waiting for the network, which owns
+  /// that reload.
+  func networkStatusDidChange(isOnline: Bool) {
+    engine.renderNowPlaying()
+    guard isOnline, playWhenReady, state == .buffering, !retry.isWaitingForNetwork else { return }
     logger.info("Connectivity restored while stalled — re-resolving to reconnect")
     reloadResolving(startFromCurrentTime: true)
   }

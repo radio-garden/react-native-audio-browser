@@ -177,16 +177,40 @@ struct PlayerRecoveringTests {
     let (player, engine, _) = makePlaying()
     player.transition(.avPlayerWaiting)
     #expect(player.state == .buffering)
-    player.networkDidReturn()
+    player.networkStatusDidChange(isOnline: true)
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
   @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() {
     let (player, engine, _) = makePlaying()
-    player.networkDidReturn()
+    player.networkStatusDidChange(isOnline: true)
     player.pause()
-    player.networkDidReturn()
+    player.networkStatusDidChange(isOnline: true)
     #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func theNetworkGoingReRendersTheStallLineWithoutReconnecting() {
+    let (player, engine, _) = makePlaying()
+    player.transition(.avPlayerWaiting)
+    engine.nowPlayingRenderCount = 0
+
+    player.networkStatusDidChange(isOnline: false)
+
+    #expect(engine.nowPlayingRenderCount == 1)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func theNetworkReturningReRendersBeforeReconnecting() {
+    let (player, engine, _) = makePlaying()
+    player.transition(.avPlayerWaiting)
+    var order: [String] = []
+    engine.onSeamCall = { order.append($0) }
+    let loadsBefore = engine.resolveAndLoadCalls.count
+
+    player.networkStatusDidChange(isOnline: true)
+
+    #expect(order.first == "renderNowPlaying")
+    #expect(engine.resolveAndLoadCalls.count == loadsBefore + 1)
   }
 
   /// A restart from a terminal error is a new Load: fresh retry budgets, unproven playback, the

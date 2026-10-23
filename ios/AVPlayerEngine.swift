@@ -28,23 +28,38 @@ final class AVPlayerEngine: PlayerEngine {
   private var skipAvailability = (canNext: false, canPrevious: false)
   /// The charset of the track last loaded, for its ICY titles.
   private var icyCharset: String?
+  private let bufferDuration: Double
 
-  /// - Parameter resolver: Resolves media URLs and now-playing artwork.
+  /// - Parameters:
+  ///   - resolver: Resolves media URLs and now-playing artwork.
+  ///   - bufferDuration: 0 lets AVPlayer choose, minimising stalls.
+  ///   - nowPlayingEnabled: When false the now-playing surface ignores the override and formatter.
   init(
     callbacks: AVPlayerEngineCallbacks?,
     resolver: MediaResolving?,
     audioSession: AudioSessionController,
+    networkStatus: (any NetworkStatusProviding)?,
+    bufferDuration: Double,
+    nowPlayingEnabled: Bool,
+    nowPlayingFormatter: ((FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
   ) {
     self.callbacks = callbacks
     self.audioSession = audioSession
+    self.bufferDuration = bufferDuration
     self.nowPlayingInfoController = nowPlayingInfoController
-    nowPlayingUpdater = NowPlayingUpdater(nowPlayingInfoController: nowPlayingInfoController)
+    nowPlayingUpdater = NowPlayingUpdater(
+      nowPlayingInfoController: nowPlayingInfoController,
+      networkStatus: networkStatus,
+      enabled: nowPlayingEnabled,
+      formatter: nowPlayingFormatter,
+    )
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
     mediaLoader = MediaLoader { [weak resolver] src, track in
       await resolver?.resolveMediaUrl(src, track: track) ?? MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
 
+    mediaLoader.bufferDuration = bufferDuration
     mediaLoader.onEvent = { [weak self] in self?.mediaLoaderDidEmit($0) }
     nowPlayingUpdater.artworkUrlResolver = { [weak resolver] track, imageContext in
       await resolver?.resolveNowPlayingArtwork(track: track, imageContext: imageContext)
@@ -64,15 +79,6 @@ final class AVPlayerEngine: PlayerEngine {
     playerObserver?.invalidate()
     playerObserver = nil
     stopObservingItem()
-  }
-
-  // MARK: - Buffering
-
-  var bufferDuration: Double = 0 {
-    didSet {
-      avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
-      mediaLoader.bufferDuration = bufferDuration
-    }
   }
 
   // MARK: - The Current Item

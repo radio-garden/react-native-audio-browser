@@ -245,9 +245,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onNowPlayingChanged: (NowPlayingMetadata) -> Void = { _ in }
   public var onOnlineChanged: (Bool) -> Void = { _ in } {
     didSet {
-      // The monitor->JS bridge is wired centrally in setupPlayer (so it doesn't depend on a JS
-      // subscription and can also drive the now-playing re-render + player reconnect). Here we only
-      // push the current state to a newly-attached subscriber.
+      // A new subscriber hears the current state at once.
       onOnlineChanged(networkMonitor.isOnline)
     }
   }
@@ -284,6 +282,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared = self
       audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
       audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
+      // From the first setup on, whether or not JS subscribes: JS, then the player.
+      networkMonitor.changed.addListener { [weak self] isOnline in
+        MainActor.assumeIsolated {
+          guard let self, let player else { return }
+          onOnlineChanged(isOnline)
+          player.networkStatusDidChange(isOnline: isOnline)
+        }
+      }
       browseGate.resolve = { [weak self] request in
         guard let self else { throw CancellationError() }
         return try await resolveGate(request).await().await()

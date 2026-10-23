@@ -18,13 +18,11 @@ final class NowPlayingUpdater {
   var onChanged: ((NowPlayingMetadata) -> Void)?
 
   /// When false the surface shows the track's own fields: the override and formatter are ignored.
-  var enabled = true
+  private let enabled: Bool
   var formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
 
-  /// Whether the device is online, which tells a stall apart: offline or buffering.
-  var isOnline = true {
-    didSet { if isOnline != oldValue { render() } }
-  }
+  /// Tells a stall apart: offline or buffering.
+  private weak var networkStatus: (any NetworkStatusProviding)?
 
   private var override: NowPlayingUpdate?
   private var timedMetadata: TimedMetadata?
@@ -103,8 +101,16 @@ final class NowPlayingUpdater {
   /// formatter result (a flash overwrites it, `clearNowPlaying` empties it).
   private var formattedTrackId: String?
 
-  init(nowPlayingInfoController: NowPlayingInfoController) {
+  init(
+    nowPlayingInfoController: NowPlayingInfoController,
+    networkStatus: (any NetworkStatusProviding)?,
+    enabled: Bool,
+    formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
+  ) {
     self.nowPlayingInfoController = nowPlayingInfoController
+    self.networkStatus = networkStatus
+    self.enabled = enabled
+    self.formatter = formatter
   }
 
   /// Pixel width to request now-playing artwork at: the active scene's screen
@@ -169,7 +175,7 @@ final class NowPlayingUpdater {
       track: track,
       timedMetadata: timedMetadata,
       playWhenReady: source.playWhenReady,
-      stalled: source.isStalled ? (isOnline ? .buffering : .offline) : nil,
+      stalled: source.isStalled ? ((networkStatus?.isOnline ?? true) ? .buffering : .offline) : nil,
       error: source.nitroPlaybackError,
     )
     // `@Sendable` breaks the @MainActor isolation inheritance: Nitro resolves the promise on the JS
