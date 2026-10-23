@@ -76,9 +76,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onFormattedChanged: { [weak self] in self?.onFormattedNavigationError($0) },
   )
 
-  // MARK: - Multi-Listener Emitters
+  // MARK: - Emitters for Native Listeners
 
-  /// Emitters allow multiple listeners for each event type, avoiding callback hijacking
   public let favoriteChangedEmitter = Emitter<FavoriteChangedEvent>()
   public let activeTrackChangedEmitter = Emitter<PlaybackActiveTrackChangedEvent>()
   public let queueChangedEmitter = Emitter<[Track]>()
@@ -295,7 +294,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // controller is subscribed to a dead instance's emitters.
       HybridAudioBrowser.instanceChangedEmitter.emit(())
     }
-    setupEmitterToNitroForwarding()
+    forwardBrowserEventsToJS()
   }
 
   /// Drops every JS-provided callback that native code can invoke on its own
@@ -356,27 +355,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     engine?.destroy()
   }
 
-  /// Sets up automatic forwarding from emitters to Nitro callbacks
-  private func setupEmitterToNitroForwarding() {
+  /// Forwards the browser's events to JS. The bridge's own events call JS where they are
+  /// emitted; their emitters are for native listeners (CarPlay).
+  private func forwardBrowserEventsToJS() {
     browserManager.pathChanged.addListener { [weak self] in self?.onPathChanged($0) }
     browserManager.tabsChanged.addListener { [weak self] in self?.onTabsChanged($0) }
     browserManager.contentChanged.addListener { [weak self] in self?.onContentChanged($0) }
-
-    favoriteChangedEmitter.addListener { [weak self] event in
-      self?.onFavoriteChanged(event)
-    }
-
-    activeTrackChangedEmitter.addListener { [weak self] event in
-      self?.onPlaybackActiveTrackChanged(event)
-    }
-
-    queueChangedEmitter.addListener { [weak self] tracks in
-      self?.onPlaybackQueueChanged(tracks)
-    }
-
-    repeatModeChangedEmitter.addListener { [weak self] event in
-      self?.onPlaybackRepeatModeChanged(event)
-    }
   }
 }
 

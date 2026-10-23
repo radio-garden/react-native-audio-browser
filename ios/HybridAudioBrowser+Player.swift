@@ -230,7 +230,9 @@ public extension HybridAudioBrowser {
       try player.replace(player.queue.currentIndex, updated)
       // The only emit: a favorite toggle mutates the active track in place, so
       // onPlaybackActiveTrackChanged stays transition-only.
-      favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updated, favorited: favorited))
+      let event = FavoriteChangedEvent(track: updated, favorited: favorited)
+      onFavoriteChanged(event)
+      favoriteChangedEmitter.emit(event)
       return true
     }
   }

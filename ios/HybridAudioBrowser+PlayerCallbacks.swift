@@ -23,6 +23,7 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
       index: event.index,
       track: event.track.map(browserManager.hydrateFavorite),
     )
+    onPlaybackActiveTrackChanged(hydrated)
     activeTrackChangedEmitter.emit(hydrated)
   }
 
@@ -47,16 +48,18 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   public func playerDidChangeQueue(_ tracks: [Track]) {
+    onPlaybackQueueChanged(tracks)
     queueChangedEmitter.emit(tracks)
   }
 
   public func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
+    onPlaybackRepeatModeChanged(event)
     repeatModeChangedEmitter.emit(event)
   }
 
   public func playerDidChangeShuffleEnabled(_ enabled: Bool) {
-    shuffleChangedEmitter.emit(enabled)
     onPlaybackShuffleModeChanged(enabled)
+    shuffleChangedEmitter.emit(enabled)
   }
 
   public func playerDidError(_ event: PlaybackErrorEvent) {
