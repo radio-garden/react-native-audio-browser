@@ -1,3 +1,22 @@
+## [0.2.0-next.33](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.32...v0.2.0-next.33) (2026-10-23)
+
+### Bug Fixes
+
+* **ios:** send an artwork config's contentType as Content-Type ([113abf6](https://github.com/radio-garden/react-native-audio-browser/commit/113abf63ea128a0ed9b10e983141906f4ae817e8))
+
+### Code Refactors
+
+* **ios:** delete dead browser code and type HttpClient's method ([5209ae5](https://github.com/radio-garden/react-native-audio-browser/commit/5209ae5f06c7c4ed8c9b5359783a7899b6281bb6))
+* **ios:** hold favorites in a FavoriteSet value type ([7f26808](https://github.com/radio-garden/react-native-audio-browser/commit/7f26808b63fa2b595aa31a25a5cd32c4c3881c07))
+* **ios:** let JsonModels' memberwise inits replace the hand-written ones ([792aac3](https://github.com/radio-garden/react-native-audio-browser/commit/792aac36e29d3c4c6b47e4c7891ad785505addbe))
+* **ios:** make invalidate-all one BrowserManager.invalidateAll() ([8c6266d](https://github.com/radio-garden/react-native-audio-browser/commit/8c6266d0d6662b529f2e9a565ba2123e538422a8))
+* **ios:** make SimpleRouter an enum that parses each segment once ([1067811](https://github.com/radio-garden/react-native-audio-browser/commit/106781135df5691dd4cc066e600909e85c7ea10c))
+* **ios:** move a search's query params and cache key onto SearchParams ([1e6213d](https://github.com/radio-garden/react-native-audio-browser/commit/1e6213dca5b7391bfafca3f5e9be213553aae606))
+* **ios:** move contextual-path stamping out of PageResolver ([f4a0cd3](https://github.com/radio-garden/react-native-audio-browser/commit/f4a0cd33e72e2cbd304cb3ed558d65c5dec17c3d))
+* **ios:** move queue expansion into SectionScope.queue ([f5ad7d6](https://github.com/radio-garden/react-native-audio-browser/commit/f5ad7d64724a236c040685b499bed30499b9c80f))
+* **ios:** move the artwork request order into RequestLayer ([550efb1](https://github.com/radio-garden/react-native-audio-browser/commit/550efb1d19e47f2256e30edefbce44d913707337))
+* **ios:** parse JsonStyle's shared declarations once ([b683be7](https://github.com/radio-garden/react-native-audio-browser/commit/b683be7a16127be8f00ce4aa36da55826784876a))
+
 ## [0.2.0-next.32](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.31...v0.2.0-next.32) (2026-10-23)
 
 ### Code Refactors
