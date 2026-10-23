@@ -118,11 +118,11 @@ func makePlayer(
   engine: MockPlayerEngine = MockPlayerEngine(),
   retry: RetryLoop = makeRetryLoop(),
   retries: Bool = true,
-  sleepTimer: SleepTimerManager = SleepTimerManager(scheduler: ManualSleepTimerScheduler()),
+  sleepTimerScheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
   saveInterval: Duration = .seconds(5),
 ) -> Player {
   let player = Player(
-    engine: engine, retry: retry, sleepTimerManager: sleepTimer,
+    engine: engine, retry: retry, sleepTimerScheduler: sleepTimerScheduler,
     persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
   retry.shouldRetry = { retries }

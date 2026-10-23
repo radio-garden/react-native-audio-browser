@@ -84,6 +84,13 @@ final class RetryLoop {
   /// Retries executed since the budgets last reset.
   private(set) var attempts = 0
 
+  /// Continuous audible playback that proves the stream recovered, so the budgets refill
+  /// (Android's HEALTHY_PLAYBACK_MS); without it a long-lived stream keeps its spent budget until
+  /// the track changes.
+  var healthyPlaybackDuration: Duration = .seconds(20)
+  /// The pending refill. Readable so tests can await the window instead of sleeping past it.
+  private(set) var healthyPlaybackTask: Task<Void, Never>?
+
   private var policy: Policy = .disabled
   private var firstRetryTime: Date?
   /// First failure observed while online for the current load: the first-connect budget's
@@ -165,6 +172,25 @@ final class RetryLoop {
     firstRetryTime = nil
     firstOnlineRetryTime = nil
     isWaitingForNetwork = false
+  }
+
+  // MARK: - Healthy Playback
+
+  /// Starts the healthy-playback window; when it elapses between failures, the budgets refill.
+  func playbackBecameAudible() {
+    healthyPlaybackTask?.cancel()
+    healthyPlaybackTask = Task { [weak self, healthyPlaybackDuration] in
+      try? await Task.sleep(for: healthyPlaybackDuration)
+      guard let self, !Task.isCancelled else { return }
+      // reset() cancels a pending retry, which would silently kill an in-flight reconnect.
+      guard pendingTask == nil else { return }
+      reset()
+    }
+  }
+
+  func playbackStoppedBeingAudible() {
+    healthyPlaybackTask?.cancel()
+    healthyPlaybackTask = nil
   }
 
   // MARK: - Budgets

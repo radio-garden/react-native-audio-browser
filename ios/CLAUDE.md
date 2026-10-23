@@ -31,9 +31,9 @@ The playback core is two `@MainActor` types, split by what SwiftPM can compile:
 - **Player** (`Player/Player.swift`) is the façade the bridge, CarPlay and Siri call, and holds
   every playback decision. It holds the `PlaybackState`, the play intent, the `ErrorStatus` and
   the current **Load**, runs `transition(_ event:)`, and publishes each change once through
-  `publish()` to `PlayerCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `RetryLoop`,
-  `SleepTimerManager` with `VolumeFader`, `DeferredSeek`, `PlaybackPersistence` and two
-  `PlaybackTimer`s. Seeking, reloading, stall and network recovery, the end-of-item judgement and
+  `publish()` to `PlayerCallbacks` (HybridAudioBrowser). It owns `QueueManager`, `RetryLoop`
+  (with the healthy-playback refill), `SleepTimerManager` with its `VolumeFader`, `DeferredSeek`,
+  `PlaybackPersistence` and two `PlaybackTimer`s. Seeking, reloading, stall and network recovery, the end-of-item judgement and
   the cold-start resume are all here, fully SwiftPM-tested against a mock engine.
 - **AVPlayerEngine** (`AVPlayerEngine.swift`) implements `PlayerEngine`, the Player's one seam to
   the media stack. It owns the `AVPlayer`, its `PlayerObserver` and the current item's
@@ -126,15 +126,15 @@ ios/
 ├── Player/
 │   ├── Player.swift                  # @MainActor façade and every playback decision (SwiftPM-tested)
 │   │                                 # State, intent, ErrorStatus, Load; transition + publish()
-│   │                                 # Owns QueueManager, RetryLoop, SleepTimerManager, VolumeFader,
-│   │                                 #   DeferredSeek, PlaybackPersistence, two PlaybackTimers
+│   │                                 # Owns QueueManager, RetryLoop, SleepTimerManager, DeferredSeek,
+│   │                                 #   PlaybackPersistence, two PlaybackTimers
 │   │                                 # Seeks, reloads, recovery, end of item, resume
 │   ├── PlayerEngine.swift            # @MainActor protocol + EngineEvent: the seam to the media stack
 │   ├── PlayerCallbacks.swift         # @MainActor protocol: Player → JS callbacks (Nitro types)
 │   ├── PlaybackStateMachine.swift    # Pure transition table nextPlaybackState(from:on:)
 │   ├── PlaybackPersistence.swift     # @MainActor cold-start resume state: snapshot, save, periodic save
 │   ├── PlaybackTimer.swift           # @MainActor interval timer (progress + playback interval)
-│   ├── VolumeFader.swift             # @MainActor sleep-timer fade-out
+│   ├── VolumeFader.swift             # @MainActor sleep-timer fade-out (owned by SleepTimerManager)
 │   ├── PlayerStatusTypes.swift       # Player status value types
 │   ├── QueueManager.swift            # @MainActor queue state, navigation, repeat, shuffle
 │   │                                 # Mutations return QueueChange
@@ -142,11 +142,15 @@ ios/
 │   ├── MediaLoader.swift             # @MainActor URL resolution, AVURLAsset, metadata/playable loading
 │   ├── NowPlayingUpdater.swift       # @MainActor now-playing state (override, flash, formatter,
 │   │                                 #   timed metadata), lines + artwork; reads NowPlayingSource
+│   ├── NowPlayingLines.swift         # Pure line ranking: flash, formatter, override, track (tested);
+│   │                                 #   NowPlayingSource protocol
+│   ├── ErrorStatus.swift             # ErrorStatus value and its after(event:from:to:) rule (tested)
 │   ├── AudioSessionController.swift  # @MainActor AVAudioSession: category, activate, release,
 │   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
 │   ├── DeferredSeek.swift            # Pure state: a seek held while the item loads (idle/pending/inFlight)
-│   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track)
-│   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware
+│   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track), fade via VolumeFader
+│   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware;
+│   │                                 #   healthy-playback budget refill
 │   ├── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
 │   └── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
 ├── NowPlayingInfo/

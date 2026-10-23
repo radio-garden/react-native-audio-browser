@@ -12,6 +12,8 @@ protocol AudioSessionPlayer: AnyObject {
   func mediaServicesWereReset()
 }
 
+extension Player: AudioSessionPlayer {}
+
 /// Owns the app's `AVAudioSession`: its category, activation and release, and the interruption,
 /// route-change, media-services-reset and volume observers, installed once at init.
 ///

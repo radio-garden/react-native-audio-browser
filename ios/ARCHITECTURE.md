@@ -28,8 +28,8 @@ subgraph Queue["Queue Management"]
 end
 
 subgraph CoordOwned["Player-owned Managers"]
-  RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
-  STM["SleepTimerManager<br/>@MainActor<br/>Time & end-of-track"]
+  RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)<br/>Healthy-playback refill"]
+  STM["SleepTimerManager<br/>@MainActor<br/>Time & end-of-track<br/>owns VolumeFader"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
   VF["VolumeFader<br/>Sleep-timer fade out"]
   LSC["DeferredSeek<br/>Pure state: a seek held while the item loads<br/>idle / pending / inFlight"]
@@ -72,7 +72,7 @@ end
 
 subgraph Loaders["Media Loading"]
   ML["MediaLoader<br/>@MainActor<br/>URL resolution, AVURLAsset<br/>Metadata + playable loading"]
-  NPU["NowPlayingUpdater<br/>@MainActor<br/>Track metadata + artwork (Kingfisher)"]
+  NPU["NowPlayingUpdater<br/>@MainActor<br/>Track metadata + artwork (Kingfisher)<br/>lines ranked by NowPlayingLines"]
 end
 
 subgraph CarPlay["CarPlay"]
@@ -136,7 +136,7 @@ PC -->|Owns| QM
 PC -->|Owns| RTL
 PC -->|Owns| STM
 PC -->|Owns| LSC
-PC -->|Owns| VF
+STM -->|Owns| VF
 PC -->|Owns| PTimer
 PC -->|"transition(event)"| PSMF
 PSMF --> PE

@@ -23,17 +23,12 @@ final class Player {
   let sleepTimerManager: SleepTimerManager
   var deferredSeek = DeferredSeek()
 
-  lazy var volumeFader = VolumeFader(
-    getVolume: { [weak self] in self?.engine.volume ?? 1 },
-    setVolume: { [weak self] level in self?.engine.volume = level },
-  )
-
   private lazy var progressTimer = PlaybackTimer(
     isActive: { $0 == .loading || $0 == .buffering || $0 == .playing },
   ) { [weak self] in
-    guard let self, currentIndex >= 0 else { return }
+    guard let self, queue.currentIndex >= 0 else { return }
     let progressEvent = PlaybackProgressUpdatedEvent(
-      track: Double(currentIndex),
+      track: Double(queue.currentIndex),
       position: engine.currentTime,
       duration: engine.duration,
       buffered: engine.bufferedPosition,
@@ -61,6 +56,13 @@ final class Player {
     var primedNowPlaying = false
     /// One of this load's items is in the engine; until then it reports the previous one's position.
     var itemPrepared = false
+
+    /// True the first time it is asked, so the silent primer runs once per load.
+    mutating func claimNowPlayingPrime() -> Bool {
+      guard !primedNowPlaying else { return false }
+      primedNowPlaying = true
+      return true
+    }
   }
 
   private(set) var load: Load?
@@ -68,40 +70,18 @@ final class Player {
 
   /// Starts a Load: a track becoming current, or a restart of this one from a terminal error.
   /// Fresh retry budgets, no pending seek, unproven playback.
-  func beginLoad() {
+  private func beginLoad() {
     loadCount &+= 1
     load = Load(id: loadCount)
     retry.reset()
     deferredSeek.reset()
   }
 
-  /// True the first time this load asks, so the silent primer runs once per load.
-  func claimNowPlayingPrime() -> Bool {
-    guard load?.primedNowPlaying == false else { return false }
-    load?.primedNowPlaying = true
-    return true
-  }
-
-  /// Whether playback should resume when the current audio-session interruption
-  /// ends — set to the play intent captured at interruption start, so we only
-  /// auto-resume if we were actually playing when interrupted.
+  /// The play intent captured when the current interruption began; its end resumes only then.
   private var shouldResumeAfterInterruption = false
 
-  /// Seconds of continuous audible playback after which the retry budget is
-  /// refilled — proof the stream actually delivered audio, not a brief blip
-  /// (mirrors Android's HEALTHY_PLAYBACK_MS). Without the refill a long-lived
-  /// stream permanently loses retry after its first recovered error, because
-  /// the window/attempt counters otherwise reset only on track change.
-  /// Overridable in tests.
-  var healthyPlaybackDuration: TimeInterval = 20
-
-  /// The pending refill. Readable so tests can await the window instead of
-  /// sleeping past it; only this type arms and cancels it.
-  private(set) var healthyPlaybackTask: Task<Void, Never>?
-
-  /// Playback rate (1.0 = normal speed). A non-positive rate would leave the player unable to
-  /// play, so it is refused here, where every source (JS, remote command, CarPlay, a restored
-  /// snapshot) funnels through. Speed and play intent are independent, as on Android and web.
+  /// Playback rate (1.0 = normal speed). A non-positive rate, which could never play, is refused.
+  /// Speed and play intent are independent, as on Android and web.
   var rate: Float = 1.0 {
     didSet {
       guard rate > 0 else {
@@ -140,25 +120,17 @@ final class Player {
 
   // MARK: - Track State (for active track changed events)
 
-  var lastIndex: Int = -1
-  var lastTrack: Track?
+  private var lastIndex: Int = -1
+  private var lastTrack: Track?
 
-  // MARK: - Queue Forwarding Properties
+  // MARK: - TrackSelectionPlayer and NowPlayingSource
 
   var tracks: [Track] { queue.tracks }
-  var currentIndex: Int { queue.currentIndex }
-  var currentTrack: Track? { queue.currentTrack }
   var queueSourcePath: String? { queue.queueSourcePath }
-  var nextTracks: [Track] { queue.nextTracks }
-  var previousTracks: [Track] { queue.previousTracks }
-  var isLastInPlaybackOrder: Bool { queue.isLastInPlaybackOrder }
-  var canNext: Bool { queue.canNext }
+  var currentTrack: Track? { queue.currentTrack }
   var currentTime: Double { engine.currentTime }
   var nitroPlaybackError: PlaybackError? { errorStatus.nitroError }
-  var sleepTimer: SleepTimerState? { sleepTimerManager.get() }
-  var canPrevious: Bool { queue.canPrevious }
 
-  /// The repeat mode for the queue player.
   var repeatMode: RepeatMode {
     get { queue.repeatMode }
     set {
@@ -167,14 +139,13 @@ final class Player {
       engine.updateRemoteRepeatMode(newValue)
       // Persisted on each change, or a mode toggled while paused would miss the resume snapshot.
       persistence.save()
-      pushSkipAvailability() // repeat-all wrap changes next/previous availability
+      pushSkipAvailability()
       callbacks?.playerDidChangeRepeatMode(
         RepeatModeChangedEvent(repeatMode: newValue),
       )
     }
   }
 
-  /// Whether shuffle mode is enabled.
   var shuffleEnabled: Bool {
     get { queue.shuffleEnabled }
     set {
@@ -182,13 +153,11 @@ final class Player {
       queue.shuffleEnabled = newValue
       engine.updateRemoteShuffleMode(newValue)
       persistence.save()
-      pushSkipAvailability() // shuffle reorders playback → boundary changes
+      pushSkipAvailability()
       callbacks?.playerDidChangeShuffleEnabled(newValue)
     }
   }
 
-  /// Pushes current next/previous availability to the remote command center so
-  /// CarPlay / lock-screen grey out the buttons when there's nowhere to skip.
   private func pushSkipAvailability() {
     engine.updateSkipAvailability(canNext: queue.canNext, canPrevious: queue.canPrevious)
   }
@@ -201,16 +170,12 @@ final class Player {
   func setPlayWhenReady(_ newValue: Bool) {
     let changed = newValue != playWhenReady
     playWhenReady = newValue
-    // A play during an interruption takes ownership of the intent: the user's later pause must
-    // not be overridden by auto-resume. (handleInterruptionEnded consumes its flag first.)
+    // A play during an interruption owns the intent: a later pause must not be auto-resumed.
     if newValue { shouldResumeAfterInterruption = false }
 
-    // Terminal states need a reload, not a bare play(): the item is gone (.stopped/.error) or
-    // parked at its end (.ended), where startPlayback() is a silent no-op. Only .error resumes
-    // from the last position.
+    // A terminal state has no item to play, or one parked at its end: reload, re-resolving a URL
+    // that may have expired since. Only .error resumes from the last position.
     if newValue, state == .error || state == .stopped || state == .ended {
-      // Re-resolve rather than replay the cached URL: play-from-.error typically comes long
-      // after the failure, when a signed URL has expired.
       reloadResolving(startFromCurrentTime: state == .error)
     }
     if state != .loading {
@@ -218,9 +183,8 @@ final class Player {
     }
 
     guard changed else { return }
-    // An explicit pause during the sleep fade is the timer's goal arriving early: clear the
-    // timer (restores the pre-fade volume via onFadeCancel).
-    if !newValue, volumeFader.isActive { sleepTimerManager.clear() }
+    // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
+    if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
     evaluateSessionRelease()
   }
@@ -253,55 +217,37 @@ final class Player {
   init(
     engine: any PlayerEngine,
     retry: RetryLoop = RetryLoop(),
-    sleepTimerManager: SleepTimerManager = SleepTimerManager(),
+    sleepTimerScheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler(),
     persistenceDefaults: UserDefaults = PlaybackPersistence.standardDefaults,
     persistenceSaveInterval: Duration = .seconds(5),
   ) {
     self.engine = engine
     self.retry = retry
-    self.sleepTimerManager = sleepTimerManager
+    sleepTimerManager = SleepTimerManager(
+      fader: VolumeFader(
+        getVolume: { [weak engine] in engine?.volume ?? 1 },
+        setVolume: { [weak engine] in engine?.volume = $0 },
+      ),
+      scheduler: sleepTimerScheduler,
+    )
     self.persistenceDefaults = persistenceDefaults
     self.persistenceSaveInterval = persistenceSaveInterval
     engine.onEvent = { [weak self] in self?.engineDidEmit($0) }
 
-    // Configure sleep timer
-    sleepTimerManager.onComplete = { [weak self] in
-      guard let self else { return }
-      self.volumeFader.resolve { self.pause() }
-    }
-    sleepTimerManager.onFadeStart = { [weak self] duration in
-      self?.volumeFader.start(duration: duration)
-    }
-    sleepTimerManager.onFadeCancel = { [weak self] in
-      self?.volumeFader.cancel(restoringVolume: true)
-    }
+    sleepTimerManager.onComplete = { [weak self] in self?.pause() }
     sleepTimerManager.onChanged = { [weak self] in self?.callbacks?.playerDidChangeSleepTimer($0) }
 
-    retry.onError = { [weak self] error in
-      self?.transition(.errorOccurred(error))
-    }
-    retry.onRetryingError = { [weak self] error in
-      self?.reportRetryingError(error)
-    }
-    retry.onRetry = { [weak self] startFromCurrentTime in
-      // Re-resolve: a retry may be recovering from an expired short-lived URL or token.
-      self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
-    }
+    retry.onError = { [weak self] in self?.transition(.errorOccurred($0)) }
+    retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
+    retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
     retry.shouldRetry = { [weak self] in self?.playWhenReady ?? false }
     retry.hasPlayed = { [weak self] in self?.load?.hasPlayed ?? false }
   }
 
-  /// Surfaces a failure the retry loop is still working on: attached to the
-  /// current (non-terminal) state so UIs can show the cause over the spinner.
-  /// Not a state transition — the state machine never sees it — and not a
-  /// `playerDidError`, which stays reserved for terminal errors.
+  /// Shows a failure the retry loop is still working on over the current state: not a
+  /// transition, and not a `playerDidError`, which is for terminal errors.
   private func reportRetryingError(_ error: TrackPlayerError.PlaybackError) {
-    // Only attach while the failure is what the listener is looking at (matches
-    // Android). During .playing buffered audio is still audibly fine — the
-    // advisory would replace the song line over working sound — and a
-    // terminal/stopped state must not regain an advisory error.
-    guard state == .loading || state == .buffering || state == .paused else { return }
-    // Each failed attempt re-reports; identical repeats add nothing.
+    guard state.carriesAdvisoryError else { return }
     errorStatus = .retrying(error)
     publish()
   }
@@ -310,29 +256,23 @@ final class Player {
 
   func transition(_ event: PlaybackEvent) {
     guard let newState = nextPlaybackState(from: state, on: event) else { return }
-
-    // Allow error-to-error transitions to update the error and emit callbacks,
-    // even though the state enum value doesn't change.
-    if newState == state, case let .errorOccurred(error) = event {
-      errorStatus = .terminal(error)
-      published.errorStatus = .none // each terminal report reaches JS, a repeat included
+    let oldState = state
+    errorStatus = errorStatus.after(event: event, from: oldState, to: newState)
+    guard newState != oldState else {
       publish()
       return
     }
-
-    guard newState != state else { return }
-    let oldState = state
     state = newState
-    applySideEffects(old: oldState, new: newState, event: event)
+    applySideEffects(old: oldState, new: newState)
     publish()
     // While nothing plays, no periodic save runs: every transition rewrites the snapshot, so it
     // never keeps a position from before a track change or a seek.
     if !(playbackActive && playWhenReady) { persistence.save() }
     // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
     // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
-    if newState == .ended, isLastInPlaybackOrder, repeatMode == .off {
+    if newState == .ended, queue.isLastInPlaybackOrder, repeatMode == .off {
       callbacks?.playerDidEndQueue(
-        PlaybackQueueEndedEvent(track: Double(currentIndex), position: engine.currentTime),
+        PlaybackQueueEndedEvent(track: Double(queue.currentIndex), position: engine.currentTime),
       )
     }
   }
@@ -379,37 +319,13 @@ final class Player {
     }
   }
 
-  private func applySideEffects(old: PlaybackState, new: PlaybackState, event: PlaybackEvent) {
-    // Error lifecycle. A retrying error rides along through loading/buffering, but any state
-    // that proves recovery (.ready/.playing: data flowed) or abandons the attempt
-    // (.stopped/.none/.ended) clears it. Runs before publish, so the emitted Playback
-    // is already clean.
-    if case let .errorOccurred(error) = event {
-      errorStatus = .terminal(error)
-    } else if old == .error || (errorStatus.isRetrying && new != .loading && new != .buffering && new != .paused) {
-      errorStatus = .none
-    }
-
-    // Retry-budget refill: sustained audible playback proves the stream
-    // recovered, so the next error starts a fresh retry window. Leaving
-    // .playing before the threshold cancels the pending refill.
+  private func applySideEffects(old: PlaybackState, new: PlaybackState) {
     if new == .playing {
-      healthyPlaybackTask?.cancel()
-      healthyPlaybackTask = Task { [weak self] in
-        guard let self else { return }
-        try? await Task.sleep(nanoseconds: UInt64(healthyPlaybackDuration * 1_000_000_000))
-        guard !Task.isCancelled else { return }
-        // Refill only between episodes: reset() cancels a pending retry,
-        // which would silently kill an in-flight reconnect.
-        guard retry.pendingTask == nil else { return }
-        retry.reset()
-      }
+      retry.playbackBecameAudible()
     } else if old == .playing {
-      healthyPlaybackTask?.cancel()
-      healthyPlaybackTask = nil
+      retry.playbackStoppedBeingAudible()
     }
 
-    // State-specific effects
     switch new {
     case .ready:
       engine.applyTimePitchAlgorithm()
@@ -417,66 +333,13 @@ final class Player {
     case .loading:
       engine.applyTimePitchAlgorithm()
     case .ended:
-      // A natural end exhausts the play intent — nothing is left to play.
-      // Keeping playWhenReady true would invert the play/pause toggle, hold
-      // the audio session forever (release is intent-gated), and arm
-      // interruption auto-resume into silence. The setter also requests the
-      // session release.
+      // A natural end exhausts the play intent; the setter also requests the session release.
       setPlayWhenReady(false)
     default: break
     }
 
     progressTimer.onPlaybackStateChanged(new)
     intervalTimer.onPlaybackStateChanged(new)
-  }
-
-  // MARK: - Observer Context Guards
-
-  func avPlayerDidChangeTimeControlStatus(_ status: PlayerTimeControlStatus) {
-    // During loading, ignore stale timeControlStatus changes from old items.
-    if state == .loading { return }
-
-    switch status {
-    case .paused:
-      let currentState = state
-      let currentTime = engine.currentTime
-      let duration = engine.duration
-      // Ignore pauses when near track end
-      let nearTrackEnd = currentTime >= duration - 0.5 && duration > 0
-
-      if nearTrackEnd {
-        // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
-      } else if !engine.hasLoadedAsset, currentState != .stopped {
-        transition(.avPlayerPaused(hasAsset: false))
-      } else if currentState != .error, currentState != .stopped {
-        if !playWhenReady {
-          transition(.avPlayerPaused(hasAsset: true))
-        }
-      }
-    case .waitingToPlayAtSpecifiedRate:
-      if engine.hasLoadedAsset {
-        transition(.avPlayerWaiting)
-      }
-    case .playing:
-      transition(.avPlayerPlaying)
-    }
-  }
-
-  func audioDidStart() {
-    load?.hasPlayed = true
-    // Don't override loading state
-    if state == .loading { return }
-    transition(.audioFrameDecoded)
-  }
-
-  func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
-    guard playbackLikelyToKeepUp else { return }
-    guard engine.hasLoadedAsset else { return }
-
-    if !deferredSeek.defersReady, state != .playing {
-      logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp → .ready")
-      transition(.bufferingSufficient)
-    }
   }
 
   // MARK: - Player Actions
@@ -494,10 +357,8 @@ final class Player {
   }
 
   func stop() {
-    // Cancel before the intent drop: a surviving retry would surface .error
-    // over the stop, and a pending task blocks the session release below.
+    // Before the intent drop: a pending retry would surface .error and hold the session.
     retry.cancel()
-    // A stop is terminal — interruption-end must not resume over it.
     shouldResumeAfterInterruption = false
     transition(.stopped)
     setPlayWhenReady(false)
@@ -506,24 +367,17 @@ final class Player {
 
   // MARK: - Audio Session Interruptions
 
-  /// The active output route disappeared (headphones unplugged, Bluetooth
-  /// speaker off). A deliberate output loss: drop the intent and any pending
-  /// interruption auto-resume, so a call ending can't blast the built-in
-  /// speaker.
+  /// The output route went away (headphones unplugged): pause, and cancel any interruption
+  /// resume, so a call ending cannot start the built-in speaker.
   func handleRouteDisconnected() {
     shouldResumeAfterInterruption = false
     pause()
   }
 
-  /// An audio-session interruption began (a phone call, or another app such as
-  /// Music/Spotify taking over playback). iOS has already paused our AVPlayer,
-  /// but that pause arrives as a `timeControlStatus` change that's swallowed
-  /// while `playWhenReady` is still true — so the state would otherwise stay
-  /// `.playing` and any UI driven by it stays stuck. Drop the play intent and
-  /// force the paused state, independent of notification delivery order.
+  /// iOS has already paused the AVPlayer, but that pause is swallowed while the intent holds, so
+  /// the paused state is forced here.
   func handleInterruptionBegan() {
-    // OR: a nested interruption's second .began sees the already-paused
-    // intent and must not wipe the flag the first one captured.
+    // A nested interruption keeps the intent the first one captured.
     shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
     pause()
     if playbackActive, state != .loading {
@@ -531,29 +385,21 @@ final class Player {
     }
   }
 
-  /// Whether an interruption-end will resume playback — the intent captured at
-  /// interruption start. Lets the host gate side effects that must precede the
-  /// resume (audio-session reactivation) on whether one will actually happen.
+  /// Whether the interruption's end will resume playback, so the session reactivates first.
   var willResumeAfterInterruption: Bool { shouldResumeAfterInterruption }
 
-  /// An audio-session interruption ended. Resume only if we were playing when it
-  /// began and the system indicates resumption is appropriate (`shouldResume`).
   func handleInterruptionEnded(shouldResume: Bool) {
     guard shouldResumeAfterInterruption else { return }
     shouldResumeAfterInterruption = false
     if shouldResume {
       play()
     } else {
-      // Interruption ended and we're staying paused: the session can be released now.
       evaluateSessionRelease()
     }
   }
 
-  /// Requests an audio-session release when playback is deliberately stopped: play intent is off,
-  /// it isn't an interruption-driven pause (those resume — `shouldResumeAfterInterruption` is set
-  /// before the interruption's `pause()`, so this skips it), and no retry is pending (a live-stream
-  /// reconnect keeps `playWhenReady` true and must keep the session). The host debounces and cancels
-  /// on the next activation, so a quick pause→resume never actually releases.
+  /// Requests a session release once playback is deliberately stopped: no intent, no
+  /// interruption to resume from, no retry pending. The host debounces it.
   private func evaluateSessionRelease() {
     guard !playWhenReady,
           !shouldResumeAfterInterruption,
@@ -566,8 +412,8 @@ final class Player {
     Playback(state: state, error: errorStatus.nitroError)
   }
 
-  /// Handles the `playWhenReady` setting while executing a given action.
-  func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
+  /// Drops the intent before `action` or raises it after, as `playWhenReady` asks.
+  private func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     if playWhenReady == false { setPlayWhenReady(false) }
     try action()
     if playWhenReady == true { setPlayWhenReady(true) }
@@ -580,9 +426,7 @@ final class Player {
       if queue.currentIndex == -1 {
         afterQueueMutation(queue.add([track], initialIndex: 0))
       } else {
-        // `currentIndex` is invariantly -1 or in bounds, and -1 took the branch
-        // above, so this cannot fail — but surface it rather than reloading the
-        // old track if that invariant is ever broken.
+        // In bounds, as -1 took the branch above.
         do {
           try queue.replace(queue.currentIndex, track)
           afterQueueMutation(.tracksAndCurrent)
@@ -692,19 +536,17 @@ final class Player {
 
   // MARK: - Track Loading
 
-  func handleTrackDidPlayToEndTime() {
+  private func trackDidPlayToEnd() {
     sleepTimerManager.onTrackPlayedToEnd()
 
     if repeatMode == .track {
-      // The end-of-track sleep pause lands just above and clears the intent;
-      // without it, settle in .ended (where play() reloads) instead of
-      // replaying past the sleep timer.
+      // The end-of-track sleep timer has just cleared the intent: settle in .ended, not replay.
       if playWhenReady {
         replay()
       } else {
         transition(.trackEndedNaturally)
       }
-    } else if repeatMode == .queue || !isLastInPlaybackOrder {
+    } else if repeatMode == .queue || !queue.isLastInPlaybackOrder {
       next()
     } else {
       transition(.trackEndedNaturally)
@@ -721,13 +563,8 @@ final class Player {
     beginLoad()
     if let start { deferredSeek.capture(start) }
 
-    if errorStatus != .none {
-      errorStatus = .none
-      // Already .loading, the .trackLoading transition below won't fire: publish the clear here,
-      // or the old track's error lingers over the new one's spinner. In any other state the
-      // transition publishes it, with the state it belongs to.
-      if state == .loading { publish() }
-    }
+    // Published by the .trackLoading or .trackUnloaded transition below, even when it is a no-op.
+    errorStatus = .none
 
     let lastPosition = engine.currentTime
     let shouldContinuePlayback = playWhenReady
@@ -735,30 +572,19 @@ final class Player {
       engine.stopObservingItem()
       engine.pause()
 
-      // Set loading state before playWhenReady so the setter's guard
-      // prevents a no-op startPlayback() on the now-nil item.
+      // Loading first, so the setter does not play the item that is gone.
       transition(.trackLoading)
-
-      // Ensure playWhenReady is set before loading to preserve playback state
       setPlayWhenReady(shouldContinuePlayback)
 
       engine.loadNowPlayingMetadata(for: currentTrack)
       persistence.save()
 
-      // Validate source URL before handing off to MediaLoader
       guard let src = currentTrack.src else {
-        logger.error("Failed to load track - no src")
-        logger.error("  track.title: \(currentTrack.title)")
-        logger.error("  track.path: \(currentTrack.path ?? "nil")")
+        logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
         clearItem()
         transition(.errorOccurred(.invalidSourceUrl("nil")))
         return
       }
-
-      logger.debug("Loading track: \(currentTrack.title)")
-      logger.debug("  track.path: \(currentTrack.path ?? "nil")")
-      logger.debug("  track.src: \(src)")
-
       engine.resolveAndLoad(src: src, track: currentTrack)
     } else {
       unload()
@@ -769,12 +595,12 @@ final class Player {
       lastIndex: lastIndex == -1 ? nil : Double(lastIndex),
       lastTrack: lastTrack,
       lastPosition: lastPosition,
-      index: currentIndex == -1 ? nil : Double(currentIndex),
+      index: queue.currentIndex == -1 ? nil : Double(queue.currentIndex),
       track: currentTrack,
     )
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack
-    lastIndex = currentIndex
+    lastIndex = queue.currentIndex
   }
 
   // MARK: - Seeking
@@ -820,7 +646,7 @@ final class Player {
         completion(false)
         return
       }
-      seekDidLand(at: seconds, finished: finished)
+      seekDidLand()
       completion(finished)
     }
   }
@@ -832,13 +658,10 @@ final class Player {
     return true
   }
 
-  private func seekDidLand(at seconds: TimeInterval, finished: Bool) {
+  private func seekDidLand() {
     switch deferredSeek.land() {
     case .done:
-      if state == .loading {
-        logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(finished)) → .ready")
-        transition(.loadSeekCompleted)
-      }
+      if state == .loading { transition(.loadSeekCompleted) }
     case let .reseek(time):
       seekItem(to: time) { _ in }
     case .none:
@@ -906,7 +729,7 @@ final class Player {
     case let .itemPrepared(likelyToKeepUp):
       load?.itemPrepared = true
       if playWhenReady { engine.play() }
-      if !beginDeferredSeek(), likelyToKeepUp { avItemDidUpdatePlaybackLikelyToKeepUp(true) }
+      if !beginDeferredSeek(), likelyToKeepUp { bufferBecameSufficient() }
     case let .loadFailed(error):
       primeNowPlayingIfNeeded()
       retry.handleError(error, context: .mediaLoad)
@@ -919,14 +742,14 @@ final class Player {
     case let .failed(error, httpStatusCode):
       retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     case let .likelyToKeepUp(isLikely):
-      guard isLikely, engine.hasItem else { return }
-      if beginDeferredSeek() { return }
-      avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
+      guard isLikely, engine.hasItem, !beginDeferredSeek() else { return }
+      bufferBecameSufficient()
     case let .timeControlStatus(status, waitingForNoItem):
       recoverIfAirPlayStalled(transitioningTo: status, waitingForNoItem: waitingForNoItem)
-      avPlayerDidChangeTimeControlStatus(status)
+      timeControlStatusDidChange(status)
     case .audioDidStart:
-      audioDidStart()
+      load?.hasPlayed = true
+      if state != .loading { transition(.audioFrameDecoded) }
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:
@@ -935,10 +758,36 @@ final class Player {
     }
   }
 
+  /// The item can play through: ready, unless a seek still holds the ready transition.
+  private func bufferBecameSufficient() {
+    guard engine.hasLoadedAsset, !deferredSeek.defersReady, state != .playing else { return }
+    transition(.bufferingSufficient)
+  }
+
+  /// While loading, a status change belongs to the previous item. A pause near the end is the
+  /// end arriving, which `.playedToEnd` handles; one with the play intent is a buffer or a seek.
+  private func timeControlStatusDidChange(_ status: PlayerTimeControlStatus) {
+    guard state != .loading else { return }
+    switch status {
+    case .paused:
+      let duration = engine.duration
+      guard duration <= 0 || engine.currentTime < duration - 0.5 else { return }
+      if !engine.hasLoadedAsset {
+        if state != .stopped { transition(.avPlayerPaused(hasAsset: false)) }
+      } else if state != .error, state != .stopped, !playWhenReady {
+        transition(.avPlayerPaused(hasAsset: true))
+      }
+    case .waitingToPlayAtSpecifiedRate:
+      if engine.hasLoadedAsset { transition(.avPlayerWaiting) }
+    case .playing:
+      transition(.avPlayerPlaying)
+    }
+  }
+
   /// A failed load renders no audio, and without it iOS never elects the app onto the
   /// now-playing surfaces (ADR 0005). Once per load: one burst either elects it or never will.
   private func primeNowPlayingIfNeeded() {
-    guard playWhenReady, claimNowPlayingPrime() else { return }
+    guard playWhenReady, load?.claimNowPlayingPrime() == true else { return }
     engine.primeNowPlaying()
   }
 
@@ -951,7 +800,7 @@ final class Player {
       duration: engine.duration,
     )
     switch judgement.outcome {
-    case .ended: handleTrackDidPlayToEndTime()
+    case .ended: trackDidPlayToEnd()
     case .stalled: recoverFromStall(reconnectIfLive: true)
     }
   }
@@ -1073,6 +922,4 @@ final class Player {
   }
 }
 
-// MARK: - TrackSelectionPlayer
-
-extension Player: TrackSelectionPlayer {}
+extension Player: TrackSelectionPlayer, NowPlayingSource {}

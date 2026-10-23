@@ -23,9 +23,20 @@ private final class MediaLoaderSpy {
   }
 }
 
+/// Resolves and loads `src`, returning once the resolved URL is handed to the asset load.
 @MainActor
-private func makeLoader() -> (MediaLoader, MediaLoaderSpy) {
-  let loader = MediaLoader()
+private func load(_ loader: MediaLoader, _ src: String) async {
+  loader.resolveAndLoad(src: src)
+  await loader.mediaResolverTask?.value
+}
+
+@MainActor
+private func makeLoader(
+  resolveUrl: @escaping (String, Track?) async -> MediaResolvedUrl = { src, _ in
+    MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+  },
+) -> (MediaLoader, MediaLoaderSpy) {
+  let loader = MediaLoader(resolveUrl: resolveUrl)
   let spy = MediaLoaderSpy()
   loader.onEvent = { spy.record($0) }
   return (loader, spy)
@@ -52,9 +63,9 @@ struct MediaLoaderInitialStateTests {
 @Suite("resolveAndLoad")
 @MainActor
 struct ResolveAndLoadTests {
-  @Test func invalidUrl_callsDelegateWithError() {
+  @Test func invalidUrl_callsDelegateWithError() async {
     let (loader, spy) = makeLoader()
-    loader.resolveAndLoad(src: "")
+    await load(loader, "")
     #expect(spy.playbackErrors.count == 1)
     if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
       #expect(url == "")
@@ -63,25 +74,24 @@ struct ResolveAndLoadTests {
     }
   }
 
-  @Test func validHttpUrl_createsAsset() {
+  @Test func validHttpUrl_createsAsset() async {
     let (loader, _) = makeLoader()
-    loader.resolveAndLoad(src: "https://example.com/audio.mp3")
+    await load(loader, "https://example.com/audio.mp3")
     #expect(loader.asset != nil)
     #expect(loader.asset?.url.absoluteString == "https://example.com/audio.mp3")
   }
 
-  @Test func fileUrl_convertsCorrectly() {
+  @Test func fileUrl_convertsCorrectly() async {
     let (loader, _) = makeLoader()
-    loader.resolveAndLoad(src: "file:///tmp/audio.mp3")
+    await load(loader, "file:///tmp/audio.mp3")
     #expect(loader.asset != nil)
     #expect(loader.asset?.url.isFileURL == true)
     #expect(loader.asset?.url.path == "/tmp/audio.mp3")
   }
 
   @Test func withResolver_callsResolver() async {
-    let (loader, _) = makeLoader()
     var resolverCalled = false
-    loader.mediaUrlResolver = { src, _ in
+    let (loader, _) = makeLoader { src, _ in
       resolverCalled = true
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
@@ -93,14 +103,11 @@ struct ResolveAndLoadTests {
   }
 
   @Test func withResolver_returningInvalidUrl_callsErrorDelegate() async {
-    let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { _, _ in
+    let (loader, spy) = makeLoader { _, _ in
       MediaResolvedUrl(url: "", headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
 
-    // The task awaits the resolver then hops back to the main actor, so the
-    // delegate call has landed by the time the task itself completes.
     await loader.mediaResolverTask?.value
 
     #expect(spy.playbackErrors.count == 1)
@@ -112,9 +119,8 @@ struct ResolveAndLoadTests {
   }
 
   @Test func cancelsPreviousResolverTask() async {
-    let (loader, _) = makeLoader()
     var callCount = 0
-    loader.mediaUrlResolver = { src, _ in
+    let (loader, _) = makeLoader { src, _ in
       callCount += 1
       // Simulate slow resolution
       try? await Task.sleep(for: .milliseconds(100))
@@ -142,8 +148,7 @@ struct ResolveAndLoadTests {
 @MainActor
 struct CancelAllTests {
   @Test func preventsDelegateCallbacksAfterResolveAndLoad() async {
-    let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { src, _ in
+    let (loader, spy) = makeLoader { src, _ in
       try? await Task.sleep(for: .milliseconds(50))
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
@@ -164,9 +169,9 @@ struct CancelAllTests {
 @Suite("clearAsset")
 @MainActor
 struct ClearAssetTests {
-  @Test func nilsOutAsset() {
+  @Test func nilsOutAsset() async {
     let (loader, _) = makeLoader()
-    loader.resolveAndLoad(src: "https://example.com/audio.mp3")
+    await load(loader, "https://example.com/audio.mp3")
     #expect(loader.asset != nil)
     loader.clearAsset()
     #expect(loader.asset == nil)
@@ -187,7 +192,7 @@ struct ClearAssetTests {
 struct AsyncLoadingTests {
   @Test func nonExistentLocalFile_eventuallyCallsRetryableError() async {
     let (loader, spy) = makeLoader()
-    loader.resolveAndLoad(src: "file:///nonexistent/path.mp3")
+    await load(loader, "file:///nonexistent/path.mp3")
 
     // Poll for delegate callback — asset loading is async
     for _ in 0 ..< 50 {

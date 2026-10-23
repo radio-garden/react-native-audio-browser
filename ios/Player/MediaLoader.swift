@@ -15,7 +15,11 @@ final class MediaLoader {
   /// Resolves a playback src into a concrete URL + headers/user-agent.
   /// The `Track` is threaded through so the resolver can invoke the
   /// consumer-supplied `media.resolve(track)` as the final media layer.
-  var mediaUrlResolver: ((String, Track?) async -> MediaResolvedUrl)?
+  private let resolveUrl: (String, Track?) async -> MediaResolvedUrl
+
+  init(resolveUrl: @escaping (String, Track?) async -> MediaResolvedUrl) {
+    self.resolveUrl = resolveUrl
+  }
 
   /// Internal access so AVPlayerEngine can read it.
   private(set) var asset: AVURLAsset?
@@ -47,51 +51,14 @@ final class MediaLoader {
   // MARK: - Public API
 
   func resolveAndLoad(src: String, track: Track? = nil) {
-    if let resolver = mediaUrlResolver {
-      mediaResolverTask?.cancel()
-      // `[weak self]` like the sibling load tasks below: the resolver is
-      // consumer-supplied and `cancelAll()` cannot force an in-flight `await`
-      // to return, so a strong capture let a resolver that never settles pin
-      // this loader (which also retains the task) indefinitely.
-      // `Logger` is a value type, so capturing it directly keeps the logging
-      // off `self` — and `self` weak, so a consumer resolver that never settles
-      // can't pin the loader (`cancelAll()` can't force an in-flight `await` to
-      // return).
-      let logger = logger
-      mediaResolverTask = Task { [weak self] in
-        logger.debug("resolveAndLoad: starting resolution for \(src)")
-
-        guard !Task.isCancelled else {
-          logger.debug("resolveAndLoad: cancelled before start")
-          return
-        }
-
-        logger.debug("resolveAndLoad: calling resolver...")
-        let resolved = await resolver(src, track)
-
-        guard !Task.isCancelled, let self else {
-          logger.debug("resolveAndLoad: cancelled after resolver returned")
-          return
-        }
-
-        self.logger.debug("resolveAndLoad: resolver returned, resolved URL: \(resolved.url)")
-        if let headers = resolved.headers {
-          self.logger.debug("  headers: \(headers)")
-        }
-        if let userAgent = resolved.userAgent {
-          self.logger.debug("  userAgent: \(userAgent)")
-        }
-
-        await MainActor.run {
-          guard !Task.isCancelled else {
-            self.logger.debug("resolveAndLoad: cancelled before loadWithResolvedUrl")
-            return
-          }
-          self.loadWithResolvedUrl(resolved)
-        }
-      }
-    } else {
-      let resolved = MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+    mediaResolverTask?.cancel()
+    // `self` stays weak across the await: a consumer resolver that never settles must not pin
+    // the loader, and cancellation cannot force its `await` to return.
+    let resolveUrl = resolveUrl
+    mediaResolverTask = Task { [weak self] in
+      guard !Task.isCancelled else { return }
+      let resolved = await resolveUrl(src, track)
+      guard !Task.isCancelled, let self else { return }
       loadWithResolvedUrl(resolved)
     }
   }
@@ -149,28 +116,17 @@ final class MediaLoader {
 
       do {
         let isPlayable = try await pendingAsset.load(.isPlayable)
-
-        guard !Task.isCancelled else { return }
-
-        await MainActor.run {
-          guard pendingAsset == self.asset else { return }
-
-          if !isPlayable {
-            self.onEvent?(.unplayable)
-            return
-          }
-
-          let avItem = AVPlayerItem(asset: pendingAsset)
-          avItem.preferredForwardBufferDuration = self.bufferDuration / 1000.0
-          self.onEvent?(.prepared(avItem))
+        guard isCurrent(pendingAsset) else { return }
+        guard isPlayable else {
+          onEvent?(.unplayable)
+          return
         }
+        let avItem = AVPlayerItem(asset: pendingAsset)
+        avItem.preferredForwardBufferDuration = bufferDuration / 1000.0
+        onEvent?(.prepared(avItem))
       } catch {
-        guard !Task.isCancelled else { return }
-
-        await MainActor.run {
-          guard pendingAsset == self.asset else { return }
-          self.onEvent?(.failed(error))
-        }
+        guard isCurrent(pendingAsset) else { return }
+        onEvent?(.failed(error))
       }
     }
   }
@@ -232,12 +188,8 @@ final class MediaLoader {
       return
     }
 
-    let isLocalFile = mediaUrl.isFileURL
-    logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
-    logger.debug("  isLocalFile: \(isLocalFile)")
-
     loadAsset(
-      url: isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl,
+      url: mediaUrl.isFileURL ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl,
       options: Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent),
     )
   }
