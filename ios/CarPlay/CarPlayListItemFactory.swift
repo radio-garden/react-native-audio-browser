@@ -141,14 +141,11 @@ final class CarPlayListItemFactory {
 
   // MARK: - List Item
 
-  /// Creates a CPListItem for a track with common setup (typed userInfo, artwork, isPlaying).
+  /// A list row for `track`: its identity, accessory, playing flag, artwork and tap handler.
   /// - Parameters:
-  ///   - track: The track to create the item for
-  ///   - style: The track's resolved style block (`track ?? section ?? page`,
-  ///     via `StyleResolver`). nil = the track's own declaration — the one
-  ///     genuinely section-less caller (the Up Next queue list) has no
-  ///     inheritance to resolve.
-  ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
+  ///   - style: The track's resolved style block (`track ?? section ?? page`); nil for the
+  ///     track's own declaration, when there is no section (Up Next).
+  ///   - handler: Replaces the default browse or play on tap.
   func createListItem(
     for track: Track,
     style: TrackStyle? = nil,
@@ -159,26 +156,18 @@ final class CarPlayListItemFactory {
       detailText: track.subtitle,
     )
 
-    // Store typed info for updatePlayingIndicators()
     item.setCarPlayItemInfo(CarPlayItemInfo(identity: track.identity))
 
-    // Set accessory type based on whether track is browsable or playable
     if let src = track.src {
-      // Playable track - check if it's currently playing
       item.accessoryType = .none
-      // Consumer-configurable via `ios.carPlayPlayingIndicatorLocation`
-      // (default leading: the indicator draws in the artwork slot). Note the
-      // indicator's rendering is owned by the phone's CarPlay service, and on
-      // some iOS/CarPlay-Simulator combinations it isn't drawn at all — for
-      // ANY third-party app. Verify on a real head unit before assuming a
-      // logic bug here.
+      // The phone's CarPlay service draws the indicator, and some iOS and CarPlay Simulator
+      // combinations draw none for any app: check a real head unit before suspecting this code.
       item.playingIndicatorLocation = playingIndicatorLocation
       item.isPlaying = isActiveTrack(track.identity)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
       }
     } else if track.path != nil {
-      // Browsable only - show disclosure indicator
       item.accessoryType = .disclosureIndicator
     }
 
@@ -200,19 +189,15 @@ final class CarPlayListItemFactory {
       item.isEnabled = false
     }
 
-    // Load artwork with size context for proper CDN optimization
     if track.artwork != nil || track.artworkSource != nil {
-      // Set empty placeholder to reserve space while loading
       item.setImage(imageLoader.placeholderImage(size: CPListItem.maximumImageSize))
       loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize) { [weak item] image in
         item?.setImage(image)
       }
     }
 
-    // Set selection handler. The disabled guard wraps BOTH handler paths —
-    // custom handlers (Up Next rows skipping the queue, say) included: belt
-    // over the isEnabled braces, so an unavailable track stays inert even if
-    // a surface delivers the tap.
+    // The disabled guard wraps custom handlers too (Up Next rows), so an unavailable track
+    // stays inert even if a surface delivers the tap.
     let selection = handler ?? { [onItemSelected] _, completion in
       onItemSelected(track, completion)
     }
@@ -382,9 +367,8 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // Per-tile taps select the child track directly. A disabled tile is
-    // grayed and inert (26+ elements) — the guard keeps it inert even if
-    // the surface delivers the tap anyway.
+    // A disabled tile is grayed and inert (iOS 26 elements); the guard keeps it inert even if
+    // the surface delivers the tap.
     item.listImageRowHandler = { [onItemSelected] _, index, completion in
       guard index < tracks.count, tracks[index].disabled != true else {
         completion()
@@ -393,7 +377,6 @@ final class CarPlayListItemFactory {
       onItemSelected(tracks[index], completion)
     }
 
-    // Load artwork for each rendered tile asynchronously
     for (index, track) in tracks.enumerated() {
       guard track.artwork != nil || track.artworkSource != nil else { continue }
 

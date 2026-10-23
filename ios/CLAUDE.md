@@ -171,7 +171,7 @@ ios/
 ├── CarPlay/
 │   ├── CarPlayController.swift       # @MainActor @objc(RNABCarPlayController): shell that waits for
 │   │                                 #   the player + configured browser, then runs a CarPlaySession
-│   ├── CarPlaySession.swift          # @MainActor one run: dependencies, subscriptions, owned tasks,
+│   ├── CarPlaySession.swift          # @MainActor one run: dependencies, subscriptions, owned tasks (spawn),
 │   │                                 #   root-build generation, playing indicators
 │   ├── CarPlaySession+TabBar.swift   # Initial interface, tab bar (gate decisions concurrent), gate
 │   ├── CarPlaySession+PageLoader.swift  # Lazy page loads, watchdog, error/empty messages
@@ -181,10 +181,11 @@ ios/
 │   ├── CarPlayTemplates.swift        # CarPlayTemplateInfo (userInfo), loading/message templates
 │   ├── SectionPresentation.swift     # Pure section rendering rules (SwiftPM-tested)
 │   ├── CarPlayArtworkResolver.swift   # Platform-independent artwork load strategy (enum)
-│   ├── CarPlayImageLoader.swift      # @MainActor SF Symbols, artwork loading, adaptive tinting
+│   ├── CarPlayImageLoader.swift      # @MainActor async artwork(for:style:size:): SF Symbols, fetch, tint
 │   ├── CarPlayListItemFactory.swift  # @MainActor CPListItem / CPListSection builder
 │   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing: buttons, album line, Up Next;
 │   │                                 #   owns its subscriptions; refresh() / prepare(for:)
+│   ├── NowPlayingButtonRules.swift   # Now Playing button dedupe and cap, repeat cycle, next rate (tested)
 │   ├── IntentHandlers.swift          # @objc(RNABIntentHandlers) handler(for:): the Siri handler per
 │   │                                 #   intent; FavoriteIntentHandler (INAddMedia, INUpdateMediaAffinity
 │   │                                 #   → favoriteActiveTrack)
@@ -217,6 +218,7 @@ ios/
 ├── Util/
 │   ├── LRUCache.swift                # Small main-actor LRU cache
 │   ├── Emitter.swift                 # Generic multi-listener event emitter
+│   ├── ConcurrentMap.swift           # Array.concurrentMap: task group, results in order (tested)
 │   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
 │   ├── NetworkMonitor.swift          # NWPathMonitor wrapper; `changed` emitter

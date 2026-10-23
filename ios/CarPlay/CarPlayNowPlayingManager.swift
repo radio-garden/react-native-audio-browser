@@ -19,20 +19,12 @@ final class CarPlayNowPlayingManager {
   private var subscriptions: [Subscription] = []
   private var nowPlayingObserver: NowPlayingObserver?
   private weak var upNextTemplate: CPListTemplate?
-  /// Everything the built button row renders — button types, the heart's
-  /// favorited state, and the shuffle/repeat `isSelected` state. Rebuilds are
-  /// skipped while this is unchanged (`configChanged` fires on unrelated
-  /// churn, and every `updateNowPlayingButtons` call re-renders ALL buttons).
+  /// What the built button row renders. A rebuild is skipped while it is unchanged: every
+  /// `updateNowPlayingButtons` re-renders all the buttons.
   ///
-  /// shuffle/repeat selected state is part of the snapshot because CarPlay
-  /// SERIALIZES the buttons (NSSecureCoding) to its UI process: whenever the
-  /// now-playing screen re-renders (it does on every metadata change), the
-  /// stateful buttons first draw from their serialized `isSelected`, and only
-  /// then overlay the live state the app reports via the command center. A
-  /// button built with the default `isSelected = false` while repeat/shuffle
-  /// is on therefore flashes background-off → background-on at every
-  /// re-render. Stamping `isSelected` at build time (and rebuilding when the
-  /// mode changes) makes the first-frame render match the live state.
+  /// Shuffle and repeat carry their `isSelected` because CarPlay serializes the buttons to its
+  /// UI process and draws each re-render from the serialized state before the live one: a
+  /// button built unselected while its mode is on flashes off, then on.
   private struct BuiltButtonRow: Equatable {
     let types: [CarPlayNowPlayingButton]
     let favorited: Bool?
