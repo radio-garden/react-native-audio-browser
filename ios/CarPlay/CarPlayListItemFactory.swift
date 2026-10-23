@@ -29,18 +29,42 @@ extension CPListItem {
 final class CarPlayListItemFactory {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayListItemFactory")
 
-  var imageLoader: CarPlayImageLoader?
-  /// Pushed by the controller (at creation and when options change), like
-  /// `imageLoader` — the factory never reads options itself.
-  var playingIndicatorLocation: CPListItemPlayingIndicatorLocation = .leading
+  private let imageLoader: CarPlayImageLoader
+  /// The last-applied location; the factory never reads options itself.
+  var playingIndicatorLocation: CPListItemPlayingIndicatorLocation
   private let isActiveTrack: (_ identity: String?) -> Bool
+  /// Runs an artwork load as a task the session owns, so ending the session cancels it.
+  private let spawn: (@escaping @MainActor () async -> Void) -> Void
   /// A row or tile was tapped; call `completion` once CarPlay may take the next tap.
-  var onItemSelected: (Track, @escaping () -> Void) -> Void = { _, completion in completion() }
+  private let onItemSelected: (Track, @escaping () -> Void) -> Void
   /// A section header's "view all" was tapped.
-  var onNavigate: (_ path: String, _ title: String) -> Void = { _, _ in }
+  private let onNavigate: (_ path: String, _ title: String) -> Void
 
-  init(isActiveTrack: @escaping (_ identity: String?) -> Bool) {
+  init(
+    imageLoader: CarPlayImageLoader,
+    playingIndicatorLocation: CPListItemPlayingIndicatorLocation,
+    isActiveTrack: @escaping (_ identity: String?) -> Bool,
+    spawn: @escaping (@escaping @MainActor () async -> Void) -> Void,
+    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
+    onNavigate: @escaping (_ path: String, _ title: String) -> Void,
+  ) {
+    self.imageLoader = imageLoader
+    self.playingIndicatorLocation = playingIndicatorLocation
     self.isActiveTrack = isActiveTrack
+    self.spawn = spawn
+    self.onItemSelected = onItemSelected
+    self.onNavigate = onNavigate
+  }
+
+  /// Loads `track`'s artwork and hands it to `apply` unless the session ended meanwhile.
+  private func loadArtwork(
+    for track: Track, style: TrackStyle?, size: CGSize, apply: @escaping @MainActor (UIImage?) -> Void,
+  ) {
+    spawn { [imageLoader] in
+      let image = await imageLoader.artwork(for: track, style: style, size: size)
+      guard !Task.isCancelled else { return }
+      apply(image)
+    }
   }
 
   // MARK: - Sections
@@ -117,14 +141,11 @@ final class CarPlayListItemFactory {
 
   // MARK: - List Item
 
-  /// Creates a CPListItem for a track with common setup (typed userInfo, artwork, isPlaying).
+  /// A list row for `track`: its identity, accessory, playing flag, artwork and tap handler.
   /// - Parameters:
-  ///   - track: The track to create the item for
-  ///   - style: The track's resolved style block (`track ?? section ?? page`,
-  ///     via `StyleResolver`). nil = the track's own declaration — the one
-  ///     genuinely section-less caller (the Up Next queue list) has no
-  ///     inheritance to resolve.
-  ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
+  ///   - style: The track's resolved style block (`track ?? section ?? page`); nil for the
+  ///     track's own declaration, when there is no section (Up Next).
+  ///   - handler: Replaces the default browse or play on tap.
   func createListItem(
     for track: Track,
     style: TrackStyle? = nil,
@@ -135,26 +156,18 @@ final class CarPlayListItemFactory {
       detailText: track.subtitle,
     )
 
-    // Store typed info for updatePlayingIndicators()
     item.setCarPlayItemInfo(CarPlayItemInfo(identity: track.identity))
 
-    // Set accessory type based on whether track is browsable or playable
     if let src = track.src {
-      // Playable track - check if it's currently playing
       item.accessoryType = .none
-      // Consumer-configurable via `ios.carPlayPlayingIndicatorLocation`
-      // (default leading: the indicator draws in the artwork slot). Note the
-      // indicator's rendering is owned by the phone's CarPlay service, and on
-      // some iOS/CarPlay-Simulator combinations it isn't drawn at all — for
-      // ANY third-party app. Verify on a real head unit before assuming a
-      // logic bug here.
+      // The phone's CarPlay service draws the indicator, and some iOS and CarPlay Simulator
+      // combinations draw none for any app: check a real head unit before suspecting this code.
       item.playingIndicatorLocation = playingIndicatorLocation
       item.isPlaying = isActiveTrack(track.identity)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
       }
     } else if track.path != nil {
-      // Browsable only - show disclosure indicator
       item.accessoryType = .disclosureIndicator
     }
 
@@ -176,21 +189,15 @@ final class CarPlayListItemFactory {
       item.isEnabled = false
     }
 
-    // Load artwork with size context for proper CDN optimization
     if track.artwork != nil || track.artworkSource != nil {
-      // Set empty placeholder to reserve space while loading
-      item.setImage(imageLoader?.placeholderImage(size: CPListItem.maximumImageSize))
-      imageLoader?.loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize) { [weak item] image in
-        Task { @MainActor in
-          item?.setImage(image)
-        }
+      item.setImage(imageLoader.placeholderImage(size: CPListItem.maximumImageSize))
+      loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize) { [weak item] image in
+        item?.setImage(image)
       }
     }
 
-    // Set selection handler. The disabled guard wraps BOTH handler paths —
-    // custom handlers (Up Next rows skipping the queue, say) included: belt
-    // over the isEnabled braces, so an unavailable track stays inert even if
-    // a surface delivers the tap.
+    // The disabled guard wraps custom handlers too (Up Next rows), so an unavailable track
+    // stays inert even if a surface delivers the tap.
     let selection = handler ?? { [onItemSelected] _, completion in
       onItemSelected(track, completion)
     }
@@ -268,50 +275,40 @@ final class CarPlayListItemFactory {
       ? Array(visibleChildren.prefix(CPMaximumNumberOfGridImages))
       : visibleChildren
     let placeholder = { [imageLoader] in
-      imageLoader?.placeholderImage(size: Self.rowImageSize) ?? UIImage()
+      imageLoader.placeholderImage(size: Self.rowImageSize) ?? UIImage()
     }
 
     let item: CPListImageRowItem
-    // Applies an async-loaded artwork image to a tile on the element-based
-    // API (the elements are captured per availability branch — their type
-    // doesn't exist before iOS 26). nil = the legacy gridImages path.
-    // @MainActor makes the closure Sendable for the artwork completion hop.
-    var applyImage: (@MainActor @Sendable (Int, UIImage) -> Void)?
-    // Resolved once per track, shared by element construction and the
-    // artwork loads below.
+    // Sets a loaded image on its tile's element; nil on the legacy gridImages path, which has
+    // no elements (their types do not exist before iOS 26).
+    var applyImage: (@MainActor (Int, UIImage) -> Void)?
     let resolvedStyles = tracks.map { StyleResolver.trackStyle(track: $0.style, section: style) }
     if #available(iOS 26.0, *) {
-      // Builds a family's elements with the shared per-element tail: the
-      // disabled fact (isEnabled lives on the element base class) applied
-      // once, not per family.
-      func makeElements<Element: CPListImageRowItemElement>(
-        _ make: (Track, TrackStyle) -> Element,
-      ) -> [Element] {
-        zip(tracks, resolvedStyles).map { track, resolved in
+      // One element per track, grayed when disabled, built into the row by the family's
+      // initializer; each tile's image lands on its element.
+      func row<Element: CPListImageRowItemElement>(
+        _ build: (String?, [Element], Bool) -> CPListImageRowItem,
+        element make: (Track, TrackStyle) -> Element,
+      ) -> CPListImageRowItem {
+        let elements = zip(tracks, resolvedStyles).map { track, resolved in
           let element = make(track, resolved)
           if track.disabled == true {
             element.isEnabled = false
           }
           return element
         }
-      }
-      // The image setter every element family shares (`image` is on the base
-      // class); bounds-checked against the elements the row was built with.
-      func imageApplier(_ elements: [some CPListImageRowItemElement]) -> @MainActor @Sendable (Int, UIImage) -> Void {
-        { index, image in
+        applyImage = { index, image in
           guard index < elements.count else { return }
           elements[index].image = image
         }
+        return build(rowText, elements, !singleLine)
       }
-      // The family is style-driven (`SectionPresentation.tileFamily`); every
-      // family takes either wrap mode. Pre-26 the treatment drops and the
-      // layout survives (the legacy branch below).
+      // Pre-26 the family's treatment drops and the layout survives (the legacy branch below).
       switch family {
       case .cardElements:
-        // Cards have no shape and no accessory slot; their knobs are the
-        // tint and the image mode ('background' fills the card full-height
-        // and fades the tint in behind the labels).
-        let elements = makeElements { track, resolved in
+        // Cards have no shape and no accessory slot; 'background' fills the card full-height
+        // and fades the tint in behind the labels.
+        item = row(CPListImageRowItem.init(text:cardElements:allowsMultipleLines:)) { track, resolved in
           CPListImageRowItemCardElement(
             image: placeholder(),
             showsImageFullHeight: resolved.cardImage == .background,
@@ -320,12 +317,8 @@ final class CarPlayListItemFactory {
             tintColor: resolved.cardTint.flatMap { UIColor(declaredHex: $0) },
           )
         }
-        item = CPListImageRowItem(
-          text: rowText, cardElements: elements, allowsMultipleLines: !singleLine,
-        )
-        applyImage = imageApplier(elements)
       case .condensedElements:
-        let elements = makeElements { track, resolved in
+        item = row(CPListImageRowItem.init(text:condensedElements:allowsMultipleLines:)) { track, resolved in
           CPListImageRowItemCondensedElement(
             image: placeholder(),
             imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
@@ -334,14 +327,10 @@ final class CarPlayListItemFactory {
             accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
           )
         }
-        item = CPListImageRowItem(
-          text: rowText, condensedElements: elements, allowsMultipleLines: !singleLine,
-        )
-        applyImage = imageApplier(elements)
       case .imageGridElements:
         // imageGridElements, never the title-less gridElements: an
         // artwork-less track must keep its name on screen (ADR 0010).
-        let elements = makeElements { track, resolved in
+        item = row(CPListImageRowItem.init(text:imageGridElements:allowsMultipleLines:)) { track, resolved in
           CPListImageRowItemImageGridElement(
             image: placeholder(),
             imageShape: resolved.imageShape == .circular ? .circular : .roundedRectangle,
@@ -349,22 +338,14 @@ final class CarPlayListItemFactory {
             accessorySymbolName: SectionPresentation.effectiveAccessorySymbol(resolved),
           )
         }
-        item = CPListImageRowItem(
-          text: rowText, imageGridElements: elements, allowsMultipleLines: !singleLine,
-        )
-        applyImage = imageApplier(elements)
       case .rowElements:
         // Titled, so an artwork-less track keeps its name on screen
         // (ADR 0010); no shape and no accessory slot.
-        let elements = makeElements { track, _ in
+        item = row(CPListImageRowItem.init(text:elements:allowsMultipleLines:)) { track, _ in
           CPListImageRowItemRowElement(
             image: placeholder(), title: track.title, subtitle: track.subtitle,
           )
         }
-        item = CPListImageRowItem(
-          text: rowText, elements: elements, allowsMultipleLines: !singleLine,
-        )
-        applyImage = imageApplier(elements)
       }
     } else {
       let placeholders = tracks.map { _ in placeholder() }
@@ -386,9 +367,8 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // Per-tile taps select the child track directly. A disabled tile is
-    // grayed and inert (26+ elements) — the guard keeps it inert even if
-    // the surface delivers the tap anyway.
+    // A disabled tile is grayed and inert (iOS 26 elements); the guard keeps it inert even if
+    // the surface delivers the tap.
     item.listImageRowHandler = { [onItemSelected] _, index, completion in
       guard index < tracks.count, tracks[index].disabled != true else {
         completion()
@@ -397,28 +377,23 @@ final class CarPlayListItemFactory {
       onItemSelected(tracks[index], completion)
     }
 
-    // Load artwork for each rendered tile asynchronously
     for (index, track) in tracks.enumerated() {
       guard track.artwork != nil || track.artworkSource != nil else { continue }
 
       let resolved = resolvedStyles[index]
-      imageLoader?.loadArtwork(
+      loadArtwork(
         for: track,
         style: resolved,
         size: Self.tileImageSize(family: family, cardImage: resolved.cardImage),
       ) { [weak item, applyImage] image in
-        Task { @MainActor in
-          guard let item, let image else { return }
-          if let applyImage {
-            // The element-based API exposes a settable `image`; assigning it
-            // updates the element the row observes.
-            applyImage(index, image)
-          } else {
-            var images = item.gridImages
-            if index < images.count {
-              images[index] = image
-              item.update(images)
-            }
+        guard let item, let image else { return }
+        if let applyImage {
+          applyImage(index, image)
+        } else {
+          var images = item.gridImages
+          if index < images.count {
+            images[index] = image
+            item.update(images)
           }
         }
       }

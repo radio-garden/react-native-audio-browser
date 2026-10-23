@@ -927,6 +927,25 @@ final class Player {
     }
   }
 
+  // MARK: - Now Playing Preview
+
+  /// Shows `track` on the now-playing surface before it is current, so a tapped track shows at
+  /// once while its queue and media resolve.
+  func previewNowPlaying(_ track: Track) {
+    engine.loadNowPlayingMetadata(for: track)
+  }
+
+  /// Puts the current track back over a preview that will not play, or clears the surface when
+  /// nothing is current.
+  func endNowPlayingPreview() {
+    guard let currentTrack else {
+      engine.clearNowPlaying()
+      return
+    }
+    engine.loadNowPlayingMetadata(for: currentTrack)
+    engine.renderNowPlaying()
+  }
+
   // MARK: - Progress Updates
 
   func setProgressUpdateInterval(_ interval: TimeInterval?) {

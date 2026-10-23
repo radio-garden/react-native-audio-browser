@@ -2,18 +2,15 @@ import Foundation
 import Intents
 import os.log
 
-/// In-app INPlayMediaIntent handler (Siri / CarPlay voice). Internal so Intents
-/// types stay out of the generated header; exposed to the ObjC runtime via
-/// `@objc(RNABMediaIntentHandler)` and vended from `RNABAudioBrowser.handlerForIntent(_:)`.
-@objc(RNABMediaIntentHandler)
-class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
+/// Siri's play-media intent, from the phone or CarPlay voice: plays through `MediaIntentPlayback`.
+final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "MediaIntentHandler")
 
   // MARK: - INPlayMediaIntentHandling
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
-    let criteria = MediaIntentCriteria.from(
+    let criteria = MediaIntentCriteria(
       mediaName: s?.mediaName,
       genreNames: s?.genreNames ?? [],
       artistName: s?.artistName,

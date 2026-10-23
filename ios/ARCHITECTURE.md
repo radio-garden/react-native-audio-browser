@@ -86,10 +86,13 @@ end
 
 subgraph ObjC["Objective-C Glue"]
   SCN["RNABCarPlaySceneDelegate<br/>CPTemplateApplicationSceneDelegate<br/>Owns RNABCarPlayController"]
-  RNAB["RNABAudioBrowser<br/>Vends Siri intent handlers"]
-  MIH["RNABMediaIntentHandler<br/>INPlayMediaIntent"]
-  MAH["RNABMediaAddHandler<br/>INAddMediaIntent"]
-  MAFH["RNABMediaAffinityHandler<br/>INUpdateMediaAffinityIntent"]
+  RNAB["RNABAudioBrowser<br/>handlerForIntent: for the host app"]
+end
+
+subgraph Siri["Siri"]
+  IH["IntentHandlers<br/>handler(for:) switch"]
+  MIH["MediaIntentHandler<br/>INPlayMediaIntent"]
+  FIH["FavoriteIntentHandler<br/>INAddMedia / INUpdateMediaAffinity"]
 end
 
 subgraph Utilities["Utilities"]
@@ -180,9 +183,9 @@ AIF --> SVG
 
 %% CarPlay
 SCN -->|"didConnect → start()"| CPC
-RNAB -->|handlerForIntent| MIH
-RNAB -->|handlerForIntent| MAH
-RNAB -->|handlerForIntent| MAFH
+RNAB -->|handlerForIntent| IH
+IH --> MIH
+IH --> FIH
 CPC -->|"Owns, per run"| CPS
 CPS -->|Owns| CPIL
 CPS -->|Owns| CPLF
@@ -191,18 +194,16 @@ CPS -->|audioBrowser| HAB
 CPS -->|Templates| CPT
 CPIL -->|weak browserManager| BM
 CPIL -->|Uses| CPAR
-CPLF -->|weak imageLoader| CPIL
+CPLF -->|imageLoader| CPIL
 CPNPM -->|audioBrowser, player| HAB
 CPNPM -->|Templates| CPT
 MIH --> MIP
 MIP -->|"resume / search → queue → play"| PC
 MIP -->|"decide (search)"| BG
-MAH -->|"favoriteCurrentTrack"| HAB
-MAFH -->|"favoriteCurrentTrack"| HAB
+FIH -->|"favoriteActiveTrack"| HAB
 CPS -->|decide| BG
 SK --> MIH
-SK --> MAH
-SK --> MAFH
+SK --> FIH
 OV -->|"Gates CarPlay cold start"| HAB
 
 classDef nitro fill:#e1f5ff,stroke:#333,stroke-width:2px

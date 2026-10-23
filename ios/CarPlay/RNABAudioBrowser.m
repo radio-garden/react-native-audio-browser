@@ -1,23 +1,15 @@
 #import "RNABAudioBrowser.h"
 
+#if __has_include(<AudioBrowser/AudioBrowser-Swift.h>)
+#import <AudioBrowser/AudioBrowser-Swift.h>
+#elif __has_include("AudioBrowser-Swift.h")
+#import "AudioBrowser-Swift.h"
+#endif
+
 @implementation RNABAudioBrowser
 
 + (nullable id)handlerForIntent:(INIntent *)intent {
-    // The handlers are internal Swift classes exposed to the ObjC runtime via
-    // @objc(...); each conforms to the matching INIntentHandling protocol.
-    NSString *handlerClassName = nil;
-    if ([intent isKindOfClass:[INPlayMediaIntent class]]) {
-        handlerClassName = @"RNABMediaIntentHandler";
-    } else if ([intent isKindOfClass:[INUpdateMediaAffinityIntent class]]) {
-        handlerClassName = @"RNABMediaAffinityHandler";
-    } else if ([intent isKindOfClass:[INAddMediaIntent class]]) {
-        handlerClassName = @"RNABMediaAddHandler";
-    }
-    if (!handlerClassName) {
-        return nil;
-    }
-    Class cls = NSClassFromString(handlerClassName);
-    return cls ? [[cls alloc] init] : nil;
+    return [RNABIntentHandlers handlerForIntent:intent];
 }
 
 @end

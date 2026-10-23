@@ -23,21 +23,21 @@ extension CarPlaySession {
   /// invalidated (e.g. a locale change).
   func refreshAllDisplayedTemplates() async {
     let browserManager = audioBrowser.browserManager
-    let loads = displayedListTemplates().compactMap { template in
-      template.contentPath.map { path in
-        (template, Task<ResolvedTrack?, Never> { @MainActor [logger] in
-          do {
-            return try await browserManager.resolve(path, useCache: false)
-          } catch {
-            logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
-            return nil
-          }
-        })
+    let targets = displayedListTemplates().compactMap { template in template.contentPath.map { (template, $0) } }
+    let pages = await targets.map(\.1).concurrentMap { [logger] path -> ResolvedTrack? in
+      do {
+        return try await browserManager.resolve(path, useCache: false)
+      } catch {
+        if !(error is CancellationError || Task.isCancelled) {
+          logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
+        }
+        return nil
       }
     }
-    for load in loads {
-      guard let resolved = await load.1.value, !Task.isCancelled else { continue }
-      updateTemplate(load.0, with: resolved)
+    guard !Task.isCancelled else { return }
+    for ((template, _), page) in zip(targets, pages) {
+      guard let page else { continue }
+      updateTemplate(template, with: page)
     }
   }
 }

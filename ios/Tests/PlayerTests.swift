@@ -1395,3 +1395,44 @@ struct MediaStackEffectTests {
     #expect(eh.appliedTimedMetadata == [metadata])
   }
 }
+
+@Suite("Player - now-playing preview")
+struct NowPlayingPreviewTests {
+  @Test @MainActor
+  func preview_showsTheTappedTrackWithoutLoadingIt() {
+    let (c, eh, _, _) = makeCoordinator()
+    let tapped = Track(id: "tapped", src: "https://example.com/tapped.mp3", title: "Tapped")
+
+    c.previewNowPlaying(tapped)
+
+    #expect(eh.loadNowPlayingMetadataCalls.map(\.id) == ["tapped"])
+    #expect(eh.resolveAndLoadCalls.isEmpty)
+    #expect(c.currentTrack == nil)
+  }
+
+  @Test @MainActor
+  func endingPreview_restoresTheCurrentTrackAndRendersItsLines() {
+    let (c, eh, _, _) = makeCoordinator()
+    loadTrack(c, id: "current")
+    c.previewNowPlaying(Track(id: "tapped", src: "https://example.com/tapped.mp3", title: "Tapped"))
+    let rendersBefore = eh.nowPlayingRenderCount
+
+    c.endNowPlayingPreview()
+
+    #expect(eh.loadNowPlayingMetadataCalls.last?.id == "current")
+    #expect(eh.nowPlayingRenderCount == rendersBefore + 1)
+    #expect(eh.clearNowPlayingCallCount == 0)
+  }
+
+  @Test @MainActor
+  func endingPreview_withNothingCurrent_clearsTheSurface() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.previewNowPlaying(Track(id: "tapped", src: "https://example.com/tapped.mp3", title: "Tapped"))
+
+    c.endNowPlayingPreview()
+
+    #expect(eh.clearNowPlayingCallCount == 1)
+    #expect(eh.loadNowPlayingMetadataCalls.map(\.id) == ["tapped"])
+    #expect(eh.nowPlayingRenderCount == 0)
+  }
+}
