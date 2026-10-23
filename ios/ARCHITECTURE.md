@@ -194,7 +194,7 @@ CPS -->|audioBrowser| HAB
 CPS -->|Templates| CPT
 CPIL -->|weak browserManager| BM
 CPIL -->|Uses| CPAR
-CPLF -->|weak imageLoader| CPIL
+CPLF -->|imageLoader| CPIL
 CPNPM -->|audioBrowser, player| HAB
 CPNPM -->|Templates| CPT
 MIH --> MIP

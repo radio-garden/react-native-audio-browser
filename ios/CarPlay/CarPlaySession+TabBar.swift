@@ -168,15 +168,16 @@ extension CarPlaySession {
   func applyTabBarEntry(to template: CPTemplate, for track: Track) {
     template.tabTitle = track.title
     if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
+      // A plain symbol: CarPlay tints the tab image itself.
       let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
-      if let image = imageLoader.sfSymbolImage(symbolName) {
+      if let image = UIImage(systemName: symbolName) {
         template.tabImage = image
       }
     } else if track.artwork != nil || track.artworkSource != nil {
-      imageLoader.loadArtwork(for: track, size: CGSize(width: 24, height: 24)) { [weak template] image in
-        Task { @MainActor in
-          if let image { template?.tabImage = image }
-        }
+      spawn { [weak template] session in
+        let image = await session.imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))
+        guard !Task.isCancelled, let image else { return }
+        template?.tabImage = image
       }
     } else {
       // A restamp must not leave an old icon on a now title-only tab.

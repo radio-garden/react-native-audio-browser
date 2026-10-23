@@ -15,7 +15,14 @@ final class CarPlaySession {
   var player: Player? { audioBrowser.player }
   let trackSelector: TrackSelector
   let imageLoader: CarPlayImageLoader
-  let listItemFactory: CarPlayListItemFactory
+  private(set) lazy var listItemFactory = CarPlayListItemFactory(
+    imageLoader: imageLoader,
+    playingIndicatorLocation: playingIndicatorLocation,
+    isActiveTrack: { [weak self] identity in identity != nil && self?.player?.currentTrack?.identity == identity },
+    spawn: { [weak self] work in self?.spawn { _ in await work() } },
+    onItemSelected: { [weak self] track, completion in self?.select(track, completion: completion) },
+    onNavigate: { [weak self] path, title in self?.spawn { await $0.navigate(to: path, title: title) } },
+  )
   private(set) var nowPlaying: CarPlayNowPlayingManager!
 
   private var subscriptions: [Subscription] = []
@@ -56,12 +63,6 @@ final class CarPlaySession {
       carTraitCollection: interfaceController.carTraitCollection,
       browserManager: audioBrowser.browserManager,
     )
-    listItemFactory = CarPlayListItemFactory(
-      isActiveTrack: { [weak audioBrowser] identity in
-        identity != nil && audioBrowser?.player?.currentTrack?.identity == identity
-      },
-    )
-    listItemFactory.imageLoader = imageLoader
     nowPlaying = CarPlayNowPlayingManager(
       interfaceController: interfaceController,
       audioBrowser: audioBrowser,
@@ -70,9 +71,6 @@ final class CarPlaySession {
       },
       navigate: { [weak self] path, title in self?.spawn { await $0.navigate(to: path, title: title) } },
     )
-    listItemFactory.onItemSelected = { [weak self] track, completion in self?.select(track, completion: completion) }
-    listItemFactory.onNavigate = { [weak self] path, title in self?.spawn { await $0.navigate(to: path, title: title) } }
-    listItemFactory.playingIndicatorLocation = playingIndicatorLocation
   }
 
   func start() {
