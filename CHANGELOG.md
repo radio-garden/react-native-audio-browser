@@ -1,3 +1,21 @@
+## [0.2.0-next.32](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.31...v0.2.0-next.32) (2026-10-23)
+
+### Code Refactors
+
+* **ios:** claim the silent primer on the Load ([b117031](https://github.com/radio-garden/react-native-audio-browser/commit/b1170312492d4c6ff901f1ca82e94b97ecc99c6c))
+* **ios:** cut the Player's comments to what the code cannot say ([7fd9256](https://github.com/radio-garden/react-native-audio-browser/commit/7fd9256f0adf9e51ebb8723e822f6dfbc05334a1))
+* **ios:** derive the ErrorStatus from one pure rule ([c15b89b](https://github.com/radio-garden/react-native-audio-browser/commit/c15b89b784cd0d4454034c13fc0b6d74b30fd89e))
+* **ios:** drop the Player's queue pass-throughs ([82b4039](https://github.com/radio-garden/react-native-audio-browser/commit/82b4039c562f2da79c13ae9785601d8139207d2c))
+* **ios:** give each engine event one entry point in the Player ([7c01a57](https://github.com/radio-garden/react-native-audio-browser/commit/7c01a571662e6e4e8d46771f59aff742ff3ce875))
+* **ios:** let SleepTimerManager own its VolumeFader ([a1c2208](https://github.com/radio-garden/react-native-audio-browser/commit/a1c22082577e5cec013bf0d06ae1e61a2bab23fe))
+* **ios:** move the healthy-playback refill into RetryLoop ([37ecc30](https://github.com/radio-garden/react-native-audio-browser/commit/37ecc3021415360077b6f6c1dccc506a7f68e04b))
+* **ios:** rank the now-playing lines in a tested NowPlayingLines ([87c5657](https://github.com/radio-garden/react-native-audio-browser/commit/87c56579eabf42fc1ac504f23f1e0cd134384b04))
+* **ios:** require MediaLoader's URL resolver and drop its main-actor hops ([29c893d](https://github.com/radio-garden/react-native-audio-browser/commit/29c893d8fc73a61dfc934964215c3e3193b8494c))
+
+### Documentation
+
+* **ios:** describe the Player's new owners in the architecture docs ([82a57da](https://github.com/radio-garden/react-native-audio-browser/commit/82a57da2c64b68d2a72ccbc767bc023f703cf43a))
+
 ## [0.2.0-next.31](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.30...v0.2.0-next.31) (2026-10-23)
 
 ### Bug Fixes
