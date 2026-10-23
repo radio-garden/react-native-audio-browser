@@ -22,7 +22,7 @@ extension CarPlaySession {
     // A playable track always lands on Now Playing, so it is pushed now with the tapped
     // track's fields: the queue expansion and media resolve may both hit the network.
     if track.src != nil {
-      audioBrowser.engine?.loadNowPlayingMetadata(for: track)
+      player?.previewNowPlaying(track)
       nowPlaying.prepare(for: track)
       nowPlaying.showNowPlaying()
     }
@@ -32,7 +32,7 @@ extension CarPlaySession {
       guard let player = session.player else { return }
       let result = await session.trackSelector.select(track: track, player: player)
       guard !Task.isCancelled else {
-        if track.src != nil { session.restoreNowPlaying() }
+        if track.src != nil { session.player?.endNowPlayingPreview() }
         return
       }
       switch result {
@@ -46,17 +46,6 @@ extension CarPlaySession {
       case .none:
         break
       }
-    }
-  }
-
-  /// Puts the current track back on the now-playing surface, over a tapped one that won't play.
-  private func restoreNowPlaying() {
-    guard let engine = audioBrowser.engine else { return }
-    if let current = player?.currentTrack {
-      engine.loadNowPlayingMetadata(for: current)
-      engine.nowPlayingUpdater.render()
-    } else {
-      engine.clearNowPlaying()
     }
   }
 
