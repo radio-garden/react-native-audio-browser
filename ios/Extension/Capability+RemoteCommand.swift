@@ -1,5 +1,8 @@
 import Foundation
-import NitroModules
+
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 extension PlayerCapabilities {
   /// The remote commands the capabilities enable: each one unless set to false. `favorite`
