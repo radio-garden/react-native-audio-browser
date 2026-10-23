@@ -86,26 +86,10 @@ final class NowPlayingUpdater {
   }
 
   /// The metadata JS sees for the current track, before any formatter result.
+  /// Applies the override whether or not `enabled` is set.
   var nowPlaying: NowPlayingMetadata? {
     guard let track = source?.currentTrack else { return nil }
-    let lines = defaultLines(for: track)
-    return metadata(track: track, title: lines.title, artist: lines.artist, album: lines.album)
-  }
-
-  /// Re-renders the text lines for the current track and state. Called on every playback
-  /// transition; unchanged lines are not re-published.
-  func render() {
-    guard let source, let track = source.currentTrack else { return }
-    render(
-      track: track,
-      timedMetadata: timedMetadata,
-      playWhenReady: source.playWhenReady,
-      stalled: source.isStalled ? (isOnline ? .buffering : .offline) : nil,
-      error: source.nitroPlaybackError,
-      flash: flash,
-      override: enabled ? override : nil,
-      formatter: enabled ? formatter : nil,
-    )
+    return metadata(track: track, lines: .resolve(track: track, flash: flash, override: override))
   }
 
   /// Empties the now-playing surface and drops any artwork fetch or formatter result in flight.
@@ -148,11 +132,11 @@ final class NowPlayingUpdater {
   private static let maxArtworkPixelWidth: CGFloat = 1200
 
   /// Publishes the static, per-track fields + artwork on a track change. The title/artist/album
-  /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
+  /// lines are owned by `render` (routed through `apply` here so it dedupes against later
   /// renders).
   func loadMetaValues(for track: Track) {
     nowPlayingInfoController.set([MPNowPlayingInfoPropertyIsLiveStream: track.live])
-    applyFields(track: track, title: track.title, artist: track.artist, album: track.album)
+    apply(.resolve(track: track), for: track)
     loadArtwork(for: track)
   }
 
@@ -160,34 +144,19 @@ final class NowPlayingUpdater {
   /// immediately, then — when a formatter is configured — its async result overlaid (each field
   /// falling back to the default). A `flash` (transient line, e.g. feedback for a refused remote
   /// command) outranks both: while one is active the formatter pass is skipped entirely, so its
-  /// async result can't land on top. Safe to call on every playback transition; redundant writes
-  /// are deduped.
-  private func render(
-    track: Track,
-    timedMetadata: TimedMetadata?,
-    playWhenReady: Bool,
-    stalled: StallReason?,
-    error: PlaybackError?,
-    flash: NowPlayingUpdate?,
-    override: NowPlayingUpdate?,
-    formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
-  ) {
+  /// async result can't land on top. Called on every playback transition; unchanged lines are not
+  /// re-published.
+  func render() {
+    guard let source, let track = source.currentTrack else { return }
+    let override = enabled ? self.override : nil
+    let formatter = enabled ? self.formatter : nil
     renderGeneration &+= 1
     let generation = renderGeneration
-
-    let defaultTitle = override?.title ?? track.title
-    let defaultSecondary = override?.artist ?? track.artist
-    let defaultAlbum = override?.album ?? track.album
 
     let trackId = track.identity ?? track.path
 
     if let flash {
-      applyFields(
-        track: track,
-        title: flash.title ?? defaultTitle,
-        artist: flash.artist ?? defaultSecondary,
-        album: flash.album ?? defaultAlbum,
-      )
+      apply(.resolve(track: track, flash: flash, override: override), for: track)
       // The flash replaced the formatter's line, so the surface no longer shows
       // one: the render that follows the flash reverting must publish the default
       // immediately rather than sit on stale flash text awaiting the formatter.
@@ -202,16 +171,16 @@ final class NowPlayingUpdater {
     // until the async result lands, since the two differ by construction on a live
     // stream (station name vs. song line).
     if formatter == nil || formattedTrackId != trackId {
-      applyFields(track: track, title: defaultTitle, artist: defaultSecondary, album: defaultAlbum)
+      apply(.resolve(track: track, override: override), for: track)
     }
 
     guard let formatter else { return }
     let params = FormatNowPlayingParams(
       track: track,
       timedMetadata: timedMetadata,
-      playWhenReady: playWhenReady,
-      stalled: stalled,
-      error: error,
+      playWhenReady: source.playWhenReady,
+      stalled: source.isStalled ? (isOnline ? .buffering : .offline) : nil,
+      error: source.nitroPlaybackError,
     )
     // `@Sendable` breaks the @MainActor isolation inheritance: Nitro resolves the promise on the JS
     // thread, so the resolver must NOT be main-isolated (a main-isolated closure run off-main traps
@@ -223,12 +192,7 @@ final class NowPlayingUpdater {
         Task { @MainActor in
           // Apply only if no newer render has superseded this one (fast skip / state moved on).
           guard self.renderGeneration == generation else { return }
-          self.applyFields(
-            track: track,
-            title: formatted.title ?? defaultTitle,
-            artist: formatted.artist ?? defaultSecondary,
-            album: formatted.album ?? defaultAlbum,
-          )
+          self.apply(.resolve(track: track, formatted: formatted, override: override), for: track)
           // A formatter result now owns the surface for this track, so later
           // renders skip the interim default write.
           self.formattedTrackId = trackId
@@ -244,21 +208,18 @@ final class NowPlayingUpdater {
 
   // MARK: - Private
 
-  /// Stamps the title/artist/album (each falling back to the track's own) onto the now-playing
-  /// surface, and notifies `onChanged` when the text or the track changed.
-  private func applyFields(track: Track, title: String?, artist: String?, album: String?) {
-    let resolvedTitle = title ?? track.title
-    let resolvedArtist = artist ?? track.artist
-    let resolvedAlbum = album ?? track.album
+  /// Stamps the lines onto the now-playing surface, and notifies `onChanged` when the text or the
+  /// track changed.
+  private func apply(_ lines: NowPlayingLines, for track: Track) {
     let textChanged = nowPlayingInfoController.set([
-      MPMediaItemPropertyTitle: resolvedTitle,
-      MPMediaItemPropertyArtist: resolvedArtist,
-      MPMediaItemPropertyAlbumTitle: resolvedAlbum,
+      MPMediaItemPropertyTitle: lines.title,
+      MPMediaItemPropertyArtist: lines.artist,
+      MPMediaItemPropertyAlbumTitle: lines.album,
     ])
     let trackId = track.identity ?? track.path
     guard textChanged || trackId != publishedTrackId else { return }
     publishedTrackId = trackId
-    onChanged?(metadata(track: track, title: resolvedTitle, artist: resolvedArtist, album: resolvedAlbum))
+    onChanged?(metadata(track: track, lines: lines))
   }
 
   private func cancelFlash() {
@@ -267,21 +228,12 @@ final class NowPlayingUpdater {
     flash = nil
   }
 
-  /// Flash over override over the track's own fields.
-  private func defaultLines(for track: Track) -> (title: String, artist: String?, album: String?) {
-    (
-      flash?.title ?? override?.title ?? track.title,
-      flash?.artist ?? override?.artist ?? track.artist,
-      flash?.album ?? override?.album ?? track.album,
-    )
-  }
-
-  private func metadata(track: Track, title: String, artist: String?, album: String?) -> NowPlayingMetadata {
+  private func metadata(track: Track, lines: NowPlayingLines) -> NowPlayingMetadata {
     NowPlayingMetadata(
       elapsedTime: source?.currentTime,
-      title: title,
-      album: album,
-      artist: artist,
+      title: lines.title,
+      album: lines.album,
+      artist: lines.artist,
       duration: track.duration,
       artwork: Self.jsArtwork(for: track),
       description: track.description,

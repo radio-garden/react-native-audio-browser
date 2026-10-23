@@ -52,6 +52,12 @@
     var icyCharset: String?
   }
 
+  struct NowPlayingUpdate: Equatable {
+    var title: String?
+    var artist: String?
+    var album: String?
+  }
+
   struct TrackLoadEvent {
     var track: Track
     var queue: [Track]
