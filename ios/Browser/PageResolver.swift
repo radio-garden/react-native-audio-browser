@@ -72,25 +72,6 @@ final class PageResolver {
     throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
   }
 
-  /// The query params a structured search sends: `q` plus whichever filters are
-  /// set. Mirrors Android's `executeSearchApiRequest` and the web stub.
-  ///
-  /// Single source of truth for "what distinguishes one search from another" —
-  /// the request sends exactly this, and the cache keys on exactly this, so a
-  /// field added here can't be forgotten in one place and silently serve one
-  /// search's results for another.
-  static func searchQueryParams(_ params: SearchParams) -> [String: String] {
-    var query: [String: String] = ["q": params.query]
-    if let mode = params.mode { query["mode"] = mode.stringValue }
-    if params.reference == .my { query["reference"] = "my" }
-    if let genre = params.genre { query["genre"] = genre }
-    if let artist = params.artist { query["artist"] = artist }
-    if let album = params.album { query["album"] = album }
-    if let title = params.title { query["title"] = title }
-    if let playlist = params.playlist { query["playlist"] = playlist }
-    return query
-  }
-
   // MARK: - Route Resolution
 
   private func resolveRouteEntry(

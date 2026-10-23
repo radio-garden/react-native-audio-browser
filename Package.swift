@@ -55,6 +55,7 @@ let package = Package(
         "Extension/ResolvedTrack+Copying.swift",
         "Extension/Section+Copying.swift",
         "Extension/Track+Copying.swift",
+        "Extension/SearchParams+Query.swift",
         "Extension/Track+Identity.swift",
         "Extension/Variant+Artwork.swift",
         "Extension/TrackMetadata+AVFoundation.swift",

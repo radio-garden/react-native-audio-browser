@@ -21,7 +21,7 @@ final class BrowserManager {
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
-  // Most recent search, keyed by `searchCacheKey`.
+  // Most recent search, keyed by `SearchParams.cacheKey`.
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
@@ -216,24 +216,15 @@ final class BrowserManager {
     )
   }
 
-  /// The cache identity of a search. Sorted so key order is stable, and
-  /// `\u{1}`-delimited so two different param sets can't serialize alike.
-  private static func searchCacheKey(_ params: SearchParams) -> String {
-    PageResolver.searchQueryParams(params)
-      .sorted { $0.key < $1.key }
-      .map { "\($0.key)=\($0.value)" }
-      .joined(separator: "\u{1}")
-  }
-
   /// Structured search, cached by the full parameter set.
   ///
   /// Voice intents reuse `query` across different structures —
   /// `MediaIntentCriteria` falls back to the structured value when there is no
   /// spoken name, so "play jazz" (genre) and a text search for "jazz" arrive
-  /// with an identical `query` — hence `searchCacheKey` rather than `query`.
+  /// with an identical `query` — hence `cacheKey` rather than `query`.
   func search(_ params: SearchParams) async throws -> ResolvedTrack {
     let query = params.query
-    let cacheKey = Self.searchCacheKey(params)
+    let cacheKey = params.cacheKey
 
     // Check cache - hydrate favorites on the way out, since they may have
     // changed since the search ran (the slot holds the raw results for exactly

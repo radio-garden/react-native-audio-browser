@@ -132,7 +132,7 @@ final class RequestPipeline {
   func fetchSearch(_ searchConfig: TransformableRequestConfig, params: SearchParams) async throws -> [Track] {
     let request = try await buildApiRequest(
       kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": params.query],
-      initialQuery: PageResolver.searchQueryParams(params),
+      initialQuery: params.queryParams,
     )
     logger.debug("Searching via API: \(request.url)")
     let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
