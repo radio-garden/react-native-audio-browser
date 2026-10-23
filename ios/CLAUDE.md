@@ -193,7 +193,6 @@ ios/
 ├── Model/
 │   ├── TrackPlayerError.swift        # PlaybackError, QueueError
 │   ├── RemoteCommand.swift           # Remote command enum with config
-│   ├── SourceType.swift              # file vs stream detection
 │   ├── PlayerUpdateOptions.swift     # Update options struct
 │   └── NitroTypeStubs.swift          # Nitro type stubs
 ├── Extension/

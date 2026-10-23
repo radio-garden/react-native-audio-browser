@@ -40,13 +40,6 @@ public final class Emitter<T>: @unchecked Sendable {
     snapshot = next
   }
 
-  /// Removes all listeners
-  public func removeAllListeners() {
-    lock.lock()
-    defer { lock.unlock() }
-    snapshot = []
-  }
-
   /// Emits an event to all registered listeners
   /// - Parameter event: The event data to emit
   public func emit(_ event: T) {
@@ -57,13 +50,6 @@ public final class Emitter<T>: @unchecked Sendable {
     for entry in current {
       entry.handler(event)
     }
-  }
-
-  /// Returns the number of registered listeners
-  public var listenerCount: Int {
-    lock.lock()
-    defer { lock.unlock() }
-    return snapshot.count
   }
 }
 

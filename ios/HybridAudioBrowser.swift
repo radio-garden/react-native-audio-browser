@@ -8,7 +8,7 @@ import os.log
 @MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, Player)> {
   guard let browser = HybridAudioBrowser.shared,
         browser.browserManager.isConfigured,
-        let player = browser.getPlayer() else { return nil }
+        let player = browser.player else { return nil }
   return (browser, player)
 }
 
@@ -71,19 +71,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor var pendingRepeatMode: RepeatMode?
   @MainActor let playerOptions = PlayerUpdateOptions()
 
-  /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
-  @MainActor var playbackRates: [Double] { playerOptions.playbackRates }
-  @MainActor var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
-  @MainActor var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] {
-    playerOptions.carPlayNowPlayingButtons
-  }
-
-  @MainActor var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation {
-    playerOptions.carPlayPlayingIndicatorLocation
-  }
-
   @MainActor lazy var navigationError = NavigationErrorState(
-    onErrorChanged: { [weak self] in self?.navigationErrorEmitter.emit(NavigationErrorEvent(error: $0)) },
+    onErrorChanged: { [weak self] in self?.onNavigationError(NavigationErrorEvent(error: $0)) },
     onFormattedChanged: { [weak self] in self?.onFormattedNavigationError($0) },
   )
 
@@ -93,7 +82,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let favoriteChangedEmitter = Emitter<FavoriteChangedEvent>()
   public let activeTrackChangedEmitter = Emitter<PlaybackActiveTrackChangedEvent>()
   public let queueChangedEmitter = Emitter<[Track]>()
-  public let navigationErrorEmitter = Emitter<NavigationErrorEvent>()
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
   public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
@@ -360,11 +348,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  /// Returns the player, if setup has been called.
-  func getPlayer() -> Player? {
-    player
-  }
-
   /// Stops the player and releases its media stack: the AVPlayer and the now-playing session
   /// outlive a dropped reference otherwise.
   @MainActor
@@ -389,10 +372,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     queueChangedEmitter.addListener { [weak self] tracks in
       self?.onPlaybackQueueChanged(tracks)
-    }
-
-    navigationErrorEmitter.addListener { [weak self] event in
-      self?.onNavigationError(event)
     }
 
     repeatModeChangedEmitter.addListener { [weak self] event in

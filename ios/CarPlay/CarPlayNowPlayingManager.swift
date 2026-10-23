@@ -11,7 +11,7 @@ final class CarPlayNowPlayingManager {
   private let interfaceController: CPInterfaceController
   private let audioBrowser: HybridAudioBrowser
   /// Read on each use: a re-setup replaces the bridge's player.
-  private var player: Player? { audioBrowser.getPlayer() }
+  private var player: Player? { audioBrowser.player }
   private let listItem: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
   /// Pushes a browse destination: the album line's.
   private let navigate: (_ path: String, _ title: String) -> Void
@@ -131,7 +131,7 @@ final class CarPlayNowPlayingManager {
   private func refreshButtons() {
     // A gate hides the custom buttons; the transport controls stay, as a gate never blocks
     // playback.
-    let configured = audioBrowser.browseGate.isActive ? [] : audioBrowser.carPlayNowPlayingButtons
+    let configured = audioBrowser.browseGate.isActive ? [] : audioBrowser.playerOptions.carPlayNowPlayingButtons
     // The template caps custom buttons at 5 (CPNowPlayingTemplate.h) and says
     // nothing about overflow — unlike lists (trim) or the tab bar (throw). The
     // config comes straight from JS, where duplicates and excess are
@@ -319,7 +319,7 @@ final class CarPlayNowPlayingManager {
   }
 
   private func handlePlaybackRateButtonTapped() {
-    let rates = audioBrowser.playbackRates
+    let rates = audioBrowser.playerOptions.playbackRates
     guard !rates.isEmpty, let player else { return }
 
     let currentRate = Double(player.rate)
@@ -349,7 +349,7 @@ final class CarPlayNowPlayingManager {
   }
 
   private func updateUpNextButton() {
-    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.carPlayUpNextButton && (player?.tracks.count ?? 0) > 1
+    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.playerOptions.carPlayUpNextButton && (player?.tracks.count ?? 0) > 1
   }
 
   fileprivate func handleUpNextButtonTapped() {
