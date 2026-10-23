@@ -275,7 +275,7 @@ struct ObserverGuardTests {
     eh.currentTime = 99.8
     eh.duration = 100
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     // State should remain .playing — the pause near track end is ignored
     #expect(c.state == .playing)
@@ -289,7 +289,7 @@ struct ObserverGuardTests {
     eh.currentTime = 0
     eh.duration = 0
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     #expect(c.state == .none)
   }
@@ -303,7 +303,7 @@ struct ObserverGuardTests {
     eh.duration = 100
     c.setPlayWhenReady(false)
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     #expect(c.state == .paused)
   }
@@ -317,7 +317,7 @@ struct ObserverGuardTests {
     eh.duration = 100
     c.setPlayWhenReady(true)
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     // playWhenReady is true — pause is ignored (likely buffering/seeking)
     #expect(c.state == .playing)
@@ -325,11 +325,11 @@ struct ObserverGuardTests {
 
   @Test @MainActor
   func timeControlStatus_ignored_duringLoading() {
-    let (c, _, cb, _) = makeCoordinator()
+    let (c, eh, cb, _) = makeCoordinator()
     c.transition(.trackLoading)
     cb.playbackChanges.removeAll()
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     #expect(c.state == .loading)
     #expect(cb.playbackChanges.isEmpty)
@@ -341,7 +341,7 @@ struct ObserverGuardTests {
     c.transition(.avPlayerPlaying)
     eh.hasLoadedAsset = false
 
-    c.avPlayerDidChangeTimeControlStatus(.waitingToPlayAtSpecifiedRate)
+    eh.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
 
     #expect(c.state == .playing) // unchanged
   }
@@ -352,18 +352,18 @@ struct ObserverGuardTests {
     c.transition(.avPlayerPlaying)
     eh.hasLoadedAsset = true
 
-    c.avPlayerDidChangeTimeControlStatus(.waitingToPlayAtSpecifiedRate)
+    eh.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
 
     #expect(c.state == .buffering)
   }
 
   @Test @MainActor
   func playbackLikelyToKeepUp_false_ignored() {
-    let (c, _, cb, _) = makeCoordinator()
+    let (c, eh, cb, _) = makeCoordinator()
     c.transition(.trackLoading)
     cb.playbackChanges.removeAll()
 
-    c.avItemDidUpdatePlaybackLikelyToKeepUp(false)
+    eh.emit(.likelyToKeepUp(false))
 
     #expect(c.state == .loading)
     #expect(cb.playbackChanges.isEmpty)
@@ -374,28 +374,29 @@ struct ObserverGuardTests {
     let (c, eh, _, _) = makeCoordinator()
     c.transition(.trackLoading)
     eh.hasLoadedAsset = true
+    eh.hasItem = true
 
-    c.avItemDidUpdatePlaybackLikelyToKeepUp(true)
+    eh.emit(.likelyToKeepUp(true))
 
     #expect(c.state == .ready)
   }
 
   @Test @MainActor
   func audioDidStart_ignored_duringLoading() {
-    let (c, _, _, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     c.transition(.trackLoading)
 
-    c.audioDidStart()
+    eh.emit(.audioDidStart)
 
     #expect(c.state == .loading)
   }
 
   @Test @MainActor
   func audioDidStart_transitionsToPlaying() {
-    let (c, _, _, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     c.transition(.bufferingSufficient)
 
-    c.audioDidStart()
+    eh.emit(.audioDidStart)
 
     #expect(c.state == .playing)
   }
@@ -604,7 +605,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     c.repeatMode = .track
     eh.startPlaybackCallCount = 0
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(eh.seekCalls == [0])
     #expect(eh.startPlaybackCallCount == 1)
@@ -622,7 +623,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     c.repeatMode = .track
     c.setPlayWhenReady(false)
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(cb.queueEndedEvents.isEmpty)
     #expect(eh.seekCalls.isEmpty)
@@ -635,7 +636,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     loadTrack(c)
     c.repeatMode = .off
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(c.state == .ended)
     #expect(cb.queueEndedEvents.count >= 1)
@@ -643,7 +644,7 @@ struct HandleTrackDidPlayToEndTimeTests {
 
   @Test @MainActor
   func midQueue_advancesToNext() {
-    let (c, _, cb, _) = makeCoordinator()
+    let (c, eh, cb, _) = makeCoordinator()
     let tracks = [
       Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
       Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
@@ -651,7 +652,7 @@ struct HandleTrackDidPlayToEndTimeTests {
     c.setQueue(tracks)
     cb.activeTrackChanges.removeAll()
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(c.currentIndex == 1)
     #expect(cb.activeTrackChanges.count == 1)
@@ -672,7 +673,7 @@ struct NaturalEndPlayIntentTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(c.state == .ended)
     #expect(c.playWhenReady == false)
@@ -684,7 +685,7 @@ struct NaturalEndPlayIntentTests {
     startPlaying(c, eh)
     callbacks.releaseSessionCount = 0
 
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
 
     #expect(callbacks.releaseSessionCount == 1)
   }
@@ -695,7 +696,7 @@ struct NaturalEndPlayIntentTests {
   func playAfterNaturalEnd_reloadsFromStart() {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
     eh.resumePosition = 300
     let resolvesBefore = eh.resolveAndLoadCalls.count
 
@@ -712,10 +713,10 @@ struct NaturalEndPlayIntentTests {
   func strayPauseAfterNaturalEnd_staysEnded() {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
     #expect(c.state == .ended)
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
     #expect(c.state == .ended)
   }
@@ -724,7 +725,7 @@ struct NaturalEndPlayIntentTests {
   func interruptionAfterNaturalEnd_doesNotArmResume() {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    c.handleTrackDidPlayToEndTime()
+    eh.emit(.playedToEnd)
     let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.handleInterruptionBegan()
@@ -922,7 +923,7 @@ struct InterruptionTests {
     let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
 
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
     #expect(c.state == .playing) // swallowed — the symptom this fix targets
 
     c.handleInterruptionBegan()
@@ -1041,7 +1042,7 @@ struct InterruptionTests {
     startPlaying(c, eh)
     // Pause before the interruption (e.g. user already paused).
     c.setPlayWhenReady(false)
-    c.avPlayerDidChangeTimeControlStatus(.paused)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
     #expect(c.state == .paused)
 
     c.handleInterruptionBegan()
@@ -1144,10 +1145,10 @@ struct LoadTests {
 
   @Test @MainActor
   func aNewTrackStartsAnUnprovenLoad() {
-    let (c, _, _, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     c.setQueue([track("a"), track("b")])
     let first = c.load
-    c.audioDidStart()
+    eh.emit(.audioDidStart)
     #expect(c.load?.hasPlayed == true)
 
     c.next()
@@ -1160,9 +1161,9 @@ struct LoadTests {
   /// recovery budget, must survive it.
   @Test @MainActor
   func aRetryResetKeepsTheLoad() {
-    let (c, _, _, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     c.setQueue([track("a")])
-    c.audioDidStart()
+    eh.emit(.audioDidStart)
     let load = c.load
 
     c.retry.reset()

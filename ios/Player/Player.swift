@@ -430,55 +430,6 @@ final class Player {
     intervalTimer.onPlaybackStateChanged(new)
   }
 
-  // MARK: - Observer Context Guards
-
-  func avPlayerDidChangeTimeControlStatus(_ status: PlayerTimeControlStatus) {
-    // During loading, ignore stale timeControlStatus changes from old items.
-    if state == .loading { return }
-
-    switch status {
-    case .paused:
-      let currentState = state
-      let currentTime = engine.currentTime
-      let duration = engine.duration
-      // Ignore pauses when near track end
-      let nearTrackEnd = currentTime >= duration - 0.5 && duration > 0
-
-      if nearTrackEnd {
-        // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
-      } else if !engine.hasLoadedAsset, currentState != .stopped {
-        transition(.avPlayerPaused(hasAsset: false))
-      } else if currentState != .error, currentState != .stopped {
-        if !playWhenReady {
-          transition(.avPlayerPaused(hasAsset: true))
-        }
-      }
-    case .waitingToPlayAtSpecifiedRate:
-      if engine.hasLoadedAsset {
-        transition(.avPlayerWaiting)
-      }
-    case .playing:
-      transition(.avPlayerPlaying)
-    }
-  }
-
-  func audioDidStart() {
-    load?.hasPlayed = true
-    // Don't override loading state
-    if state == .loading { return }
-    transition(.audioFrameDecoded)
-  }
-
-  func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
-    guard playbackLikelyToKeepUp else { return }
-    guard engine.hasLoadedAsset else { return }
-
-    if !deferredSeek.defersReady, state != .playing {
-      logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp → .ready")
-      transition(.bufferingSufficient)
-    }
-  }
-
   // MARK: - Player Actions
 
   func play() {
@@ -692,7 +643,7 @@ final class Player {
 
   // MARK: - Track Loading
 
-  func handleTrackDidPlayToEndTime() {
+  private func trackDidPlayToEnd() {
     sleepTimerManager.onTrackPlayedToEnd()
 
     if repeatMode == .track {
@@ -906,7 +857,7 @@ final class Player {
     case let .itemPrepared(likelyToKeepUp):
       load?.itemPrepared = true
       if playWhenReady { engine.play() }
-      if !beginDeferredSeek(), likelyToKeepUp { avItemDidUpdatePlaybackLikelyToKeepUp(true) }
+      if !beginDeferredSeek(), likelyToKeepUp { bufferBecameSufficient() }
     case let .loadFailed(error):
       primeNowPlayingIfNeeded()
       retry.handleError(error, context: .mediaLoad)
@@ -919,19 +870,45 @@ final class Player {
     case let .failed(error, httpStatusCode):
       retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     case let .likelyToKeepUp(isLikely):
-      guard isLikely, engine.hasItem else { return }
-      if beginDeferredSeek() { return }
-      avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
+      guard isLikely, engine.hasItem, !beginDeferredSeek() else { return }
+      bufferBecameSufficient()
     case let .timeControlStatus(status, waitingForNoItem):
       recoverIfAirPlayStalled(transitioningTo: status, waitingForNoItem: waitingForNoItem)
-      avPlayerDidChangeTimeControlStatus(status)
+      timeControlStatusDidChange(status)
     case .audioDidStart:
-      audioDidStart()
+      load?.hasPlayed = true
+      if state != .loading { transition(.audioFrameDecoded) }
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:
       // Nudge, don't reconnect: a genuine drop is recovered by the retry and network paths.
       recoverFromStall(reconnectIfLive: false)
+    }
+  }
+
+  /// The item can play through: ready, unless a seek still holds the ready transition.
+  private func bufferBecameSufficient() {
+    guard engine.hasLoadedAsset, !deferredSeek.defersReady, state != .playing else { return }
+    transition(.bufferingSufficient)
+  }
+
+  /// While loading, a status change belongs to the previous item. A pause near the end is the
+  /// end arriving, which `.playedToEnd` handles; one with the play intent is a buffer or a seek.
+  private func timeControlStatusDidChange(_ status: PlayerTimeControlStatus) {
+    guard state != .loading else { return }
+    switch status {
+    case .paused:
+      let duration = engine.duration
+      guard duration <= 0 || engine.currentTime < duration - 0.5 else { return }
+      if !engine.hasLoadedAsset {
+        if state != .stopped { transition(.avPlayerPaused(hasAsset: false)) }
+      } else if state != .error, state != .stopped, !playWhenReady {
+        transition(.avPlayerPaused(hasAsset: true))
+      }
+    case .waitingToPlayAtSpecifiedRate:
+      if engine.hasLoadedAsset { transition(.avPlayerWaiting) }
+    case .playing:
+      transition(.avPlayerPlaying)
     }
   }
 
@@ -951,7 +928,7 @@ final class Player {
       duration: engine.duration,
     )
     switch judgement.outcome {
-    case .ended: handleTrackDidPlayToEndTime()
+    case .ended: trackDidPlayToEnd()
     case .stalled: recoverFromStall(reconnectIfLive: true)
     }
   }
