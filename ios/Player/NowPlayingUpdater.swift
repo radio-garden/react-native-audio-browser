@@ -3,46 +3,118 @@ import MediaPlayer
 import NitroModules
 import os.log
 
+/// What the now-playing surface renders from: the player's track and state.
+@MainActor
+protocol NowPlayingSource: AnyObject {
+  var currentTrack: Track? { get }
+  var currentTime: Double { get }
+  var playWhenReady: Bool { get }
+  var isStalled: Bool { get }
+  var nitroPlaybackError: PlaybackError? { get }
+}
+
 /// Owns the now-playing surface: publishes a track's static fields + artwork, and renders the
-/// title/artist line — the formatter's result, or the track/override default. The single writer of
-/// the title/artist fields, with a publish-dedupe so the frequent re-renders stay cheap.
-///
-/// Does not exclusively own NowPlayingInfoController -- other callers (e.g. HybridAudioBrowser for
-/// overrides) can still access it directly.
+/// title/artist line — a flash, else the formatter's result, else the override or the track's own
+/// fields. Holds that state (override, flash, latest timed metadata, formatter) and reports each
+/// change of the rendered lines through `onChanged`.
 @MainActor
 final class NowPlayingUpdater {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingUpdater")
   private let nowPlayingInfoController: NowPlayingInfoController
 
+  weak var source: NowPlayingSource?
   var artworkUrlResolver: ((Track, ImageContext?) async -> ImageSource?)?
-  /// Invoked when the published title/artist actually change, so the owner can emit the JS
-  /// `onNowPlayingChanged` event (which it shapes with elapsed time / artwork / etc.).
-  var onChanged: (@MainActor (_ track: Track, _ title: String, _ artist: String?, _ album: String?) -> Void)?
+  /// Called with the JS-facing metadata whenever the rendered lines or the track change.
+  var onChanged: ((NowPlayingMetadata) -> Void)?
 
-  private var artworkLoadTask: Task<Void, Never>?
-  private var artworkGeneration: UInt = 0
+  /// When false the surface shows the track's own fields: the override and formatter are ignored.
+  var enabled = true
+  var formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
 
-  /// Last published text lines, to dedupe redundant writes (render runs on every transition).
-  private struct Published: Equatable {
-    let trackId: String?
-    let title: String?
-    let artist: String?
-    let album: String?
+  /// Whether the device is online, which tells a stall apart: offline or buffering.
+  var isOnline = true {
+    didSet { if isOnline != oldValue { render() } }
   }
 
-  /// Dedupe baseline for `applyFields`. Only meaningful while it describes the
-  /// controller's current info dict, so the two are cleared together in
-  /// `clearNowPlaying()` — never separately.
-  private var lastPublished: Published?
+  private var override: NowPlayingUpdate?
+  private var timedMetadata: TimedMetadata?
+  /// A transient line (e.g. feedback for a refused remote command) that outranks the formatter
+  /// and the override, reverted by a native timer: JS timers pause in the background.
+  private var flash: NowPlayingUpdate?
+  private var flashRevert: DispatchWorkItem?
 
-  /// Empties the now-playing surface and the dedupe baseline that describes it.
-  /// One call, because clearing the dict without the baseline makes the next
-  /// publish of the SAME track dedupe against a dict that no longer holds it —
-  /// artwork lands (never deduped) but the text doesn't, and `onChanged`
-  /// never fires.
+  private var artworkLoadTask: Task<Void, Never>?
+
+  /// The track `onChanged` last reported, so a new track with the same text still reports.
+  private var publishedTrackId: String?
+
+  func setOverride(_ update: NowPlayingUpdate?) {
+    override = update
+    render()
+  }
+
+  func flash(_ update: NowPlayingUpdate, durationMs: Double) {
+    flashRevert?.cancel()
+    flash = update
+    let revert = DispatchWorkItem { [weak self] in
+      self?.flash = nil
+      self?.flashRevert = nil
+      self?.render()
+    }
+    flashRevert = revert
+    DispatchQueue.main.asyncAfter(deadline: .now() + durationMs / 1000, execute: revert)
+    render()
+  }
+
+  func clearFlash() {
+    guard flash != nil else { return }
+    cancelFlash()
+    render()
+  }
+
+  func receivedTimedMetadata(_ metadata: TimedMetadata) {
+    timedMetadata = metadata
+    render()
+  }
+
+  /// A new track drops the override, flash and timed metadata of the last one.
+  func trackChanged() {
+    override = nil
+    cancelFlash()
+    timedMetadata = nil
+    render()
+  }
+
+  /// The metadata JS sees for the current track, before any formatter result.
+  var nowPlaying: NowPlayingMetadata? {
+    guard let track = source?.currentTrack else { return nil }
+    let lines = defaultLines(for: track)
+    return metadata(track: track, title: lines.title, artist: lines.artist, album: lines.album)
+  }
+
+  /// Re-renders the text lines for the current track and state. Called on every playback
+  /// transition; unchanged lines are not re-published.
+  func render() {
+    guard let source, let track = source.currentTrack else { return }
+    render(
+      track: track,
+      timedMetadata: timedMetadata,
+      playWhenReady: source.playWhenReady,
+      stalled: source.isStalled ? (isOnline ? .buffering : .offline) : nil,
+      error: source.nitroPlaybackError,
+      flash: flash,
+      override: enabled ? override : nil,
+      formatter: enabled ? formatter : nil,
+    )
+  }
+
+  /// Empties the now-playing surface and drops any artwork fetch or formatter result in flight.
   func clearNowPlaying() {
+    renderGeneration &+= 1
+    artworkLoadTask?.cancel()
+    artworkLoadTask = nil
     nowPlayingInfoController.clear()
-    lastPublished = nil
+    publishedTrackId = nil
     formattedTrackId = nil
   }
 
@@ -79,9 +151,7 @@ final class NowPlayingUpdater {
   /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
   /// renders).
   func loadMetaValues(for track: Track) {
-    nowPlayingInfoController.set(keyValues: [
-      NowPlayingInfoProperty.isLiveStream(track.live),
-    ])
+    nowPlayingInfoController.set([MPNowPlayingInfoPropertyIsLiveStream: track.live])
     applyFields(track: track, title: track.title, artist: track.artist, album: track.album)
     loadArtwork(for: track)
   }
@@ -92,13 +162,13 @@ final class NowPlayingUpdater {
   /// command) outranks both: while one is active the formatter pass is skipped entirely, so its
   /// async result can't land on top. Safe to call on every playback transition; redundant writes
   /// are deduped.
-  func render(
+  private func render(
     track: Track,
     timedMetadata: TimedMetadata?,
     playWhenReady: Bool,
     stalled: StallReason?,
     error: PlaybackError?,
-    flash: NowPlayingUpdate? = nil,
+    flash: NowPlayingUpdate?,
     override: NowPlayingUpdate?,
     formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
   ) {
@@ -174,27 +244,58 @@ final class NowPlayingUpdater {
 
   // MARK: - Private
 
-  /// Stamps the title/artist/album (each falling back to the track's own) onto
-  /// NowPlayingInfoCenter, deduped against the last publish, and notifies `onChanged`.
+  /// Stamps the title/artist/album (each falling back to the track's own) onto the now-playing
+  /// surface, and notifies `onChanged` when the text or the track changed.
   private func applyFields(track: Track, title: String?, artist: String?, album: String?) {
     let resolvedTitle = title ?? track.title
     let resolvedArtist = artist ?? track.artist
     let resolvedAlbum = album ?? track.album
-    let published = Published(
-      trackId: track.identity ?? track.path,
-      title: resolvedTitle,
-      artist: resolvedArtist,
-      album: resolvedAlbum,
-    )
-    guard published != lastPublished else { return }
-    lastPublished = published
-
-    nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.title(resolvedTitle),
-      MediaItemProperty.artist(resolvedArtist),
-      MediaItemProperty.albumTitle(resolvedAlbum),
+    let textChanged = nowPlayingInfoController.set([
+      MPMediaItemPropertyTitle: resolvedTitle,
+      MPMediaItemPropertyArtist: resolvedArtist,
+      MPMediaItemPropertyAlbumTitle: resolvedAlbum,
     ])
-    onChanged?(track, resolvedTitle, resolvedArtist, resolvedAlbum)
+    let trackId = track.identity ?? track.path
+    guard textChanged || trackId != publishedTrackId else { return }
+    publishedTrackId = trackId
+    onChanged?(metadata(track: track, title: resolvedTitle, artist: resolvedArtist, album: resolvedAlbum))
+  }
+
+  private func cancelFlash() {
+    flashRevert?.cancel()
+    flashRevert = nil
+    flash = nil
+  }
+
+  /// Flash over override over the track's own fields.
+  private func defaultLines(for track: Track) -> (title: String, artist: String?, album: String?) {
+    (
+      flash?.title ?? override?.title ?? track.title,
+      flash?.artist ?? override?.artist ?? track.artist,
+      flash?.album ?? override?.album ?? track.album,
+    )
+  }
+
+  private func metadata(track: Track, title: String, artist: String?, album: String?) -> NowPlayingMetadata {
+    NowPlayingMetadata(
+      elapsedTime: source?.currentTime,
+      title: title,
+      album: album,
+      artist: artist,
+      duration: track.duration,
+      artwork: Self.jsArtwork(for: track),
+      description: track.description,
+      mediaId: track.src ?? track.path,
+      genre: track.genre,
+    )
+  }
+
+  /// The artwork URI JS can load: the resolved `artworkSource` (a rendered SF Symbol's `file://`
+  /// included), else the raw artwork unless it is an SF Symbol.
+  private static func jsArtwork(for track: Track) -> String? {
+    if let uri = track.artworkSource?.uri { return uri }
+    guard let artwork = track.artwork?.url else { return nil }
+    return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
   }
 
   private func loadArtwork(for track: Track) {
@@ -207,8 +308,6 @@ final class NowPlayingUpdater {
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 
     artworkLoadTask?.cancel()
-    artworkGeneration &+= 1
-    let expectedGeneration = artworkGeneration
     artworkLoadTask = Task {
       let image: UIImage?
 
@@ -216,19 +315,19 @@ final class NowPlayingUpdater {
       if let resolver = artworkUrlResolver,
          let imageSource = await resolver(track, nowPlayingSize)
       {
-        guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+        guard !Task.isCancelled else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
-        image = await ArtworkImageFetcher.fetchImage(from: imageSource)
+        image = await ArtworkImageFetcher.fetchImage(from: imageSource, waitsForConnectivity: true)
       } else {
-        guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+        guard !Task.isCancelled else { return }
         if let source = track.artworkImageSource {
-          image = await ArtworkImageFetcher.fetchImage(from: source)
+          image = await ArtworkImageFetcher.fetchImage(from: source, waitsForConnectivity: true)
         } else {
           image = nil
         }
       }
 
-      guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
+      guard !Task.isCancelled else { return }
 
       if let image {
         logger.debug("loadArtwork: loaded image \(image.size.width)x\(image.size.height)")
@@ -237,10 +336,10 @@ final class NowPlayingUpdater {
         let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
           return image
         }
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
+        nowPlayingInfoController.set([MPMediaItemPropertyArtwork: artwork])
       } else {
         logger.debug("loadArtwork: no image loaded")
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
+        nowPlayingInfoController.set([MPMediaItemPropertyArtwork: nil])
       }
     }
   }

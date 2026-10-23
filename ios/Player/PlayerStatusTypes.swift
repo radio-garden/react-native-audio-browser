@@ -1,9 +1,5 @@
-/// Decouples PlaybackCoordinator from AVFoundation enum types.
-/// TrackPlayer maps from AVPlayer.TimeControlStatus → PlayerTimeControlStatus at the call boundary.
+/// Decouples Player from AVFoundation enum types.
+/// AVPlayerEngine maps from AVPlayer.TimeControlStatus → PlayerTimeControlStatus at the call boundary.
 enum PlayerTimeControlStatus {
   case paused, waitingToPlayAtSpecifiedRate, playing
-}
-
-enum PlayerItemStatus {
-  case unknown, readyToPlay, failed
 }

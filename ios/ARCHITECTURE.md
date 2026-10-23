@@ -5,15 +5,19 @@ graph TB
 JS["React Native Layer<br/>JavaScript"]
 
 subgraph Nitro["Nitro Hybrid Object"]
-  HAB["HybridAudioBrowser<br/>@MainActor<br/>Implements TrackPlayerCallbacks<br/>~50 callbacks + ~12 Emitters<br/>Static shared (Siri/CarPlay reach)"]
+  HAB["HybridAudioBrowser<br/>main-actor work via onMainActor<br/>Implements PlayerCallbacks + AVPlayerEngineCallbacks<br/>~50 callbacks + ~12 Emitters<br/>Static shared (Siri/CarPlay reach)"]
 end
 
 subgraph PlaybackCore["Playback Core"]
-  TP["TrackPlayer<br/>@MainActor<br/>AVPlayer bridge + observers<br/>Owns coordinator, loaders, controllers"]
-  PC["PlaybackCoordinator<br/>@MainActor<br/>State machine hub + side effects<br/>Owns queue, timers, sleep, fade"]
+  TP["AVPlayerEngine<br/>@MainActor (PlayerEngine)<br/>AVPlayer, observers, loader<br/>now playing, remote commands; no policy"]
+  PC["Player<br/>@MainActor façade<br/>State machine, Load, ErrorStatus<br/>every playback decision (SwiftPM-tested)"]
   PSMF["nextPlaybackState()<br/>PlaybackStateMachine.swift<br/>Pure transition table"]
   PE["PlaybackEvent enum<br/>Transition triggers"]
-  PStore["PlaybackStateStore<br/>UserDefaults cold-start resume"]
+  PStore["PlaybackPersistence<br/>@MainActor<br/>UserDefaults cold-start resume<br/>periodic save while playing"]
+  ASC["AudioSessionController<br/>@MainActor<br/>category, activation, session observers"]
+  BG["BrowseGate<br/>@MainActor<br/>per-request gate decision"]
+  NES["NavigationErrorState<br/>@MainActor<br/>error + display; newer report wins"]
+  MIP["MediaIntentPlayback<br/>voice play funnel (ADR 0002)"]
 end
 
 TS["TrackSelector<br/>@MainActor<br/>Shared track selection decision tree<br/>SelectionResult / PlaybackIntent"]
@@ -23,23 +27,23 @@ subgraph Queue["Queue Management"]
   SO["ShuffleOrder<br/>Fisher-Yates shuffle"]
 end
 
-subgraph CoordOwned["Coordinator-owned Managers"]
-  PEH["PlaybackErrorHandler<br/>@MainActor<br/>Error classify + retry orchestration"]
-  RM["RetryManager<br/>@MainActor (RetryHandling)<br/>Backoff, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
-  PSM["PlayingStateManager<br/>playing / buffering flags"]
-  STM["SleepTimerManager<br/>@MainActor (SleepTimerHandling)<br/>Time & end-of-track"]
+subgraph CoordOwned["Player-owned Managers"]
+  RTL["RetryLoop<br/>@MainActor<br/>Classify, back off, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
+  STM["SleepTimerManager<br/>@MainActor<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
   VF["VolumeFader<br/>Sleep-timer fade out"]
-  LSC["LoadSeekCoordinator<br/>Deferred seek state machine<br/>idle / pendingSeek / seekInFlight"]
+  LSC["DeferredSeek<br/>Pure state: a seek held while the item loads<br/>idle / pending / inFlight"]
 end
 
 subgraph Browser["Browser System"]
-  BM["BrowserManager<br/>@MainActor<br/>Navigation, routing, caching<br/>URL resolution, favorites"]
+  BM["BrowserManager<br/>@MainActor<br/>State, caches, favorites, load<br/>owns PageResolver + RequestPipeline"]
   SR["SimpleRouter<br/>Route pattern matching<br/>{param}, *, ** wildcards"]
   BPH["BrowserPathHelper<br/>Contextual URLs, __trackId"]
-  BC["BrowserConfig<br/>Config wrapper + JS handlers"]
-  LRU["LRUCache<br/>contentCache 20<br/>NSLock thread-safe"]
-  MRC["MediaResolveComposer<br/>Pure URL layer composition"]
+  BC["BrowserConfig<br/>Copy of the Nitro config"]
+  PR["PageResolver<br/>@MainActor<br/>Route → normalized, stamped page"]
+  RP["RequestPipeline<br/>@MainActor<br/>Request layers, API, media + artwork URLs"]
+  LRU["LRUCache<br/>contentCache 20<br/>main actor"]
+  RL["RequestLayer<br/>Request-Config Layer rules (SwiftPM-tested)"]
   SDI["SearchDrillIn<br/>Browsable-first 'play X' drill-in"]
   TBE["TabBarEntries<br/>Tab churn suppression"]
 end
@@ -55,11 +59,9 @@ subgraph Platform["Apple Platform APIs"]
   SK["SiriKit Intents<br/>INPlayMedia / Add / Affinity"]
 end
 
-subgraph Observers["Observer Layer (report to TrackPlayer)"]
-  PSO["PlayerStateObserver<br/>KVO status, timeControlStatus"]
-  PTO["PlayerTimeObserver<br/>Audio-start boundary (1ms)"]
-  PINO["PlayerItemNotificationObserver<br/>End / fail / stalled"]
-  PIPO["PlayerItemPropertyObserver<br/>Duration, buffering, timed metadata"]
+subgraph Observers["Observer Layer (report to AVPlayerEngine)"]
+  PSO["PlayerObserver<br/>One per AVPlayer<br/>status, timeControlStatus, audio start (1ms)"]
+  PIPO["ItemObserver<br/>One per AVPlayerItem<br/>status, buffering, end / fail / stalled, timed metadata"]
 end
 
 subgraph Controllers["Controllers"]
@@ -70,13 +72,12 @@ end
 
 subgraph Loaders["Media Loading"]
   ML["MediaLoader<br/>@MainActor<br/>URL resolution, AVURLAsset<br/>Metadata + playable loading"]
-  MLD["MediaLoaderDelegate<br/>Protocol"]
   NPU["NowPlayingUpdater<br/>@MainActor<br/>Track metadata + artwork (Kingfisher)"]
-  SCH["SeekCompletionHandler<br/>Protocol"]
 end
 
 subgraph CarPlay["CarPlay"]
-  CPC["CarPlayController<br/>@MainActor @objc(RNABCarPlayController)<br/>Tab bar, list, navigation"]
+  CPC["RNABCarPlayController<br/>@MainActor @objc<br/>Waits for player + browser"]
+  CPS["CarPlaySession<br/>@MainActor<br/>Tab bar, pages, navigation, refresh"]
   CPIL["CarPlayImageLoader<br/>@MainActor<br/>SF Symbols, artwork, tinting"]
   CPAR["CarPlayArtworkResolver<br/>Artwork load strategy (enum)"]
   CPLF["CarPlayListItemFactory<br/>@MainActor<br/>CPListItem / CPListSection builder"]
@@ -84,7 +85,7 @@ subgraph CarPlay["CarPlay"]
 end
 
 subgraph ObjC["Objective-C Glue"]
-  SCN["RNABCarPlaySceneDelegate<br/>CPTemplateApplicationSceneDelegate<br/>Owns CarPlayController"]
+  SCN["RNABCarPlaySceneDelegate<br/>CPTemplateApplicationSceneDelegate<br/>Owns RNABCarPlayController"]
   RNAB["RNABAudioBrowser<br/>Vends Siri intent handlers"]
   MIH["RNABMediaIntentHandler<br/>INPlayMediaIntent"]
   MAH["RNABMediaAddHandler<br/>INAddMediaIntent"]
@@ -94,7 +95,7 @@ end
 subgraph Utilities["Utilities"]
   NM["NetworkMonitor<br/>NWPathMonitor"]
   EM["Emitter<br/>Multi-listener events"]
-  OV["OnceValue<br/>Async init gate (cold start)"]
+  OV["ReadyValue<br/>Waits for the player and configured browser"]
   AIF["ArtworkImageFetcher<br/>Kingfisher + SVG/headers"]
   SFR["SFSymbolRenderer<br/>SF Symbol → file:// image"]
   SVG["SVGProcessor<br/>SVG → UIImage (SwiftDraw)"]
@@ -102,83 +103,78 @@ end
 
 %% Entry point ownership
 JS -->|"Direct sync/async calls"| HAB
-HAB -->|Owns| TP
+HAB -->|Owns| PC
+HAB -->|"engine: AV-only settings"| TP
 HAB -->|Owns| BM
 HAB -->|Owns| TS
 HAB -->|Owns| NM
 HAB -->|Owns| EM
-HAB -->|Owns| PStore
+HAB -->|Owns| ASC
+HAB -->|Owns| BG
+HAB -->|Owns| NES
 HAB -.->|"~50 callbacks to JS"| JS
 
 %% Track selection
 TS -->|"Queue reuse, expand, intercept"| BM
-TS -.->|"player: TrackSelectionPlayer"| TP
-CPC -->|Owns| TS
+TS -.->|"player: TrackSelectionPlayer"| PC
+CPS -->|Owns| TS
 
-%% TrackPlayer ownership
-TP -->|Owns| PC
+%% Engine ownership
+PC -->|"Owns engine: PlayerEngine"| TP
+TP -.->|"onEvent: EngineEvent"| PC
 TP -->|Controls| AVP
 TP -->|Owns| ML
 TP -->|Owns| NPU
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
-TP -->|Owns| RM
-TP -->|Owns| PStore
+PC -->|Owns| PStore
 TP -->|Owns| PSO
-TP -->|Owns| PTO
-TP -->|Owns| PINO
 TP -->|Owns| PIPO
-TP -.->|Implements| MLD
-TP -.->|Implements| SCH
-TP -.->|"Implements PlaybackEffectHandler"| PC
 
-%% Coordinator hub
+%% Player hub
 PC -->|Owns| QM
-PC -->|Owns| PEH
+PC -->|Owns| RTL
 PC -->|Owns| STM
 PC -->|Owns| LSC
 PC -->|Owns| VF
-PC -->|Owns| PSM
 PC -->|Owns| PTimer
 PC -->|"transition(event)"| PSMF
 PSMF --> PE
-PC -.->|"effectHandler: TrackPlayer"| TP
 PC -.->|"callbacks: HybridAudioBrowser"| HAB
-PC -.->|Implements QueueManagerDelegate| QM
-PEH -.->|"retryHandler: RetryHandling"| RM
+PC -->|"mutation → QueueChange"| QM
 QM --> SO
 
 %% Loaders
-ML -.->|Delegate| MLD
-ML -->|delegate: TrackPlayer| TP
-LSC -.->|Delegate| SCH
+ML -.->|"onEvent: MediaLoader.Event"| TP
 NPU -->|Updates| NPIC
 NPU -->|Loads artwork| AIF
 
 %% Browser internals
-BM --> SR
+BM -->|Owns| PR
+BM -->|Owns| RP
+PR --> SR
+PR --> RP
 BM --> BPH
 BM --> BC
-BM --> HC
+RP --> HC
 BM --> LRU
-BM --> MRC
+RP --> RL
 BM --> SDI
 BM --> TBE
 BM -->|Artwork resolve| SFR
 BM -->|Artwork fetch| AIF
 
 %% Observers → AVPlayer
-PSO -->|KVO| AVP
-PTO -->|Boundary observer| AVP
-PINO -->|NotificationCenter| AVP
-PIPO -->|KVO + metadata output| AVP
+PSO -->|KVO + boundary observer| AVP
+PIPO -->|KVO + NotificationCenter + metadata output| AVP
 
 %% Platform
 RCC -->|addTarget| MPRC
 NPIC -->|linkPlayer| MPNS
 TP -->|Owns, primes on failed first load| SAP
-TP -->|setCategory| AS
-RM -->|Monitors| NM
+ASC -->|"setCategory, setActive"| AS
+ASC -.->|AudioSessionPlayer| PC
+RTL -->|Monitors| NM
 AIF --> SVG
 
 %% CarPlay
@@ -186,19 +182,23 @@ SCN -->|"didConnect → start()"| CPC
 RNAB -->|handlerForIntent| MIH
 RNAB -->|handlerForIntent| MAH
 RNAB -->|handlerForIntent| MAFH
-CPC -->|Owns| CPIL
-CPC -->|Owns| CPLF
-CPC -->|Owns| CPNPM
-CPC -->|"weak audioBrowser"| HAB
-CPC -->|Templates| CPT
+CPC -->|"Owns, per run"| CPS
+CPS -->|Owns| CPIL
+CPS -->|Owns| CPLF
+CPS -->|Owns| CPNPM
+CPS -->|audioBrowser| HAB
+CPS -->|Templates| CPT
 CPIL -->|weak browserManager| BM
 CPIL -->|Uses| CPAR
 CPLF -->|weak imageLoader| CPIL
-CPNPM -->|weak audioBrowser| HAB
+CPNPM -->|audioBrowser, player| HAB
 CPNPM -->|Templates| CPT
-MIH -->|"handlePlayMediaIntent"| HAB
-MAH -->|"setActiveTrackFavorited"| HAB
-MAFH -->|"setActiveTrackFavorited"| HAB
+MIH --> MIP
+MIP -->|"resume / search → queue → play"| PC
+MIP -->|"decide (search)"| BG
+MAH -->|"favoriteCurrentTrack"| HAB
+MAFH -->|"favoriteCurrentTrack"| HAB
+CPS -->|decide| BG
 SK --> MIH
 SK --> MAH
 SK --> MAFH
@@ -212,7 +212,6 @@ classDef controller fill:#fff3e1,stroke:#333,stroke-width:2px
 classDef platform fill:#f0f0f0,stroke:#333,stroke-width:2px
 classDef state fill:#e8f5e9,stroke:#333,stroke-width:2px
 classDef util fill:#fafafa,stroke:#333,stroke-width:2px
-classDef protocol fill:#fff8e1,stroke:#333,stroke-width:1px,stroke-dasharray:5 5
 classDef carplay fill:#e1f0ff,stroke:#333,stroke-width:2px
 classDef objc fill:#ffe1f0,stroke:#333,stroke-width:2px
 classDef queue fill:#fce4ec,stroke:#333,stroke-width:2px
@@ -222,15 +221,14 @@ class HAB nitro
 class TP,PC,PStore core
 class TS core
 class PSMF,PE state
-class BM,SR,BPH,BC,LRU,MRC,SDI,TBE browser
+class BM,SR,BPH,BC,LRU,RL,SDI,TBE browser
 class HC browser
-class PSO,PTO,PINO,PIPO observer
+class PSO,PIPO observer
 class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
-class PEH,RM,PSM,STM,PTimer,VF,LSC state
+class RTL,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util
-class MLD,SCH protocol
-class CPC,CPIL,CPAR,CPLF,CPNPM carplay
+class CPC,CPS,CPIL,CPAR,CPLF,CPNPM carplay
 class SCN,RNAB,MIH,MAH,MAFH objc
 class QM,SO queue
 class ML,NPU loader

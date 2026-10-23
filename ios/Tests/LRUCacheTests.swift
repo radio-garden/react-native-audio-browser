@@ -4,6 +4,7 @@ import Testing
 @testable import AudioBrowserTestable
 
 @Suite("LRUCache")
+@MainActor
 struct LRUCacheTests {
   /// A class so the tests can observe release through a weak reference.
   private final class Box {
@@ -49,9 +50,7 @@ struct LRUCacheTests {
     #expect(cache.count == 2)
   }
 
-  /// The nodes form a doubly-linked list. If both directions were strong, adjacent nodes would
-  /// retain each other and clearing would drop only the dictionary and the two ends — the chain,
-  /// and everything it holds, would survive (#96).
+  /// Clearing releases every value the cache held (#96).
   @Test func clearReleasesEveryNode() {
     let cache = LRUCache<String, Box>(maxSize: 10)
     weak var first: Box?
@@ -76,7 +75,7 @@ struct LRUCacheTests {
     #expect(cache.count == 0)
   }
 
-  /// Same cycle, reached by dropping the cache itself rather than clearing it.
+  /// So does dropping the cache itself.
   @Test func droppingTheCacheReleasesEveryNode() {
     weak var first: Box?
     weak var last: Box?
@@ -94,7 +93,7 @@ struct LRUCacheTests {
     #expect(last == nil)
   }
 
-  /// Eviction has always unlinked the node it drops; this pins that down alongside the rest.
+  /// And evicting an entry releases its value.
   @Test func evictionReleasesTheEvictedNode() {
     let cache = LRUCache<String, Box>(maxSize: 1)
     weak var evicted: Box?

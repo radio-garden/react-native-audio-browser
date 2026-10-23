@@ -17,13 +17,26 @@ final class MediaLoader {
   /// consumer-supplied `media.resolve(track)` as the final media layer.
   var mediaUrlResolver: ((String, Track?) async -> MediaResolvedUrl)?
 
-  /// Internal access so TrackPlayer can read it for observer guards.
+  /// Internal access so AVPlayerEngine can read it.
   private(set) var asset: AVURLAsset?
 
   /// Milliseconds; applied to AVPlayerItem's preferredForwardBufferDuration.
   var bufferDuration: Double = 0
 
-  weak var delegate: MediaLoaderDelegate?
+  enum Event {
+    case prepared(AVPlayerItem)
+    /// Loading failed; the retry loop decides whether another attempt could help.
+    case failed(Error)
+    /// The asset loaded but cannot play.
+    case unplayable
+    /// The source is not a URL, so no asset exists.
+    case invalidSource(String)
+    case commonMetadata([AVMetadataItem])
+    case chapterMetadata([AVTimedMetadataGroup])
+    case timedMetadata([AVTimedMetadataGroup])
+  }
+
+  var onEvent: (@MainActor (Event) -> Void)?
 
   /// The in-flight resolve. Readable so tests can await the resolve-then-load
   /// chain instead of sleeping past it; only this type starts and cancels it.
@@ -89,7 +102,7 @@ final class MediaLoader {
     guard let url else {
       // Callers (reload-from-terminal) have already transitioned to .loading;
       // a silent return would strand that state with no load in flight.
-      delegate?.mediaLoaderDidFailWithError(.invalidSourceUrl("nil"))
+      onEvent?(.invalidSource("nil"))
       return
     }
     let pendingAsset = AVURLAsset(url: url, options: urlOptions)
@@ -108,7 +121,7 @@ final class MediaLoader {
       guard isCurrent(pendingAsset) else { return }
 
       if !commonMetadata.isEmpty {
-        delegate?.mediaLoaderDidReceiveCommonMetadata(commonMetadata)
+        onEvent?(.commonMetadata(commonMetadata))
       }
 
       if !chapterLocales.isEmpty {
@@ -119,7 +132,7 @@ final class MediaLoader {
             containingItemsWithCommonKeys: [],
           ) {
             guard isCurrent(pendingAsset) else { return }
-            delegate?.mediaLoaderDidReceiveChapterMetadata(chapters)
+            onEvent?(.chapterMetadata(chapters))
           }
         }
       } else {
@@ -133,7 +146,7 @@ final class MediaLoader {
               end: duration,
             )
             let group = AVTimedMetadataGroup(items: metadata, timeRange: timeRange)
-            delegate?.mediaLoaderDidReceiveTimedMetadata([group])
+            onEvent?(.timedMetadata([group]))
           }
         }
       }
@@ -151,20 +164,20 @@ final class MediaLoader {
           guard pendingAsset == self.asset else { return }
 
           if !isPlayable {
-            self.delegate?.mediaLoaderDidFailWithUnplayableTrack()
+            self.onEvent?(.unplayable)
             return
           }
 
           let avItem = AVPlayerItem(asset: pendingAsset)
           avItem.preferredForwardBufferDuration = self.bufferDuration / 1000.0
-          self.delegate?.mediaLoaderDidPrepareItem(avItem)
+          self.onEvent?(.prepared(avItem))
         }
       } catch {
         guard !Task.isCancelled else { return }
 
         await MainActor.run {
           guard pendingAsset == self.asset else { return }
-          self.delegate?.mediaLoaderDidFailWithRetryableError(error)
+          self.onEvent?(.failed(error))
         }
       }
     }
@@ -207,7 +220,7 @@ final class MediaLoader {
 
   /// Builds AVURLAsset options, merging any explicit headers with a resolved
   /// User-Agent. An explicit `User-Agent` in `headers` wins (mirrors the artwork
-  /// path in BrowserManager+URLResolution). A nil/empty userAgent contributes
+  /// path in RequestPipeline). A nil/empty userAgent contributes
   /// nothing, so "no UA configured" still falls through to AVPlayer's default.
   nonisolated static func buildAssetOptions(
     headers: [String: String]?,
@@ -225,7 +238,7 @@ final class MediaLoader {
   private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl) {
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")
-      delegate?.mediaLoaderDidFailWithError(.invalidSourceUrl(resolved.url))
+      onEvent?(.invalidSource(resolved.url))
       return
     }
 

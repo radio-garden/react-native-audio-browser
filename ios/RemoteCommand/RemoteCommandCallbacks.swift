@@ -5,9 +5,8 @@
 /// The callbacks `RemoteCommandController` invokes when the system delivers a
 /// remote command (lock screen, Control Center, CarPlay, headset).
 ///
-/// Split out of `TrackPlayerCallbacks` — which the controller does not otherwise
-/// use — so the controller depends only on what it calls. `TrackPlayerCallbacks`
-/// extends this protocol, so conformers implement both at once.
+/// Its own protocol so the controller depends only on what it calls.
+/// `AVPlayerEngineCallbacks` extends it, so conformers implement both at once.
 @MainActor protocol RemoteCommandCallbacks: AnyObject {
   /// Called when play is triggered remotely.
   func remotePlay()

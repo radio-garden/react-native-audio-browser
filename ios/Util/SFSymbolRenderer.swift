@@ -41,15 +41,6 @@ final class SFSymbolRenderer: @unchecked Sendable {
   ///   - canvasSize: The canvas size in points (rendered at device scale)
   /// - Returns: A file URI string, or nil if the symbol doesn't exist or rendering fails
   func render(_ artworkValue: String, canvasSize: CGSize = defaultCanvasSize) -> String? {
-    let (symbolName, backgroundColor, symbolColor) = Self.parseArtwork(artworkValue)
-
-    // Validate symbol exists before any filesystem work
-    let symbolPointSize = min(canvasSize.width, canvasSize.height) * 0.45
-    let config = UIImage.SymbolConfiguration(pointSize: symbolPointSize, weight: .medium)
-    guard let symbol = UIImage(systemName: symbolName, withConfiguration: config) else {
-      return nil
-    }
-
     let safeArtwork = artworkValue.unicodeScalars
       .filter { CharacterSet.alphanumerics.contains($0) || $0 == "_" }
       .map(String.init).joined()
@@ -61,26 +52,11 @@ final class SFSymbolRenderer: @unchecked Sendable {
       return fileURL.absoluteString
     }
 
-    let renderer = UIGraphicsImageRenderer(size: canvasSize, format: {
-      let fmt = UIGraphicsImageRendererFormat()
-      fmt.scale = scale
-      return fmt
-    }())
-
-    let pngData = renderer.pngData { _ in
-      if let backgroundColor {
-        backgroundColor.setFill()
-        UIRectFill(CGRect(origin: .zero, size: canvasSize))
-      }
-
-      let symbolSize = symbol.size
-      let x = (canvasSize.width - symbolSize.width) / 2
-      let y = (canvasSize.height - symbolSize.height) / 2
-
-      (symbolColor ?? .black).set()
-      symbol.withRenderingMode(.alwaysTemplate)
-        .draw(in: CGRect(x: x, y: y, width: symbolSize.width, height: symbolSize.height))
-    }
+    let (symbolName, backgroundColor, symbolColor) = Self.parseArtwork(artworkValue)
+    guard let pngData = Self.image(
+      name: symbolName, canvasSize: canvasSize, scale: scale,
+      tint: symbolColor ?? .black, background: backgroundColor,
+    )?.pngData() else { return nil }
 
     do {
       try pngData.write(to: fileURL, options: .atomic)
@@ -90,6 +66,36 @@ final class SFSymbolRenderer: @unchecked Sendable {
     }
 
     return fileURL.absoluteString
+  }
+
+  /// Draws the symbol at 45% of the canvas, centred and tinted, over `background` (nil leaves it
+  /// transparent). Nil when there is no symbol of that name.
+  static func image(
+    name: String,
+    canvasSize: CGSize,
+    scale: CGFloat,
+    tint: UIColor,
+    background: UIColor?,
+  ) -> UIImage? {
+    let pointSize = min(canvasSize.width, canvasSize.height) * 0.45
+    let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
+    guard let symbol = UIImage(systemName: name, withConfiguration: config) else { return nil }
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    return UIGraphicsImageRenderer(size: canvasSize, format: format).image { _ in
+      if let background {
+        background.setFill()
+        UIRectFill(CGRect(origin: .zero, size: canvasSize))
+      }
+      let size = symbol.size
+      tint.set()
+      symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(
+        x: (canvasSize.width - size.width) / 2,
+        y: (canvasSize.height - size.height) / 2,
+        width: size.width,
+        height: size.height,
+      ))
+    }.withRenderingMode(.alwaysOriginal)
   }
 
   /// Whether the given artwork string is an SF Symbol reference.

@@ -1074,7 +1074,7 @@ export type CarPlaySiriListButtonPosition = 'top' | 'bottom'
  */
 export type FormattedNavigationError = {
   /**
-   * Title shown in the error action sheet header.
+   * Title of the error.
    *
    * Default values:
    * - `'content-not-found'`: "Content Not Found" (English)
@@ -1085,8 +1085,8 @@ export type FormattedNavigationError = {
    */
   title: string
   /**
-   * Optional second line — the body in the error action sheet, the subtitle in
-   * the browse error/empty view. Omit it to show a title only.
+   * Optional second line — the subtitle in the browse error/empty view. Omit it
+   * to show a title only.
    *
    * Default value: `error.message` (omitted when that is empty).
    */

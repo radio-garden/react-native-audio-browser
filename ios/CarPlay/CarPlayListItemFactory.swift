@@ -34,14 +34,13 @@ final class CarPlayListItemFactory {
   /// `imageLoader` — the factory never reads options itself.
   var playingIndicatorLocation: CPListItemPlayingIndicatorLocation = .leading
   private let isActiveTrack: (_ identity: String?) -> Bool
-  private let onItemSelected: (Track, @escaping () -> Void) -> Void
+  /// A row or tile was tapped; call `completion` once CarPlay may take the next tap.
+  var onItemSelected: (Track, @escaping () -> Void) -> Void = { _, completion in completion() }
+  /// A section header's "view all" was tapped.
+  var onNavigate: (_ path: String, _ title: String) -> Void = { _, _ in }
 
-  init(
-    isActiveTrack: @escaping (_ identity: String?) -> Bool,
-    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
-  ) {
+  init(isActiveTrack: @escaping (_ identity: String?) -> Bool) {
     self.isActiveTrack = isActiveTrack
-    self.onItemSelected = onItemSelected
   }
 
   // MARK: - Sections
@@ -380,9 +379,10 @@ final class CarPlayListItemFactory {
     // Header tap → navigate to section.path ("view all"). A path-less
     // section is a pure preview and gets no handler.
     if let path = section.path {
-      let target = Self.navigationTrack(path: path, title: section.title)
-      item.handler = { [onItemSelected] _, completion in
-        onItemSelected(target, completion)
+      let title = section.title ?? ""
+      item.handler = { [onNavigate] _, completion in
+        onNavigate(path, title)
+        completion()
       }
     }
 
@@ -425,19 +425,5 @@ final class CarPlayListItemFactory {
     }
 
     return item
-  }
-
-  /// A synthetic browsable Track for section-header navigation — the
-  /// section's "view all" surface has a path and a title, but no Track.
-  /// Style-less by design: CarPlay resolves presentation from the page it
-  /// navigates to. (Android's counterpart projects the section's block —
-  /// the promise only exists to feed Android Auto's parent-level hint.)
-  private static func navigationTrack(path: String, title: String?) -> Track {
-    Track(
-      id: nil, path: path, src: nil, artwork: nil, artworkSource: nil,
-      request: nil, title: title ?? "", subtitle: nil,
-      artist: nil, albumPath: nil, album: nil, description: nil, genre: nil,
-      duration: nil, style: nil, disabled: nil, favorited: nil, live: nil, icyCharset: nil,
-    )
   }
 }

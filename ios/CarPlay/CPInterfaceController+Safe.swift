@@ -64,6 +64,17 @@ extension CPInterfaceController {
     }
   }
 
+  /// Replaces `expected` with `template` while `expected` is still the top template, restoring
+  /// it if the push fails; a no-op once the user has moved on.
+  func safeReplaceTop(_ expected: CPTemplate, with template: CPTemplate, animated: Bool) {
+    whenStackSettled { controller in
+      guard controller.topTemplate === expected else { return }
+      controller.topReplacer.push(
+        template, replacingTopOf: GuardedTemplateStack(controller: controller), animated: animated,
+      )
+    }
+  }
+
   /// Pushes `template`, skipping the raise cases (already in the hierarchy,
   /// stack at the depth limit).
   fileprivate func guardedPush(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)?) {
@@ -148,30 +159,6 @@ extension CPInterfaceController {
         }
         completion?(set, error)
       }
-    }
-  }
-
-  func safePresent(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
-    presentTemplate(template, animated: animated) { presented, error in
-      if let error {
-        Self.stackLogger.error("presentTemplate \(Self.name(of: template)) failed: \(error.localizedDescription)")
-      }
-      completion?(presented, error)
-    }
-  }
-
-  /// Dismisses the presented template, skipping when nothing is presented.
-  func safeDismiss(animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
-    guard presentedTemplate != nil else {
-      Self.stackLogger.debug("dismiss skipped: no presented template")
-      completion?(false, nil)
-      return
-    }
-    dismissTemplate(animated: animated) { dismissed, error in
-      if let error {
-        Self.stackLogger.error("dismissTemplate failed: \(error.localizedDescription)")
-      }
-      completion?(dismissed, error)
     }
   }
 }

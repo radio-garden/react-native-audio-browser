@@ -1,4 +1,5 @@
 import Kingfisher
+import Network
 import NitroModules
 import os.log
 import UIKit
@@ -7,11 +8,14 @@ import UIKit
 enum ArtworkImageFetcher {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "ArtworkImageFetcher")
 
+  /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
+  ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
   static func fetchImage(
     from source: ImageSource,
     svgScale: CGFloat? = nil,
     downsampleTo: (size: CGSize, scale: CGFloat)? = nil,
+    waitsForConnectivity: Bool = false,
   ) async -> UIImage? {
     guard let url = URL(string: source.uri) else { return nil }
 
@@ -41,6 +45,10 @@ enum ArtworkImageFetcher {
       options.append(.cacheOriginalImage)
     }
 
+    if waitsForConnectivity {
+      options.append(.retryStrategy(ConnectivityRetry()))
+    }
+
     do {
       let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
       return result.image
@@ -49,4 +57,38 @@ enum ArtworkImageFetcher {
       return nil
     }
   }
+}
+
+/// Repeats a fetch that failed for want of a connection once one is back, a few times at most; any
+/// other failure, a 404 included, stops at once.
+private struct ConnectivityRetry: RetryStrategy {
+  private static let maxRetries = 3
+
+  func retry(context: RetryContext, retryHandler: @escaping @Sendable (RetryDecision) -> Void) {
+    guard context.retriedCount < Self.maxRetries,
+          case let .responseError(reason: .URLSessionError(error)) = context.error,
+          (error as? URLError)?.isConnectivity == true
+    else {
+      retryHandler(.stop)
+      return
+    }
+    Self.whenConnected { retryHandler(.retry(userInfo: nil)) }
+  }
+
+  /// Calls `body` once the device has a usable path, at once when it has one already: a monitor
+  /// reports the current path when it starts, so a reconnect cannot slip past it. The handler
+  /// holds the monitor until it fires.
+  private static func whenConnected(_ body: @escaping @Sendable () -> Void) {
+    let monitor = NWPathMonitor()
+    monitor.pathUpdateHandler = { path in
+      guard path.status == .satisfied, monitor.pathUpdateHandler != nil else { return }
+      monitor.pathUpdateHandler = nil
+      monitor.cancel()
+      body()
+    }
+    monitor.start(queue: queue)
+  }
+
+  /// Serial, so a monitor's handler never runs twice at once.
+  private static let queue = DispatchQueue(label: "com.audiobrowser.artwork-connectivity", qos: .utility)
 }

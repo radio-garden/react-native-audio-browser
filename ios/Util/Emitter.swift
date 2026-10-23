@@ -66,3 +66,45 @@ public final class Emitter<T>: @unchecked Sendable {
     return snapshot.count
   }
 }
+
+/// A listener registration that ends when cancelled or released.
+final class Subscription {
+  private var cancelHandler: (() -> Void)?
+
+  init(cancel: @escaping () -> Void) {
+    cancelHandler = cancel
+  }
+
+  func cancel() {
+    cancelHandler?()
+    cancelHandler = nil
+  }
+
+  deinit {
+    cancelHandler?()
+  }
+}
+
+extension Emitter {
+  /// Adds `listener` until the returned subscription is cancelled or released.
+  func subscribe(_ listener: @escaping (T) -> Void) -> Subscription {
+    let token = addListener(listener)
+    return Subscription { [weak self] in self?.removeListener(token) }
+  }
+}
+
+extension Emitter {
+  /// Like `subscribe`, but `handler` runs on the main actor after the emit returns, whichever
+  /// thread emitted.
+  func subscribeOnMain(_ handler: @escaping @MainActor (T) -> Void) -> Subscription {
+    subscribe { value in
+      let event = MainActorHop(value: value)
+      Task { @MainActor in handler(event.value) }
+    }
+  }
+}
+
+/// Carries an emitted value to the main actor, where it is only read.
+private struct MainActorHop<T>: @unchecked Sendable {
+  let value: T
+}

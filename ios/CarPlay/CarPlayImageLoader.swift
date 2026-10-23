@@ -30,10 +30,29 @@ final class CarPlayImageLoader {
     UIImage(systemName: symbolName)
   }
 
-  /// Renders an SF Symbol from an artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff").
+  /// Renders an SF Symbol from an artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff"). With an
+  /// `fg` it is drawn in that color; without one it is black or white by appearance, over a grey
+  /// tile.
   func sfSymbolImage(forArtwork artwork: String, canvasSize: CGSize) -> UIImage? {
-    let (symbolName, bg, fg) = SFSymbolRenderer.parseArtwork(artwork)
-    return sfSymbolImageForSize(symbolName, canvasSize: canvasSize, backgroundColor: bg, symbolColor: fg)
+    let (name, background, tint) = SFSymbolRenderer.parseArtwork(artwork)
+    let scale = carTraitCollection.displayScale
+    let lightTile = UIColor(white: 0.92, alpha: 1)
+    let darkTile = UIColor(white: 0.15, alpha: 1)
+    if let tint {
+      return SFSymbolRenderer.image(
+        name: name, canvasSize: canvasSize, scale: scale, tint: tint,
+        background: background ?? (tint == .white ? darkTile : lightTile),
+      )
+    }
+    guard
+      let light = SFSymbolRenderer.image(
+        name: name, canvasSize: canvasSize, scale: scale, tint: .black, background: lightTile,
+      ),
+      let dark = SFSymbolRenderer.image(
+        name: name, canvasSize: canvasSize, scale: scale, tint: .white, background: darkTile,
+      )
+    else { return nil }
+    return .adaptive(light: light, dark: dark, for: carTraitCollection)
   }
 
   /// Cached empty placeholders, keyed by point size — list items and image-row
@@ -72,27 +91,22 @@ final class CarPlayImageLoader {
       return
     }
 
-    // The annotation goes on the closure's return type, not the binding:
-    // @Sendable isn't inferred through `map`, and omitting it fails with
-    // "type of expression is ambiguous" — which doesn't mention @Sendable.
-    let urlResolver = browserManager.map { bm -> @Sendable (Double, Double) async -> ArtworkResolvedImage? in
-      { [weak bm] pixelWidth, pixelHeight in
-        guard let bm else { return nil }
-        let imageContext = ImageContext(width: pixelWidth, height: pixelHeight)
-        guard let source = await bm.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext) else { return nil }
-        return ArtworkResolvedImage(uri: source.uri, headers: source.headers)
-      }
-    }
-
+    let artwork = track.artwork?.url
     Task {
-      let action = await CarPlayArtworkResolver.resolve(
-        artwork: track.artwork?.url,
-        artworkSourceUri: track.artworkSource?.uri,
+      var resolved: ArtworkResolvedImage?
+      if CarPlayArtworkResolver.needsResolve(artwork: artwork), let browserManager = self.browserManager {
+        let scale = Double(self.carTraitCollection.displayScale)
+        let context = ImageContext(width: Double(size.width) * scale, height: Double(size.height) * scale)
+        resolved = await browserManager.requests.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: context)
+          .map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) }
+      }
+      let action = CarPlayArtworkResolver.action(
+        artwork: artwork,
+        artworkSource: track.artworkSource.map { ArtworkResolvedImage(uri: $0.uri, headers: $0.headers) },
+        resolved: resolved,
         stencil: (style ?? track.style)?.artworkRendering == .stencil,
-        targetWidth: Double(size.width),
-        targetHeight: Double(size.height),
-        displayScale: Double(self.carTraitCollection.displayScale),
-        urlResolver: urlResolver,
+        width: Double(size.width),
+        height: Double(size.height),
       )
 
       switch action {
@@ -145,10 +159,7 @@ final class CarPlayImageLoader {
         return
       }
 
-      let asset = UIImageAsset()
-      asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
-      asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
-      completion(asset.image(with: self.carTraitCollection))
+      completion(.adaptive(light: lightImage, dark: darkImage, for: self.carTraitCollection))
     }
   }
 
@@ -174,55 +185,6 @@ final class CarPlayImageLoader {
     return await ArtworkImageFetcher.fetchImage(from: source, downsampleTo: (size, scale))
   }
 
-  /// Creates an SF Symbol image rendered at the given canvas size.
-  /// When explicit colors are provided, uses them directly.
-  /// Otherwise falls back to automatic light/dark variants.
-  private func sfSymbolImageForSize(_ symbolName: String, canvasSize: CGSize, backgroundColor: UIColor? = nil, symbolColor: UIColor? = nil) -> UIImage? {
-    let scale = carTraitCollection.displayScale
-    let symbolPointSize = min(canvasSize.width, canvasSize.height) * 0.45
-
-    let config = UIImage.SymbolConfiguration(pointSize: symbolPointSize, weight: .medium)
-    guard let symbol = UIImage(systemName: symbolName, withConfiguration: config) else { return nil }
-
-    // Explicit colors: single image, no light/dark variants needed
-    if let symbolColor {
-      return renderSymbolInCanvas(symbol, tintColor: symbolColor, backgroundColor: backgroundColor, canvasSize: canvasSize, scale: scale)
-    }
-
-    // Auto light/dark variants
-    let lightImage = renderSymbolInCanvas(symbol, tintColor: .black, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
-    let darkImage = renderSymbolInCanvas(symbol, tintColor: .white, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
-
-    let asset = UIImageAsset()
-    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
-    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
-
-    return asset.image(with: carTraitCollection)
-  }
-
-  /// Renders an SF Symbol centered in a canvas with a background fill.
-  /// When `backgroundColor` is nil, derives a default from the tint color (light/dark).
-  private nonisolated func renderSymbolInCanvas(_ symbol: UIImage, tintColor: UIColor, backgroundColor: UIColor?, canvasSize: CGSize, scale: CGFloat) -> UIImage {
-    let renderer = UIGraphicsImageRenderer(size: canvasSize, format: {
-      let fmt = UIGraphicsImageRendererFormat()
-      fmt.scale = scale
-      return fmt
-    }())
-
-    return renderer.image { _ in
-      let bgColor = backgroundColor ?? (tintColor == .white ? UIColor(white: 0.15, alpha: 1) : UIColor(white: 0.92, alpha: 1))
-      bgColor.setFill()
-      UIRectFill(CGRect(origin: .zero, size: canvasSize))
-
-      let symbolSize = symbol.size
-      let x = (canvasSize.width - symbolSize.width) / 2
-      let y = (canvasSize.height - symbolSize.height) / 2
-
-      tintColor.set()
-      symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(x: x, y: y, width: symbolSize.width, height: symbolSize.height))
-    }.withRenderingMode(.alwaysOriginal)
-  }
-
   /// Renders an image to a bitmap with the specified tint color (for monochrome icons).
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
@@ -239,13 +201,10 @@ final class CarPlayImageLoader {
 
   /// Creates light/dark tinted variants of an image and returns the appropriate one for current appearance
   private nonisolated func createAdaptiveImage(_ image: UIImage, carTraitCollection: UITraitCollection) -> UIImage {
-    let lightImage = renderImageToBitmap(image, tintColor: .black)
-    let darkImage = renderImageToBitmap(image, tintColor: .white)
-
-    let asset = UIImageAsset()
-    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
-    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
-
-    return asset.image(with: carTraitCollection)
+    .adaptive(
+      light: renderImageToBitmap(image, tintColor: .black),
+      dark: renderImageToBitmap(image, tintColor: .white),
+      for: carTraitCollection,
+    )
   }
 }

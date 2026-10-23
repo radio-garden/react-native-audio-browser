@@ -3,9 +3,16 @@ import Foundation
   import NitroModules
 #endif
 
-/// Notifies the owner when the track list changes.
-@MainActor protocol QueueManagerDelegate: AnyObject {
-  func queueDidChangeTracks(_ tracks: [Track])
+/// What a queue mutation changed, reported once the queue has settled.
+struct QueueChange: Equatable {
+  /// The track list changed.
+  var tracks = false
+  /// A different track became current, or the current track was cleared.
+  var currentTrack = false
+
+  static let none = QueueChange()
+  static let tracksOnly = QueueChange(tracks: true)
+  static let tracksAndCurrent = QueueChange(tracks: true, currentTrack: true)
 }
 
 /// Result of a navigation action (next/previous/skipTo).
@@ -19,11 +26,9 @@ enum QueueNavigationResult {
 }
 
 /// Pure queue logic: tracks, indices, shuffle, repeat.
-/// Has no knowledge of AVPlayer or playback — TrackPlayer owns that.
+/// Has no knowledge of AVPlayer or playback — Player and its engine own that.
 @MainActor
 class QueueManager {
-  weak var delegate: QueueManagerDelegate?
-
   // MARK: - Stored Properties
 
   /// The index of the current track. `-1` when there is no current track.
@@ -33,11 +38,7 @@ class QueueManager {
   private(set) var queueSourcePath: String?
 
   /// All tracks held by the queue.
-  private(set) var tracks: [Track] = [] {
-    didSet {
-      delegate?.queueDidChangeTracks(tracks)
-    }
-  }
+  private(set) var tracks: [Track] = []
 
   /// The shuffle order for randomized playback.
   private(set) var shuffleOrder = ShuffleOrder()
@@ -203,38 +204,36 @@ class QueueManager {
     return .trackChanged
   }
 
-  // MARK: - Mutations (returns Bool: whether current track changed)
+  // MARK: - Mutations
 
-  /// Replace the entire queue with new tracks.
-  /// Returns `true` (current track always changes).
+  /// Replace the entire queue with new tracks. The current track always changes.
   @discardableResult
-  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, sourcePath: String? = nil) -> Bool {
+  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, sourcePath: String? = nil) -> QueueChange {
     let clampedIndex = max(0, min(initialIndex, newTracks.count - 1))
     currentIndex = clampedIndex
     queueSourcePath = sourcePath
     tracks = newTracks
     shuffleOrder = ShuffleOrder(length: newTracks.count, firstIndex: clampedIndex)
-    return true
+    return .tracksAndCurrent
   }
 
-  /// Add tracks to the end of the queue.
-  /// Returns `true` if the queue was empty (a new current track was set).
+  /// Add tracks to the end of the queue. The current track changes only when the queue was empty.
   @discardableResult
-  func add(_ newTracks: [Track], initialIndex: Int = 0) -> Bool {
-    guard !newTracks.isEmpty else { return false }
+  func add(_ newTracks: [Track], initialIndex: Int = 0) -> QueueChange {
+    guard !newTracks.isEmpty else { return .none }
     let wasEmpty = tracks.isEmpty
     let insertIndex = tracks.count
     tracks.append(contentsOf: newTracks)
     if wasEmpty { return adoptInitialCurrent(initialIndex) }
     shuffleOrder.insert(at: insertIndex, count: newTracks.count)
-    return false
+    return .tracksOnly
   }
 
-  /// Add tracks at a specific index in the queue.
-  /// Returns `true` if the queue was empty (a new current track was set).
+  /// Add tracks at a specific index in the queue. The current track changes only when the queue
+  /// was empty.
   @discardableResult
-  func addAt(_ newTracks: [Track], at index: Int) throws -> Bool {
-    guard !newTracks.isEmpty else { return false }
+  func addAt(_ newTracks: [Track], at index: Int) throws -> QueueChange {
+    guard !newTracks.isEmpty else { return .none }
     guard index >= 0, tracks.count >= index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
@@ -249,7 +248,7 @@ class QueueManager {
     tracks.insert(contentsOf: newTracks, at: index)
     if wasEmpty { return adoptInitialCurrent(0) }
     shuffleOrder.insert(at: index, count: newTracks.count)
-    return false
+    return .tracksOnly
   }
 
   /// The queue was empty: `index` becomes the current track AND leads the
@@ -264,44 +263,39 @@ class QueueManager {
   /// shuffle is on right now, since `shuffleEnabled`'s didSet only re-pins on
   /// the off→on edge.
   ///
-  /// Returns true, so callers can `return adoptInitialCurrent(…)` to report the
-  /// current track changed.
-  private func adoptInitialCurrent(_ index: Int) -> Bool {
+  /// Returns the change, so callers can `return adoptInitialCurrent(…)`.
+  private func adoptInitialCurrent(_ index: Int) -> QueueChange {
     currentIndex = max(0, min(index, tracks.count - 1))
     shuffleOrder = ShuffleOrder(length: tracks.count, firstIndex: currentIndex)
-    return true
+    return .tracksAndCurrent
   }
 
-  /// Remove a track from the queue.
-  /// Returns `true` if the current track changed.
+  /// Remove a track from the queue. The current track changes when it is the one removed.
   @discardableResult
-  func remove(_ index: Int) throws -> Bool {
+  func remove(_ index: Int) throws -> QueueChange {
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: index)
     tracks.remove(at: index)
     shuffleOrder.remove(from: index, to: index + 1)
     if index == currentIndex {
       currentIndex = tracks.count > 0 ? currentIndex % tracks.count : -1
-      return true
+      return .tracksAndCurrent
     } else if index < currentIndex {
       currentIndex -= 1
     }
-    return false
+    return .tracksOnly
   }
 
-  /// Move a track in the queue from one position to another.
-  /// Returns `true` if the current track changed (fromIndex was currentIndex).
+  /// Move a track in the queue from one position to another. The current track never changes:
+  /// the pointer follows the playing track.
   @discardableResult
-  func move(fromIndex: Int, toIndex: Int) throws -> Bool {
+  func move(fromIndex: Int, toIndex: Int) throws -> QueueChange {
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: fromIndex, name: "fromIndex")
     try throwIfIndexInvalid(index: toIndex, name: "toIndex", max: Int.max)
-    // Mutate a copy and assign once to trigger didSet only once
-    var newTracks = tracks
-    let track = newTracks.remove(at: fromIndex)
-    let insertion = min(newTracks.count, toIndex)
-    newTracks.insert(track, at: insertion)
-    tracks = newTracks
+    let track = tracks.remove(at: fromIndex)
+    let insertion = min(tracks.count, toIndex)
+    tracks.insert(track, at: insertion)
     // Carry the moved track's shuffle position across the move. `insert(at:count:)`
     // would drop it at a RANDOM position instead — reordering the queue would then
     // silently reorder shuffled playback, and moving the playing track could land it
@@ -314,8 +308,6 @@ class QueueManager {
     shuffleOrder.insert(
       at: insertion, atShufflePosition: shufflePosition ?? shuffleOrder.count,
     )
-    // The pointer follows the playing track; its identity never changes on a
-    // move, so no caller needs to reload (returning true reloads).
     if currentIndex == fromIndex {
       currentIndex = insertion
     } else if fromIndex < currentIndex, insertion >= currentIndex {
@@ -323,37 +315,38 @@ class QueueManager {
     } else if fromIndex > currentIndex, insertion <= currentIndex {
       currentIndex += 1
     }
-    return false
+    return .tracksOnly
   }
 
-  /// Remove all tracks and reset state.
-  /// Returns `true` if there was a current track to clear.
+  /// Remove all tracks and reset state. Does nothing when there is no current track.
   @discardableResult
-  func clear() -> Bool {
-    guard currentIndex != -1 else { return false }
+  func clear() -> QueueChange {
+    guard currentIndex != -1 else { return .none }
     currentIndex = -1
     tracks.removeAll()
     shuffleOrder.clear()
     queueSourcePath = nil
-    return true
+    return .tracksAndCurrent
   }
 
-  // MARK: - Other Mutations
-
-  /// Replace the track at a specific index.
+  /// Replace the track at a specific index; which index is current does not change.
   /// Throws like every other index-taking mutation here, rather than trapping.
-  func replace(_ index: Int, _ track: Track) throws {
+  @discardableResult
+  func replace(_ index: Int, _ track: Track) throws -> QueueChange {
     try throwIfIndexInvalid(index: index)
     tracks[index] = track
+    return .tracksOnly
   }
 
   /// Remove all upcoming tracks (those after currentIndex).
-  func removeUpcomingTracks() {
-    guard !tracks.isEmpty else { return }
+  @discardableResult
+  func removeUpcomingTracks() -> QueueChange {
+    guard !tracks.isEmpty else { return .none }
     let nextIndex = currentIndex + 1
-    guard nextIndex < tracks.count else { return }
+    guard nextIndex < tracks.count else { return .none }
     let end = tracks.count
     tracks.removeSubrange(nextIndex ..< end)
     shuffleOrder.remove(from: nextIndex, to: end)
+    return .tracksOnly
   }
 }

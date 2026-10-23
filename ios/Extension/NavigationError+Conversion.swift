@@ -8,10 +8,6 @@ extension NavigationError {
       switch browserError {
       case .contentNotFound:
         NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
-      case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
         NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .callbackError:
@@ -52,6 +48,13 @@ extension NavigationError {
     }
     // Omit an empty message so it renders as title-only (e.g. the empty-content case).
     return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
+  }
+}
+
+extension NavigationError {
+  /// A code-only error: the copy comes from the app's `formatNavigationError` (ADR 0001).
+  static func code(_ code: NavigationErrorType) -> NavigationError {
+    NavigationError(code: code, message: "", statusCode: nil, statusCodeSuccess: nil)
   }
 }
 

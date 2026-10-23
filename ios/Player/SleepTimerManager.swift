@@ -40,7 +40,7 @@ struct MainQueueSleepTimerScheduler: SleepTimerScheduling {
 /// Manages sleep timer functionality for the audio player.
 /// Supports both time-based timers and end-of-track timers.
 @MainActor
-class SleepTimerManager: SleepTimerHandling {
+final class SleepTimerManager {
   // MARK: - Properties
 
   private let scheduler: any SleepTimerScheduling

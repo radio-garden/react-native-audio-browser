@@ -27,28 +27,12 @@ class RNABMediaAffinityHandler: NSObject, INUpdateMediaAffinityIntentHandling {
     Self.logger.info("Update media affinity — type=\(affinity.rawValue)")
 
     Task { @MainActor in
-      // Affinity targets the current track; if nothing is playing there's nothing
-      // to like, so the assistant reports failure rather than a silent no-op.
-      guard let browser = HybridAudioBrowser.shared,
-            browser.getPlayer()?.currentTrack != nil
-      else {
-        completion(INUpdateMediaAffinityIntentResponse(code: .failure, userActivity: nil))
-        return
+      let applied = switch affinity {
+      case .like: HybridAudioBrowser.favoriteCurrentTrack(true)
+      case .dislike: HybridAudioBrowser.favoriteCurrentTrack(false)
+      default: false
       }
-
-      // Map affinity onto the library-managed favorite state (same path as the
-      // CarPlay favorite button): flips the now-playing heart and fires
-      // `onFavoriteChanged` so the consumer persists it — no extra handler.
-      switch affinity {
-      case .like:
-        try? browser.setActiveTrackFavorited(favorited: true)
-      case .dislike:
-        try? browser.setActiveTrackFavorited(favorited: false)
-      default:
-        completion(INUpdateMediaAffinityIntentResponse(code: .failure, userActivity: nil))
-        return
-      }
-      completion(INUpdateMediaAffinityIntentResponse(code: .success, userActivity: nil))
+      completion(INUpdateMediaAffinityIntentResponse(code: applied ? .success : .failure, userActivity: nil))
     }
   }
 

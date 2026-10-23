@@ -55,6 +55,23 @@
     case off
     case track
     case queue
+
+    init?(fromString string: String) {
+      switch string {
+      case "off": self = .off
+      case "track": self = .track
+      case "queue": self = .queue
+      default: return nil
+      }
+    }
+
+    var stringValue: String {
+      switch self {
+      case .off: "off"
+      case .track: "track"
+      case .queue: "queue"
+      }
+    }
   }
 
   enum CarPlaySiriListButtonPosition {
@@ -313,7 +330,7 @@
     }
   }
 
-  // MARK: - Playback Event Types (used by PlaybackCoordinator)
+  // MARK: - Playback Event Types (used by Player)
 
   /// Public to match the generated Nitro enum, which `TrackPlayerError`
   /// exposes from a public property.

@@ -1,6 +1,3 @@
-// This file is intentionally empty — mock types live in
-// Model/NitroTypeStubs.swift (part of the AudioBrowserTestable target).
-
 @testable import AudioBrowserTestable
 import AVFoundation
 
@@ -28,94 +25,116 @@ func makeMetadataItem(
   return item
 }
 
-// MARK: - Mock PlaybackEffectHandler
+// MARK: - Mock PlayerEngine
 
 @MainActor
-final class MockPlaybackEffectHandler: PlaybackEffectHandler {
-  // Playback control
-  var startPlaybackCallCount = 0
-  var pausePlaybackCallCount = 0
-  var setTimePitchCallCount = 0
+final class MockPlayerEngine: PlayerEngine {
+  var onEvent: (@MainActor (EngineEvent) -> Void)?
 
-  func startPlayback() { startPlaybackCallCount += 1 }
-  func pausePlayback() { pausePlaybackCallCount += 1 }
-  func setTimePitchingAlgorithmForCurrentItem() { setTimePitchCallCount += 1 }
+  /// Reports `event` as the media stack would.
+  func emit(_ event: EngineEvent) {
+    onEvent?(event)
+  }
 
-  // Player volume
-  var volume: Float = 1
-
-  // AVPlayer state queries
+  // The current item
+  var hasItem = false
+  var hasLoadedAsset = false
   var currentTime: Double = 0
   var duration: Double = 0
   var bufferedPosition: Double = 0
-  var hasLoadedAsset: Bool = false
+  var resumePosition: Double?
+  var liveEdge: Double?
+  var isPlaybackLikelyToKeepUp = false
+  var isAirPlayRoute = false
+  var volume: Float = 1
 
-  // Item management
-  var clearCurrentItemCallCount = 0
-  var stopObservingCurrentItemCallCount = 0
+  // Loading
+  var resolveAndLoadCalls: [String] = []
+  var loadResolvedCount = 0
+  var cancelLoadingCount = 0
+  var dropAssetCount = 0
+  var clearItemCount = 0
+  var stopObservingItemCount = 0
+  var recreateCount = 0
 
-  func clearCurrentItem() { clearCurrentItemCallCount += 1 }
-  func stopObservingCurrentItem() { stopObservingCurrentItemCallCount += 1 }
+  func resolveAndLoad(src: String, track _: Track) { resolveAndLoadCalls.append(src) }
+  func loadResolved() { loadResolvedCount += 1 }
+  func cancelLoading() { cancelLoadingCount += 1 }
+  func dropAsset() { dropAssetCount += 1 }
+  func clearItem() { clearItemCount += 1 }
+  func stopObservingItem() { stopObservingItemCount += 1 }
+  func recreate() { recreateCount += 1 }
 
-  // Track loading
-  var loadTrackCalls: [String] = []
-  var loadTrackTracks: [Track] = []
-  var reloadTrackCalls: [Bool] = []
-  var unloadTrackCallCount = 0
-  var cancelMediaLoadingCallCount = 0
+  // Transport
+  var startPlaybackCallCount = 0
+  var pausePlaybackCallCount = 0
+  var setTimePitchCallCount = 0
+  var rates: [(rate: Float, playing: Bool)] = []
+  var seekCalls: [Double] = []
+  /// What a seek completes with; nil leaves it in flight until `completeSeeks`.
+  var seekResult: Bool? = true
 
-  func loadTrack(src: String, track: Track) {
-    loadTrackCalls.append(src)
-    loadTrackTracks.append(track)
+  func play() { startPlaybackCallCount += 1 }
+  func pause() { pausePlaybackCallCount += 1 }
+  func setRate(_ rate: Float, playing: Bool) { rates.append((rate, playing)) }
+  private var seeksInFlight: [@MainActor (Bool) -> Void] = []
+
+  func seek(to seconds: Double, completion: @escaping @MainActor (Bool) -> Void) {
+    seekCalls.append(seconds)
+    if let seekResult { completion(seekResult) } else { seeksInFlight.append(completion) }
   }
 
-  func reloadTrack(startFromCurrentTime: Bool) { reloadTrackCalls.append(startFromCurrentTime) }
-  func unloadTrack() { unloadTrackCallCount += 1 }
-  func cancelMediaLoading() { cancelMediaLoadingCallCount += 1 }
+  /// Lands the seeks left in flight while `seekResult` was nil.
+  func completeSeeks(_ finished: Bool) {
+    let pending = seeksInFlight
+    seeksInFlight = []
+    for completion in pending {
+      completion(finished)
+    }
+  }
 
-  // Seek operations
-  var seekToStartCallCount = 0
-  var replayCurrentTrackCallCount = 0
+  func applyTimePitchAlgorithm() { setTimePitchCallCount += 1 }
 
-  func seekToStart() { seekToStartCallCount += 1 }
-  func replayCurrentTrack() { replayCurrentTrackCallCount += 1 }
-
-  // Now Playing
+  // Now playing and remote commands
+  var primeCount = 0
   var loadNowPlayingMetadataCalls: [Track] = []
   var clearNowPlayingCallCount = 0
-  var updateNowPlayingStateCalls: [Bool] = []
-
-  func loadNowPlayingMetadata(for track: Track) {
-    loadNowPlayingMetadataCalls.append(track)
-  }
-
-  func clearNowPlaying() { clearNowPlayingCallCount += 1 }
-  func updateNowPlayingState(playWhenReady: Bool) {
-    updateNowPlayingStateCalls.append(playWhenReady)
-  }
-
-  // Remote commands
   var updateRemoteRepeatModeCalls: [RepeatMode] = []
   var updateRemoteShuffleModeCalls: [Bool] = []
-
-  func updateRemoteRepeatMode(_ mode: RepeatMode) {
-    updateRemoteRepeatModeCalls.append(mode)
-  }
-
-  func updateRemoteShuffleMode(_ enabled: Bool) {
-    updateRemoteShuffleModeCalls.append(enabled)
-  }
-
   var updateSkipAvailabilityCalls: [(canNext: Bool, canPrevious: Bool)] = []
+
+  func primeNowPlaying() { primeCount += 1 }
+  func loadNowPlayingMetadata(for track: Track) { loadNowPlayingMetadataCalls.append(track) }
+  func clearNowPlaying() { clearNowPlayingCallCount += 1 }
+  func updateRemoteRepeatMode(_ mode: RepeatMode) { updateRemoteRepeatModeCalls.append(mode) }
+  func updateRemoteShuffleMode(_ enabled: Bool) { updateRemoteShuffleModeCalls.append(enabled) }
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
     updateSkipAvailabilityCalls.append((canNext, canPrevious))
   }
 }
 
-// MARK: - Mock PlaybackCoordinatorCallbacks
+/// A Player over `engine` whose retries reload while `retries` and otherwise give up, keeping
+/// its resume snapshot out of the app's defaults.
+@MainActor
+func makePlayer(
+  engine: MockPlayerEngine = MockPlayerEngine(),
+  retry: RetryLoop = makeRetryLoop(),
+  retries: Bool = true,
+  sleepTimer: SleepTimerManager = SleepTimerManager(scheduler: ManualSleepTimerScheduler()),
+  saveInterval: Duration = .seconds(5),
+) -> Player {
+  let player = Player(
+    engine: engine, retry: retry, sleepTimerManager: sleepTimer,
+    persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
+  )
+  retry.shouldRetry = { retries }
+  return player
+}
+
+// MARK: - Mock PlayerCallbacks
 
 @MainActor
-final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
+final class MockPlayerCallbacks: PlayerCallbacks {
   var playbackChanges: [Playback] = []
   var activeTrackChanges: [PlaybackActiveTrackChangedEvent] = []
   var progressUpdates: [PlaybackProgressUpdatedEvent] = []
@@ -123,18 +142,25 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   var playingStateChanges: [PlayingState] = []
   var queueEndedEvents: [PlaybackQueueEndedEvent] = []
   var queueChanges: [[Track]] = []
+  /// The order in which the queue and active-track callbacks arrived.
+  var queueAndTrackOrder: [String] = []
   var repeatModeChanges: [RepeatModeChangedEvent] = []
   var shuffleEnabledChanges: [Bool] = []
   var errorEvents: [PlaybackErrorEvent] = []
   var playbackIntervalFiredCount = 0
   var releaseSessionCount = 0
 
+  /// The order playback, intent and playing-state changes arrived in.
+  var publishOrder: [String] = []
+
   func playerDidChangePlayback(_ playback: Playback) {
+    publishOrder.append("playback")
     playbackChanges.append(playback)
   }
 
   func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     activeTrackChanges.append(event)
+    queueAndTrackOrder.append("activeTrack")
   }
 
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
@@ -146,10 +172,12 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   }
 
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
+    publishOrder.append("playWhenReady")
     playWhenReadyChanges.append(playWhenReady)
   }
 
   func playerDidChangePlayingState(_ state: PlayingState) {
+    publishOrder.append("playingState")
     playingStateChanges.append(state)
   }
 
@@ -159,6 +187,7 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
 
   func playerDidChangeQueue(_ tracks: [Track]) {
     queueChanges.append(tracks)
+    queueAndTrackOrder.append("queue")
   }
 
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
@@ -176,53 +205,23 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   func playerShouldReleaseSession() {
     releaseSessionCount += 1
   }
+
+  var sleepTimerChanges: [SleepTimerState?] = []
+  func playerDidChangeSleepTimer(_ state: SleepTimerState?) {
+    sleepTimerChanges.append(state)
+  }
 }
 
-// MARK: - Mock SleepTimerHandling
+// MARK: - RetryLoop
 
+/// A RetryLoop for tests: enabled, with an instant backoff unless `delay`, whose attempts reload
+/// while `retries` and otherwise give up, as an exhausted budget does.
 @MainActor
-final class MockSleepTimerHandling: SleepTimerHandling {
-  var onComplete: (() -> Void)?
-  var onFadeStart: ((_ duration: TimeInterval) -> Void)?
-  var onFadeCancel: (() -> Void)?
-  var onChanged: ((SleepTimerState) -> Void)?
-  var trackChangedCallCount = 0
-  var trackPlayedToEndCallCount = 0
-  var clearCallCount = 0
-
-  @discardableResult func clear() -> Bool {
-    clearCallCount += 1
-    return true
-  }
-
-  func onTrackChanged() { trackChangedCallCount += 1 }
-  func onTrackPlayedToEnd() { trackPlayedToEndCallCount += 1 }
-
-  // Consumer-facing surface — unused by the coordinator tests, present only to
-  // satisfy the protocol. Add recorders alongside the tests that need them.
-  func get() -> SleepTimerState? { nil }
-  func set(seconds _: TimeInterval, fadeDuration _: TimeInterval?) {}
-  func setToEndOfTrack() {}
-}
-
-// MARK: - Mock RetryHandling
-
-@MainActor
-final class MockRetryHandling: RetryHandling {
-  var isEnabled = true
-  var hasPlayed = false
-  var isRetryableResult = false
-  var attemptRetryResult = false
-  var attemptRetryDelayNs: UInt64 = 0
-  var resetCallCount = 0
-
-  func isRetryable(_: Error?, httpStatusCode _: Int?) -> Bool { isRetryableResult }
-  func attemptRetry(startFromCurrentTime _: Bool) async -> Bool {
-    if attemptRetryDelayNs > 0 {
-      try? await Task.sleep(nanoseconds: attemptRetryDelayNs)
-    }
-    return attemptRetryResult
-  }
-
-  func reset() { resetCallCount += 1 }
+func makeRetryLoop(retries: Bool = true, delay: TimeInterval = 0) -> RetryLoop {
+  let loop = RetryLoop(sleep: { _ in
+    if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+  })
+  loop.updatePolicy(from: .first(true))
+  loop.shouldRetry = { retries }
+  return loop
 }

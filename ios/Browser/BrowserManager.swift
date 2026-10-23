@@ -3,66 +3,35 @@ import NitroModules
 import os.log
 
 /// Custom browser errors.
-enum BrowserError: Error {
+enum BrowserError: LocalizedError {
   case contentNotFound(path: String)
-  case httpError(code: Int, body: String)
-  case networkError(Error)
   case invalidConfiguration(String)
   case callbackError(String)
 
-  var localizedDescription: String {
+  var errorDescription: String? {
     switch self {
-    case .contentNotFound:
-      return "Content not found"
-    case let .httpError(code, body):
-      // Try to extract error message from JSON response: { "error": "message" }
-      if let data = body.data(using: .utf8),
-         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-         let errorMessage = json["error"] as? String
-      {
-        return errorMessage
-      }
-      // Fall back to localized HTTP status description
-      return HTTPURLResponse.localizedString(forStatusCode: code)
-    case let .networkError(error):
-      return "Network error: \(error.localizedDescription)"
-    case let .invalidConfiguration(message):
-      return "Invalid configuration: \(message)"
-    case let .callbackError(message):
-      return message
+    case .contentNotFound: "Content not found"
+    case let .invalidConfiguration(message): "Invalid configuration: \(message)"
+    case let .callbackError(message): message
     }
   }
 }
 
-/// Core browser manager that handles navigation, search, and media browsing.
-///
-/// This class contains the main business logic for:
-/// - Route resolution and path matching with parameter extraction
-/// - HTTP API requests and response processing
-/// - JavaScript callback invocation
-/// - Fallback handling and error management
+/// The browser's state (path, content, tabs, config), its content and search caches, favorites
+/// and events. Pages come from `PageResolver`; requests go through `RequestPipeline`.
 @MainActor
 final class BrowserManager {
   // Allow creation from nonisolated contexts (e.g. HybridAudioBrowser property default)
-  nonisolated init() {}
+  nonisolated init() {
+    pages = PageResolver(requests: requests)
+  }
 
   let logger = Logger(subsystem: "com.audiobrowser", category: "BrowserManager")
 
-  // MARK: - Constants (match Kotlin companion object)
-
-  /// Internal path used for the default/root browse source
-  static let defaultRoutePath = "__default__"
-
-  /// Internal path used for navigation tabs
-  static let tabsRoutePath = "__tabs__"
-
-  /// Internal path used for search
-  static let searchRoutePath = "__search__"
-
   // MARK: - Private Properties
 
-  private let router = SimpleRouter()
-  private let httpClient = HttpClient()
+  let requests = RequestPipeline()
+  private let pages: PageResolver
 
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
@@ -70,12 +39,6 @@ final class BrowserManager {
   // Most recent search, keyed by `searchCacheKey`.
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
-
-  // Resolver caching: request/browse thunks resolve once per content generation.
-  private var layerGeneration = 0
-  private var resolvedLayerGeneration = -1
-  var resolvedRequestLayer: TransformableRequestConfig?
-  private var resolvedBrowseLayer: TransformableRequestConfig?
 
   // Set of favorited track identities (id when non-blank, else src).
   private var favoriteIds: Set<String> = []
@@ -92,7 +55,7 @@ final class BrowserManager {
   private(set) var path: String = "/" {
     didSet {
       if oldValue != path {
-        onPathChanged?(path)
+        pathChanged.emit(path)
       }
     }
   }
@@ -100,7 +63,7 @@ final class BrowserManager {
   private(set) var content: ResolvedTrack? {
     didSet {
       // Note: Can't compare ResolvedTrack directly, always fire callback
-      onContentChanged?(content)
+      contentChanged.emit(content)
     }
   }
 
@@ -111,7 +74,7 @@ final class BrowserManager {
       // titles in a new locale), and an unchanged result must not churn the
       // CarPlay tab bar or reset its selection.
       if let tabs, !TabBarEntries.same(oldValue, tabs) {
-        onTabsChanged?(tabs)
+        tabsChanged.emit(tabs)
       }
     }
   }
@@ -121,35 +84,38 @@ final class BrowserManager {
   /// Whether configureBrowser() has been called
   private(set) var isConfigured = false
 
-  /// Browser configuration containing routes, search, tabs, and request settings.
-  var config: BrowserConfig = .init() {
-    didSet {
+  /// Browser configuration containing routes, search, tabs, and request settings. Kept on
+  /// `requests`, which every request reads.
+  var config: BrowserConfig {
+    get { requests.config }
+    set {
       isConfigured = true
-      // New config means the cached resolver results are stale.
-      layerGeneration += 1
-      onConfigChanged?(config)
+      requests.config = newValue
+      configChanged.emit(newValue)
     }
   }
 
-  // MARK: - Callbacks
+  // MARK: - Events (emitted on the main actor)
 
-  var onPathChanged: ((String) -> Void)?
-  var onContentChanged: ((ResolvedTrack?) -> Void)?
-  var onTabsChanged: (([Track]) -> Void)?
-  var onConfigChanged: ((BrowserConfig) -> Void)?
-  /// Fired when the favorite id set changes (e.g. an app/webview-originated
-  /// favorite). Lets surfaces like the CarPlay now-playing heart re-render —
-  /// they otherwise only learn of their own toggles via favorite/active-track
-  /// events, never an external change routed through `setFavorites`.
-  var onFavoritesChanged: (() -> Void)?
+  let pathChanged = Emitter<String>()
+  let contentChanged = Emitter<ResolvedTrack?>()
+  let tabsChanged = Emitter<[Track]>()
+  let configChanged = Emitter<BrowserConfig>()
+  /// The favorite id set changed, however it changed (e.g. from the app or a webview), so
+  /// surfaces like the CarPlay now-playing heart can re-render.
+  let favoritesChanged = Emitter<Void>()
 
-  /// Forwards to config.awaitTrackLoadHandler so callers don't need to
-  /// cross the MainActor boundary to access `config`.
+  /// Runs the app's `handleTrackLoad` for `event` and waits for it, both promise layers: a JS
+  /// callback returning `Promise<void>` arrives as `Promise<Promise<Void>>`. False when the app
+  /// set none.
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
-    // awaitTrackLoadHandler manages its own MainActor dispatch internally
-    nonisolated(unsafe) let cfg = config
-    nonisolated(unsafe) let evt = event
-    return await cfg.awaitTrackLoadHandler(event: evt)
+    guard let handler = config.handleTrackLoad else { return false }
+    do {
+      try await handler(event).await().await()
+    } catch {
+      logger.error("handleTrackLoad failed: \(error.localizedDescription)")
+    }
+    return true
   }
 
   // MARK: - Favorites
@@ -159,7 +125,7 @@ final class BrowserManager {
     let newIds = Set(favorites)
     guard newIds != favoriteIds else { return }
     favoriteIds = newIds
-    onFavoritesChanged?()
+    favoritesChanged.emit(())
   }
 
   /// Enables/disables favoriting (propagated from the `favorite` capability).
@@ -206,30 +172,25 @@ final class BrowserManager {
 
   // MARK: - Navigation
 
-  /// Main navigation method - updates path and resolves content.
-  ///
-  /// Uses a navigation ID to prevent race conditions when multiple navigations
-  /// overlap. Only the most recent navigation's result is applied.
-  func navigate(_ path: String) async throws {
-    // Increment navigation ID and capture for this navigation
+  /// Loads `path` as the current page. `bypassCache` reloads it from the network and keeps the
+  /// content on screen meanwhile, for refreshing the current path. A newer load supersedes this one, and its
+  /// result or failure is dropped: every caller reports a throw, so a slow /a failing after a
+  /// fast /b succeeded would otherwise show /a's error over /b's content.
+  func load(_ path: String, bypassCache: Bool = false) async throws {
     currentNavigationId += 1
     let navigationId = currentNavigationId
-
     self.path = path
-    content = nil // Clear for loading state
-
+    if bypassCache {
+      // A failed reload must not leave the stale page to be served from the cache.
+      contentCache.remove(path)
+    } else {
+      content = nil
+    }
     do {
-      let resolved = try await resolve(path)
-
-      // Only apply result if this is still the current navigation
+      let resolved = try await resolve(path, useCache: !bypassCache)
       guard navigationId == currentNavigationId else { return }
-
       content = resolved
     } catch {
-      // A superseded navigation's failure is not the current page's failure.
-      // Every caller reports a throw unconditionally (and CarPlay presents it as
-      // a modal action sheet), so without this a slow /a that fails after a fast
-      // /b succeeded would show /a's error over /b's content.
       guard navigationId == currentNavigationId else { return }
       throw error
     }
@@ -245,7 +206,7 @@ final class BrowserManager {
       return hydrateChildren(cached)
     }
 
-    let resolvedTrack = try await resolveUncached(normalizedPath)
+    let resolvedTrack = try await pages.resolve(normalizedPath)
 
     // Cache the resolved content for future navigation
     contentCache.set(normalizedPath, value: resolvedTrack)
@@ -273,7 +234,7 @@ final class BrowserManager {
   /// Runs from `invalidateAllContent`, so re-resolve the layer thunks too.
   func clearContentCache() {
     contentCache.clear()
-    layerGeneration += 1
+    requests.invalidateLayers()
     // The search slot is content too: a locale switch or a re-auth changes
     // titles, src, artwork and availability, and nothing else ever evicts it,
     // so a repeated query returned pre-invalidation results forever.
@@ -281,320 +242,15 @@ final class BrowserManager {
     lastSearchResults = nil
   }
 
-  /// Refreshes the current path by invalidating cache and re-resolving.
-  ///
-  /// Uses navigation ID tracking to prevent race conditions.
-  func refresh() async throws {
-    // Increment navigation ID and capture for this refresh
-    currentNavigationId += 1
-    let navigationId = currentNavigationId
-
-    let currentPath = path
-    contentCache.remove(currentPath)
-
-    do {
-      let resolved = try await resolve(currentPath, useCache: false)
-
-      // Only apply result if this is still the current navigation
-      guard navigationId == currentNavigationId else { return }
-
-      content = resolved
-    } catch {
-      // Superseded refreshes stay silent, for the same reason as `navigate`.
-      guard navigationId == currentNavigationId else { return }
-      throw error
-    }
-  }
-
-  private func resolveUncached(_ path: String) async throws -> ResolvedTrack {
-    // Match an explicit route (or the '*' default). With no match, fall back to
-    // the implicit default: fetch the path via the request + browse config.
-    let routeEntry = (config.routes).flatMap { findBestRouteMatch(path: path, routes: $0) }
-
-    let resolvedTrack: ResolvedTrack = if let (entry, routeMatch) = routeEntry {
-      try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
-    } else {
-      // Implicit default — no route config, just request → browse → fetch path.
-      try await resolveFromConfig(
-        nil, path: path, params: ["path": path],
-      )
-    }
-
-    // Normalize to the canonical sectioned shape (children sugar → one
-    // untitled section — ADR 0010), then validate and transform. The output
-    // never carries `children`.
-    if let sections = resolvedTrack.normalizedSections {
-      // Dev diagnostic (ADR 0011) — before the blocks are folded, while each
-      // level is still attributable. Every page passes here whatever its
-      // source, and only on a cache miss. No-op outside debug builds.
-      InertStyleDiagnostic.warn(path: path, pageStyle: resolvedTrack.style, sections: sections)
-      let transformed = try await transformSections(
-        sections, parentPath: path, routeEntry: routeEntry?.0,
-      )
-      return resolvedTrack.copying(sections: transformed, children: .some(nil))
-    }
-
-    return resolvedTrack
-  }
-
-  // MARK: - Route Resolution
-
-  private func findBestRouteMatch(
-    path: String,
-    routes: [NativeRouteEntry],
-  ) -> (NativeRouteEntry, RouteMatch)? {
-    // Filter out special routes
-    let browseRoutes = routes.filter {
-      $0.path != Self.tabsRoutePath &&
-        $0.path != Self.searchRoutePath &&
-        $0.path != Self.defaultRoutePath
-    }
-
-    // Try to find a matching route
-    if let match = router.findBestMatch(path: path, routes: browseRoutes) {
-      return match
-    }
-
-    // Fall back to __default__ if present
-    if let defaultRoute = routes.first(where: { $0.path == Self.defaultRoutePath }) {
-      return (defaultRoute, RouteMatch(params: ["path": path]))
-    }
-
-    return nil
-  }
-
-  private func resolveRouteEntry(
-    _ entry: NativeRouteEntry,
-    path: String,
-    params: [String: String],
-  ) async throws -> ResolvedTrack {
-    // Priority: callback > config > static
-    if let callback = entry.browseCallback {
-      let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      // BrowserSourceCallback may return a BrowseResult synchronously or via a
-      // Promise. Nitro flattens (ResolvedTrack | BrowseError) | Promise<BrowseResult>
-      // into a 3-arm variant: sync track, sync error, or a Promise resolving to a
-      // BrowseResult (which is itself a ResolvedTrack | BrowseError variant).
-      switch try await callback(callbackParam).await() {
-      case let .first(resolvedTrack):
-        return resolvedTrack
-      case let .second(browseError):
-        throw BrowserError.callbackError(browseError.error)
-      case let .third(promise):
-        switch try await promise.await() {
-        case let .first(resolvedTrack):
-          return resolvedTrack
-        case let .second(browseError):
-          throw BrowserError.callbackError(browseError.error)
-        }
-      }
-    }
-
-    if let browseConfig = entry.browseConfig {
-      return try await resolveFromConfig(
-        browseConfig, path: path, params: params,
-      )
-    }
-
-    if let staticContent = entry.browseStatic {
-      return staticContent
-    }
-
-    throw BrowserError.contentNotFound(path: path)
-  }
-
-  /// Builds the HTTP request for an API-backed route by layering
-  /// request → kind → route configs. `initialQuery` seeds request-level query
-  /// params (e.g. search q/mode/…) onto the base before the route layer, so they
-  /// survive into `request.query` even when a layer's transform "wins
-  /// completely" (it is handed only the base, so the route config's own static
-  /// query would otherwise be dropped). `routeConfig` is nil for the implicit
-  /// browse default; `kindConfig` is nil for kinds with no per-kind config.
-  private func buildApiRequest(
-    kind kindConfig: TransformableRequestConfig?,
-    _ routeConfig: TransformableRequestConfig?,
-    path: String,
-    params: [String: String],
-    initialQuery: [String: String]? = nil,
-  ) async throws -> HttpClient.HttpRequest {
-    try await ensureLayersResolved()
-
-    var merged = RequestConfig(
-      method: nil, path: path, baseUrl: nil, headers: nil,
-      query: nil, body: nil, contentType: nil, userAgent: nil,
+  /// `error` as the app's `formatNavigationError` displays it, or its default display when
+  /// there is no formatter or it fails.
+  func formatted(_ error: NavigationError, path: String) async -> FormattedNavigationError {
+    let fallback = error.defaultFormatted()
+    guard let formatter = config.formatNavigationError else { return fallback }
+    let params = FormatNavigationErrorParams(
+      error: error, defaultFormatted: fallback, path: path, kind: NavigationErrorKind(path: path),
     )
-    merged = try await applyLayer(resolvedRequestLayer, to: merged, params: params)
-    if let initialQuery, !initialQuery.isEmpty {
-      merged = merged.copying(query: mergeDicts(merged.query, initialQuery))
-    }
-    merged = try await applyLayer(kindConfig, to: merged, params: params)
-    merged = try await applyLayer(routeConfig, to: merged, params: params)
-
-    guard let baseUrl = merged.baseUrl else {
-      throw BrowserError.invalidConfiguration("No URL configured for route")
-    }
-    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: merged.path ?? path)
-    if let query = merged.query, !query.isEmpty {
-      url = BrowserPathHelper.appendQuery(query, to: url)
-    }
-
-    return HttpClient.HttpRequest(
-      url: url,
-      method: merged.method?.stringValue ?? "GET",
-      headers: merged.headers,
-      body: merged.body,
-      contentType: merged.contentType ?? HttpClient.defaultContentType,
-      userAgent: merged.userAgent ?? HttpClient.defaultUserAgent,
-    )
-  }
-
-  /// Resolves a browse route: a page object (`{title,path,children:[…]}`).
-  /// The browse kind layer is the cached resolved layer (`resolvedBrowseLayer`),
-  /// populated by `ensureLayersResolved()` inside `buildApiRequest`.
-  private func resolveFromConfig(
-    _ routeConfig: TransformableRequestConfig?,
-    path: String,
-    params: [String: String],
-  ) async throws -> ResolvedTrack {
-    try await ensureLayersResolved()
-    let request = try await buildApiRequest(
-      kind: resolvedBrowseLayer, routeConfig, path: path, params: params,
-    )
-
-    logger.debug("Resolving content from API")
-    logger.debug("  path: \(path)")
-    logger.debug("  url: \(request.url)")
-
-    let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
-    let nitroResult = result.toNitro()
-
-    logger.debug("Resolved: \(nitroResult.title)")
-    if let sections = nitroResult.normalizedSections {
-      logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
-    }
-
-    return nitroResult
-  }
-
-  /// Applies one request-config layer (request / browse / route) onto a base.
-  /// A transform (async and/or sync) wins completely: it receives the base and its
-  /// result replaces it. When both are set they run as a pipeline — async first,
-  /// then sync. Otherwise the layer's static fields merge over the base. `path` is
-  /// carried from the base (only a transform may change it).
-  func applyLayer(
-    _ layer: TransformableRequestConfig?,
-    to base: RequestConfig,
-    params: [String: String],
-  ) async throws -> RequestConfig {
-    guard let layer else { return base }
-    // Run-both transform: async first, then sync (each replaces the running config).
-    // The bridge await depth — the bug-prone part — is centralised in awaitAsync/SyncConfig.
-    if layer.transform != nil || layer.transformSync != nil {
-      var result = base
-      if let transform = layer.transform { result = try await awaitAsyncConfig(transform(result, params)) }
-      if let transformSync = layer.transformSync { result = try await awaitSyncConfig(transformSync(result, params)) }
-      return result
-    }
-    return RequestConfig(
-      method: layer.method ?? base.method,
-      path: base.path,
-      baseUrl: layer.baseUrl ?? base.baseUrl,
-      headers: mergeDicts(base.headers, layer.headers),
-      query: mergeDicts(base.query, layer.query),
-      body: layer.body ?? base.body,
-      contentType: layer.contentType ?? base.contentType,
-      userAgent: layer.userAgent ?? base.userAgent,
-    )
-  }
-
-  /// Merges two optional dictionaries, with override values taking precedence.
-  /// Delegates to the pure, unit-tested `MediaResolveComposer.mergeDicts`.
-  func mergeDicts(
-    _ base: [String: String]?,
-    _ override: [String: String]?,
-  ) -> [String: String]? {
-    MediaResolveComposer.mergeDicts(base, override)
-  }
-
-  // MARK: - Layer Resolvers
-
-  /// Resolve one layer: invoke its resolver if present, else return the static
-  /// layer config unchanged. The resolver is Promise-only (the TS layer wraps a
-  /// sync-or-async thunk in Promise.resolve), so its result is the JS promise
-  /// behind the bridge promise — a double await.
-  private func resolveLayer(
-    config staticConfig: TransformableRequestConfig?,
-    resolver: (() -> Promise<Promise<TransformableRequestConfig>>)?,
-  ) async throws -> TransformableRequestConfig? {
-    guard let resolver else { return staticConfig }
-    return try await resolver().await().await()
-  }
-
-  /// Ensure request/browse resolvers are resolved for the current generation,
-  /// caching the results. Re-resolves after a generation bump (config change /
-  /// invalidateAllContent). Idempotent within a generation.
-  func ensureLayersResolved() async throws {
-    guard resolvedLayerGeneration != layerGeneration else { return }
-    let generation = layerGeneration
-    let req = try await resolveLayer(config: config.request, resolver: config.requestResolver)
-    let brw = try await resolveLayer(config: config.browse, resolver: config.browseResolver)
-    // Only commit if still current (a newer generation may have started during await).
-    guard generation == layerGeneration else { return }
-    resolvedRequestLayer = req
-    resolvedBrowseLayer = brw
-    resolvedLayerGeneration = generation
-  }
-
-  // MARK: - Child Transformation
-
-  private func transformSections(
-    _ sections: [Section],
-    parentPath: String,
-    routeEntry: NativeRouteEntry?,
-  ) async throws -> [Section] {
-    var transformed: [Section] = []
-    // The contextual index is the flat page position — children concatenated
-    // in section order (ADR 0009/0010).
-    var flatIndex = 0
-
-    for section in sections {
-      var transformedChildren: [Track] = []
-
-      for track in section.children {
-        let index = flatIndex
-        flatIndex += 1
-
-        // Validate track has stable identifier.
-        if track.path == nil, track.src == nil {
-          throw BrowserError.invalidConfiguration(
-            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
-          )
-        }
-
-        var transformedTrack = track
-
-        if track.src != nil, track.path == nil {
-          // src != nil guarantees a non-nil identity (id when non-blank, else src).
-          // The flat page position rides along as a duplicate-identity tie-breaker.
-          let contextualPath = BrowserPathHelper.build(
-            parentPath: parentPath, trackId: track.identity!, index: index,
-          )
-          transformedTrack = track.copying(path: contextualPath)
-        }
-
-        // Resolve artwork URL at browse-time (no size context)
-        let artworkConfig = routeEntry?.artwork ?? config.artwork
-        if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
-          transformedTrack = transformedTrack.copying(artworkSource: imageSource)
-        }
-
-        transformedChildren.append(transformedTrack)
-      }
-
-      transformed.append(section.copying(children: transformedChildren))
-    }
-
-    return transformed
+    return await (try? formatter(params).await()) ?? fallback
   }
 
   // MARK: - Search
@@ -607,29 +263,10 @@ final class BrowserManager {
     )
   }
 
-  /// The query params a structured search sends: `q` plus whichever filters are
-  /// set. Mirrors Android's `executeSearchApiRequest` and the web stub.
-  ///
-  /// Single source of truth for "what distinguishes one search from another" —
-  /// the request sends exactly this, and the cache keys on exactly this, so a
-  /// field added here can't be forgotten in one place and silently serve one
-  /// search's results for another.
-  private static func searchQueryParams(_ params: SearchParams) -> [String: String] {
-    var query: [String: String] = ["q": params.query]
-    if let mode = params.mode { query["mode"] = mode.stringValue }
-    if params.reference == .my { query["reference"] = "my" }
-    if let genre = params.genre { query["genre"] = genre }
-    if let artist = params.artist { query["artist"] = artist }
-    if let album = params.album { query["album"] = album }
-    if let title = params.title { query["title"] = title }
-    if let playlist = params.playlist { query["playlist"] = playlist }
-    return query
-  }
-
   /// The cache identity of a search. Sorted so key order is stable, and
   /// `\u{1}`-delimited so two different param sets can't serialize alike.
   private static func searchCacheKey(_ params: SearchParams) -> String {
-    searchQueryParams(params)
+    PageResolver.searchQueryParams(params)
       .sorted { $0.key < $1.key }
       .map { "\($0.key)=\($0.value)" }
       .joined(separator: "\u{1}")
@@ -652,38 +289,7 @@ final class BrowserManager {
       return makeSearchResult(query: query, results: results)
     }
 
-    guard let routes = config.routes else {
-      throw BrowserError.contentNotFound(path: Self.searchRoutePath)
-    }
-
-    guard let searchEntry = routes.first(where: { $0.path == Self.searchRoutePath }) else {
-      throw BrowserError.contentNotFound(path: Self.searchRoutePath)
-    }
-
-    var results: [Track]
-
-    if let callback = searchEntry.searchCallback {
-      let outerPromise = callback(params)
-      let innerPromise = try await outerPromise.await()
-      results = try await innerPromise.await()
-    } else if let searchConfig = searchEntry.searchConfig {
-      // Search is its own kind — request → search route (no browse layer). The
-      // endpoint returns a bare Track array (unlike browse's page object). The
-      // search params go through `initialQuery` so they land in `request.query`
-      // (and the URL); a config with a transform only ever sees the base.
-      // Seed the search config's static path onto the base — a layer's static
-      // path never applies (carried from the base; only a transform may change
-      // it). Matches the web stub's fetchSearchResults and Android.
-      let request = try await buildApiRequest(
-        kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": query],
-        initialQuery: Self.searchQueryParams(params),
-      )
-      logger.debug("Searching via API: \(request.url)")
-      let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
-      results = jsonTracks.map { $0.toNitro() }
-    } else {
-      throw BrowserError.contentNotFound(path: Self.searchRoutePath)
-    }
+    let results = try await pages.search(params)
 
     // Cache the RAW results, never the hydrated ones: hydration is one-shot
     // (`hydrateFavorite` skips a track whose `favorited` is already set), so a
@@ -746,20 +352,9 @@ final class BrowserManager {
 
   /// Query navigation tabs.
   func queryTabs() async throws -> [Track] {
-    guard let routes = config.routes else {
-      return []
-    }
-
-    guard let tabsEntry = routes.first(where: { $0.path == Self.tabsRoutePath }) else {
-      return []
-    }
-
-    let resolved = try await resolveRouteEntry(tabsEntry, path: Self.tabsRoutePath, params: [:])
-    // Tabs are a flat list, not a page — a sectioned tabs source flattens.
-    let tabTracks = resolved.flattenedChildren ?? []
-
-    tabs = tabTracks
-    return tabTracks
+    guard let tabs = try await pages.tabs() else { return [] }
+    self.tabs = tabs
+    return tabs
   }
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
@@ -826,20 +421,6 @@ final class BrowserManager {
     }
 
     return (tracks: playableTracks, selectedIndex: selectedIndex)
-  }
-
-  // MARK: - Accessors
-
-  func getPath() -> String {
-    path
-  }
-
-  func getContent() -> ResolvedTrack? {
-    content
-  }
-
-  func getTabs() -> [Track]? {
-    tabs
   }
 }
 
