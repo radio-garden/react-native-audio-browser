@@ -28,7 +28,9 @@ extension CarPlaySession {
       do {
         return try await browserManager.resolve(path, useCache: false)
       } catch {
-        logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
+        if !(error is CancellationError || Task.isCancelled) {
+          logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
+        }
         return nil
       }
     }

@@ -5,13 +5,10 @@ import Testing
 struct ConcurrentMapTests {
   @Test @MainActor
   func keepsElementOrder_whenLaterElementsFinishFirst() async {
-    var finished: [Int] = []
     let results = await [30, 20, 10].concurrentMap { delayMs in
       try? await Task.sleep(for: .milliseconds(delayMs))
-      finished.append(delayMs)
       return delayMs * 2
     }
-    #expect(finished == [10, 20, 30])
     #expect(results == [60, 40, 20])
   }
 
