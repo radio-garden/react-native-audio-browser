@@ -177,3 +177,36 @@ import Testing
   #expect(BrowserPathHelper.isSearchPath("/search?q=jazz") == false)
   #expect(BrowserPathHelper.isSearchPath("/__searchable") == false)
 }
+
+// MARK: - stampingContextualPaths
+
+@Test func stampsPlayableOnlyTracksWithTheirFlatPagePosition() throws {
+  let sections = [
+    Section(children: [Track(path: "/a", title: "A"), Track(src: "one.mp3", title: "One")]),
+    Section(children: [Track(id: "two", src: "two.mp3", title: "Two")]),
+  ]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page")
+  #expect(stamped.map { $0.children.map(\.path) } == [
+    ["/a", "/page?__trackId=one.mp3&__index=1"],
+    ["/page?__trackId=two&__index=2"],
+  ])
+}
+
+@Test func keepsTheSectionsAndATrackThatHasAPath() throws {
+  let track = Track(path: "/a", src: "a.mp3", title: "A")
+  let sections = [Section(title: "Top", path: "/top", children: [track])]
+  #expect(try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page") == sections)
+}
+
+@Test func stampsBesideAnExistingQuery() throws {
+  let sections = [Section(children: [Track(src: "s.mp3", title: "S")])]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/search?q=jazz")
+  #expect(stamped[0].children[0].path == "/search?q=jazz&__trackId=s.mp3&__index=0")
+}
+
+@Test func rejectsATrackWithNeitherPathNorSrc() {
+  let sections = [Section(children: [Track(id: "only-id", title: "Nowhere")])]
+  #expect(throws: BrowserError.self) {
+    try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page")
+  }
+}

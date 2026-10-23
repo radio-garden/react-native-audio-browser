@@ -135,43 +135,17 @@ final class PageResolver {
 
   // MARK: - Stamping
 
+  /// `sections` stamped with contextual paths, every track's browse-time artwork (no size
+  /// context) resolved at once.
   private func transformSections(
     _ sections: [Section],
     parentPath: String,
     routeEntry: NativeRouteEntry?,
   ) async throws -> [Section] {
-    // The contextual index is the flat page position — children concatenated
-    // in section order (ADR 0009/0010).
-    var flatIndex = 0
-    var pageTracks: [[Track]] = []
-    for section in sections {
-      var tracks: [Track] = []
-      for track in section.children {
-        let index = flatIndex
-        flatIndex += 1
-        if track.path == nil, track.src == nil {
-          throw BrowserError.invalidConfiguration(
-            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
-          )
-        }
-        if track.src != nil, track.path == nil {
-          // src != nil guarantees a non-nil identity (id when non-blank, else src).
-          // The flat page position rides along as a duplicate-identity tie-breaker.
-          let contextualPath = BrowserPathHelper.build(
-            parentPath: parentPath, trackId: track.identity!, index: index,
-          )
-          tracks.append(track.copying(path: contextualPath))
-        } else {
-          tracks.append(track)
-        }
-      }
-      pageTracks.append(tracks)
-    }
-
-    // Every track's browse-time artwork (no size context) resolves at once.
-    let artworkConfig = routeEntry?.artwork ?? config.artwork
-    let artworkLoads = pageTracks.map { tracks in
-      tracks.map { track in
+    let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: parentPath)
+    let artworkConfig = routeEntry?.artwork
+    let artworkLoads = stamped.map { section in
+      section.children.map { track in
         Task<ImageSource?, Never> { @MainActor in
           await self.requests.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
         }
@@ -179,14 +153,13 @@ final class PageResolver {
     }
 
     var transformed: [Section] = []
-    for sectionIndex in sections.indices {
+    for (section, loads) in zip(stamped, artworkLoads) {
       var children: [Track] = []
-      for trackIndex in pageTracks[sectionIndex].indices {
-        let track = pageTracks[sectionIndex][trackIndex]
-        let artwork = await artworkLoads[sectionIndex][trackIndex].value
+      for (track, load) in zip(section.children, loads) {
+        let artwork = await load.value
         children.append(artwork.map { track.copying(artworkSource: $0) } ?? track)
       }
-      transformed.append(sections[sectionIndex].copying(children: children))
+      transformed.append(section.copying(children: children))
     }
     return transformed
   }

@@ -113,9 +113,12 @@ ios/
 │   │                                 #   MediaResolving
 │   ├── BrowseGate.swift              # @MainActor Browse Gate: mode, per-request decide, changed emitter
 │   ├── NavigationErrorState.swift    # @MainActor navigation error + display; a newer report wins
-│   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards)
+│   ├── SimpleRouter.swift            # Route pattern matching ({param}, *, ** wildcards);
+│   │                                 #   the browse route for a path
 │   ├── BrowserConfig.swift           # Swift-side copy of NativeBrowserConfiguration; JS-callback strip
-│   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding)
+│   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs (__trackId encoding),
+│   │                                 #   contextual-path stamping of a page
+│   ├── BrowserError.swift            # Browser errors (content not found, invalid config, callback)
 │   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl (tested)
 │   ├── SearchDrillIn.swift           # Browsable-first drill-in for "play X" voice intents
 │   ├── TabBarEntries.swift           # Tab-bar churn suppression (same(old:new:))

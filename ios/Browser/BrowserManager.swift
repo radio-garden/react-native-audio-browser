@@ -2,21 +2,6 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Custom browser errors.
-enum BrowserError: LocalizedError {
-  case contentNotFound(path: String)
-  case invalidConfiguration(String)
-  case callbackError(String)
-
-  var errorDescription: String? {
-    switch self {
-    case .contentNotFound: "Content not found"
-    case let .invalidConfiguration(message): "Invalid configuration: \(message)"
-    case let .callbackError(message): message
-    }
-  }
-}
-
 /// The browser's state (path, content, tabs, config), its content and search caches, favorites
 /// and events. Pages come from `PageResolver`; requests go through `RequestPipeline`.
 @MainActor

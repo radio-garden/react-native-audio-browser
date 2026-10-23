@@ -10,6 +10,7 @@ let package = Package(
       path: "ios",
       sources: [
         "Browser/BrowserPathHelper.swift",
+        "Browser/BrowserError.swift",
         "Browser/SectionScope.swift",
         "Browser/SearchDrillIn.swift",
         "Browser/TabBarEntries.swift",
@@ -52,6 +53,7 @@ let package = Package(
         "CarPlay/TopTemplateReplacer.swift",
         "Extension/ResolvedTrack+Copying.swift",
         "Extension/Section+Copying.swift",
+        "Extension/Track+Copying.swift",
         "Extension/Track+Identity.swift",
         "Extension/Variant+Artwork.swift",
         "Extension/TrackMetadata+AVFoundation.swift",

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// Utility for handling browser paths and contextual URLs in the media browser system.
 ///
@@ -208,5 +211,26 @@ enum BrowserPathHelper {
     }
 
     return "\(normalizedBase)/\(normalizedPath)"
+  }
+}
+
+extension BrowserPathHelper {
+  /// `sections` with a contextual path on every playable-only track (a `src` and no `path`), so
+  /// it can be addressed: `parentPath`, the track's identity and its flat page position (children
+  /// concatenated in section order). Throws when a track has neither `path` nor `src`.
+  static func stampingContextualPaths(_ sections: [Section], parentPath: String) throws -> [Section] {
+    var flatIndex = 0
+    return try sections.map { section in
+      try section.copying(children: section.children.map { track in
+        defer { flatIndex += 1 }
+        if track.path != nil { return track }
+        guard track.src != nil, let identity = track.identity else {
+          throw BrowserError.invalidConfiguration(
+            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
+          )
+        }
+        return track.copying(path: build(parentPath: parentPath, trackId: identity, index: flatIndex))
+      })
+    }
   }
 }
