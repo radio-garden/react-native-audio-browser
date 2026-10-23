@@ -344,68 +344,12 @@ final class BrowserManager {
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
 
-  /// Expands a contextual path to a full queue of playable tracks.
+  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`), from its page.
   func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
-    guard BrowserPathHelper.isContextual(path) else { return nil }
-
-    let parentPath = BrowserPathHelper.stripTrackId(path)
-    guard let trackId = BrowserPathHelper.extractTrackId(path) else { return nil }
-
-    logger.debug("Expanding queue from contextual path")
-    logger.debug("  path: \(path)")
-    logger.debug("  parentPath: \(parentPath)")
-    logger.debug("  trackId: \(trackId)")
-
-    // Resolve the parent container
-    let resolved = try await resolve(parentPath, useCache: true)
+    guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
+    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
     guard let sections = resolved.normalizedSections else { return nil }
-
-    // Queue scope is the tapped section, not the whole page (ADR 0006). The
-    // stamped flat index pins which section (and which copy) was tapped when
-    // the same identity appears more than once; it is only a tie-breaker —
-    // a stale index falls back to the first identity match. An id that no
-    // longer appears on the page at all aborts the expansion — the caller
-    // falls back to the stored single track (matching Android); silently
-    // queueing the changed list would resume the wrong station.
-    let tappedIndex = BrowserPathHelper.extractIndex(path)
-    guard let scoped = SectionScope.scoped(in: sections, containing: trackId, tappedIndex: tappedIndex) else {
-      return nil
-    }
-    let sectionTracks = scoped.section.children
-    let tappedOffset = scoped.tappedOffset
-
-    // Filter to playable tracks (have src). A disabled track is unavailable —
-    // queue expansion excludes it, so auto-advance never meets one.
-    let playableTracks = sectionTracks.filter { $0.src != nil && $0.disabled != true }
-    guard !playableTracks.isEmpty else { return nil }
-
-    logger.debug("Found \(playableTracks.count) playable tracks")
-    for (index, track) in playableTracks.enumerated() {
-      logger.debug("  [\(index)] \(track.title) - src: \(track.src ?? "nil")")
-    }
-
-    // Find selected track index: the pinned copy when the stamp survived,
-    // else the first identity match. A miss must abort rather than silently
-    // start the queue at the wrong track (unreachable in practice — the
-    // section was found BY this id).
-    let selectedIndex: Int
-    if let tappedOffset, sectionTracks[tappedOffset].src != nil, sectionTracks[tappedOffset].disabled != true {
-      selectedIndex =
-        sectionTracks.prefix(through: tappedOffset)
-          .count(where: { $0.src != nil && $0.disabled != true }) - 1
-    } else if let index = playableTracks.firstIndex(where: { $0.identity == trackId }) {
-      selectedIndex = index
-    } else {
-      return nil
-    }
-    logger.debug("Selected track index: \(selectedIndex)")
-
-    // If singleTrack mode, return just the selected track
-    if config.singleTrack {
-      return (tracks: [playableTracks[selectedIndex]], selectedIndex: 0)
-    }
-
-    return (tracks: playableTracks, selectedIndex: selectedIndex)
+    return SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
   }
 }
 
