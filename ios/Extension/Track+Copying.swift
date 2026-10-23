@@ -1,4 +1,6 @@
-import NitroModules
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 extension Track {
   /// Returns a copy of this Track with only the specified fields changed.

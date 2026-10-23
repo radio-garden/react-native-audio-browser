@@ -2,21 +2,6 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Custom browser errors.
-enum BrowserError: LocalizedError {
-  case contentNotFound(path: String)
-  case invalidConfiguration(String)
-  case callbackError(String)
-
-  var errorDescription: String? {
-    switch self {
-    case .contentNotFound: "Content not found"
-    case let .invalidConfiguration(message): "Invalid configuration: \(message)"
-    case let .callbackError(message): message
-    }
-  }
-}
-
 /// The browser's state (path, content, tabs, config), its content and search caches, favorites
 /// and events. Pages come from `PageResolver`; requests go through `RequestPipeline`.
 @MainActor
@@ -36,16 +21,11 @@ final class BrowserManager {
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
-  // Most recent search, keyed by `searchCacheKey`.
+  // Most recent search, keyed by `SearchParams.cacheKey`.
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
-  // Set of favorited track identities (id when non-blank, else src).
-  private var favoriteIds: Set<String> = []
-
-  // Whether favoriting is enabled, propagated from the player's `favorite`
-  // capability. false = no row hearts. Set via setFavoriteEnabled.
-  private var favoriteEnabled = false
+  private var favorites = FavoriteSet()
 
   // Navigation tracking to prevent race conditions
   private var currentNavigationId: Int = 0
@@ -120,54 +100,27 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  /// Sets the favorited track identifiers.
+  /// Sets the favorited track identities, emitting `favoritesChanged` when they change.
   func setFavorites(_ favorites: [String]) {
-    let newIds = Set(favorites)
-    guard newIds != favoriteIds else { return }
-    favoriteIds = newIds
-    favoritesChanged.emit(())
-  }
-
-  /// Enables/disables favoriting (propagated from the `favorite` capability).
-  /// false disables row-heart hydration.
-  func setFavoriteEnabled(_ enabled: Bool) {
-    favoriteEnabled = enabled
-  }
-
-  /// Optimistically reflects a local favorite toggle in the favorite set, keyed
-  /// by the track's identity (id when non-blank, else src). The consumer
-  /// reconciles `favoriteIds` to its canonical set on the next `setFavorites`;
-  /// `hydrateFavorite` gives the same answer before and after, so the
-  /// now-playing heart stays responsive.
-  func setFavorited(identity: String, favorited: Bool) {
-    if favorited {
-      favoriteIds.insert(identity)
-    } else {
-      favoriteIds.remove(identity)
+    if self.favorites.replace(with: favorites) {
+      favoritesChanged.emit(())
     }
   }
 
-  /// Hydrates the favorited field on a track based on the favoriteIds set.
-  /// No-op unless favoriting is enabled (the `favorite` capability). Only
-  /// identity-bearing tracks (id or src) are favoritable; the flag is set to
-  /// true OR false so non-favorited tracks still show an (empty) heart. A
-  /// caller-set `favorited` wins — API/consumer-provided values are never
-  /// overwritten (matches Android and web).
-  func hydrateFavorite(_ track: Track) -> Track {
-    // `identity` bridges a std::string out of the C++ track, so it is bound
-    // once here rather than computed again to answer "is it favorited".
-    guard favoriteEnabled, track.favorited == nil, let identity = track.identity else { return track }
-    return track.copying(favorited: favoriteIds.contains(identity))
+  /// Enables/disables favoriting (propagated from the `favorite` capability).
+  func setFavoriteEnabled(_ enabled: Bool) {
+    favorites.enabled = enabled
   }
 
-  /// Hydrates favorites on all tracks of a resolved page. Pages reach
-  /// hydration normalized (ADR 0010), so `sections` is the only structure
-  /// to walk.
-  private func hydrateChildren(_ resolvedTrack: ResolvedTrack) -> ResolvedTrack {
-    guard let sections = resolvedTrack.sections else { return resolvedTrack }
-    return resolvedTrack.copying(sections: sections.map { section in
-      section.copying(children: section.children.map { hydrateFavorite($0) })
-    })
+  /// Optimistically reflects a local favorite toggle (`FavoriteSet.set`), so the now-playing
+  /// heart stays responsive.
+  func setFavorited(identity: String, favorited: Bool) {
+    favorites.set(identity, favorited: favorited)
+  }
+
+  /// `track` with its `favorited` hydrated (`FavoriteSet.hydrate`).
+  func hydrateFavorite(_ track: Track) -> Track {
+    favorites.hydrate(track)
   }
 
   // MARK: - Navigation
@@ -203,7 +156,7 @@ final class BrowserManager {
 
     // Check content cache first
     if useCache, let cached = contentCache.get(normalizedPath) {
-      return hydrateChildren(cached)
+      return favorites.hydrate(cached)
     }
 
     let resolvedTrack = try await pages.resolve(normalizedPath)
@@ -211,7 +164,7 @@ final class BrowserManager {
     // Cache the resolved content for future navigation
     contentCache.set(normalizedPath, value: resolvedTrack)
 
-    return hydrateChildren(resolvedTrack)
+    return favorites.hydrate(resolvedTrack)
   }
 
   /// Invalidates the content cache for a specific path.
@@ -230,16 +183,23 @@ final class BrowserManager {
     contentCache.remove(path)
   }
 
-  /// Clears the entire content cache (e.g. on a locale change).
-  /// Runs from `invalidateAllContent`, so re-resolve the layer thunks too.
-  func clearContentCache() {
+  /// Clears the content cache, the search cache and the resolved request layers (e.g. on a
+  /// locale change), then re-queries the tabs and reloads the current path from the network.
+  /// The two are independent: a failed reload goes to `reloadFailed` with its path and neither
+  /// waits for nor cancels the tabs, and a failed tabs re-query keeps the current tabs.
+  func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
     contentCache.clear()
     requests.invalidateLayers()
-    // The search slot is content too: a locale switch or a re-auth changes
-    // titles, src, artwork and availability, and nothing else ever evicts it,
-    // so a repeated query returned pre-invalidation results forever.
     lastSearchKey = nil
     lastSearchResults = nil
+    Task { _ = try? await queryTabs() }
+    Task {
+      do {
+        try await load(path, bypassCache: true)
+      } catch {
+        await reloadFailed(error, path)
+      }
+    }
   }
 
   /// `error` as the app's `formatNavigationError` displays it, or its default display when
@@ -263,24 +223,15 @@ final class BrowserManager {
     )
   }
 
-  /// The cache identity of a search. Sorted so key order is stable, and
-  /// `\u{1}`-delimited so two different param sets can't serialize alike.
-  private static func searchCacheKey(_ params: SearchParams) -> String {
-    PageResolver.searchQueryParams(params)
-      .sorted { $0.key < $1.key }
-      .map { "\($0.key)=\($0.value)" }
-      .joined(separator: "\u{1}")
-  }
-
   /// Structured search, cached by the full parameter set.
   ///
   /// Voice intents reuse `query` across different structures —
   /// `MediaIntentCriteria` falls back to the structured value when there is no
   /// spoken name, so "play jazz" (genre) and a text search for "jazz" arrive
-  /// with an identical `query` — hence `searchCacheKey` rather than `query`.
+  /// with an identical `query` — hence `cacheKey` rather than `query`.
   func search(_ params: SearchParams) async throws -> ResolvedTrack {
     let query = params.query
-    let cacheKey = Self.searchCacheKey(params)
+    let cacheKey = params.cacheKey
 
     // Check cache - hydrate favorites on the way out, since they may have
     // changed since the search ran (the slot holds the raw results for exactly
@@ -292,7 +243,7 @@ final class BrowserManager {
     let results = try await pages.search(params)
 
     // Cache the RAW results, never the hydrated ones: hydration is one-shot
-    // (`hydrateFavorite` skips a track whose `favorited` is already set), so a
+    // (`FavoriteSet.hydrate` skips a track whose `favorited` is already set), so a
     // hydrated slot would serve the favorites as they were at first search
     // forever. The content cache keys on the same rule — it stores the
     // unhydrated resolve and hydrates in `resolve()`.
@@ -319,14 +270,14 @@ final class BrowserManager {
 
   /// Wraps raw search results as a resolved page, hydrating favorites on the
   /// way out — the single exit for `search`, so an unhydrated search page can't
-  /// be emitted (the same funnel `resolve()` gets from `hydrateChildren`).
+  /// be emitted (the same funnel `resolve()` has).
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
     // Search results are a flat list; as a resolved page they are one
     // untitled section (ADR 0010).
     ResolvedTrack(
       path: BrowserPathHelper.createSearchPath(query),
       style: nil,
-      sections: [.untitled(results.map { hydrateFavorite($0) })],
+      sections: [.untitled(results.map { favorites.hydrate($0) })],
       children: nil,
       carPlaySiriListButton: nil,
       id: nil,
@@ -359,68 +310,12 @@ final class BrowserManager {
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
 
-  /// Expands a contextual path to a full queue of playable tracks.
+  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`), from its page.
   func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
-    guard BrowserPathHelper.isContextual(path) else { return nil }
-
-    let parentPath = BrowserPathHelper.stripTrackId(path)
-    guard let trackId = BrowserPathHelper.extractTrackId(path) else { return nil }
-
-    logger.debug("Expanding queue from contextual path")
-    logger.debug("  path: \(path)")
-    logger.debug("  parentPath: \(parentPath)")
-    logger.debug("  trackId: \(trackId)")
-
-    // Resolve the parent container
-    let resolved = try await resolve(parentPath, useCache: true)
+    guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
+    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
     guard let sections = resolved.normalizedSections else { return nil }
-
-    // Queue scope is the tapped section, not the whole page (ADR 0006). The
-    // stamped flat index pins which section (and which copy) was tapped when
-    // the same identity appears more than once; it is only a tie-breaker —
-    // a stale index falls back to the first identity match. An id that no
-    // longer appears on the page at all aborts the expansion — the caller
-    // falls back to the stored single track (matching Android); silently
-    // queueing the changed list would resume the wrong station.
-    let tappedIndex = BrowserPathHelper.extractIndex(path)
-    guard let scoped = SectionScope.scoped(in: sections, containing: trackId, tappedIndex: tappedIndex) else {
-      return nil
-    }
-    let sectionTracks = scoped.section.children
-    let tappedOffset = scoped.tappedOffset
-
-    // Filter to playable tracks (have src). A disabled track is unavailable —
-    // queue expansion excludes it, so auto-advance never meets one.
-    let playableTracks = sectionTracks.filter { $0.src != nil && $0.disabled != true }
-    guard !playableTracks.isEmpty else { return nil }
-
-    logger.debug("Found \(playableTracks.count) playable tracks")
-    for (index, track) in playableTracks.enumerated() {
-      logger.debug("  [\(index)] \(track.title) - src: \(track.src ?? "nil")")
-    }
-
-    // Find selected track index: the pinned copy when the stamp survived,
-    // else the first identity match. A miss must abort rather than silently
-    // start the queue at the wrong track (unreachable in practice — the
-    // section was found BY this id).
-    let selectedIndex: Int
-    if let tappedOffset, sectionTracks[tappedOffset].src != nil, sectionTracks[tappedOffset].disabled != true {
-      selectedIndex =
-        sectionTracks.prefix(through: tappedOffset)
-          .count(where: { $0.src != nil && $0.disabled != true }) - 1
-    } else if let index = playableTracks.firstIndex(where: { $0.identity == trackId }) {
-      selectedIndex = index
-    } else {
-      return nil
-    }
-    logger.debug("Selected track index: \(selectedIndex)")
-
-    // If singleTrack mode, return just the selected track
-    if config.singleTrack {
-      return (tracks: [playableTracks[selectedIndex]], selectedIndex: 0)
-    }
-
-    return (tracks: playableTracks, selectedIndex: selectedIndex)
+    return SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
   }
 }
 

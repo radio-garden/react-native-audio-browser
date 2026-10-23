@@ -109,4 +109,120 @@ struct RequestLayerTests {
     #expect(RequestLayer.mergeDicts(["a": "1"], nil) == ["a": "1"])
     #expect(RequestLayer.mergeDicts(nil, ["b": "2"]) == ["b": "2"])
   }
+
+  @Test func baseSetsOnlyThePath() {
+    #expect(Config.base(path: "/a") == Config(path: "/a"))
+  }
+
+  // MARK: - artwork
+
+  private func artwork(
+    _ artwork: Config = Config(),
+    over base: Config = Config(path: "/art.png"),
+    resolve: (nonisolated(nonsending)() async throws -> Config?)? = nil,
+    trackHasArtwork: Bool = true,
+    sizeQuery: [String: String] = [:],
+    transforms: [nonisolated(nonsending)(Config) async throws -> Config] = [],
+    id: String? = nil,
+  ) async throws -> Config? {
+    try await RequestLayer.artwork(
+      artwork, over: base, resolve: resolve, trackHasArtwork: trackHasArtwork,
+      sizeQuery: sizeQuery, transforms: transforms, id: id,
+    )
+  }
+
+  @Test func artworkStaticFieldsMergeOverTheBasePathIncluded() async throws {
+    let result = try await artwork(
+      Config(path: "/artwork/{id}", baseUrl: "https://img", headers: ["B": "2"]),
+      over: Config(path: "/art.png", baseUrl: "https://api", headers: ["A": "1"]),
+      id: "42",
+    )
+    #expect(result == Config(path: "/artwork/42", baseUrl: "https://img", headers: ["A": "1", "B": "2"]))
+  }
+
+  @Test func theResolvedConfigWinsOverTheStaticFields() async throws {
+    let result = try await artwork(
+      Config(baseUrl: "https://static", userAgent: "static"),
+      resolve: { Config(baseUrl: "https://resolved") },
+    )
+    #expect(result == Config(path: "/art.png", baseUrl: "https://resolved", userAgent: "static"))
+  }
+
+  @Test func aResolverThatProducesNothingKeepsTheTracksArtwork() async throws {
+    let result = try await artwork(Config(baseUrl: "https://img"), resolve: { nil })
+    #expect(result == Config(path: "/art.png", baseUrl: "https://img"))
+  }
+
+  @Test func aResolverThatProducesNothingForATrackWithoutArtworkIsNoArtwork() async throws {
+    let result = try await artwork(
+      Config(path: "/fallback.png"), over: Config(), resolve: { nil }, trackHasArtwork: false,
+    )
+    #expect(result == nil)
+  }
+
+  @Test func theSizeQueryMergesBeforeTheTransformsRun() async throws {
+    var seen: Config?
+    let result = try await artwork(
+      over: Config(path: "/art.png", query: ["v": "1"]),
+      sizeQuery: ["w": "300"],
+      transforms: [{ seen = $0; return $0 }],
+    )
+    #expect(seen?.query == ["v": "1", "w": "300"])
+    #expect(result?.query == ["v": "1", "w": "300"])
+  }
+
+  @Test func anEmptySizeQueryLeavesNoQuery() async throws {
+    #expect(try await artwork()?.query == nil)
+  }
+
+  @Test func transformsRunInOrderBeforeTheIdIsFilled() async throws {
+    let result = try await artwork(
+      transforms: [
+        { Config(path: "/t/{id}", baseUrl: $0.baseUrl) },
+        { Config(path: $0.path, baseUrl: "https://second", headers: ["X-Id": "{id}"], query: ["id": "{id}"]) },
+      ],
+      id: "7",
+    )
+    #expect(result == Config(path: "/t/7", baseUrl: "https://second", headers: ["X-Id": "7"], query: ["id": "7"]))
+  }
+
+  @Test func withoutAnIdTheTokenStays() async throws {
+    let result = try await artwork(Config(path: "/artwork/{id}"), id: nil)
+    #expect(result?.path == "/artwork/{id}")
+    #expect(RequestLayer.hasUnfilledIdToken(result!))
+    #expect(!RequestLayer.hasUnfilledIdToken(Config(path: "/artwork/1")))
+    #expect(RequestLayer.hasUnfilledIdToken(Config(headers: ["X": "{id}"])))
+  }
+
+  @Test func noPathLeftIsNoArtwork() async throws {
+    #expect(try await artwork(over: Config(baseUrl: "https://img")) == nil)
+    #expect(try await artwork(transforms: [{ _ in Config(baseUrl: "https://img") }]) == nil)
+  }
+
+  @Test func sizeQueryNamesTheContextsWholePixels() {
+    let params = ImageQueryParams(width: "w", height: "h")
+    #expect(RequestLayer.sizeQuery(params, ImageContext(width: 300.7, height: 200)) == ["w": "300", "h": "200"])
+    #expect(RequestLayer.sizeQuery(ImageQueryParams(width: "w"), ImageContext(width: 300, height: 200)) == ["w": "300"])
+    #expect(RequestLayer.sizeQuery(params, ImageContext(width: nil, height: 200)) == ["h": "200"])
+    #expect(RequestLayer.sizeQuery(params, nil) == [:])
+    #expect(RequestLayer.sizeQuery(nil, ImageContext(width: 300, height: 200)) == [:])
+  }
+
+  @Test func imageHeadersAddTheUserAgentUnlessAHeaderSetsIt() {
+    #expect(RequestLayer.imageHeaders(Config()) == nil)
+    #expect(RequestLayer.imageHeaders(Config(userAgent: "UA")) == ["User-Agent": "UA"])
+    #expect(RequestLayer.imageHeaders(Config(headers: ["User-Agent": "mine"], userAgent: "UA")) == ["User-Agent": "mine"])
+  }
+
+  @Test func imageHeadersAddTheContentTypeUnlessAHeaderSetsIt() {
+    #expect(RequestLayer.imageHeaders(Config(contentType: "image/png")) == ["Content-Type": "image/png"])
+    #expect(
+      RequestLayer.imageHeaders(Config(headers: ["Content-Type": "mine"], contentType: "image/png"))
+        == ["Content-Type": "mine"],
+    )
+    #expect(
+      RequestLayer.imageHeaders(Config(contentType: "image/png", userAgent: "UA"))
+        == ["Content-Type": "image/png", "User-Agent": "UA"],
+    )
+  }
 }

@@ -7,9 +7,7 @@ private struct TestRoute: RouteEntry {
 }
 
 private func match(_ path: String, _ patterns: [String]) -> (route: TestRoute, match: RouteMatch)? {
-  let router = SimpleRouter()
-  let routes = patterns.map { TestRoute(path: $0) }
-  return router.findBestMatch(path: path, routes: routes)
+  SimpleRouter.findBestMatch(path: path, routes: patterns.map { TestRoute(path: $0) })
 }
 
 // MARK: - exact matches
@@ -136,4 +134,41 @@ private func match(_ path: String, _ patterns: [String]) -> (route: TestRoute, m
   // prefix should beat the parameter prefix.
   let result = match("/api/v1/users", ["/api/{version}/**", "/api/v1/**"])
   #expect(result!.route.path == "/api/v1/**")
+}
+
+@Test func treatsADoubleStarBeforeTheEndAsAConstant() {
+  #expect(match("/a/**/b", ["/a/**/b"]) != nil)
+  #expect(match("/a/x/b", ["/a/**/b"]) == nil)
+}
+
+@Test func theFirstRouteWinsATie() {
+  let result = match("/artists/123", ["/artists/{id}", "/artists/{name}"])
+  #expect(result!.route.path == "/artists/{id}")
+}
+
+// MARK: - browse route
+
+private func browseRoute(_ path: String, _ patterns: [String]) -> (route: TestRoute, match: RouteMatch)? {
+  SimpleRouter.browseRoute(for: path, in: patterns.map { TestRoute(path: $0) })
+}
+
+@Test func theSpecialRoutesNeverMatchABrowsePath() {
+  #expect(browseRoute("/__tabs__", ["__tabs__", "__search__"]) == nil)
+  #expect(browseRoute("__search__", ["__search__"]) == nil)
+}
+
+@Test func aMatchingRouteWinsOverTheDefault() {
+  let result = browseRoute("/artists/1", ["__default__", "/artists/{id}"])
+  #expect(result!.route.path == "/artists/{id}")
+  #expect(result!.match.params == ["id": "1"])
+}
+
+@Test func withoutAMatchTheDefaultRouteBrowsesThePath() {
+  let result = browseRoute("/a/b", ["/artists", "__default__"])
+  #expect(result!.route.path == "__default__")
+  #expect(result!.match.params == ["path": "/a/b"])
+}
+
+@Test func withoutAMatchOrADefaultThereIsNoBrowseRoute() {
+  #expect(browseRoute("/a/b", ["/artists", "__tabs__"]) == nil)
 }

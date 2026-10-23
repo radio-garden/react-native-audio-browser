@@ -75,35 +75,17 @@ extension JsonArtwork {
 /// payload). `init(from:)` therefore never throws, and unknown enum values
 /// map to nil at `toNitro` time.
 struct JsonStyle: Codable, Equatable {
-  let display: String?
-  let gridWrap: Bool?
-  let gridTile: String?
-  let artworkRendering: String?
-  let imageShape: String?
-  let accessorySymbol: String?
-  let cardTint: String?
-  let cardImage: String?
+  var display: String? = nil
+  var gridWrap: Bool? = nil
+  var gridTile: String? = nil
+  var artworkRendering: String? = nil
+  var imageShape: String? = nil
+  var accessorySymbol: String? = nil
+  var cardTint: String? = nil
+  var cardImage: String? = nil
+}
 
-  init(
-    display: String? = nil,
-    gridWrap: Bool? = nil,
-    gridTile: String? = nil,
-    artworkRendering: String? = nil,
-    imageShape: String? = nil,
-    accessorySymbol: String? = nil,
-    cardTint: String? = nil,
-    cardImage: String? = nil,
-  ) {
-    self.display = display
-    self.gridWrap = gridWrap
-    self.gridTile = gridTile
-    self.artworkRendering = artworkRendering
-    self.imageShape = imageShape
-    self.accessorySymbol = accessorySymbol
-    self.cardTint = cardTint
-    self.cardImage = cardImage
-  }
-
+extension JsonStyle {
   init(from decoder: Decoder) throws {
     // A non-object value (the retired `style: 'grid'` string) decodes as an
     // empty block rather than failing the parent.
@@ -132,61 +114,51 @@ extension JsonStyle {
   /// maps to nil, so "no declaration" has one shape on every platform
   /// (Android's lenient mapper makes the same collapse).
   func toTrackStyle() -> TrackStyle? {
-    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
-    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
-    // The 'none' sentinel is a legitimate value; only emptiness collapses.
-    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
-    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
-    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil || imageShape != nil
-      || accessorySymbol != nil || cardTint != nil || cardImage != nil
-    else { return nil }
-    return TrackStyle(
-      display: display,
-      artworkRendering: artworkRendering,
-      imageShape: imageShape,
-      accessorySymbol: accessorySymbol,
-      cardTint: cardTint,
-      cardImage: cardImage,
-    )
+    let declarations = trackDeclarations
+    return Self.declaresAnything(declarations) ? declarations : nil
   }
 
   func toSectionStyle() -> SectionStyle? {
-    let display = display.flatMap { StyleDisplay(fromString: $0.lowercased()) }
+    let declarations = trackDeclarations
     let gridTile = gridTile.flatMap { GridTile(fromString: $0.lowercased()) }
-    let artworkRendering = artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) }
-    let imageShape = imageShape.flatMap { ImageShape(fromString: $0.lowercased()) }
-    let accessorySymbol = accessorySymbol?.isEmpty == false ? accessorySymbol : nil
-    let cardTint = cardTint?.isEmpty == false ? cardTint : nil
-    let cardImage = cardImage.flatMap { CardImage(fromString: $0.lowercased()) }
-    guard display != nil || artworkRendering != nil || gridWrap != nil
-      || gridTile != nil || imageShape != nil || accessorySymbol != nil
-      || cardTint != nil || cardImage != nil
-    else { return nil }
+    guard Self.declaresAnything(declarations) || gridWrap != nil || gridTile != nil else { return nil }
     // Argument order is the generated init's (own properties before
     // inherited ones — Nitro flattens `extends` own-props-first).
     return SectionStyle(
       gridWrap: gridWrap,
       gridTile: gridTile,
-      display: display,
-      artworkRendering: artworkRendering,
-      imageShape: imageShape,
-      accessorySymbol: accessorySymbol,
-      cardTint: cardTint,
-      cardImage: cardImage,
+      display: declarations.display,
+      artworkRendering: declarations.artworkRendering,
+      imageShape: declarations.imageShape,
+      accessorySymbol: declarations.accessorySymbol,
+      cardTint: declarations.cardTint,
+      cardImage: declarations.cardImage,
     )
+  }
+
+  /// The declarations a section shares with a track, each nil when absent or unknown.
+  private var trackDeclarations: TrackStyle {
+    TrackStyle(
+      display: display.flatMap { StyleDisplay(fromString: $0.lowercased()) },
+      artworkRendering: artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) },
+      imageShape: imageShape.flatMap { ImageShape(fromString: $0.lowercased()) },
+      // The 'none' sentinel is a legitimate value; only emptiness collapses.
+      accessorySymbol: accessorySymbol?.isEmpty == false ? accessorySymbol : nil,
+      cardTint: cardTint?.isEmpty == false ? cardTint : nil,
+      cardImage: cardImage.flatMap { CardImage(fromString: $0.lowercased()) },
+    )
+  }
+
+  private static func declaresAnything(_ style: TrackStyle) -> Bool {
+    style.display != nil || style.artworkRendering != nil || style.imageShape != nil
+      || style.accessorySymbol != nil || style.cardTint != nil || style.cardImage != nil
   }
 
   /// Snapshot a live track block back to its JSON model (for persistence).
   /// An all-nil block snapshots as no block — the decoders collapse it to
   /// "no declaration" anyway, so never persist the distinction.
   init?(_ style: TrackStyle?) {
-    guard let style,
-          style.display != nil || style.artworkRendering != nil
-          || style.imageShape != nil || style.accessorySymbol != nil
-          || style.cardTint != nil || style.cardImage != nil
-    else { return nil }
+    guard let style, Self.declaresAnything(style) else { return nil }
     self.init(
       display: Self.string(style.display),
       artworkRendering: Self.string(style.artworkRendering),
@@ -234,22 +206,10 @@ extension JsonStyle {
 /// keys in payloads are simply unknown to these models and decode as
 /// ignored dead weight.
 struct JsonSection: Codable {
-  let title: String?
-  let style: JsonStyle?
-  let path: String?
-  let children: [JsonTrack]
-
-  init(
-    title: String? = nil,
-    style: JsonStyle? = nil,
-    path: String? = nil,
-    children: [JsonTrack],
-  ) {
-    self.title = title
-    self.style = style
-    self.path = path
-    self.children = children
-  }
+  var title: String? = nil
+  var style: JsonStyle? = nil
+  var path: String? = nil
+  var children: [JsonTrack]
 }
 
 /// JSON model for per-track HTTP request configuration.
@@ -265,126 +225,46 @@ struct JsonTrackRequest: Codable {
 
 /// JSON model for resolved track (container with children).
 struct JsonResolvedTrack: Codable {
-  let id: String?
-  let path: String
-  let title: String
-  let subtitle: String?
-  let artwork: JsonArtwork?
-  let artist: String?
-  let albumPath: String?
-  let album: String?
-  let description: String?
-  let genre: String?
-  let duration: Double?
-  let sections: [JsonSection]?
-  let children: [JsonTrack]?
-  let src: String?
-  let style: JsonStyle?
-  let disabled: Bool?
-  let live: Bool?
-  let icyCharset: String?
-  let carPlaySiriListButton: String?
-
-  init(
-    id: String? = nil,
-    path: String,
-    title: String,
-    subtitle: String? = nil,
-    artwork: JsonArtwork? = nil,
-    artist: String? = nil,
-    albumPath: String? = nil,
-    album: String? = nil,
-    description: String? = nil,
-    genre: String? = nil,
-    duration: Double? = nil,
-    sections: [JsonSection]? = nil,
-    children: [JsonTrack]? = nil,
-    src: String? = nil,
-    style: JsonStyle? = nil,
-    disabled: Bool? = nil,
-    live: Bool? = nil,
-    icyCharset: String? = nil,
-    carPlaySiriListButton: String? = nil,
-  ) {
-    self.path = path
-    self.title = title
-    self.subtitle = subtitle
-    self.artwork = artwork
-    self.artist = artist
-    self.albumPath = albumPath
-    self.album = album
-    self.description = description
-    self.genre = genre
-    self.duration = duration
-    self.sections = sections
-    self.children = children
-    self.src = src
-    self.style = style
-    self.disabled = disabled
-    self.live = live
-    self.icyCharset = icyCharset
-    self.carPlaySiriListButton = carPlaySiriListButton
-    self.id = id
-  }
+  var id: String? = nil
+  var path: String
+  var title: String
+  var subtitle: String? = nil
+  var artwork: JsonArtwork? = nil
+  var artist: String? = nil
+  var albumPath: String? = nil
+  var album: String? = nil
+  var description: String? = nil
+  var genre: String? = nil
+  var duration: Double? = nil
+  var sections: [JsonSection]? = nil
+  var children: [JsonTrack]? = nil
+  var src: String? = nil
+  var style: JsonStyle? = nil
+  var disabled: Bool? = nil
+  var live: Bool? = nil
+  var icyCharset: String? = nil
+  var carPlaySiriListButton: String? = nil
 }
 
 /// JSON model for individual tracks.
 struct JsonTrack: Codable {
-  let id: String?
-  let path: String?
-  let title: String
-  let subtitle: String?
-  let artwork: JsonArtwork?
-  let artist: String?
-  let albumPath: String?
-  let album: String?
-  let description: String?
-  let genre: String?
-  let duration: Double?
-  let src: String?
-  let request: JsonTrackRequest?
-  let style: JsonStyle?
-  let disabled: Bool?
-  let live: Bool?
-  let icyCharset: String?
-
-  init(
-    id: String? = nil,
-    path: String? = nil,
-    title: String,
-    subtitle: String? = nil,
-    artwork: JsonArtwork? = nil,
-    artist: String? = nil,
-    albumPath: String? = nil,
-    album: String? = nil,
-    description: String? = nil,
-    genre: String? = nil,
-    duration: Double? = nil,
-    src: String? = nil,
-    request: JsonTrackRequest? = nil,
-    style: JsonStyle? = nil,
-    disabled: Bool? = nil,
-    live: Bool? = nil,
-    icyCharset: String? = nil,
-  ) {
-    self.path = path
-    self.title = title
-    self.subtitle = subtitle
-    self.artwork = artwork
-    self.artist = artist
-    self.albumPath = albumPath
-    self.album = album
-    self.description = description
-    self.genre = genre
-    self.duration = duration
-    self.src = src
-    self.request = request
-    self.style = style
-    self.disabled = disabled
-    self.live = live
-    self.icyCharset = icyCharset
-    self.id = id
-  }
+  var id: String? = nil
+  var path: String? = nil
+  var title: String
+  var subtitle: String? = nil
+  var artwork: JsonArtwork? = nil
+  var artist: String? = nil
+  var albumPath: String? = nil
+  var album: String? = nil
+  var description: String? = nil
+  var genre: String? = nil
+  var duration: Double? = nil
+  var src: String? = nil
+  var request: JsonTrackRequest? = nil
+  var style: JsonStyle? = nil
+  var disabled: Bool? = nil
+  var live: Bool? = nil
+  var icyCharset: String? = nil
 }
 
 // MARK: - Snapshot live Nitro types back to JSON models (for persistence)

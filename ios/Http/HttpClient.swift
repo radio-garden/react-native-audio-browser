@@ -13,27 +13,11 @@ final class HttpClient: @unchecked Sendable {
   /// HTTP request configuration (matches Kotlin HttpClient.HttpRequest).
   struct HttpRequest {
     let url: String
-    let method: String
+    let method: HttpMethod
     let headers: [String: String]?
     let body: String?
     let contentType: String
     let userAgent: String
-
-    init(
-      url: String,
-      method: String = "GET",
-      headers: [String: String]? = nil,
-      body: String? = nil,
-      contentType: String = HttpClient.defaultContentType,
-      userAgent: String = HttpClient.defaultUserAgent,
-    ) {
-      self.url = url
-      self.method = method
-      self.headers = headers
-      self.body = body
-      self.contentType = contentType
-      self.userAgent = userAgent
-    }
   }
 
   /// A non-2xx response (matches Kotlin HttpClient.HttpException).
@@ -55,14 +39,14 @@ final class HttpClient: @unchecked Sendable {
 
   enum HttpClientError: LocalizedError {
     case invalidUrl(String)
-    case unsupportedMethod(String)
+    case unsupportedMethod(HttpMethod)
     case notHttp
     case undecodable(String)
 
     var errorDescription: String? {
       switch self {
       case let .invalidUrl(url): "Invalid URL: \(url)"
-      case let .unsupportedMethod(method): "Unsupported HTTP method: \(method)"
+      case let .unsupportedMethod(method): "Unsupported HTTP method: \(method.stringValue)"
       case .notHttp: "Invalid response type"
       case let .undecodable(reason): reason
       }
@@ -74,7 +58,7 @@ final class HttpClient: @unchecked Sendable {
   }
 
   /// Sends `httpRequest` and returns the status code and body, whatever the status.
-  func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
+  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
     guard let url = URL(string: httpRequest.url) else { throw HttpClientError.invalidUrl(httpRequest.url) }
 
     var urlRequest = URLRequest(url: url)
@@ -87,21 +71,19 @@ final class HttpClient: @unchecked Sendable {
       urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
     }
 
-    let method = httpRequest.method.uppercased()
-    switch method {
-    case "GET":
-      urlRequest.httpMethod = method
-    case "POST", "PUT", "PATCH":
-      urlRequest.httpMethod = method
+    urlRequest.httpMethod = httpRequest.method.stringValue
+    switch httpRequest.method {
+    case .get:
+      break
+    case .post, .put, .patch:
       urlRequest.setValue(httpRequest.contentType, forHTTPHeaderField: "Content-Type")
       urlRequest.httpBody = httpRequest.body?.data(using: .utf8)
-    case "DELETE":
-      urlRequest.httpMethod = method
+    case .delete:
       if let body = httpRequest.body {
         urlRequest.setValue(httpRequest.contentType, forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = body.data(using: .utf8)
       }
-    default:
+    case .head, .options:
       throw HttpClientError.unsupportedMethod(httpRequest.method)
     }
 
@@ -143,7 +125,7 @@ final class HttpClient: @unchecked Sendable {
 
 extension HttpClient {
   private func logRequest(_ request: HttpRequest) {
-    logger.debug("→ \(request.method) \(request.url)")
+    logger.debug("→ \(request.method.stringValue) \(request.url)")
     for (key, value) in request.headers ?? [:] {
       logger.debug("  \(key): \(value)")
     }

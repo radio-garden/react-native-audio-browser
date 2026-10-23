@@ -110,6 +110,71 @@
     case options
   }
 
+  enum SearchMode {
+    case any
+    case song
+    case playlist
+    case station
+    case podcast
+    case audiobook
+    case news
+    case music
+    case musicVideo
+    case movie
+    case tvShow
+    case tvShowEpisode
+
+    var stringValue: String {
+      switch self {
+      case .any: "any"
+      case .song: "song"
+      case .playlist: "playlist"
+      case .station: "station"
+      case .podcast: "podcast"
+      case .audiobook: "audiobook"
+      case .news: "news"
+      case .music: "music"
+      case .musicVideo: "music-video"
+      case .movie: "movie"
+      case .tvShow: "tv-show"
+      case .tvShowEpisode: "tv-show-episode"
+      }
+    }
+  }
+
+  enum MediaReference {
+    case my
+    case unknown
+
+    var stringValue: String {
+      switch self {
+      case .my: "my"
+      case .unknown: "unknown"
+      }
+    }
+  }
+
+  struct SearchParams {
+    var mode: SearchMode?
+    var query: String
+    var genre: String?
+    var artist: String?
+    var album: String?
+    var title: String?
+    var playlist: String?
+    var reference: MediaReference
+  }
+
+  struct ImageContext {
+    var width: Double?
+    var height: Double?
+  }
+
+  struct ImageQueryParams {
+    var width: String?
+    var height: String?
+  }
+
   struct ImageSource: Equatable {
     var uri: String
     var method: HttpMethod?

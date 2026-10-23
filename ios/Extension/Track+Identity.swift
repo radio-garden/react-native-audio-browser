@@ -16,3 +16,10 @@ extension Track {
     return src
   }
 }
+
+extension Track {
+  /// Playable and not Disabled: a track the library may queue and play.
+  var isPlayable: Bool {
+    src != nil && disabled != true
+  }
+}

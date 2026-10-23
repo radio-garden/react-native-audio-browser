@@ -8,11 +8,6 @@ struct RouteMatch {
 
   /// Specificity score (higher = more specific match)
   let specificity: Int
-
-  init(params: [String: String] = [:], specificity: Int = 0) {
-    self.params = params
-    self.specificity = specificity
-  }
 }
 
 /// Protocol for route entries that can be matched.
@@ -20,165 +15,99 @@ protocol RouteEntry {
   var path: String { get }
 }
 
-/// Simple route matcher for path patterns with parameter extraction.
+/// Route pattern matching with parameter extraction.
 ///
 /// Supports patterns like:
 /// - /artists - exact match
 /// - /artists/{id} - parameter extraction
-/// - /artists/{id}/albums - multiple segments with parameters
 /// - /artists/* - wildcard match (matches any single segment)
-/// - /files/** - tail wildcard (matches remaining path segments)
+/// - /files/** - tail wildcard (matches remaining path segments, captured as `tail`)
 ///
-/// Route specificity rules:
-/// - More path segments = higher specificity
-/// - Constant segments > parameter segments > wildcards > tail wildcards
-/// - Most specific route wins
-final class SimpleRouter {
-  /// Finds the best matching route for the given path.
-  ///
-  /// - Parameters:
-  ///   - path: The incoming path to match (e.g., "/artists/123")
-  ///   - routes: Array of route entries to match against
-  /// - Returns: Tuple of (route, match result) or nil if no match
-  func findBestMatch<T: RouteEntry>(path: String, routes: [T]) -> (route: T, match: RouteMatch)? {
-    var bestMatch: (route: T, match: RouteMatch)?
+/// The most specific route wins, the first on a tie: constant segments over parameters over
+/// wildcards over the tail wildcard, then more segments.
+enum SimpleRouter {
+  /// The route the top-level `browse:` source is flattened into.
+  static let defaultRoutePath = "__default__"
+  static let tabsRoutePath = "__tabs__"
+  static let searchRoutePath = "__search__"
 
+  /// The route that browses `path`: the best match among the routes that are not tabs, search or
+  /// the default, else the default route with `path` as its `path` param.
+  static func browseRoute<T: RouteEntry>(for path: String, in routes: [T]) -> (route: T, match: RouteMatch)? {
+    let browseRoutes = routes.filter {
+      $0.path != tabsRoutePath && $0.path != searchRoutePath && $0.path != defaultRoutePath
+    }
+    if let match = findBestMatch(path: path, routes: browseRoutes) {
+      return match
+    }
+    guard let defaultRoute = routes.first(where: { $0.path == defaultRoutePath }) else { return nil }
+    return (defaultRoute, RouteMatch(params: ["path": path], specificity: 0))
+  }
+
+  /// The most specific of `routes` matching `path`, or nil when none does.
+  static func findBestMatch<T: RouteEntry>(path: String, routes: [T]) -> (route: T, match: RouteMatch)? {
+    var best: (route: T, match: RouteMatch)?
     for route in routes {
-      if let match = matchPattern(pattern: route.path, path: path) {
-        if bestMatch == nil || match.specificity > bestMatch!.match.specificity {
-          bestMatch = (route, match)
-        }
+      guard let match = match(pattern: route.path, path: path) else { continue }
+      if best.map({ match.specificity > $0.match.specificity }) ?? true {
+        best = (route, match)
+      }
+    }
+    return best
+  }
+
+  private enum Segment {
+    case constant(Substring)
+    case param(String)
+    case wildcard
+
+    init(_ segment: Substring) {
+      if segment.hasPrefix("{"), segment.hasSuffix("}") {
+        self = .param(String(segment.dropFirst().dropLast()))
+      } else if segment == "*" {
+        self = .wildcard
+      } else {
+        self = .constant(segment)
       }
     }
 
-    return bestMatch
+    var specificity: Int {
+      switch self {
+      case .constant: 1000
+      case .param: 100
+      case .wildcard: 10
+      }
+    }
   }
 
-  /// Attempts to match a single pattern against a path.
-  ///
-  /// - Parameters:
-  ///   - pattern: Route pattern (e.g., "/artists/{id}", "/files/*", "/api/**")
-  ///   - path: Incoming path (e.g., "/artists/123")
-  /// - Returns: RouteMatch if successful, nil otherwise
-  private func matchPattern(pattern: String, path: String) -> RouteMatch? {
-    let patternSegments = pattern.split(separator: "/").map(String.init)
-    let pathSegments = path.split(separator: "/").map(String.init)
+  private static func match(pattern: String, path: String) -> RouteMatch? {
+    var patternSegments = pattern.split(separator: "/")
+    let hasTailWildcard = patternSegments.last == "**"
+    if hasTailWildcard { patternSegments.removeLast() }
+    let pathSegments = path.split(separator: "/")
+    guard hasTailWildcard
+      ? pathSegments.count >= patternSegments.count
+      : pathSegments.count == patternSegments.count
+    else { return nil }
 
     var params: [String: String] = [:]
-    var constantSegments = 0
-    var parameterSegments = 0
-    var wildcardSegments = 0
-    var hasTailWildcard = false
-
-    // Check for tail wildcard at end
-    if let lastSegment = patternSegments.last, lastSegment == "**" {
-      hasTailWildcard = true
-
-      // For tail wildcard, pattern must have <= path segments
-      if patternSegments.count - 1 > pathSegments.count {
-        return nil
+    // Each segment counts once more, the tail wildcard twice (its segment and its own point).
+    var specificity = patternSegments.count + (hasTailWildcard ? 2 : 0)
+    for (patternSegment, pathSegment) in zip(patternSegments, pathSegments) {
+      let segment = Segment(patternSegment)
+      switch segment {
+      case let .constant(constant):
+        guard constant == pathSegment else { return nil }
+      case let .param(name):
+        params[name] = String(pathSegment)
+      case .wildcard:
+        break
       }
-
-      // Match all segments except the tail wildcard
-      for i in 0 ..< (patternSegments.count - 1) {
-        guard
-          matchSingleSegment(
-            patternSegment: patternSegments[i],
-            pathSegment: pathSegments[i],
-            params: &params,
-          )
-        else {
-          return nil
-        }
-
-        updateSegmentCounts(
-          patternSegment: patternSegments[i],
-          constantSegments: &constantSegments,
-          parameterSegments: &parameterSegments,
-          wildcardSegments: &wildcardSegments,
-        )
-      }
-
-      // Capture remaining path segments as "tail" parameter (matches Kotlin behavior)
-      if pathSegments.count > patternSegments.count - 1 {
-        let remainingSegments = pathSegments.dropFirst(patternSegments.count - 1)
-        params["tail"] = remainingSegments.joined(separator: "/")
-      }
-    } else {
-      // Normal matching - must have same number of segments
-      if patternSegments.count != pathSegments.count {
-        return nil
-      }
-
-      for i in patternSegments.indices {
-        guard
-          matchSingleSegment(
-            patternSegment: patternSegments[i],
-            pathSegment: pathSegments[i],
-            params: &params,
-          )
-        else {
-          return nil
-        }
-
-        updateSegmentCounts(
-          patternSegment: patternSegments[i],
-          constantSegments: &constantSegments,
-          parameterSegments: &parameterSegments,
-          wildcardSegments: &wildcardSegments,
-        )
-      }
+      specificity += segment.specificity
     }
-
-    // Specificity calculation (higher = more specific):
-    // - Constants: 1000 points each
-    // - Parameters: 100 points each
-    // - Single wildcards: 10 points each
-    // - Tail wildcard: 1 point
-    // - Base path length: segments count
-    let specificity =
-      (constantSegments * 1000)
-        + (parameterSegments * 100)
-        + (wildcardSegments * 10)
-        + (hasTailWildcard ? 1 : 0)
-        + patternSegments.count
-
+    if hasTailWildcard, pathSegments.count > patternSegments.count {
+      params["tail"] = pathSegments.dropFirst(patternSegments.count).joined(separator: "/")
+    }
     return RouteMatch(params: params, specificity: specificity)
-  }
-
-  private func matchSingleSegment(
-    patternSegment: String,
-    pathSegment: String,
-    params: inout [String: String],
-  ) -> Bool {
-    // Parameter segment: {paramName}
-    if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
-      let paramName = String(patternSegment.dropFirst().dropLast())
-      params[paramName] = pathSegment
-      return true
-    }
-
-    // Single wildcard: *
-    if patternSegment == "*" {
-      return true
-    }
-
-    // Constant segment: must match exactly
-    return patternSegment == pathSegment
-  }
-
-  private func updateSegmentCounts(
-    patternSegment: String,
-    constantSegments: inout Int,
-    parameterSegments: inout Int,
-    wildcardSegments: inout Int,
-  ) {
-    if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
-      parameterSegments += 1
-    } else if patternSegment == "*" {
-      wildcardSegments += 1
-    } else {
-      constantSegments += 1
-    }
   }
 }

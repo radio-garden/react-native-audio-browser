@@ -111,4 +111,57 @@ struct SectionScopeTests {
   @Test func childlessPageHasNoSections() {
     #expect(ResolvedTrack(path: "/p", title: "P").normalizedSections == nil)
   }
+
+  // MARK: - Queue
+
+  private func queue(_ sections: [Section], _ path: String, singleTrack: Bool = false) -> ([String?], Int)? {
+    SectionScope.queue(in: sections, path: path, singleTrack: singleTrack).map { ($0.tracks.map(\.src), $0.selectedIndex) }
+  }
+
+  @Test func queuesThePlayableTracksOfTheTappedSection() {
+    let page = [
+      section("First", [track("a"), Track(id: "off", src: "off", disabled: true), Track(path: "/browse"), track("b")]),
+      section("Second", [track("c")]),
+    ]
+    let result = queue(page, "/p?__trackId=b&__index=3")
+    #expect(result?.0 == ["a", "b"])
+    #expect(result?.1 == 1)
+  }
+
+  @Test func thePinnedCopyIsTheSelectedOne() {
+    let page = [section(nil, [track("a"), track("b"), track("a")])]
+    #expect(queue(page, "/p?__trackId=a&__index=2")?.1 == 2)
+    #expect(queue(page, "/p?__trackId=a")?.1 == 0)
+  }
+
+  @Test func aStaleIndexSelectsTheFirstIdentityMatch() {
+    let page = [section(nil, [track("x"), track("a"), track("a")])]
+    #expect(queue(page, "/p?__trackId=a&__index=0")?.1 == 1)
+  }
+
+  @Test func singleTrackQueuesOnlyTheTappedTrack() {
+    let page = [section(nil, [track("a"), track("b"), track("c")])]
+    let result = queue(page, "/p?__trackId=b&__index=1", singleTrack: true)
+    #expect(result?.0 == ["b"])
+    #expect(result?.1 == 0)
+  }
+
+  @Test func aDisabledTappedTrackQueuesNothing() {
+    let page = [section(nil, [track("a"), Track(id: "off", src: "off", disabled: true)])]
+    #expect(queue(page, "/p?__trackId=off&__index=1") == nil)
+    #expect(queue(page, "/p?__trackId=off") == nil)
+  }
+
+  @Test func aVanishedIdentityOrAPlainPathQueuesNothing() {
+    let page = [section(nil, [track("a")])]
+    #expect(queue(page, "/p?__trackId=gone") == nil)
+    #expect(queue(page, "/p") == nil)
+  }
+
+  @Test func isPlayableNeedsASrcAndNoDisabled() {
+    #expect(Track(src: "s").isPlayable)
+    #expect(Track(src: "s", disabled: false).isPlayable)
+    #expect(!Track(src: "s", disabled: true).isPlayable)
+    #expect(!Track(path: "/p").isPlayable)
+  }
 }

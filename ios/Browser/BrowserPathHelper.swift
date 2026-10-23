@@ -1,9 +1,12 @@
 import Foundation
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// Utility for handling browser paths and contextual URLs in the media browser system.
 ///
 /// Handles two types of special paths:
-/// 1. System paths (prefixed with `/__`): root, search, and offline paths
+/// 1. Search paths (`/__search?q=…`)
 /// 2. Contextual URLs: Embed parent context in track identifiers for playback integration
 ///
 /// Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}`
@@ -18,14 +21,8 @@ import Foundation
 /// - Cache lookup to work consistently
 /// - Parent context to be preserved for queue restoration
 enum BrowserPathHelper {
-  /// Root path for media browsing
-  static let rootPath = "/__root"
-
   /// Search path prefix (full path is /__search?q=query)
   static let searchPathPrefix = "/__search"
-
-  /// Offline error placeholder media ID
-  static let offlinePath = "/__offline"
 
   /// Character set for percent-encoding query parameter keys and values.
   /// Starts from `.urlQueryAllowed` but removes characters that have special
@@ -41,11 +38,6 @@ enum BrowserPathHelper {
 
   /// Query parameter name for the tapped child's page position (tie-breaker)
   private static let contextualIndexParam = "__index"
-
-  /// Check if a path is a special system path (not a regular navigation path)
-  static func isSpecialPath(_ path: String) -> Bool {
-    path == rootPath || isSearchPath(path)
-  }
 
   /// Check if a path is a search path (`/__search?q=…`)
   static func isSearchPath(_ path: String) -> Bool {
@@ -219,5 +211,26 @@ enum BrowserPathHelper {
     }
 
     return "\(normalizedBase)/\(normalizedPath)"
+  }
+}
+
+extension BrowserPathHelper {
+  /// `sections` with a contextual path on every playable-only track (a `src` and no `path`), so
+  /// it can be addressed: `parentPath`, the track's identity and its flat page position (children
+  /// concatenated in section order). Throws when a track has neither `path` nor `src`.
+  static func stampingContextualPaths(_ sections: [Section], parentPath: String) throws -> [Section] {
+    var flatIndex = 0
+    return try sections.map { section in
+      try section.copying(children: section.children.map { track in
+        defer { flatIndex += 1 }
+        if track.path != nil { return track }
+        guard track.src != nil, let identity = track.identity else {
+          throw BrowserError.invalidConfiguration(
+            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
+          )
+        }
+        return track.copying(path: build(parentPath: parentPath, trackId: identity, index: flatIndex))
+      })
+    }
   }
 }
