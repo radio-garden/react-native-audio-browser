@@ -65,6 +65,7 @@ let package = Package(
         "Extension/URLError+Connectivity.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Util/Emitter.swift",
+        "Util/ConcurrentMap.swift",
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/LRUCache.swift",

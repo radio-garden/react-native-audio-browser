@@ -39,9 +39,9 @@ extension CarPlaySession {
     // A tab bar with no tabs renders blank. A gate shows one full-screen page instead;
     // otherwise it is the empty-content error, like any other failure (ADR 0001).
     guard !tabs.isEmpty else {
-      if gated, let chrome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: .browse, path: nil, search: nil)) {
+      if gated, let chrome = await browseGates(for: [nil])[0] {
         guard isCurrent(build) else { return }
-        audioBrowser.onGate(GateEvent(reason: .browse))
+        reportGates([chrome], reason: .browse)
         interfaceController.safeSetRoot(makeGatePage(chrome, path: nil, tab: nil), animated: true)
       } else {
         await showRootError(.code(.emptyContent), build: build)
@@ -49,11 +49,9 @@ extension CarPlaySession {
       return
     }
 
-    let chromes = gated ? await gates(for: tabs) : tabs.map { _ in nil }
+    let chromes = gated ? await browseGates(for: tabs.map(\.path)) : tabs.map { _ in nil }
     guard isCurrent(build) else { return }
-    for _ in chromes.compactMap(\.self) {
-      audioBrowser.onGate(GateEvent(reason: .browse))
-    }
+    reportGates(chromes, reason: .browse)
     let templates = zip(tabs, chromes).map { tab, chrome in
       chrome.map { makeGatePage($0, path: tab.path, tab: tab) } ?? makeTabTemplate(for: tab)
     }
@@ -123,24 +121,24 @@ extension CarPlaySession {
   /// request is allowed.
   func gate(_ reason: GateReason, path: String?, search: SearchParams? = nil) async -> Gate? {
     let chrome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: reason, path: path, search: search))
-    if chrome != nil { audioBrowser.onGate(GateEvent(reason: reason)) }
+    reportGates([chrome], reason: reason)
     return chrome
   }
 
-  /// One decision per tab, made concurrently and returned in tab order. Reports nothing: the
-  /// caller fires `onGate` once it knows its build is still current.
-  private func gates(for tabs: [Track]) async -> [Gate?] {
+  /// One browse decision per path, made concurrently and returned in path order. Reports
+  /// nothing: the caller reports once it knows its build is still current.
+  private func browseGates(for paths: [String?]) async -> [Gate?] {
     let browseGate = audioBrowser.browseGate
-    let decisions = tabs.map { tab in
-      Task<Gate?, Never> { @MainActor in
-        await browseGate.decide(NativeGateRequest(reason: .browse, path: tab.path, search: nil))
-      }
+    return await paths.concurrentMap { path in
+      await browseGate.decide(NativeGateRequest(reason: .browse, path: path, search: nil))
     }
-    var chromes: [Gate?] = []
-    for decision in decisions {
-      await chromes.append(decision.value)
+  }
+
+  /// Fires `onGate` once for each request the gate gated.
+  private func reportGates(_ chromes: [Gate?], reason: GateReason) {
+    for _ in chromes.compactMap(\.self) {
+      audioBrowser.onGate(GateEvent(reason: reason))
     }
-    return chromes
   }
 
   /// A tab's content shell, which loads when it first appears.
