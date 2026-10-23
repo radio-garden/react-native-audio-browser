@@ -41,7 +41,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest: public jni::JavaClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest;";
 
   public:
     /**
@@ -123,7 +123,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx::invoke_cxx)});
     }

@@ -16,3 +16,15 @@ public indirect enum Variant_String_ArtworkVariants {
   case first(String)
   case second(ArtworkVariants)
 }
+
+public extension Variant_String_ArtworkVariants {
+  func asType<T>(_ type: T.Type = T.self) -> T? {
+    switch self {
+      case .first(let value): return value as? T
+      case .second(let value): return value as? T
+    }
+  }
+  func isType<T>(_ type: T.Type = T.self) -> Bool {
+    return self.asType(type) != nil
+  }
+}

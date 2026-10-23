@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class NativeGateRequest(
   val search: SearchParams?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeGateRequest) return false
+    return Objects.deepEquals(this.reason, other.reason)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.search, other.search)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      reason,
+      path,
+      search
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

@@ -24,7 +24,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JVariant_Boolean_RetryConfig: public jni::JavaClass<JVariant_Boolean_RetryConfig> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig;";
 
     static jni::local_ref<JVariant_Boolean_RetryConfig> create_0(jboolean value) {
       static const auto method = javaClassStatic()->getStaticMethod<JVariant_Boolean_RetryConfig(jboolean)>("create");
@@ -49,7 +49,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JVariant_Boolean_RetryConfig_impl {
     class First final: public jni::JavaClass<First, JVariant_Boolean_RetryConfig> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig$First;";
     
       [[nodiscard]] jboolean getValue() const {
         static const auto field = javaClassStatic()->getField<jboolean>("value");
@@ -59,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JVariant_Boolean_RetryConfig> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_RetryConfig$Second;";
     
       [[nodiscard]] jni::local_ref<JRetryConfig> getValue() const {
         static const auto field = javaClassStatic()->getField<JRetryConfig>("value");

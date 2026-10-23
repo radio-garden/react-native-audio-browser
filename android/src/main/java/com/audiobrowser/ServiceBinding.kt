@@ -19,18 +19,22 @@ internal class ServiceBinding(private val context: Context) {
   var isBound: Boolean = false
     private set
 
+  @Volatile private var bindSucceeded: Boolean = false
+
   /**
-   * Binds if not already bound, and returns whether a binding is held afterwards. A second call
-   * while bound is a no-op: Android would otherwise count the extra bind and expect a matching
+   * Binds if not already bound, and returns whether the service will connect: what
+   * [Context.bindService] returned for the binding held. A second call while bound is a no-op that
+   * returns the same answer: Android would otherwise count the extra bind and expect a matching
    * unbind.
    */
   fun bind(intent: Intent, connection: ServiceConnection): Boolean {
-    if (isBound) return true
+    if (isBound) return bindSucceeded
     // Marked bound whatever the result: Android registers the connection before it asks the
     // ActivityManager, so a false return still leaves one to release — "regardless of the return
     // value, you should later call unbindService()".
     isBound = true
-    return context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    bindSucceeded = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    return bindSucceeded
   }
 
   /**

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class Section(
   val children: Array<Track>
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is Section) return false
+    return Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.style, other.style)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.children, other.children)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      title,
+      style,
+      path,
+      children
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

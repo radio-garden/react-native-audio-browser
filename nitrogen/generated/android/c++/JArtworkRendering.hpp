@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "ArtworkRendering" and the the Kotlin enum "ArtworkRendering".
+   * The C++ JNI bridge between the C++ enum "ArtworkRendering" and the Kotlin enum "ArtworkRendering".
    */
   struct JArtworkRendering final: public jni::JavaClass<JArtworkRendering> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ArtworkRendering;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ArtworkRendering;";
 
   public:
     /**

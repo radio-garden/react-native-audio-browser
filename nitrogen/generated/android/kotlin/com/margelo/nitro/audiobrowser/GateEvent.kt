@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -22,6 +23,18 @@ data class GateEvent(
   val reason: GateReason
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is GateEvent) return false
+    return Objects.deepEquals(this.reason, other.reason)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      reason
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

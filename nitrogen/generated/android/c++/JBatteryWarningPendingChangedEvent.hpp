@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "BatteryWarningPendingChangedEvent" and the the Kotlin data class "BatteryWarningPendingChangedEvent".
+   * The C++ JNI bridge between the C++ struct "BatteryWarningPendingChangedEvent" and the Kotlin data class "BatteryWarningPendingChangedEvent".
    */
   struct JBatteryWarningPendingChangedEvent final: public jni::JavaClass<JBatteryWarningPendingChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BatteryWarningPendingChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BatteryWarningPendingChangedEvent;";
 
   public:
     /**

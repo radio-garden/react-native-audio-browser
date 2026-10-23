@@ -28,7 +28,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_Output: public jni::JavaClass<JFunc_void_Output> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_Output;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_Output;";
 
   public:
     /**
@@ -64,7 +64,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_Output_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_Output_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_Output_cxx::invoke_cxx)});
     }

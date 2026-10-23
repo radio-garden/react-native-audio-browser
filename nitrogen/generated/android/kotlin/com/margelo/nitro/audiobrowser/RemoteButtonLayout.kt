@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -28,6 +29,22 @@ data class RemoteButtonLayout(
   val overflow: Array<RemoteButton>
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is RemoteButtonLayout) return false
+    return Objects.deepEquals(this.back, other.back)
+      && Objects.deepEquals(this.forward, other.forward)
+      && Objects.deepEquals(this.overflow, other.overflow)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      back,
+      forward,
+      overflow
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

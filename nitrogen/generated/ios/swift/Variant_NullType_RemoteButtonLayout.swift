@@ -16,3 +16,15 @@ public indirect enum Variant_NullType_RemoteButtonLayout {
   case first(NullType)
   case second(RemoteButtonLayout)
 }
+
+public extension Variant_NullType_RemoteButtonLayout {
+  func asType<T>(_ type: T.Type = T.self) -> T? {
+    switch self {
+      case .first(let value): return value as? T
+      case .second(let value): return value as? T
+    }
+  }
+  func isType<T>(_ type: T.Type = T.self) -> Bool {
+    return self.asType(type) != nil
+  }
+}

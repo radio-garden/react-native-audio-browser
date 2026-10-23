@@ -20,11 +20,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "RemoteButtonLayout" and the the Kotlin data class "RemoteButtonLayout".
+   * The C++ JNI bridge between the C++ struct "RemoteButtonLayout" and the Kotlin data class "RemoteButtonLayout".
    */
   struct JRemoteButtonLayout final: public jni::JavaClass<JRemoteButtonLayout> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteButtonLayout;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteButtonLayout;";
 
   public:
     /**
@@ -43,16 +43,16 @@ namespace margelo::nitro::audiobrowser {
       return RemoteButtonLayout(
         back != nullptr ? std::make_optional(back->toCpp()) : std::nullopt,
         forward != nullptr ? std::make_optional(forward->toCpp()) : std::nullopt,
-        [&]() {
-          size_t __size = overflow->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<RemoteButton> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = overflow->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()
+        }(overflow)
       );
     }
 
@@ -69,16 +69,16 @@ namespace margelo::nitro::audiobrowser {
         clazz,
         value.back.has_value() ? JRemoteButton::fromCpp(value.back.value()) : nullptr,
         value.forward.has_value() ? JRemoteButton::fromCpp(value.forward.value()) : nullptr,
-        [&]() {
-          size_t __size = value.overflow.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JRemoteButton>> __array = jni::JArrayClass<JRemoteButton>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.overflow[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JRemoteButton::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }()
+        }(value.overflow)
       );
     }
   };

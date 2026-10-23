@@ -31,7 +31,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_PlaybackErrorEvent: public jni::JavaClass<JFunc_void_PlaybackErrorEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_PlaybackErrorEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_PlaybackErrorEvent;";
 
   public:
     /**
@@ -67,7 +67,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_PlaybackErrorEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_PlaybackErrorEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_PlaybackErrorEvent_cxx::invoke_cxx)});
     }

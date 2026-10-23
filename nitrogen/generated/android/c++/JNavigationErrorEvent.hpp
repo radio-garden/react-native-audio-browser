@@ -22,11 +22,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NavigationErrorEvent" and the the Kotlin data class "NavigationErrorEvent".
+   * The C++ JNI bridge between the C++ struct "NavigationErrorEvent" and the Kotlin data class "NavigationErrorEvent".
    */
   struct JNavigationErrorEvent final: public jni::JavaClass<JNavigationErrorEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorEvent;";
 
   public:
     /**

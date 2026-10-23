@@ -29,11 +29,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "TransformableRequestConfig" and the the Kotlin data class "TransformableRequestConfig".
+   * The C++ JNI bridge between the C++ struct "TransformableRequestConfig" and the Kotlin data class "TransformableRequestConfig".
    */
   struct JTransformableRequestConfig final: public jni::JavaClass<JTransformableRequestConfig> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TransformableRequestConfig;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TransformableRequestConfig;";
 
   public:
     /**

@@ -87,6 +87,7 @@ import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -916,24 +917,27 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun load(track: Track) {
+    // Throws without a player, as on iOS: a track asked for and silently dropped hides a mistake.
+    val player = player
     launchInScope { player.load(track) }
   }
 
-  override fun reset() = runBlockingOnMain {
-    player.stop()
-    player.clear()
-    // clear() while IDLE emits no engine event, so the state machine never
-    // leaves STOPPED — a reset queue is "nothing loaded".
-    player.setPlaybackState(PlaybackState.NONE)
-  }
+  override fun reset() =
+    commandPlayer("reset") { player ->
+      player.stop()
+      player.clear()
+      // clear() while IDLE emits no engine event, so the state machine never
+      // leaves STOPPED — a reset queue is "nothing loaded".
+      player.setPlaybackState(PlaybackState.NONE)
+    }
 
-  override fun play() = runBlockingOnMain { player.play() }
+  override fun play() = commandPlayer("play") { it.play() }
 
-  override fun pause() = runBlockingOnMain { player.pause() }
+  override fun pause() = commandPlayer("pause") { it.pause() }
 
-  override fun togglePlayback() = runBlockingOnMain { player.togglePlayback() }
+  override fun togglePlayback() = commandPlayer("togglePlayback") { it.togglePlayback() }
 
-  override fun stop() = runBlockingOnMain { player.stop() }
+  override fun stop() = commandPlayer("stop") { it.stop() }
 
   override fun setPlayWhenReady(playWhenReady: Boolean) = runBlockingOnMain {
     // Pre-setup this stages the intent for the player to come up with — never throws.
@@ -945,35 +949,41 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     connectedService?.player?.playWhenReady ?: pendingPlayWhenReady ?: false
   }
 
-  override fun seekTo(position: Double) = runBlockingOnMain {
-    player.seekTo((position * 1000).toLong(), TimeUnit.MILLISECONDS)
-  }
+  override fun seekTo(position: Double) =
+    commandPlayer("seekTo") { player ->
+      player.seekTo((position * 1000).toLong(), TimeUnit.MILLISECONDS)
+    }
 
-  override fun seekBy(offset: Double) = runBlockingOnMain {
-    player.seekBy((offset * 1000).toLong(), TimeUnit.MILLISECONDS)
-  }
+  override fun seekBy(offset: Double) =
+    commandPlayer("seekBy") { player ->
+      player.seekBy((offset * 1000).toLong(), TimeUnit.MILLISECONDS)
+    }
 
-  override fun seekToLiveEdge() = runBlockingOnMain { player.seekToLiveEdge() }
+  override fun seekToLiveEdge() = commandPlayer("seekToLiveEdge") { it.seekToLiveEdge() }
 
-  override fun setVolume(level: Double) = runBlockingOnMain { player.volume = level.toFloat() }
+  override fun setVolume(level: Double) = commandPlayer("setVolume") { it.volume = level.toFloat() }
 
-  override fun getVolume(): Double = runBlockingOnMain { player.volume.toDouble() }
+  override fun getVolume(): Double = readPlayer(1.0) { it.volume.toDouble() }
 
-  override fun setRate(rate: Double) = runBlockingOnMain { player.playbackSpeed = rate.toFloat() }
+  override fun setRate(rate: Double) =
+    commandPlayer("setRate") { it.playbackSpeed = rate.toFloat() }
 
-  override fun getRate(): Double = runBlockingOnMain { player.playbackSpeed.toDouble() }
+  override fun getRate(): Double = readPlayer(1.0) { it.playbackSpeed.toDouble() }
 
-  override fun getProgress(): Progress = runBlockingOnMain {
-    Progress(
-      duration = player.duration.toSeconds(),
-      position = player.position.toSeconds(),
-      buffered = player.bufferedPosition.toSeconds(),
-    )
-  }
+  override fun getProgress(): Progress =
+    readPlayer(Progress(duration = 0.0, position = 0.0, buffered = 0.0)) { player ->
+      Progress(
+        duration = player.duration.toSeconds(),
+        position = player.position.toSeconds(),
+        buffered = player.bufferedPosition.toSeconds(),
+      )
+    }
 
-  override fun getPlayback(): Playback = runBlockingOnMain { player.getPlayback() }
+  override fun getPlayback(): Playback =
+    readPlayer(Playback(PlaybackState.NONE, null)) { it.getPlayback() }
 
-  override fun getPlayingState(): PlayingState = runBlockingOnMain { player.getPlayingState() }
+  override fun getPlayingState(): PlayingState =
+    readPlayer(PlayingState(playing = false, buffering = false)) { it.getPlayingState() }
 
   override fun getRepeatMode(): RepeatMode = runBlockingOnMain {
     connectedService?.player?.repeatMode ?: pendingRepeatMode ?: RepeatMode.OFF
@@ -984,121 +994,121 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     connectedService?.player?.let { it.repeatMode = mode } ?: run { pendingRepeatMode = mode }
   }
 
-  override fun getShuffleEnabled(): Boolean = runBlockingOnMain { player.shuffleMode }
+  override fun getShuffleEnabled(): Boolean = readPlayer(false) { it.shuffleMode }
 
-  override fun setShuffleEnabled(enabled: Boolean) = runBlockingOnMain {
-    player.shuffleMode = enabled
-  }
+  override fun setShuffleEnabled(enabled: Boolean) =
+    commandPlayer("setShuffleEnabled") { player -> player.shuffleMode = enabled }
 
-  override fun setPlaybackIntervalEnabled(enabled: Boolean) = runBlockingOnMain {
-    player.setPlaybackIntervalEnabled(enabled)
-  }
+  override fun setPlaybackIntervalEnabled(enabled: Boolean) =
+    commandPlayer("setPlaybackIntervalEnabled") { player ->
+      player.setPlaybackIntervalEnabled(enabled)
+    }
 
-  override fun getPlaybackError(): PlaybackError? = runBlockingOnMain { player.playbackError }
+  override fun getPlaybackError(): PlaybackError? = readPlayer(null) { it.playbackError }
 
-  override fun retry() = runBlockingOnMain { player.prepare() }
+  override fun retry() = commandPlayer("retry") { it.prepare() }
 
   // ============================================================================
   // MARK: Queue Management
   // ============================================================================
 
-  override fun add(tracks: Array<Track>, insertBeforeIndex: Double?) = runBlockingOnMain {
-    val inputIndex = insertBeforeIndex?.toInt() ?: -1
-    player.add(tracks, inputIndex)
-  }
-
-  override fun move(fromIndex: Double, toIndex: Double) = runBlockingOnMain {
-    player.move(fromIndex.toInt(), toIndex.toInt())
-  }
-
-  override fun remove(indexes: DoubleArray) = runBlockingOnMain {
-    val indexList = indexes.map { it.toInt() }
-    player.remove(indexList)
-  }
-
-  override fun removeUpcomingTracks() = runBlockingOnMain { player.removeUpcomingTracks() }
-
-  override fun skip(index: Double, initialPosition: Double?) = runBlockingOnMain {
-    player.skipTo(index.toInt())
-
-    if (initialPosition != null && initialPosition >= 0) {
-      player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+  override fun add(tracks: Array<Track>, insertBeforeIndex: Double?) =
+    commandPlayer("add") { player ->
+      val inputIndex = insertBeforeIndex?.toInt() ?: -1
+      player.add(tracks, inputIndex)
     }
-  }
 
-  override fun skipToNext(initialPosition: Double?) = runBlockingOnMain {
-    player.next()
+  override fun move(fromIndex: Double, toIndex: Double) =
+    commandPlayer("move") { player -> player.move(fromIndex.toInt(), toIndex.toInt()) }
 
-    if (initialPosition != null && initialPosition >= 0) {
-      player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+  override fun remove(indexes: DoubleArray) =
+    commandPlayer("remove") { player ->
+      val indexList = indexes.map { it.toInt() }
+      player.remove(indexList)
     }
-  }
 
-  override fun skipToPrevious(initialPosition: Double?) = runBlockingOnMain {
-    player.previous()
+  override fun removeUpcomingTracks() =
+    commandPlayer("removeUpcomingTracks") { it.removeUpcomingTracks() }
 
-    if (initialPosition != null && initialPosition >= 0) {
-      player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+  override fun skip(index: Double, initialPosition: Double?) =
+    commandPlayer("skip") { player ->
+      player.skipTo(index.toInt())
+
+      if (initialPosition != null && initialPosition >= 0) {
+        player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+      }
     }
-  }
+
+  override fun skipToNext(initialPosition: Double?) =
+    commandPlayer("skipToNext") { player ->
+      player.next()
+
+      if (initialPosition != null && initialPosition >= 0) {
+        player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+      }
+    }
+
+  override fun skipToPrevious(initialPosition: Double?) =
+    commandPlayer("skipToPrevious") { player ->
+      player.previous()
+
+      if (initialPosition != null && initialPosition >= 0) {
+        player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
+      }
+    }
 
   override fun setQueue(tracks: Array<Track>, startIndex: Double?, startPosition: Double?) =
-    runBlockingOnMain {
+    commandPlayer("setQueue") { player ->
       player.setQueue(tracks, startIndex?.toInt() ?: 0, ((startPosition ?: 0.0) * 1000).toLong())
     }
 
-  override fun setActiveTrackFavorited(favorited: Boolean): Unit = runBlockingOnMain {
-    // Applied-result is for MediaSession honesty; the JS API stays fire-and-forget.
-    player.setActiveTrackFavorited(favorited)
-    Unit
-  }
-
-  override fun toggleActiveTrackFavorited(): Unit = runBlockingOnMain {
-    player.toggleActiveTrackFavorited()
-    Unit
-  }
-
-  override fun getQueue(): Array<Track> = runBlockingOnMain { player.tracks }
-
-  override fun getTrack(index: Double): Track? = runBlockingOnMain {
-    try {
-      player.getTrack(index.toInt())
-    } catch (e: IllegalArgumentException) {
-      null
+  override fun setActiveTrackFavorited(favorited: Boolean): Unit =
+    commandPlayer("setActiveTrackFavorited") { player ->
+      // Applied-result is for MediaSession honesty; the JS API stays fire-and-forget.
+      player.setActiveTrackFavorited(favorited)
     }
-  }
 
-  override fun getActiveTrackIndex(): Double? = runBlockingOnMain {
-    player.currentIndex?.toDouble()
-  }
+  override fun toggleActiveTrackFavorited(): Unit =
+    commandPlayer("toggleActiveTrackFavorited") { it.toggleActiveTrackFavorited() }
 
-  override fun getActiveTrack(): Track? = runBlockingOnMain { player.currentTrack }
+  override fun getQueue(): Array<Track> = readPlayer(emptyArray()) { it.tracks }
+
+  override fun getTrack(index: Double): Track? =
+    readPlayer(null) { player ->
+      try {
+        player.getTrack(index.toInt())
+      } catch (e: IllegalArgumentException) {
+        null
+      }
+    }
+
+  override fun getActiveTrackIndex(): Double? = readPlayer(null) { it.currentIndex?.toDouble() }
+
+  override fun getActiveTrack(): Track? = readPlayer(null) { it.currentTrack }
 
   // ============================================================================
   // MARK: Now Playing Metadata
   // ============================================================================
 
-  override fun updateNowPlaying(update: NowPlayingUpdate?) = runBlockingOnMain {
-    player.nowPlaying.updateNowPlaying(update)
-  }
+  override fun updateNowPlaying(update: NowPlayingUpdate?) =
+    commandPlayer("updateNowPlaying") { player -> player.nowPlaying.updateNowPlaying(update) }
 
-  override fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) = runBlockingOnMain {
-    player.nowPlaying.flashNowPlaying(update, durationMs)
-  }
+  override fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) =
+    commandPlayer("flashNowPlaying") { player ->
+      player.nowPlaying.flashNowPlaying(update, durationMs)
+    }
 
-  override fun clearNowPlayingFlash() = runBlockingOnMain {
-    player.nowPlaying.clearNowPlayingFlash()
-  }
+  override fun clearNowPlayingFlash() =
+    commandPlayer("clearNowPlayingFlash") { player -> player.nowPlaying.clearNowPlayingFlash() }
 
-  override fun getNowPlaying(): NowPlayingMetadata? = runBlockingOnMain {
-    player.nowPlaying.getNowPlaying()
-  }
+  override fun getNowPlaying(): NowPlayingMetadata? =
+    readPlayer(null) { player -> player.nowPlaying.getNowPlaying() }
 
   // ============================================================================
   // MARK: Network Connectivity
   // ============================================================================
 
-  override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
+  override fun getOnline(): Boolean = readPlayer(true) { it.getOnline() }
 
   // ============================================================================
   // MARK: System Volume
@@ -1124,35 +1134,32 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Equalizer (Android only)
   // ============================================================================
 
-  override fun getEqualizerSettings(): EqualizerSettings? = runBlockingOnMain {
-    player.equalizer.getSettings()
-  }
+  override fun getEqualizerSettings(): EqualizerSettings? =
+    readPlayer(null) { player -> player.equalizer.getSettings() }
 
-  override fun setEqualizerEnabled(enabled: Boolean) = runBlockingOnMain {
-    player.equalizer.setEnabled(enabled)
-  }
+  override fun setEqualizerEnabled(enabled: Boolean) =
+    commandPlayer("setEqualizerEnabled") { player -> player.equalizer.setEnabled(enabled) }
 
-  override fun setEqualizerPreset(preset: String) = runBlockingOnMain {
-    player.equalizer.setPreset(preset)
-  }
+  override fun setEqualizerPreset(preset: String) =
+    commandPlayer("setEqualizerPreset") { player -> player.equalizer.setPreset(preset) }
 
-  override fun setEqualizerLevels(levels: DoubleArray) = runBlockingOnMain {
-    player.equalizer.setLevels(levels)
-  }
+  override fun setEqualizerLevels(levels: DoubleArray) =
+    commandPlayer("setEqualizerLevels") { player -> player.equalizer.setLevels(levels) }
 
   // ============================================================================
   // MARK: Sleep Timer
   // ============================================================================
 
-  override fun getSleepTimer(): SleepTimer = runBlockingOnMain { player.sleepTimer.get() }
+  override fun getSleepTimer(): SleepTimer =
+    readPlayer(SleepTimer.create(NullType.NULL)) { it.sleepTimer.get() }
 
-  override fun setSleepTimer(seconds: Double, fadeDuration: Double?) = runBlockingOnMain {
-    player.sleepTimer.setAfter(seconds, fadeDuration)
-  }
+  override fun setSleepTimer(seconds: Double, fadeDuration: Double?) =
+    commandPlayer("setSleepTimer") { player -> player.sleepTimer.setAfter(seconds, fadeDuration) }
 
-  override fun setSleepTimerToEndOfTrack() = runBlockingOnMain { player.sleepTimer.setEndOfTrack() }
+  override fun setSleepTimerToEndOfTrack() =
+    commandPlayer("setSleepTimerToEndOfTrack") { it.sleepTimer.setEndOfTrack() }
 
-  override fun clearSleepTimer(): Boolean = runBlockingOnMain { player.sleepTimer.clear() }
+  override fun clearSleepTimer(): Boolean = readPlayer(false) { it.sleepTimer.clear() }
 
   // ============================================================================
   // MARK: Battery Optimization (Android only)
@@ -1292,6 +1299,29 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   private val service: Service
     get() = connectedService ?: throw Exception("Player not initialized")
+
+  /**
+   * The player while its service is connected: not before setupPlayer, nor while the service
+   * restarts.
+   */
+  private val connectedPlayer: Player?
+    get() = connectedService?.player
+
+  /** What [read] gets from the player, or without one [fallback], the answer iOS gives then. */
+  private fun <T> readPlayer(fallback: T, read: suspend (Player) -> T): T = runBlockingOnMain {
+    val player = connectedPlayer ?: return@runBlockingOnMain fallback
+    read(player)
+  }
+
+  /** Runs [command] on the player; without one it is dropped with a warning, as iOS drops it. */
+  private fun commandPlayer(name: String, command: suspend (Player) -> Unit) = runBlockingOnMain {
+    val player = connectedPlayer
+    if (player == null) {
+      Timber.w("$name before the player is set up, or while its service restarts: ignored")
+    } else {
+      command(player)
+    }
+  }
 
   internal val player
     get() = service.player

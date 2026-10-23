@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "CarPlayPlayingIndicatorLocation" and the the Kotlin enum "CarPlayPlayingIndicatorLocation".
+   * The C++ JNI bridge between the C++ enum "CarPlayPlayingIndicatorLocation" and the Kotlin enum "CarPlayPlayingIndicatorLocation".
    */
   struct JCarPlayPlayingIndicatorLocation final: public jni::JavaClass<JCarPlayPlayingIndicatorLocation> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/CarPlayPlayingIndicatorLocation;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/CarPlayPlayingIndicatorLocation;";
 
   public:
     /**

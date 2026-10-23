@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_std__vector_ChapterMetadata__cxx: Func_void_std__vector_ChapterM
   override fun invoke(chapters: Array<ChapterMetadata>): Unit
     = invoke_cxx(chapters)
 
-  @FastNative
   private external fun invoke_cxx(chapters: Array<ChapterMetadata>): Unit
 }
 

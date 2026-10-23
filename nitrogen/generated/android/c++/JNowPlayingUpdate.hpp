@@ -18,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NowPlayingUpdate" and the the Kotlin data class "NowPlayingUpdate".
+   * The C++ JNI bridge between the C++ struct "NowPlayingUpdate" and the Kotlin data class "NowPlayingUpdate".
    */
   struct JNowPlayingUpdate final: public jni::JavaClass<JNowPlayingUpdate> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NowPlayingUpdate;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NowPlayingUpdate;";
 
   public:
     /**

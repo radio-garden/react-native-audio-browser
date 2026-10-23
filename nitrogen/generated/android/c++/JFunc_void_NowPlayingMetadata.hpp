@@ -27,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_NowPlayingMetadata: public jni::JavaClass<JFunc_void_NowPlayingMetadata> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata;";
 
   public:
     /**
@@ -63,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_NowPlayingMetadata_cxx::invoke_cxx)});
     }

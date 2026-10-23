@@ -18,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "FormattedNavigationError" and the the Kotlin data class "FormattedNavigationError".
+   * The C++ JNI bridge between the C++ struct "FormattedNavigationError" and the Kotlin data class "FormattedNavigationError".
    */
   struct JFormattedNavigationError final: public jni::JavaClass<JFormattedNavigationError> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FormattedNavigationError;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FormattedNavigationError;";
 
   public:
     /**

@@ -19,11 +19,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "EqualizerSettings" and the the Kotlin data class "EqualizerSettings".
+   * The C++ JNI bridge between the C++ struct "EqualizerSettings" and the Kotlin data class "EqualizerSettings".
    */
   struct JEqualizerSettings final: public jni::JavaClass<JEqualizerSettings> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/EqualizerSettings;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/EqualizerSettings;";
 
   public:
     /**
@@ -66,16 +66,16 @@ namespace margelo::nitro::audiobrowser {
         }(),
         static_cast<bool>(enabled),
         lowerBandLevelLimit,
-        [&]() {
-          size_t __size = presets->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<std::string> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = presets->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toStdString());
           }
           return __vector;
-        }(),
+        }(presets),
         upperBandLevelLimit
       );
     }
@@ -107,16 +107,16 @@ namespace margelo::nitro::audiobrowser {
         }(),
         value.enabled,
         value.lowerBandLevelLimit,
-        [&]() {
-          size_t __size = value.presets.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.presets[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = jni::make_jstring(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }(),
+        }(value.presets),
         value.upperBandLevelLimit
       );
     }

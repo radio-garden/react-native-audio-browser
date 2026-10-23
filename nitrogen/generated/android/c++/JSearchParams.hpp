@@ -22,11 +22,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "SearchParams" and the the Kotlin data class "SearchParams".
+   * The C++ JNI bridge between the C++ struct "SearchParams" and the Kotlin data class "SearchParams".
    */
   struct JSearchParams final: public jni::JavaClass<JSearchParams> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SearchParams;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SearchParams;";
 
   public:
     /**

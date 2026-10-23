@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "GridTile" and the the Kotlin enum "GridTile".
+   * The C++ JNI bridge between the C++ enum "GridTile" and the Kotlin enum "GridTile".
    */
   struct JGridTile final: public jni::JavaClass<JGridTile> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/GridTile;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/GridTile;";
 
   public:
     /**

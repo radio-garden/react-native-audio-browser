@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "BrowseError" and the the Kotlin data class "BrowseError".
+   * The C++ JNI bridge between the C++ struct "BrowseError" and the Kotlin data class "BrowseError".
    */
   struct JBrowseError final: public jni::JavaClass<JBrowseError> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseError;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseError;";
 
   public:
     /**

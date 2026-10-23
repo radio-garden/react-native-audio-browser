@@ -74,6 +74,19 @@ class ServiceBindingTest {
     assertEquals(1, shadowOf(app).unboundServiceConnections.size)
   }
 
+  /**
+   * setupPlayer binds after the auto-bind at construction already has. If that first bind failed,
+   * the service never connects, so setup must hear false and reject rather than wait for it.
+   */
+  @Test
+  fun bindingAgainAfterAFailedBindReportsTheFailure() {
+    val binding = ServiceBinding(app)
+    shadowOf(app).declareActionUnbindable("unbindable")
+
+    assertFalse(binding.bind(Intent("unbindable"), connection))
+    assertFalse(binding.bind(Intent("unbindable"), connection))
+  }
+
   @Test
   fun unbindIsIdempotent() {
     val binding = ServiceBinding(app)

@@ -21,11 +21,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "IOSOptions" and the the Kotlin data class "IOSOptions".
+   * The C++ JNI bridge between the C++ struct "IOSOptions" and the Kotlin data class "IOSOptions".
    */
   struct JIOSOptions final: public jni::JavaClass<JIOSOptions> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/IOSOptions;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/IOSOptions;";
 
   public:
     /**
@@ -51,16 +51,16 @@ namespace margelo::nitro::audiobrowser {
           return __vector;
         }(),
         static_cast<bool>(carPlayUpNextButton),
-        [&]() {
-          size_t __size = carPlayNowPlayingButtons->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<CarPlayNowPlayingButton> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = carPlayNowPlayingButtons->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }(),
+        }(carPlayNowPlayingButtons),
         carPlayPlayingIndicatorLocation->toCpp()
       );
     }
@@ -83,16 +83,16 @@ namespace margelo::nitro::audiobrowser {
           return __array;
         }(),
         value.carPlayUpNextButton,
-        [&]() {
-          size_t __size = value.carPlayNowPlayingButtons.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JCarPlayNowPlayingButton>> __array = jni::JArrayClass<JCarPlayNowPlayingButton>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.carPlayNowPlayingButtons[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JCarPlayNowPlayingButton::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }(),
+        }(value.carPlayNowPlayingButtons),
         JCarPlayPlayingIndicatorLocation::fromCpp(value.carPlayPlayingIndicatorLocation)
       );
     }

@@ -27,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__optional_FormattedNavigationError_: public jni::JavaClass<JFunc_void_std__optional_FormattedNavigationError_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_FormattedNavigationError_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_FormattedNavigationError_;";
 
   public:
     /**
@@ -63,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_FormattedNavigationError__cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_FormattedNavigationError__cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_std__optional_FormattedNavigationError__cxx::invoke_cxx)});
     }

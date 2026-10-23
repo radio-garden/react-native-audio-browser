@@ -21,11 +21,11 @@ namespace margelo::nitro::audiobrowser {
   class JHybridAudioBrowserSpec: public virtual HybridAudioBrowserSpec, public virtual JHybridObject {
   public:
     struct JavaPart: public jni::JavaClass<JavaPart, JHybridObject::JavaPart> {
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HybridAudioBrowserSpec;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HybridAudioBrowserSpec;";
       std::shared_ptr<JHybridAudioBrowserSpec> getJHybridAudioBrowserSpec();
     };
     struct CxxPart: public jni::HybridClass<CxxPart, JHybridObject::CxxPart> {
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HybridAudioBrowserSpec$CxxPart;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HybridAudioBrowserSpec$CxxPart;";
       static jni::local_ref<jhybriddata> initHybrid(jni::alias_ref<jhybridobject> jThis);
       static void registerNatives();
       using HybridBase::HybridBase;

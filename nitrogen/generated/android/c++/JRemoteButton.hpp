@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "RemoteButton" and the the Kotlin enum "RemoteButton".
+   * The C++ JNI bridge between the C++ enum "RemoteButton" and the Kotlin enum "RemoteButton".
    */
   struct JRemoteButton final: public jni::JavaClass<JRemoteButton> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteButton;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RemoteButton;";
 
   public:
     /**

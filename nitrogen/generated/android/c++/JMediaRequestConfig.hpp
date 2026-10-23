@@ -51,11 +51,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "MediaRequestConfig" and the the Kotlin data class "MediaRequestConfig".
+   * The C++ JNI bridge between the C++ struct "MediaRequestConfig" and the Kotlin data class "MediaRequestConfig".
    */
   struct JMediaRequestConfig final: public jni::JavaClass<JMediaRequestConfig> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaRequestConfig;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaRequestConfig;";
 
   public:
     /**

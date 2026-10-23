@@ -5,6 +5,98 @@ const isNotReservedKeyword = (val) => !['core', 'nitro', 'NitroModules'].include
 const isReservedKeywordError = {
     message: `This value is reserved and cannot be used!`,
 };
+const autolinkingLanguageSchema = z.enum(['c++', 'swift', 'kotlin']);
+const autolinkingAllImplementationSchema = z.object({
+    language: z.literal('c++'),
+    implementationClassName: z.string(),
+});
+const autolinkingIOSImplementationSchema = z.object({
+    language: z.enum(['c++', 'swift']),
+    implementationClassName: z.string(),
+});
+const autolinkingAndroidImplementationSchema = z.object({
+    language: z.enum(['c++', 'kotlin']),
+    implementationClassName: z.string(),
+});
+const autolinkingPlatformImplementationSchema = z.object({
+    language: autolinkingLanguageSchema,
+    implementationClassName: z.string(),
+});
+const autolinkingModernHybridObjectSchema = z
+    .object({
+    all: autolinkingAllImplementationSchema.optional(),
+    ios: autolinkingIOSImplementationSchema.optional(),
+    android: autolinkingAndroidImplementationSchema.optional(),
+})
+    .catchall(autolinkingPlatformImplementationSchema)
+    .superRefine((value, ctx) => {
+    const hasAll = value.all != null;
+    const platformCount = Object.keys(value).filter((key) => key !== 'all').length;
+    if (hasAll && platformCount > 0) {
+        ctx.addIssue({
+            code: 'custom',
+            message: '"all" cannot be combined with platform-specific entries.',
+        });
+    }
+    if (!hasAll && platformCount === 0) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Each autolinking entry must declare either "all" or at least one platform.',
+        });
+    }
+});
+const autolinkingLegacyHybridObjectSchema = z
+    .object({
+    cpp: z.string().optional(),
+    swift: z.string().optional(),
+    kotlin: z.string().optional(),
+})
+    .strict()
+    .superRefine((value, ctx) => {
+    const hasCpp = value.cpp != null;
+    const hasSwift = value.swift != null;
+    const hasKotlin = value.kotlin != null;
+    if (!hasCpp && !hasSwift && !hasKotlin) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Each autolinking entry must declare at least one implementation.',
+        });
+    }
+    if (hasCpp && (hasSwift || hasKotlin)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Legacy autolinking entries cannot mix "cpp" with "swift"/"kotlin".',
+        });
+    }
+});
+function normalizeLegacyAutolinkingHybridObject(value) {
+    if (value.cpp != null) {
+        return {
+            all: {
+                language: 'c++',
+                implementationClassName: value.cpp,
+            },
+        };
+    }
+    const normalized = {};
+    if (value.swift != null) {
+        normalized.ios = {
+            language: 'swift',
+            implementationClassName: value.swift,
+        };
+    }
+    if (value.kotlin != null) {
+        normalized.android = {
+            language: 'kotlin',
+            implementationClassName: value.kotlin,
+        };
+    }
+    return normalized;
+}
+const autolinkingHybridObjectSchema = z.union([
+    autolinkingModernHybridObjectSchema,
+    autolinkingLegacyHybridObjectSchema.transform(normalizeLegacyAutolinkingHybridObject),
+]);
 export const NitroUserConfigSchema = z.object({
     /**
      * Represents the C++ namespace of the module that will be generated.
@@ -65,14 +157,10 @@ export const NitroUserConfigSchema = z.object({
      * Configures the code that gets generated for autolinking (registering)
      * Hybrid Object constructors.
      *
-     * Each class listed here needs to have a default constructor/initializer that takes
-     * zero arguments.
+     * Each class listed here needs to have a default constructor/initializer
+     * that takes zero arguments.
      */
-    autolinking: z.record(z.string(), z.object({
-        cpp: z.string().optional(),
-        swift: z.string().optional(),
-        kotlin: z.string().optional(),
-    })),
+    autolinking: z.record(z.string(), autolinkingHybridObjectSchema),
     /**
      * A list of paths relative to the project directory that should be ignored by nitrogen.
      * Nitrogen will not look for `.nitro.ts` files in these directories.

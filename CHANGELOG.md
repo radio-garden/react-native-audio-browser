@@ -1,3 +1,35 @@
+## [0.2.0-next.28](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.27...v0.2.0-next.28) (2026-10-20)
+
+### Bug Fixes
+
+* **android:** reject setupPlayer when the service bind failed ([bf3d211](https://github.com/radio-garden/react-native-audio-browser/commit/bf3d211f803fc42b124259dbe68a0fa7d516e63c)), closes [#157](https://github.com/radio-garden/react-native-audio-browser/issues/157)
+
+## [0.2.0-next.27](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.26...v0.2.0-next.27) (2026-10-20)
+
+### Other changes
+
+* regenerate specs with the new vendored nitrogen ([24124e1](https://github.com/radio-garden/react-native-audio-browser/commit/24124e17bf2617a74939b8598f9850984f0c893c))
+* vendor nitrogen 0.37.1 with only the Swift traversal fix (margelo/nitro[#1387](https://github.com/radio-garden/react-native-audio-browser/issues/1387)) ([8b76540](https://github.com/radio-garden/react-native-audio-browser/commit/8b76540543557cfeb4982222b383b9a1966785b5)), closes [margelo/nitro#1232](https://github.com/margelo/nitro/issues/1232) [#1232](https://github.com/radio-garden/react-native-audio-browser/issues/1232) [#1232](https://github.com/radio-garden/react-native-audio-browser/issues/1232)
+
+## [0.2.0-next.26](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.25...v0.2.0-next.26) (2026-10-20)
+
+### Other changes
+
+* **example:** move the native example to react-native 0.88 ([a7d0059](https://github.com/radio-garden/react-native-audio-browser/commit/a7d0059400b7b962f16dde8152daa8f9858144f7))
+* upgrade to react-native 0.88 and nitro 0.37, regenerate specs ([b11069b](https://github.com/radio-garden/react-native-audio-browser/commit/b11069bd5182c7d86624df4b50cf05b35994fdc4)), closes [mrousavy/nitro#1232](https://github.com/mrousavy/nitro/issues/1232)
+
+## [0.2.0-next.25](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.24...v0.2.0-next.25) (2026-10-20)
+
+### Bug Fixes
+
+* **android:** answer without a player instead of throwing, as iOS does ([f975163](https://github.com/radio-garden/react-native-audio-browser/commit/f975163eb715de553c13922195e074fe23f5ba5e))
+
+## [0.2.0-next.24](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.23...v0.2.0-next.24) (2026-10-19)
+
+### Features
+
+* pass the request kind to formatNavigationError ([765dc5c](https://github.com/radio-garden/react-native-audio-browser/commit/765dc5cffd460cd76a5bd65e80d70fbca485c25e))
+
 ## [0.2.0-next.23](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.22...v0.2.0-next.23) (2026-10-01)
 
 ### Bug Fixes

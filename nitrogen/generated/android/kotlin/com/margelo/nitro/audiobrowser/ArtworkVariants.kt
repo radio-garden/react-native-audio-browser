@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -25,6 +26,20 @@ data class ArtworkVariants(
   val dark: String
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ArtworkVariants) return false
+    return Objects.deepEquals(this.light, other.light)
+      && Objects.deepEquals(this.dark, other.dark)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      light,
+      dark
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

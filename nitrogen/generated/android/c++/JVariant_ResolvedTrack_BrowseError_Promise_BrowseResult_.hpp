@@ -61,7 +61,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_: public jni::JavaClass<JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_;";
 
     static jni::local_ref<JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_> create_0(jni::alias_ref<JResolvedTrack> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_(jni::alias_ref<JResolvedTrack>)>("create");
@@ -102,7 +102,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult__impl {
     class First final: public jni::JavaClass<First, JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$First;";
     
       [[nodiscard]] jni::local_ref<JResolvedTrack> getValue() const {
         static const auto field = javaClassStatic()->getField<JResolvedTrack>("value");
@@ -112,7 +112,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$Second;";
     
       [[nodiscard]] jni::local_ref<JBrowseError> getValue() const {
         static const auto field = javaClassStatic()->getField<JBrowseError>("value");
@@ -122,7 +122,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Third final: public jni::JavaClass<Third, JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$Third;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_$Third;";
     
       [[nodiscard]] jni::local_ref<JPromise::javaobject> getValue() const {
         static const auto field = javaClassStatic()->getField<JPromise::javaobject>("value");

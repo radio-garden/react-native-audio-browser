@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "PlaybackState" and the the Kotlin enum "PlaybackState".
+   * The C++ JNI bridge between the C++ enum "PlaybackState" and the Kotlin enum "PlaybackState".
    */
   struct JPlaybackState final: public jni::JavaClass<JPlaybackState> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackState;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackState;";
 
   public:
     /**

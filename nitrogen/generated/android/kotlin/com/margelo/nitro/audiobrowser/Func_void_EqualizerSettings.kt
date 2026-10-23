@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_EqualizerSettings_cxx: Func_void_EqualizerSettings {
   override fun invoke(settings: EqualizerSettings): Unit
     = invoke_cxx(settings)
 
-  @FastNative
   private external fun invoke_cxx(settings: EqualizerSettings): Unit
 }
 

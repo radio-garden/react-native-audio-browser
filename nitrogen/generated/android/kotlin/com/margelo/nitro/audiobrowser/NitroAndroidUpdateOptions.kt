@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.NullType
 
 /**
@@ -28,6 +29,22 @@ data class NitroAndroidUpdateOptions(
   val remoteButtonLayout: Variant_NullType_RemoteButtonLayout?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NitroAndroidUpdateOptions) return false
+    return Objects.deepEquals(this.appKilledPlaybackBehavior, other.appKilledPlaybackBehavior)
+      && Objects.deepEquals(this.skipSilence, other.skipSilence)
+      && Objects.deepEquals(this.remoteButtonLayout, other.remoteButtonLayout)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      appKilledPlaybackBehavior,
+      skipSilence,
+      remoteButtonLayout
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

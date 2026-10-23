@@ -46,11 +46,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "Section" and the the Kotlin data class "Section".
+   * The C++ JNI bridge between the C++ struct "Section" and the Kotlin data class "Section".
    */
   struct JSection final: public jni::JavaClass<JSection> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Section;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Section;";
 
   public:
     /**
@@ -72,16 +72,16 @@ namespace margelo::nitro::audiobrowser {
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt,
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
-        [&]() {
-          size_t __size = children->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = children->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()
+        }(children)
       );
     }
 
@@ -99,16 +99,16 @@ namespace margelo::nitro::audiobrowser {
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
         value.style.has_value() ? JSectionStyle::fromCpp(value.style.value()) : nullptr,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
-        [&]() {
-          size_t __size = value.children.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.children[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JTrack::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }()
+        }(value.children)
       );
     }
   };

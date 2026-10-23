@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "OutputType" and the the Kotlin enum "OutputType".
+   * The C++ JNI bridge between the C++ enum "OutputType" and the Kotlin enum "OutputType".
    */
   struct JOutputType final: public jni::JavaClass<JOutputType> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/OutputType;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/OutputType;";
 
   public:
     /**

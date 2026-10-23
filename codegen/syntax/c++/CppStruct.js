@@ -44,9 +44,7 @@ export function createCppStruct(typename, properties) {
         equatableFunc = `// ${typename} is not equatable because these properties are not equatable: ${nonEquatableTypes.join(', ')}`;
     }
     // Get C++ includes for each extra-file we need to include
-    const includedTypes = properties
-        .flatMap((r) => r.getRequiredImports('c++'))
-        .filter((i) => i.name !== `${typename}.hpp`);
+    const includedTypes = properties.flatMap((r) => r.getRequiredImports('c++'));
     const cppForwardDeclarations = includedTypes
         .map((i) => i.forwardDeclaration)
         .filter((v) => v != null)

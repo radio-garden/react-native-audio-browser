@@ -24,7 +24,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JVariant_Boolean_AndroidAudioOffloadSettings: public jni::JavaClass<JVariant_Boolean_AndroidAudioOffloadSettings> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings;";
 
     static jni::local_ref<JVariant_Boolean_AndroidAudioOffloadSettings> create_0(jboolean value) {
       static const auto method = javaClassStatic()->getStaticMethod<JVariant_Boolean_AndroidAudioOffloadSettings(jboolean)>("create");
@@ -49,7 +49,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JVariant_Boolean_AndroidAudioOffloadSettings_impl {
     class First final: public jni::JavaClass<First, JVariant_Boolean_AndroidAudioOffloadSettings> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings$First;";
     
       [[nodiscard]] jboolean getValue() const {
         static const auto field = javaClassStatic()->getField<jboolean>("value");
@@ -59,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JVariant_Boolean_AndroidAudioOffloadSettings> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Variant_Boolean_AndroidAudioOffloadSettings$Second;";
     
       [[nodiscard]] jni::local_ref<JAndroidAudioOffloadSettings> getValue() const {
         static const auto field = javaClassStatic()->getField<JAndroidAudioOffloadSettings>("value");

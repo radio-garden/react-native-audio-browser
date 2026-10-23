@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -22,6 +23,18 @@ data class RemoteSkipEvent(
   val index: Double
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is RemoteSkipEvent) return false
+    return Objects.deepEquals(this.index, other.index)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      index
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
