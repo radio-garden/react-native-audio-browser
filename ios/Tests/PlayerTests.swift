@@ -761,10 +761,10 @@ struct HealthyPlaybackRetryResetTests {
   func sustainedPlayback_resetsRetryBudget() async {
     let (player, retry, _) = await makeAfterOneRetry()
     #expect(retry.attempts == 1)
-    player.healthyPlaybackDuration = 0.01
+    retry.healthyPlaybackDuration = .milliseconds(10)
 
     player.transition(.avPlayerPlaying)
-    await player.healthyPlaybackTask?.value
+    await retry.healthyPlaybackTask?.value
 
     #expect(retry.attempts == 0)
   }
@@ -774,11 +774,11 @@ struct HealthyPlaybackRetryResetTests {
   @Test @MainActor
   func refill_skipsWhileRetryIsPending() async {
     let (player, retry, _) = await makeAfterOneRetry(delay: 1)
-    player.healthyPlaybackDuration = 0.01
+    retry.healthyPlaybackDuration = .milliseconds(10)
 
     player.transition(.avPlayerPlaying)
     retry.handleError(URLError(.timedOut), context: .playback)
-    await player.healthyPlaybackTask?.value
+    await retry.healthyPlaybackTask?.value
 
     #expect(retry.pendingTask != nil)
     retry.cancel()
@@ -788,10 +788,10 @@ struct HealthyPlaybackRetryResetTests {
   func playbackInterruptedBeforeThreshold_doesNotReset() async {
     let (player, retry, engine) = await makeAfterOneRetry()
     engine.hasLoadedAsset = true
-    player.healthyPlaybackDuration = 0.5
+    retry.healthyPlaybackDuration = .milliseconds(500)
 
     player.transition(.avPlayerPlaying)
-    let refill = player.healthyPlaybackTask
+    let refill = retry.healthyPlaybackTask
     player.transition(.avPlayerWaiting) // stalls before the threshold
 
     // Leaving .playing cancels the refill; awaiting the cancelled task is the

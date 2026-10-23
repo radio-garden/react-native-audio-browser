@@ -87,18 +87,6 @@ final class Player {
   /// auto-resume if we were actually playing when interrupted.
   private var shouldResumeAfterInterruption = false
 
-  /// Seconds of continuous audible playback after which the retry budget is
-  /// refilled — proof the stream actually delivered audio, not a brief blip
-  /// (mirrors Android's HEALTHY_PLAYBACK_MS). Without the refill a long-lived
-  /// stream permanently loses retry after its first recovered error, because
-  /// the window/attempt counters otherwise reset only on track change.
-  /// Overridable in tests.
-  var healthyPlaybackDuration: TimeInterval = 20
-
-  /// The pending refill. Readable so tests can await the window instead of
-  /// sleeping past it; only this type arms and cancels it.
-  private(set) var healthyPlaybackTask: Task<Void, Never>?
-
   /// Playback rate (1.0 = normal speed). A non-positive rate would leave the player unable to
   /// play, so it is refused here, where every source (JS, remote command, CarPlay, a restored
   /// snapshot) funnels through. Speed and play intent are independent, as on Android and web.
@@ -369,23 +357,10 @@ final class Player {
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
-    // Retry-budget refill: sustained audible playback proves the stream
-    // recovered, so the next error starts a fresh retry window. Leaving
-    // .playing before the threshold cancels the pending refill.
     if new == .playing {
-      healthyPlaybackTask?.cancel()
-      healthyPlaybackTask = Task { [weak self] in
-        guard let self else { return }
-        try? await Task.sleep(nanoseconds: UInt64(healthyPlaybackDuration * 1_000_000_000))
-        guard !Task.isCancelled else { return }
-        // Refill only between episodes: reset() cancels a pending retry,
-        // which would silently kill an in-flight reconnect.
-        guard retry.pendingTask == nil else { return }
-        retry.reset()
-      }
+      retry.playbackBecameAudible()
     } else if old == .playing {
-      healthyPlaybackTask?.cancel()
-      healthyPlaybackTask = nil
+      retry.playbackStoppedBeingAudible()
     }
 
     // State-specific effects

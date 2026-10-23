@@ -268,3 +268,38 @@ struct RetryLoopHandleErrorTests {
 private final class LoopHolder {
   weak var loop: RetryLoop?
 }
+
+@Suite("RetryLoop healthy playback")
+@MainActor
+struct RetryLoopHealthyPlaybackTests {
+  private func makeAfterOneRetry() async -> RetryLoop {
+    let loop = makeRetryLoop()
+    loop.handleError(URLError(.timedOut), context: .playback)
+    await loop.pendingTask?.value
+    return loop
+  }
+
+  @Test func audiblePlaybackForTheWindowRefillsTheBudgets() async {
+    let loop = await makeAfterOneRetry()
+    #expect(loop.attempts == 1)
+    loop.healthyPlaybackDuration = .milliseconds(10)
+
+    loop.playbackBecameAudible()
+    await loop.healthyPlaybackTask?.value
+
+    #expect(loop.attempts == 0)
+  }
+
+  @Test func stoppingBeforeTheWindowKeepsTheBudgets() async {
+    let loop = await makeAfterOneRetry()
+    loop.healthyPlaybackDuration = .milliseconds(500)
+
+    loop.playbackBecameAudible()
+    let refill = loop.healthyPlaybackTask
+    loop.playbackStoppedBeingAudible()
+    await refill?.value
+
+    #expect(loop.attempts == 1)
+    #expect(loop.healthyPlaybackTask == nil)
+  }
+}
