@@ -9,7 +9,8 @@ private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaInten
 enum MediaIntentPlayback {
   /// Callable before the bridge exists: it waits, within the assistant's budget, for the player
   /// and a configured browser, which come up once React Native boots. Each await may outlive the
-  /// player (a JS reload replaces it), so it is looked up again after one.
+  /// bridge or its player (a JS reload or a second setup replaces them), so the player is looked
+  /// up again after one, and the intent fails once the bridge is gone.
   @MainActor
   static func play(criteria: MediaIntentCriteria) async -> Bool {
     guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
@@ -28,7 +29,7 @@ enum MediaIntentPlayback {
         if let path = session.track.path {
           expanded = try? await browser.browserManager.expandQueueFromContextualPath(path)
         }
-        guard let player = browser.getPlayer() else { return false }
+        guard let player = livePlayer(of: browser) else { return false }
         player.resume(session, queue: expanded)
       }
       browser.showNowPlayingRequestedEmitter.emit(())
@@ -54,7 +55,7 @@ enum MediaIntentPlayback {
     }
     do {
       guard let tracks = try await browser.browserManager.searchPlayable(params),
-            let player = browser.getPlayer() else { return false }
+            let player = livePlayer(of: browser) else { return false }
       player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
       browser.showNowPlayingRequestedEmitter.emit(())
       return true
@@ -62,5 +63,12 @@ enum MediaIntentPlayback {
       logger.error("search failed: \(error.localizedDescription)")
       return false
     }
+  }
+
+  /// `browser`'s player while `browser` is still the live bridge; a replaced bridge keeps its
+  /// destroyed player.
+  @MainActor
+  private static func livePlayer(of browser: HybridAudioBrowser) -> Player? {
+    HybridAudioBrowser.shared === browser ? browser.getPlayer() : nil
   }
 }
