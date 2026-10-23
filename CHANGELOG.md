@@ -1,3 +1,9 @@
+## [0.2.0-next.30](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.29...v0.2.0-next.30) (2026-10-23)
+
+### Bug Fixes
+
+* **ios:** fail a reload of a track without a source ([77773f6](https://github.com/radio-garden/react-native-audio-browser/commit/77773f660cd25b8b4e9f453d5a8193ad437fbb78))
+
 ## [0.2.0-next.29](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.28...v0.2.0-next.29) (2026-10-23)
 
 ### Features
