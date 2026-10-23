@@ -290,7 +290,8 @@ final class Player {
 
   /// Emits what changed since the last publish, in order: the play intent, the playing state,
   /// the playback (state and error), the terminal error, the active play intent. The one place
-  /// these leave the Player, so each goes out once per change.
+  /// these leave the Player, so each goes out once per change, with the audio-session and
+  /// now-playing effects it drives.
   private func publish() {
     let playing = playingState
     let now = Published(
@@ -302,13 +303,19 @@ final class Player {
     guard now != old else { return }
     published = now
     if now.playWhenReady != old.playWhenReady {
+      if now.playWhenReady { engine.cancelAudioSessionRelease() }
       callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
     }
     if now.playing != old.playing || now.buffering != old.buffering {
       callbacks?.playerDidChangePlayingState(playing)
+      // Activated on output, not at setup: activating at launch interrupts other apps' audio.
+      if playing.playing || playing.buffering { engine.activateAudioSession() }
+      // A stall starting or recovering may leave the state as it was.
+      engine.renderNowPlaying()
     }
     if now.state != old.state || now.errorStatus != old.errorStatus {
       callbacks?.playerDidChangePlayback(Playback(state: now.state, error: now.errorStatus.nitroError))
+      engine.renderNowPlaying()
     }
     let erred = now.state == .error, wasErred = old.state == .error
     if erred != wasErred || (erred && now.errorStatus != old.errorStatus) {
@@ -399,13 +406,14 @@ final class Player {
   }
 
   /// Requests a session release once playback is deliberately stopped: no intent, no
-  /// interruption to resume from, no retry pending. The host debounces it.
+  /// interruption to resume from, and no retry pending, whose reconnect needs the session. The
+  /// engine debounces it.
   private func evaluateSessionRelease() {
     guard !playWhenReady,
           !shouldResumeAfterInterruption,
           retry.pendingTask == nil
     else { return }
-    callbacks?.playerShouldReleaseSession()
+    engine.scheduleAudioSessionRelease()
   }
 
   func getPlayback() -> Playback {
@@ -599,6 +607,7 @@ final class Player {
       track: currentTrack,
     )
     callbacks?.playerDidChangeActiveTrack(eventData)
+    engine.nowPlayingTrackChanged()
     lastTrack = currentTrack
     lastIndex = queue.currentIndex
   }
@@ -755,6 +764,9 @@ final class Player {
     case .stalled:
       // Nudge, don't reconnect: a genuine drop is recovered by the retry and network paths.
       recoverFromStall(reconnectIfLive: false)
+    case let .timedMetadata(metadata):
+      callbacks?.playerDidReceiveTimedMetadata(metadata)
+      engine.applyTimedMetadata(metadata)
     }
   }
 

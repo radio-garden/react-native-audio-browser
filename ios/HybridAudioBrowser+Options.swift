@@ -20,7 +20,7 @@ public extension HybridAudioBrowser {
         // and un-published first. No-op on first setup.
         destroyPlayer()
 
-        let newEngine = AVPlayerEngine(callbacks: self, resolver: browserManager.requests)
+        let newEngine = AVPlayerEngine(callbacks: self, resolver: browserManager.requests, audioSession: audioSession)
         if let buffer = options.ios?.buffer { newEngine.bufferDuration = buffer }
         newEngine.nowPlayingUpdater.enabled = options.autoUpdateNowPlayingMetadata ?? true
         newEngine.nowPlayingUpdater.formatter = options.nowPlayingMetadataFormatter

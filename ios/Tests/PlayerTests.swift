@@ -681,13 +681,13 @@ struct NaturalEndPlayIntentTests {
 
   @Test @MainActor
   func naturalEnd_requestsSessionRelease() {
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    callbacks.releaseSessionCount = 0
+    eh.scheduleAudioSessionReleaseCount = 0
 
     eh.emit(.playedToEnd)
 
-    #expect(callbacks.releaseSessionCount == 1)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 
   /// play() from .ended must reload from the start — startPlayback() alone is a
@@ -1272,48 +1272,126 @@ struct StopCancelsRetryTests {
 struct SessionReleaseTests {
   @Test @MainActor
   func deliberatePause_requestsRelease() {
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    callbacks.releaseSessionCount = 0
+    eh.scheduleAudioSessionReleaseCount = 0
     c.pause()
-    #expect(callbacks.releaseSessionCount == 1)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 
   @Test @MainActor
   func play_doesNotRequestRelease() {
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    #expect(callbacks.releaseSessionCount == 0)
+    #expect(eh.scheduleAudioSessionReleaseCount == 0)
   }
 
   @Test @MainActor
   func interruptionBegan_doesNotRequestRelease() {
     // A phone call pauses (playWhenReady → false) but is meant to resume, so the session must be
     // held — the exact race the intent-gating design exists to avoid.
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
-    callbacks.releaseSessionCount = 0
+    eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionBegan()
-    #expect(callbacks.releaseSessionCount == 0)
+    #expect(eh.scheduleAudioSessionReleaseCount == 0)
   }
 
   @Test @MainActor
   func interruptionEnded_withResume_doesNotRequestRelease() {
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     c.handleInterruptionBegan()
-    callbacks.releaseSessionCount = 0
+    eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: true)
-    #expect(callbacks.releaseSessionCount == 0)
+    #expect(eh.scheduleAudioSessionReleaseCount == 0)
   }
 
   @Test @MainActor
   func interruptionEnded_withoutResume_requestsRelease() {
-    let (c, eh, callbacks, _) = makeCoordinator()
+    let (c, eh, _, _) = makeCoordinator()
     startPlaying(c, eh)
     c.handleInterruptionBegan()
-    callbacks.releaseSessionCount = 0
+    eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: false)
-    #expect(callbacks.releaseSessionCount == 1)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+}
+
+// MARK: - Media-stack effects of a publish
+
+/// The audio-session and now-playing effects the Player drives through its engine, in their
+/// order relative to the callbacks JS hears.
+@Suite("Player - media-stack effects")
+struct MediaStackEffectTests {
+  @MainActor
+  private func makeTraced() -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+    let (c, eh, cb, _) = makeCoordinator()
+    eh.onSeamCall = { [weak cb] in cb?.publishOrder.append($0) }
+    return (c, eh, cb)
+  }
+
+  @Test @MainActor
+  func playIntent_cancelsTheReleaseBeforeJSHearsIt_thenActivatesOnOutput() {
+    let (c, _, cb) = makeTraced()
+    loadTrack(c)
+    cb.publishOrder.removeAll()
+
+    c.setPlayWhenReady(true)
+
+    #expect(cb.publishOrder == [
+      "cancelAudioSessionRelease", "playWhenReady",
+      "playingState", "activateAudioSession", "renderNowPlaying",
+    ])
+  }
+
+  @Test @MainActor
+  func pause_rendersWithoutActivating_thenSchedulesTheRelease() {
+    let (c, eh, cb) = makeTraced()
+    startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    c.pause()
+
+    #expect(cb.publishOrder == [
+      "playWhenReady", "playingState", "renderNowPlaying", "scheduleAudioSessionRelease",
+    ])
+  }
+
+  @Test @MainActor
+  func playbackChange_rendersAfterJSHearsIt() {
+    let (c, _, cb) = makeTraced()
+    loadTrack(c)
+    cb.publishOrder.removeAll()
+
+    c.transition(.errorOccurred(.playbackFailed))
+
+    #expect(cb.publishOrder == ["playback", "renderNowPlaying"])
+  }
+
+  @Test @MainActor
+  func activeTrackChange_resetsTheNowPlayingLinesAfterJSHearsIt() {
+    let (c, eh, cb, _) = makeCoordinator()
+    eh.onSeamCall = { [weak cb] call in
+      if call == "nowPlayingTrackChanged" { cb?.queueAndTrackOrder.append(call) }
+    }
+
+    c.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")])
+
+    #expect(cb.queueAndTrackOrder == ["queue", "activeTrack", "nowPlayingTrackChanged"])
+    #expect(eh.nowPlayingTrackChangedCount == 1)
+  }
+
+  @Test @MainActor
+  func timedMetadata_reachesJSThenTheNowPlayingLines() {
+    let (c, eh, cb) = makeTraced()
+    let metadata = TimedMetadata(title: "Song", artist: "Artist")
+
+    eh.emit(.timedMetadata(metadata))
+    withExtendedLifetime(c) {}
+
+    #expect(cb.publishOrder == ["timedMetadata", "applyTimedMetadata"])
+    #expect(cb.timedMetadata == [metadata])
+    #expect(eh.appliedTimedMetadata == [metadata])
   }
 }
