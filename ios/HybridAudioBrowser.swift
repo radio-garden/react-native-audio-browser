@@ -98,17 +98,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Runs a closure on MainActor synchronously. Safe for non-Sendable return types
   /// because DispatchQueue.main.sync blocks the caller — no concurrent access window.
-  func onMainActor<T>(_ work: @MainActor () -> T) -> T {
-    if Thread.isMainThread {
-      MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
-    } else {
-      DispatchQueue.main.sync {
-        MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
-      }
-    }
-  }
-
-  func onMainActor<T>(_ work: @MainActor () throws -> T) throws -> T {
+  func onMainActor<T>(_ work: @MainActor () throws -> T) rethrows -> T {
     if Thread.isMainThread {
       try MainActor.assumeIsolated { try UncheckedSendableBox(value: work()) }.value
     } else {
@@ -336,27 +326,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   deinit {
-    // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
+    // Safety net: the AVPlayer must not outlive this instance. `self` can't reach the main
+    // actor from here, so the teardown takes what it releases.
     let player = self.player, engine = self.engine
-    if Thread.isMainThread {
-      MainActor.assumeIsolated {
-        player?.clear()
-        engine?.destroy()
-      }
-    } else {
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          player?.clear()
-          engine?.destroy()
-        }
-      }
-    }
+    let tearDown: @Sendable () -> Void = { MainActor.assumeIsolated { Self.destroy(player, engine) } }
+    if Thread.isMainThread { tearDown() } else { DispatchQueue.main.async(execute: tearDown) }
   }
 
   /// Stops the player and releases its media stack: the AVPlayer and the now-playing session
   /// outlive a dropped reference otherwise.
   @MainActor
   func destroyPlayer() {
+    Self.destroy(player, engine)
+  }
+
+  @MainActor
+  private static func destroy(_ player: Player?, _ engine: AVPlayerEngine?) {
     player?.clear()
     engine?.destroy()
   }

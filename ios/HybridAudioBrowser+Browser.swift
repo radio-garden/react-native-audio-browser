@@ -10,19 +10,18 @@ public extension HybridAudioBrowser {
   /// synchronous: JS hears it before the navigation that may set the error again.
   internal func navigate(_ path: String, clearError: Bool) {
     if clearError { onMainActor { navigationError.clear() } }
-    Task { @MainActor in
-      do {
-        try await browserManager.load(path)
-      } catch {
-        await reportNavigationError(error, path: path)
-      }
-    }
+    Task { @MainActor in await loadPath(path) }
   }
 
+  /// Loads `path` into the browser, reporting a failure as the navigation error.
   @MainActor
-  private func reportNavigationError(_ error: Error, path: String) async {
-    await navigationError.report(NavigationError.from(error)) { [browserManager] in
-      await browserManager.formatted($0, path: path)
+  private func loadPath(_ path: String, bypassCache: Bool = false) async {
+    do {
+      try await browserManager.load(path, bypassCache: bypassCache)
+    } catch {
+      await navigationError.report(NavigationError.from(error)) { [browserManager] in
+        await browserManager.formatted($0, path: path)
+      }
     }
   }
 
@@ -81,15 +80,12 @@ public extension HybridAudioBrowser {
   func notifyContentChanged(path: String) throws {
     // Throws on a contextual path (matching Android's `require`) — the caller
     // must pass the container path, or the invalidation silently hits nothing.
-    try onMainActor { try browserManager.invalidateContentCache(path) }
-
-    // Notify external controllers (CarPlay) that content changed
-    externalContentChangedEmitter.emit(path)
-
-    // Re-resolve the path if it's the current browser path
-    if onMainActor({ browserManager.path }) == path {
-      navigate(path, clearError: false)
+    let isCurrentPath = try onMainActor {
+      try browserManager.invalidateContentCache(path)
+      return browserManager.path == path
     }
+    externalContentChangedEmitter.emit(path)
+    if isCurrentPath { navigate(path, clearError: false) }
   }
 
   func invalidateAllContent() throws {

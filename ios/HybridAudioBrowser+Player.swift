@@ -336,64 +336,6 @@ public extension HybridAudioBrowser {
   }
 
   func openOutputPicker() throws {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      guard let windowScene = UIApplication.shared.activeWindowScene,
-            let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-            var topController = window.rootViewController
-      else {
-        self.logger.error("openOutputPicker: no active window scene / root view controller")
-        return
-      }
-
-      // Walk up to the topmost presented view controller
-      while let presented = topController.presentedViewController {
-        topController = presented
-      }
-
-      // AVRoutePickerView has no public API to present its picker
-      // programmatically, so we add it to the hierarchy and tap its internal
-      // button. Two requirements that are easy to get wrong:
-      //   1. The view must be *visible* to the system (a `isHidden` source view
-      //      suppresses the presentation), so we keep it transparent instead.
-      //   2. The internal button can be nested below the top-level subviews on
-      //      modern iOS, so we search recursively rather than only direct children.
-      let routePicker = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
-      routePicker.alpha = 0.01
-      topController.view.addSubview(routePicker)
-
-      let button = Self.firstButton(in: routePicker)
-      self.logger.notice(
-        "openOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)",
-      )
-
-      if let button {
-        button.sendActions(for: .touchUpInside)
-      } else {
-        self.logger.error("openOutputPicker: no UIButton found inside AVRoutePickerView")
-      }
-
-      // Keep the source view in the hierarchy long enough for the picker to
-      // present (on iPad it anchors a popover to this view).
-      DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-        routePicker.removeFromSuperview()
-      }
-    }
-  }
-
-  /// Depth-first search for the first `UIButton` inside a view tree.
-  private static func firstButton(in view: UIView) -> UIButton? {
-    if let button = view as? UIButton { return button }
-    for subview in view.subviews {
-      if let button = firstButton(in: subview) { return button }
-    }
-    return nil
-  }
-
-  /// Compact description of a view tree, e.g. `AVRoutePickerView[UIButton[UIImageView]]`.
-  private static func describeHierarchy(_ view: UIView) -> String {
-    let name = String(describing: type(of: view))
-    let children = view.subviews.map(describeHierarchy).joined(separator: ", ")
-    return children.isEmpty ? name : "\(name)[\(children)]"
+    DispatchQueue.main.async { OutputPicker.present() }
   }
 }
