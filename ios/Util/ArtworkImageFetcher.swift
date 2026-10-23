@@ -1,4 +1,5 @@
 import Kingfisher
+import Network
 import NitroModules
 import os.log
 import UIKit
@@ -62,7 +63,6 @@ enum ArtworkImageFetcher {
 /// other failure, a 404 included, stops at once.
 private struct ConnectivityRetry: RetryStrategy {
   private static let maxRetries = 3
-  private let reconnect = NetworkRetryStrategy(timeoutInterval: nil)
 
   func retry(context: RetryContext, retryHandler: @escaping @Sendable (RetryDecision) -> Void) {
     guard context.retriedCount < Self.maxRetries,
@@ -72,6 +72,23 @@ private struct ConnectivityRetry: RetryStrategy {
       retryHandler(.stop)
       return
     }
-    reconnect.retry(context: context, retryHandler: retryHandler)
+    Self.whenConnected { retryHandler(.retry(userInfo: nil)) }
   }
+
+  /// Calls `body` once the device has a usable path, at once when it has one already: a monitor
+  /// reports the current path when it starts, so a reconnect cannot slip past it. The handler
+  /// holds the monitor until it fires.
+  private static func whenConnected(_ body: @escaping @Sendable () -> Void) {
+    let monitor = NWPathMonitor()
+    monitor.pathUpdateHandler = { path in
+      guard path.status == .satisfied, monitor.pathUpdateHandler != nil else { return }
+      monitor.pathUpdateHandler = nil
+      monitor.cancel()
+      body()
+    }
+    monitor.start(queue: queue)
+  }
+
+  /// Serial, so a monitor's handler never runs twice at once.
+  private static let queue = DispatchQueue(label: "com.audiobrowser.artwork-connectivity", qos: .utility)
 }
