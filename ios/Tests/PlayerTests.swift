@@ -426,13 +426,15 @@ struct PlayWhenReadyTests {
   @Test @MainActor
   func true_fromStopped_triggersReload() {
     let (c, eh, _, _) = makeCoordinator()
+    loadTrack(c)
     c.transition(.stopped)
     eh.resumePosition = 42
+    let resolvesBefore = eh.resolveAndLoadCalls.count
 
     c.setPlayWhenReady(true)
 
     #expect(eh.recreateCount == 0)
-    #expect(eh.loadResolvedCount == 1)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
     #expect(c.deferredSeek.target == nil) // a stop restarts from the start
   }
 

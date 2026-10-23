@@ -50,7 +50,6 @@ final class MockPlayerEngine: PlayerEngine {
 
   // Loading
   var resolveAndLoadCalls: [String] = []
-  var loadResolvedCount = 0
   var cancelLoadingCount = 0
   var dropAssetCount = 0
   var clearItemCount = 0
@@ -58,7 +57,6 @@ final class MockPlayerEngine: PlayerEngine {
   var recreateCount = 0
 
   func resolveAndLoad(src: String, track _: Track) { resolveAndLoadCalls.append(src) }
-  func loadResolved() { loadResolvedCount += 1 }
   func cancelLoading() { cancelLoadingCount += 1 }
   func dropAsset() { dropAssetCount += 1 }
   func clearItem() { clearItemCount += 1 }
