@@ -65,34 +65,42 @@ class TrackSelector {
       return .none
     }
 
-    let path = track.path
-
-    // 1. Contextual path (playable-only track with queue context)
-    if let path, BrowserPathHelper.isContextual(path) {
-      return await handleContextualPath(path, track: track, player: player)
-    }
-
-    // 2. Has src — single playable track
-    if track.src != nil {
-      return await handlePlayableTrack(track, player: player)
-    }
-
-    // 3. Has path — browsable
-    if let path {
+    let playback: PlannedPlayback
+    if let path = track.path, BrowserPathHelper.isContextual(path) {
+      playback = await contextualPlayback(path, track: track, player: player)
+    } else if track.src != nil {
+      playback = .single(track)
+    } else if let path = track.path {
       return .browse(path: path)
+    } else {
+      return .none
     }
 
-    // 4. Neither
-    return .none
+    let event = TrackLoadEvent(track: track, queue: playback.queue, startIndex: Double(playback.index))
+    if await browserManager.awaitTrackLoadHandler(event: event) {
+      return .intercepted
+    }
+    return .play(playback.intent)
   }
 
   // MARK: - Private Helpers
 
-  private func handleContextualPath(
+  /// What a selection plays, and the queue and index the track-load handler is shown.
+  private struct PlannedPlayback {
+    let queue: [Track]
+    let index: Int
+    let intent: PlaybackIntent
+
+    static func single(_ track: Track) -> PlannedPlayback {
+      PlannedPlayback(queue: [track], index: 0, intent: .loadTrack(track))
+    }
+  }
+
+  private func contextualPlayback(
     _ path: String,
     track: Track,
     player: some TrackSelectionPlayer,
-  ) async -> SelectionResult {
+  ) async -> PlannedPlayback {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
@@ -110,47 +118,21 @@ class TrackSelector {
       }
       if let index = skipIndex {
         logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        let queue = player.tracks
-        let event = TrackLoadEvent(track: track, queue: queue, startIndex: Double(index))
-        if await browserManager.awaitTrackLoadHandler(event: event) {
-          return .intercepted
-        }
-        return .play(.skipTo(index: index))
+        return PlannedPlayback(queue: player.tracks, index: index, intent: .skipTo(index: index))
       }
     }
 
-    // Expand the queue from the contextual path
     do {
-      if let expanded = try await browserManager.expandQueueFromContextualPath(path) {
-        let (tracks, startIndex) = expanded
-        let event = TrackLoadEvent(track: track, queue: tracks, startIndex: Double(startIndex))
-        if await browserManager.awaitTrackLoadHandler(event: event) {
-          return .intercepted
-        }
-        return .play(.setQueue(tracks: tracks, startIndex: startIndex, sourcePath: parentPath))
-      } else {
-        // Fallback: single track
-        return await singleTrackResult(track)
+      guard let (tracks, startIndex) = try await browserManager.expandQueueFromContextualPath(path) else {
+        return .single(track)
       }
+      return PlannedPlayback(
+        queue: tracks, index: startIndex,
+        intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: parentPath),
+      )
     } catch {
       logger.error("Error expanding queue: \(error.localizedDescription)")
-      // Fallback to single track
-      return await singleTrackResult(track)
+      return .single(track)
     }
-  }
-
-  private func handlePlayableTrack(
-    _ track: Track,
-    player _: some TrackSelectionPlayer,
-  ) async -> SelectionResult {
-    await singleTrackResult(track)
-  }
-
-  private func singleTrackResult(_ track: Track) async -> SelectionResult {
-    let event = TrackLoadEvent(track: track, queue: [track], startIndex: 0)
-    if await browserManager.awaitTrackLoadHandler(event: event) {
-      return .intercepted
-    }
-    return .play(.loadTrack(track))
   }
 }
