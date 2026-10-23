@@ -10,12 +10,16 @@ public extension HybridAudioBrowser {
   /// synchronous: JS hears it before the navigation that may set the error again.
   internal func navigate(_ path: String, clearError: Bool) {
     if clearError { onMainActor { navigationError.clear() } }
-    Task { @MainActor in
-      do {
-        try await browserManager.load(path)
-      } catch {
-        await reportNavigationError(error, path: path)
-      }
+    Task { @MainActor in await loadPath(path) }
+  }
+
+  /// Loads `path` into the browser, reporting a failure as the navigation error.
+  @MainActor
+  private func loadPath(_ path: String) async {
+    do {
+      try await browserManager.load(path)
+    } catch {
+      await reportNavigationError(error, path: path)
     }
   }
 
@@ -33,9 +37,7 @@ public extension HybridAudioBrowser {
   }
 
   func navigateTrack(track: Track) throws {
-    // @MainActor: `player` is main-confined, and `trackSelector.select` is
-    // MainActor anyway — a bare Task read the reference off the cooperative
-    // pool, racing the assignment in `setupPlayer`.
+    // @MainActor: `player` is main-confined.
     Task { @MainActor in
       guard let player else { return }
       let result = await trackSelector.select(track: track, player: player)
@@ -81,15 +83,12 @@ public extension HybridAudioBrowser {
   func notifyContentChanged(path: String) throws {
     // Throws on a contextual path (matching Android's `require`) — the caller
     // must pass the container path, or the invalidation silently hits nothing.
-    try onMainActor { try browserManager.invalidateContentCache(path) }
-
-    // Notify external controllers (CarPlay) that content changed
-    externalContentChangedEmitter.emit(path)
-
-    // Re-resolve the path if it's the current browser path
-    if onMainActor({ browserManager.path }) == path {
-      navigate(path, clearError: false)
+    let isCurrentPath = try onMainActor {
+      try browserManager.invalidateContentCache(path)
+      return browserManager.path == path
     }
+    externalContentChangedEmitter.emit(path)
+    if isCurrentPath { navigate(path, clearError: false) }
   }
 
   func invalidateAllContent() throws {

@@ -69,6 +69,6 @@ enum MediaIntentPlayback {
   /// destroyed player.
   @MainActor
   private static func livePlayer(of browser: HybridAudioBrowser) -> Player? {
-    HybridAudioBrowser.shared === browser ? browser.getPlayer() : nil
+    HybridAudioBrowser.shared === browser ? browser.player : nil
   }
 }

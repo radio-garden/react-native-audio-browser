@@ -127,6 +127,7 @@ TP -->|Owns| ML
 TP -->|Owns| NPU
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
+TP -->|"activate, release"| ASC
 PC -->|Owns| PStore
 TP -->|Owns| PSO
 TP -->|Owns| PIPO

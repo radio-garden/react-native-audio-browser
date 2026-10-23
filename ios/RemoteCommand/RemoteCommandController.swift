@@ -39,7 +39,10 @@ final class RemoteCommandController {
 
   weak var callbacks: RemoteCommandCallbacks?
 
-  private var enabledCommands: [RemoteCommand] = []
+  private var enabledCommands: Set<RemoteCommand> = []
+  private var forwardJumpInterval: Double = 15
+  private var backwardJumpInterval: Double = 15
+  private var playbackRates: [Double] = []
 
   /// Whether the queue has a next / previous track; read whenever those commands are enabled.
   var skipAvailability: @MainActor () -> (canNext: Bool, canPrevious: Bool) = { (true, true) }
@@ -62,18 +65,27 @@ final class RemoteCommandController {
   func switchCommandCenter(_ newCenter: MPRemoteCommandCenter) {
     guard newCenter !== center else { return }
     let commands = enabledCommands
-    disableAll()
+    commands.forEach(disable)
     center = newCenter
-    enable(commands: commands)
+    commands.forEach(enable)
     center.changeShuffleModeCommand.currentShuffleType = shuffleEnabled.mpShuffleType
     center.changeRepeatModeCommand.currentRepeatType = repeatMode.mpRepeatType
     logger.info("Switched command center, re-enabled \(commands.count) commands")
   }
 
-  /// Enables exactly `commands`, disabling any enabled command they no longer include.
-  func enable(commands: [RemoteCommand]) {
-    RemoteCommand.commandsToDisable(enabled: enabledCommands, replacedBy: commands).forEach(disable)
+  /// Enables exactly `commands`, disabling any enabled command they no longer include. The skip
+  /// commands offer their interval, the rate command `playbackRates`.
+  func enable(
+    commands: Set<RemoteCommand>,
+    forwardJumpInterval: Double = 15,
+    backwardJumpInterval: Double = 15,
+    playbackRates: [Double] = [],
+  ) {
+    enabledCommands.subtracting(commands).forEach(disable)
     enabledCommands = commands
+    self.forwardJumpInterval = forwardJumpInterval
+    self.backwardJumpInterval = backwardJumpInterval
+    self.playbackRates = playbackRates
     commands.forEach(enable)
   }
 
@@ -106,7 +118,6 @@ final class RemoteCommandController {
     case .play: center.playCommand
     case .pause: center.pauseCommand
     case .stop: center.stopCommand
-    case .togglePlayPause: center.togglePlayPauseCommand
     case .next: center.nextTrackCommand
     case .previous: center.previousTrackCommand
     case .changePlaybackPosition: center.changePlaybackPositionCommand
@@ -120,9 +131,10 @@ final class RemoteCommandController {
 
   private func enable(_ command: RemoteCommand) {
     switch command {
-    case let .skipForward(intervals): center.skipForwardCommand.preferredIntervals = intervals
-    case let .skipBackward(intervals): center.skipBackwardCommand.preferredIntervals = intervals
-    case let .changePlaybackRate(rates): center.changePlaybackRateCommand.supportedPlaybackRates = rates
+    case .skipForward: center.skipForwardCommand.preferredIntervals = [NSNumber(value: forwardJumpInterval)]
+    case .skipBackward: center.skipBackwardCommand.preferredIntervals = [NSNumber(value: backwardJumpInterval)]
+    case .changePlaybackRate:
+      center.changePlaybackRateCommand.supportedPlaybackRates = playbackRates.map { NSNumber(value: $0) }
     default: break
     }
     let mpCommand = mpCommand(for: command)
@@ -148,14 +160,13 @@ final class RemoteCommandController {
     case .play: callbacks?.remotePlay()
     case .pause: callbacks?.remotePause()
     case .stop: callbacks?.remoteStop()
-    case .togglePlayPause: callbacks?.remotePlayPause()
     case .next: callbacks?.remoteNext()
     case .previous: callbacks?.remotePrevious()
     case .skipForward, .skipBackward:
       guard let interval = (event.command as? MPSkipIntervalCommand)?.preferredIntervals.first else {
         return .commandFailed
       }
-      if case .skipForward = command {
+      if command == .skipForward {
         callbacks?.remoteJumpForward(interval: interval.doubleValue)
       } else {
         callbacks?.remoteJumpBackward(interval: interval.doubleValue)

@@ -21,7 +21,7 @@ The playback subsystem within AudioBrowser. Receives Playable Tracks and streams
 _Avoid_: Engine, AudioEngine.
 
 **PlayerEngine**:
-The media stack under the **Player** on iOS: the AVPlayer and its items, media loading, now playing and the remote commands. It carries out what the Player decides and reports what it observes; it holds no playback policy. Not a name for the Player itself. See ADR 0012.
+The media stack under the **Player** on iOS: the AVPlayer and its items, media loading, now playing, the remote commands and the audio session's activation and release. It carries out what the Player decides and reports what it observes; it holds no playback policy. Not a name for the Player itself. See ADR 0012.
 _Avoid_: backend, driver, effect handler.
 
 ### Navigation

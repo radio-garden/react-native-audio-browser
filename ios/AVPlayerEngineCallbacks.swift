@@ -8,7 +8,6 @@ import NitroModules
 @MainActor
 protocol AVPlayerEngineCallbacks: RemoteCommandCallbacks {
   func playerDidReceiveCommonMetadata(_ metadata: [AVMetadataItem])
-  func playerDidReceiveTimedMetadata(_ metadata: [AVTimedMetadataGroup])
   func playerDidReceiveChapterMetadata(_ metadata: [AVTimedMetadataGroup])
   /// The now-playing lines or track changed; carries the metadata JS sees.
   func playerDidChangeNowPlaying(_ metadata: NowPlayingMetadata)

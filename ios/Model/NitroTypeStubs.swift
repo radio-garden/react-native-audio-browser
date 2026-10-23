@@ -58,6 +58,21 @@
     var album: String?
   }
 
+  struct PlayerCapabilities: Equatable {
+    var play: Bool?
+    var pause: Bool?
+    var stop: Bool?
+    var seekTo: Bool?
+    var skipToNext: Bool?
+    var skipToPrevious: Bool?
+    var jumpForward: Bool?
+    var jumpBackward: Bool?
+    var favorite: Bool?
+    var shuffleMode: Bool?
+    var repeatMode: Bool?
+    var playbackRate: Bool?
+  }
+
   struct TrackLoadEvent {
     var track: Track
     var queue: [Track]

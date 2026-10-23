@@ -8,7 +8,7 @@ import os.log
 @MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, Player)> {
   guard let browser = HybridAudioBrowser.shared,
         browser.browserManager.isConfigured,
-        let player = browser.getPlayer() else { return nil }
+        let player = browser.player else { return nil }
   return (browser, player)
 }
 
@@ -34,14 +34,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// silent.
   static let instanceChangedEmitter = Emitter<Void>()
 
-  /// Installed once, on first instance creation. React Native posts this
-  /// notification (from `RCTReloadCommand`) when a JS reload — dev or
-  /// OTA-update restart — is triggered, *before* the old runtime is destroyed:
-  /// the earliest signal that this instance's JS callbacks are about to go
-  /// stale. `init` of the replacement instance drops them too, but only after
-  /// the new runtime is up; this observer closes the window in between.
-  /// Observed by name so the library needs no React-Core dependency (and
-  /// stays inert under SPM tests, where nothing posts it).
+  /// React Native posts this notification when a JS reload is triggered, before the old runtime
+  /// is destroyed: the earliest sign this instance's JS callbacks go stale. The replacement's
+  /// `init` drops them too, but only once the new runtime is up. Observed by name, so the library
+  /// needs no React-Core dependency.
   @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
     forName: Notification.Name("RCTTriggerReloadCommandNotification"),
     object: nil,
@@ -71,29 +67,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor var pendingRepeatMode: RepeatMode?
   @MainActor let playerOptions = PlayerUpdateOptions()
 
-  /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
-  @MainActor var playbackRates: [Double] { playerOptions.playbackRates }
-  @MainActor var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
-  @MainActor var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] {
-    playerOptions.carPlayNowPlayingButtons
-  }
-
-  @MainActor var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation {
-    playerOptions.carPlayPlayingIndicatorLocation
-  }
-
   @MainActor lazy var navigationError = NavigationErrorState(
-    onErrorChanged: { [weak self] in self?.navigationErrorEmitter.emit(NavigationErrorEvent(error: $0)) },
+    onErrorChanged: { [weak self] in self?.onNavigationError(NavigationErrorEvent(error: $0)) },
     onFormattedChanged: { [weak self] in self?.onFormattedNavigationError($0) },
   )
 
-  // MARK: - Multi-Listener Emitters
+  // MARK: - Emitters for Native Listeners
 
-  /// Emitters allow multiple listeners for each event type, avoiding callback hijacking
   public let favoriteChangedEmitter = Emitter<FavoriteChangedEvent>()
   public let activeTrackChangedEmitter = Emitter<PlaybackActiveTrackChangedEvent>()
   public let queueChangedEmitter = Emitter<[Track]>()
-  public let navigationErrorEmitter = Emitter<NavigationErrorEvent>()
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
   public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
@@ -111,17 +94,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Runs a closure on MainActor synchronously. Safe for non-Sendable return types
   /// because DispatchQueue.main.sync blocks the caller — no concurrent access window.
-  func onMainActor<T>(_ work: @MainActor () -> T) -> T {
-    if Thread.isMainThread {
-      MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
-    } else {
-      DispatchQueue.main.sync {
-        MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
-      }
-    }
-  }
-
-  func onMainActor<T>(_ work: @MainActor () throws -> T) throws -> T {
+  func onMainActor<T>(_ work: @MainActor () throws -> T) rethrows -> T {
     if Thread.isMainThread {
       try MainActor.assumeIsolated { try UncheckedSendableBox(value: work()) }.value
     } else {
@@ -159,14 +132,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       let configuredPath = configuration.path
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }
 
-      // Query tabs and navigate to initial path after config is set (matches Kotlin behavior)
       Task { @MainActor in
-        // Notify waiting listeners (e.g., CarPlay cold start)
         playerAndConfiguredBrowser.check()
       }
       Task {
         let tabs = try? await browserManager.queryTabs()
-        // Navigate to configured path, first tab, or "/"
         navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
       }
     }
@@ -258,9 +228,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onNowPlayingChanged: (NowPlayingMetadata) -> Void = { _ in }
   public var onOnlineChanged: (Bool) -> Void = { _ in } {
     didSet {
-      // The monitor->JS bridge is wired centrally in setupPlayer (so it doesn't depend on a JS
-      // subscription and can also drive the now-playing re-render + player reconnect). Here we only
-      // push the current state to a newly-attached subscriber.
+      // A new subscriber hears the current state at once.
       onOnlineChanged(networkMonitor.isOnline)
     }
   }
@@ -280,11 +248,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  /// Stored so a re-setup can re-apply it: unlike the other runtime options this
-  /// one has no home in `playerOptions`, and the player it was pushed to does not
-  /// survive `setupPlayer`.
-  @MainActor var playbackIntervalEnabled = false
-
   // MARK: - Initialization
 
   override public init() {
@@ -302,6 +265,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared = self
       audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
       audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
+      // From the first setup on, whether or not JS subscribes: JS, then the player.
+      networkMonitor.changed.addListener { [weak self] isOnline in
+        guard let self else { return }
+        MainActor.assumeIsolated {
+          guard let player = self.player else { return }
+          self.onOnlineChanged(isOnline)
+          player.networkStatusDidChange(isOnline: isOnline)
+        }
+      }
       browseGate.resolve = { [weak self] request in
         guard let self else { throw CancellationError() }
         return try await resolveGate(request).await().await()
@@ -312,24 +284,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // controller is subscribed to a dead instance's emitters.
       HybridAudioBrowser.instanceChangedEmitter.emit(())
     }
-    setupEmitterToNitroForwarding()
+    forwardBrowserEventsToJS()
   }
 
   /// Drops every JS-provided callback that native code can invoke on its own
   /// initiative (browse resolvers, `handleTrackLoad`, `resolveAlbumPath`,
   /// `formatNavigationError`, `resolveGate`, the now-playing formatter).
   ///
-  /// Called on the *previous* instance when a new one takes over: its JS runtime
-  /// is gone, and invoking a callback from a dead runtime aborts the process —
-  /// Nitro's `AsyncJSCallback` throws on a destroyed Dispatcher, and the throw
-  /// crosses the generated bridge wrapper's `noexcept` boundary. Native code
-  /// (e.g. a CarPlay controller still bound to this instance mid-reload) keeps
-  /// working off the data-only config with built-in fallbacks; `resolveGate`
-  /// reverts to the fail-closed default it documents for exactly this window.
-  /// One-shot: on a normal reload both triggers hit the same dying instance
-  /// (the reload notification, then the replacement's `init`), and the second
-  /// strip would re-fire the config-setter cascade — another `configChanged`
-  /// → CarPlay now-playing button rebuild — for nothing.
+  /// Called on the previous instance when a new one takes over: invoking a callback of a dead
+  /// runtime aborts the process (Nitro throws across a `noexcept` boundary). Native code still
+  /// bound to this instance (CarPlay mid-reload) keeps working off the data-only config;
+  /// `resolveGate` reverts to its fail-closed default. One-shot: both triggers reach the same
+  /// dying instance, and a second strip would re-run the config setter's cascade.
   @MainActor private var didDropJSCallbacks = false
 
   @MainActor
@@ -348,61 +314,32 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   deinit {
-    // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
+    // Safety net: the AVPlayer must not outlive this instance. `self` can't reach the main
+    // actor from here, so the teardown takes what it releases.
     let player = self.player, engine = self.engine
-    if Thread.isMainThread {
-      MainActor.assumeIsolated {
-        player?.clear()
-        engine?.destroy()
-      }
-    } else {
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          player?.clear()
-          engine?.destroy()
-        }
-      }
-    }
-  }
-
-  /// Returns the player, if setup has been called.
-  func getPlayer() -> Player? {
-    player
+    let tearDown: @Sendable () -> Void = { MainActor.assumeIsolated { Self.destroy(player, engine) } }
+    if Thread.isMainThread { tearDown() } else { DispatchQueue.main.async(execute: tearDown) }
   }
 
   /// Stops the player and releases its media stack: the AVPlayer and the now-playing session
   /// outlive a dropped reference otherwise.
   @MainActor
   func destroyPlayer() {
+    Self.destroy(player, engine)
+  }
+
+  @MainActor
+  private static func destroy(_ player: Player?, _ engine: AVPlayerEngine?) {
     player?.clear()
     engine?.destroy()
   }
 
-  /// Sets up automatic forwarding from emitters to Nitro callbacks
-  private func setupEmitterToNitroForwarding() {
+  /// Forwards the browser's events to JS. The bridge's own events call JS where they are
+  /// emitted; their emitters are for native listeners (CarPlay).
+  private func forwardBrowserEventsToJS() {
     browserManager.pathChanged.addListener { [weak self] in self?.onPathChanged($0) }
     browserManager.tabsChanged.addListener { [weak self] in self?.onTabsChanged($0) }
     browserManager.contentChanged.addListener { [weak self] in self?.onContentChanged($0) }
-
-    favoriteChangedEmitter.addListener { [weak self] event in
-      self?.onFavoriteChanged(event)
-    }
-
-    activeTrackChangedEmitter.addListener { [weak self] event in
-      self?.onPlaybackActiveTrackChanged(event)
-    }
-
-    queueChangedEmitter.addListener { [weak self] tracks in
-      self?.onPlaybackQueueChanged(tracks)
-    }
-
-    navigationErrorEmitter.addListener { [weak self] event in
-      self?.onNavigationError(event)
-    }
-
-    repeatModeChangedEmitter.addListener { [weak self] event in
-      self?.onPlaybackRepeatModeChanged(event)
-    }
   }
 }
 

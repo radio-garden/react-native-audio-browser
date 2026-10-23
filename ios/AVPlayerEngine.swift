@@ -13,6 +13,7 @@ final class AVPlayerEngine: PlayerEngine {
 
   var onEvent: (@MainActor (EngineEvent) -> Void)?
   private weak var callbacks: AVPlayerEngineCallbacks?
+  private weak var audioSession: AudioSessionController?
 
   let nowPlayingInfoController: NowPlayingInfoController
   let nowPlayingUpdater: NowPlayingUpdater
@@ -25,25 +26,40 @@ final class AVPlayerEngine: PlayerEngine {
   private var itemObserver: ItemObserver?
   private var rate: Float = 1
   private var skipAvailability = (canNext: false, canPrevious: false)
+  /// The charset of the track last loaded, for its ICY titles.
+  private var icyCharset: String?
+  private let bufferDuration: Double
 
-  var remoteCommands: [RemoteCommand] = [] {
-    didSet { remoteCommandController.enable(commands: remoteCommands) }
-  }
-
-  /// - Parameter resolver: Resolves media URLs and now-playing artwork.
+  /// - Parameters:
+  ///   - resolver: Resolves media URLs and now-playing artwork.
+  ///   - bufferDuration: 0 lets AVPlayer choose, minimising stalls.
+  ///   - nowPlayingEnabled: When false the now-playing surface ignores the override and formatter.
   init(
     callbacks: AVPlayerEngineCallbacks?,
     resolver: MediaResolving?,
+    audioSession: AudioSessionController,
+    networkStatus: (any NetworkStatusProviding)?,
+    bufferDuration: Double,
+    nowPlayingEnabled: Bool,
+    nowPlayingFormatter: ((FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
   ) {
     self.callbacks = callbacks
+    self.audioSession = audioSession
+    self.bufferDuration = bufferDuration
     self.nowPlayingInfoController = nowPlayingInfoController
-    nowPlayingUpdater = NowPlayingUpdater(nowPlayingInfoController: nowPlayingInfoController)
+    nowPlayingUpdater = NowPlayingUpdater(
+      nowPlayingInfoController: nowPlayingInfoController,
+      networkStatus: networkStatus,
+      enabled: nowPlayingEnabled,
+      formatter: nowPlayingFormatter,
+    )
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
     mediaLoader = MediaLoader { [weak resolver] src, track in
       await resolver?.resolveMediaUrl(src, track: track) ?? MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
 
+    mediaLoader.bufferDuration = bufferDuration
     mediaLoader.onEvent = { [weak self] in self?.mediaLoaderDidEmit($0) }
     nowPlayingUpdater.artworkUrlResolver = { [weak resolver] track, imageContext in
       await resolver?.resolveNowPlayingArtwork(track: track, imageContext: imageContext)
@@ -63,21 +79,6 @@ final class AVPlayerEngine: PlayerEngine {
     playerObserver?.invalidate()
     playerObserver = nil
     stopObservingItem()
-  }
-
-  /// Re-requests the now-playing election, which the system may have declined at link time while
-  /// the audio session was still inactive.
-  func reactivateNowPlayingSession() {
-    nowPlayingInfoController.reactivateSessionIfNeeded()
-  }
-
-  // MARK: - Buffering
-
-  var bufferDuration: Double = 0 {
-    didSet {
-      avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
-      mediaLoader.bufferDuration = bufferDuration
-    }
   }
 
   // MARK: - The Current Item
@@ -141,6 +142,7 @@ final class AVPlayerEngine: PlayerEngine {
   // MARK: - Loading
 
   func resolveAndLoad(src: String, track: Track) {
+    icyCharset = track.icyCharset
     mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
@@ -221,6 +223,18 @@ final class AVPlayerEngine: PlayerEngine {
     nowPlayingUpdater.clearNowPlaying()
   }
 
+  func renderNowPlaying() {
+    nowPlayingUpdater.render()
+  }
+
+  func nowPlayingTrackChanged() {
+    nowPlayingUpdater.trackChanged()
+  }
+
+  func applyTimedMetadata(_ metadata: TimedMetadata) {
+    nowPlayingUpdater.receivedTimedMetadata(metadata)
+  }
+
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     remoteCommandController.updateRepeatMode(mode)
   }
@@ -232,6 +246,20 @@ final class AVPlayerEngine: PlayerEngine {
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
     skipAvailability = (canNext, canPrevious)
     remoteCommandController.refreshSkipAvailability()
+  }
+
+  // MARK: - Audio Session
+
+  func activateAudioSession() {
+    audioSession?.activate { [weak self] in self?.nowPlayingInfoController.reactivateSessionIfNeeded() }
+  }
+
+  func cancelAudioSessionRelease() {
+    audioSession?.cancelRelease()
+  }
+
+  func scheduleAudioSessionRelease() {
+    audioSession?.scheduleRelease()
   }
 
   // MARK: - Observed Events
@@ -260,7 +288,7 @@ final class AVPlayerEngine: PlayerEngine {
     case let .failed(error), let .failedToPlayToEnd(error): reportFailure(error)
     case .playedToEnd: onEvent?(.playedToEnd)
     case .stalled: onEvent?(.stalled)
-    case let .timedMetadata(groups): callbacks?.playerDidReceiveTimedMetadata(groups)
+    case let .timedMetadata(groups): reportTimedMetadata(groups)
     }
   }
 
@@ -299,7 +327,15 @@ final class AVPlayerEngine: PlayerEngine {
     case let .chapterMetadata(groups):
       callbacks?.playerDidReceiveChapterMetadata(groups)
     case let .timedMetadata(groups):
-      callbacks?.playerDidReceiveTimedMetadata(groups)
+      reportTimedMetadata(groups)
+    }
+  }
+
+  private func reportTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
+    for group in groups {
+      if let metadata = TimedMetadata.from(items: group.items, icyCharset: icyCharset) {
+        onEvent?(.timedMetadata(metadata))
+      }
     }
   }
 

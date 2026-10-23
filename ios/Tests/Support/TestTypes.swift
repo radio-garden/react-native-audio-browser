@@ -109,6 +109,46 @@ final class MockPlayerEngine: PlayerEngine {
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
     updateSkipAvailabilityCalls.append((canNext, canPrevious))
   }
+
+  // Now-playing lines and the audio session, in the order the Player drove them
+  var nowPlayingRenderCount = 0
+  var nowPlayingTrackChangedCount = 0
+  var appliedTimedMetadata: [TimedMetadata] = []
+  var activateAudioSessionCount = 0
+  var cancelAudioSessionReleaseCount = 0
+  var scheduleAudioSessionReleaseCount = 0
+  /// Called with the name of each of these calls, so a test can interleave them with callbacks.
+  var onSeamCall: ((String) -> Void)?
+
+  func renderNowPlaying() {
+    nowPlayingRenderCount += 1
+    onSeamCall?("renderNowPlaying")
+  }
+
+  func nowPlayingTrackChanged() {
+    nowPlayingTrackChangedCount += 1
+    onSeamCall?("nowPlayingTrackChanged")
+  }
+
+  func applyTimedMetadata(_ metadata: TimedMetadata) {
+    appliedTimedMetadata.append(metadata)
+    onSeamCall?("applyTimedMetadata")
+  }
+
+  func activateAudioSession() {
+    activateAudioSessionCount += 1
+    onSeamCall?("activateAudioSession")
+  }
+
+  func cancelAudioSessionRelease() {
+    cancelAudioSessionReleaseCount += 1
+    onSeamCall?("cancelAudioSessionRelease")
+  }
+
+  func scheduleAudioSessionRelease() {
+    scheduleAudioSessionReleaseCount += 1
+    onSeamCall?("scheduleAudioSessionRelease")
+  }
 }
 
 /// A Player over `engine` whose retries reload while `retries` and otherwise give up, keeping
@@ -146,7 +186,7 @@ final class MockPlayerCallbacks: PlayerCallbacks {
   var shuffleEnabledChanges: [Bool] = []
   var errorEvents: [PlaybackErrorEvent] = []
   var playbackIntervalFiredCount = 0
-  var releaseSessionCount = 0
+  var timedMetadata: [TimedMetadata] = []
 
   /// The order playback, intent and playing-state changes arrived in.
   var publishOrder: [String] = []
@@ -200,8 +240,9 @@ final class MockPlayerCallbacks: PlayerCallbacks {
     errorEvents.append(event)
   }
 
-  func playerShouldReleaseSession() {
-    releaseSessionCount += 1
+  func playerDidReceiveTimedMetadata(_ metadata: TimedMetadata) {
+    publishOrder.append("timedMetadata")
+    timedMetadata.append(metadata)
   }
 
   var sleepTimerChanges: [SleepTimerState?] = []

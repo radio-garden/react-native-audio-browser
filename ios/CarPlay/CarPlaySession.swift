@@ -12,7 +12,7 @@ final class CarPlaySession {
   let interfaceController: CPInterfaceController
   let audioBrowser: HybridAudioBrowser
   /// Read on each use: a re-setup replaces the bridge's player.
-  var player: Player? { audioBrowser.getPlayer() }
+  var player: Player? { audioBrowser.player }
   let trackSelector: TrackSelector
   let imageLoader: CarPlayImageLoader
   let listItemFactory: CarPlayListItemFactory
@@ -58,7 +58,7 @@ final class CarPlaySession {
     )
     listItemFactory = CarPlayListItemFactory(
       isActiveTrack: { [weak audioBrowser] identity in
-        identity != nil && audioBrowser?.getPlayer()?.currentTrack?.identity == identity
+        identity != nil && audioBrowser?.player?.currentTrack?.identity == identity
       },
     )
     listItemFactory.imageLoader = imageLoader
@@ -156,7 +156,7 @@ final class CarPlaySession {
   // MARK: - Playing Indicators
 
   var playingIndicatorLocation: CPListItemPlayingIndicatorLocation {
-    switch audioBrowser.carPlayPlayingIndicatorLocation {
+    switch audioBrowser.playerOptions.carPlayPlayingIndicatorLocation {
     case .trailing: .trailing
     case .leading: .leading
     }
