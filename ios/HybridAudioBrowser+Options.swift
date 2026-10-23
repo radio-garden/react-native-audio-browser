@@ -10,7 +10,6 @@ public extension HybridAudioBrowser {
 
   func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
-      // Create player and configure on main actor
       await MainActor.run { [weak self] in
         guard let self else { return }
         // Set the category now, but activate only when playback produces output.
@@ -36,11 +35,8 @@ public extension HybridAudioBrowser {
         player = newPlayer
         audioSession.player = newPlayer
 
-        // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
-        // A terminal error keeps the now-playing info (never cleared on error), and next/previous
-        // stay enabled (gated on queue position, not state). So the
-        // session stays controllable through errors by default — the behavior Android achieves via
-        // InterceptingPlayer is already the iOS norm.
+        // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
+        // info, and next/previous follow the queue, not the state.
 
         // The bundled runtime options and initial state are part of the atomic launch
         // description. Stage the state first so setup options and earlier pre-setup setter
@@ -51,8 +47,6 @@ public extension HybridAudioBrowser {
         applyPendingPlayerState()
         // The stored options outlive the player, so a re-setup applies them to the new one.
         applyOptions()
-
-        // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
       }
     }

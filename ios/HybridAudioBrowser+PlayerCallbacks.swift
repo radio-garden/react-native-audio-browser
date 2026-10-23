@@ -144,12 +144,10 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   public func remoteChangeRepeatMode(mode: RepeatMode) {
-    // Apply the repeat mode change from CarPlay/lock screen
     try? setRepeatMode(mode: mode)
   }
 
   public func remoteChangeShuffleMode(enabled: Bool) {
-    // Apply the shuffle mode change from CarPlay/lock screen
     try? setShuffleEnabled(enabled: enabled)
   }
 

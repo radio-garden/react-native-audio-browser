@@ -32,9 +32,7 @@ public extension HybridAudioBrowser {
   }
 
   func navigateTrack(track: Track) throws {
-    // @MainActor: `player` is main-confined, and `trackSelector.select` is
-    // MainActor anyway — a bare Task read the reference off the cooperative
-    // pool, racing the assignment in `setupPlayer`.
+    // @MainActor: `player` is main-confined.
     Task { @MainActor in
       guard let player else { return }
       let result = await trackSelector.select(track: track, player: player)

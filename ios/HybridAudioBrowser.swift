@@ -34,14 +34,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// silent.
   static let instanceChangedEmitter = Emitter<Void>()
 
-  /// Installed once, on first instance creation. React Native posts this
-  /// notification (from `RCTReloadCommand`) when a JS reload — dev or
-  /// OTA-update restart — is triggered, *before* the old runtime is destroyed:
-  /// the earliest signal that this instance's JS callbacks are about to go
-  /// stale. `init` of the replacement instance drops them too, but only after
-  /// the new runtime is up; this observer closes the window in between.
-  /// Observed by name so the library needs no React-Core dependency (and
-  /// stays inert under SPM tests, where nothing posts it).
+  /// React Native posts this notification when a JS reload is triggered, before the old runtime
+  /// is destroyed: the earliest sign this instance's JS callbacks go stale. The replacement's
+  /// `init` drops them too, but only once the new runtime is up. Observed by name, so the library
+  /// needs no React-Core dependency.
   @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
     forName: Notification.Name("RCTTriggerReloadCommandNotification"),
     object: nil,
@@ -136,14 +132,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       let configuredPath = configuration.path
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }
 
-      // Query tabs and navigate to initial path after config is set (matches Kotlin behavior)
       Task { @MainActor in
-        // Notify waiting listeners (e.g., CarPlay cold start)
         playerAndConfiguredBrowser.check()
       }
       Task {
         let tabs = try? await browserManager.queryTabs()
-        // Navigate to configured path, first tab, or "/"
         navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
       }
     }
@@ -297,17 +290,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// initiative (browse resolvers, `handleTrackLoad`, `resolveAlbumPath`,
   /// `formatNavigationError`, `resolveGate`, the now-playing formatter).
   ///
-  /// Called on the *previous* instance when a new one takes over: its JS runtime
-  /// is gone, and invoking a callback from a dead runtime aborts the process —
-  /// Nitro's `AsyncJSCallback` throws on a destroyed Dispatcher, and the throw
-  /// crosses the generated bridge wrapper's `noexcept` boundary. Native code
-  /// (e.g. a CarPlay controller still bound to this instance mid-reload) keeps
-  /// working off the data-only config with built-in fallbacks; `resolveGate`
-  /// reverts to the fail-closed default it documents for exactly this window.
-  /// One-shot: on a normal reload both triggers hit the same dying instance
-  /// (the reload notification, then the replacement's `init`), and the second
-  /// strip would re-fire the config-setter cascade — another `configChanged`
-  /// → CarPlay now-playing button rebuild — for nothing.
+  /// Called on the previous instance when a new one takes over: invoking a callback of a dead
+  /// runtime aborts the process (Nitro throws across a `noexcept` boundary). Native code still
+  /// bound to this instance (CarPlay mid-reload) keeps working off the data-only config;
+  /// `resolveGate` reverts to its fail-closed default. One-shot: both triggers reach the same
+  /// dying instance, and a second strip would re-run the config setter's cascade.
   @MainActor private var didDropJSCallbacks = false
 
   @MainActor
