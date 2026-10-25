@@ -1,3 +1,9 @@
+## [0.2.0-next.39](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.38...v0.2.0-next.39) (2026-10-25)
+
+### Bug Fixes
+
+* **android:** build the player once per change of setup options ([b2c0e2d](https://github.com/radio-garden/react-native-audio-browser/commit/b2c0e2d4b780fa2d1e48bddf1faf8cea204dfac3))
+
 ## [0.2.0-next.38](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.37...v0.2.0-next.38) (2026-10-25)
 
 ### Bug Fixes
