@@ -186,6 +186,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     }
   }
 
+  override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+    player.refreshPlayingState()
+  }
+
   /**
    * The generic onEvents callback provides access to the Player object and specifies the set of
    * events that occurred together. It's always called after the callbacks that correspond to the
@@ -211,12 +215,16 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
             PlaybackEvent.ExoPlaybackStateChanged(
               player.exoPlayer.playbackState,
               media3Player.mediaItemCount,
-              player.exoPlayer.playWhenReady,
+              player.shouldPlayWhenReady,
             )
           MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->
             PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)
-          MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED ->
-            PlaybackEvent.PlayWhenReadyChanged(player.playWhenReady)
+          MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED,
+          MediaPlayer.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED ->
+            PlaybackEvent.ShouldPlayWhenReadyChanged(
+              player.shouldPlayWhenReady,
+              player.exoPlayer.playbackState,
+            )
           MediaPlayer.EVENT_IS_PLAYING_CHANGED -> PlaybackEvent.IsPlayingChanged(player.isPlaying)
           else -> null
         } ?: continue

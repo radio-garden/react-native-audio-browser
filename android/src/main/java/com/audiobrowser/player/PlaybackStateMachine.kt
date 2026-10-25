@@ -17,13 +17,21 @@ sealed interface PlaybackEvent {
   data class ExoPlaybackStateChanged(
     @get:MediaPlayer.State val exoState: Int,
     val mediaItemCount: Int,
-    val playWhenReady: Boolean,
+    val shouldPlayWhenReady: Boolean,
   ) : PlaybackEvent
 
   /** The active media item changed (auto-advance, skip, queue swap). */
   data class MediaItemTransition(val hasTrack: Boolean, val isPlaying: Boolean) : PlaybackEvent
 
-  data class PlayWhenReadyChanged(val playWhenReady: Boolean) : PlaybackEvent
+  /**
+   * An input of [Player.shouldPlayWhenReady] changed: the intent, or a playback suppression such as
+   * a transient audio focus loss, which moves the machine as a pause does. [exoState] is the real
+   * ExoPlayer state, as in [ExoPlaybackStateChanged].
+   */
+  data class ShouldPlayWhenReadyChanged(
+    val shouldPlayWhenReady: Boolean,
+    @get:MediaPlayer.State val exoState: Int,
+  ) : PlaybackEvent
 
   data class IsPlayingChanged(val isPlaying: Boolean) : PlaybackEvent
 }
@@ -42,12 +50,12 @@ object PlaybackStateMachine {
         when (event.exoState) {
           MediaPlayer.STATE_BUFFERING -> listOf(PlaybackState.BUFFERING)
           MediaPlayer.STATE_READY ->
-            // While playing (playWhenReady), READY is a transient before PLAYING —
+            // While playing (shouldPlayWhenReady), READY is a transient before PLAYING —
             // suppress it so consumers don't flash a settled/non-loading state
             // mid-startup (none→loading→buffering→playing). When paused it IS the
             // settled signal a buffer-that-finished-while-paused needs, so consumers
             // can clear their loading spinner (mono#3325).
-            if (event.playWhenReady) emptyList() else listOf(PlaybackState.READY)
+            if (event.shouldPlayWhenReady) emptyList() else listOf(PlaybackState.READY)
           MediaPlayer.STATE_IDLE ->
             // A terminal error (or an explicit stop) idles ExoPlayer; transitioning to NONE
             // would clear the ERROR/STOPPED state the session is rendering.
@@ -68,16 +76,20 @@ object PlaybackStateMachine {
             listOf(PlaybackState.LOADING, PlaybackState.READY, PlaybackState.PLAYING)
           else -> listOf(PlaybackState.LOADING)
         }
-      is PlaybackEvent.PlayWhenReadyChanged ->
-        // STOPPED and ENDED are terminal: dropping the intent there (stop()'s own
-        // clear, the clear on natural end, or a redundant pause press) must not
-        // re-report the state as PAUSED.
-        if (
-          !event.playWhenReady && current != PlaybackState.STOPPED && current != PlaybackState.ENDED
-        ) {
-          listOf(PlaybackState.PAUSED)
-        } else {
-          emptyList()
+      is PlaybackEvent.ShouldPlayWhenReadyChanged ->
+        when {
+          // STOPPED and ENDED are terminal: dropping the intent there (stop()'s own
+          // clear, the clear on natural end, or a redundant pause press) must not
+          // re-report the state as PAUSED.
+          !event.shouldPlayWhenReady &&
+            current != PlaybackState.STOPPED &&
+            current != PlaybackState.ENDED -> listOf(PlaybackState.PAUSED)
+          !event.shouldPlayWhenReady -> emptyList()
+          // Resuming while ExoPlayer still buffers (a pause or suppression that began during a
+          // load): READY will be dropped as the transient before PLAYING, so report the load now.
+          current == PlaybackState.PAUSED && event.exoState == MediaPlayer.STATE_BUFFERING ->
+            listOf(PlaybackState.BUFFERING)
+          else -> emptyList()
         }
       is PlaybackEvent.IsPlayingChanged ->
         if (event.isPlaying) listOf(PlaybackState.PLAYING) else emptyList()

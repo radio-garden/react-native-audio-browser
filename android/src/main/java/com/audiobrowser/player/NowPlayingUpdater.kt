@@ -30,7 +30,8 @@ interface NowPlayingSurface {
   val playbackError: PlaybackError?
 
   /**
-   * MUST be the real play/pause intent read from the underlying ExoPlayer — not the
+   * MUST be the real play/pause intent read from the underlying ExoPlayer, false while a transient
+   * audio focus loss suppresses output (as iOS pauses on an interruption) — not the
    * InterceptingPlayer-masked value, which can report false through a masked terminal error to keep
    * the session paused-but-alive. The formatter receives this; feeding it the masked value breaks
    * its output exactly in the error case the mask exists for.

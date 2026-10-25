@@ -27,7 +27,7 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_BUFFERING,
           mediaItemCount = 1,
-          playWhenReady = true,
+          shouldPlayWhenReady = true,
         )
       ),
     )
@@ -35,7 +35,7 @@ class PlaybackStateMachineTest {
 
   @Test
   fun `ready is emitted only while paused, suppressed while playing`() {
-    // Paused (playWhenReady=false): READY is the settled signal consumers need to
+    // Paused (shouldPlayWhenReady=false): READY is the settled signal consumers need to
     // clear a spinner from a buffer that finished while paused (mono#3325).
     assertEquals(
       listOf(PlaybackState.READY),
@@ -43,12 +43,12 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_READY,
           mediaItemCount = 1,
-          playWhenReady = false,
+          shouldPlayWhenReady = false,
         ),
         from = PlaybackState.BUFFERING,
       ),
     )
-    // Playing (playWhenReady=true): READY is a transient before PLAYING — suppressed
+    // Playing (shouldPlayWhenReady=true): READY is a transient before PLAYING — suppressed
     // so consumers don't flash a settled/non-loading state mid-startup.
     assertEquals(
       emptyList<PlaybackState>(),
@@ -56,7 +56,7 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_READY,
           mediaItemCount = 1,
-          playWhenReady = true,
+          shouldPlayWhenReady = true,
         ),
         from = PlaybackState.BUFFERING,
       ),
@@ -69,7 +69,7 @@ class PlaybackStateMachineTest {
       PlaybackEvent.ExoPlaybackStateChanged(
         MediaPlayer.STATE_IDLE,
         mediaItemCount = 1,
-        playWhenReady = false,
+        shouldPlayWhenReady = false,
       )
     assertEquals(listOf(PlaybackState.NONE), on(idle, from = PlaybackState.PLAYING))
     // A terminal error idles ExoPlayer; transitioning to NONE would clear the ERROR state the
@@ -86,7 +86,7 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_ENDED,
           mediaItemCount = 3,
-          playWhenReady = false,
+          shouldPlayWhenReady = false,
         )
       ),
     )
@@ -97,7 +97,7 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_ENDED,
           mediaItemCount = 0,
-          playWhenReady = false,
+          shouldPlayWhenReady = false,
         )
       ),
     )
@@ -114,19 +114,19 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_BUFFERING,
           mediaItemCount = 1,
-          playWhenReady = true,
+          shouldPlayWhenReady = true,
         ),
         from = PlaybackState.ERROR,
       ),
     )
-    // A paused recovery reaching READY (playWhenReady=false) also leaves ERROR.
+    // A paused recovery reaching READY (shouldPlayWhenReady=false) also leaves ERROR.
     assertEquals(
       listOf(PlaybackState.READY),
       on(
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_READY,
           mediaItemCount = 1,
-          playWhenReady = false,
+          shouldPlayWhenReady = false,
         ),
         from = PlaybackState.ERROR,
       ),
@@ -141,7 +141,7 @@ class PlaybackStateMachineTest {
         PlaybackEvent.ExoPlaybackStateChanged(
           exoState = 99,
           mediaItemCount = 1,
-          playWhenReady = false,
+          shouldPlayWhenReady = false,
         )
       ),
     )
@@ -171,11 +171,15 @@ class PlaybackStateMachineTest {
     )
   }
 
-  // MARK: playWhenReady / isPlaying
+  // MARK: shouldPlayWhenReady / isPlaying
 
   @Test
-  fun `losing playWhenReady pauses except from stopped or ended`() {
-    val paused = PlaybackEvent.PlayWhenReadyChanged(playWhenReady = false)
+  fun `losing shouldPlayWhenReady pauses except from stopped or ended`() {
+    val paused =
+      PlaybackEvent.ShouldPlayWhenReadyChanged(
+        shouldPlayWhenReady = false,
+        exoState = MediaPlayer.STATE_READY,
+      )
     assertEquals(listOf(PlaybackState.PAUSED), on(paused, from = PlaybackState.PLAYING))
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.STOPPED))
     // ENDED is terminal the same way: dropping the intent after a natural end (the
@@ -183,7 +187,35 @@ class PlaybackStateMachineTest {
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.ENDED))
     assertEquals(
       emptyList<PlaybackState>(),
-      on(PlaybackEvent.PlayWhenReadyChanged(playWhenReady = true)),
+      on(
+        PlaybackEvent.ShouldPlayWhenReadyChanged(
+          shouldPlayWhenReady = true,
+          exoState = MediaPlayer.STATE_READY,
+        )
+      ),
+    )
+  }
+
+  @Test
+  fun `resuming from paused while exo buffers reports buffering`() {
+    val resumed =
+      PlaybackEvent.ShouldPlayWhenReadyChanged(
+        shouldPlayWhenReady = true,
+        exoState = MediaPlayer.STATE_BUFFERING,
+      )
+    assertEquals(listOf(PlaybackState.BUFFERING), on(resumed, from = PlaybackState.PAUSED))
+    assertEquals(emptyList<PlaybackState>(), on(resumed, from = PlaybackState.LOADING))
+    assertEquals(emptyList<PlaybackState>(), on(resumed, from = PlaybackState.STOPPED))
+    // Exo READY: PLAYING follows from IsPlayingChanged.
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(
+        PlaybackEvent.ShouldPlayWhenReadyChanged(
+          shouldPlayWhenReady = true,
+          exoState = MediaPlayer.STATE_READY,
+        ),
+        from = PlaybackState.PAUSED,
+      ),
     )
   }
 
