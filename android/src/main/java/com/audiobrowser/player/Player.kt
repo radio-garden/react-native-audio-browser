@@ -381,20 +381,28 @@ class Player(internal val context: Context) {
       exoPlayer.skipSilenceEnabled = value
     }
 
+  private var engineOptions: PlayerSetupOptions? = null
+
   /**
-   * Sets up or recreates the ExoPlayer with the provided setup options. This method can be called
-   * multiple times to change setup options.
+   * Applies [setupOptions]: builds the ExoPlayer on the first call, and rebuilds it only when the
+   * engine options differ from the ones it was built with. A rebuild carries over the queue, the
+   * position and the play intent, so playback that has started goes on with the new engine.
    */
   fun setup(setupOptions: PlayerSetupOptions) {
-    Timber.Forest.d("Setting up player with new options")
-
     nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
     // Wrap the Nitro Func into a plain suspend call so the updater (and its tests) never touch
     // bridge types; the double-await depth is unchanged (invoke -> bridge Promise -> JS promise).
     nowPlaying.formatter =
       setupOptions.nowPlayingMetadataFormatter?.let { f -> { params -> f.invoke(params).await() } }
 
-    val isInitialSetup = !::exoPlayer.isInitialized
+    val newEngineOptions = setupOptions.engineOptions()
+    if (newEngineOptions == engineOptions) {
+      Timber.Forest.d("Setup options unchanged: keeping the player")
+      return
+    }
+    Timber.Forest.d("Setting up player with new options")
+    val isInitialSetup = engineOptions == null
+    val carried = if (isInitialSetup) null else EnginePlayback.of(exoPlayer)
 
     if (!isInitialSetup) {
       forwardingPlayer.removeListener(playerListener)
@@ -442,14 +450,8 @@ class Player(internal val context: Context) {
     loadControl = engine.loadControl
     mediaFactory = engine.mediaFactory
     exoPlayer = engine.exoPlayer
-
-    // A rebuilt engine starts paused and fires no change event — sync the
-    // eager cache and tell JS, or the stale true sticks (and the emit dedupe
-    // would swallow the next real rise).
-    if (!isInitialSetup) {
-      playWhenReadyCache = false
-      emitPlayWhenReadyChanged(false)
-    }
+    // Before the listener and the session are attached, so neither hears the playback replayed.
+    carried?.restoreTo(exoPlayer)
 
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer =
@@ -478,11 +480,20 @@ class Player(internal val context: Context) {
         mediaSession.player = forwardingPlayer
       }
 
-      setPlaybackState(PlaybackState.NONE)
+      // No listener heard the restore; its prepare() leaves the engine buffering.
+      setPlaybackState(
+        if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
+        else PlaybackState.BUFFERING
+      )
+      // The new engine can refuse the carried intent (audio focus denied) without a change event:
+      // sync the eager cache and tell JS, or a stale true sticks.
+      playWhenReadyCache = exoPlayer.playWhenReady
+      emitPlayWhenReadyChanged(exoPlayer.playWhenReady)
     }
 
     // Set up automatic buffer management if enabled
     setupAutomaticBufferManager(setupOptions.automaticBuffer)
+    engineOptions = newEngineOptions
   }
 
   /** Sets up or tears down the automatic buffer manager based on the enabled flag. */
