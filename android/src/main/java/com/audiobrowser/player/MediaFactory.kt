@@ -14,7 +14,9 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.Track
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
@@ -28,7 +30,7 @@ class MediaFactory(
   private val hasPlayed: () -> Boolean = { false },
   private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
-  private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
+  private val getRequestConfig: (originalUrl: String, track: Track) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
 
   companion object {
@@ -130,7 +132,9 @@ class MediaFactory(
     val baseFactory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
 
     // Wrap with TransformingDataSource to resolve URLs on the IO thread
-    val transformingFactory = TransformingDataSource.Factory(baseFactory, getRequestConfig)
+    val track = TrackFactory.fromMedia3(mediaItem)
+    val transformingFactory =
+      TransformingDataSource.Factory(baseFactory) { url -> getRequestConfig(url, track) }
 
     // Configure data source factory with optional caching
     val dataSourceFactory =

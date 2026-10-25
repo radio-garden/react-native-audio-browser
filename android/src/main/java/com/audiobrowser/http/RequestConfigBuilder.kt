@@ -153,12 +153,11 @@ object RequestConfigBuilder {
    * per-track `request` override (e.g. a strict-UA sentinel the consumer swaps for a clean
    * User-Agent) — and returns the config whose fields win.
    *
-   * No-op when the media config has no `resolve` callback or no track is available (so the
-   * request/media layers stand). The callback may return its config synchronously (variant `first`)
-   * or via a Promise (`second`). Mirrors iOS resolveMediaTrackConfig + applyMediaResolveLayer.
+   * No-op when the media config has no `resolve` callback (so the request/media layers stand). The
+   * callback may return its config synchronously (variant `first`) or via a Promise (`second`).
+   * Mirrors iOS resolveMediaTrackConfig + applyMediaResolveLayer.
    */
-  suspend fun applyMediaResolve(layered: MediaRequestConfig, track: Track?): MediaRequestConfig {
-    if (track == null) return layered
+  suspend fun applyMediaResolve(layered: MediaRequestConfig, track: Track): MediaRequestConfig {
     if (layered.resolve == null && layered.resolveSync == null) return layered
     val resolved: RequestConfig =
       try {

@@ -20,11 +20,11 @@ import timber.log.Timber
  */
 
 /**
- * Builds the media request config for [originalUrl]. Returns null only when neither a request layer
- * nor a media config is set (the caller then uses the original URL as-is). Mirrors the web stub's
- * and iOS's `resolveMediaUrl`.
+ * Builds the media request config for [originalUrl], [track]'s src, with `media.resolve` run for
+ * [track]. Returns null only when neither a request layer nor a media config is set (the caller
+ * then uses the original URL as-is). Mirrors the web stub's and iOS's `resolveMediaUrl`.
  */
-suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestConfig? {
+suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): MediaRequestConfig? {
   val mediaConfig = config.media
   // The request layer counts as present when a static `request` OR a `requestResolver`
   // is set — a resolver-only consumer still needs its baseUrl/headers/transform
@@ -67,16 +67,6 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestCon
         userAgent = base.userAgent,
       )
     }
-  // Final, most-specific layer: media.resolve(track). The cached Track carries any
-  // per-track `request` override (e.g. a strict-UA sentinel); resolve reads it and
-  // returns the winning config. Only look up the track when a resolve callback
-  // exists, to avoid a needless cache lookup (and its miss-log) otherwise — async
-  // OR sync (the old code checked only `resolve`, silently breaking
-  // resolveSync-only consumers).
-  val track =
-    if (mediaConfig?.resolve != null || mediaConfig?.resolveSync != null) {
-      getCachedTrack(originalUrl)
-    } else null
   return RequestConfigBuilder.applyMediaResolve(mediaLayered, track)
 }
 

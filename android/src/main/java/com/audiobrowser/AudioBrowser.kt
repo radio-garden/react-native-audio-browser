@@ -389,9 +389,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * bridge: it runs on ExoPlayer's IO thread (TransformingDataSource.open), so blocking here is
    * safe and intentional.
    */
-  fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
+  fun getMediaRequestConfig(originalUrl: String, track: Track): MediaRequestConfig? {
     return try {
-      runBlocking { browserManager.resolveMediaUrl(originalUrl) }
+      runBlocking { browserManager.resolveMediaUrl(originalUrl, track) }
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform media URL: $originalUrl")
       null
