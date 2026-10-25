@@ -20,6 +20,7 @@ class ServiceBindingTest {
 
   private val app = RuntimeEnvironment.getApplication()
   private val intent = Intent(app, Service::class.java)
+  private val unbindableIntent = Intent("unbindable").setPackage(app.packageName)
 
   private val connection =
     object : ServiceConnection {
@@ -65,7 +66,7 @@ class ServiceBindingTest {
     val binding = ServiceBinding(app)
     shadowOf(app).declareActionUnbindable("unbindable")
 
-    assertFalse(binding.bind(Intent("unbindable"), connection))
+    assertFalse(binding.bind(unbindableIntent, connection))
 
     assertTrue(binding.isBound)
 
@@ -83,8 +84,8 @@ class ServiceBindingTest {
     val binding = ServiceBinding(app)
     shadowOf(app).declareActionUnbindable("unbindable")
 
-    assertFalse(binding.bind(Intent("unbindable"), connection))
-    assertFalse(binding.bind(Intent("unbindable"), connection))
+    assertFalse(binding.bind(unbindableIntent, connection))
+    assertFalse(binding.bind(unbindableIntent, connection))
   }
 
   @Test

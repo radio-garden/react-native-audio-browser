@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
@@ -23,6 +24,7 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
 import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
@@ -925,6 +927,25 @@ class MediaSessionCallback(private val player: Player) :
    */
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    isForPlayback: Boolean,
+  ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+    val resumption = resume(controller, isForPlayback)
+    if (isForPlayback) {
+      Futures.addCallback(
+        resumption,
+        object : FutureCallback<MediaSession.MediaItemsWithStartPosition> {
+          override fun onSuccess(result: MediaSession.MediaItemsWithStartPosition) {}
+
+          override fun onFailure(t: Throwable) = player.onPlaybackResumptionFailed()
+        },
+        ContextCompat.getMainExecutor(player.context),
+      )
+    }
+    return resumption
+  }
+
+  private fun resume(
     controller: MediaSession.ControllerInfo,
     isForPlayback: Boolean,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {

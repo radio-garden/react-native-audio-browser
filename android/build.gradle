@@ -69,6 +69,7 @@ android {
   // android.util.LruCache.evictAll() is what this flag used to paper over.
   testOptions {
     unitTests.returnDefaultValues = false
+    unitTests.includeAndroidResources = true
   }
 
   defaultConfig {

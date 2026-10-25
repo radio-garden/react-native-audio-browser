@@ -37,7 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -120,6 +119,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
     player.imageLoader = imageLoader
+    player.onPlaybackResumptionFailed = { releasePlaceholder() }
 
     // Populate the artwork content provider holder so ArtworkContentProvider can serve
     // browse artwork to Android Auto / AAOS over content:// URIs.
@@ -183,8 +183,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       ?.let { searchIntent ->
         val searchParams = parseSearchIntent(searchIntent)
         Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: $searchParams")
-        scope.launch { player.playFromSearch(searchParams) }
+        // A search that plays has waited for AudioBrowser, whose MediaBrowser connecting hands
+        // the notification to Media3.
+        playInForeground(scope, startId, hasMedia = { player.currentTrack != null }) {
+          player.playFromSearch(searchParams)
+        }
       }
+    // Released by Media3's update after the play request, or by a failed resumption.
+    if (intent?.isForegroundStartKey() == true) holdForeground()
 
     return super.onStartCommand(intent, flags, startId)
   }
