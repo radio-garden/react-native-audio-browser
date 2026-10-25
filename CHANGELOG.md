@@ -1,3 +1,9 @@
+## [0.2.0-next.38](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.37...v0.2.0-next.38) (2026-10-25)
+
+### Bug Fixes
+
+* **android:** run media resolve for every track the player plays ([03b895d](https://github.com/radio-garden/react-native-audio-browser/commit/03b895d420e97cd3b11abebcb6a2bdde042fd550))
+
 ## [0.2.0-next.37](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.36...v0.2.0-next.37) (2026-10-25)
 
 ### Bug Fixes
