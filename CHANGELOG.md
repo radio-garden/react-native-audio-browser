@@ -1,3 +1,9 @@
+## [0.2.0-next.37](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.36...v0.2.0-next.37) (2026-10-25)
+
+### Bug Fixes
+
+* **android:** go foreground at once on a play-from-search or play-key start ([#181](https://github.com/radio-garden/react-native-audio-browser/issues/181)) ([c163526](https://github.com/radio-garden/react-native-audio-browser/commit/c163526262af59d98206b05cead45efdecc3ec42)), closes [#180](https://github.com/radio-garden/react-native-audio-browser/issues/180)
+
 ## [0.2.0-next.36](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.35...v0.2.0-next.36) (2026-10-25)
 
 ### Bug Fixes
