@@ -6,6 +6,7 @@ import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.TestFixtures.transformableConfig
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,13 +32,18 @@ class BrowserUrlResolutionTest {
   fun `resolveMediaUrl returns null when neither media nor request layer is configured`() =
     runTest {
       bm.config = BrowserConfig()
-      assertNull(bm.resolveMediaUrl("https://cdn.example.com/a.mp3"))
+      assertNull(
+        bm.resolveMediaUrl(
+          "https://cdn.example.com/a.mp3",
+          track(src = "https://cdn.example.com/a.mp3"),
+        )
+      )
     }
 
   @Test
   fun `resolveMediaUrl applies the request layer to a relative src`() = runTest {
     bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
-    val resolved = bm.resolveMediaUrl("/stream/123")
+    val resolved = bm.resolveMediaUrl("/stream/123", track(src = "/stream/123"))
     assertEquals("https://api.example.com", resolved?.baseUrl)
     assertEquals("/stream/123", resolved?.path)
   }
@@ -50,10 +56,31 @@ class BrowserUrlResolutionTest {
         media =
           mediaConfig(baseUrl = "https://media.example.com", headers = mapOf("x-token" to "abc")),
       )
-    val resolved = bm.resolveMediaUrl("/stream/123")
+    val resolved = bm.resolveMediaUrl("/stream/123", track(src = "/stream/123"))
     assertEquals("https://media.example.com", resolved?.baseUrl)
     assertEquals("abc", resolved?.headers?.get("x-token"))
     assertEquals("/stream/123", resolved?.path)
+  }
+
+  @Test
+  fun `resolveMediaUrl runs media resolveSync for the track it is given`() = runTest {
+    val resolvedFor = mutableListOf<Track>()
+    bm.config =
+      BrowserConfig(
+        media =
+          mediaConfig(
+            // Records the track and stops there: a Nitro Promise cannot be built off-device.
+            resolveSync = { track ->
+              resolvedFor.add(track)
+              throw IllegalStateException("recorded")
+            }
+          )
+      )
+    val queued = track(id = "queued", src = "https://cdn.example.com/queued.mp3")
+
+    bm.resolveMediaUrl("https://cdn.example.com/queued.mp3", queued)
+
+    assertEquals(listOf(queued), resolvedFor)
   }
 
   @Test

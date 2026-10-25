@@ -437,7 +437,7 @@ class Player(internal val context: Context) {
           }
           reportRetryingError(exception)
         },
-        resolveMediaConfig = { url -> browser?.getMediaRequestConfig(url) },
+        resolveMediaConfig = { url, track -> browser?.getMediaRequestConfig(url, track) },
       )
     loadControl = engine.loadControl
     mediaFactory = engine.mediaFactory

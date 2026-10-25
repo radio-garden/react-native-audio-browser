@@ -621,7 +621,7 @@ export class NativeAudioBrowser
    * Resolves a media URL using the browser's media configuration.
    * Combines baseUrl with relative paths to create full URLs.
    * Supports the transform callback for URL manipulation.
-   * Mirrors Android's MediaFactory.getMediaRequestConfig behavior.
+   * Mirrors Android's and iOS's `resolveMediaUrl`.
    */
   private async resolveMediaRequest(
     src: string,

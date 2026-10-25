@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
+import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.SectionStyle
@@ -17,6 +18,7 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.Promise
 
 /**
  * Shared builders for Nitro structs, whose generated constructors require every field. Tests set
@@ -90,10 +92,11 @@ object TestFixtures {
     path: String? = null,
     query: Map<String, String>? = null,
     headers: Map<String, String>? = null,
+    resolveSync: ((Track) -> Promise<RequestConfig>)? = null,
   ) =
     MediaRequestConfig(
       resolve = null,
-      resolveSync = null,
+      resolveSync = resolveSync,
       transform = null,
       transformSync = null,
       method = null,
