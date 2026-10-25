@@ -1,3 +1,9 @@
+## [0.2.0-next.36](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.35...v0.2.0-next.36) (2026-10-25)
+
+### Bug Fixes
+
+* **android:** align the app's OkHttp modules with the OkHttp BOM ([5c0f6da](https://github.com/radio-garden/react-native-audio-browser/commit/5c0f6da712c4832a3204341c0f844ddf8a521099))
+
 ## [0.2.0-next.35](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.34...v0.2.0-next.35) (2026-10-23)
 
 ### Code Refactors
