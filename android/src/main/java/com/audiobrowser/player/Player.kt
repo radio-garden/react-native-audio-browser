@@ -127,6 +127,9 @@ class Player(internal val context: Context) {
    */
   var imageLoader: coil3.ImageLoader? = null
 
+  /** Called on the main thread when a resumption meant to start playback fails. Set by Service. */
+  var onPlaybackResumptionFailed: () -> Unit = {}
+
   /** Registry that maps content:// tokens to artwork URLs for the browse content provider. */
   val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
 
