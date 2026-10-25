@@ -257,13 +257,12 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Re-derives [playingState] from the current `playWhenReady` + [playbackState] and emits
-   * `onPlaybackPlayingState` when it changed. The only writer of [playingState] — called from the
-   * state machine ([setPlaybackState]) and from [PlayerListener.onPlayWhenReadyChanged], the change
-   * points of its two inputs.
+   * Re-derives [playingState] from the current [shouldPlayWhenReady] + [playbackState] and emits
+   * `onPlaybackPlayingState` when it changed. The only writer of [playingState], called at every
+   * change point of its inputs.
    */
   internal fun refreshPlayingState() {
-    val newPlayingState = PlayingStateFactory.derive(playWhenReady, playbackState)
+    val newPlayingState = PlayingStateFactory.derive(shouldPlayWhenReady, playbackState)
     if (newPlayingState == playingState) return
     Timber.d(
       "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
@@ -314,6 +313,15 @@ class Player(internal val context: Context) {
 
   val isPlaying
     get() = exoPlayer.isPlaying
+
+  /**
+   * False while ExoPlayer suppresses output (a transient audio focus loss) though [playWhenReady]
+   * stays raised for it to resume on; mirrors media3's `ExoPlayerImplInternal.shouldPlayWhenReady`.
+   */
+  internal val shouldPlayWhenReady
+    get() =
+      exoPlayer.playWhenReady &&
+        exoPlayer.playbackSuppressionReason == ExoPlayer.PLAYBACK_SUPPRESSION_REASON_NONE
 
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
@@ -788,7 +796,7 @@ class Player(internal val context: Context) {
           get() = this@Player.playbackError
 
         override val playWhenReady
-          get() = exoPlayer.playWhenReady
+          get() = shouldPlayWhenReady
 
         override val isRebuffering
           get() = loadControl.isRebuffering
@@ -1026,10 +1034,12 @@ class Player(internal val context: Context) {
   }
 
   fun togglePlayback() {
-    if (exoPlayer.playWhenReady) {
-      pause()
-    } else {
-      play()
+    when {
+      shouldPlayWhenReady -> pause()
+      // Suppressed with the intent raised: ExoPlayer resumes when focus returns. play() would
+      // request focus again, and a call refuses it, which drops the intent.
+      playWhenReady -> Unit
+      else -> play()
     }
   }
 
