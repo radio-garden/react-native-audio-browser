@@ -1,3 +1,9 @@
+## [0.2.0-next.40](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.39...v0.2.0-next.40) (2026-10-25)
+
+### Bug Fixes
+
+* **android:** read a transient audio focus loss as paused ([168d757](https://github.com/radio-garden/react-native-audio-browser/commit/168d7574f28075ed4fba1fa79a9d19bb34f6c555)), closes [#183](https://github.com/radio-garden/react-native-audio-browser/issues/183)
+
 ## [0.2.0-next.39](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.38...v0.2.0-next.39) (2026-10-25)
 
 ### Bug Fixes
