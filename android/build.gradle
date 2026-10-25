@@ -205,9 +205,12 @@ dependencies {
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
 
-  // HTTP client for browser API requests
-  implementation 'com.squareup.okhttp3:okhttp:5.3.0'
-  implementation 'com.squareup.okhttp3:logging-interceptor:5.3.0'
+  // HTTP client for browser API requests. The BOM also aligns the app's other
+  // okhttp3 modules: React Native's okhttp-urlconnection 4 calls a class
+  // OkHttp 5 removed, and crashes on the first fetch that carries a cookie.
+  implementation platform('com.squareup.okhttp3:okhttp-bom:5.3.0')
+  implementation 'com.squareup.okhttp3:okhttp'
+  implementation 'com.squareup.okhttp3:logging-interceptor'
 
   // JSON parsing
   implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
