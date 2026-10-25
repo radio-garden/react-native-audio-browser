@@ -70,6 +70,13 @@ data class PlayerSetupOptions(
   val automaticBuffer: Boolean
     get() = rebufferBuffer == null
 
+  /**
+   * A copy that equals another's when both build the same engine: without the now-playing options,
+   * which apply without a rebuild. A formatter is a new object on every setup call.
+   */
+  fun engineOptions() =
+    copy(autoUpdateNowPlayingMetadata = true, nowPlayingMetadataFormatter = null)
+
   fun update(options: NativeSetupPlayerOptions) {
     // Android-specific options
     options.android?.let { android ->

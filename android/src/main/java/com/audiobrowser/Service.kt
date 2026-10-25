@@ -319,10 +319,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
-    // The player is always set up by onCreate. Don't re-run setup() here for controllers that
-    // connect before React Native does: setup() releases and recreates the ExoPlayer, which would
-    // kill in-progress playback (e.g. playback resumption from a car/Bluetooth controller) when a
-    // second controller connects while JS is still booting.
+    // No setup() here: default options would replace the ones setupPlayer applied.
     if (player.getCallbacks() == null) {
       Timber.w("External controller connecting before React Native setup - using default options")
     }
