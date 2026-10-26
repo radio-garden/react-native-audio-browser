@@ -918,8 +918,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun load(track: Track) {
     // Throws without a player, as on iOS: a track asked for and silently dropped hides a mistake.
-    val player = player
-    launchInScope { player.load(track) }
+    // Blocks rather than launching, so a track the player refuses fails this call.
+    runBlockingOnMain { player.load(track) }
   }
 
   override fun reset() =

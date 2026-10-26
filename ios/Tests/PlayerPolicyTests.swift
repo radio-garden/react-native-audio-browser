@@ -8,19 +8,19 @@ import Testing
 private func makeLoading(
   src: String? = "https://example.com/a.mp3",
   live: Bool = false,
-) -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
   let player = makePlayer(engine: engine, retries: false)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
-  player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
+  try player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
   return (player, engine, callbacks)
 }
 
 /// Loaded and playing: the item is in place and audio has started.
 @MainActor
-private func makePlaying(live: Bool = false) -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
-  let (player, engine, callbacks) = makeLoading(live: live)
+private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let (player, engine, callbacks) = try makeLoading(live: live)
   player.setPlayWhenReady(true)
   engine.hasItem = true
   engine.hasLoadedAsset = true
@@ -32,8 +32,8 @@ private func makePlaying(live: Bool = false) -> (Player, MockPlayerEngine, MockP
 @Suite("Player - seeking")
 @MainActor
 struct PlayerSeekingTests {
-  @Test func aSeekWhileLoadingWaitsForTheItem_andHoldsReadyUntilItLands() {
-    let (player, engine, _) = makeLoading()
+  @Test func aSeekWhileLoadingWaitsForTheItem_andHoldsReadyUntilItLands() throws {
+    let (player, engine, _) = try makeLoading()
     engine.seekResult = nil
     player.seek(to: 30)
     #expect(engine.seekCalls.isEmpty)
@@ -45,8 +45,8 @@ struct PlayerSeekingTests {
     #expect(player.state == .loading)
   }
 
-  @Test func theLoadBecomesReadyWhenTheDeferredSeekLands() {
-    let (player, engine, _) = makeLoading()
+  @Test func theLoadBecomesReadyWhenTheDeferredSeekLands() throws {
+    let (player, engine, _) = try makeLoading()
     player.seek(to: 30)
     engine.hasItem = true
     engine.hasLoadedAsset = true
@@ -55,8 +55,8 @@ struct PlayerSeekingTests {
     #expect(player.state == .ready)
   }
 
-  @Test func seekByWhileLoadingOffsetsTheDeferredTarget() {
-    let (player, _, _) = makeLoading()
+  @Test func seekByWhileLoadingOffsetsTheDeferredTarget() throws {
+    let (player, _, _) = try makeLoading()
     player.seek(to: 30)
     player.seek(by: 15)
     #expect(player.deferredSeek.target == 45)
@@ -64,13 +64,13 @@ struct PlayerSeekingTests {
 
   /// A completion from before a track change belongs to the old item: it reports false and
   /// leaves the new track's start position pending.
-  @Test func aCompletionFromBeforeATrackChangeIsDropped() {
-    let (player, engine, _) = makePlaying()
+  @Test func aCompletionFromBeforeATrackChangeIsDropped() throws {
+    let (player, engine, _) = try makePlaying()
     engine.seekResult = nil
     var landed: [Bool] = []
     player.seek(to: 10) { landed.append($0) }
 
-    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")], startPositionMs: 25000)
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")], startPositionMs: 25000)
     engine.completeSeeks(true)
 
     #expect(landed == [false])
@@ -78,8 +78,8 @@ struct PlayerSeekingTests {
     #expect(player.state == .loading)
   }
 
-  @Test func theLiveEdgeIsTheSeekableWindowsEnd_orAReconnectWithoutOne() {
-    let (player, engine, _) = makePlaying(live: true)
+  @Test func theLiveEdgeIsTheSeekableWindowsEnd_orAReconnectWithoutOne() throws {
+    let (player, engine, _) = try makePlaying(live: true)
     engine.liveEdge = 120
     player.seekToLiveEdge()
     #expect(engine.seekCalls == [120])
@@ -94,61 +94,61 @@ struct PlayerSeekingTests {
 @Suite("Player - engine events")
 @MainActor
 struct PlayerEngineEventTests {
-  @Test func aFailedLoadPrimesNowPlayingOncePerLoad() {
-    let (player, engine, _) = makeLoading()
+  @Test func aFailedLoadPrimesNowPlayingOncePerLoad() throws {
+    let (player, engine, _) = try makeLoading()
     player.setPlayWhenReady(true)
     player.retry.shouldRetry = { true }
     engine.emit(.loadFailed(URLError(.timedOut)))
     engine.emit(.loadFailed(URLError(.timedOut)))
     #expect(engine.primeCount == 1)
 
-    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     engine.emit(.loadFailed(URLError(.timedOut)))
     #expect(engine.primeCount == 2)
   }
 
-  @Test func aFailedLoadWithoutIntentDoesNotPrime() async {
-    let (player, engine, _) = makeLoading()
+  @Test func aFailedLoadWithoutIntentDoesNotPrime() async throws {
+    let (player, engine, _) = try makeLoading()
     engine.emit(.loadFailed(URLError(.timedOut)))
     await player.retry.pendingTask?.value
     #expect(engine.primeCount == 0)
     #expect(player.state == .error)
   }
 
-  @Test func anUnplayableAssetIsTerminal() {
-    let (player, engine, _) = makeLoading()
+  @Test func anUnplayableAssetIsTerminal() throws {
+    let (player, engine, _) = try makeLoading()
     engine.emit(.unplayable)
     #expect(player.state == .error)
     #expect(player.errorStatus == .terminal(.trackWasUnplayable, report: 1))
   }
 
-  @Test func anInvalidSourceIsTerminal() {
-    let (player, engine, _) = makeLoading()
+  @Test func anInvalidSourceIsTerminal() throws {
+    let (player, engine, _) = try makeLoading()
     engine.emit(.invalidSource("::"))
     #expect(player.errorStatus == .terminal(.invalidSourceUrl("::"), report: 1))
   }
 
-  @Test func aPlayerFailureCarriesItsHTTPStatus() {
-    let (player, engine, _) = makePlaying()
+  @Test func aPlayerFailureCarriesItsHTTPStatus() throws {
+    let (player, engine, _) = try makePlaying()
     engine.emit(.failed(nil, httpStatusCode: 404))
     #expect(player.errorStatus == .terminal(.httpStatus(404), report: 1))
   }
 
-  @Test func aGenuineEndAdvances_aLiveEndReconnects() {
-    let (player, engine, _) = makePlaying()
+  @Test func aGenuineEndAdvances_aLiveEndReconnects() throws {
+    let (player, engine, _) = try makePlaying()
     engine.currentTime = 300
     engine.duration = 300
     engine.emit(.playedToEnd)
     #expect(player.state == .ended)
 
-    let (live, liveEngine, _) = makePlaying(live: true)
+    let (live, liveEngine, _) = try makePlaying(live: true)
     liveEngine.emit(.playedToEnd)
     #expect(live.state == .loading)
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
   }
 
-  @Test func aStallNudgesPlayback_onlyWithIntent() {
-    let (player, engine, _) = makePlaying()
+  @Test func aStallNudgesPlayback_onlyWithIntent() throws {
+    let (player, engine, _) = try makePlaying()
     engine.startPlaybackCallCount = 0
     engine.emit(.stalled)
     #expect(engine.startPlaybackCallCount == 1)
@@ -159,8 +159,8 @@ struct PlayerEngineEventTests {
     #expect(engine.startPlaybackCallCount == 0)
   }
 
-  @Test func anAirPlayStrandingIsNudged() {
-    let (player, engine, _) = makePlaying()
+  @Test func anAirPlayStrandingIsNudged() throws {
+    let (player, engine, _) = try makePlaying()
     engine.isAirPlayRoute = true
     engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: true))
     engine.startPlaybackCallCount = 0
@@ -173,24 +173,24 @@ struct PlayerEngineEventTests {
 @Suite("Player - recovering")
 @MainActor
 struct PlayerRecoveringTests {
-  @Test func theNetworkReturningReconnectsAStalledStream() {
-    let (player, engine, _) = makePlaying()
+  @Test func theNetworkReturningReconnectsAStalledStream() throws {
+    let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)
     #expect(player.state == .buffering)
     player.networkStatusDidChange(isOnline: true)
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
-  @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() {
-    let (player, engine, _) = makePlaying()
+  @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() throws {
+    let (player, engine, _) = try makePlaying()
     player.networkStatusDidChange(isOnline: true)
     player.pause()
     player.networkStatusDidChange(isOnline: true)
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkGoingReRendersTheStallLineWithoutReconnecting() {
-    let (player, engine, _) = makePlaying()
+  @Test func theNetworkGoingReRendersTheStallLineWithoutReconnecting() throws {
+    let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)
     engine.nowPlayingRenderCount = 0
 
@@ -200,8 +200,8 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkReturningReRendersBeforeReconnecting() {
-    let (player, engine, _) = makePlaying()
+  @Test func theNetworkReturningReRendersBeforeReconnecting() throws {
+    let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)
     var order: [String] = []
     engine.onSeamCall = { order.append($0) }
@@ -215,8 +215,8 @@ struct PlayerRecoveringTests {
 
   /// A restart from a terminal error is a new Load: fresh retry budgets, unproven playback, the
   /// primer allowed again; a retry within a Load keeps its Load.
-  @Test func aRestartFromAnErrorBeginsANewLoad() async {
-    let (player, engine, _) = makePlaying()
+  @Test func aRestartFromAnErrorBeginsANewLoad() async throws {
+    let (player, engine, _) = try makePlaying()
     engine.emit(.audioDidStart)
     let first = player.load
     #expect(first?.hasPlayed == true)
@@ -231,8 +231,8 @@ struct PlayerRecoveringTests {
     #expect(engine.recreateCount == 1)
   }
 
-  @Test func aRetryKeepsItsLoad() async {
-    let (player, engine, _) = makePlaying()
+  @Test func aRetryKeepsItsLoad() async throws {
+    let (player, engine, _) = try makePlaying()
     player.retry.shouldRetry = { true }
     let first = player.load
     engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
@@ -241,26 +241,26 @@ struct PlayerRecoveringTests {
     #expect(engine.recreateCount == 0)
   }
 
-  @Test func aMediaServicesResetReloadsOnANewPlayer() {
-    let (player, engine, _) = makePlaying()
+  @Test func aMediaServicesResetReloadsOnANewPlayer() throws {
+    let (player, engine, _) = try makePlaying()
     player.mediaServicesWereReset()
     #expect(engine.recreateCount == 1)
     #expect(engine.resolveAndLoadCalls.count == 2)
     #expect(player.playWhenReady)
   }
 
-  @Test func aStopRewindsAFiniteTrack_notALiveOne() {
-    let (player, engine, _) = makePlaying()
+  @Test func aStopRewindsAFiniteTrack_notALiveOne() throws {
+    let (player, engine, _) = try makePlaying()
     player.stop()
     #expect(engine.seekCalls == [0])
 
-    let (live, liveEngine, _) = makePlaying(live: true)
+    let (live, liveEngine, _) = try makePlaying(live: true)
     live.stop()
     #expect(liveEngine.seekCalls.isEmpty)
   }
 
-  @Test func aNonPositiveRateIsRefused() {
-    let (player, engine, _) = makePlaying()
+  @Test func aNonPositiveRateIsRefused() throws {
+    let (player, engine, _) = try makePlaying()
     player.rate = 1.5
     player.rate = 0
     #expect(player.rate == 1.5)
@@ -268,8 +268,8 @@ struct PlayerRecoveringTests {
     #expect(engine.rates.last?.playing == true)
   }
 
-  @Test func isStalledNeedsProgressIntentAndAThinBuffer() {
-    let (player, engine, _) = makePlaying()
+  @Test func isStalledNeedsProgressIntentAndAThinBuffer() throws {
+    let (player, engine, _) = try makePlaying()
     engine.currentTime = 10
     engine.isPlaybackLikelyToKeepUp = false
     #expect(player.isStalled)
@@ -283,9 +283,9 @@ struct PlayerRecoveringTests {
 struct PlayerReviewRegressionTests {
   /// An end-of-track sleep timer drops the intent while still .playing; the snapshot must still
   /// be rewritten on entering .ended, or a cold resume seeks to the end and re-ends.
-  @Test func endingWithTheIntentAlreadyOffSavesPositionZero() {
+  @Test func endingWithTheIntentAlreadyOffSavesPositionZero() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let (player, engine, _) = makePlaying()
+    let (player, engine, _) = try makePlaying()
     engine.currentTime = 300
     engine.duration = 300
     player.pause()
@@ -296,10 +296,10 @@ struct PlayerReviewRegressionTests {
 
   /// A track change while paused saves the new track at its start, not at the old item's
   /// position, which the engine still reports until the new item is prepared.
-  @Test func skippingWhilePausedSavesTheNewTrackAtItsStart() {
+  @Test func skippingWhilePausedSavesTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let (player, engine, _) = makePlaying()
-    player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    let (player, engine, _) = try makePlaying()
+    try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     player.pause()
     engine.currentTime = 1800
     player.next()
@@ -310,9 +310,9 @@ struct PlayerReviewRegressionTests {
 
   /// A reload while paused holds its resume position before the loading transition saves the
   /// snapshot.
-  @Test func aRetryWhilePausedSavesWhereItWas() {
+  @Test func aRetryWhilePausedSavesWhereItWas() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let (player, engine, _) = makePlaying()
+    let (player, engine, _) = try makePlaying()
     player.pause()
     engine.currentTime = 120
     engine.resumePosition = 120
@@ -324,10 +324,10 @@ struct PlayerReviewRegressionTests {
 
   /// A skip whose load fails leaves the previous item in the engine: the snapshot and the restart
   /// from the error start the new track at its start, not at the old one's position.
-  @Test func aFailedSkipKeepsTheNewTrackAtItsStart() {
+  @Test func aFailedSkipKeepsTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let (player, engine, _) = makePlaying()
-    player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    let (player, engine, _) = try makePlaying()
+    try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     engine.currentTime = 1800
     engine.resumePosition = 1800
     player.next()
@@ -344,10 +344,10 @@ struct PlayerReviewRegressionTests {
 
   /// A queue's start position is in the snapshot the track change saves, not only in the next
   /// periodic save.
-  @Test func aStartPositionIsSavedWithTheTrackChange() {
+  @Test func aStartPositionIsSavedWithTheTrackChange() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let player = makePlayer(retries: false)
-    player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")], startPositionMs: 30000)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")], startPositionMs: 30000)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
     #expect(saved?.positionMs == 30000)
     #expect(player.deferredSeek.target == 30)
@@ -355,9 +355,9 @@ struct PlayerReviewRegressionTests {
 
   /// Play on a track without a source fails as an invalid source; it never reloads the media
   /// loader's last URL, which belongs to an earlier track.
-  @Test func playOnATrackWithoutASourceFailsInsteadOfReloading() {
-    let (player, engine, _) = makePlaying()
-    player.setQueue([Track(id: "t2", src: nil, title: "No source")])
+  @Test func playOnATrackWithoutASourceFailsInsteadOfReloading() throws {
+    let (player, engine, _) = try makePlaying()
+    try player.setQueue([Track(id: "t2", path: "/no-source", src: nil, title: "No source")])
     #expect(player.state == .error)
     let resolves = engine.resolveAndLoadCalls.count
 
@@ -369,9 +369,9 @@ struct PlayerReviewRegressionTests {
   }
 
   /// While nothing plays, a transition alone rewrites the snapshot.
-  @Test func anErrorWhilePausedSavesWhereItStopped() {
+  @Test func anErrorWhilePausedSavesWhereItStopped() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let (player, engine, _) = makePlaying()
+    let (player, engine, _) = try makePlaying()
     player.pause()
     engine.currentTime = 42
     engine.emit(.failed(nil, httpStatusCode: nil))
@@ -385,7 +385,7 @@ struct PlayerReviewRegressionTests {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retries: false, saveInterval: .milliseconds(10))
-    player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
     engine.hasItem = true
     engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
@@ -432,14 +432,14 @@ struct PlayerReviewRegressionTests {
 
   /// A track change while the old track loads with a retrying error publishes the new track's
   /// loading state without that error.
-  @Test func aTrackChangeClearsTheRetryingErrorOfTheTrackItLeaves() async {
-    let (player, engine, callbacks) = makeLoading()
+  @Test func aTrackChangeClearsTheRetryingErrorOfTheTrackItLeaves() async throws {
+    let (player, engine, callbacks) = try makeLoading()
     player.retry.shouldRetry = { true }
     player.setPlayWhenReady(true)
     engine.emit(.loadFailed(URLError(.timedOut)))
     #expect(callbacks.playbackChanges.last?.error != nil)
 
-    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
 
     #expect(callbacks.playbackChanges.last?.state == .loading)
     #expect(callbacks.playbackChanges.last?.error == nil)
@@ -448,12 +448,12 @@ struct PlayerReviewRegressionTests {
 
   /// Leaving an errored track publishes the new track's loading state once, never an error
   /// state without its error.
-  @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() {
-    let (player, engine, callbacks) = makeLoading()
+  @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() throws {
+    let (player, engine, callbacks) = try makeLoading()
     engine.emit(.unplayable)
     callbacks.playbackChanges.removeAll()
     callbacks.errorEvents.removeAll()
-    player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     #expect(!callbacks.playbackChanges.contains { $0.state == .error })
     #expect(callbacks.errorEvents.count == 1)
   }
