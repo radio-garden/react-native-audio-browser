@@ -60,6 +60,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   private var artworkProviderDeps: ArtworkProviderDeps? = null
 
+  /**
+   * Whether AudioBrowser holds its [LocalBinder] binding. While it does, [stopSelf] cannot end the
+   * service, so a task removal keeps the player.
+   */
+  private var moduleBound = false
+
   // Headless service binding
   private var headlessBound = false
   private val headlessConnection: ServiceConnection =
@@ -255,13 +261,17 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       super.onBind(intent)
     } else {
       Timber.d("Service being bound by module - returning LocalBinder")
+      moduleBound = true
       binder
     }
   }
 
-  override fun onTaskRemoved(rootIntent: Intent?) {
-    onUnbind(rootIntent)
+  override fun onRebind(intent: Intent?) {
+    if (intent?.action == null) moduleBound = true
+    super.onRebind(intent)
+  }
 
+  override fun onTaskRemoved(rootIntent: Intent?) {
     val appKilledPlaybackBehavior = player.appKilledPlaybackBehavior
 
     Timber.d("player = $player, appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
@@ -288,18 +298,21 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
           // Just pause and remove notification, but keep service alive for external controllers
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
+        } else if (moduleBound) {
+          Timber.d("AudioBrowser still bound - stopping playback but keeping the player")
+          stopPlaybackAndRemoveNotification()
+          // Ends the service once AudioBrowser unbinds.
+          stopSelf()
         } else {
           Timber.d("No external controllers - proceeding with service shutdown")
           try {
             if (::mediaSession.isInitialized) {
               mediaSession.release()
             }
-            player.clear()
-            player.stop()
+            stopPlaybackAndRemoveNotification()
             tearDownArtworkProvider()
             player.destroy()
             scope.cancel()
-            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
           } catch (e: Exception) {
             Timber.e(e, "Error during aggressive cleanup in onTaskRemoved")
@@ -316,6 +329,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     }
   }
 
+  private fun stopPlaybackAndRemoveNotification() {
+    // Before stop(), while a mid-ramp fade can still restore the volume.
+    player.sleepTimer.clear()
+    player.clear()
+    player.stop()
+    stopForeground(STOP_FOREGROUND_REMOVE)
+  }
+
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
@@ -329,6 +350,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   override fun onUnbind(intent: Intent?): Boolean {
     Timber.d("onUnbind called - action: ${intent?.action}, package: ${intent?.`package`}")
+    if (intent?.action == null) {
+      moduleBound = false
+      // Android calls onBind once per distinct Intent while the service lives and caches the
+      // binder, so only onRebind tells of the next binding, and only when this returns true.
+      return true
+    }
     return super.onUnbind(intent)
   }
 
