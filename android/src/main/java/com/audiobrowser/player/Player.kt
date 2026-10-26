@@ -933,6 +933,11 @@ class Player(internal val context: Context) {
     mediaSessionCallback.commandManager.updateFavoriteState(mediaSession, favorited)
   }
 
+  internal fun updateLiveState(live: Boolean) {
+    if (!::mediaSession.isInitialized) return
+    mediaSessionCallback.commandManager.updateLiveState(mediaSession, live)
+  }
+
   /** Removes all the upcoming tracks, if any (the ones returned by [next]). */
   fun removeUpcomingTracks() {
     val index = exoPlayer.currentMediaItemIndex
