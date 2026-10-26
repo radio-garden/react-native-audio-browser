@@ -1,3 +1,9 @@
+## [0.2.0-next.41](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.40...v0.2.0-next.41) (2026-10-26)
+
+### Bug Fixes
+
+* **android:** keep the player when the task is removed while AudioBrowser is bound ([6e53ad7](https://github.com/radio-garden/react-native-audio-browser/commit/6e53ad7c8b2e86f16f04bce132b17f9f0e66a9b6)), closes [#189](https://github.com/radio-garden/react-native-audio-browser/issues/189)
+
 ## [0.2.0-next.40](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.39...v0.2.0-next.40) (2026-10-25)
 
 ### Bug Fixes
