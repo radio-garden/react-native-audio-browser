@@ -1,3 +1,10 @@
+## [0.2.0-next.43](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.42...v0.2.0-next.43) (2026-10-26)
+
+### Bug Fixes
+
+* **android:** fail load() on an invalid track instead of crashing ([2b9e869](https://github.com/radio-garden/react-native-audio-browser/commit/2b9e869cec89395eca16a78bac94fe9fca32a85a)), closes [#190](https://github.com/radio-garden/react-native-audio-browser/issues/190)
+* **ios:** refuse a track with neither src nor path, as Android does ([8bf1030](https://github.com/radio-garden/react-native-audio-browser/commit/8bf1030da01fb9a82ddeaff0300ba70bb8da62e7)), closes [#190](https://github.com/radio-garden/react-native-audio-browser/issues/190)
+
 ## [0.2.0-next.42](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.41...v0.2.0-next.42) (2026-10-26)
 
 ### Bug Fixes
