@@ -90,7 +90,7 @@ class MediaSessionCommandManager {
       else -> CommandButton.ICON_SKIP_BACK
     }
 
-  /** Player commands available to every controller, derived from capabilities alone */
+  /** Player commands available to every controller, derived from capabilities and liveness */
   var playerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
     private set
 
@@ -120,6 +120,7 @@ class MediaSessionCommandManager {
     )
   private var currentRemoteButtonLayout: RemoteButtonLayout? = null
   private var currentFavorited: Boolean? = null
+  private var currentLive: Boolean = false
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
@@ -142,7 +143,7 @@ class MediaSessionCommandManager {
     // Initialize with defaults matching PlayerUpdateOptions (all capabilities enabled)
     val defaultCapabilities = currentCapabilities
 
-    playerCommands = buildPlayerCommands(defaultCapabilities)
+    playerCommands = buildPlayerCommands(defaultCapabilities, live = false)
     sessionCommands = buildSessionCommands(defaultCapabilities, searchAvailable = false)
     buttonPreferences =
       buildButtonPreferences(
@@ -183,22 +184,39 @@ class MediaSessionCommandManager {
     currentForwardJumpInterval = forwardJumpInterval
     currentBackwardJumpInterval = backwardJumpInterval
 
-    // Commands gate on capabilities only — placement never revokes one, so a control left out of
-    // the layout still works from a Bluetooth remote or headset.
-    playerCommands = buildPlayerCommands(capabilities)
+    // Commands gate on capabilities and liveness, never on placement, so a control left out of the
+    // layout still works from a Bluetooth remote or headset.
+    playerCommands = buildPlayerCommands(capabilities, currentLive)
     sessionCommands = buildSessionCommands(capabilities, searchAvailable)
     buttonPreferences =
       buildButtonPreferences(deriveButtonSlots(capabilities, remoteButtonLayout), currentFavorited)
 
-    // Push the rebuilt commands to already-connected controllers — buildConnectionResult only
-    // serves controllers that connect later, and an Android Auto session lives until the car shuts
-    // down. Granted before the layout broadcast so a newly-added button arrives with its command
-    // already available; Media3 disables buttons whose backing command is missing.
+    // Granted before the layout broadcast so a newly-added button arrives with its command already
+    // available; Media3 disables buttons whose backing command is missing.
+    publishAvailableCommands(mediaSession)
+    publishButtonPreferences(mediaSession)
+  }
+
+  /**
+   * Withholds seeking within the current item while it is live, whatever the `seekTo` capability
+   * says: a controller offered that command draws a seek bar, which a live stream has nothing to
+   * fill. Call this whenever the current track may have changed.
+   */
+  fun updateLiveState(mediaSession: MediaSession, live: Boolean) {
+    if (currentLive == live) return
+    currentLive = live
+    playerCommands = buildPlayerCommands(currentCapabilities, live)
+    publishAvailableCommands(mediaSession)
+  }
+
+  /**
+   * Pushes the commands to already-connected controllers — [buildConnectionResult] only serves
+   * controllers that connect later, and an Android Auto session lives until the car shuts down.
+   */
+  private fun publishAvailableCommands(mediaSession: MediaSession) {
     mediaSession.connectedControllers.forEach {
       mediaSession.setAvailableCommands(it, sessionCommands, playerCommands)
     }
-
-    publishButtonPreferences(mediaSession)
   }
 
   /**
@@ -301,7 +319,10 @@ class MediaSessionCommandManager {
     }
   }
 
-  private fun buildPlayerCommands(capabilities: PlayerCapabilities): MediaPlayer.Commands {
+  private fun buildPlayerCommands(
+    capabilities: PlayerCapabilities,
+    live: Boolean,
+  ): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
 
     // Always filter out direct media item commands to avoid dual-command confusion.
@@ -314,6 +335,10 @@ class MediaSessionCommandManager {
         playerCommandsBuilder.remove(command)
         Timber.Forest.d("Removed command: $command ($capability disabled)")
       }
+    }
+
+    if (live) {
+      playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 
     return playerCommandsBuilder.build()

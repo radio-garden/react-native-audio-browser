@@ -116,6 +116,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Update favorite button state for new track
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
+    player.updateLiveState(player.currentTrack?.live == true)
 
     // Clear now playing override when track changes (new track = clean slate)
     player.nowPlaying.clearOverride()
@@ -351,6 +352,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Only emit for playlist changes, not initial load or other reasons
     if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
       player.callbacks?.onPlaybackQueueChanged(player.tracks)
+      // Replacing the current item with one of the same URL updates it in place, without a
+      // transition, so a changed `live` arrives only here.
+      player.updateLiveState(player.currentTrack?.live == true)
     }
   }
 
