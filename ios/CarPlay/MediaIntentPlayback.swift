@@ -56,7 +56,7 @@ enum MediaIntentPlayback {
     do {
       guard let tracks = try await browser.browserManager.searchPlayable(params),
             let player = livePlayer(of: browser) else { return false }
-      player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
+      try player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
       browser.showNowPlayingRequestedEmitter.emit(())
       return true
     } catch {

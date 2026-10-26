@@ -431,7 +431,15 @@ final class Player {
 
   // MARK: - Queue Methods
 
-  func load(_ track: Track, playWhenReady: Bool? = nil) {
+  /// Refuses a track with neither `src` nor `path`, before the queue changes.
+  private func throwIfInvalid(_ tracks: [Track]) throws {
+    if let track = tracks.first(where: { $0.src == nil && $0.path == nil }) {
+      throw TrackPlayerError.QueueError.invalidTrack(title: track.title)
+    }
+  }
+
+  func load(_ track: Track, playWhenReady: Bool? = nil) throws {
+    try throwIfInvalid([track])
     handlePlayWhenReady(playWhenReady) {
       if queue.currentIndex == -1 {
         afterQueueMutation(queue.add([track], initialIndex: 0))
@@ -457,7 +465,8 @@ final class Player {
     startPositionMs: Double? = nil,
     playWhenReady: Bool? = nil,
     sourcePath: String? = nil,
-  ) {
+  ) throws {
+    try throwIfInvalid(newTracks)
     guard !newTracks.isEmpty else {
       clear()
       return
@@ -470,13 +479,15 @@ final class Player {
     }
   }
 
-  func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
+  func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) throws {
+    try throwIfInvalid(tracks)
     handlePlayWhenReady(playWhenReady) {
       afterQueueMutation(queue.add(tracks, initialIndex: initialIndex ?? 0))
     }
   }
 
   func add(_ tracks: [Track], at index: Int) throws {
+    try throwIfInvalid(tracks)
     try afterQueueMutation(queue.addAt(tracks, at: index))
   }
 
@@ -904,26 +915,30 @@ final class Player {
     shuffleEnabled = snapshot.shuffleEnabled
     rate = snapshot.playbackSpeed
     let startMs = track.live == true ? nil : snapshot.positionMs
-    if let expanded {
-      setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
-    } else {
-      setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+    do {
+      if let expanded {
+        try setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
+      } else {
+        try setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+      }
+    } catch {
+      logger.error("resume: \(error)")
     }
   }
 
   /// Plays what `TrackSelector` resolved a picked track to.
   func execute(_ intent: TrackSelector.PlaybackIntent) {
-    switch intent {
-    case let .skipTo(index):
-      do {
+    do {
+      switch intent {
+      case let .skipTo(index):
         try skipTo(index, playWhenReady: true)
-      } catch {
-        logger.error("Failed to skip to track at index \(index): \(error)")
+      case let .setQueue(tracks, startIndex, sourcePath):
+        try setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
+      case let .loadTrack(track):
+        try load(track, playWhenReady: true)
       }
-    case let .setQueue(tracks, startIndex, sourcePath):
-      setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-    case let .loadTrack(track):
-      load(track, playWhenReady: true)
+    } catch {
+      logger.error("Failed to play the selected track: \(error)")
     }
   }
 

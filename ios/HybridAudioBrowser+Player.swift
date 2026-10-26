@@ -13,7 +13,7 @@ public extension HybridAudioBrowser {
       guard let player else {
         throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
       }
-      player.load(track)
+      try player.load(track)
     }
   }
 
@@ -161,7 +161,7 @@ public extension HybridAudioBrowser {
       if let index = insertBeforeIndex {
         try player.add(tracks, at: Int(index))
       } else {
-        player.add(tracks)
+        try player.add(tracks)
       }
     }
   }
@@ -248,9 +248,9 @@ public extension HybridAudioBrowser {
   }
 
   func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws {
-    onMainActor {
+    try onMainActor {
       guard let player else { return }
-      player.setQueue(
+      try player.setQueue(
         tracks,
         initialIndex: startIndex.map { Int($0) } ?? 0,
         startPositionMs: startPosition.map { $0 * 1000 },

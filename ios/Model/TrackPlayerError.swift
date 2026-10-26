@@ -21,6 +21,8 @@ public enum TrackPlayerError: Error {
     case noCurrentItem
     case invalidIndex(index: Int, message: String)
     case empty
+    /// A track with neither `src` nor `path`, which no queue can hold.
+    case invalidTrack(title: String)
   }
 }
 
@@ -56,6 +58,8 @@ extension TrackPlayerError.QueueError: LocalizedError {
       "Invalid track index \(index): \(message)"
     case .empty:
       "Queue is empty"
+    case let .invalidTrack(title):
+      "Track must have either path or src defined. Track: title='\(title)'"
     }
   }
 }

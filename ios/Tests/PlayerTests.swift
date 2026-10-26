@@ -25,9 +25,9 @@ private func loadTrack(
   id: String = "t1",
   src: String? = "https://example.com/audio.mp3",
   title: String = "Test Track",
-) {
+) throws {
   let track = Track(id: id, src: src, title: title)
-  player.setQueue([track])
+  try player.setQueue([track])
 }
 
 // MARK: - Transition + Side Effects
@@ -35,9 +35,9 @@ private func loadTrack(
 @Suite("Player - transition + side effects")
 struct TransitionTests {
   @Test @MainActor
-  func toReady_startsPlayback_whenPlayWhenReady() {
+  func toReady_startsPlayback_whenPlayWhenReady() throws {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.setPlayWhenReady(true)
     eh.startPlaybackCallCount = 0 // reset from playWhenReady setter
 
@@ -48,9 +48,9 @@ struct TransitionTests {
   }
 
   @Test @MainActor
-  func toReady_doesNotStart_whenNotPlayWhenReady() {
+  func toReady_doesNotStart_whenNotPlayWhenReady() throws {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.transition(.bufferingSufficient)
 
     #expect(c.state == .ready)
@@ -248,9 +248,9 @@ struct EmitStateChangeTests {
   }
 
   @Test @MainActor
-  func emitsQueueEnded_onEndedAndLastTrack() {
+  func emitsQueueEnded_onEndedAndLastTrack() throws {
     let (c, eh, cb, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     eh.currentTime = 42
     cb.queueEndedEvents.removeAll()
 
@@ -407,9 +407,9 @@ struct ObserverGuardTests {
 @Suite("Player - playWhenReady")
 struct PlayWhenReadyTests {
   @Test @MainActor
-  func true_fromError_triggersReload() {
+  func true_fromError_triggersReload() throws {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     eh.emit(.itemPrepared(likelyToKeepUp: false))
     c.transition(.errorOccurred(.playbackFailed))
     eh.resumePosition = 42
@@ -425,9 +425,9 @@ struct PlayWhenReadyTests {
   }
 
   @Test @MainActor
-  func true_fromStopped_triggersReload() {
+  func true_fromStopped_triggersReload() throws {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.transition(.stopped)
     eh.resumePosition = 42
     let resolvesBefore = eh.resolveAndLoadCalls.count
@@ -498,27 +498,27 @@ struct SkipAvailabilityCoordinatorTests {
   }
 
   @Test @MainActor
-  func singleTrack_disablesBoth() {
+  func singleTrack_disablesBoth() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue([Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1")])
+    try c.setQueue([Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1")])
 
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
   }
 
   @Test @MainActor
-  func firstOfMany_nextOnly() {
+  func firstOfMany_nextOnly() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue(Self.multiTrack())
+    try c.setQueue(Self.multiTrack())
 
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
   }
 
   @Test @MainActor
-  func lastOfMany_previousOnly() {
+  func lastOfMany_previousOnly() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue(Self.multiTrack())
+    try c.setQueue(Self.multiTrack())
     try? c.skipTo(1)
 
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
@@ -526,9 +526,9 @@ struct SkipAvailabilityCoordinatorTests {
   }
 
   @Test @MainActor
-  func repeatAll_repushesAvailability_atEnd() {
+  func repeatAll_repushesAvailability_atEnd() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue(Self.multiTrack())
+    try c.setQueue(Self.multiTrack())
     try? c.skipTo(1) // last track
     eh.updateSkipAvailabilityCalls.removeAll()
 
@@ -545,35 +545,35 @@ struct SkipAvailabilityCoordinatorTests {
 @Suite("Player - handleCurrentTrackChanged")
 struct HandleCurrentTrackChangedTests {
   @Test @MainActor
-  func clearsError_beforeTransition() {
+  func clearsError_beforeTransition() throws {
     let (c, eh, _, _) = makeCoordinator()
     eh.hasLoadedAsset = true
     c.transition(.errorOccurred(.playbackFailed))
     #expect(c.errorStatus.error != nil)
 
-    loadTrack(c)
+    try loadTrack(c)
 
     // After loading a track, the error should be cleared
     #expect(c.errorStatus.error == nil)
   }
 
   @Test @MainActor
-  func preservesPlayWhenReady_acrossLoading() {
+  func preservesPlayWhenReady_acrossLoading() throws {
     let (c, _, _, _) = makeCoordinator()
     c.setPlayWhenReady(true)
 
-    loadTrack(c)
+    try loadTrack(c)
 
     #expect(c.playWhenReady == true)
     #expect(c.state == .loading)
   }
 
   @Test @MainActor
-  func nilSrc_transitionsToError() {
+  func nilSrc_transitionsToError() throws {
     let (c, _, cb, _) = makeCoordinator()
 
-    let track = Track(id: "t1", src: nil, title: "No Source")
-    c.setQueue([track])
+    let track = Track(id: "t1", path: "/no-source", src: nil, title: "No Source")
+    try c.setQueue([track])
 
     #expect(c.state == .error)
     #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
@@ -581,10 +581,10 @@ struct HandleCurrentTrackChangedTests {
   }
 
   @Test @MainActor
-  func emitsActiveTrackChangedEvent() {
+  func emitsActiveTrackChangedEvent() throws {
     let (c, _, cb, _) = makeCoordinator()
 
-    loadTrack(c)
+    try loadTrack(c)
 
     #expect(cb.activeTrackChanges.count == 1)
     let event = cb.activeTrackChanges.first!
@@ -599,9 +599,9 @@ struct HandleCurrentTrackChangedTests {
 @Suite("Player - handleTrackDidPlayToEndTime")
 struct HandleTrackDidPlayToEndTimeTests {
   @Test @MainActor
-  func repeatTrack_replays() {
+  func repeatTrack_replays() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.repeatMode = .track
     eh.startPlaybackCallCount = 0
 
@@ -617,9 +617,9 @@ struct HandleTrackDidPlayToEndTimeTests {
   /// reloads (a bare .paused would park at the end, where play() no-ops).
   /// A repeating queue never conceptually ends, so no queue-ended reaches JS.
   @Test @MainActor
-  func repeatTrack_withoutIntent_settlesEnded() {
+  func repeatTrack_withoutIntent_settlesEnded() throws {
     let (c, eh, cb, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.repeatMode = .track
     c.setPlayWhenReady(false)
 
@@ -631,9 +631,9 @@ struct HandleTrackDidPlayToEndTimeTests {
   }
 
   @Test @MainActor
-  func lastTrack_noRepeat_transitionsToEnded() {
+  func lastTrack_noRepeat_transitionsToEnded() throws {
     let (c, eh, cb, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.repeatMode = .off
 
     eh.emit(.playedToEnd)
@@ -643,13 +643,13 @@ struct HandleTrackDidPlayToEndTimeTests {
   }
 
   @Test @MainActor
-  func midQueue_advancesToNext() {
+  func midQueue_advancesToNext() throws {
     let (c, eh, cb, _) = makeCoordinator()
     let tracks = [
       Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
       Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
     ]
-    c.setQueue(tracks)
+    try c.setQueue(tracks)
     cb.activeTrackChanges.removeAll()
 
     eh.emit(.playedToEnd)
@@ -669,9 +669,9 @@ struct HandleTrackDidPlayToEndTimeTests {
 @Suite("Player - natural end drops play intent")
 struct NaturalEndPlayIntentTests {
   @Test @MainActor
-  func naturalEnd_clearsPlayWhenReady() {
+  func naturalEnd_clearsPlayWhenReady() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
 
     eh.emit(.playedToEnd)
 
@@ -680,9 +680,9 @@ struct NaturalEndPlayIntentTests {
   }
 
   @Test @MainActor
-  func naturalEnd_requestsSessionRelease() {
+  func naturalEnd_requestsSessionRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.scheduleAudioSessionReleaseCount = 0
 
     eh.emit(.playedToEnd)
@@ -693,9 +693,9 @@ struct NaturalEndPlayIntentTests {
   /// play() from .ended must reload from the start — startPlayback() alone is a
   /// silent no-op on a player parked at the end of its item.
   @Test @MainActor
-  func playAfterNaturalEnd_reloadsFromStart() {
+  func playAfterNaturalEnd_reloadsFromStart() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.emit(.playedToEnd)
     eh.resumePosition = 300
     let resolvesBefore = eh.resolveAndLoadCalls.count
@@ -710,9 +710,9 @@ struct NaturalEndPlayIntentTests {
   /// timeControlStatus pause after the end reaches the state machine — the
   /// table's .ended guard must hold the state.
   @Test @MainActor
-  func strayPauseAfterNaturalEnd_staysEnded() {
+  func strayPauseAfterNaturalEnd_staysEnded() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.emit(.playedToEnd)
     #expect(c.state == .ended)
 
@@ -722,9 +722,9 @@ struct NaturalEndPlayIntentTests {
   }
 
   @Test @MainActor
-  func interruptionAfterNaturalEnd_doesNotArmResume() {
+  func interruptionAfterNaturalEnd_doesNotArmResume() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.emit(.playedToEnd)
     let resolvesBefore = eh.resolveAndLoadCalls.count
 
@@ -827,9 +827,9 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
-  func completion_pausesThenRestoresPreFadeVolume() {
+  func completion_pausesThenRestoresPreFadeVolume() throws {
     let (c, eh, _, clock) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.setPlayWhenReady(true)
     c.transition(.bufferingSufficient) // leave .loading so pause reaches the player
     eh.pausePlaybackCallCount = 0
@@ -846,9 +846,9 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
-  func completion_withoutFade_justPauses() {
+  func completion_withoutFade_justPauses() throws {
     let (c, eh, _, clock) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.setPlayWhenReady(true)
     eh.volume = 0.8
     c.sleepTimerManager.set(seconds: 20)
@@ -874,9 +874,9 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
-  func pauseDuringFade_clearsSleepTimer() {
+  func pauseDuringFade_clearsSleepTimer() throws {
     let (c, _, _, clock) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.setPlayWhenReady(true)
 
     startFade(c, clock)
@@ -886,9 +886,9 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
-  func pauseWithoutFade_leavesSleepTimerAlone() {
+  func pauseWithoutFade_leavesSleepTimerAlone() throws {
     let (c, _, _, _) = makeCoordinator()
-    loadTrack(c)
+    try loadTrack(c)
     c.setPlayWhenReady(true)
     c.sleepTimerManager.set(seconds: 60, fadeDuration: 10)
 
@@ -902,8 +902,8 @@ struct SleepTimerFadeTests {
 
 /// Helper to drive the player into an actively-playing state.
 @MainActor
-private func startPlaying(_ c: Player, _ eh: MockPlayerEngine) {
-  loadTrack(c)
+private func startPlaying(_ c: Player, _ eh: MockPlayerEngine) throws {
+  try loadTrack(c)
   eh.hasLoadedAsset = true
   eh.hasItem = true
   c.setPlayWhenReady(true)
@@ -913,9 +913,9 @@ private func startPlaying(_ c: Player, _ eh: MockPlayerEngine) {
 @Suite("Player - audio session interruptions")
 struct InterruptionTests {
   @Test @MainActor
-  func began_whilePlaying_pauses() {
+  func began_whilePlaying_pauses() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     #expect(c.state == .playing)
 
     c.handleInterruptionBegan()
@@ -928,9 +928,9 @@ struct InterruptionTests {
   /// is swallowed because `playWhenReady` is still true, so the state stays
   /// `.playing`. The interruption handler must force the pause regardless.
   @Test @MainActor
-  func began_afterSwallowedTimeControlPause_stillPauses() {
+  func began_afterSwallowedTimeControlPause_stillPauses() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
 
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
     #expect(c.state == .playing) // swallowed — the symptom this fix targets
@@ -941,9 +941,9 @@ struct InterruptionTests {
   }
 
   @Test @MainActor
-  func ended_shouldResume_resumesWhenWasPlaying() {
+  func ended_shouldResume_resumesWhenWasPlaying() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
     #expect(c.playWhenReady == false)
     eh.startPlaybackCallCount = 0
@@ -955,9 +955,9 @@ struct InterruptionTests {
   }
 
   @Test @MainActor
-  func ended_withoutShouldResume_staysPaused() {
+  func ended_withoutShouldResume_staysPaused() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
 
     c.handleInterruptionEnded(shouldResume: false)
@@ -970,9 +970,9 @@ struct InterruptionTests {
   /// paused-when-interrupted must not grab a non-mixable session for a resume
   /// that never happens.
   @Test @MainActor
-  func willResumeAfterInterruption_reflectsCapturedIntent() {
+  func willResumeAfterInterruption_reflectsCapturedIntent() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
 
     c.handleInterruptionBegan()
     #expect(c.willResumeAfterInterruption == true)
@@ -988,9 +988,9 @@ struct InterruptionTests {
   /// iOS can deliver nested interruptions (Siri, then a phone call) — a second
   /// .began must not re-capture the now-false intent and wipe the resume flag.
   @Test @MainActor
-  func doubleBegan_preservesResumeIntent() {
+  func doubleBegan_preservesResumeIntent() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
 
     c.handleInterruptionBegan()
     c.handleInterruptionBegan()
@@ -1002,9 +1002,9 @@ struct InterruptionTests {
   /// Unplugging headphones during a call is a deliberate output loss — the
   /// call ending must not blast playback from the built-in speaker.
   @Test @MainActor
-  func routeDisconnectDuringInterruption_cancelsResume() {
+  func routeDisconnectDuringInterruption_cancelsResume() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
 
     c.handleRouteDisconnected()
@@ -1016,9 +1016,9 @@ struct InterruptionTests {
   /// An explicit stop during the interruption is a terminal command — the
   /// interruption-end must not restart playback over it.
   @Test @MainActor
-  func stopDuringInterruption_isNotOverriddenByResume() {
+  func stopDuringInterruption_isNotOverriddenByResume() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
     let resolvesBefore = eh.resolveAndLoadCalls.count
 
@@ -1033,9 +1033,9 @@ struct InterruptionTests {
   /// A user who plays then pauses during the interruption has taken ownership
   /// of the intent — interruption-end must not override their pause.
   @Test @MainActor
-  func userPauseDuringInterruption_overridesResume() {
+  func userPauseDuringInterruption_overridesResume() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
 
     c.play()
@@ -1046,9 +1046,9 @@ struct InterruptionTests {
   }
 
   @Test @MainActor
-  func ended_doesNotResume_whenNotPlayingBeforeInterruption() {
+  func ended_doesNotResume_whenNotPlayingBeforeInterruption() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     // Pause before the interruption (e.g. user already paused).
     c.setPlayWhenReady(false)
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
@@ -1070,7 +1070,7 @@ struct MutationSkipAvailabilityTests {
   @Test @MainActor
   func move_pushesPostMutationAvailability() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue([
+    try c.setQueue([
       Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
       Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
     ])
@@ -1086,7 +1086,7 @@ struct MutationSkipAvailabilityTests {
   @Test @MainActor
   func removeBeforeCurrent_pushesPostMutationAvailability() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue(
+    try c.setQueue(
       [
         Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
         Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
@@ -1153,9 +1153,9 @@ struct LoadTests {
   }
 
   @Test @MainActor
-  func aNewTrackStartsAnUnprovenLoad() {
+  func aNewTrackStartsAnUnprovenLoad() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue([track("a"), track("b")])
+    try c.setQueue([track("a"), track("b")])
     let first = c.load
     eh.emit(.audioDidStart)
     #expect(c.load?.hasPlayed == true)
@@ -1169,9 +1169,9 @@ struct LoadTests {
   /// The healthy-playback refill resets the retry budgets mid-play; the load, and with it the
   /// recovery budget, must survive it.
   @Test @MainActor
-  func aRetryResetKeepsTheLoad() {
+  func aRetryResetKeepsTheLoad() throws {
     let (c, eh, _, _) = makeCoordinator()
-    c.setQueue([track("a")])
+    try c.setQueue([track("a")])
     eh.emit(.audioDidStart)
     let load = c.load
 
@@ -1201,9 +1201,9 @@ struct QueuePublicationTests {
   }
 
   @Test @MainActor
-  func setQueue_publishesTheQueueBeforeTheActiveTrack() {
+  func setQueue_publishesTheQueueBeforeTheActiveTrack() throws {
     let (c, _, cb, _) = makeCoordinator()
-    c.setQueue(threeTracks())
+    try c.setQueue(threeTracks())
     #expect(cb.queueChanges.map { $0.map(\.id) } == [["a", "b", "c"]])
     #expect(cb.queueAndTrackOrder == ["queue", "activeTrack"])
   }
@@ -1211,16 +1211,16 @@ struct QueuePublicationTests {
   @Test @MainActor
   func move_publishesTheSettledQueueOnce() throws {
     let (c, _, cb, _) = makeCoordinator()
-    c.setQueue(threeTracks())
+    try c.setQueue(threeTracks())
     cb.queueChanges.removeAll()
     try c.move(fromIndex: 0, toIndex: 2)
     #expect(cb.queueChanges.map { $0.map(\.id) } == [["b", "c", "a"]])
   }
 
   @Test @MainActor
-  func clear_publishesAnEmptyQueue() {
+  func clear_publishesAnEmptyQueue() throws {
     let (c, _, cb, _) = makeCoordinator()
-    c.setQueue(threeTracks())
+    try c.setQueue(threeTracks())
     cb.queueChanges.removeAll()
     c.clear()
     #expect(cb.queueChanges.map(\.count) == [0])
@@ -1229,7 +1229,7 @@ struct QueuePublicationTests {
   @Test @MainActor
   func navigation_publishesNoQueue() throws {
     let (c, _, cb, _) = makeCoordinator()
-    c.setQueue(threeTracks())
+    try c.setQueue(threeTracks())
     cb.queueChanges.removeAll()
     c.next()
     c.previous()
@@ -1271,36 +1271,36 @@ struct StopCancelsRetryTests {
 @Suite("Player - audio session release")
 struct SessionReleaseTests {
   @Test @MainActor
-  func deliberatePause_requestsRelease() {
+  func deliberatePause_requestsRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.scheduleAudioSessionReleaseCount = 0
     c.pause()
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 
   @Test @MainActor
-  func play_doesNotRequestRelease() {
+  func play_doesNotRequestRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     #expect(eh.scheduleAudioSessionReleaseCount == 0)
   }
 
   @Test @MainActor
-  func interruptionBegan_doesNotRequestRelease() {
+  func interruptionBegan_doesNotRequestRelease() throws {
     // A phone call pauses (playWhenReady → false) but is meant to resume, so the session must be
     // held — the exact race the intent-gating design exists to avoid.
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionBegan()
     #expect(eh.scheduleAudioSessionReleaseCount == 0)
   }
 
   @Test @MainActor
-  func interruptionEnded_withResume_doesNotRequestRelease() {
+  func interruptionEnded_withResume_doesNotRequestRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
     eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: true)
@@ -1308,9 +1308,9 @@ struct SessionReleaseTests {
   }
 
   @Test @MainActor
-  func interruptionEnded_withoutResume_requestsRelease() {
+  func interruptionEnded_withoutResume_requestsRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     c.handleInterruptionBegan()
     eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: false)
@@ -1332,9 +1332,9 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func playIntent_cancelsTheReleaseBeforeJSHearsIt_thenActivatesOnOutput() {
+  func playIntent_cancelsTheReleaseBeforeJSHearsIt_thenActivatesOnOutput() throws {
     let (c, _, cb) = makeTraced()
-    loadTrack(c)
+    try loadTrack(c)
     cb.publishOrder.removeAll()
 
     c.setPlayWhenReady(true)
@@ -1346,9 +1346,9 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func pause_rendersWithoutActivating_thenSchedulesTheRelease() {
+  func pause_rendersWithoutActivating_thenSchedulesTheRelease() throws {
     let (c, eh, cb) = makeTraced()
-    startPlaying(c, eh)
+    try startPlaying(c, eh)
     cb.publishOrder.removeAll()
 
     c.pause()
@@ -1359,9 +1359,9 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func playbackChange_rendersAfterJSHearsIt() {
+  func playbackChange_rendersAfterJSHearsIt() throws {
     let (c, _, cb) = makeTraced()
-    loadTrack(c)
+    try loadTrack(c)
     cb.publishOrder.removeAll()
 
     c.transition(.errorOccurred(.playbackFailed))
@@ -1370,13 +1370,13 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func activeTrackChange_resetsTheNowPlayingLinesAfterJSHearsIt() {
+  func activeTrackChange_resetsTheNowPlayingLinesAfterJSHearsIt() throws {
     let (c, eh, cb, _) = makeCoordinator()
     eh.onSeamCall = { [weak cb] call in
       if call == "nowPlayingTrackChanged" { cb?.queueAndTrackOrder.append(call) }
     }
 
-    c.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")])
+    try c.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")])
 
     #expect(cb.queueAndTrackOrder == ["queue", "activeTrack", "nowPlayingTrackChanged"])
     #expect(eh.nowPlayingTrackChangedCount == 1)
@@ -1411,9 +1411,9 @@ struct NowPlayingPreviewTests {
   }
 
   @Test @MainActor
-  func endingPreview_restoresTheCurrentTrackAndRendersItsLines() {
+  func endingPreview_restoresTheCurrentTrackAndRendersItsLines() throws {
     let (c, eh, _, _) = makeCoordinator()
-    loadTrack(c, id: "current")
+    try loadTrack(c, id: "current")
     c.previewNowPlaying(Track(id: "tapped", src: "https://example.com/tapped.mp3", title: "Tapped"))
     let rendersBefore = eh.nowPlayingRenderCount
 
