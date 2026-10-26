@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Looper
+import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
@@ -35,9 +36,10 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 // Robolectric: Player builds a real ExoPlayer, whose audio focus handling the framework's
-// AudioManager drives. With no decoder under Robolectric, the WAV plays on ExoPlayer's standalone
-// clock, which still reaches READY and isPlaying. SDK 28: from 33, media3 asks
-// AudioManager.getAudioDevicesForAttributes, which Robolectric 4.11 answers with null.
+// AudioManager drives. Robolectric's clock stands still, so a delayed message on ExoPlayer's
+// playback thread never runs: the audio track is disabled because an audio renderer can wait in
+// BUFFERING on one. SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes,
+// which Robolectric 4.11 answers with null.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class PlayerSuppressionTest {
@@ -55,6 +57,11 @@ class PlayerSuppressionTest {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
     val src = Uri.fromFile(silentWav()).toString()
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+        .build()
     player.exoPlayer.setMediaItems(
       listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = src)))
     )
