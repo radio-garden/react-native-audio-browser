@@ -1,3 +1,9 @@
+## [0.2.0-next.42](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.41...v0.2.0-next.42) (2026-10-26)
+
+### Bug Fixes
+
+* **android:** offer no seek bar for a live track ([9e0635f](https://github.com/radio-garden/react-native-audio-browser/commit/9e0635fe6d2f0c8030fd28f2f99149ec5aadd9b8))
+
 ## [0.2.0-next.41](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.40...v0.2.0-next.41) (2026-10-26)
 
 ### Bug Fixes
