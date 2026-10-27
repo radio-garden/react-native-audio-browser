@@ -35,13 +35,22 @@ object TrackFactory {
   @Volatile var favoriteEnabled = false
 
   /**
-   * Stamps [favorited] as the heart `userRating`, which a controller's rating sets, and unrated
-   * when it is unknown: Android Automotive OS's car media app draws a heart-rated item as its own
-   * favorite control. None while favoriting is off.
+   * Sets the heart `userRating`, which a controller's rating sets: [favorited], or unrated when it
+   * is unknown on a [playable] item, so Android Automotive OS's car media app, which draws it as
+   * its own favorite control, always has one to draw. None while favoriting is off.
    */
-  fun MediaMetadata.Builder.setFavorite(favorited: Boolean?): MediaMetadata.Builder = apply {
-    if (favoriteEnabled) setUserRating(favorited?.let { HeartRating(it) } ?: HeartRating())
-  }
+  fun MediaMetadata.Builder.setFavorite(
+    favorited: Boolean?,
+    playable: Boolean = true,
+  ): MediaMetadata.Builder =
+    setUserRating(
+      when {
+        !favoriteEnabled -> null
+        favorited != null -> HeartRating(favorited)
+        playable -> HeartRating()
+        else -> null
+      }
+    )
 
   fun fromMedia3(mediaItem: MediaItem): Track {
     return mediaItem.localConfiguration!!.tag as Track
@@ -143,7 +152,7 @@ object TrackFactory {
       .setIsBrowsable(track.src == null)
       .setIsPlayable(track.src != null)
       .setExtras(MediaExtrasBuilder.build(track, section))
-      .setFavorite(track.favorited)
+      .setFavorite(track.favorited, playable = track.src != null)
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
     // A playable track's mediaId is the consumer's stable `id` when it has one —
