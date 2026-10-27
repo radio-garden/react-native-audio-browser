@@ -198,8 +198,8 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    // A heart rating from a controller (e.g. Android Automotive OS's rating control) toggles the
-    // now-playing favorite. setActiveTrackFavorited fires onFavoriteChanged so the consumer
+    // A heart rating toggles the now-playing favorite. setActiveTrackFavorited fires
+    // onFavoriteChanged so the consumer
     // persists it — the same path as the notification / CarPlay heart button. Report an honest
     // result (see onCustomCommand): INVALID_STATE when there is no current track to favorite.
     RatingFavorites.favoritedFor(rating)?.let { favorited ->
@@ -214,9 +214,9 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * The overload a legacy controller reaches through the platform session's `setRating` (Android
-   * Automotive OS's rating control, a voice assistant's rating action), always naming the current
-   * item.
+   * A rating for [mediaId]: a Media3 controller's setRating(mediaId, rating), and every legacy
+   * controller's through the platform session (Android Automotive OS's rating control, a voice
+   * assistant's rating action), which names the current item. Only the current item's is applied.
    */
   override fun onSetRating(
     session: MediaSession,
