@@ -1,3 +1,9 @@
+## [0.2.0-next.45](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.44...v0.2.0-next.45) (2026-10-27)
+
+### Bug Fixes
+
+* getNowPlaying and onNowPlayingChanged carry the formatter's lines ([ec69560](https://github.com/radio-garden/react-native-audio-browser/commit/ec695609c8ff1e78fac835472d02e807ddbe5c87)), closes [#178](https://github.com/radio-garden/react-native-audio-browser/issues/178)
+
 ## [0.2.0-next.44](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.43...v0.2.0-next.44) (2026-10-27)
 
 ### Bug Fixes
