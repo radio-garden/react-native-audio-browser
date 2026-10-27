@@ -11,6 +11,12 @@ import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import timber.log.Timber
 
+/** Previous in BACK or Next in FORWARD: where a controller draws its own skip buttons. */
+private val SlottedButton.isStandardSkip: Boolean
+  get() =
+    (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
+      (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD)
+
 /**
  * A slot's Media3 preference list: the requested slot, then OVERFLOW as a fallback.
  *
@@ -49,7 +55,7 @@ internal fun media3SlotsFor(slot: ButtonSlot): IntArray =
  * extras that Android Auto and the Android 13+ system media controls read. Publishing
  * per-controller instead would reach neither, since Android Auto connects as a legacy controller.
  */
-class MediaSessionCommandManager {
+class MediaSessionCommandManager(private val automotive: Boolean) {
 
   companion object {
     private const val CUSTOM_ACTION_JUMP_BACKWARD = "JUMP_BACKWARD"
@@ -432,6 +438,10 @@ class MediaSessionCommandManager {
    * Assembles the CommandButtons for an already-derived slot layout (see [deriveButtonSlots] — the
    * slots are pre-filtered by Capability).
    *
+   * On Android Automotive OS, Previous in BACK and Next in FORWARD are left out, so Media3 keeps
+   * them as the PlaybackState's standard skip actions, which the car media app draws either side of
+   * play/pause. Sent as buttons they arrive as custom actions, which it places by its own rules.
+   *
    * Each button gets its requested slot followed by OVERFLOW as a fallback. `slots` is an ordered
    * preference list, and every surface caps how many buttons it renders — a head unit, the
    * collapsed notification, the Android 13+ media controls all truncate differently. Without a
@@ -441,7 +451,9 @@ class MediaSessionCommandManager {
     slots: List<SlottedButton>,
     favorited: Boolean?,
   ): List<CommandButton> =
-    slots.map { (button, slot) ->
-      buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
-    }
+    slots
+      .filterNot { automotive && it.isStandardSkip }
+      .map { (button, slot) ->
+        buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
+      }
 }

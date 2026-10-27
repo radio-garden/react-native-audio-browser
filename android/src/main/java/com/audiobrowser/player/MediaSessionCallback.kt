@@ -20,9 +20,11 @@ import com.audiobrowser.browser.untitledSection
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toTrack
 import com.audiobrowser.navigationErrorFor
+import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
 import com.audiobrowser.util.TrackFactory
+import com.audiobrowser.util.isAutomotive
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
@@ -61,7 +63,7 @@ import timber.log.Timber
  */
 class MediaSessionCallback(private val player: Player) :
   MediaLibraryService.MediaLibrarySession.Callback {
-  internal val commandManager = MediaSessionCommandManager()
+  internal val commandManager = MediaSessionCommandManager(player.context.isAutomotive)
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   // Track which controllers are subscribed to which media IDs.
@@ -119,8 +121,8 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Builds the gate tile from a per-request chrome: while a gate is active, tabs stay visible but a
    * gated browse/search level serves this single tile (see the gate checks in [onGetChildren] /
-   * [onGetSearchResult]). Same shape as the error tiles — non-browsable, non-playable — and
-   * deliberately NOT accompanied by a SessionError: a gate is deliberate app state, not a failure.
+   * [onGetSearchResult]). Same shape as the error tiles, and deliberately NOT accompanied by a
+   * SessionError: a gate is deliberate app state, not a failure.
    */
   private fun createGateMediaItem(gate: Gate): MediaItem =
     createErrorMediaItem(
@@ -259,102 +261,126 @@ class MediaSessionCallback(private val player: Player) :
       "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSpecialPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
     return scope.future {
-      val audioBrowser =
-        player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
-      val browserManager = audioBrowser.browserManager
-
-      // While a gate is active, tabs stay visible (the root keeps serving them below) but each
-      // non-root level is resolved per request: a gated path — including re-queries of the gate
-      // tile's own sentinel path — serves the single gate tile, so drilling into it re-shows the
-      // message instead of dead-ending in "No items"; an allowed path falls through to real
-      // children. Checked before the offline guard: gated content isn't coming back with
-      // connectivity, so the gate copy is the truer message.
-      if (parentId != BrowserPathHelper.ROOT_PATH) {
-        val outcome =
-          audioBrowser.gateDecision(
-            NativeGateRequest(reason = GateReason.BROWSE, path = parentId, search = null)
-          )
-        if (outcome.gated) {
-          audioBrowser.onGate(GateEvent(GateReason.BROWSE))
-          // gateDecision guarantees non-null chrome on a gated decision (override → default →
-          // built-in).
-          return@future LibraryResult.ofItemList(
-            ImmutableList.of(createGateMediaItem(outcome.chrome!!)),
-            params,
-          )
+      children(session, browser, parentId, page, pageSize, params).also {
+        if (parentId == BrowserPathHelper.ROOT_PATH && page == 0) {
+          rootTile = deadEndTileOf(it.value.orEmpty())
         }
       }
+    }
+  }
 
-      // A drill-in on the error / offline / empty tile returns nothing (see isDeadEndPath). For
-      // the offline tile, re-send the alert when still offline so a tap surfaces the explanation
-      // again — but only then, since these paths are also re-queried by notifyChildrenChanged
-      // (e.g. when connectivity returns) without any user action.
-      if (BrowserPathHelper.isDeadEndPath(parentId)) {
-        if (parentId == BrowserPathHelper.OFFLINE_PATH && !player.networkMonitor.isOnline.value) {
-          sendBrowseError(session, browser, offline = true)
-        }
-        return@future LibraryResult.ofItemList(ImmutableList.of<MediaItem>(), params)
+  /**
+   * The tile the root last served in place of its tabs, or null. Android Automotive OS shows such a
+   * root as one tab that drills into the tile's sentinel path (see [deadEndChildren]).
+   */
+  @Volatile private var rootTile: MediaItem? = null
+
+  private suspend fun children(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    parentId: String,
+    page: Int,
+    pageSize: Int,
+    params: MediaLibraryService.LibraryParams?,
+  ): LibraryResult<ImmutableList<MediaItem>> {
+    val audioBrowser =
+      player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
+    val browserManager = audioBrowser.browserManager
+
+    // While a gate is active, tabs stay visible (the root keeps serving them below) but each
+    // non-root level is resolved per request: a gated path — including re-queries of the gate
+    // tile's own sentinel path — serves the single gate tile, so drilling into it re-shows the
+    // message instead of dead-ending in "No items"; an allowed path falls through to real
+    // children. Checked before the offline guard: gated content isn't coming back with
+    // connectivity, so the gate copy is the truer message.
+    if (parentId != BrowserPathHelper.ROOT_PATH) {
+      val outcome =
+        audioBrowser.gateDecision(
+          NativeGateRequest(reason = GateReason.BROWSE, path = parentId, search = null)
+        )
+      if (outcome.gated) {
+        audioBrowser.onGate(GateEvent(GateReason.BROWSE))
+        // gateDecision guarantees non-null chrome on a gated decision (override → default →
+        // built-in).
+        return LibraryResult.ofItemList(
+          ImmutableList.of(createGateMediaItem(outcome.chrome!!)),
+          params,
+        )
       }
+    }
 
-      if (
-        !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
-      ) {
-        Timber.w("Network offline - returning error message for: $parentId")
+    // For the offline tile, re-send the alert when still offline so a tap surfaces the
+    // explanation again — but only then, since these paths are also re-queried by
+    // notifyChildrenChanged (e.g. when connectivity returns) without any user action.
+    if (BrowserPathHelper.isDeadEndPath(parentId)) {
+      val offline = !player.networkMonitor.isOnline.value
+      if (parentId == BrowserPathHelper.OFFLINE_PATH && offline) {
         sendBrowseError(session, browser, offline = true)
-        return@future LibraryResult.ofItemList(
-          ImmutableList.of(
-            createOfflineMediaItem(audioBrowser.resolveFormattedError(offlineError(), parentId))
-          ),
-          params,
-        )
       }
+      return LibraryResult.ofItemList(
+        deadEndChildren(parentId, rootTile, Automotive.device, offline),
+        params,
+      )
+    }
 
-      try {
-        val children =
-          if (parentId == BrowserPathHelper.ROOT_PATH) {
-            // Disabled tabs hide (Track.disabled) — filtered before the four-tab cap so an
-            // unavailable tab never costs an available one its slot.
-            val tabs = browserManager.queryTabs().filterNot { it.disabled == true }
-            if (tabs.size > 4) {
-              Timber.w(
-                "Root has ${tabs.size} tabs; dropping ${tabs.size - 4} (Android Auto root limit)"
-              )
-            }
-            toFlatMediaItems(tabs.take(4))
-          } else {
-            // Section styles arrive page-folded (`section ?? page`, ADR 0011).
-            val resolvedTrack = browserManager.resolve(parentId)
-            val sections =
-              resolvedTrack.styleResolvedSections()
-                ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
-            browserManager.warnIfGridPageLacksPromise(parentId, sections)
-            // A page with no children resolved fine, so it raises no SessionError and no event —
-            // notifyChildrenChanged re-queries these paths without any user action. It serves the
-            // app's path-aware `empty-content` copy as one inert tile (ADR 0001) instead of
-            // Android Auto's bare "No items".
-            browseLevelItems(toMediaItems(sections)) {
-              audioBrowser.resolveFormattedError(emptyContentError(), parentId)
-            }
-          }
+    if (
+      !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
+    ) {
+      Timber.w("Network offline - returning error message for: $parentId")
+      sendBrowseError(session, browser, offline = true)
+      return LibraryResult.ofItemList(
+        ImmutableList.of(
+          createOfflineMediaItem(audioBrowser.resolveFormattedError(offlineError(), parentId))
+        ),
+        params,
+      )
+    }
 
-        LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
-      } catch (e: Exception) {
-        // A cancelled browse (controller disconnected) is not a failure — don't render it as an
-        // error tile. awaitBrowser's TimeoutCancellationException IS a real failure, keep that.
-        if (e is CancellationException && e !is TimeoutCancellationException) throw e
-        Timber.e(e, "Error getting children for parentId: $parentId")
-        // A tile rather than a bare ofError() — see createErrorMediaItem and
-        // https://github.com/androidx/media/issues/2901
-        sendBrowseError(session, browser, offline = false)
-        LibraryResult.ofItemList(
-          ImmutableList.of(
-            createBrowseErrorMediaItem(
-              audioBrowser.resolveFormattedError(navigationErrorFor(e), parentId)
+    return try {
+      val children =
+        if (parentId == BrowserPathHelper.ROOT_PATH) {
+          // Disabled tabs hide (Track.disabled) — filtered before the four-tab cap so an
+          // unavailable tab never costs an available one its slot.
+          val tabs = browserManager.queryTabs().filterNot { it.disabled == true }
+          if (tabs.size > 4) {
+            Timber.w(
+              "Root has ${tabs.size} tabs; dropping ${tabs.size - 4} (Android Auto root limit)"
             )
-          ),
-          params,
-        )
-      }
+          }
+          toFlatMediaItems(tabs.take(4))
+        } else {
+          // Section styles arrive page-folded (`section ?? page`, ADR 0011).
+          val resolvedTrack = browserManager.resolve(parentId)
+          val sections =
+            resolvedTrack.styleResolvedSections()
+              ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
+          browserManager.warnIfGridPageLacksPromise(parentId, sections)
+          // A page with no children resolved fine, so it raises no SessionError and no event —
+          // notifyChildrenChanged re-queries these paths without any user action. It serves the
+          // app's path-aware `empty-content` copy as one inert tile (ADR 0001) instead of
+          // Android Auto's bare "No items".
+          browseLevelItems(toMediaItems(sections)) {
+            audioBrowser.resolveFormattedError(emptyContentError(), parentId)
+          }
+        }
+
+      LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
+    } catch (e: Exception) {
+      // A cancelled browse (controller disconnected) is not a failure — don't render it as an
+      // error tile. awaitBrowser's TimeoutCancellationException IS a real failure, keep that.
+      if (e is CancellationException && e !is TimeoutCancellationException) throw e
+      Timber.e(e, "Error getting children for parentId: $parentId")
+      // A tile rather than a bare ofError() — see createErrorMediaItem and
+      // https://github.com/androidx/media/issues/2901
+      sendBrowseError(session, browser, offline = false)
+      LibraryResult.ofItemList(
+        ImmutableList.of(
+          createBrowseErrorMediaItem(
+            audioBrowser.resolveFormattedError(navigationErrorFor(e), parentId)
+          )
+        ),
+        params,
+      )
     }
   }
 
@@ -1020,10 +1046,35 @@ class MediaSessionCallback(private val player: Player) :
 }
 
 /**
- * Builds a non-browsable, non-playable [MediaItem] used to surface an error inside an Android Auto
- * / AAOS browse list. Rendered as a greyed-out, non-interactive tile, which is the only
- * side-effect-free way to communicate a browse failure to legacy controllers (Media3 drops
- * [LibraryResult.ofError] on the legacy browse bridge, leaving an empty "No items" screen).
+ * What a drill-in on a tile's sentinel path serves. Nothing, so Android Auto, which drills into a
+ * tile whatever its flags, dead-ends at "No items" rather than stacking error pages. On Android
+ * Automotive OS, a root that serves only a tile shows as one tab that drills in here, and an empty
+ * level as "Media isn't available for this list", so there the [rootTile] is served again, unless
+ * it is the offline tile and the device is back online.
+ */
+internal fun deadEndChildren(
+  parentId: String,
+  rootTile: MediaItem?,
+  automotive: Boolean,
+  offline: Boolean,
+): List<MediaItem> =
+  listOfNotNull(
+    rootTile?.takeIf {
+      automotive &&
+        it.mediaId == parentId &&
+        (parentId != BrowserPathHelper.OFFLINE_PATH || offline)
+    }
+  )
+
+/** The single tile of a level that serves one in place of its items, or null. */
+internal fun deadEndTileOf(items: List<MediaItem>): MediaItem? =
+  items.singleOrNull()?.takeIf { BrowserPathHelper.isDeadEndPath(it.mediaId) }
+
+/**
+ * Builds a non-playable [MediaItem] used to surface an error inside an Android Auto / AAOS browse
+ * list. Rendered as a tile, which is the only side-effect-free way to communicate a browse failure
+ * to legacy controllers (Media3 drops [LibraryResult.ofError] on the legacy browse bridge, leaving
+ * an empty "No items" screen).
  *
  * Tiles are the only in-browse error signal that exists. Verified on a head unit (2026-06): the
  * Android Auto browse list renders no error text for a transient [SessionError], for sticky
@@ -1038,10 +1089,9 @@ internal fun createErrorMediaItem(mediaId: String, title: String, subtitle: Stri
       MediaMetadata.Builder()
         .setTitle(title)
         .setSubtitle(subtitle)
-        // Android Auto ignores these flags and drills into a tapped tile anyway; onGetChildren
-        // returns an empty list for the sentinel paths, so it dead-ends at "No Items" rather
-        // than stacking error pages.
-        .setIsBrowsable(false)
+        // Android Automotive OS's car media app drops an item that is neither browsable nor
+        // playable; Android Auto ignores these flags and drills in anyway (see deadEndChildren).
+        .setIsBrowsable(Automotive.device)
         .setIsPlayable(false)
         .build()
     )
@@ -1061,8 +1111,7 @@ private fun createErrorMediaItem(mediaId: String, formatted: FormattedNavigation
 /**
  * Builds the empty tile from the app's formatted `empty-content` copy for the page's path, so an
  * empty Favorites tab and an empty search can be worded apart (ADR 0001). Same shape as the error
- * tiles — non-browsable, non-playable — and deliberately NOT accompanied by a SessionError: an
- * empty page is a successful resolve.
+ * tiles, and deliberately NOT accompanied by a SessionError: an empty page is a successful resolve.
  */
 internal fun createEmptyMediaItem(formatted: FormattedNavigationError): MediaItem =
   createErrorMediaItem(BrowserPathHelper.EMPTY_PATH, formatted)

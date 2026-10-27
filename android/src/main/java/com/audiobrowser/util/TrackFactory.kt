@@ -1,12 +1,10 @@
 package com.audiobrowser.util
 
-import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.browser.BrowseArtworkRegistry
-import com.audiobrowser.browser.ResolvedArtwork
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
@@ -20,6 +18,28 @@ import com.margelo.nitro.audiobrowser.TrackStyle
  * pipeline; see the Now Playing Metadata guide).
  */
 object TrackFactory {
+  /** Set once by the Player. */
+  @Volatile var artworkRoutes: ArtworkRoutes? = null
+
+  /**
+   * The artwork URI the session publishes for [url]. On Android Automotive OS, whose car media app
+   * loads artwork only from `content://`, `android.resource://` and `file://` URIs, http(s) artwork
+   * is served through the provider, as browse artwork always is.
+   */
+  fun sessionArtworkUri(url: String, headers: Map<String, String>?, isSvg: Boolean): String {
+    val provider = artworkRoutes?.takeIf { Automotive.device } ?: return url
+    return provider.route(url, headers, isSvg, pinned = true)
+  }
+
+  /**
+   * Stamps [favorited] as the heart `userRating`, which Assistant's "I like this" sets. Not on
+   * Android Automotive OS, whose car media app draws a heart-rated session as a star among the
+   * transport controls, beside the favorite button.
+   */
+  fun MediaMetadata.Builder.setFavorite(favorited: Boolean?): MediaMetadata.Builder = apply {
+    if (!Automotive.device && favorited != null) setUserRating(HeartRating(favorited))
+  }
+
   fun fromMedia3(mediaItem: MediaItem): Track {
     return mediaItem.localConfiguration!!.tag as Track
   }
@@ -72,7 +92,9 @@ object TrackFactory {
   }
 
   fun toMedia3(track: Track): MediaItem {
-    val metadata = metadataBuilder(track).setArtworkUri(artworkUri(track)?.toUri()).build()
+    val artwork =
+      artworkUri(track)?.let { sessionArtworkUri(it, track.artworkSource?.headers, isSvg(track)) }
+    val metadata = metadataBuilder(track).setArtworkUri(artwork?.toUri()).build()
     return buildMediaItem(track, metadata)
   }
 
@@ -80,7 +102,7 @@ object TrackFactory {
    * Browse-surface conversion. Routes http(s) artwork through the content:// provider (so headers +
    * SVG apply in our process, and no bytes cross the Binder), registering it in [registry].
    * Non-http artwork (android.resource:// tab icons, file://) passes through to setArtworkUri
-   * unchanged so vector/category icons survive. Plain toMedia3 (queue/now-playing) is unaffected.
+   * unchanged so vector/category icons survive.
    */
   fun toBrowseMediaItem(
     track: Track,
@@ -88,20 +110,18 @@ object TrackFactory {
     authority: String,
     section: Section? = null,
   ): MediaItem {
-    val rawUrl = artworkUri(track) // artworkSource.uri ?: artwork
-    val scheme = rawUrl?.let { Uri.parse(it).scheme?.lowercase() }
-    val builder = metadataBuilder(track, section)
-    if (rawUrl != null && (scheme == "http" || scheme == "https")) {
-      val isSvg =
-        SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
-      val token = ArtworkUris.tokenFor(rawUrl)
-      registry.register(token, ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg))
-      builder.setArtworkUri(ArtworkUris.contentUri(authority, token).toUri())
-    } else if (rawUrl != null) {
-      builder.setArtworkUri(rawUrl.toUri())
-    }
-    return buildMediaItem(track, builder.build())
+    val artwork =
+      artworkUri(track)?.let {
+        ArtworkRoutes(registry, authority)
+          .route(it, track.artworkSource?.headers, isSvg(track), pinned = false)
+      }
+    val metadata = metadataBuilder(track, section).setArtworkUri(artwork?.toUri()).build()
+    return buildMediaItem(track, metadata)
   }
+
+  private fun isSvg(track: Track): Boolean =
+    SvgArtworkRenderer.isSvgUrl(artworkUri(track)) ||
+      SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
 
   /** The transformed artworkSource wins over the raw artwork field. */
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
@@ -120,7 +140,7 @@ object TrackFactory {
       .setIsBrowsable(track.src == null)
       .setIsPlayable(track.src != null)
       .setExtras(MediaExtrasBuilder.build(track, section))
-      .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
+      .setFavorite(track.favorited)
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
     // A playable track's mediaId is the consumer's stable `id` when it has one —

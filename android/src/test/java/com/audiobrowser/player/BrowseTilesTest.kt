@@ -12,6 +12,7 @@ import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.defaultFormattedError
 import com.audiobrowser.formattedOrDefault
 import com.audiobrowser.navigationErrorFor
+import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.NavigationError
@@ -20,6 +21,7 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -82,6 +84,96 @@ class BrowseTilesTest {
         FormattedNavigationError("No favorites yet", "Tap the heart on a station to add it here.")
       isSearch -> FormattedNavigationError("No results found", "Try a different search.")
       else -> FormattedNavigationError("Nothing here", null)
+    }
+  }
+
+  @After
+  fun resetDevice() {
+    Automotive.device = false
+  }
+
+  private val offlineTile = createOfflineMediaItem(FormattedNavigationError("Offline", "Message"))
+
+  @Test
+  fun `a phone's drill into a tile dead-ends`() {
+    assertTrue(
+      deadEndChildren(
+          BrowserPathHelper.OFFLINE_PATH,
+          offlineTile,
+          automotive = false,
+          offline = true,
+        )
+        .isEmpty()
+    )
+  }
+
+  @Test
+  fun `Android Automotive OS serves the root's tile again on its own path`() {
+    assertEquals(
+      listOf(offlineTile),
+      deadEndChildren(
+        BrowserPathHelper.OFFLINE_PATH,
+        offlineTile,
+        automotive = true,
+        offline = true,
+      ),
+    )
+  }
+
+  @Test
+  fun `Android Automotive OS serves no tile for another sentinel, or offline once back online`() {
+    assertTrue(
+      deadEndChildren(BrowserPathHelper.ERROR_PATH, offlineTile, automotive = true, offline = true)
+        .isEmpty()
+    )
+    assertTrue(
+      deadEndChildren(
+          BrowserPathHelper.OFFLINE_PATH,
+          offlineTile,
+          automotive = true,
+          offline = false,
+        )
+        .isEmpty()
+    )
+  }
+
+  @Test
+  fun `Android Automotive OS serves an error tile again while online`() {
+    val errorTile = createBrowseErrorMediaItem(FormattedNavigationError("Failed", "Message"))
+    assertEquals(
+      listOf(errorTile),
+      deadEndChildren(BrowserPathHelper.ERROR_PATH, errorTile, automotive = true, offline = false),
+    )
+  }
+
+  @Test
+  fun `a level serving only a dead-end tile yields that tile`() {
+    val tile = createOfflineMediaItem(FormattedNavigationError("Offline", "Message"))
+    assertSame(tile, deadEndTileOf(listOf(tile)))
+  }
+
+  @Test
+  fun `a level of items, or the gate tile, yields no dead-end tile`() {
+    val tile = createOfflineMediaItem(FormattedNavigationError("Offline", "Message"))
+    val gate = createErrorMediaItem(BrowserPathHelper.GATE_PATH, "Title", "Message")
+    assertNull(deadEndTileOf(listOf(tile, tile)))
+    assertNull(deadEndTileOf(listOf(gate)))
+    assertNull(deadEndTileOf(emptyList()))
+  }
+
+  @Test
+  fun `on Android Automotive OS every tile is browsable, so its car media app shows it`() {
+    Automotive.device = true
+    val copy = FormattedNavigationError("Title", "Message")
+    for (tile in
+      listOf(
+        createEmptyMediaItem(copy),
+        createOfflineMediaItem(copy),
+        createBrowseErrorMediaItem(copy),
+        createErrorMediaItem(BrowserPathHelper.GATE_PATH, "Title", "Message"),
+      )) {
+      assertTrue(tile.mediaId, tile.mediaMetadata.isBrowsable!!)
+      assertFalse(tile.mediaId, tile.mediaMetadata.isPlayable!!)
     }
   }
 

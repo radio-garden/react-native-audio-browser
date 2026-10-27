@@ -81,7 +81,11 @@ sealed class MetadataAdapter {
         albumTitle = metadata.albumTitle as String?,
         subtitle = metadata.subtitle as String?,
         description = metadata.description as String?,
-        artworkUri = metadata.artworkUri?.toString(),
+        artworkUri =
+          metadata.artworkUri?.let { uri ->
+            val routes = TrackFactory.artworkRoutes
+            if (routes == null) uri.toString() else routes.publicUrl(uri)
+          },
         trackNumber = metadata.trackNumber?.toString(),
         composer = metadata.composer as String?,
         conductor = metadata.conductor as String?,

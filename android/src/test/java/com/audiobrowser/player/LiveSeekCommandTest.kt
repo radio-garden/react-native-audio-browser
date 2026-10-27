@@ -36,7 +36,7 @@ class LiveSeekCommandTest {
         },
       )
       .build()
-  private val manager = MediaSessionCommandManager()
+  private val manager = MediaSessionCommandManager(automotive = false)
 
   @After
   fun release() {

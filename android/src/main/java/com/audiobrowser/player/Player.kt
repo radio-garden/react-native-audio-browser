@@ -6,7 +6,6 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
 import androidx.media3.common.C
-import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaMetadata
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -23,11 +22,17 @@ import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.util.ArtworkRoutes
+import com.audiobrowser.util.ArtworkUris
+import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
+import com.audiobrowser.util.SvgArtworkRenderer
 import com.audiobrowser.util.TrackFactory
+import com.audiobrowser.util.TrackFactory.setFavorite
+import com.audiobrowser.util.isAutomotive
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -132,6 +137,12 @@ class Player(internal val context: Context) {
 
   /** Registry that maps content:// tokens to artwork URLs for the browse content provider. */
   val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
+
+  init {
+    Automotive.device = context.isAutomotive
+    TrackFactory.artworkRoutes =
+      ArtworkRoutes(browseArtworkRegistry, ArtworkUris.authorityFor(context.packageName))
+  }
 
   /**
    * Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation.
@@ -742,8 +753,7 @@ class Player(internal val context: Context) {
     // This preserves internal references and avoids playback interruption
     // Note: setTag() requires setUri() to be called, so we must re-set the URI
     val currentMediaItem = exoPlayer.getMediaItemAt(index)
-    val updatedMetadata =
-      currentMediaItem.mediaMetadata.buildUpon().setUserRating(HeartRating(favorited)).build()
+    val updatedMetadata = currentMediaItem.mediaMetadata.buildUpon().setFavorite(favorited).build()
     val updatedMediaItem =
       currentMediaItem
         .buildUpon()
@@ -842,11 +852,13 @@ class Player(internal val context: Context) {
               null
             }
           val uri = resolved?.uri?.takeIf { it.isNotEmpty() } ?: return null
+          val published =
+            TrackFactory.sessionArtworkUri(uri, resolved.headers, SvgArtworkRenderer.isSvgUrl(uri))
           // Remember how this URI was produced: Media3 hands it back to the bitmap loader, which
           // re-resolves Track-first (with the nowPlayingArtwork kind, not the global artwork
           // config).
-          browserManager.artworkResolutions.register(uri, track, config)
-          return uri
+          browserManager.artworkResolutions.register(published, track, config)
+          return published
         }
 
         override fun emitNowPlayingChanged(metadata: NowPlayingMetadata) {
@@ -920,6 +932,14 @@ class Player(internal val context: Context) {
     browserManager.displayArtworkSource(uri, imageContext)?.let {
       return it
     }
+    // On Android Automotive OS the queue publishes provider URIs; the resolutions are keyed by URL.
+    TrackFactory.artworkRoutes
+      ?.publicUrl(uri.toUri())
+      ?.takeIf { it != uri }
+      ?.let { browserManager.displayArtworkSource(it, imageContext) }
+      ?.let {
+        return it
+      }
     withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) }
       ?.let { track ->
         return browserManager.resolveArtworkUrl(track, null, imageContext)

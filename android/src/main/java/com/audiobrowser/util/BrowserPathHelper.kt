@@ -61,8 +61,7 @@ object BrowserPathHelper {
   }
 
   /**
-   * The tile sentinels a drill-in dead-ends on: Android Auto ignores the tiles' non-browsable flag
-   * and subscribes anyway, so these serve no children rather than stacking another page.
+   * The tile sentinels a drill-in dead-ends on (see `deadEndChildren` for what they serve).
    * [GATE_PATH] is not one of them — it re-serves the gate tile so the message stays readable.
    */
   fun isDeadEndPath(path: String): Boolean {
