@@ -7,6 +7,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.TrackFactory
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -47,5 +48,33 @@ class FavoriteCapabilityTest {
 
     player.applyOptions(favorite(false))
     assertNull(queuedRating())
+  }
+
+  @Test
+  fun `the restamp is one timeline change, not one per item`() {
+    player.setup(PlayerSetupOptions())
+    session = MediaSession.Builder(app, player.exoPlayer).build()
+    player.setMediaSession(session)
+    player.add(
+      arrayOf(
+        TestFixtures.track(title = "a", src = "https://s/a.mp3"),
+        TestFixtures.track(title = "b", src = "https://s/b.mp3"),
+        TestFixtures.track(title = "c", src = "https://s/c.mp3"),
+      )
+    )
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+    var timelineChanges = 0
+    player.exoPlayer.addListener(
+      object : androidx.media3.common.Player.Listener {
+        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+          timelineChanges++
+        }
+      }
+    )
+
+    player.applyOptions(favorite(true))
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+
+    assertEquals(1, timelineChanges)
   }
 }
