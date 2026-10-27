@@ -70,6 +70,7 @@ let package = Package(
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/LRUCache.swift",
+        "Util/ArtworkFreshness.swift",
         "Observer/PlayerObserver.swift",
         "Observer/ItemObserver.swift",
       ]
