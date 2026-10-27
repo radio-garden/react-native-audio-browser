@@ -869,13 +869,24 @@ class Player(internal val context: Context) {
       MainScope(),
     )
 
-  /** Restamps every queued item's heart rating after the favorite capability changed. */
+  /**
+   * Restamps every queued item's heart rating after the favorite capability changed, in one
+   * replacement: each separate one would be a timeline change, and a queue event to JS.
+   */
   private fun restampFavorites() {
-    if (!::exoPlayer.isInitialized) return
-    for (index in 0 until exoPlayer.mediaItemCount) {
-      val track = exoPlayer.getMediaItemAt(index).localConfiguration?.tag as? Track ?: continue
-      restampMediaItem(index, track) { setFavorite(track.favorited) }
-    }
+    if (!::exoPlayer.isInitialized || exoPlayer.mediaItemCount == 0) return
+    val items =
+      (0 until exoPlayer.mediaItemCount).map { index ->
+        val item = exoPlayer.getMediaItemAt(index)
+        val track = item.localConfiguration?.tag as? Track ?: return@map item
+        item
+          .buildUpon()
+          .setUri(item.localConfiguration?.uri)
+          .setMediaMetadata(item.mediaMetadata.buildUpon().setFavorite(track.favorited).build())
+          .setTag(track)
+          .build()
+      }
+    exoPlayer.replaceMediaItems(0, items.size, items)
   }
 
   /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
