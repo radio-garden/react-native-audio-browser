@@ -45,6 +45,12 @@ class TrackFactoryRatingTest {
   }
 
   @Test
+  fun `a browsable item with no known favorite carries no rating`() {
+    val item = TrackFactory.toMedia3(TestFixtures.browseTrack())
+    assertNull(item.mediaMetadata.userRating)
+  }
+
+  @Test
   fun `favoriting off advertises no userRating`() {
     TrackFactory.favoriteEnabled = false
     val item = TrackFactory.toMedia3(TestFixtures.track(favorited = true))
