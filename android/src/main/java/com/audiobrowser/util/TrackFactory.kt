@@ -32,12 +32,11 @@ object TrackFactory {
   }
 
   /**
-   * Stamps [favorited] as the heart `userRating`, which Assistant's "I like this" sets. Not on
-   * Android Automotive OS, whose car media app draws a heart-rated session as a star among the
-   * transport controls, beside the favorite button.
+   * Stamps [favorited] as the heart `userRating`, which a controller's rating sets: Android
+   * Automotive OS's car media app draws it as its own favorite control.
    */
   fun MediaMetadata.Builder.setFavorite(favorited: Boolean?): MediaMetadata.Builder = apply {
-    if (!Automotive.device && favorited != null) setUserRating(HeartRating(favorited))
+    if (favorited != null) setUserRating(HeartRating(favorited))
   }
 
   fun fromMedia3(mediaItem: MediaItem): Track {

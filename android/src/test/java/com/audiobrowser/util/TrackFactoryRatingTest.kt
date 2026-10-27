@@ -49,10 +49,10 @@ class TrackFactoryRatingTest {
     }
 
   @Test
-  fun `Android Automotive OS advertises no userRating`() {
+  fun `Android Automotive OS advertises the heart userRating too`() {
     automotive()
     val item = TrackFactory.toMedia3(TestFixtures.track(favorited = true))
-    assertNull(item.mediaMetadata.userRating)
+    assertTrue((item.mediaMetadata.userRating as HeartRating).isHeart)
   }
 
   @Test

@@ -130,16 +130,25 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
-  /** The Media3 player command behind each Capability (FAVORITE is a session command). */
-  private val capabilityPlayerCommands: Map<Capability, @MediaPlayer.Command Int> =
+  /**
+   * The Media3 player commands behind each Capability (FAVORITE is a session command). Skip has two
+   * each: Media3 advertises the platform skip action for either, and its notification's own skip
+   * buttons use the media-item one, so a disabled skip must remove both.
+   */
+  private val capabilityPlayerCommands: Map<Capability, List<@MediaPlayer.Command Int>> =
     mapOf(
-      Capability.PLAY_PAUSE to MediaPlayer.COMMAND_PLAY_PAUSE,
-      Capability.STOP to MediaPlayer.COMMAND_STOP,
-      Capability.SEEK_TO to MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-      Capability.SKIP_TO_NEXT to MediaPlayer.COMMAND_SEEK_TO_NEXT,
-      Capability.SKIP_TO_PREVIOUS to MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
-      Capability.JUMP_FORWARD to MediaPlayer.COMMAND_SEEK_FORWARD,
-      Capability.JUMP_BACKWARD to MediaPlayer.COMMAND_SEEK_BACK,
+      Capability.PLAY_PAUSE to listOf(MediaPlayer.COMMAND_PLAY_PAUSE),
+      Capability.STOP to listOf(MediaPlayer.COMMAND_STOP),
+      Capability.SEEK_TO to listOf(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM),
+      Capability.SKIP_TO_NEXT to
+        listOf(MediaPlayer.COMMAND_SEEK_TO_NEXT, MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM),
+      Capability.SKIP_TO_PREVIOUS to
+        listOf(
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        ),
+      Capability.JUMP_FORWARD to listOf(MediaPlayer.COMMAND_SEEK_FORWARD),
+      Capability.JUMP_BACKWARD to listOf(MediaPlayer.COMMAND_SEEK_BACK),
     )
 
   // Declared above `init` deliberately: `init` calls `buildPlayerCommands`, which reads
@@ -331,15 +340,10 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   ): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
 
-    // Always filter out direct media item commands to avoid dual-command confusion.
-    // This forces MediaSession to only use the "smart" commands we can control via capabilities.
-    playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-    playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-
-    capabilityPlayerCommands.forEach { (capability, command) ->
+    capabilityPlayerCommands.forEach { (capability, commands) ->
       if (!capabilities.isEnabled(capability)) {
-        playerCommandsBuilder.remove(command)
-        Timber.Forest.d("Removed command: $command ($capability disabled)")
+        commands.forEach { playerCommandsBuilder.remove(it) }
+        Timber.Forest.d("Removed commands: $commands ($capability disabled)")
       }
     }
 
@@ -438,9 +442,12 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
    * Assembles the CommandButtons for an already-derived slot layout (see [deriveButtonSlots] — the
    * slots are pre-filtered by Capability).
    *
-   * On Android Automotive OS, Previous in BACK and Next in FORWARD are left out, so Media3 keeps
-   * them as the PlaybackState's standard skip actions, which the car media app draws either side of
-   * play/pause. Sent as buttons they arrive as custom actions, which it places by its own rules.
+   * Previous in BACK and Next in FORWARD are left out, so Media3 keeps them as the PlaybackState's
+   * standard skip actions and reserves their slots, and each surface draws its own skip buttons
+   * there. Sent as buttons they arrive as custom actions, which Android Automotive OS's car media
+   * app places by its own rules, not either side of play/pause. On Android Automotive OS the
+   * favorite is left out too: the car media app draws the heart `userRating` as its own favorite
+   * control.
    *
    * Each button gets its requested slot followed by OVERFLOW as a fallback. `slots` is an ordered
    * preference list, and every surface caps how many buttons it renders — a head unit, the
@@ -452,7 +459,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     favorited: Boolean?,
   ): List<CommandButton> =
     slots
-      .filterNot { automotive && it.isStandardSkip }
+      .filterNot { it.isStandardSkip || (automotive && it.button == RemoteButton.FAVORITE) }
       .map { (button, slot) ->
         buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
       }
