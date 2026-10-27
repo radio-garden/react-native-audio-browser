@@ -1324,6 +1324,7 @@ class Player(internal val context: Context) {
       // The `favorite` capability is the single favoriting switch — propagate
       // it to the browser so it can hydrate row hearts.
       browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
+      TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
     }
 
     if (progressUpdateEventIntervalChanged) {

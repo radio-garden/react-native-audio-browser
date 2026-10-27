@@ -31,12 +31,16 @@ object TrackFactory {
     return provider.route(url, headers, isSvg, pinned = true)
   }
 
+  /** Whether favoriting is on: the `favorite` capability, set by the Player. */
+  @Volatile var favoriteEnabled = false
+
   /**
-   * Stamps [favorited] as the heart `userRating`, which a controller's rating sets: Android
-   * Automotive OS's car media app draws it as its own favorite control.
+   * Stamps [favorited] as the heart `userRating`, which a controller's rating sets, and unrated
+   * when it is unknown: Android Automotive OS's car media app draws a heart-rated item as its own
+   * favorite control. None while favoriting is off.
    */
   fun MediaMetadata.Builder.setFavorite(favorited: Boolean?): MediaMetadata.Builder = apply {
-    if (favorited != null) setUserRating(HeartRating(favorited))
+    if (favoriteEnabled) setUserRating(favorited?.let { HeartRating(it) } ?: HeartRating())
   }
 
   fun fromMedia3(mediaItem: MediaItem): Track {

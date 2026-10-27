@@ -11,11 +11,15 @@ import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import timber.log.Timber
 
-/** Previous in BACK or Next in FORWARD: where a controller draws its own skip buttons. */
-private val SlottedButton.isStandardSkip: Boolean
-  get() =
-    (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
-      (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD)
+/**
+ * Whether a surface draws this button itself, from the standard PlaybackState: Previous in BACK and
+ * Next in FORWARD everywhere (the standard skip actions), and the favorite on Android Automotive OS
+ * (the heart `userRating`, drawn as the car media app's rating control).
+ */
+private fun SlottedButton.isDrawnBySurface(automotive: Boolean): Boolean =
+  (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
+    (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD) ||
+    (automotive && button == RemoteButton.FAVORITE)
 
 /**
  * A slot's Media3 preference list: the requested slot, then OVERFLOW as a fallback.
@@ -374,6 +378,12 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
       Timber.Forest.d("Removed search commands - search not configured")
     }
 
+    // Media3 always advertises the platform rating action; without this command a rating, which
+    // sets the favorite, is refused.
+    if (!capabilities.isEnabled(Capability.FAVORITE)) {
+      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_SESSION_SET_RATING)
+    }
+
     RemoteButton.entries
       .filter { capabilities.allows(it) }
       .mapNotNull { customCommandFor(it) }
@@ -442,12 +452,10 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
    * Assembles the CommandButtons for an already-derived slot layout (see [deriveButtonSlots] — the
    * slots are pre-filtered by Capability).
    *
-   * Previous in BACK and Next in FORWARD are left out, so Media3 keeps them as the PlaybackState's
-   * standard skip actions and reserves their slots, and each surface draws its own skip buttons
-   * there. Sent as buttons they arrive as custom actions, which Android Automotive OS's car media
-   * app places by its own rules, not either side of play/pause. On Android Automotive OS the
-   * favorite is left out too: the car media app draws the heart `userRating` as its own favorite
-   * control.
+   * Buttons a surface draws itself are left out ([isDrawnBySurface]): Media3 then keeps the
+   * standard skip actions and reserves their slots. Sent as buttons they arrive as custom actions,
+   * which Android Automotive OS's car media app places by its own rules, not either side of
+   * play/pause.
    *
    * Each button gets its requested slot followed by OVERFLOW as a fallback. `slots` is an ordered
    * preference list, and every surface caps how many buttons it renders — a head unit, the
@@ -459,7 +467,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     favorited: Boolean?,
   ): List<CommandButton> =
     slots
-      .filterNot { it.isStandardSkip || (automotive && it.button == RemoteButton.FAVORITE) }
+      .filterNot { it.isDrawnBySurface(automotive) }
       .map { (button, slot) ->
         buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
       }

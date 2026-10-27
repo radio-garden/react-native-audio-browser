@@ -5,6 +5,7 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
@@ -51,6 +52,7 @@ class StandardSkipTest {
     skipToNext: Boolean? = null,
     skipToPrevious: Boolean? = null,
     jump: Boolean = false,
+    favorite: Boolean = true,
   ) =
     PlayerCapabilities(
       play = null,
@@ -61,7 +63,7 @@ class StandardSkipTest {
       skipToPrevious = skipToPrevious,
       jumpForward = jump,
       jumpBackward = jump,
-      favorite = true,
+      favorite = favorite,
       shuffleMode = null,
       repeatMode = null,
       playbackRate = null,
@@ -131,5 +133,19 @@ class StandardSkipTest {
     assertFalse(commands.contains(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM))
     assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS))
     assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM))
+  }
+
+  private fun acceptsRatings(capabilities: PlayerCapabilities): Boolean {
+    manager.updateMediaSession(session, capabilities, null, searchAvailable = false)
+    return manager
+      .buildConnectionResult(session)
+      .availableSessionCommands
+      .contains(SessionCommand.COMMAND_CODE_SESSION_SET_RATING)
+  }
+
+  @Test
+  fun `a rating, which sets the favorite, is accepted only while favoriting is on`() {
+    assertTrue(acceptsRatings(capabilities(favorite = true)))
+    assertFalse(acceptsRatings(capabilities(favorite = false)))
   }
 }

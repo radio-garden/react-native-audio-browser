@@ -198,8 +198,8 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    // A heart rating from a controller (e.g. Google Assistant "I like this") toggles the
-    // now-playing favorite. setActiveTrackFavorited fires onFavoriteChanged so the consumer
+    // A heart rating toggles the now-playing favorite. setActiveTrackFavorited fires
+    // onFavoriteChanged so the consumer
     // persists it — the same path as the notification / CarPlay heart button. Report an honest
     // result (see onCustomCommand): INVALID_STATE when there is no current track to favorite.
     RatingFavorites.favoritedFor(rating)?.let { favorited ->
