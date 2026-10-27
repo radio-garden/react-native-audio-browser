@@ -1,3 +1,9 @@
+## [0.2.0-next.44](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.43...v0.2.0-next.44) (2026-10-27)
+
+### Bug Fixes
+
+* **ios:** refetch artwork once its response's max-age has passed ([fbffbf9](https://github.com/radio-garden/react-native-audio-browser/commit/fbffbf9c8e2e570b545f323132c5e3fc9119243f)), closes [#196](https://github.com/radio-garden/react-native-audio-browser/issues/196) [#195](https://github.com/radio-garden/react-native-audio-browser/issues/195)
+
 ## [0.2.0-next.43](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.42...v0.2.0-next.43) (2026-10-26)
 
 ### Bug Fixes
