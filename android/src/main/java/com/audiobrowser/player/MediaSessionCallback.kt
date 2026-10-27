@@ -198,10 +198,10 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    // A heart rating from a controller (e.g. Google Assistant "I like this") toggles the
-    // now-playing favorite. setActiveTrackFavorited fires onFavoriteChanged so the consumer
-    // persists it — the same path as the notification / CarPlay heart button. Report an honest
-    // result (see onCustomCommand): INVALID_STATE when there is no current track to favorite.
+    // A heart rating toggles the now-playing favorite. setActiveTrackFavorited fires
+    // onFavoriteChanged so the consumer persists it — the same path as the favorite button. Report
+    // an honest result (see onCustomCommand): INVALID_STATE when there is no current track to
+    // favorite.
     RatingFavorites.favoritedFor(rating)?.let { favorited ->
       val applied = player.setActiveTrackFavorited(favorited)
       return Futures.immediateFuture(
@@ -212,6 +212,23 @@ class MediaSessionCallback(private val player: Player) :
     }
     return super.onSetRating(session, controller, rating)
   }
+
+  /**
+   * A rating for [mediaId]: a Media3 controller's setRating(mediaId, rating), and every legacy
+   * controller's through the platform session (Android Automotive OS's rating control, a voice
+   * assistant's rating action), which names the current item. Only the current item's is applied.
+   */
+  override fun onSetRating(
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    mediaId: String,
+    rating: Rating,
+  ): ListenableFuture<SessionResult> =
+    if (mediaId == session.player.currentMediaItem?.mediaId) {
+      onSetRating(session, controller, rating)
+    } else {
+      super.onSetRating(session, controller, mediaId, rating)
+    }
 
   @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   override fun onGetLibraryRoot(

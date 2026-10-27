@@ -140,6 +140,7 @@ class Player(internal val context: Context) {
 
   init {
     Automotive.device = context.isAutomotive
+    TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
     TrackFactory.artworkRoutes =
       ArtworkRoutes(browseArtworkRegistry, ArtworkUris.authorityFor(context.packageName))
   }
@@ -868,6 +869,26 @@ class Player(internal val context: Context) {
       MainScope(),
     )
 
+  /**
+   * Restamps every queued item's heart rating after the favorite capability changed, in one
+   * replacement: each separate one would be a timeline change, and a queue event to JS.
+   */
+  private fun restampFavorites() {
+    if (!::exoPlayer.isInitialized || exoPlayer.mediaItemCount == 0) return
+    val items =
+      (0 until exoPlayer.mediaItemCount).map { index ->
+        val item = exoPlayer.getMediaItemAt(index)
+        val track = item.localConfiguration?.tag as? Track ?: return@map item
+        item
+          .buildUpon()
+          .setUri(item.localConfiguration?.uri)
+          .setMediaMetadata(item.mediaMetadata.buildUpon().setFavorite(track.favorited).build())
+          .setTag(track)
+          .build()
+      }
+    exoPlayer.replaceMediaItems(0, items.size, items)
+  }
+
   /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
   private fun restampMediaItem(
     index: Int,
@@ -1324,6 +1345,10 @@ class Player(internal val context: Context) {
       // The `favorite` capability is the single favoriting switch — propagate
       // it to the browser so it can hydrate row hearts.
       browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
+      TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
+      if (previousOptions.capabilities.favoriteEnabled != options.capabilities.favoriteEnabled) {
+        restampFavorites()
+      }
     }
 
     if (progressUpdateEventIntervalChanged) {
