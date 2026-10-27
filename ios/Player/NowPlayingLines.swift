@@ -25,6 +25,22 @@ struct NowPlayingLines: Equatable {
   }
 }
 
+/// The lines last stamped on the now-playing surface, and the track they were stamped for.
+struct PublishedNowPlayingLines {
+  let trackId: String?
+  let lines: NowPlayingLines
+
+  init(_ lines: NowPlayingLines, for track: Track) {
+    trackId = track.identity ?? track.path
+    self.lines = lines
+  }
+
+  /// `lines` when they were stamped for `track`, else nil.
+  func lines(for track: Track) -> NowPlayingLines? {
+    trackId == (track.identity ?? track.path) ? lines : nil
+  }
+}
+
 /// What the now-playing surface renders from: the player's track and state.
 @MainActor
 protocol NowPlayingSource: AnyObject {

@@ -33,8 +33,9 @@ final class NowPlayingUpdater {
 
   private var artworkLoadTask: Task<Void, Never>?
 
-  /// The track `onChanged` last reported, so a new track with the same text still reports.
-  private var publishedTrackId: String?
+  /// The lines `onChanged` last reported, and their track, so a new track with the same text
+  /// still reports.
+  private var published: PublishedNowPlayingLines?
 
   func setOverride(_ update: NowPlayingUpdate?) {
     override = update
@@ -73,11 +74,13 @@ final class NowPlayingUpdater {
     render()
   }
 
-  /// The metadata JS sees for the current track, before any formatter result.
-  /// Applies the override whether or not `enabled` is set.
+  /// The lines the surface shows for the current track, formatter result included; until the
+  /// track's first render, and while `enabled` is false, the flash, override or track fields.
   var nowPlaying: NowPlayingMetadata? {
     guard let track = source?.currentTrack else { return nil }
-    return metadata(track: track, lines: .resolve(track: track, flash: flash, override: override))
+    let rendered = enabled ? published?.lines(for: track) : nil
+    let lines = rendered ?? .resolve(track: track, flash: flash, override: override)
+    return metadata(track: track, lines: lines)
   }
 
   /// Empties the now-playing surface and drops any artwork fetch or formatter result in flight.
@@ -86,7 +89,7 @@ final class NowPlayingUpdater {
     artworkLoadTask?.cancel()
     artworkLoadTask = nil
     nowPlayingInfoController.clear()
-    publishedTrackId = nil
+    published = nil
     formattedTrackId = nil
   }
 
@@ -212,9 +215,8 @@ final class NowPlayingUpdater {
       MPMediaItemPropertyArtist: lines.artist,
       MPMediaItemPropertyAlbumTitle: lines.album,
     ])
-    let trackId = track.identity ?? track.path
-    guard textChanged || trackId != publishedTrackId else { return }
-    publishedTrackId = trackId
+    guard textChanged || published?.lines(for: track) == nil else { return }
+    published = PublishedNowPlayingLines(lines, for: track)
     onChanged?(metadata(track: track, lines: lines))
   }
 
