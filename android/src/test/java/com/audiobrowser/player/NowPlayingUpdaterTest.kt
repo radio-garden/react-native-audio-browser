@@ -87,6 +87,8 @@ class NowPlayingUpdaterTest {
 
     assertEquals(listOf(FakeSurface.Stamp(0, "Station", "Station", "Place", null)), surface.stamps)
     assertEquals(1, surface.emitted.size)
+    assertEquals("Place", surface.emitted.last().artist)
+    assertEquals(surface.emitted.last(), updater.getNowPlaying())
   }
 
   @Test
@@ -120,6 +122,16 @@ class NowPlayingUpdaterTest {
     updater.updateNowPlaying(update(title = "Song"))
 
     assertEquals("Station", surface.stamps.last().title)
+  }
+
+  @Test
+  fun `disabled updater still reports the override to JS`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station") }
+    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = false }
+    updater.updateNowPlaying(update(title = "Song"))
+
+    assertEquals("Song", surface.emitted.last().title)
+    assertEquals("Song", updater.getNowPlaying()?.title)
   }
 
   // MARK: dedupe
@@ -190,6 +202,164 @@ class NowPlayingUpdaterTest {
 
     assertEquals(listOf("Station", "Live Song"), surface.stamps.map { it.title })
     assertEquals("Place", surface.stamps.last().secondary) // per-field fallback
+  }
+
+  @Test
+  fun `the formatter's lines reach the event and getNowPlaying`() = runTest {
+    val surface =
+      FakeSurface().apply {
+        currentTrack =
+          track("Station", artist = "Place", album = "Country", artwork = "https://s/a.png")
+      }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { update(artist = "Song - Artist") }
+
+    updater.render()
+    runCurrent()
+
+    val emitted = surface.emitted.last()
+    assertEquals("Station", emitted.title)
+    assertEquals("Song - Artist", emitted.artist)
+    assertEquals("Country", emitted.album)
+    assertEquals(emitted, updater.getNowPlaying())
+    assertNull(emitted.elapsedTime)
+    assertEquals("https://s/a.png", emitted.artwork)
+    assertEquals("https://s/a.mp3", emitted.mediaId)
+  }
+
+  @Test
+  fun `a re-render keeps the formatter's line up while the formatter runs`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    val gate = CompletableDeferred<Unit>()
+    var calls = 0
+    updater.formatter = {
+      if (++calls > 1) gate.await()
+      update(artist = "Song - Artist")
+    }
+    updater.render()
+    runCurrent()
+
+    updater.render()
+    runCurrent()
+    assertEquals("Song - Artist", updater.getNowPlaying()?.artist)
+    gate.complete(Unit)
+    runCurrent()
+
+    assertEquals(listOf("Place", "Song - Artist"), surface.emitted.map { it.artist })
+    assertEquals(listOf("Place", "Song - Artist"), surface.stamps.map { it.secondary })
+  }
+
+  @Test
+  fun `a formatter that stops customizing restores the default`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    var line: String? = "Song - Artist"
+    updater.formatter = { update(artist = line) }
+    updater.render()
+    runCurrent()
+
+    line = null
+    updater.render()
+    runCurrent()
+
+    assertEquals("Place", surface.stamps.last().secondary)
+    assertEquals("Place", surface.emitted.last().artist)
+    assertEquals("Place", updater.getNowPlaying()?.artist)
+  }
+
+  @Test
+  fun `a throwing formatter after a result restores the default`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    var fail = false
+    updater.formatter = { if (fail) error("boom") else update(artist = "Song - Artist") }
+    updater.render()
+    runCurrent()
+
+    fail = true
+    updater.render()
+    runCurrent()
+
+    assertEquals("Place", surface.stamps.last().secondary)
+    assertEquals("Place", updater.getNowPlaying()?.artist)
+  }
+
+  @Test
+  fun `getNowPlaying keeps the formatter's line when the playing item moves in the queue`() =
+    runTest {
+      val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+      val updater = NowPlayingUpdater(surface, backgroundScope)
+      updater.formatter = { update(artist = "Song - Artist") }
+      updater.render()
+      runCurrent()
+
+      surface.currentIndex = 1
+
+      assertEquals("Song - Artist", updater.getNowPlaying()?.artist)
+    }
+
+  @Test
+  fun `a track replaced in place is stamped even with unchanged lines`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.render()
+
+    updater.forgetPublished()
+    surface.currentTrack = track("Station")
+    updater.render()
+
+    assertEquals(listOf("Station", "Station"), surface.stamps.map { it.title })
+  }
+
+  @Test
+  fun `a new item of the same track gets the formatter's line stamped again`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { update(artist = "Song - Artist") }
+    updater.render()
+    runCurrent()
+
+    surface.currentTrack = track("Station", artist = "Place")
+    updater.clearOverride()
+    updater.render()
+    runCurrent()
+
+    assertEquals(
+      listOf("Place", "Song - Artist", "Place", "Song - Artist"),
+      surface.stamps.map { it.secondary },
+    )
+    assertEquals("Song - Artist", updater.getNowPlaying()?.artist)
+  }
+
+  @Test
+  fun `a copy of the playing track keeps the formatter's line`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { update(artist = "Song - Artist") }
+    updater.render()
+    runCurrent()
+
+    surface.currentTrack = surface.currentTrack?.copy(favorited = true)
+    assertEquals("Song - Artist", updater.getNowPlaying()?.artist)
+    updater.render()
+    runCurrent()
+
+    assertEquals(listOf("Place", "Song - Artist"), surface.emitted.map { it.artist })
+  }
+
+  @Test
+  fun `getNowPlaying shows a new track before it renders`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("A", src = "https://s/a.mp3") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { update(artist = "Song on A") }
+    updater.render()
+    runCurrent()
+
+    surface.currentTrack = track("B", src = "https://s/b.mp3", artist = "Place B")
+
+    assertEquals("B", updater.getNowPlaying()?.title)
+    assertEquals("Place B", updater.getNowPlaying()?.artist)
   }
 
   @Test

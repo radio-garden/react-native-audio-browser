@@ -704,7 +704,10 @@ class Player(internal val context: Context) {
    */
   fun replaceTrack(index: Int, track: Track) {
     validateIndex(index)
+    val isCurrent = index == currentIndex
+    if (isCurrent) nowPlaying.forgetPublished()
     exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
+    if (isCurrent) nowPlaying.render()
   }
 
   /**
