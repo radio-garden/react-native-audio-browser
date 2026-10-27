@@ -1,3 +1,9 @@
+## [0.2.0-next.46](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.45...v0.2.0-next.46) (2026-10-27)
+
+### Bug Fixes
+
+* **android:** a now-playing screen and browse tiles that Android Automotive OS can show ([649f4c4](https://github.com/radio-garden/react-native-audio-browser/commit/649f4c4c33c9613a60c7efcf55088bcd01db2264)), closes [#200](https://github.com/radio-garden/react-native-audio-browser/issues/200)
+
 ## [0.2.0-next.45](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.44...v0.2.0-next.45) (2026-10-27)
 
 ### Bug Fixes
