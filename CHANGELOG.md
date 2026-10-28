@@ -1,3 +1,9 @@
+## [0.2.0-next.47](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.46...v0.2.0-next.47) (2026-10-28)
+
+### Bug Fixes
+
+* **android:** apply a legacy controller's heart rating to the favorite ([2701281](https://github.com/radio-garden/react-native-audio-browser/commit/27012817da8ad789158ea3edc6eb4d71f8d8b8c5)), closes [#205](https://github.com/radio-garden/react-native-audio-browser/issues/205)
+
 ## [0.2.0-next.46](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.45...v0.2.0-next.46) (2026-10-27)
 
 ### Bug Fixes
