@@ -213,6 +213,22 @@ class MediaSessionCallback(private val player: Player) :
     return super.onSetRating(session, controller, rating)
   }
 
+  /**
+   * Where a legacy controller's `setRating` arrives, naming the current item, and a Media3
+   * controller's `setRating(mediaId, rating)`, naming any item: only the current one can be rated.
+   */
+  override fun onSetRating(
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    mediaId: String,
+    rating: Rating,
+  ): ListenableFuture<SessionResult> =
+    if (mediaId == session.player.currentMediaItem?.mediaId) {
+      onSetRating(session, controller, rating)
+    } else {
+      super.onSetRating(session, controller, mediaId, rating)
+    }
+
   @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   override fun onGetLibraryRoot(
     session: MediaLibraryService.MediaLibrarySession,
