@@ -1,3 +1,16 @@
+## [0.2.0-next.49](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.48...v0.2.0-next.49) (2026-11-03)
+
+### Bug Fixes
+
+* **android:** ratings only with favoriting on, and a car favorite control for every track ([fdd2a6d](https://github.com/radio-garden/react-native-audio-browser/commit/fdd2a6d556f037492d656323fcb2b974f4c042be))
+* **android:** restamp the heart rating when the favorite capability changes ([03c1680](https://github.com/radio-garden/react-native-audio-browser/commit/03c1680bcc2c783ec6b2c3db0d55f2ef37f8fdd7))
+* **android:** restamp the queue's heart ratings in one replacement ([ea8a75c](https://github.com/radio-garden/react-native-audio-browser/commit/ea8a75c4718f05a343b3b02dc9da24b8c76bd910))
+* **android:** send Previous and Next as the standard skip actions ([f0d0122](https://github.com/radio-garden/react-native-audio-browser/commit/f0d01225387268ac82da429fc5bcb573663d68f1))
+
+### Code Refactors
+
+* **android:** rebuild a restamped media item in one place ([e598b85](https://github.com/radio-garden/react-native-audio-browser/commit/e598b85d9f66702c76dc280385cf0407fe10bab9))
+
 ## [0.2.0-next.48](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.47...v0.2.0-next.48) (2026-11-03)
 
 ### Bug Fixes
