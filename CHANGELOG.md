@@ -1,3 +1,10 @@
+## [0.2.0-next.48](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.47...v0.2.0-next.48) (2026-11-03)
+
+### Bug Fixes
+
+* **android:** report online from the default network only ([e6633ea](https://github.com/radio-garden/react-native-audio-browser/commit/e6633ea9e25e3e3c26c21117b954840710e2e89c))
+* **ios:** emit onOnlineChanged before the player is set up ([641c9a2](https://github.com/radio-garden/react-native-audio-browser/commit/641c9a26e8f7021336f3f6c4aa2f99163028b1c0))
+
 ## [0.2.0-next.47](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.46...v0.2.0-next.47) (2026-10-28)
 
 ### Bug Fixes
