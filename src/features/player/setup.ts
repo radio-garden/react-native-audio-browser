@@ -609,7 +609,8 @@ export type SetupPlayerOptions = Pick<
    * reports the selected one as the `Output`, with `type: 'remote'`. Only the selection is
    * reported: the library keeps playing locally, and rendering the audio on the speaker is the
    * provider's job. The speakers come from media route providers that declare the library's
-   * remote-output control category (`RemoteOutputs.CATEGORY` on Android).
+   * remote-output control category (`RemoteOutputs.CATEGORY` on Android). The app declares
+   * AndroidX's `MediaTransferReceiver` in its manifest for the switcher to move the session.
    *
    * Android 11+ only for now; ignored on iOS, whose route picker already lists AirPlay devices.
    * @default false

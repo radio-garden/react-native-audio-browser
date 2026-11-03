@@ -67,7 +67,17 @@ is reliably distinguished from it. The device **name** still comes through.
 With `remoteOutputs: true` in [`setupPlayer`](/guide/configuration), the system
 Output Switcher (Android 11+) also lists the speakers and TVs of media route
 providers, and the one the listener selects becomes the output, with
-`type: 'remote'`. Choosing the phone again reports the local device.
+`type: 'remote'`. While one is selected, the switcher offers **Stop casting**
+rather than the phone's own outputs; stopping reports the local device again.
+
+The switcher moves the session only for an app that declares AndroidX's
+`MediaTransferReceiver` in its own manifest. The library leaves it out, because
+it turns on transfer for any MediaRouter in the app, Cast's included:
+
+```xml
+<!-- android/app/src/main/AndroidManifest.xml, inside <application> -->
+<receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" />
+```
 
 A provider offers its routes by declaring the library's control category,
 `com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
