@@ -205,6 +205,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `RemoteOutputsOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 
 #include <string>
 #include <optional>
@@ -473,6 +475,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "RetryConfig.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
 #include "JRetryConfig.hpp"
+#include "RemoteOutputsOptions.hpp"
+#include "JRemoteOutputsOptions.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

@@ -54,9 +54,12 @@ internal class EqualizerController(
 
   /**
    * Reacts to an audio session change: a no-op for the same session, otherwise a fresh effect that
-   * picks up the outgoing one's settings.
+   * picks up the outgoing one's settings. An unset session (playback moved to a Cast receiver)
+   * keeps the effect on the local session, where it applies again on the way back; an effect on
+   * session 0 would equalize the whole device's output instead.
    */
   fun onAudioSessionChanged(newAudioSessionId: Int) {
+    if (newAudioSessionId == C.AUDIO_SESSION_ID_UNSET) return
     val old = effect
     if (old != null && old.audioSessionId == newAudioSessionId) return
 

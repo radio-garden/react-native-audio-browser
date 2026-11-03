@@ -18,7 +18,7 @@ public extension NativeSetupPlayerOptions {
   /**
    * Create a new instance of `NativeSetupPlayerOptions`.
    */
-  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Bool?, repeatMode: RepeatMode?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?, remoteOutputs: Bool?) {
+  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Bool?, repeatMode: RepeatMode?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?, remoteOutputs: RemoteOutputsOptions?) {
     self.init({ () -> bridge.std__optional_NativeAndroidSetupOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_NativeAndroidSetupOptions_(__unwrappedValue)
@@ -83,9 +83,9 @@ public extension NativeSetupPlayerOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
+    }(), { () -> bridge.std__optional_RemoteOutputsOptions_ in
       if let __unwrappedValue = remoteOutputs {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
+        return bridge.create_std__optional_RemoteOutputsOptions_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -211,14 +211,7 @@ public extension NativeSetupPlayerOptions {
   }
   
   @inline(__always)
-  var remoteOutputs: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__remoteOutputs) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__remoteOutputs)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
+  var remoteOutputs: RemoteOutputsOptions? {
+    return self.__remoteOutputs.value
   }
 }

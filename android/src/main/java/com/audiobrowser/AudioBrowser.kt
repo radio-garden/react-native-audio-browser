@@ -23,6 +23,7 @@ import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.flattenedChildren
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
+import com.audiobrowser.cast.castRouteCategory
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.model.PlayerSetupOptions
@@ -75,6 +76,7 @@ import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
@@ -229,7 +231,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
-  private var remoteOutputs = false
+  private var remoteOutputs: RemoteOutputsOptions? = null
   // Written only on the main thread (ServiceConnection callbacks, dispose); read from main or,
   // in a few places, straight from the JS thread. @Volatile gives those reads visibility — they
   // must still tolerate staleness in both directions (a just-detached service, or null while
@@ -863,7 +865,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       setupOptions.update(options)
       options.remoteOutputs?.let { remoteOutputs = it }
       // Applied even when omitted, so a reloaded bundle that omits the option turns it off.
-      RemoteOutputs.setEnabled(context, remoteOutputs)
+      RemoteOutputs.setEnabled(
+        context,
+        enabled = remoteOutputs != null,
+        castCategory = castRouteCategory.takeIf { remoteOutputs?.cast == true },
+      )
       // The bundled runtime options and initial state are part of the atomic launch
       // description: stage them here, apply them together with the engine below (or at
       // service connect). Last-write-wins with their imperative counterparts.

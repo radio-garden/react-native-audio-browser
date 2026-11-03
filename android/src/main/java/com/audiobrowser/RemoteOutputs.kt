@@ -17,16 +17,20 @@ import timber.log.Timber
 /**
  * Remote outputs: the speakers and TVs of media route providers, offered in the system Output
  * Switcher next to the phone and Bluetooth, and the one selected there reported as the [Output].
- * Only the selection is reported; rendering the audio there is the provider's job.
+ * Only the selection is reported; rendering the audio there is the provider's job, or the Cast
+ * session's for a Cast device.
  *
  * Holds the process's one [MediaRouter] while enabled, on Android 11+ where the switcher exists. A
- * provider's routes are offered when they declare [CATEGORY] in a control filter.
+ * provider's routes are offered when they declare [CATEGORY] in a control filter; with Cast on, the
+ * Cast receiver's routes are too.
  */
 object RemoteOutputs {
   /** The control category a media route provider's routes declare to be offered as outputs. */
   const val CATEGORY = "com.audiobrowser.CATEGORY_REMOTE_OUTPUT"
 
-  private val selector = MediaRouteSelector.Builder().addControlCategory(CATEGORY).build()
+  private var selector = selectorFor(castCategory = null)
+
+  private var castCategory: String? = null
 
   // The global router holds routers weakly: let this one go and the system Output Switcher stops
   // listing the category's routes, as the app's discovery preference empties on the next GC.
@@ -59,11 +63,27 @@ object RemoteOutputs {
         update(router)
     }
 
-  /** Turns remote outputs on or off. Idempotent. */
+  /**
+   * Turns remote outputs on or off, and with them, when [castCategory] is set, the Cast routes that
+   * declare it. Idempotent.
+   */
   @MainThread
-  internal fun setEnabled(context: Context, enabled: Boolean) {
-    if (enabled) start(context) else stop()
+  internal fun setEnabled(context: Context, enabled: Boolean, castCategory: String? = null) {
+    val castCategory = castCategory.takeIf { enabled }
+    if (!enabled) stop()
+    if (castCategory != this.castCategory) {
+      this.castCategory = castCategory
+      selector = selectorFor(castCategory)
+      router?.let(::listen)
+    }
+    if (enabled) start(context)
   }
+
+  private fun selectorFor(castCategory: String?) =
+    MediaRouteSelector.Builder()
+      .addControlCategory(CATEGORY)
+      .apply { castCategory?.let(::addControlCategory) }
+      .build()
 
   /** Calls [listener] on the main thread whenever [current] changes. */
   internal fun addListener(listener: () -> Unit) {
@@ -79,6 +99,11 @@ object RemoteOutputs {
     warnWithoutTransferReceiver(context)
     val router = MediaRouter.getInstance(context.applicationContext)
     this.router = router
+    listen(router)
+  }
+
+  private fun listen(router: MediaRouter) {
+    router.removeCallback(callback)
     router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
     update(router)
   }
@@ -110,7 +135,13 @@ object RemoteOutputs {
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
-    setCurrent(remoteOutputOf(name = route.name, offersCategory = route.matchesSelector(selector)))
+    setCurrent(
+      remoteOutputOf(
+        name = route.name,
+        offersCategory = route.matchesSelector(selector),
+        isCast = castCategory?.let(route::supportsControlCategory) == true,
+      )
+    )
   }
 
   @VisibleForTesting
@@ -123,6 +154,10 @@ object RemoteOutputs {
   }
 }
 
-/** The [Output] a selected route stands for: null for a route outside [RemoteOutputs.CATEGORY]. */
-internal fun remoteOutputOf(name: String, offersCategory: Boolean): Output? =
-  if (offersCategory) Output(type = OutputType.REMOTE, name = name, external = true) else null
+/** The [Output] a selected route stands for: null for a route the remote outputs don't offer. */
+internal fun remoteOutputOf(name: String, offersCategory: Boolean, isCast: Boolean): Output? =
+  when {
+    !offersCategory -> null
+    isCast -> Output(type = OutputType.CAST, name = name, external = true)
+    else -> Output(type = OutputType.REMOTE, name = name, external = true)
+  }

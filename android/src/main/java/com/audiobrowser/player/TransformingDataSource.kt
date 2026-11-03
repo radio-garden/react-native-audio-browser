@@ -137,19 +137,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     return try {
       val requestConfig = factory.getRequestConfig(originalUrl)
       if (requestConfig != null) {
-        val path = requestConfig.path ?: ""
-        val baseUrl = requestConfig.baseUrl
-        val url = BrowserPathHelper.buildUrl(baseUrl, path)
-
-        val finalUrl =
-          if (requestConfig.query?.isNotEmpty() == true) {
-            val uri = Uri.parse(url).buildUpon()
-            requestConfig.query?.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
-            uri.build().toString()
-          } else {
-            url
-          }
-
+        val finalUrl = requestConfig.url()
         val headers = requestConfig.headers ?: emptyMap()
         val userAgent = requestConfig.userAgent ?: DEFAULT_USER_AGENT
 
@@ -195,4 +183,13 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)
     }
   }
+}
+
+/** The URL this config requests: its path against its base URL, with its query appended. */
+internal fun MediaRequestConfig.url(): String {
+  val url = BrowserPathHelper.buildUrl(baseUrl, path ?: "")
+  val query = query?.takeIf { it.isNotEmpty() } ?: return url
+  val uri = Uri.parse(url).buildUpon()
+  query.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
+  return uri.build().toString()
 }

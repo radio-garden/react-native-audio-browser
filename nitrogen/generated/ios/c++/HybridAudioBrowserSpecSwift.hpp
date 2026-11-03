@@ -208,6 +208,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `RemoteOutputsOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 
@@ -317,6 +319,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "FormatNowPlayingParams.hpp"
 #include "StallReason.hpp"
 #include "RetryConfig.hpp"
+#include "RemoteOutputsOptions.hpp"
 #include "Progress.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"

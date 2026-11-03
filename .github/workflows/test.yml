@@ -136,6 +136,11 @@ jobs:
         working-directory: apps/example-native/android
         run: ./gradlew :react-native-audio-browser:testDebugUnitTest --no-daemon --build-cache
 
+      # The example app builds with Cast; this compiles the library as an app without it gets it.
+      - name: Compile without Cast
+        working-directory: apps/example-native/android
+        run: ./gradlew :react-native-audio-browser:compileDebugKotlin -PAudioBrowser_castEnabled=false --no-daemon --build-cache
+
       - name: Upload test report
         if: failure()
         uses: actions/upload-artifact@v4

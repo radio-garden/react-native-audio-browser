@@ -156,6 +156,8 @@ namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteOutputsOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -284,6 +286,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "RemoteButtonLayout.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
+#include "RemoteOutputsOptions.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
@@ -2695,6 +2698,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<RemoteOutputsOptions>
+  /**
+   * Specialized version of `std::optional<RemoteOutputsOptions>`.
+   */
+  using std__optional_RemoteOutputsOptions_ = std::optional<RemoteOutputsOptions>;
+  inline std::optional<RemoteOutputsOptions> create_std__optional_RemoteOutputsOptions_(const RemoteOutputsOptions& value) noexcept {
+    return std::optional<RemoteOutputsOptions>(value);
+  }
+  inline bool has_value_std__optional_RemoteOutputsOptions_(const std::optional<RemoteOutputsOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline RemoteOutputsOptions get_std__optional_RemoteOutputsOptions_(const std::optional<RemoteOutputsOptions>& optional) noexcept {
     return optional.value();
   }
   

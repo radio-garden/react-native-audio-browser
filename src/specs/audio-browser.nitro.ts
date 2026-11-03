@@ -70,7 +70,7 @@ export type EqualizerSettings = {
  * Cross-platform audio output kind. Each platform maps its native ports into
  * this shared set: iOS's granular Bluetooth ports (`bluetoothA2DP`/`HFP`/`LE`)
  * all collapse to `'bluetooth'`. `'airplay'` comes from iOS only, `'remote'`
- * from Android only (with `remoteOutputs` on), and `'cast'` is reserved.
+ * and `'cast'` from Android only (with `remoteOutputs` on).
  */
 export type OutputType =
   | 'speaker' // built-in loudspeaker
@@ -81,7 +81,7 @@ export type OutputType =
   | 'car' // car audio (CarPlay / Android Auto / car Bluetooth)
   | 'hdmi'
   | 'usb'
-  | 'cast' // Cast device (reserved)
+  | 'cast' // Cast device, playing through the library's Cast support (Android)
   | 'remote' // a media route provider's speaker or TV, selected in the Output Switcher (Android)
   | 'other'
 

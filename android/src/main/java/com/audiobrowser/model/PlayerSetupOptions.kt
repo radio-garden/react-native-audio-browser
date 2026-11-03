@@ -62,6 +62,8 @@ data class PlayerSetupOptions(
   // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
   // timed metadata. When null, the default mapping is used.
   var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
+  // Whether playback moves to a Cast device selected in the Output Switcher.
+  var cast: Boolean = false,
 ) {
   /**
    * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
@@ -71,11 +73,11 @@ data class PlayerSetupOptions(
     get() = rebufferBuffer == null
 
   /**
-   * A copy that equals another's when both build the same engine: without the now-playing options,
-   * which apply without a rebuild. A formatter is a new object on every setup call.
+   * A copy that equals another's when both build the same engine: without the now-playing options
+   * and Cast, which apply without a rebuild. A formatter is a new object on every setup call.
    */
   fun engineOptions() =
-    copy(autoUpdateNowPlayingMetadata = true, nowPlayingMetadataFormatter = null)
+    copy(autoUpdateNowPlayingMetadata = true, nowPlayingMetadataFormatter = null, cast = false)
 
   fun update(options: NativeSetupPlayerOptions) {
     // Android-specific options
@@ -136,5 +138,6 @@ data class PlayerSetupOptions(
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
     options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
+    options.remoteOutputs?.let { cast = it.cast == true }
   }
 }
