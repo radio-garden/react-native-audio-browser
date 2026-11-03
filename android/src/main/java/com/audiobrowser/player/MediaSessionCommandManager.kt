@@ -11,11 +11,15 @@ import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import timber.log.Timber
 
-/** Previous in BACK or Next in FORWARD: where a controller draws its own skip buttons. */
-private val SlottedButton.isStandardSkip: Boolean
-  get() =
-    (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
-      (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD)
+/**
+ * Whether a surface draws this button itself, from the standard PlaybackState: Previous in BACK and
+ * Next in FORWARD everywhere (the standard skip actions), and the favorite on Android Automotive OS
+ * (the heart `userRating`, drawn as the car media app's rating control).
+ */
+private fun SlottedButton.isDrawnBySurface(automotive: Boolean): Boolean =
+  (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
+    (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD) ||
+    (automotive && button == RemoteButton.FAVORITE)
 
 /**
  * A slot's Media3 preference list: the requested slot, then OVERFLOW as a fallback.
@@ -130,16 +134,25 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
-  /** The Media3 player command behind each Capability (FAVORITE is a session command). */
-  private val capabilityPlayerCommands: Map<Capability, @MediaPlayer.Command Int> =
+  /**
+   * The Media3 player commands behind each Capability (FAVORITE is a session command). Skip has two
+   * each: Media3 advertises the platform skip action for either, and its notification's own skip
+   * buttons use the media-item one, so a disabled skip must remove both.
+   */
+  private val capabilityPlayerCommands: Map<Capability, List<@MediaPlayer.Command Int>> =
     mapOf(
-      Capability.PLAY_PAUSE to MediaPlayer.COMMAND_PLAY_PAUSE,
-      Capability.STOP to MediaPlayer.COMMAND_STOP,
-      Capability.SEEK_TO to MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-      Capability.SKIP_TO_NEXT to MediaPlayer.COMMAND_SEEK_TO_NEXT,
-      Capability.SKIP_TO_PREVIOUS to MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
-      Capability.JUMP_FORWARD to MediaPlayer.COMMAND_SEEK_FORWARD,
-      Capability.JUMP_BACKWARD to MediaPlayer.COMMAND_SEEK_BACK,
+      Capability.PLAY_PAUSE to listOf(MediaPlayer.COMMAND_PLAY_PAUSE),
+      Capability.STOP to listOf(MediaPlayer.COMMAND_STOP),
+      Capability.SEEK_TO to listOf(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM),
+      Capability.SKIP_TO_NEXT to
+        listOf(MediaPlayer.COMMAND_SEEK_TO_NEXT, MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM),
+      Capability.SKIP_TO_PREVIOUS to
+        listOf(
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        ),
+      Capability.JUMP_FORWARD to listOf(MediaPlayer.COMMAND_SEEK_FORWARD),
+      Capability.JUMP_BACKWARD to listOf(MediaPlayer.COMMAND_SEEK_BACK),
     )
 
   // Declared above `init` deliberately: `init` calls `buildPlayerCommands`, which reads
@@ -331,15 +344,10 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   ): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
 
-    // Always filter out direct media item commands to avoid dual-command confusion.
-    // This forces MediaSession to only use the "smart" commands we can control via capabilities.
-    playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-    playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-
-    capabilityPlayerCommands.forEach { (capability, command) ->
+    capabilityPlayerCommands.forEach { (capability, commands) ->
       if (!capabilities.isEnabled(capability)) {
-        playerCommandsBuilder.remove(command)
-        Timber.Forest.d("Removed command: $command ($capability disabled)")
+        commands.forEach { playerCommandsBuilder.remove(it) }
+        Timber.Forest.d("Removed commands: $commands ($capability disabled)")
       }
     }
 
@@ -368,6 +376,12 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
       sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
       sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
       Timber.Forest.d("Removed search commands - search not configured")
+    }
+
+    // Media3 always advertises the platform rating action; without this command a rating, which
+    // sets the favorite, is refused.
+    if (!capabilities.isEnabled(Capability.FAVORITE)) {
+      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_SESSION_SET_RATING)
     }
 
     RemoteButton.entries
@@ -438,9 +452,10 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
    * Assembles the CommandButtons for an already-derived slot layout (see [deriveButtonSlots] — the
    * slots are pre-filtered by Capability).
    *
-   * On Android Automotive OS, Previous in BACK and Next in FORWARD are left out, so Media3 keeps
-   * them as the PlaybackState's standard skip actions, which the car media app draws either side of
-   * play/pause. Sent as buttons they arrive as custom actions, which it places by its own rules.
+   * Buttons a surface draws itself are left out ([isDrawnBySurface]): Media3 then keeps the
+   * standard skip actions and reserves their slots. Sent as buttons they arrive as custom actions,
+   * which Android Automotive OS's car media app places by its own rules, not either side of
+   * play/pause.
    *
    * Each button gets its requested slot followed by OVERFLOW as a fallback. `slots` is an ordered
    * preference list, and every surface caps how many buttons it renders — a head unit, the
@@ -452,7 +467,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     favorited: Boolean?,
   ): List<CommandButton> =
     slots
-      .filterNot { automotive && it.isStandardSkip }
+      .filterNot { it.isDrawnBySurface(automotive) }
       .map { (button, slot) ->
         buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
       }

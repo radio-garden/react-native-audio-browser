@@ -6,14 +6,21 @@ import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class TrackFactoryRatingTest {
+  @Before
+  fun favoritesOn() {
+    TrackFactory.favoriteEnabled = true
+  }
+
   @Test
   fun `favorited true advertises a rated, hearted userRating`() {
     val item = TrackFactory.toMedia3(TestFixtures.track(favorited = true))
@@ -31,8 +38,22 @@ class TrackFactoryRatingTest {
   }
 
   @Test
-  fun `favorited null advertises no userRating (favoriting disabled)`() {
+  fun `favorited null advertises an unrated heart, so a car still draws its rating control`() {
     val item = TrackFactory.toMedia3(TestFixtures.track(favorited = null))
+    val rating = item.mediaMetadata.userRating as HeartRating
+    assertFalse(rating.isRated)
+  }
+
+  @Test
+  fun `a browsable item with no known favorite carries no rating`() {
+    val item = TrackFactory.toMedia3(TestFixtures.browseTrack())
+    assertNull(item.mediaMetadata.userRating)
+  }
+
+  @Test
+  fun `favoriting off advertises no userRating`() {
+    TrackFactory.favoriteEnabled = false
+    val item = TrackFactory.toMedia3(TestFixtures.track(favorited = true))
     assertNull(item.mediaMetadata.userRating)
   }
 
@@ -40,6 +61,7 @@ class TrackFactoryRatingTest {
   fun resetDevice() {
     Automotive.device = false
     TrackFactory.artworkRoutes = null
+    TrackFactory.favoriteEnabled = false
   }
 
   private fun automotive(): BrowseArtworkRegistry =
@@ -47,13 +69,6 @@ class TrackFactoryRatingTest {
       Automotive.device = true
       TrackFactory.artworkRoutes = ArtworkRoutes(it, "app.artwork")
     }
-
-  @Test
-  fun `Android Automotive OS advertises no userRating`() {
-    automotive()
-    val item = TrackFactory.toMedia3(TestFixtures.track(favorited = true))
-    assertNull(item.mediaMetadata.userRating)
-  }
 
   @Test
   fun `Android Automotive OS serves http artwork through the provider`() {

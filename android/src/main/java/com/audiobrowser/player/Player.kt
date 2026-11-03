@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -140,6 +141,7 @@ class Player(internal val context: Context) {
 
   init {
     Automotive.device = context.isAutomotive
+    TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
     TrackFactory.artworkRoutes =
       ArtworkRoutes(browseArtworkRegistry, ArtworkUris.authorityFor(context.packageName))
   }
@@ -746,23 +748,8 @@ class Player(internal val context: Context) {
     val index = exoPlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return true
 
-    // Create updated Track with new favorited state
     val updatedTrack = currentTrack.copy(favorited = favorited)
-
-    // Use buildUpon() on the existing MediaItem to update only the metadata
-    // This preserves internal references and avoids playback interruption
-    // Note: setTag() requires setUri() to be called, so we must re-set the URI
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
-    val updatedMetadata = currentMediaItem.mediaMetadata.buildUpon().setFavorite(favorited).build()
-    val updatedMediaItem =
-      currentMediaItem
-        .buildUpon()
-        .setUri(currentMediaItem.localConfiguration?.uri)
-        .setMediaMetadata(updatedMetadata)
-        .setTag(updatedTrack)
-        .build()
-
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+    restampMediaItem(index, updatedTrack) { setFavorite(favorited) }
 
     // Update the heart button icon in notification/Android Auto
     updateFavoriteButtonState(favorited)
@@ -868,22 +855,43 @@ class Player(internal val context: Context) {
       MainScope(),
     )
 
+  /**
+   * Restamps every queued item's heart rating after the favorite capability changed, in one
+   * replacement: each separate one would be a timeline change, and a queue event to JS.
+   */
+  private fun restampFavorites() {
+    if (!::exoPlayer.isInitialized || exoPlayer.mediaItemCount == 0) return
+    val items =
+      (0 until exoPlayer.mediaItemCount).map { index ->
+        val item = exoPlayer.getMediaItemAt(index)
+        val track = item.localConfiguration?.tag as? Track ?: return@map item
+        item.restamped(track) { setFavorite(track.favorited) }
+      }
+    exoPlayer.replaceMediaItems(0, items.size, items)
+  }
+
   /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
   private fun restampMediaItem(
     index: Int,
     track: Track,
     mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
   ) {
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
-    val updatedMediaItem =
-      currentMediaItem
-        .buildUpon()
-        .setUri(currentMediaItem.localConfiguration?.uri)
-        .setMediaMetadata(currentMediaItem.mediaMetadata.buildUpon().mutate().build())
-        .setTag(track)
-        .build()
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+    exoPlayer.replaceMediaItem(index, exoPlayer.getMediaItemAt(index).restamped(track, mutate))
   }
+
+  /**
+   * This item with mutated metadata and [track] as its tag, its uri unchanged so ExoPlayer updates
+   * it in place instead of reloading it.
+   */
+  private fun MediaItem.restamped(
+    track: Track,
+    mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
+  ): MediaItem =
+    buildUpon()
+      .setUri(localConfiguration?.uri)
+      .setMediaMetadata(mediaMetadata.buildUpon().mutate().build())
+      .setTag(track)
+      .build()
 
   /**
    * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.
@@ -1324,6 +1332,10 @@ class Player(internal val context: Context) {
       // The `favorite` capability is the single favoriting switch — propagate
       // it to the browser so it can hydrate row hearts.
       browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
+      TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
+      if (previousOptions.capabilities.favoriteEnabled != options.capabilities.favoriteEnabled) {
+        restampFavorites()
+      }
     }
 
     if (progressUpdateEventIntervalChanged) {
