@@ -1,10 +1,13 @@
 package com.audiobrowser
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.annotation.MainThread
 import androidx.annotation.VisibleForTesting
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
+import androidx.mediarouter.media.MediaTransferReceiver
 import com.audiobrowser.util.OutputSwitcher
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
@@ -73,6 +76,11 @@ object RemoteOutputs {
 
   private fun start(context: Context) {
     if (router != null || !OutputSwitcher.isSupported()) return
+    if (!declaresTransferReceiver(context)) {
+      Timber.w(
+        "RemoteOutputs: the app's manifest declares no MediaTransferReceiver, so the Output Switcher won't list remote outputs"
+      )
+    }
     val router = MediaRouter.getInstance(context.applicationContext)
     this.router = router
     router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
@@ -88,6 +96,17 @@ object RemoteOutputs {
     this.router = null
     setCurrent(null)
   }
+
+  private fun declaresTransferReceiver(context: Context): Boolean =
+    try {
+      context.packageManager.getReceiverInfo(
+        ComponentName(context, MediaTransferReceiver::class.java),
+        PackageManager.GET_META_DATA,
+      )
+      true
+    } catch (_: PackageManager.NameNotFoundException) {
+      false
+    }
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute

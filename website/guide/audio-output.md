@@ -79,6 +79,9 @@ it turns on transfer for any MediaRouter in the app, Cast's included:
 <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" />
 ```
 
+Without it, the switcher lists only the phone's own outputs, and the library
+logs a warning saying the receiver is missing.
+
 A provider offers its routes by declaring the library's control category,
 `com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
 selection is reported: the library keeps playing locally, and rendering the
