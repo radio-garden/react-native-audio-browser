@@ -7,6 +7,8 @@ import android.os.Looper
 import androidx.media3.common.HeartRating
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionResult
+import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.util.TrackFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -51,6 +53,7 @@ class LegacyRatingTest {
   @After
   fun destroy() {
     controller.destroy()
+    TrackFactory.favoriteEnabled = false
   }
 
   private fun idle() = shadowOf(Looper.getMainLooper()).idle()
@@ -69,6 +72,9 @@ class LegacyRatingTest {
 
   private fun loadTrack() {
     controller.bind()
+    player.applyOptions(
+      PlayerUpdateOptions().let { it.copy(capabilities = it.capabilities.copy(favorite = true)) }
+    )
     player.load(TestFixtures.track(id = "a", favorited = false))
     idle()
   }
