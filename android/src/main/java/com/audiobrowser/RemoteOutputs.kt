@@ -76,11 +76,7 @@ object RemoteOutputs {
 
   private fun start(context: Context) {
     if (router != null || !OutputSwitcher.isSupported()) return
-    if (!declaresTransferReceiver(context)) {
-      Timber.w(
-        "RemoteOutputs: the app's manifest declares no MediaTransferReceiver, so the Output Switcher won't list remote outputs"
-      )
-    }
+    warnWithoutTransferReceiver(context)
     val router = MediaRouter.getInstance(context.applicationContext)
     this.router = router
     router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
@@ -97,16 +93,20 @@ object RemoteOutputs {
     setCurrent(null)
   }
 
-  private fun declaresTransferReceiver(context: Context): Boolean =
+  /** Never throws: a failed check must not keep [start] from setting up the router. */
+  private fun warnWithoutTransferReceiver(context: Context) {
     try {
       context.packageManager.getReceiverInfo(
         ComponentName(context, MediaTransferReceiver::class.java),
         PackageManager.GET_META_DATA,
       )
-      true
-    } catch (_: PackageManager.NameNotFoundException) {
-      false
+    } catch (e: Exception) {
+      Timber.w(
+        e,
+        "RemoteOutputs: found no MediaTransferReceiver in the app's manifest, so the Output Switcher won't list remote outputs",
+      )
     }
+  }
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
