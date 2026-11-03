@@ -1,3 +1,27 @@
+## [0.2.0-next.50](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.49...v0.2.0-next.50) (2026-11-03)
+
+### ⚠ BREAKING CHANGES
+
+* **android:** `OutputType` gains `'remote'`. Code that maps every
+`OutputType` exhaustively (a `Record<OutputType, …>` or an exhaustive
+`switch`) needs a case for it.
+
+### Features
+
+* **android:** report a remote output selected in the Output Switcher ([17254c8](https://github.com/radio-garden/react-native-audio-browser/commit/17254c814de3007971da96b86c86a0ced1b4b676))
+
+### Bug Fixes
+
+* **android:** announce the phone speaker when a left remote output has no local reading ([cd09bfe](https://github.com/radio-garden/react-native-audio-browser/commit/cd09bfedd8d4db10e71d7ca8d1bb864991d95b58))
+* **android:** keep a failed receiver check from stopping remote outputs ([4c46115](https://github.com/radio-garden/react-native-audio-browser/commit/4c461152ad508cfbc59d8fdc5dc62a83ebcbd7c2))
+* **android:** leave MediaTransferReceiver to the host app ([f45eecd](https://github.com/radio-garden/react-native-audio-browser/commit/f45eecdc5db79f026de38ddd9a3ccfa5c3d08516))
+* **android:** stop reporting a left remote output when the local reading is empty ([d35170c](https://github.com/radio-garden/react-native-audio-browser/commit/d35170ce090055c541550c9cb3969dd08468fcea))
+* **android:** warn when remote outputs are on without MediaTransferReceiver ([b34e65d](https://github.com/radio-garden/react-native-audio-browser/commit/b34e65d70a6476329046c57ae4bbc9992f90adcc))
+
+### Other changes
+
+* **example:** add a fake speaker for trying remote outputs ([ad0f6b3](https://github.com/radio-garden/react-native-audio-browser/commit/ad0f6b390ae064daf2d53182385b761b5701e48c))
+
 ## [0.2.0-next.49](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.48...v0.2.0-next.49) (2026-11-03)
 
 ### Bug Fixes
