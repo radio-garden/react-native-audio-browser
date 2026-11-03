@@ -2,6 +2,7 @@ package com.audiobrowser
 
 import android.content.Context
 import androidx.annotation.MainThread
+import androidx.annotation.VisibleForTesting
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.audiobrowser.util.OutputSwitcher
@@ -93,7 +94,9 @@ object RemoteOutputs {
     setCurrent(remoteOutputOf(name = route.name, offersCategory = route.matchesSelector(selector)))
   }
 
-  private fun setCurrent(output: Output?) {
+  @VisibleForTesting
+  @MainThread
+  internal fun setCurrent(output: Output?) {
     if (output == current) return
     current = output
     Timber.d("RemoteOutputs: %s", output?.name ?: "local")
