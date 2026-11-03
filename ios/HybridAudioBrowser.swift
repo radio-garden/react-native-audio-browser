@@ -269,9 +269,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       networkMonitor.changed.addListener { [weak self] isOnline in
         guard let self else { return }
         MainActor.assumeIsolated {
-          guard let player = self.player else { return }
           self.onOnlineChanged(isOnline)
-          player.networkStatusDidChange(isOnline: isOnline)
+          self.player?.networkStatusDidChange(isOnline: isOnline)
         }
       }
       browseGate.resolve = { [weak self] request in

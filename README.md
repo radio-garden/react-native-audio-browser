@@ -34,7 +34,7 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 ## Requirements
 
 - React Native **0.76+** with the **New Architecture** (Fabric + TurboModules)
-- iOS **16+** · Android **API 23+**
+- iOS **16+** · Android **API 24+**
 - [`react-native-nitro-modules`](https://nitro.margelo.com) (peer dependency)
 
 ## Installation
