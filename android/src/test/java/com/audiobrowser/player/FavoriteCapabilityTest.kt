@@ -1,6 +1,10 @@
 package com.audiobrowser.player
 
+import android.os.Looper
 import androidx.media3.common.HeartRating
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaSession
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
@@ -10,18 +14,27 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 
-// Robolectric: Player builds a real ExoPlayer, which needs the framework and a main looper.
 @RunWith(RobolectricTestRunner::class)
 class FavoriteCapabilityTest {
 
   private val app = RuntimeEnvironment.getApplication()
   private val player = Player(app)
   private lateinit var session: MediaSession
+
+  @Before
+  fun setUp() {
+    player.setup(PlayerSetupOptions())
+    session = MediaSession.Builder(app, player.exoPlayer).build()
+    player.setMediaSession(session)
+  }
 
   @After
   fun release() {
@@ -33,28 +46,35 @@ class FavoriteCapabilityTest {
   private fun favorite(enabled: Boolean) =
     PlayerUpdateOptions().let { it.copy(capabilities = it.capabilities.copy(favorite = enabled)) }
 
-  private fun queuedRating() = player.exoPlayer.getMediaItemAt(0).mediaMetadata.userRating
+  private fun rating(index: Int) = player.exoPlayer.getMediaItemAt(index).mediaMetadata.userRating
+
+  private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
   @Test
-  fun `turning favoriting on and off restamps the queued items' heart rating`() {
-    player.setup(PlayerSetupOptions())
-    session = MediaSession.Builder(app, player.exoPlayer).build()
-    player.setMediaSession(session)
-    player.add(TestFixtures.track(title = "a", src = "https://s/a.mp3"))
-    assertNull(queuedRating())
+  fun `turning favoriting on and off restamps each queued item's own heart rating`() {
+    player.add(
+      arrayOf(
+        TestFixtures.track(title = "a", src = "https://s/a.mp3"),
+        TestFixtures.track(title = "b", src = "https://s/b.mp3", favorited = true),
+        TestFixtures.track(title = "c", src = "https://s/c.mp3", favorited = false),
+      )
+    )
+    assertNull(rating(0))
+    assertNull(rating(1))
 
     player.applyOptions(favorite(true))
-    assertFalse((queuedRating() as HeartRating).isRated)
+    assertFalse((rating(0) as HeartRating).isRated)
+    assertEquals(HeartRating(true), rating(1))
+    assertEquals(HeartRating(false), rating(2))
 
     player.applyOptions(favorite(false))
-    assertNull(queuedRating())
+    assertNull(rating(0))
+    assertNull(rating(1))
+    assertNull(rating(2))
   }
 
   @Test
-  fun `the restamp is one timeline change, not one per item`() {
-    player.setup(PlayerSetupOptions())
-    session = MediaSession.Builder(app, player.exoPlayer).build()
-    player.setMediaSession(session)
+  fun `the restamp is one timeline change, in place`() {
     player.add(
       arrayOf(
         TestFixtures.track(title = "a", src = "https://s/a.mp3"),
@@ -62,19 +82,28 @@ class FavoriteCapabilityTest {
         TestFixtures.track(title = "c", src = "https://s/c.mp3"),
       )
     )
-    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+    player.exoPlayer.seekTo(1, 0)
+    idle()
     var timelineChanges = 0
+    var transitions = 0
     player.exoPlayer.addListener(
-      object : androidx.media3.common.Player.Listener {
-        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+      object : MediaPlayer.Listener {
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
           timelineChanges++
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+          transitions++
         }
       }
     )
 
     player.applyOptions(favorite(true))
-    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+    idle()
 
     assertEquals(1, timelineChanges)
+    assertEquals(0, transitions)
+    assertEquals(1, player.exoPlayer.currentMediaItemIndex)
+    assertTrue(rating(1) is HeartRating)
   }
 }
