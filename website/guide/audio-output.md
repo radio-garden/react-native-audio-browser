@@ -64,7 +64,7 @@ is reliably distinguished from it. The device **name** still comes through.
 
 ### Remote outputs (Android)
 
-With `remoteOutputs: true` in [`setupPlayer`](/guide/configuration), the system
+With `remoteOutputs: {}` in [`setupPlayer`](/guide/configuration), the system
 Output Switcher (Android 11+) also lists the speakers and TVs of media route
 providers, and the one the listener selects becomes the output, with
 `type: 'remote'`. While one is selected, the switcher offers **Stop casting**
@@ -86,6 +86,55 @@ A provider offers its routes by declaring the library's control category,
 `com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
 selection is reported: the library keeps playing locally, and rendering the
 audio on the speaker is the provider's job.
+
+### Google Cast (Android)
+
+With `remoteOutputs: { cast: true }`, selecting a Cast device in the switcher
+moves playback there, through Google's Default Media Receiver. The output
+reports `type: 'cast'`, and the queue, the position and the play intent move
+across both ways: **Stop casting** brings playback back to the phone, at the
+same track.
+
+```ts
+await setupPlayer({ remoteOutputs: { cast: true } })
+```
+
+Cast is opt-in at build time, so apps that don't cast don't ship Google Play
+services' Cast framework. Turn it on in the app's `gradle.properties`:
+
+```properties
+# android/gradle.properties
+AudioBrowser_castEnabled=true
+```
+
+The app also declares `MediaTransferReceiver`, as above. Without the build
+property, or on a device without Google Play services, playback stays on the
+phone and the library logs a warning.
+
+The receiver fetches the stream itself:
+
+- It gets the URL your media transform resolves, without its headers, so a
+  stream that needs request headers won't play on it.
+- A track without a file extension is sent as `audio/mpeg`; the receiver works
+  out the real codec. A track with `live: true` loads as a live stream.
+- The receiver shows the track's title, artist and artwork. It doesn't read
+  song titles from the stream, so the live song doesn't update while casting.
+
+While casting, what only makes sense on the phone steps aside:
+
+- `setVolume` moves the receiver's volume;
+- the equalizer and the skip-silence setting wait for playback to come back;
+- the sleep timer pauses the receiver without fading;
+- load retries and stall recovery are the receiver's own, and a receiver error
+  reaches the app as a playback error.
+
+Known limits:
+
+- No live song titles on the receiver or the phone while casting: the Default
+  Media Receiver keeps the metadata it was loaded with.
+- No custom or styled receiver; the receiver is Google's Default Media Receiver.
+- Android only. On iOS, the route picker lists AirPlay devices.
+- A receiver error is not retried; the app decides what to do with it.
 
 Outside React, read a snapshot with `getOutput()` or subscribe with
 [`onOutputChanged`](/api/features/output/#onoutputchanged):
