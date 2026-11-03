@@ -34,8 +34,9 @@ export function supportsOutputSwitcher(): boolean {
 /**
  * The current audio output, or `undefined` when unknown. iOS reports one while a
  * session is active; Android reports the active output route via AudioManager
- * (the `type` is coarse — e.g. wired headphones may report as `speaker`). Guard
- * for `undefined`.
+ * (the `type` is coarse — e.g. wired headphones may report as `speaker`), or the
+ * remote output selected in the Output Switcher when `remoteOutputs` is on.
+ * Guard for `undefined`.
  */
 export function getOutput(): Output | undefined {
   return nativeBrowser.getOutput()

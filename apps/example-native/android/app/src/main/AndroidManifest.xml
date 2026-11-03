@@ -25,5 +25,14 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <!-- Lets the Output Switcher move the session to a remote output -->
+      <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" />
+      <!-- A fake speaker for trying remote outputs in the Output Switcher -->
+      <service android:name=".ExampleSpeakerProviderService" android:exported="true">
+        <intent-filter>
+          <action android:name="android.media.MediaRouteProviderService" />
+          <action android:name="android.media.MediaRoute2ProviderService" />
+        </intent-filter>
+      </service>
     </application>
 </manifest>
