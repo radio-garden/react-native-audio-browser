@@ -18,7 +18,7 @@ public extension NativeSetupPlayerOptions {
   /**
    * Create a new instance of `NativeSetupPlayerOptions`.
    */
-  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Bool?, repeatMode: RepeatMode?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?) {
+  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Bool?, repeatMode: RepeatMode?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?, remoteOutputs: Bool?) {
     self.init({ () -> bridge.std__optional_NativeAndroidSetupOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_NativeAndroidSetupOptions_(__unwrappedValue)
@@ -79,6 +79,12 @@ public extension NativeSetupPlayerOptions {
       }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = keepSessionAliveOnError {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = remoteOutputs {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
@@ -197,6 +203,18 @@ public extension NativeSetupPlayerOptions {
     return { () -> Bool? in
       if bridge.has_value_std__optional_bool_(self.__keepSessionAliveOnError) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__keepSessionAliveOnError)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var remoteOutputs: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__remoteOutputs) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__remoteOutputs)
         return __unwrapped
       } else {
         return nil

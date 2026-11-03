@@ -72,7 +72,7 @@ capabilities). Elsewhere, just omit a field to leave it unchanged.
 | `ios.playbackRates` / `carPlayUpNextButton` / `carPlayNowPlayingButtons`                 |       ✓       |        ✓        |
 | `nowPlaying` (metadata formatter)                                                        |       ✓       |        —        |
 | `playWhenReady`, `repeatMode` (initial values)                                           |       ✓       |        —        |
-| `retry`, `keepSessionAliveOnError`                                                       |       ✓       |        —        |
+| `retry`, `keepSessionAliveOnError`, `remoteOutputs`                                      |       ✓       |        —        |
 | `android` / `ios` audio engine & session (`audioContentType`, `wakeMode`, `category`, …) |       ✓       |        —        |
 
 `playWhenReady` and `repeatMode` set the _initial_ state; change them at runtime

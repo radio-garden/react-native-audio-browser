@@ -41,6 +41,10 @@
             android:exported="true"
             android:grantUriPermissions="false" />
 
+        <!-- Lets the system Output Switcher transfer the media session to the routes the app's
+             MediaRouter asks for: with remoteOutputs on, RemoteOutputs.CATEGORY -->
+        <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" android:exported="true" />
+
         <!-- Headless Task Service for background JS execution -->
         <service android:name="com.audiobrowser.HeadlessTaskService" android:enabled="true" android:exported="false" />
         <!-- Media button receiver for playback resumption -->

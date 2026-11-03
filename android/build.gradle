@@ -185,6 +185,7 @@ dependencies {
   implementation "androidx.car.app:app:1.4.0"
   implementation "androidx.lifecycle:lifecycle-process:2.8.6"
   implementation 'androidx.media:media:1.7.0'
+  implementation "androidx.mediarouter:mediarouter:1.8.1"
 
   implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 

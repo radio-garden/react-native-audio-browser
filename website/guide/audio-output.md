@@ -51,18 +51,28 @@ An [`Output`](/api/features/output/#output) is:
 | `external` | `boolean`    | `false` only for the built-in speaker/receiver; `true` for everything external. |
 
 `type` is one of `'speaker'`, `'receiver'` (the iOS earpiece), `'headphones'`,
-`'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` (a remote
-speaker / TV), or `'other'`. Both platforms map their native ports/routes into
+`'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` (reserved),
+`'remote'` (a remote speaker or TV, see below), or `'other'`. Both platforms map their native ports/routes into
 this shared set — e.g. iOS's separate Bluetooth ports all collapse to
 `'bluetooth'`.
 
 ::: warning Android reports a coarser type
 On Android the type comes from the system route and is coarser: wired headphones
 often report as `'speaker'` (the built-in route), and really only `'bluetooth'`
-is reliably distinguished from it (`'cast'` requires active route discovery,
-which the reader doesn't run, so it won't appear here). The device **name** still
-comes through.
+is reliably distinguished from it. The device **name** still comes through.
 :::
+
+### Remote outputs (Android)
+
+With `remoteOutputs: true` in [`setupPlayer`](/guide/configuration), the system
+Output Switcher (Android 11+) also lists the speakers and TVs of media route
+providers, and the one the listener selects becomes the output, with
+`type: 'remote'`. Choosing the phone again reports the local device.
+
+A provider offers its routes by declaring the library's control category,
+`com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
+selection is reported: the library keeps playing locally, and rendering the
+audio on the speaker is the provider's job.
 
 Outside React, read a snapshot with `getOutput()` or subscribe with
 [`onOutputChanged`](/api/features/output/#onoutputchanged):

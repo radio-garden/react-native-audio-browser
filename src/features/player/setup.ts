@@ -490,7 +490,11 @@ export interface IOSSetupOptions extends IOSUpdateOptions {
  */
 export interface NativeSetupPlayerOptions extends Pick<
   SetupPlayerOptions,
-  'playWhenReady' | 'repeatMode' | 'retry' | 'keepSessionAliveOnError'
+  | 'playWhenReady'
+  | 'repeatMode'
+  | 'retry'
+  | 'keepSessionAliveOnError'
+  | 'remoteOutputs'
 > {
   /** Android-specific configuration options for setup */
   android?: NativeAndroidSetupOptions
@@ -599,6 +603,18 @@ export type SetupPlayerOptions = Pick<
    * @default true
    */
   keepSessionAliveOnError?: boolean
+
+  /**
+   * Offers remote speakers and TVs in the system Output Switcher (`openOutputPicker`), and
+   * reports the selected one as the `Output`, with `type: 'remote'`. Only the selection is
+   * reported: the library keeps playing locally, and rendering the audio on the speaker is the
+   * provider's job. The speakers come from media route providers that declare the library's
+   * remote-output control category (`RemoteOutputs.CATEGORY` on Android).
+   *
+   * Android 11+ only for now; ignored on iOS, whose route picker already lists AirPlay devices.
+   * @default false
+   */
+  remoteOutputs?: boolean
 
   /** Android-specific options: engine construction and runtime, merged. */
   android?: AndroidSetupOptions

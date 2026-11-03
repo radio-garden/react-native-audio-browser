@@ -11,6 +11,7 @@ import android.os.Looper
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.audiobrowser.RemoteOutputs
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
 import timber.log.Timber
@@ -42,6 +43,9 @@ import timber.log.Timber
  * On API < 33 [getAudioDevicesForAttributes] is unavailable, so we fall back to a coarse heuristic
  * over the connected output devices; that fallback cannot detect a manual reroute while a device
  * stays connected (the long-standing limitation).
+ *
+ * A selected [RemoteOutputs] route takes precedence over the local device. Unlike a local device's,
+ * a remote route's selection is reliable: the router owns it.
  *
  * Threading: [AudioManager] queries are thread-safe, so [current] recomputes live on read (safe
  * from the JS thread's `getOutput()`); emitted change events come from the main-thread
@@ -80,6 +84,8 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
         recompute("device-removed")
     }
 
+  private val remoteOutputListener = { recompute("remote-output") }
+
   // Backstop for manual reroutes, which emit no public event (see class doc).
   // Only scheduled while in the foreground.
   private val poll =
@@ -94,6 +100,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
   fun start() {
     mainHandler.post {
       audioManager.registerAudioDeviceCallback(deviceCallback, mainHandler)
+      RemoteOutputs.addListener(remoteOutputListener)
       // Delivers onStart synchronously if already foreground, kicking off the poll.
       ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
@@ -120,6 +127,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       mainHandler.removeCallbacks(poll)
       ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
       audioManager.unregisterAudioDeviceCallback(deviceCallback)
+      RemoteOutputs.removeListener(remoteOutputListener)
     }
   }
 
@@ -132,6 +140,9 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
   }
 
   private fun computeOutput(): Output? {
+    RemoteOutputs.current?.let {
+      return it
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       val device =
         audioManager.getAudioDevicesForAttributes(mediaAttributes).firstOrNull { it.isSink }

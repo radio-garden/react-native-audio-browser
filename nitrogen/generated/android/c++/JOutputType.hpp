@@ -69,6 +69,9 @@ namespace margelo::nitro::audiobrowser {
         case OutputType::CAST:
           static const auto fieldCAST = clazz->getStaticField<JOutputType>("CAST");
           return clazz->getStaticFieldValue(fieldCAST);
+        case OutputType::REMOTE:
+          static const auto fieldREMOTE = clazz->getStaticField<JOutputType>("REMOTE");
+          return clazz->getStaticFieldValue(fieldREMOTE);
         case OutputType::OTHER:
           static const auto fieldOTHER = clazz->getStaticField<JOutputType>("OTHER");
           return clazz->getStaticFieldValue(fieldOTHER);

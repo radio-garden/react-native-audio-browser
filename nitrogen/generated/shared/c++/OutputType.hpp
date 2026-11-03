@@ -38,7 +38,8 @@ namespace margelo::nitro::audiobrowser {
     HDMI      SWIFT_NAME(hdmi) = 6,
     USB      SWIFT_NAME(usb) = 7,
     CAST      SWIFT_NAME(cast) = 8,
-    OTHER      SWIFT_NAME(other) = 9,
+    REMOTE      SWIFT_NAME(remote) = 9,
+    OTHER      SWIFT_NAME(other) = 10,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -60,6 +61,7 @@ namespace margelo::nitro {
         case hashString("hdmi"): return margelo::nitro::audiobrowser::OutputType::HDMI;
         case hashString("usb"): return margelo::nitro::audiobrowser::OutputType::USB;
         case hashString("cast"): return margelo::nitro::audiobrowser::OutputType::CAST;
+        case hashString("remote"): return margelo::nitro::audiobrowser::OutputType::REMOTE;
         case hashString("other"): return margelo::nitro::audiobrowser::OutputType::OTHER;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum OutputType - invalid value!");
@@ -76,6 +78,7 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::OutputType::HDMI: return JSIConverter<std::string>::toJSI(runtime, "hdmi");
         case margelo::nitro::audiobrowser::OutputType::USB: return JSIConverter<std::string>::toJSI(runtime, "usb");
         case margelo::nitro::audiobrowser::OutputType::CAST: return JSIConverter<std::string>::toJSI(runtime, "cast");
+        case margelo::nitro::audiobrowser::OutputType::REMOTE: return JSIConverter<std::string>::toJSI(runtime, "remote");
         case margelo::nitro::audiobrowser::OutputType::OTHER: return JSIConverter<std::string>::toJSI(runtime, "other");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert OutputType to JS - invalid value: "
@@ -97,6 +100,7 @@ namespace margelo::nitro {
         case hashString("hdmi"):
         case hashString("usb"):
         case hashString("cast"):
+        case hashString("remote"):
         case hashString("other"):
           return true;
         default:
