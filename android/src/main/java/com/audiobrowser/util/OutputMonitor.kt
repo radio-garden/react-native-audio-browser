@@ -132,12 +132,17 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
   }
 
   private fun recompute(reason: String) {
-    val output = computeOutput()
-    if (output == null) {
-      // A left remote output is no fallback for a local reading that came back empty.
-      if (cached?.type == OutputType.REMOTE) cached = null
-      return
-    }
+    // A left remote output is no fallback for a local reading that came back empty: the phone
+    // speaker stands in, so listeners hear that the remote output is gone.
+    val output =
+      computeOutput()
+        ?: if (cached?.type == OutputType.REMOTE)
+          Output(
+            type = OutputType.SPEAKER,
+            name = defaultName(OutputType.SPEAKER),
+            external = false,
+          )
+        else return
     if (output == cached) return
     cached = output
     Timber.d("OutputMonitor [%s]: type=%s name=%s", reason, output.type, output.name)

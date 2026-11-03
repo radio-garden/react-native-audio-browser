@@ -9,7 +9,6 @@ import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,14 +72,16 @@ class OutputMonitorTest {
   }
 
   @Test
-  fun `leaving the remote output with no local reading does not keep reporting it`() {
+  fun `leaving the remote output with no local reading reports the phone speaker`() {
     RemoteOutputs.setCurrent(kitchen)
     idle()
 
     RemoteOutputs.setCurrent(null)
     idle()
 
-    assertNull(monitor.current)
+    val phoneSpeaker = Output(type = OutputType.SPEAKER, name = "Phone speaker", external = false)
+    assertEquals(phoneSpeaker, emitted.last())
+    assertEquals(phoneSpeaker, monitor.current)
   }
 
   private fun routeMediaTo(deviceType: Int) {
