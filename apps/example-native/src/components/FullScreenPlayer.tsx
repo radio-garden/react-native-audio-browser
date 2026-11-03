@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   PanResponder,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -22,6 +21,7 @@ import {
   setRepeatMode,
   skipToNext,
   skipToPrevious,
+  supportsOutputSwitcher,
   toggleActiveTrackFavorited,
   togglePlayback,
   toggleShuffle,
@@ -303,13 +303,14 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
                 </View>
               </Pressable>
             )}
-            {Platform.OS === 'ios' && (
+            {supportsOutputSwitcher() && (
               <Pressable
                 style={({ pressed }) => [
                   styles.secondaryButton,
                   { opacity: pressed ? 0.5 : 1 }
                 ]}
                 onPress={openOutputPicker}
+                accessibilityLabel={`Output: ${output?.name ?? 'unknown'}`}
               >
                 <Icon
                   name="headphones"

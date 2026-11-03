@@ -99,7 +99,7 @@ const configuration: BrowserConfiguration = {
 }
 
 export const setupBrowser = async () => {
-  await AudioBrowser.setupPlayer()
+  await AudioBrowser.setupPlayer({ remoteOutputs: true })
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
