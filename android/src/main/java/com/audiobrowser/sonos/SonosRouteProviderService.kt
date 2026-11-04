@@ -20,7 +20,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import timber.log.Timber
 
 /**
@@ -28,12 +27,20 @@ import timber.log.Timber
  * system, not the app: [SonosOutputs.setEnabled] turns the component on.
  */
 class SonosRouteProviderService : MediaRouteProviderService() {
-  override fun onCreateMediaRouteProvider(): MediaRouteProvider = SonosRouteProvider(this)
+  private var provider: SonosRouteProvider? = null
+
+  override fun onCreateMediaRouteProvider(): MediaRouteProvider =
+    SonosRouteProvider(this).also { provider = it }
+
+  override fun onDestroy() {
+    provider?.release()
+    super.onDestroy()
+  }
 }
 
 private class SonosRouteProvider(context: Context) : MediaRouteProvider(context) {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-  private val httpClient = OkHttpClient()
+  private val httpClient = sonosHttpClient()
   private val discoverer =
     SonosDiscoverer(httpClient, SsdpDiscovery(wifiMulticastLock(context.applicationContext)))
   private val soap = SoapClient(httpClient)
@@ -65,6 +72,10 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
           delay(ACTIVE_RESCAN_MS)
         }
       }
+  }
+
+  fun release() {
+    scope.cancel()
   }
 
   override fun onCreateRouteController(routeId: String): RouteController? {
@@ -109,8 +120,16 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
 
     override fun onSetVolume(volume: Int) = setVolume(room, volume.coerceIn(0, MAX_VOLUME))
 
-    override fun onUpdateVolume(delta: Int) =
-      setVolume(room, ((volumes[room.id] ?: 0) + delta).coerceIn(0, MAX_VOLUME))
+    override fun onUpdateVolume(delta: Int) {
+      scope.launch {
+        // From the speaker's own volume: the Sonos app or the speaker's buttons may have moved it.
+        val current =
+          withContext(Dispatchers.IO) {
+            runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
+          } ?: volumes[room.id] ?: return@launch
+        setVolume(room, (current + delta).coerceIn(0, MAX_VOLUME))
+      }
+    }
 
     override fun onRelease() {}
   }
@@ -162,7 +181,7 @@ private fun wifiMulticastLock(context: Context): MulticastLockHandle? {
   val lock =
     (context.getSystemService(Context.WIFI_SERVICE) as WifiManager)
       .createMulticastLock("audiobrowser-sonos")
-      .apply { setReferenceCounted(false) }
+      .apply { setReferenceCounted(true) }
   return object : MulticastLockHandle {
     override fun acquire() = lock.acquire()
 

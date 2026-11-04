@@ -58,6 +58,13 @@
             <SCPDURL>/xml/RenderingControl1.xml</SCPDURL>
           </service>
           <service>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:GroupRenderingControl</serviceId>
+            <controlURL>/MediaRenderer/GroupRenderingControl/Control</controlURL>
+            <eventSubURL>/MediaRenderer/GroupRenderingControl/Event</eventSubURL>
+            <SCPDURL>/xml/GroupRenderingControl1.xml</SCPDURL>
+          </service>
+          <service>
             <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
             <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
             <controlURL>/MediaRenderer/AVTransport/Control</controlURL>

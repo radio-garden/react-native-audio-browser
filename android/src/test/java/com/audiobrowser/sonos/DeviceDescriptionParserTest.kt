@@ -15,14 +15,14 @@ class DeviceDescriptionParserTest {
   fun `parses udn, name and resolves nested control URLs against the base`() {
     val device = DeviceDescriptionParser.parse(fixture("device_description.xml"), location)!!
     assertEquals("uuid:RINCON_949F3EC213E001400", device.udn)
-    // AVTransport + RenderingControl live on the embedded MediaRenderer, not the root device.
+    // AVTransport + GroupRenderingControl live on the embedded MediaRenderer, not the root device.
     assertEquals(
       "http://192.168.1.50:1400/MediaRenderer/AVTransport/Control",
       device.avTransportControlUrl,
     )
     assertEquals(
-      "http://192.168.1.50:1400/MediaRenderer/RenderingControl/Control",
-      device.renderingControlControlUrl,
+      "http://192.168.1.50:1400/MediaRenderer/GroupRenderingControl/Control",
+      device.groupRenderingControlUrl,
     )
     assertEquals("http://192.168.1.50:1400", device.baseUrl)
   }
@@ -49,7 +49,7 @@ class DeviceDescriptionParserTest {
             <controlURL>/AVT/Control</controlURL>
           </service>
           <service>
-            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
             <controlURL>/RC/Control</controlURL>
           </service>
         </serviceList>
@@ -80,7 +80,7 @@ class DeviceDescriptionParserTest {
             <controlURL>http://10.0.0.5:1400/AVT/Control</controlURL>
           </service>
           <service>
-            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
             <controlURL>/RC/Control</controlURL>
           </service>
         </serviceList>
@@ -89,7 +89,7 @@ class DeviceDescriptionParserTest {
         .trimIndent()
     val device = DeviceDescriptionParser.parse(xml, "http://10.0.0.5:1400/desc.xml")!!
     assertEquals("http://10.0.0.5:1400/AVT/Control", device.avTransportControlUrl)
-    assertEquals("http://10.0.0.5:1400/RC/Control", device.renderingControlControlUrl)
+    assertEquals("http://10.0.0.5:1400/RC/Control", device.groupRenderingControlUrl)
   }
 
   @Test
@@ -109,7 +109,7 @@ class DeviceDescriptionParserTest {
               <controlURL>/AVT/Control</controlURL>
             </service>
             <service>
-              <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+              <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
               <controlURL>/RC/Control</controlURL>
             </service>
           </serviceList>
@@ -120,7 +120,7 @@ class DeviceDescriptionParserTest {
     // Description was retrieved from .50 but URLBase points control at .99.
     val device = DeviceDescriptionParser.parse(xml, location)!!
     assertEquals("http://10.0.0.99:1400/AVT/Control", device.avTransportControlUrl)
-    assertEquals("http://10.0.0.99:1400/RC/Control", device.renderingControlControlUrl)
+    assertEquals("http://10.0.0.99:1400/RC/Control", device.groupRenderingControlUrl)
   }
 
   @Test
@@ -138,7 +138,7 @@ class DeviceDescriptionParserTest {
             <controlURL>/AVT/Control</controlURL>
           </service>
           <service>
-            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
             <controlURL>/RC/Control</controlURL>
           </service>
         </serviceList>
@@ -165,7 +165,7 @@ class DeviceDescriptionParserTest {
             <controlURL>/AVT/Control</controlURL>
           </service>
           <service>
-            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
             <controlURL>/RC/Control</controlURL>
           </service>
         </serviceList>
@@ -186,7 +186,7 @@ class DeviceDescriptionParserTest {
         <UDN>uuid:RINCON_NOAVT</UDN>
         <serviceList>
           <service>
-            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
             <controlURL>/RC/Control</controlURL>
           </service>
         </serviceList>

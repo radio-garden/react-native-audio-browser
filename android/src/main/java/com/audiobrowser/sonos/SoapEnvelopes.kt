@@ -1,17 +1,17 @@
 package com.audiobrowser.sonos
 
 /** A UPnP SOAP request: the `SOAPACTION` header value (service#action) and the XML body. */
-data class SoapAction(val soapAction: String, val body: String)
+internal data class SoapAction(val soapAction: String, val body: String)
 
 /**
  * Builds the SOAP request bodies + SOAPAction headers for the UPnP actions the Sonos backend
  * issues. Bodies are deterministic and entity-escaped; the DIDL metadata is escaped a second time
  * because it is embedded as element text inside `CurrentURIMetaData` (UPnP requires the nested
- * document be entity-encoded). All actions use `InstanceID` 0 and the `Master` channel.
+ * document be entity-encoded). All actions use `InstanceID` 0.
  */
-object SoapEnvelopes {
+internal object SoapEnvelopes {
   const val AV_TRANSPORT = "urn:schemas-upnp-org:service:AVTransport:1"
-  const val RENDERING_CONTROL = "urn:schemas-upnp-org:service:RenderingControl:1"
+  const val GROUP_RENDERING_CONTROL = "urn:schemas-upnp-org:service:GroupRenderingControl:1"
   const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
   fun setAvTransportUri(currentUri: String, metadata: String): SoapAction =
@@ -19,8 +19,8 @@ object SoapEnvelopes {
       AV_TRANSPORT,
       "SetAVTransportURI",
       "<InstanceID>0</InstanceID>" +
-        "<CurrentURI>${escape(currentUri)}</CurrentURI>" +
-        "<CurrentURIMetaData>${escape(metadata)}</CurrentURIMetaData>",
+        "<CurrentURI>${xmlEscape(currentUri)}</CurrentURI>" +
+        "<CurrentURIMetaData>${xmlEscape(metadata)}</CurrentURIMetaData>",
     )
 
   fun play(): SoapAction =
@@ -38,16 +38,16 @@ object SoapEnvelopes {
 
   fun getZoneGroupState(): SoapAction = action(ZONE_GROUP_TOPOLOGY, "GetZoneGroupState", "")
 
-  fun setVolume(volume: Int): SoapAction =
+  /** The volume of the coordinator's whole group, which is the room's own when it plays alone. */
+  fun setGroupVolume(volume: Int): SoapAction =
     action(
-      RENDERING_CONTROL,
-      "SetVolume",
-      "<InstanceID>0</InstanceID><Channel>Master</Channel>" +
-        "<DesiredVolume>${volume.coerceIn(0, 100)}</DesiredVolume>",
+      GROUP_RENDERING_CONTROL,
+      "SetGroupVolume",
+      "<InstanceID>0</InstanceID><DesiredVolume>${volume.coerceIn(0, 100)}</DesiredVolume>",
     )
 
-  fun getVolume(): SoapAction =
-    action(RENDERING_CONTROL, "GetVolume", "<InstanceID>0</InstanceID><Channel>Master</Channel>")
+  fun getGroupVolume(): SoapAction =
+    action(GROUP_RENDERING_CONTROL, "GetGroupVolume", "<InstanceID>0</InstanceID>")
 
   private fun action(service: String, name: String, args: String): SoapAction =
     SoapAction(
@@ -60,11 +60,14 @@ object SoapEnvelopes {
           "<u:$name xmlns:u=\"$service\">$args</u:$name>" +
           "</s:Body></s:Envelope>",
     )
-
-  private fun escape(s: String): String =
-    s.replace("&", "&amp;")
-      .replace("<", "&lt;")
-      .replace(">", "&gt;")
-      .replace("\"", "&quot;")
-      .replace("'", "&#39;")
 }
+
+/** [s] as XML text or attribute content. */
+internal fun xmlEscape(s: String): String =
+  s.replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace("\"", "&quot;")
+    // &#39; rather than &apos;, which some older XML readers, older Sonos firmware among them,
+    // mishandle.
+    .replace("'", "&#39;")

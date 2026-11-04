@@ -12,7 +12,7 @@ import timber.log.Timber
  * Sonos rooms as remote outputs, over UPnP: whether the system may bind
  * [SonosRouteProviderService], and the room selected in the Output Switcher.
  */
-object SonosOutputs {
+internal object SonosOutputs {
   /**
    * The control category a Sonos room's route declares beside
    * [com.audiobrowser.RemoteOutputs.CATEGORY].
@@ -28,9 +28,11 @@ object SonosOutputs {
 
   /**
    * Enables or disables the provider service. The component state persists, so the system can bind
-   * the service before the app has set up its player.
+   * the service before the app has set up its player. Disabling forgets the selected room.
    */
+  @MainThread
   fun setEnabled(context: Context, enabled: Boolean) {
+    if (!enabled) selected?.let(::unselect)
     if (enabled && !canHoldMulticastLock(context)) {
       Timber.w(
         "Sonos: the app's manifest doesn't declare CHANGE_WIFI_MULTICAST_STATE, so Sonos discovery runs without a multicast lock and can miss rooms"

@@ -30,7 +30,7 @@ class SonosTransportTest {
         name = "Test Room",
         baseUrl = base,
         avTransportControlUrl = "$base/MediaRenderer/AVTransport/Control",
-        renderingControlControlUrl = "$base/MediaRenderer/RenderingControl/Control",
+        groupRenderingControlUrl = "$base/MediaRenderer/GroupRenderingControl/Control",
         zoneGroupTopologyControlUrl = "$base/ZoneGroupTopology/Control",
       )
     transport = SonosTransport(device, SoapClient(OkHttpClient()))
@@ -110,14 +110,15 @@ class SonosTransportTest {
   }
 
   @Test
-  fun `getStreamContent reads the title from GetPositionInfo`() {
+  fun `getPosition reads the title, position and duration from GetPositionInfo`() {
     val didl =
       "<DIDL-Lite xmlns:r=\"urn:schemas-rinconnetworks-com:metadata-1-0/\">" +
         "<item><r:streamContent>Santana - Smooth</r:streamContent></item></DIDL-Lite>"
     server.enqueue(
       okResponse(
         "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
-          "<s:Body><u:GetPositionInfoResponse><TrackMetaData>" +
+          "<s:Body><u:GetPositionInfoResponse><TrackDuration>0:03:21</TrackDuration>" +
+          "<RelTime>0:01:02</RelTime><TrackMetaData>" +
           didl
             .replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -126,7 +127,7 @@ class SonosTransportTest {
           "</TrackMetaData></u:GetPositionInfoResponse></s:Body></s:Envelope>"
       )
     )
-    assertEquals("Santana - Smooth", transport.getStreamContent())
+    assertEquals(SonosPosition("Santana - Smooth", 62_000, 201_000), transport.getPosition())
     assertEquals(
       "\"urn:schemas-upnp-org:service:AVTransport:1#GetPositionInfo\"",
       server.takeRequest().getHeader("SOAPACTION"),
@@ -134,18 +135,18 @@ class SonosTransportTest {
   }
 
   @Test
-  fun `setVolume targets the RenderingControl endpoint and getVolume parses`() {
+  fun `the volume is the group's, through GroupRenderingControl`() {
     server.enqueue(okResponse())
     transport.setVolume(33)
     val req = server.takeRequest()
-    assertEquals("/MediaRenderer/RenderingControl/Control", req.path)
+    assertEquals("/MediaRenderer/GroupRenderingControl/Control", req.path)
     assertEquals(true, req.body.readUtf8().contains("<DesiredVolume>33</DesiredVolume>"))
 
     server.enqueue(
       okResponse(
         "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
-          "<s:Body><u:GetVolumeResponse><CurrentVolume>33</CurrentVolume>" +
-          "</u:GetVolumeResponse></s:Body></s:Envelope>"
+          "<s:Body><u:GetGroupVolumeResponse><CurrentVolume>33</CurrentVolume>" +
+          "</u:GetGroupVolumeResponse></s:Body></s:Envelope>"
       )
     )
     assertEquals(33, transport.getVolume())

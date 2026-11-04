@@ -189,21 +189,24 @@ What plays:
   updating.
 - Play, pause, skip and the volume act on the speaker. A live stream that
   refuses to pause is stopped instead, and playing it again restarts it.
-- Pausing or stopping in the Sonos app shows up as paused here.
+- A track shows the position and duration the speaker reports.
+- Pausing or stopping in the Sonos app shows up as paused here. A track that
+  plays to its end moves the queue on.
 
 Grouping:
 
 - The switcher lists rooms, not speakers. A stereo pair or a home theatre is one
   room.
 - Rooms grouped in the Sonos app are listed once, named after the room that
-  leads the group: "Kitchen + 2". Playing there plays in every room of the group.
+  leads the group: "Kitchen + 2". Playing there plays in every room of the group,
+  and the volume is the group's, as the Sonos app's group volume is.
 - The library doesn't group or ungroup rooms; the listener does that in the
   Sonos app.
 
 While on Sonos, local-only behaviour steps aside as it does for Cast: the
 volume is the speaker's, the equalizer waits for the phone, and a speaker error
 reaches the app as a playback error, as does a stream the speaker doesn't start
-within 20 seconds.
+within 20 seconds and a speaker that stops answering.
 
 Known limits:
 
@@ -218,7 +221,7 @@ Known limits:
 - The state is polled every two seconds, so a change made in the Sonos app shows
   up here after a moment.
 - If another app or the Sonos app starts something else on the room, this app
-  doesn't notice it until it stops.
+  goes on showing its own track.
 - Android only. On iOS, a Sonos speaker with AirPlay 2 appears in the route
   picker as an AirPlay target.
 

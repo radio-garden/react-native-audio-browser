@@ -582,6 +582,59 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a receiver's failure after a handback that cut a load short still reaches the app`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    gate = CompletableDeferred()
+    player.setMediaItems(listOf(item("b")))
+    idle()
+    remote.endSession()
+    idle()
+    gate!!.complete(Unit)
+    player.stop()
+    idle()
+
+    remote.startSession()
+    idle()
+    remote.fail()
+    idle()
+
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
+  fun `a session ending while its handover resolves leaves the next remote to take over`() {
+    playLocally(listOf("a"))
+    gate = CompletableDeferred()
+    remote.startSession()
+    idle()
+    other.startSession()
+    remote.endSession()
+    gate!!.complete(Unit)
+    idle()
+
+    assertTrue(remote.player.items.isEmpty())
+    assertEquals(listOf("a"), other.player.items.map { it.mediaId })
+  }
+
+  @Test
+  fun `release while a handover resolves keeps playback local`() {
+    playLocally(listOf("a"))
+    gate = CompletableDeferred()
+    remote.startSession()
+    idle()
+
+    player.release()
+    gate!!.complete(Unit)
+    idle()
+
+    assertTrue(remote.player.items.isEmpty())
+    assertEquals(0, local.stops)
+    assertTrue(remote.released)
+  }
+
+  @Test
   fun `release lets go of every remote`() {
     player.release()
 

@@ -6,7 +6,8 @@ package com.audiobrowser.sonos
  * [SonosPlayer]. Every call blocks on a SOAP round-trip and throws [SoapException] on failure, so
  * callers invoke it off the main thread (the player uses `Dispatchers.IO`).
  */
-class SonosTransport(private val device: SonosDevice, private val soap: SoapClient) : SonosControl {
+internal class SonosTransport(private val device: SonosDevice, private val soap: SoapClient) :
+  SonosControl {
   /** Loads the stream on the device (`SetAVTransportURI`) without starting playback. */
   override fun setUri(
     streamUrl: String,
@@ -40,26 +41,21 @@ class SonosTransport(private val device: SonosDevice, private val soap: SoapClie
       soap.execute(device.avTransportControlUrl, SoapEnvelopes.getTransportInfo())
     )
 
-  /** The title the speaker reads from the stream, or null when it has none. */
-  override fun getStreamContent(): String? =
-    SoapResponseParser.streamContent(
+  override fun getPosition(): SonosPosition? =
+    SoapResponseParser.position(
       soap.execute(device.avTransportControlUrl, SoapEnvelopes.getPositionInfo())
     )
 
   override fun setVolume(volume: Int) {
-    rc(SoapEnvelopes.setVolume(volume))
+    soap.execute(device.groupRenderingControlUrl, SoapEnvelopes.setGroupVolume(volume))
   }
 
   override fun getVolume(): Int? =
     SoapResponseParser.volume(
-      soap.execute(device.renderingControlControlUrl, SoapEnvelopes.getVolume())
+      soap.execute(device.groupRenderingControlUrl, SoapEnvelopes.getGroupVolume())
     )
 
   private fun avt(action: SoapAction) {
     soap.execute(device.avTransportControlUrl, action)
-  }
-
-  private fun rc(action: SoapAction) {
-    soap.execute(device.renderingControlControlUrl, action)
   }
 }

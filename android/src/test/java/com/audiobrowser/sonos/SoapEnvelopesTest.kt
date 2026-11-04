@@ -7,7 +7,7 @@ import org.junit.Test
 class SoapEnvelopesTest {
 
   private val avt = "urn:schemas-upnp-org:service:AVTransport:1"
-  private val rc = "urn:schemas-upnp-org:service:RenderingControl:1"
+  private val grc = "urn:schemas-upnp-org:service:GroupRenderingControl:1"
 
   private fun envelope(service: String, action: String, args: String): String =
     "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
@@ -77,34 +77,34 @@ class SoapEnvelopesTest {
   }
 
   @Test
-  fun `setVolume clamps to 0 through 100 and targets the Master channel`() {
+  fun `setGroupVolume clamps to 0 through 100`() {
     assertEquals(
       envelope(
-        rc,
-        "SetVolume",
-        "<InstanceID>0</InstanceID><Channel>Master</Channel><DesiredVolume>50</DesiredVolume>",
+        grc,
+        "SetGroupVolume",
+        "<InstanceID>0</InstanceID><DesiredVolume>50</DesiredVolume>",
       ),
-      SoapEnvelopes.setVolume(50).body,
+      SoapEnvelopes.setGroupVolume(50).body,
     )
-    assertEquals("$rc#SetVolume", SoapEnvelopes.setVolume(50).soapAction)
-    // Clamping.
+    assertEquals("$grc#SetGroupVolume", SoapEnvelopes.setGroupVolume(50).soapAction)
     assertEquals(
       "<DesiredVolume>100</DesiredVolume>",
-      Regex("<DesiredVolume>.*?</DesiredVolume>").find(SoapEnvelopes.setVolume(150).body)!!.value,
+      Regex("<DesiredVolume>.*?</DesiredVolume>")
+        .find(SoapEnvelopes.setGroupVolume(150).body)!!
+        .value,
     )
     assertEquals(
       "<DesiredVolume>0</DesiredVolume>",
-      Regex("<DesiredVolume>.*?</DesiredVolume>").find(SoapEnvelopes.setVolume(-5).body)!!.value,
+      Regex("<DesiredVolume>.*?</DesiredVolume>")
+        .find(SoapEnvelopes.setGroupVolume(-5).body)!!
+        .value,
     )
   }
 
   @Test
-  fun `getVolume`() {
-    val a = SoapEnvelopes.getVolume()
-    assertEquals("$rc#GetVolume", a.soapAction)
-    assertEquals(
-      envelope(rc, "GetVolume", "<InstanceID>0</InstanceID><Channel>Master</Channel>"),
-      a.body,
-    )
+  fun `getGroupVolume`() {
+    val a = SoapEnvelopes.getGroupVolume()
+    assertEquals("$grc#GetGroupVolume", a.soapAction)
+    assertEquals(envelope(grc, "GetGroupVolume", "<InstanceID>0</InstanceID>"), a.body)
   }
 }

@@ -1,12 +1,24 @@
 package com.audiobrowser.sonos
 
+import java.util.concurrent.TimeUnit
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
+/**
+ * The HTTP client for the speakers, which answer on the local network within moments: a speaker
+ * that doesn't is gone, and waiting OkHttp's default 10 s per call would hold up every command.
+ */
+internal fun sonosHttpClient(): OkHttpClient =
+  OkHttpClient.Builder()
+    .connectTimeout(3, TimeUnit.SECONDS)
+    .readTimeout(5, TimeUnit.SECONDS)
+    .writeTimeout(5, TimeUnit.SECONDS)
+    .build()
+
 /** Thrown when a SOAP control call fails (non-2xx HTTP or a SOAP fault). */
-class SoapException(message: String, val httpCode: Int?, val fault: SoapFault?) :
+internal class SoapException(message: String, val httpCode: Int?, val fault: SoapFault?) :
   Exception(message)
 
 /**
@@ -15,7 +27,7 @@ class SoapException(message: String, val httpCode: Int?, val fault: SoapFault?) 
  * any SOAP fault out of the body and throws [SoapException]; on 2xx it returns the response body
  * verbatim for the caller to parse.
  */
-class SoapClient(private val httpClient: OkHttpClient) {
+internal class SoapClient(private val httpClient: OkHttpClient) {
   fun execute(controlUrl: String, action: SoapAction): String {
     val body = action.body.toRequestBody(XML_MEDIA_TYPE)
     val request =

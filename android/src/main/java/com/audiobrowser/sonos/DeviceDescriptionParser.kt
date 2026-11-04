@@ -9,12 +9,12 @@ import org.w3c.dom.Node
  * A discovered Sonos speaker, reduced to what control needs: its identity, a display name, and the
  * absolute control URLs for the two UPnP services we drive.
  */
-data class SonosDevice(
+internal data class SonosDevice(
   val udn: String,
   val name: String,
   val baseUrl: String,
   val avTransportControlUrl: String,
-  val renderingControlControlUrl: String,
+  val groupRenderingControlUrl: String,
   val zoneGroupTopologyControlUrl: String?,
 )
 
@@ -27,10 +27,10 @@ data class SonosDevice(
  * device, so the whole device tree is searched. Returns null for a non-Sonos device, a description
  * missing either required service, or malformed XML.
  */
-object DeviceDescriptionParser {
+internal object DeviceDescriptionParser {
   private const val SONOS_MANUFACTURER = "Sonos, Inc."
   private const val AV_TRANSPORT = "urn:schemas-upnp-org:service:AVTransport:1"
-  private const val RENDERING_CONTROL = "urn:schemas-upnp-org:service:RenderingControl:1"
+  private const val GROUP_RENDERING_CONTROL = "urn:schemas-upnp-org:service:GroupRenderingControl:1"
   private const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
   fun parse(xml: String, location: String): SonosDevice? {
@@ -57,14 +57,14 @@ object DeviceDescriptionParser {
       childText(docElement, "URLBase").ifBlank { "" }.trimEnd('/').ifBlank { baseUrlOf(location) }
         ?: return null
     val avControl = findControlUrl(doc, AV_TRANSPORT, baseUrl) ?: return null
-    val rcControl = findControlUrl(doc, RENDERING_CONTROL, baseUrl) ?: return null
+    val groupRcControl = findControlUrl(doc, GROUP_RENDERING_CONTROL, baseUrl) ?: return null
 
     return SonosDevice(
       udn = udn,
       name = name,
       baseUrl = baseUrl,
       avTransportControlUrl = avControl,
-      renderingControlControlUrl = rcControl,
+      groupRenderingControlUrl = groupRcControl,
       zoneGroupTopologyControlUrl = findControlUrl(doc, ZONE_GROUP_TOPOLOGY, baseUrl),
     )
   }

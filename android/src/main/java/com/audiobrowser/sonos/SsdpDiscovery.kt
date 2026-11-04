@@ -10,7 +10,7 @@ import timber.log.Timber
  * Acquire/release wrapper around a Wi-Fi multicast lock (`WifiManager.MulticastLock`), so the
  * socket I/O here stays decoupled from Android. The provider supplies one built from a `Context`.
  */
-interface MulticastLockHandle {
+internal interface MulticastLockHandle {
   fun acquire()
 
   fun release()
@@ -24,14 +24,13 @@ interface MulticastLockHandle {
  * [SsdpMessagesTest], and the end-to-end path is on the manual hardware checklist. A
  * [MulticastLockHandle] is held for the duration so Wi-Fi power-saving does not drop replies.
  */
-class SsdpDiscovery(private val multicastLock: MulticastLockHandle? = null) : SsdpScanner {
+internal class SsdpDiscovery(private val multicastLock: MulticastLockHandle? = null) : SsdpScanner {
 
   override fun search(timeoutMs: Int, repeats: Int): List<SsdpResponse> {
     multicastLock?.acquire()
     val responsesByUsn = LinkedHashMap<String, SsdpResponse>()
     try {
       DatagramSocket().use { socket ->
-        socket.reuseAddress = true
         val group = InetAddress.getByName(SsdpMessages.MULTICAST_HOST)
         val datagram = SsdpMessages.buildMSearch()
         // Send a few times — UDP is lossy and a single probe is easily missed on busy Wi-Fi.

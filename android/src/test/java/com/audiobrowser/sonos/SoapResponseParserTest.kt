@@ -112,4 +112,35 @@ class SoapResponseParserTest {
     assertNull(SoapResponseParser.streamContent(positionInfo("")))
     assertNull(SoapResponseParser.streamContent(fault))
   }
+
+  private fun timing(duration: String, relTime: String): String =
+    "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
+      "<s:Body><u:GetPositionInfoResponse xmlns:u=\"urn:schemas-upnp-org:service:AVTransport:1\">" +
+      "<Track>1</Track><TrackDuration>$duration</TrackDuration><TrackMetaData></TrackMetaData>" +
+      "<RelTime>$relTime</RelTime></u:GetPositionInfoResponse></s:Body></s:Envelope>"
+
+  @Test
+  fun `position reads a track's position and duration`() {
+    assertEquals(
+      SonosPosition(streamContent = null, positionMs = 3_723_000, durationMs = 201_500),
+      SoapResponseParser.position(timing("0:03:21.500", "1:02:03")),
+    )
+  }
+
+  @Test
+  fun `position has no duration for a live stream, and no time the speaker doesn't keep`() {
+    assertEquals(
+      SonosPosition(streamContent = null, positionMs = null, durationMs = null),
+      SoapResponseParser.position(timing("0:00:00", "NOT_IMPLEMENTED")),
+    )
+  }
+
+  @Test
+  fun `position carries the stream title, and is null for a fault`() {
+    assertEquals(
+      "Santana - Smooth",
+      SoapResponseParser.position(positionInfo(trackDidl("Santana - Smooth")))?.streamContent,
+    )
+    assertNull(SoapResponseParser.position(fault))
+  }
 }

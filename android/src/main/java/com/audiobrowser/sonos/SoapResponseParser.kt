@@ -5,13 +5,13 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Document
 
 /** A parsed UPnP SOAP fault (the `<UPnPError>` detail). */
-data class SoapFault(val errorCode: Int?, val errorDescription: String?)
+internal data class SoapFault(val errorCode: Int?, val errorDescription: String?)
 
 /**
  * Pure parse of the UPnP SOAP responses the Sonos backend reads. DOM-based (`javax.xml`), so it is
  * unit-testable on the JVM. Each accessor returns null when the field/response shape is absent.
  */
-object SoapResponseParser {
+internal object SoapResponseParser {
   /** Parses a SOAP fault envelope into its UPnP error, or null when the response is not a fault. */
   fun fault(xml: String): SoapFault? {
     val doc = parse(xml) ?: return null
@@ -27,7 +27,7 @@ object SoapResponseParser {
     return firstText(doc, "CurrentTransportState")
   }
 
-  /** The `<CurrentVolume>` integer from a `GetVolume` response, or null (incl. faults). */
+  /** The `<CurrentVolume>` integer from a `GetGroupVolume` response, or null (incl. faults). */
   fun volume(xml: String): Int? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
@@ -41,6 +41,31 @@ object SoapResponseParser {
   fun streamContent(xml: String): String? {
     val metadata = embeddedDocument(xml, "TrackMetaData") ?: return null
     return firstText(metadata, "r:streamContent")
+  }
+
+  /**
+   * The position, duration and stream title from a `GetPositionInfo` response, or null (incl.
+   * faults). A time the speaker doesn't report (`NOT_IMPLEMENTED`, or a live stream's empty
+   * duration) is null.
+   */
+  fun position(xml: String): SonosPosition? {
+    val doc = parse(xml) ?: return null
+    if (faultOf(doc) != null) return null
+    return SonosPosition(
+      streamContent = streamContent(xml),
+      positionMs = firstText(doc, "RelTime")?.let(::upnpTimeMs),
+      durationMs = firstText(doc, "TrackDuration")?.let(::upnpTimeMs)?.takeIf { it > 0 },
+    )
+  }
+
+  /** `H+:MM:SS` (with optional fractions) in milliseconds, or null for anything else. */
+  private fun upnpTimeMs(time: String): Long? {
+    val parts = time.split(':')
+    if (parts.size != 3) return null
+    val hours = parts[0].toLongOrNull() ?: return null
+    val minutes = parts[1].toLongOrNull() ?: return null
+    val seconds = parts[2].toDoubleOrNull() ?: return null
+    return (hours * 3600 + minutes * 60) * 1000 + (seconds * 1000).toLong()
   }
 
   /** The text of a SOAP response's [tag], itself an XML document escaped inside it. */

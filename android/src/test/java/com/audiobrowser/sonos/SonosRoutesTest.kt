@@ -29,8 +29,8 @@ class SonosRoutesTest {
           name = name,
           baseUrl = "http://10.0.0.1:1400",
           avTransportControlUrl = "http://10.0.0.1:1400/MediaRenderer/AVTransport/Control",
-          renderingControlControlUrl =
-            "http://10.0.0.1:1400/MediaRenderer/RenderingControl/Control",
+          groupRenderingControlUrl =
+            "http://10.0.0.1:1400/MediaRenderer/GroupRenderingControl/Control",
           zoneGroupTopologyControlUrl = "http://10.0.0.1:1400/ZoneGroupTopology/Control",
         ),
     )
@@ -130,5 +130,15 @@ class SonosRoutesTest {
     shadowOf(context).grantPermissions(Manifest.permission.CHANGE_WIFI_MULTICAST_STATE)
 
     assertTrue(SonosOutputs.canHoldMulticastLock(context))
+  }
+
+  @Test
+  fun `disabling forgets the selected room, so turning back on doesn't move playback there`() {
+    val context = RuntimeEnvironment.getApplication()
+    SonosOutputs.select(dining)
+
+    SonosOutputs.setEnabled(context, false)
+
+    assertNull(SonosOutputs.selected)
   }
 }

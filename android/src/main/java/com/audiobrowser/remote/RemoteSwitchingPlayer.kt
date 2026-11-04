@@ -156,6 +156,7 @@ internal class RemoteSwitchingPlayer(
     sent.clear()
     index = C.INDEX_UNSET
     loading = null
+    sending = false
     remoteError = null
     active = null
   }

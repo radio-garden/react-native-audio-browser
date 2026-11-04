@@ -6,7 +6,7 @@ package com.audiobrowser.sonos
  * the SOAP layer escapes it again when embedding it in the envelope. Empty/blank optional fields
  * are omitted.
  */
-object DidlLite {
+internal object DidlLite {
   private const val HEADER =
     "<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
@@ -24,7 +24,7 @@ object DidlLite {
     return buildString {
       append(HEADER)
       append("<item id=\"R:0/0/0\" parentID=\"R:0/0\" restricted=\"true\">")
-      append("<dc:title>").append(escape(title)).append("</dc:title>")
+      append("<dc:title>").append(xmlEscape(title)).append("</dc:title>")
       append("<upnp:class>").append(upnpClass).append("</upnp:class>")
       appendElement("dc:creator", creator)
       appendElement("upnp:album", album)
@@ -36,15 +36,6 @@ object DidlLite {
   private fun StringBuilder.appendElement(tag: String, value: String?) {
     val v = value?.trim().orEmpty()
     if (v.isEmpty()) return
-    append("<").append(tag).append(">").append(escape(v)).append("</").append(tag).append(">")
+    append("<").append(tag).append(">").append(xmlEscape(v)).append("</").append(tag).append(">")
   }
-
-  private fun escape(s: String): String =
-    s.replace("&", "&amp;")
-      .replace("<", "&lt;")
-      .replace(">", "&gt;")
-      .replace("\"", "&quot;")
-      // &#39; rather than &apos; — the latter is the one predefined entity some legacy XML readers
-      // (incl. older Sonos firmware) have historically mishandled.
-      .replace("'", "&#39;")
 }

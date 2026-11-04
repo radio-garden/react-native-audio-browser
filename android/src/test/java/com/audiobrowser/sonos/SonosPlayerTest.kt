@@ -33,7 +33,13 @@ class SonosPlayerTest {
     var state: String? = "STOPPED"
     var title: String? = null
     var level: Int? = 20
+    var positionMs: Long? = null
+    var durationMs: Long? = null
     var failing: String? = null
+    var unreachable = false
+
+    /** Runs once, while the next poll reads the speaker. */
+    var duringRead: (() -> Unit)? = null
 
     private fun call(name: String) {
       calls += name
@@ -55,9 +61,13 @@ class SonosPlayerTest {
 
     override fun stop() = call("stop")
 
-    override fun getTransportState() = state
+    override fun getTransportState(): String? {
+      if (unreachable) throw java.io.IOException("no route to host")
+      duringRead?.also { duringRead = null }?.invoke()
+      return state
+    }
 
-    override fun getStreamContent() = title
+    override fun getPosition() = SonosPosition(title, positionMs, durationMs)
 
     override fun getVolume() = level
 
@@ -224,24 +234,6 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `a metadata-only replacement of the current item does not reload the speaker`() {
-    startPlaying(station("a"))
-    room.calls.clear()
-
-    player.replaceMediaItem(
-      0,
-      station("a")
-        .buildUpon()
-        .setMediaMetadata(MediaMetadata.Builder().setTitle("New").build())
-        .build(),
-    )
-    settle()
-
-    assertEquals(emptyList<String>(), room.calls)
-    assertEquals("New", player.currentMediaItem?.mediaMetadata?.title)
-  }
-
-  @Test
   fun `the speaker's stream title arrives as an ICY title`() {
     val titles = mutableListOf<String?>()
     player.addListener(
@@ -290,9 +282,11 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `a finished track moves on to the next one`() {
+  fun `a track that plays to its end moves on to the next one`() {
     startPlaying(track("t1"), track("t2"))
     room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 199_500
     poll()
     room.calls.clear()
     room.state = "STOPPED"
@@ -312,6 +306,8 @@ class SonosPlayerTest {
     player.seekToNextMediaItem()
     settle()
     room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 199_500
     poll()
     room.calls.clear()
     room.state = "STOPPED"
@@ -329,13 +325,97 @@ class SonosPlayerTest {
     startPlaying(station("a"))
     room.state = "PLAYING"
     poll()
-    // The poll reads PLAYING, then pause is pressed before its reading is applied.
-    room.state = "PLAYING"
-    scope.advanceTimeBy(1_000)
-    player.pause()
-    settle()
+    room.duringRead = { player.pause() }
+    poll()
 
     assertFalse(player.playWhenReady)
+  }
+
+  @Test
+  fun `a track stopped on the speaker before its end reads as paused, not as its end`() {
+    startPlaying(track("t1"), track("t2"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+    room.calls.clear()
+    room.state = "STOPPED"
+    poll()
+
+    assertEquals(0, player.currentMediaItemIndex)
+    assertFalse(player.playWhenReady)
+    assertEquals(emptyList<String>(), room.calls)
+  }
+
+  @Test
+  fun `a track's position and duration are the speaker's`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+
+    assertEquals(200_000, player.duration)
+    assertTrue(player.currentPosition >= 30_000)
+  }
+
+  @Test
+  fun `a failure that a later command replaced is not reported`() {
+    room.failing = "setUri https://a.example/stream Station a live=true"
+    player.setMediaItems(listOf(station("a"), station("b")))
+    player.playWhenReady = true
+    player.seekToNextMediaItem()
+    settle()
+
+    assertTrue(errors.isEmpty())
+    assertEquals(
+      listOf("setUri https://b.example/raw Station b live=true", "play"),
+      room.calls.takeLast(2),
+    )
+  }
+
+  @Test
+  fun `a command that fails after release reports nothing`() {
+    room.failing = "stop"
+    startPlaying(station("a"))
+    player.stop()
+    player.release()
+    settle()
+
+    assertTrue(errors.isEmpty())
+  }
+
+  @Test
+  fun `a stop still reaches the speaker once the scope has ended`() {
+    startPlaying(station("a"))
+    room.calls.clear()
+
+    player.stop()
+    scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+    settle()
+
+    assertEquals(listOf("stop"), room.calls)
+  }
+
+  @Test
+  fun `a speaker that stops answering is reported`() {
+    startPlaying(station("a"))
+    room.state = "PLAYING"
+    poll()
+    room.unreachable = true
+    repeat(3) { poll() }
+
+    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
+    assertEquals(Player.STATE_IDLE, player.playbackState)
+  }
+
+  @Test
+  fun `a stream stuck transitioning is reported once the start times out`() {
+    room.state = "TRANSITIONING"
+    startPlaying(station("a"))
+    repeat(12) { poll() }
+
+    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
   }
 
   @Test

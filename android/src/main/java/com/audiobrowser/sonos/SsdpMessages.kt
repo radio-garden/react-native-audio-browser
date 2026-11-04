@@ -1,7 +1,7 @@
 package com.audiobrowser.sonos
 
 /** Parsed fields of an SSDP discovery response we care about. */
-data class SsdpResponse(
+internal data class SsdpResponse(
   val location: String,
   val usn: String,
   val searchTarget: String?,
@@ -12,7 +12,7 @@ data class SsdpResponse(
  * Pure build/parse of the two SSDP messages Sonos discovery needs: the outbound `M-SEARCH` datagram
  * and the inbound search responses. No sockets — [SsdpDiscovery] owns the I/O.
  */
-object SsdpMessages {
+internal object SsdpMessages {
   const val MULTICAST_HOST = "239.255.255.250"
   const val MULTICAST_PORT = 1900
 

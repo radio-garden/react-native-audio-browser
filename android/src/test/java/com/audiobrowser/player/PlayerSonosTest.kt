@@ -8,6 +8,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.sonos.SonosControl
 import com.audiobrowser.sonos.SonosDevice
 import com.audiobrowser.sonos.SonosOutputs
+import com.audiobrowser.sonos.SonosPosition
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.sonos.SonosRoom
 import com.audiobrowser.util.TrackFactory
@@ -60,7 +61,7 @@ class PlayerSonosTest {
 
     override fun getTransportState() = "PLAYING"
 
-    override fun getStreamContent() = title
+    override fun getPosition() = SonosPosition(title, null, null)
 
     override fun getVolume() = 0
 
@@ -91,10 +92,20 @@ class PlayerSonosTest {
     idleUntil("playing on the speaker") { "play" in room.calls }
   }
 
+  private var destroyed = false
+
   @After
   fun release() {
-    SonosOutputs.unselect(ROOM)
+    SonosOutputs.selected?.let(SonosOutputs::unselect)
+    if (!destroyed) player.destroy()
+  }
+
+  @Test
+  fun `destroying the player stops the speaker`() {
     player.destroy()
+    destroyed = true
+
+    idleUntil("the speaker stopped") { "stop" in room.calls }
   }
 
   @Test
@@ -150,8 +161,8 @@ class PlayerSonosTest {
             name = "Test Room",
             baseUrl = "http://192.0.2.1:1400",
             avTransportControlUrl = "http://192.0.2.1:1400/MediaRenderer/AVTransport/Control",
-            renderingControlControlUrl =
-              "http://192.0.2.1:1400/MediaRenderer/RenderingControl/Control",
+            groupRenderingControlUrl =
+              "http://192.0.2.1:1400/MediaRenderer/GroupRenderingControl/Control",
             zoneGroupTopologyControlUrl = null,
           ),
       )

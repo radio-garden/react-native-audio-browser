@@ -5,7 +5,7 @@ import okhttp3.Request
 import timber.log.Timber
 
 /** Runs an SSDP M-SEARCH and returns the raw responses. */
-interface SsdpScanner {
+internal interface SsdpScanner {
   fun search(timeoutMs: Int = 3000, repeats: Int = 3): List<SsdpResponse>
 }
 
@@ -15,7 +15,10 @@ interface SsdpScanner {
  * none when the speakers refuse UPnP (HTTP 403, the user's switch in the Sonos app). Blocking: run
  * off the main thread.
  */
-class SonosDiscoverer(private val httpClient: OkHttpClient, private val scanner: SsdpScanner) {
+internal class SonosDiscoverer(
+  private val httpClient: OkHttpClient,
+  private val scanner: SsdpScanner,
+) {
   private val soap = SoapClient(httpClient)
 
   fun discover(timeoutMs: Int = 3000): List<SonosRoom> {

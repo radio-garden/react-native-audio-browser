@@ -8,7 +8,6 @@ import com.audiobrowser.remote.RemoteMediaResolutions
 import com.audiobrowser.remote.RemotePlayback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import okhttp3.OkHttpClient
 
 /**
  * The Sonos room selected in the Output Switcher ([SonosOutputs.selected]) as a remote output: a
@@ -92,7 +91,7 @@ internal class SonosRemote(
     }
 
     fun defaultControl(): (SonosRoom) -> SonosControl {
-      val soap = SoapClient(OkHttpClient())
+      val soap = SoapClient(sonosHttpClient())
       return { room -> SonosTransport(room.device, soap) }
     }
   }

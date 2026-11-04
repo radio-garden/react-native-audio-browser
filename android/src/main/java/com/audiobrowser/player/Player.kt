@@ -572,7 +572,8 @@ class Player(internal val context: Context) {
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
   }
 
-  private var remotesRequested = false to false
+  private var castRequested = false
+  private var sonosRequested = false
   private val remoteScope = MainScope()
 
   /**
@@ -581,8 +582,9 @@ class Player(internal val context: Context) {
    * back here. Cast stays off where it is unavailable.
    */
   private fun setRemoteOutputs(cast: Boolean, sonos: Boolean) {
-    if (cast to sonos == remotesRequested) return
-    remotesRequested = cast to sonos
+    if (cast == castRequested && sonos == sonosRequested) return
+    castRequested = cast
+    sonosRequested = sonos
     remotePlayer?.release()
     remoteResolutions.clear()
     val remotes =
