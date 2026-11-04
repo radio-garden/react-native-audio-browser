@@ -150,6 +150,14 @@ _Avoid_: Current Track, Playing Track.
 The display metadata surfaced on lockscreen / notification / CarPlay / Android Auto. Mirrors the **Active Track**'s metadata by default; the app may override it via `updateNowPlaying()` (the live-stream use case: the station stays as the Active Track while Now Playing reflects the current song).
 _Avoid_: Lockscreen info, Notification info, Media metadata.
 
+**Remote output**:
+A device other than the phone that plays the **Active Track** on Android: a Cast receiver or a Sonos room, chosen in the system's output switcher. It plays one item at a time; the Player keeps the **Queue** and sends it the next item when one ends. See ADR 0013.
+_Avoid_: Cast device (Sonos is one too), route (the system's word for any output, the phone's included), renderer.
+
+**Receiver**:
+The player of the **Remote output** that plays: what the Player sends an item to, and what reports that item playing, ended or failed.
+_Avoid_: remote player, target.
+
 ### Playback state
 
 Three closely-named concepts that sound interchangeable but are not.
