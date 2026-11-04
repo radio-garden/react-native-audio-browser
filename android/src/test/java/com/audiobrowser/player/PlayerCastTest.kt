@@ -5,9 +5,9 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
-import com.audiobrowser.cast.FakeCastRemote
-import com.audiobrowser.cast.FakePlayer
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.remote.FakePlayer
+import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.time.Duration
@@ -32,7 +32,7 @@ import org.robolectric.annotation.Config
 class PlayerCastTest {
   private val looper = Looper.getMainLooper()
   private val player = Player(RuntimeEnvironment.getApplication())
-  private val remote = FakeCastRemote(looper)
+  private val remote = FakeRemote(looper)
   private val receiver = remote.player
   private val callbacks = mock(Callbacks::class.java)
 

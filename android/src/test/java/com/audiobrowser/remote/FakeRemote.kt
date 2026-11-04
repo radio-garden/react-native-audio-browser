@@ -1,4 +1,4 @@
-package com.audiobrowser.cast
+package com.audiobrowser.remote
 
 import android.os.Looper
 import androidx.media3.common.C
@@ -200,8 +200,8 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
   }
 }
 
-/** A Cast session the test starts and ends. */
-internal class FakeCastRemote(looper: Looper) : CastRemote {
+/** A remote whose session the test starts and ends. */
+internal class FakeRemote(looper: Looper) : RemotePlayback {
   override val player = FakePlayer(looper)
   override var isSessionAvailable = false
     private set
@@ -223,7 +223,7 @@ internal class FakeCastRemote(looper: Looper) : CastRemote {
     errorListener?.invoke(PlaybackException("receiver failed", null, code))
   }
 
-  /** A session already up, as one the Cast framework resumes. */
+  /** A session already up, as one the Cast framework resumes, without telling the listener. */
   fun sessionUp() {
     isSessionAvailable = true
   }

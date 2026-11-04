@@ -1,5 +1,8 @@
 package com.audiobrowser.cast
 
+import com.audiobrowser.remote.RemoteMedia
+import com.audiobrowser.remote.RemoteMediaResolutions
+import com.audiobrowser.remote.RemotePlayback
 import android.content.Context
 import androidx.core.net.toUri
 import androidx.media3.cast.Cast
@@ -32,7 +35,7 @@ internal val castRouteCategory: String? =
  * Starts Cast with the Default Media Receiver and builds its remote player, or returns null on a
  * device without Google Play services.
  */
-internal fun createCastRemote(context: Context, resolutions: CastMediaResolutions): CastRemote? {
+internal fun createCastRemote(context: Context, resolutions: RemoteMediaResolutions): RemotePlayback? {
   val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
   if (availability != ConnectionResult.SUCCESS) {
     Timber.w("Cast: Google Play services unavailable (%d), playing locally only", availability)
@@ -48,7 +51,7 @@ internal fun createCastRemote(context: Context, resolutions: CastMediaResolution
 }
 
 private class SdkCastRemote(private val cast: Cast, override val player: RemoteCastPlayer) :
-  CastRemote {
+  RemotePlayback {
   private var errorListener: ((PlaybackException) -> Unit)? = null
   private var client: RemoteMediaClient? = null
 
@@ -134,10 +137,10 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
 }
 
 /**
- * Sends each item as its [CastMedia]: the resolved URL and MIME type, artwork the receiver can
+ * Sends each item as its [RemoteMedia]: the resolved URL and MIME type, artwork the receiver can
  * fetch, and live items as live streams. An item without one goes as it is.
  */
-private class ResolvingMediaItemConverter(private val resolutions: CastMediaResolutions) :
+private class ResolvingMediaItemConverter(private val resolutions: RemoteMediaResolutions) :
   MediaItemConverter {
   private val default = DefaultMediaItemConverter()
 

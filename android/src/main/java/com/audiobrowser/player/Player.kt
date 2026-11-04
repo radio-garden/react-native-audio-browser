@@ -21,16 +21,16 @@ import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.browser.unattributedArtworkSource
-import com.audiobrowser.cast.CastMedia
-import com.audiobrowser.cast.CastMediaResolutions
-import com.audiobrowser.cast.CastRemote
-import com.audiobrowser.cast.CastSwitchingPlayer
 import com.audiobrowser.cast.castContentType
 import com.audiobrowser.cast.createCastRemote
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.remote.RemoteMedia
+import com.audiobrowser.remote.RemoteMediaResolutions
+import com.audiobrowser.remote.RemotePlayback
+import com.audiobrowser.remote.RemoteSwitchingPlayer
 import com.audiobrowser.util.ArtworkRoutes
 import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
@@ -102,9 +102,9 @@ class Player(internal val context: Context) {
   lateinit var exoPlayer: ExoPlayer
 
   /**
-   * What plays: [exoPlayer], or while Cast is on, the [CastSwitchingPlayer] around it. Every
-   * playback read and command goes here; only local-only work (retry, stuck recovery, buffering,
-   * the equalizer, the volume fade) touches [exoPlayer].
+   * What plays: [exoPlayer], or while a remote output is on, the [RemoteSwitchingPlayer] around it.
+   * Every playback read and command goes here; only local-only work (retry, stuck recovery,
+   * buffering, the equalizer, the volume fade) touches [exoPlayer].
    */
   lateinit var sessionPlayer: MediaPlayer
     private set
@@ -112,15 +112,15 @@ class Player(internal val context: Context) {
   /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
   lateinit var forwardingPlayer: MediaPlayer
 
-  private var castPlayer: CastSwitchingPlayer? = null
-  private val castResolutions = CastMediaResolutions()
+  private var remotePlayer: RemoteSwitchingPlayer? = null
+  private val remoteResolutions = RemoteMediaResolutions()
 
   /** Builds the Cast session's remote player; replaced in tests. */
-  internal var castRemoteFactory: (Context, CastMediaResolutions) -> CastRemote? =
+  internal var castRemoteFactory: (Context, RemoteMediaResolutions) -> RemotePlayback? =
     ::createCastRemote
 
   internal val isPlayingLocally: Boolean
-    get() = castPlayer?.isRemote != true
+    get() = remotePlayer?.isRemote != true
 
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
@@ -467,7 +467,7 @@ class Player(internal val context: Context) {
       buildEngine(setupOptions)
       engineOptions = newEngineOptions
     }
-    setCastEnabled(setupOptions.cast)
+    setRemoteOutputs(cast = setupOptions.cast)
   }
 
   private fun buildEngine(setupOptions: PlayerSetupOptions) {
@@ -523,7 +523,7 @@ class Player(internal val context: Context) {
     exoPlayer = engine.exoPlayer
     // Before the listener and the session are attached, so neither hears the playback replayed.
     carried?.restoreTo(exoPlayer)
-    castPlayer?.setLocal(exoPlayer)
+    remotePlayer?.setLocal(exoPlayer)
     keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
 
     if (isInitialSetup) playerListener = PlayerListener(this)
@@ -552,12 +552,12 @@ class Player(internal val context: Context) {
   private var keepSessionAliveOnError = true
 
   /**
-   * Wraps [sessionPlayer] for the session: the Cast switch while there is one, else [exoPlayer].
+   * Wraps [sessionPlayer] for the session: the remote switch while there is one, else [exoPlayer].
    * Called when either changes.
    */
   private fun attachSessionPlayer() {
     if (::forwardingPlayer.isInitialized) forwardingPlayer.removeListener(playerListener)
-    sessionPlayer = castPlayer ?: exoPlayer
+    sessionPlayer = remotePlayer ?: exoPlayer
     forwardingPlayer =
       InterceptingPlayer(sessionPlayer, { callbacks }, { options }, keepSessionAliveOnError)
     forwardingPlayer.addListener(playerListener)
@@ -565,27 +565,27 @@ class Player(internal val context: Context) {
   }
 
   private var castRequested = false
-  private val castScope = MainScope()
+  private val remoteScope = MainScope()
 
   /**
-   * Starts or stops moving playback to a Cast device selected in the Output Switcher. Turning it
-   * off while casting brings playback back here. Stays local where Cast is unavailable.
+   * Starts or stops moving playback to the remote outputs selected in the Output Switcher: a Cast
+   * device with [cast]. Turning one off while it plays brings playback back here. Cast stays off
+   * where it is unavailable.
    */
-  private fun setCastEnabled(enabled: Boolean) {
-    if (enabled == castRequested) return
-    castRequested = enabled
-    val previous = castPlayer
-    castPlayer =
-      if (enabled) {
-        castRemoteFactory(context, castResolutions)?.let { remote ->
-          CastSwitchingPlayer(exoPlayer, remote, castResolutions, ::resolveCastMedia, castScope)
+  private fun setRemoteOutputs(cast: Boolean) {
+    if (cast == castRequested) return
+    castRequested = cast
+    val previous = remotePlayer
+    val remotes = listOfNotNull(if (cast) castRemoteFactory(context, remoteResolutions) else null)
+    remotePlayer =
+      remotes
+        .takeIf { it.isNotEmpty() }
+        ?.let {
+          RemoteSwitchingPlayer(exoPlayer, it, remoteResolutions, ::resolveRemoteMedia, remoteScope)
         }
-      } else {
-        null
-      }
-    if (castPlayer === previous) return
+    if (remotePlayer === previous) return
     previous?.release()
-    castResolutions.clear()
+    remoteResolutions.clear()
     attachSessionPlayer()
   }
 
@@ -593,7 +593,7 @@ class Player(internal val context: Context) {
    * What the receiver loads for [item]: its track's media URL through the media transform, without
    * its headers, and its artwork. Null for an item without a track.
    */
-  private suspend fun resolveCastMedia(item: MediaItem): CastMedia? {
+  private suspend fun resolveRemoteMedia(item: MediaItem): RemoteMedia? {
     val track = item.localConfiguration?.tag as? Track ?: return null
     val src = track.src ?: return null
     val browserManager = browser?.browserManager
@@ -603,7 +603,7 @@ class Player(internal val context: Context) {
         val url = browserManager?.resolveMediaUrl(src, track)?.url() ?: src
         url to browserManager?.resolveArtworkUrl(track)?.uri
       }
-    return CastMedia(
+    return RemoteMedia(
       url = url,
       contentType = castContentType(url, item.localConfiguration?.mimeType),
       artworkUrl = artworkUrl?.takeIf { it.startsWith("http://") || it.startsWith("https://") },
@@ -1214,9 +1214,9 @@ class Player(internal val context: Context) {
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null
-    castPlayer?.release()
-    castPlayer = null
-    castScope.cancel()
+    remotePlayer?.release()
+    remotePlayer = null
+    remoteScope.cancel()
     exoPlayer.release()
     cache?.release()
     cache = null

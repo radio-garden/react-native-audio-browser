@@ -1,4 +1,4 @@
-package com.audiobrowser.cast
+package com.audiobrowser.remote
 
 import android.os.Looper
 import androidx.media3.common.DeviceInfo
@@ -21,12 +21,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
-class CastSwitchingPlayerTest {
+class RemoteSwitchingPlayerTest {
   private val looper = Looper.getMainLooper()
   private val scope = MainScope()
   private val local = FakePlayer(looper, DeviceInfo.UNKNOWN)
-  private val remote = FakeCastRemote(looper)
-  private val resolutions = CastMediaResolutions()
+  private val remote = FakeRemote(looper)
+  private val other = FakeRemote(looper)
+  private val resolutions = RemoteMediaResolutions()
   private val resolved = mutableListOf<String>()
   private val live = mutableSetOf<String>()
 
@@ -34,14 +35,14 @@ class CastSwitchingPlayerTest {
   private var gate: CompletableDeferred<Unit>? = null
 
   private val player =
-    CastSwitchingPlayer(
+    RemoteSwitchingPlayer(
       local,
-      remote,
+      listOf(remote, other),
       resolutions,
       resolveMedia = { item ->
         gate?.await()
         resolved += item.mediaId
-        CastMedia("https://cdn.example/${item.mediaId}", "audio/mpeg", null, item.mediaId in live)
+        RemoteMedia("https://cdn.example/${item.mediaId}", "audio/mpeg", null, item.mediaId in live)
       },
       scope = scope,
     )
@@ -347,9 +348,9 @@ class CastSwitchingPlayerTest {
     val local = FakePlayer(looper, DeviceInfo.UNKNOWN)
     local.setMediaItems(listOf(item("a")))
     local.prepare()
-    val remote = FakeCastRemote(looper).apply { sessionUp() }
+    val remote = FakeRemote(looper).apply { sessionUp() }
 
-    val player = CastSwitchingPlayer(local, remote, resolutions, { null }, scope)
+    val player = RemoteSwitchingPlayer(local, listOf(remote), resolutions, { null }, scope)
     idle()
 
     assertTrue(player.isRemote)
@@ -523,6 +524,69 @@ class CastSwitchingPlayerTest {
 
     assertNull(player.playerError)
     assertEquals(listOf("b"), remote.player.items.map { it.mediaId })
+  }
+
+  @Test
+  fun `the remote with a session plays, whichever it is in the list`() {
+    playLocally(listOf("a"))
+
+    other.startSession()
+    idle()
+
+    assertTrue(player.isRemote)
+    assertEquals(listOf("a"), other.player.items.map { it.mediaId })
+    assertTrue(remote.player.items.isEmpty())
+  }
+
+  @Test
+  fun `a remote keeps playing while another starts a session`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    other.startSession()
+    idle()
+
+    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
+    assertEquals(1, remote.player.sent.size)
+    assertTrue(other.player.items.isEmpty())
+  }
+
+  @Test
+  fun `when the playing remote's session ends, the next one takes the queue through the phone`() {
+    playLocally(listOf("a", "b"), index = 1)
+    remote.startSession()
+    idle()
+    other.sessionUp()
+
+    remote.endSession()
+    idle()
+
+    assertEquals(listOf("a", "b"), other.player.items.map { it.mediaId })
+    assertEquals(1, other.player.index)
+    assertTrue(other.player.playWhenReady)
+    assertEquals(1, remote.player.stops)
+    assertEquals(2, local.stops)
+  }
+
+  @Test
+  fun `a remote that isn't playing does not fail playback`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    other.fail()
+    idle()
+
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `release lets go of every remote`() {
+    player.release()
+
+    assertTrue(remote.released)
+    assertTrue(other.released)
   }
 
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {
