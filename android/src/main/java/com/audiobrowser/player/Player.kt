@@ -122,11 +122,10 @@ internal constructor(
   private val remoteOutputs =
     RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
 
-  /** Whether a remote output plays, in place of [exoPlayer]. */
-  internal val isRemote: Boolean
-    get() = remoteOutputs.player?.isRemote == true
+  internal val localEngine =
+    LocalEngine({ exoPlayer }, isRemote = { remoteOutputs.player?.isRemote == true })
 
-  internal val localEngine = LocalEngine({ exoPlayer }, { isRemote })
+  private var keepSessionAliveOnError = true
 
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
@@ -547,8 +546,6 @@ internal constructor(
     // Set up automatic buffer management if enabled
     setupAutomaticBufferManager(setupOptions.automaticBuffer)
   }
-
-  private var keepSessionAliveOnError = true
 
   /**
    * Wraps [sessionPlayer] for the session: the remote switch while there is one, else [exoPlayer].

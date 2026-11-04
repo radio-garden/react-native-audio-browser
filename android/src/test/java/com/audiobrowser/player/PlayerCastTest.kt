@@ -58,7 +58,7 @@ class PlayerCastTest {
     )
     player.playWhenReady = true
     remote.startSession()
-    idleUntil("remote") { player.isRemote }
+    idleUntil("remote") { !player.localEngine.isActive }
     player.sessionPlayer.prepare()
     idleUntil("the item on the receiver") { receiver.loads.isNotEmpty() }
   }

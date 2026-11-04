@@ -101,7 +101,7 @@ class PlayerSonosTest {
     )
     player.playWhenReady = true
     SonosOutputs.select(ROOM)
-    idleUntil("the handover") { player.isRemote }
+    idleUntil("the handover") { !player.localEngine.isActive }
     player.sessionPlayer.prepare()
     idleUntil("playing on the speaker") { "play" in room.calls }
   }
@@ -125,7 +125,7 @@ class PlayerSonosTest {
   @Test
   fun `the selected room plays the queue, and the phone stops`() {
     assertEquals(listOf("setUri https://s/a.mp3", "play"), room.calls)
-    assertEquals(true, player.isRemote)
+    assertEquals(false, player.localEngine.isActive)
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
   }
 
@@ -156,7 +156,7 @@ class PlayerSonosTest {
     SonosOutputs.unselect(ROOM)
 
     idleUntil("the speaker stopped") { "stop" in room.calls }
-    assertEquals(false, player.isRemote)
+    assertEquals(true, player.localEngine.isActive)
     assertEquals(true, player.exoPlayer.playWhenReady)
     assertEquals(1, player.exoPlayer.mediaItemCount)
   }

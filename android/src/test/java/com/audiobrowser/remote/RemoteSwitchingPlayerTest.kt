@@ -614,6 +614,73 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `an item that started and then buffers is not timed out`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    remote.player.readiness = MediaPlayer.STATE_BUFFERING
+    remote.player.update()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `a play the receiver doesn't start in time is the player error`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    player.pause()
+    remote.player.readiness = MediaPlayer.STATE_BUFFERING
+    remote.player.update()
+    idle()
+
+    player.play()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
+  fun `removing the current item when it is the last ends playback`() {
+    playLocally(listOf("a", "b"), index = 1)
+    remote.startSession()
+    idle()
+
+    player.removeMediaItem(1)
+    idle()
+
+    assertEquals(MediaPlayer.STATE_ENDED, player.playbackState)
+    assertEquals(listOf("b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(1, remote.player.stops)
+  }
+
+  @Test
+  fun `removing the current item when it is the last goes back to the first under repeat all`() {
+    playLocally(listOf("a", "b"), index = 1)
+    local.repeatMode = MediaPlayer.REPEAT_MODE_ALL
+    remote.startSession()
+    idle()
+
+    player.removeMediaItem(1)
+    idle()
+
+    assertEquals(listOf("b", "a"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(0, player.currentMediaItemIndex)
+  }
+
+  @Test
+  fun `the phone lets go of its queue while remote`() {
+    playLocally(listOf("a", "b"))
+
+    remote.startSession()
+    idle()
+
+    assertTrue(local.items.isEmpty())
+  }
+
+  @Test
   fun `the last item's end stands where the receiver ended it`() {
     playLocally(listOf("a"))
     remote.startSession()

@@ -153,8 +153,8 @@ Known limits:
 
 - No live song titles on the receiver or the phone while casting: the Default
   Media Receiver keeps the metadata it was loaded with.
-- No custom receiver: the receiver is Google's Default Media Receiver, or a
-  Styled Media Receiver, which takes the same media.
+- The receiver is one that takes the same media as the Default Media Receiver:
+  Google's own, or a Styled Media Receiver registered for the app.
 - Android only. On iOS, the route picker lists AirPlay devices.
 - A receiver error is not retried; the app decides what to do with it.
 
@@ -228,8 +228,7 @@ Grouping:
 
 While on Sonos, local-only behaviour steps aside as it does for Cast: the
 volume is the speaker's, the equalizer waits for the phone, and a speaker error
-reaches the app as a playback error, as does a stream the speaker doesn't start
-within 20 seconds and a speaker that stops answering.
+reaches the app as a playback error, as does a speaker that stops answering.
 
 Known limits:
 
@@ -262,8 +261,8 @@ Cast and Sonos play the queue the same way:
   the phone in between.
 - A receiver that fails to play reaches the app as a playback error with code
   `remote-error`, as does an item whose URL can't be resolved for it, and one
-  the receiver hasn't started within 30 seconds. Playing again loads the item
-  there anew.
+  the receiver hasn't started within 30 seconds of being sent or played.
+  Playing again loads the item there anew.
 
 The library's Sonos route provider service is exported, as the Output Switcher
 needs to bind it: another app on the phone can bind it too, list the rooms,

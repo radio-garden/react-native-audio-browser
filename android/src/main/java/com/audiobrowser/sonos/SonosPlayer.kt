@@ -80,10 +80,10 @@ internal interface SonosControl {
  *
  * Commands run in the order they are made, one at a time, off the main thread, and run to the end
  * even once the player is released, so its last stop reaches the speaker. A failed command that no
- * later one replaced goes to [onError] and leaves the player idle; so does an item the speaker
- * hasn't started within [startTimeoutMs] of being asked to play, and a speaker that stops answering
- * [unreachableAfterPolls] polls in a row. A room that played on after a failure still hears pause
- * and stop. A failed seek or volume change is only logged.
+ * later one replaced goes to [onError] and leaves the player idle; so does a speaker that stops
+ * answering [unreachableAfterPolls] polls in a row. An item the speaker never starts is the
+ * switch's to time out. A room that played on after a failure still hears pause and stop. A failed
+ * seek or volume change is only logged.
  */
 internal class SonosPlayer(
   looper: Looper,
@@ -95,7 +95,6 @@ internal class SonosPlayer(
   private val scope: CoroutineScope,
   private val io: CoroutineDispatcher,
   private val pollIntervalMs: Long = 2_000,
-  private val startTimeoutMs: Long = 20_000,
   private val unreachableAfterPolls: Int = 3,
   private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : SimpleBasePlayer(looper) {
@@ -118,7 +117,6 @@ internal class SonosPlayer(
   // it ready to play without loading again; when it was asked to play; whether it has since.
   private var loadedUrl: String? = null
   private var ready = false
-  private var playRequestedAtMs = 0L
   private var seenPlaying = false
 
   // A poll that overlapped a command is dropped: its reading may predate it. A failed command is an
@@ -184,7 +182,6 @@ internal class SonosPlayer(
     }
     if (!isPrepared) return done()
     if (ready) {
-      if (!seenPlaying) playRequestedAtMs = nowMs()
       command { control.play() }
     } else {
       load(C.TIME_UNSET)
@@ -271,7 +268,6 @@ internal class SonosPlayer(
     playbackState = Player.STATE_BUFFERING
     loadedUrl = url
     ready = true
-    playRequestedAtMs = nowMs()
     seenPlaying = false
     timedMetadata = null
     durationMs = C.TIME_UNSET
@@ -423,16 +419,6 @@ internal class SonosPlayer(
     val live = item?.isRemoteLive ?: true
     if (!live) reading.position?.durationMs?.let { durationMs = it }
     val positionMs = if (live) 0 else reading.position?.positionMs ?: 0
-    if (state != "PLAYING" && playWhenReady && !seenPlaying && startTimedOut()) {
-      fail(
-        PlaybackException(
-          "Sonos: the speaker did not start the stream",
-          null,
-          PlaybackException.ERROR_CODE_REMOTE_ERROR,
-        )
-      )
-      return
-    }
     when (state) {
       "PLAYING" -> {
         seenPlaying = true
@@ -457,8 +443,6 @@ internal class SonosPlayer(
       else -> onStopped()
     }
   }
-
-  private fun startTimedOut() = nowMs() - playRequestedAtMs > startTimeoutMs
 
   /** Another app plays on the room: this player reads as paused and leaves the room alone. */
   private fun onTakenOver() {

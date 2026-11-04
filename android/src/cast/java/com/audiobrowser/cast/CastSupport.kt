@@ -24,12 +24,17 @@ import timber.log.Timber
 private fun receiverOrDefault(receiverApplicationId: String?) =
   receiverApplicationId ?: CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
 
-/** The MediaRouter control category of the routes that can run the receiver. */
-internal fun castRouteCategory(receiverApplicationId: String?): String? =
-  CastMediaControlIntent.categoryForCast(receiverOrDefault(receiverApplicationId))
-
 // Cast takes its receiver once per process.
 private var initializedReceiver: String? = null
+
+/**
+ * The MediaRouter control category of the routes that can run the receiver: the one Cast started
+ * with, else [receiverApplicationId].
+ */
+internal fun castRouteCategory(receiverApplicationId: String?): String? =
+  CastMediaControlIntent.categoryForCast(
+    initializedReceiver ?: receiverOrDefault(receiverApplicationId)
+  )
 
 /**
  * Starts Cast with the receiver application (the Default Media Receiver when null) and builds its

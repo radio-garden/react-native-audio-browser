@@ -139,7 +139,7 @@ jobs:
       # The example app builds with Cast; this compiles the library the way an app without it does.
       - name: Compile without Cast
         working-directory: apps/example-native/android
-        run: ./gradlew :react-native-audio-browser:compileDebugKotlin -PAudioBrowser_castEnabled=false --no-daemon --build-cache
+        run: ./gradlew :react-native-audio-browser:formatCheck :react-native-audio-browser:compileDebugKotlin -PAudioBrowser_castEnabled=false --no-daemon --build-cache
 
       - name: Upload test report
         if: failure()

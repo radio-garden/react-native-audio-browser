@@ -97,7 +97,6 @@ class SonosPlayerTest {
       scope = scope,
       io = dispatcher,
       pollIntervalMs = 1_000,
-      startTimeoutMs = 10_000,
       nowMs = { dispatcher.scheduler.currentTime },
     )
 
@@ -423,20 +422,6 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `playing an item loaded paused long ago gives it the whole start time`() {
-    player.setMediaItem(station("a"))
-    settle()
-    repeat(30) { poll() }
-
-    player.play()
-    settle()
-    poll()
-
-    assertTrue(errors.isEmpty())
-    assertTrue(player.playWhenReady)
-  }
-
-  @Test
   fun `after a failure, stopping still stops the speaker`() {
     room.failing = "play"
     startPlaying(station("a"))
@@ -608,29 +593,12 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `a stream stuck transitioning is reported once the start times out`() {
-    room.state = "TRANSITIONING"
-    startPlaying(station("a"))
-    repeat(12) { poll() }
-
-    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
-  }
-
-  @Test
   fun `a failed command is reported, and leaves the player idle`() {
     room.failing = "play"
     startPlaying(station("a"))
 
     assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
     assertEquals(Player.STATE_IDLE, player.playbackState)
-  }
-
-  @Test
-  fun `a stream the speaker never starts is reported as a failure`() {
-    startPlaying(station("a"))
-    repeat(12) { poll() }
-
-    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
   }
 
   @Test

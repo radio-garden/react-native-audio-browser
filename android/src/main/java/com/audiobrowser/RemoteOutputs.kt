@@ -68,11 +68,7 @@ object RemoteOutputs {
    * reported as its output type. Idempotent.
    */
   @MainThread
-  internal fun setEnabled(
-    context: Context,
-    enabled: Boolean,
-    types: Map<String, OutputType> = emptyMap(),
-  ) {
+  internal fun setEnabled(context: Context, enabled: Boolean, types: Map<String, OutputType>) {
     val types = types.takeIf { enabled }.orEmpty()
     if (!enabled) stop()
     if (types != this.types) {
