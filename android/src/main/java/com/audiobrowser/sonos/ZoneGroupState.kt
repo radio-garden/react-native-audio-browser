@@ -35,8 +35,9 @@ internal object ZoneGroupState {
       .any { it.getAttribute("UUID") == uuid && it.getAttribute("Invisible") == "1" }
   }
 
-  fun parse(xml: String): List<SonosGroup> {
-    val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return emptyList()
+  /** The groups, or null when [xml] holds no readable `ZoneGroupState`. */
+  fun parse(xml: String): List<SonosGroup>? {
+    val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return null
     val groups = doc.getElementsByTagName("ZoneGroup")
     return (0 until groups.length).mapNotNull { groupOf(groups.item(it) as Element) }
   }

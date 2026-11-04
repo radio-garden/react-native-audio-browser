@@ -35,6 +35,7 @@ class SonosPlayerTest {
     var level: Int? = 20
     var positionMs: Long? = null
     var durationMs: Long? = null
+    var trackUri: String? = null
     var failing: String? = null
     var unreachable = false
 
@@ -61,13 +62,15 @@ class SonosPlayerTest {
 
     override fun stop() = call("stop")
 
+    override fun seek(positionMs: Long) = call("seek $positionMs")
+
     override fun getTransportState(): String? {
       if (unreachable) throw java.io.IOException("no route to host")
       duringRead?.also { duringRead = null }?.invoke()
       return state
     }
 
-    override fun getPosition() = SonosPosition(title, positionMs, durationMs)
+    override fun getPosition() = SonosPosition(title, positionMs, durationMs, trackUri)
 
     override fun getVolume() = level
 
@@ -395,6 +398,116 @@ class SonosPlayerTest {
     settle()
 
     assertEquals(listOf("stop"), room.calls)
+  }
+
+  @Test
+  fun `playing an item loaded paused long ago gives it the whole start time`() {
+    player.setMediaItems(listOf(station("a")))
+    settle()
+    repeat(30) { poll() }
+
+    player.play()
+    settle()
+    poll()
+
+    assertTrue(errors.isEmpty())
+    assertTrue(player.playWhenReady)
+  }
+
+  @Test
+  fun `after a failure, stopping still stops the speaker`() {
+    room.failing = "play"
+    startPlaying(station("a"))
+    room.failing = null
+    room.calls.clear()
+
+    player.stop()
+    settle()
+
+    assertEquals(listOf("stop"), room.calls)
+  }
+
+  @Test
+  fun `a failed volume change is only logged`() {
+    room.failing = "setVolume 7"
+    startPlaying(station("a"))
+
+    player.setDeviceVolume(7, 0)
+    settle()
+
+    assertTrue(errors.isEmpty())
+    assertEquals(Player.STATE_BUFFERING, player.playbackState)
+  }
+
+  @Test
+  fun `a volume change doesn't hide a failed load`() {
+    room.failing = "setUri https://a.example/stream Station a live=true"
+    player.setMediaItems(listOf(station("a")))
+    player.setDeviceVolume(5, 0)
+    settle()
+
+    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
+  }
+
+  @Test
+  fun `another app taking the room reads as paused, and the room is left alone`() {
+    startPlaying(station("a"))
+    room.state = "PLAYING"
+    room.trackUri = "x-rincon-mp3radio://https://a.example/stream"
+    poll()
+    room.trackUri = "x-sonos-spotify:spotify%3atrack%3a1"
+    room.title = "Someone else - Their song"
+    poll()
+
+    assertFalse(player.playWhenReady)
+    room.calls.clear()
+    player.stop()
+    settle()
+    assertEquals(emptyList<String>(), room.calls)
+  }
+
+  @Test
+  fun `pausing stops the position running`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+
+    player.pause()
+    settle()
+    val paused = player.currentPosition
+    shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(5))
+
+    assertEquals(paused, player.currentPosition)
+  }
+
+  @Test
+  fun `seeking within a track seeks on the speaker`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+    room.calls.clear()
+
+    player.seekTo(60_000)
+    settle()
+
+    assertEquals(listOf("seek 60000"), room.calls)
+  }
+
+  @Test
+  fun `seeking to the default position of a station loads it again`() {
+    startPlaying(station("a"))
+    room.state = "PLAYING"
+    poll()
+    room.calls.clear()
+
+    player.seekToDefaultPosition()
+    settle()
+
+    assertEquals(listOf("setUri https://a.example/stream Station a live=true", "play"), room.calls)
   }
 
   @Test

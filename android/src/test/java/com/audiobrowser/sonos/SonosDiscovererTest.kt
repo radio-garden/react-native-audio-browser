@@ -17,6 +17,7 @@ class SonosDiscovererTest {
   private val sonosXml = javaClass.getResource("/sonos/device_description.xml")!!.readText()
   private var topologyResponse: MockResponse = MockResponse().setResponseCode(500)
   private var topologyCalls = 0
+  private var firstTopology: MockResponse? = null
 
   @Before
   fun setUp() {
@@ -28,7 +29,7 @@ class SonosDiscovererTest {
             "/xml/device_description.xml" -> MockResponse().setBody(sonosXml)
             "/ZoneGroupTopology/Control" -> {
               topologyCalls++
-              topologyResponse
+              firstTopology?.also { firstTopology = null } ?: topologyResponse
             }
             else -> MockResponse().setResponseCode(404)
           }
@@ -140,6 +141,17 @@ class SonosDiscovererTest {
     } finally {
       hidden.shutdown()
     }
+  }
+
+  @Test
+  fun `moves on to the next speaker when one's topology can't be read`() {
+    firstTopology = MockResponse().setBody("<s:Envelope><s:Body></s:Body></s:Envelope>")
+    topologyResponse = topology("RINCON_A" to "Dining Room")
+
+    val rooms =
+      SonosDiscoverer(OkHttpClient(), scannerReturning(location, "$location?b")).discover()
+
+    assertEquals(listOf("Dining Room"), rooms.map { it.name })
   }
 
   @Test

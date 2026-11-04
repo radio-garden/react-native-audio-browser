@@ -107,4 +107,16 @@ class SoapEnvelopesTest {
     assertEquals("$grc#GetGroupVolume", a.soapAction)
     assertEquals(envelope(grc, "GetGroupVolume", "<InstanceID>0</InstanceID>"), a.body)
   }
+
+  @Test
+  fun `seek goes to a relative time, to the second`() {
+    assertEquals(
+      envelope(
+        "urn:schemas-upnp-org:service:AVTransport:1",
+        "Seek",
+        "<InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>1:01:01</Target>",
+      ),
+      SoapEnvelopes.seek(3_661_500).body,
+    )
+  }
 }

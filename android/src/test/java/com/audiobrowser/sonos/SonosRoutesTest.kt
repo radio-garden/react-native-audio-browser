@@ -141,4 +141,14 @@ class SonosRoutesTest {
 
     assertNull(SonosOutputs.selected)
   }
+
+  @Test
+  fun `discovery holds a multicast lock only with the permission the app declares`() {
+    val context = RuntimeEnvironment.getApplication()
+    assertNull(wifiMulticastLock(context))
+
+    shadowOf(context).grantPermissions(Manifest.permission.CHANGE_WIFI_MULTICAST_STATE)
+
+    assertTrue(wifiMulticastLock(context) != null)
+  }
 }

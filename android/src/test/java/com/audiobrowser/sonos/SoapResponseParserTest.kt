@@ -136,11 +136,10 @@ class SoapResponseParserTest {
   }
 
   @Test
-  fun `position carries the stream title, and is null for a fault`() {
-    assertEquals(
-      "Santana - Smooth",
-      SoapResponseParser.position(positionInfo(trackDidl("Santana - Smooth")))?.streamContent,
-    )
+  fun `position carries the stream title and track URI, and is null for a fault`() {
+    val position = SoapResponseParser.position(positionInfo(trackDidl("Santana - Smooth")))
+    assertEquals("Santana - Smooth", position?.streamContent)
+    assertEquals("x-rincon-mp3radio://https://h/stream", position?.trackUri)
     assertNull(SoapResponseParser.position(fault))
   }
 }

@@ -1,5 +1,7 @@
 package com.audiobrowser.sonos
 
+import java.util.Locale
+
 /** A UPnP SOAP request: the `SOAPACTION` header value (service#action) and the XML body. */
 internal data class SoapAction(val soapAction: String, val body: String)
 
@@ -29,6 +31,18 @@ internal object SoapEnvelopes {
   fun pause(): SoapAction = action(AV_TRANSPORT, "Pause", "<InstanceID>0</InstanceID>")
 
   fun stop(): SoapAction = action(AV_TRANSPORT, "Stop", "<InstanceID>0</InstanceID>")
+
+  /** Seeks within the current track, to [positionMs] rounded down to the second. */
+  fun seek(positionMs: Long): SoapAction {
+    val seconds = positionMs.coerceAtLeast(0) / 1000
+    val target =
+      String.format(Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+    return action(
+      AV_TRANSPORT,
+      "Seek",
+      "<InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>$target</Target>",
+    )
+  }
 
   fun getTransportInfo(): SoapAction =
     action(AV_TRANSPORT, "GetTransportInfo", "<InstanceID>0</InstanceID>")

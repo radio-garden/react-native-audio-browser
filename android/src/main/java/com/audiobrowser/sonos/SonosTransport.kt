@@ -35,6 +35,8 @@ internal class SonosTransport(private val device: SonosDevice, private val soap:
 
   override fun stop() = avt(SoapEnvelopes.stop())
 
+  override fun seek(positionMs: Long) = avt(SoapEnvelopes.seek(positionMs))
+
   /** The device's current UPnP `CurrentTransportState`, or null if unreadable. */
   override fun getTransportState(): String? =
     SoapResponseParser.transportState(

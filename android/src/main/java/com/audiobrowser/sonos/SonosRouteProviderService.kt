@@ -45,7 +45,8 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
     SonosDiscoverer(httpClient, SsdpDiscovery(wifiMulticastLock(context.applicationContext)))
   private val soap = SoapClient(httpClient)
 
-  private var rooms: List<SonosRoom> = emptyList()
+  // A new provider, after the system rebound the service, starts from the room still selected.
+  private var rooms: List<SonosRoom> = listOfNotNull(SonosOutputs.selected)
   private var lastScanMs = 0L
   private var scanJob: Job? = null
   private val volumes = HashMap<String, Int>()
@@ -176,7 +177,8 @@ internal fun sonosRouteDescriptors(
   return builder.build()
 }
 
-private fun wifiMulticastLock(context: Context): MulticastLockHandle? {
+@VisibleForTesting
+internal fun wifiMulticastLock(context: Context): MulticastLockHandle? {
   if (!SonosOutputs.canHoldMulticastLock(context)) return null
   val lock =
     (context.getSystemService(Context.WIFI_SERVICE) as WifiManager)

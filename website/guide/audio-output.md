@@ -214,14 +214,14 @@ Known limits:
   speakers must share it; guest and isolated Wi-Fi networks hide them.
 - A track that needs request headers won't play.
 - The speaker plays one track at a time: the queue stays in the app, which
-  loads the next track when one ends. A track starts from the beginning, and
-  seeking within it isn't supported.
+  loads the next track when one ends. A track moved there starts from the
+  beginning; seeking within it then works.
 - Moving from one room or Cast device straight to another goes through the
   phone, which can play for a moment while the next one loads.
 - The state is polled every two seconds, so a change made in the Sonos app shows
   up here after a moment.
 - If another app or the Sonos app starts something else on the room, this app
-  goes on showing its own track.
+  reads as paused and leaves the room alone; playing again loads its own track.
 - Android only. On iOS, a Sonos speaker with AirPlay 2 appears in the route
   picker as an AirPlay target.
 

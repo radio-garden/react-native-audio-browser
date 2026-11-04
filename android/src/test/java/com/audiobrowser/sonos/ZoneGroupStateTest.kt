@@ -1,6 +1,7 @@
 package com.audiobrowser.sonos
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ZoneGroupStateTest {
@@ -67,7 +68,7 @@ class ZoneGroupStateTest {
         "</ZoneGroup>" +
         "</ZoneGroups></ZoneGroupState>"
 
-    assertEquals(listOf("RINCON_A"), ZoneGroupState.parse(response(state)).map { it.coordinator })
+    assertEquals(listOf("RINCON_A"), ZoneGroupState.parse(response(state))!!.map { it.coordinator })
   }
 
   @Test
@@ -81,7 +82,7 @@ class ZoneGroupStateTest {
         "</ZoneGroup>" +
         "</ZoneGroups></ZoneGroupState>"
 
-    assertEquals(listOf("Kitchen + 2"), ZoneGroupState.parse(response(state)).map { it.name })
+    assertEquals(listOf("Kitchen + 2"), ZoneGroupState.parse(response(state))!!.map { it.name })
   }
 
   @Test
@@ -116,7 +117,7 @@ class ZoneGroupStateTest {
         member("RINCON_A", "10.0.0.1", "Bedroom") +
         "</ZoneGroup></ZoneGroups>"
 
-    assertEquals(listOf("Bedroom"), ZoneGroupState.parse(response(state)).map { it.name })
+    assertEquals(listOf("Bedroom"), ZoneGroupState.parse(response(state))!!.map { it.name })
   }
 
   @Test
@@ -131,8 +132,8 @@ class ZoneGroupStateTest {
   }
 
   @Test
-  fun `is empty for a fault or garbage`() {
-    assertEquals(emptyList<SonosGroup>(), ZoneGroupState.parse("not xml"))
-    assertEquals(emptyList<SonosGroup>(), ZoneGroupState.parse(response("not xml")))
+  fun `is null for a fault or garbage`() {
+    assertNull(ZoneGroupState.parse("not xml"))
+    assertNull(ZoneGroupState.parse(response("not xml")))
   }
 }

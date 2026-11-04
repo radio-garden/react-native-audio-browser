@@ -11,8 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal interface RemotePlayback {
   /**
-   * Plays on the receiver, read while [isSessionAvailable]. Setting its items loads them there and
-   * plays as its play intent says, without [MediaPlayer.prepare].
+   * Plays on the receiver, read while [isSessionAvailable]: each session can bring a new player, so
+   * the switch keeps the one it handed over to until the handback. Setting its items loads them
+   * there and plays as its play intent says, without [MediaPlayer.prepare].
    */
   val player: MediaPlayer
 

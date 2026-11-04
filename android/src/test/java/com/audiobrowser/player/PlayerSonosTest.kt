@@ -59,6 +59,10 @@ class PlayerSonosTest {
       calls += "stop"
     }
 
+    override fun seek(positionMs: Long) {
+      calls += "seek $positionMs"
+    }
+
     override fun getTransportState() = "PLAYING"
 
     override fun getPosition() = SonosPosition(title, null, null)

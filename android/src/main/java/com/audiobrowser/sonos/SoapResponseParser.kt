@@ -55,6 +55,7 @@ internal object SoapResponseParser {
       streamContent = streamContent(xml),
       positionMs = firstText(doc, "RelTime")?.let(::upnpTimeMs),
       durationMs = firstText(doc, "TrackDuration")?.let(::upnpTimeMs)?.takeIf { it > 0 },
+      trackUri = firstText(doc, "TrackURI"),
     )
   }
 
