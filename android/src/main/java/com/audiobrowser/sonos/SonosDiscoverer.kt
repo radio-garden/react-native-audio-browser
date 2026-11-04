@@ -58,7 +58,7 @@ internal class SonosDiscoverer(
       try {
         httpClient.newCall(Request.Builder().url(location).build()).execute().use { response ->
           if (!response.isSuccessful) return null
-          response.body.string()
+          response.speakerBody()
         }
       } catch (e: Exception) {
         Timber.w(e, "Failed to fetch Sonos device description from %s", location)

@@ -243,8 +243,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlayerError(error: PlaybackException) {
-    // The recoveries below restart the local engine; a receiver's error is the app's to see.
-    if (player.isPlayingLocally && recoverLocally(error)) return
+    // Only the local engine raises the errors these recover from.
+    if (recoverLocally(error)) return
     surface(error)
   }
 

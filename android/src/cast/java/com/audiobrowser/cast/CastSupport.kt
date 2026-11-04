@@ -1,10 +1,6 @@
 package com.audiobrowser.cast
 
-import com.audiobrowser.remote.RemoteMedia
-import com.audiobrowser.remote.RemoteMediaResolutions
-import com.audiobrowser.remote.RemotePlayback
 import android.content.Context
-import androidx.core.net.toUri
 import androidx.media3.cast.Cast
 import androidx.media3.cast.CastParams
 import androidx.media3.cast.DefaultMediaItemConverter
@@ -12,8 +8,8 @@ import androidx.media3.cast.MediaItemConverter
 import androidx.media3.cast.RemoteCastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
+import com.audiobrowser.remote.RemotePlayback
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaQueueItem
 import com.google.android.gms.cast.MediaStatus
@@ -35,7 +31,7 @@ internal val castRouteCategory: String? =
  * Starts Cast with the Default Media Receiver and builds its remote player, or returns null on a
  * device without Google Play services.
  */
-internal fun createCastRemote(context: Context, resolutions: RemoteMediaResolutions): RemotePlayback? {
+internal fun createCastRemote(context: Context): RemotePlayback? {
   val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
   if (availability != ConnectionResult.SUCCESS) {
     Timber.w("Cast: Google Play services unavailable (%d), playing locally only", availability)
@@ -45,36 +41,39 @@ internal fun createCastRemote(context: Context, resolutions: RemoteMediaResoluti
     .initialize(CastParams.Builder().setReceiverApplicationId(RECEIVER_APPLICATION_ID).build())
   val player =
     RemoteCastPlayer.Builder(context)
-      .setMediaItemConverter(ResolvingMediaItemConverter(resolutions))
+      .setMediaItemConverter(SendingMediaItemConverter())
       .build()
   return SdkCastRemote(Cast.getSingletonInstance(context), player)
 }
 
 private class SdkCastRemote(private val cast: Cast, override val player: RemoteCastPlayer) :
   RemotePlayback {
-  private var errorListener: ((PlaybackException) -> Unit)? = null
+  private var listener: RemotePlayback.Listener? = null
   private var client: RemoteMediaClient? = null
 
-  // Whether the receiver's last status was a failure, so each failure is reported once.
-  private var failed = false
+  // The receiver's last idle reason, so each end and each failure is reported once.
+  private var idleReason = MediaStatus.IDLE_REASON_NONE
 
   private val statusCallback =
     object : RemoteMediaClient.Callback() {
       override fun onStatusUpdated() {
         val status = client?.mediaStatus ?: return
-        val failing =
-          status.playerState == MediaStatus.PLAYER_STATE_IDLE &&
-            status.idleReason == MediaStatus.IDLE_REASON_ERROR
-        if (failing && !failed) {
-          errorListener?.invoke(
-            PlaybackException(
-              "The Cast receiver failed to play the media",
-              null,
-              PlaybackException.ERROR_CODE_REMOTE_ERROR,
+        val reason =
+          if (status.playerState == MediaStatus.PLAYER_STATE_IDLE) status.idleReason
+          else MediaStatus.IDLE_REASON_NONE
+        if (reason == idleReason) return
+        idleReason = reason
+        when (reason) {
+          MediaStatus.IDLE_REASON_FINISHED -> listener?.onEnded()
+          MediaStatus.IDLE_REASON_ERROR ->
+            listener?.onFailed(
+              PlaybackException(
+                "The Cast receiver failed to play the media",
+                null,
+                PlaybackException.ERROR_CODE_REMOTE_ERROR,
+              )
             )
-          )
         }
-        failed = failing
       }
     }
 
@@ -105,7 +104,7 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   }
 
   private fun watch(session: CastSession?) {
-    failed = false
+    idleReason = MediaStatus.IDLE_REASON_NONE
     client?.unregisterCallback(statusCallback)
     client = session?.remoteMediaClient
     client?.registerCallback(statusCallback)
@@ -113,20 +112,17 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   override val isSessionAvailable: Boolean
     get() = player.isCastSessionAvailable
 
-  override fun setSessionListener(listener: (() -> Unit)?) {
+  override fun setListener(listener: RemotePlayback.Listener?) {
+    this.listener = listener
     player.setSessionAvailabilityListener(
       listener?.let {
         object : SessionAvailabilityListener {
-          override fun onCastSessionAvailable() = it()
+          override fun onCastSessionAvailable() = it.onSessionChanged()
 
-          override fun onCastSessionUnavailable() = it()
+          override fun onCastSessionUnavailable() = it.onSessionChanged()
         }
       }
     )
-  }
-
-  override fun setErrorListener(listener: ((PlaybackException) -> Unit)?) {
-    errorListener = listener
   }
 
   override fun release() {
@@ -137,43 +133,18 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
 }
 
 /**
- * Sends each item as its [RemoteMedia]: the resolved URL and MIME type, artwork the receiver can
- * fetch, and live items as live streams. An item without one goes as it is.
+ * Sends each item as it is, with a content id of its own: Media3's timeline tracker keys what it was
+ * sent by content id, and forgets an id when an item with it leaves the receiver's queue, so a
+ * station sent again would be forgotten with the last and show as an empty item.
  */
-private class ResolvingMediaItemConverter(private val resolutions: RemoteMediaResolutions) :
-  MediaItemConverter {
+internal class SendingMediaItemConverter : MediaItemConverter {
   private val default = DefaultMediaItemConverter()
-
-  // Media3's timeline tracker keys what it was sent by content id, and forgets an id when an item
-  // with it leaves the receiver's queue: a station sent again in the next queue would be forgotten
-  // with the old one, and then show as an empty item. Each send gets a content id of its own.
   private var sends = 0L
 
-  override fun toMediaQueueItem(mediaItem: MediaItem): MediaQueueItem {
-    val contentId = "${mediaItem.mediaId}$SEND_SEPARATOR${sends++}"
-    val media =
-      resolutions[mediaItem]
-        ?: return default.toMediaQueueItem(mediaItem.buildUpon().setMediaId(contentId).build())
-    val artwork =
-      media.artworkUrl?.toUri()
-        ?: mediaItem.mediaMetadata.artworkUri?.takeIf { it.scheme == "http" || it.scheme == "https" }
-    val metadata =
-      mediaItem.mediaMetadata
-        .buildUpon()
-        .setArtworkUri(artwork)
-        .apply { if (media.live) setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION) }
-        .build()
-    val item =
-      mediaItem
-        .buildUpon()
-        .setMediaId(contentId)
-        .setUri(media.url)
-        .setMimeType(media.contentType)
-        .setMediaMetadata(metadata)
-        .apply { if (media.live) setLiveConfiguration(LIVE) }
-        .build()
-    return default.toMediaQueueItem(item)
-  }
+  override fun toMediaQueueItem(mediaItem: MediaItem): MediaQueueItem =
+    default.toMediaQueueItem(
+      mediaItem.buildUpon().setMediaId("${mediaItem.mediaId}$SEND_SEPARATOR${sends++}").build()
+    )
 
   /**
    * The receiver's item as a media item, or [MediaItem.EMPTY] for one it reports without its media
@@ -194,10 +165,5 @@ private class ResolvingMediaItemConverter(private val resolutions: RemoteMediaRe
 
   private companion object {
     const val SEND_SEPARATOR = "#cast-send-"
-
-    // Any configuration other than UNSET makes the converter send STREAM_TYPE_LIVE; this one also
-    // asks for no speed adjustment.
-    val LIVE: MediaItem.LiveConfiguration =
-      MediaItem.LiveConfiguration.Builder().setMinPlaybackSpeed(1f).setMaxPlaybackSpeed(1f).build()
   }
 }

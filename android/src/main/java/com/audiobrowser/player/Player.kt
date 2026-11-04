@@ -21,16 +21,14 @@ import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.browser.unattributedArtworkSource
-import com.audiobrowser.cast.castContentType
 import com.audiobrowser.cast.createCastRemote
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.remote.RemoteMedia
-import com.audiobrowser.remote.RemoteMediaResolutions
+import com.audiobrowser.remote.RemoteOutputsController
 import com.audiobrowser.remote.RemotePlayback
-import com.audiobrowser.remote.RemoteSwitchingPlayer
+import com.audiobrowser.remote.RemoteUrls
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
 import com.audiobrowser.util.ArtworkUris
@@ -64,20 +62,25 @@ import com.margelo.nitro.audiobrowser.Track
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
-class Player(internal val context: Context) {
+class Player
+internal constructor(
+  internal val context: Context,
+  castRemote: (Context) -> RemotePlayback?,
+  sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+) {
+  constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
+
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
 
@@ -105,8 +108,9 @@ class Player(internal val context: Context) {
 
   /**
    * What plays: [exoPlayer], or while a remote output is on, the [RemoteSwitchingPlayer] around it.
-   * Every playback read and command goes here; only local-only work (retry, stuck recovery,
-   * buffering, the equalizer, the volume fade) touches [exoPlayer].
+   * Every playback read and command goes here; local-only work (retry, stuck recovery, buffering,
+   * the equalizer, the volume fade) goes to [exoPlayer], or to [localEngine] where it would disturb
+   * a remote.
    */
   lateinit var sessionPlayer: MediaPlayer
     private set
@@ -114,21 +118,15 @@ class Player(internal val context: Context) {
   /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
   lateinit var forwardingPlayer: MediaPlayer
 
-  private var remotePlayer: RemoteSwitchingPlayer? = null
-  private val remoteResolutions = RemoteMediaResolutions()
+  private val remoteOutputs =
+    RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
 
-  /** Builds the Cast session's remote player; replaced in tests. */
-  internal var castRemoteFactory: (Context, RemoteMediaResolutions) -> RemotePlayback? =
-    ::createCastRemote
+  /** Whether a remote output plays, in place of [exoPlayer]. */
+  internal val isRemote: Boolean
+    get() = remoteOutputs.player?.isRemote == true
 
-  /** Builds the selected Sonos room's remote player; replaced in tests. */
-  internal var sonosRemoteFactory: (RemoteMediaResolutions, CoroutineScope) -> RemotePlayback =
-    { resolutions, scope ->
-      SonosRemote(context, resolutions, scope)
-    }
-
-  internal val isPlayingLocally: Boolean
-    get() = remotePlayer?.isRemote != true
+  private val localEngine: ExoPlayer?
+    get() = exoPlayer.takeIf { !isRemote }
 
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
@@ -356,18 +354,11 @@ class Player(internal val context: Context) {
       if (sessionPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0
       else sessionPlayer.bufferedPosition
 
-  /** The local volume, or while casting, the receiver's, both from 0 to 1. */
+  /** The volume, from 0 to 1: the local engine's, or while remote, the receiver's. */
   var volume: Float
-    get() =
-      if (isPlayingLocally) exoPlayer.volume
-      else
-        sessionPlayer.deviceVolume.toFloat() / sessionPlayer.deviceInfo.maxVolume.coerceAtLeast(1)
+    get() = sessionPlayer.volume
     set(value) {
-      if (isPlayingLocally) {
-        exoPlayer.volume = value
-      } else {
-        sessionPlayer.setDeviceVolume((value * sessionPlayer.deviceInfo.maxVolume).roundToInt(), 0)
-      }
+      sessionPlayer.volume = value
     }
 
   var playbackSpeed: Float
@@ -475,7 +466,7 @@ class Player(internal val context: Context) {
       buildEngine(setupOptions)
       engineOptions = newEngineOptions
     }
-    setRemoteOutputs(cast = setupOptions.cast, sonos = setupOptions.sonos)
+    if (remoteOutputs.apply(setupOptions.remoteOutputs, exoPlayer)) attachSessionPlayer()
   }
 
   private fun buildEngine(setupOptions: PlayerSetupOptions) {
@@ -531,7 +522,7 @@ class Player(internal val context: Context) {
     exoPlayer = engine.exoPlayer
     // Before the listener and the session are attached, so neither hears the playback replayed.
     carried?.restoreTo(exoPlayer)
-    remotePlayer?.setLocal(exoPlayer)
+    remoteOutputs.setLocal(exoPlayer)
     keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
 
     if (isInitialSetup) playerListener = PlayerListener(this)
@@ -540,8 +531,8 @@ class Player(internal val context: Context) {
     if (isInitialSetup) {
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
       equalizer.initialize(exoPlayer.audioSessionId)
-    } else if (isPlayingLocally) {
-      // No listener heard the restore; its prepare() leaves the engine buffering. While casting,
+    } else if (localEngine != null) {
+      // No listener heard the restore; its prepare() leaves the engine buffering. While remote,
       // the receiver plays on unchanged.
       setPlaybackState(
         if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
@@ -565,65 +556,22 @@ class Player(internal val context: Context) {
    */
   private fun attachSessionPlayer() {
     if (::forwardingPlayer.isInitialized) forwardingPlayer.removeListener(playerListener)
-    sessionPlayer = remotePlayer ?: exoPlayer
+    sessionPlayer = remoteOutputs.player ?: exoPlayer
     forwardingPlayer =
       InterceptingPlayer(sessionPlayer, { callbacks }, { options }, keepSessionAliveOnError)
     forwardingPlayer.addListener(playerListener)
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
   }
 
-  private var castRequested = false
-  private var sonosRequested = false
-  private val remoteScope = MainScope()
-
   /**
-   * Starts or stops moving playback to the remote outputs selected in the Output Switcher: a Cast
-   * device with [cast], a Sonos room with [sonos]. Turning one off while it plays brings playback
-   * back here. Cast stays off where it is unavailable.
+   * The URLs a receiver fetches for [track]: through the media transform, which can call into JS.
    */
-  private fun setRemoteOutputs(cast: Boolean, sonos: Boolean) {
-    if (cast == castRequested && sonos == sonosRequested) return
-    castRequested = cast
-    sonosRequested = sonos
-    remotePlayer?.release()
-    remoteResolutions.clear()
-    val remotes =
-      listOfNotNull(
-        if (cast) castRemoteFactory(context, remoteResolutions) else null,
-        if (sonos) sonosRemoteFactory(remoteResolutions, remoteScope) else null,
-      )
-    remotePlayer =
-      if (remotes.isEmpty()) null
-      else
-        RemoteSwitchingPlayer(
-          exoPlayer,
-          remotes,
-          remoteResolutions,
-          ::resolveRemoteMedia,
-          remoteScope,
-        )
-    attachSessionPlayer()
-  }
-
-  /**
-   * What the receiver loads for [item]: its track's media URL through the media transform, without
-   * its headers, and its artwork. Null for an item without a track.
-   */
-  private suspend fun resolveRemoteMedia(item: MediaItem): RemoteMedia? {
-    val track = item.localConfiguration?.tag as? Track ?: return null
-    val src = track.src ?: return null
+  private suspend fun resolveRemoteUrls(track: Track): RemoteUrls {
+    val src = checkNotNull(track.src) { "The track has no src" }
     val browserManager = browser?.browserManager
-    // The transform can call into JS, which blocks the calling thread.
-    val (url, artworkUrl) =
-      withContext(Dispatchers.IO) {
-        val url = browserManager?.resolveMediaUrl(src, track)?.url() ?: src
-        url to browserManager?.resolveArtworkUrl(track)?.uri
-      }
-    return RemoteMedia(
-      url = url,
-      contentType = castContentType(url, item.localConfiguration?.mimeType),
-      artworkUrl = artworkUrl?.takeIf { it.startsWith("http://") || it.startsWith("https://") },
-      live = track.live == true,
+    return RemoteUrls(
+      url = browserManager?.resolveMediaUrl(src, track)?.url() ?: src,
+      artworkUrl = browserManager?.resolveArtworkUrl(track)?.uri,
     )
   }
 
@@ -662,8 +610,8 @@ class Player(internal val context: Context) {
         Timber.d("Network restored with pending retry, triggering immediate retry")
         pendingNetworkRetry = false
         // Only while the play intent holds, and only locally: a receiver reconnects by itself.
-        if (playWhenReadyCache && isPlayingLocally) {
-          exoPlayer.prepare()
+        if (playWhenReadyCache) {
+          localEngine?.prepare()
         }
       }
     }
@@ -813,9 +761,9 @@ class Player(internal val context: Context) {
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
-    // The order is the local engine's; a receiver shuffles by its own.
-    if (mediaItems.isNotEmpty() && isPlayingLocally) {
-      exoPlayer.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
+    // While remote, the queue plays in list order.
+    if (mediaItems.isNotEmpty()) {
+      localEngine?.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
     }
     queueSourcePath = sourcePath
     sessionPlayer.prepare()
@@ -1115,16 +1063,17 @@ class Player(internal val context: Context) {
    */
   fun seekToLiveEdge() {
     if (currentTrack?.live != true) return
-    // A receiver reconnects a live stream itself on a seek to its default position.
-    if (!isPlayingLocally || exoPlayer.isCurrentMediaItemLive) {
+    // A receiver loads a live stream again on a seek to its default position.
+    val engine = localEngine
+    if (engine == null || engine.isCurrentMediaItemLive) {
       sessionPlayer.seekToDefaultPosition()
       return
     }
     // ExoPlayer.prepare() only re-prepares from STATE_IDLE, hence the raw stop() — not
     // Player.stop(), which would drop the play intent this reconnect must preserve.
-    exoPlayer.stop()
-    exoPlayer.seekToDefaultPosition()
-    exoPlayer.prepare()
+    engine.stop()
+    engine.seekToDefaultPosition()
+    engine.prepare()
   }
 
   /**
@@ -1230,9 +1179,7 @@ class Player(internal val context: Context) {
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null
-    remotePlayer?.release()
-    remotePlayer = null
-    remoteScope.cancel()
+    remoteOutputs.release()
     exoPlayer.release()
     cache?.release()
     cache = null

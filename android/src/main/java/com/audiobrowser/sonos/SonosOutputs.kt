@@ -5,12 +5,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.annotation.MainThread
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import timber.log.Timber
 
 /**
  * Sonos rooms as remote outputs, over UPnP: whether the system may bind
- * [SonosRouteProviderService], and the room selected in the Output Switcher.
+ * [SonosRouteProviderService], the room selected in the Output Switcher, and its volume. While a
+ * session plays on the room, its volume goes through that session, which reads it back; the route
+ * provider shows it.
  */
 internal object SonosOutputs {
   /**
@@ -25,6 +28,11 @@ internal object SonosOutputs {
     private set
 
   private val listeners = CopyOnWriteArraySet<() -> Unit>()
+  private val volumeListeners = CopyOnWriteArraySet<() -> Unit>()
+  private val volumes = ConcurrentHashMap<String, Int>()
+
+  // The session playing on a room, by room id, and how it sets the room's volume.
+  private var session: Pair<String, (Int) -> Unit>? = null
 
   /**
    * Enables or disables the provider service. The component state persists, so the system can bind
@@ -57,6 +65,44 @@ internal object SonosOutputs {
 
   fun removeListener(listener: () -> Unit) {
     listeners.remove(listener)
+  }
+
+  /** [roomId]'s volume as last read or set, from 0 to 100, or null before either. */
+  fun volumeOf(roomId: String): Int? = volumes[roomId]
+
+  /** Records [roomId]'s volume as read or set, and tells the volume listeners. */
+  @MainThread
+  fun reportVolume(roomId: String, volume: Int) {
+    if (volumes.put(roomId, volume) == volume) return
+    volumeListeners.forEach { it() }
+  }
+
+  /** Calls [listener] on the main thread whenever a room's volume changes. */
+  fun addVolumeListener(listener: () -> Unit) {
+    volumeListeners.add(listener)
+  }
+
+  fun removeVolumeListener(listener: () -> Unit) {
+    volumeListeners.remove(listener)
+  }
+
+  /** While a session plays on [roomId], [setVolume] sets its volume; null when it ends. */
+  @MainThread
+  fun setSession(roomId: String, setVolume: ((Int) -> Unit)?) {
+    if (setVolume != null) session = roomId to setVolume
+    else if (session?.first == roomId) session = null
+  }
+
+  /** Whether a session plays on [roomId]. */
+  fun hasSession(roomId: String): Boolean = session?.first == roomId
+
+  /** Sets [roomId]'s volume through the session playing there: false when none does. */
+  @MainThread
+  fun setVolumeThroughSession(roomId: String, volume: Int): Boolean {
+    val (id, setVolume) = session ?: return false
+    if (id != roomId) return false
+    setVolume(volume)
+    return true
   }
 
   internal fun canHoldMulticastLock(context: Context) =

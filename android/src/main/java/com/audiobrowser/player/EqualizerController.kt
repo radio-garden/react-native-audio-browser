@@ -54,7 +54,7 @@ internal class EqualizerController(
 
   /**
    * Reacts to an audio session change: a no-op for the same session, otherwise a fresh effect that
-   * picks up the outgoing one's settings. An unset session (playback moved to a Cast receiver)
+   * picks up the outgoing one's settings. An unset session (playback moved to a remote output)
    * keeps the effect on the local session, where it applies again on the way back; an effect on
    * session 0 would equalize the whole device's output instead.
    */

@@ -1,7 +1,5 @@
 package com.audiobrowser.sonos
 
-import java.io.ByteArrayInputStream
-import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Document
 
 /** A parsed UPnP SOAP fault (the `<UPnPError>` detail). */
@@ -97,14 +95,7 @@ internal object SoapResponseParser {
     return false
   }
 
-  private fun parse(xml: String): Document? =
-    runCatching {
-        DocumentBuilderFactory.newInstance()
-          .apply { isNamespaceAware = false }
-          .newDocumentBuilder()
-          .parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-      }
-      .getOrNull()
+  private fun parse(xml: String): Document? = parseSpeakerXml(xml)
 
   private fun firstText(doc: Document, tag: String): String? {
     val nodes = doc.getElementsByTagName(tag)

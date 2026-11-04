@@ -1,9 +1,8 @@
 package com.audiobrowser.remote
 
 import android.os.Looper
-import androidx.media3.common.DeviceInfo
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import kotlinx.coroutines.CompletableDeferred
@@ -13,7 +12,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,12 +22,12 @@ import org.robolectric.Shadows.shadowOf
 class RemoteSwitchingPlayerTest {
   private val looper = Looper.getMainLooper()
   private val scope = MainScope()
-  private val local = FakePlayer(looper, DeviceInfo.UNKNOWN)
+  private val local = FakeLocalPlayer(looper)
   private val remote = FakeRemote(looper)
   private val other = FakeRemote(looper)
-  private val resolutions = RemoteMediaResolutions()
   private val resolved = mutableListOf<String>()
   private val live = mutableSetOf<String>()
+  private val unresolvable = mutableSetOf<String>()
 
   /** Holds a resolution until completed, for the steps that must wait on one. */
   private var gate: CompletableDeferred<Unit>? = null
@@ -38,11 +36,11 @@ class RemoteSwitchingPlayerTest {
     RemoteSwitchingPlayer(
       local,
       listOf(remote, other),
-      resolutions,
-      resolveMedia = { item ->
+      resolve = { item ->
         gate?.await()
+        check(item.mediaId !in unresolvable) { "no URL" }
         resolved += item.mediaId
-        RemoteMedia("https://cdn.example/${item.mediaId}", "audio/mpeg", null, item.mediaId in live)
+        remoteItemOf(item, "https://cdn.example/${item.mediaId}", null, item.mediaId in live)
       },
       scope = scope,
     )
@@ -50,24 +48,27 @@ class RemoteSwitchingPlayerTest {
   @After fun cancel() = scope.cancel()
 
   @Test
-  fun `a session takes the queue, its position and the play intent to the receiver`() {
+  fun `a session takes the current item to the receiver at its position and play intent`() {
     playLocally(listOf("a", "b", "c"), index = 1, positionMs = 5_000)
 
     remote.startSession()
     idle()
 
     assertTrue(player.isRemote)
-    assertEquals(listOf("a", "b", "c"), remote.player.items.map { it.mediaId })
-    assertEquals(1, remote.player.index)
-    assertEquals(5_000, remote.player.positionMs)
-    assertTrue(remote.player.playWhenReady)
-    assertEquals(listOf("a", "b", "c"), resolved)
+    assertEquals(listOf(Triple("b", 5_000L, true)), remote.player.loads.map { it.short() })
+    assertEquals(
+      "https://cdn.example/b",
+      remote.player.loads.single().item.localConfiguration?.uri.toString(),
+    )
+    assertEquals(listOf("b"), resolved)
     assertEquals(1, local.stops)
+    assertEquals(listOf("a", "b", "c"), queue())
     assertEquals(1, player.currentMediaItemIndex)
+    assertEquals("b", player.currentMediaItem?.mediaId)
   }
 
   @Test
-  fun `the phone plays on until the receiver's media is resolved`() {
+  fun `the phone plays on until the receiver's item is resolved`() {
     playLocally(listOf("a"))
     gate = CompletableDeferred()
 
@@ -76,11 +77,26 @@ class RemoteSwitchingPlayerTest {
 
     assertFalse(player.isRemote)
     assertEquals(0, local.stops)
-    assertTrue(remote.player.items.isEmpty())
+    assertTrue(remote.player.loads.isEmpty())
 
     gate!!.complete(Unit)
     idle()
     assertTrue(player.isRemote)
+  }
+
+  @Test
+  fun `an item the phone moves on to while resolving is the one handed over`() {
+    playLocally(listOf("a", "b"))
+    gate = CompletableDeferred()
+    remote.startSession()
+    idle()
+
+    local.moveTo(1)
+    gate!!.complete(Unit)
+    idle()
+
+    assertEquals(listOf("b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(1, player.currentMediaItemIndex)
   }
 
   @Test
@@ -91,7 +107,23 @@ class RemoteSwitchingPlayerTest {
     remote.startSession()
     idle()
 
-    assertEquals(0, remote.player.positionMs)
+    assertEquals(C.TIME_UNSET, remote.player.loads.single().positionMs)
+  }
+
+  @Test
+  fun `an unprepared queue goes over unloaded, and prepare loads it at its position`() {
+    local.setMediaItems(items("a"), 0, 3_000)
+    idle()
+
+    remote.startSession()
+    idle()
+    assertTrue(player.isRemote)
+    assertTrue(remote.player.loads.isEmpty())
+    assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
+
+    player.prepare()
+    idle()
+    assertEquals(3_000, remote.player.loads.single().positionMs)
   }
 
   @Test
@@ -99,9 +131,9 @@ class RemoteSwitchingPlayerTest {
     playLocally(listOf("a", "b"))
     remote.startSession()
     idle()
-    remote.player.index = 1
-    remote.player.positionMs = 7_000
-    remote.player.update()
+    val receiver = remote.player
+    receiver.positionMs = 7_000
+    receiver.update()
     idle()
 
     remote.endSession()
@@ -109,464 +141,354 @@ class RemoteSwitchingPlayerTest {
 
     assertFalse(player.isRemote)
     assertEquals(listOf("a", "b"), local.items.map { it.mediaId })
-    assertEquals(1, local.index)
+    assertEquals(0, local.index)
     assertEquals(7_000, local.positionMs)
     assertTrue(local.playWhenReady)
-    assertEquals(MediaPlayer.STATE_READY, local.playbackState)
+    assertEquals(2, local.prepares)
+    assertEquals(1, receiver.stops)
   }
 
   @Test
-  fun `a session ending before the media is resolved leaves playback here`() {
-    playLocally(listOf("a"))
-    gate = CompletableDeferred()
+  fun `the receiver's end plays the next item from its start`() {
+    playLocally(listOf("a", "b"), positionMs = 4_000)
     remote.startSession()
     idle()
 
-    remote.endSession()
-    gate!!.complete(Unit)
+    remote.end()
     idle()
 
-    assertFalse(player.isRemote)
-    assertEquals(0, local.stops)
-    assertTrue(remote.player.sent.isEmpty())
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(C.TIME_UNSET, remote.player.loads.last().positionMs)
+    assertEquals(1, player.currentMediaItemIndex)
   }
 
   @Test
-  fun `a now-playing restamp while casting does not reload the receiver`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    val sent = remote.player.sent.size
-
-    player.replaceMediaItem(0, item("a", title = "Song – Artist"))
-    idle()
-
-    assertEquals(sent, remote.player.sent.size)
-    assertEquals("Song – Artist", player.currentMediaItem?.mediaMetadata?.title)
-  }
-
-  @Test
-  fun `a restamp of a new queue still resolving does not reach the receiver`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-
-    player.setMediaItems(listOf(item("b")))
-    val transitions = mutableListOf<Int>()
-    player.addListener(
-      object : MediaPlayer.Listener {
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-          transitions += reason
-        }
-      }
-    )
-    player.replaceMediaItem(0, item("b", title = "Song – Artist"))
-    idle()
-    assertEquals(emptyList<Int>(), transitions)
-    gate!!.complete(Unit)
-    idle()
-
-    assertEquals(
-      listOf(listOf("b")),
-      remote.player.sent.drop(1).map { items -> items.map { it.mediaId } },
-    )
-    assertEquals("Song – Artist", player.currentMediaItem?.mediaMetadata?.title)
-  }
-
-  @Test
-  fun `items the receiver reports without their data show as sent`() {
-    playLocally(listOf("a", "b", "c", "d"))
-    remote.startSession()
-    idle()
-
-    remote.player.forget(0)
-    remote.player.forget(3)
-    idle()
-
-    assertEquals(
-      listOf("tag-a", "tag-b", "tag-c", "tag-d"),
-      (0 until player.mediaItemCount).map { player.getMediaItemAt(it).localConfiguration?.tag },
-    )
-  }
-
-  @Test
-  fun `an earlier queue's item the receiver reports shows as the item sent`() {
-    playLocally(listOf("a", "b"))
-    remote.startSession()
-    idle()
-
-    remote.player.report(0, item("old"))
-    idle()
-
-    assertEquals("a", player.getMediaItemAt(0).mediaId)
-  }
-
-  @Test
-  fun `an item the receiver reports without its tag shows as it was sent`() {
-    playLocally(listOf("a", "b"))
-    remote.startSession()
-    idle()
-
-    remote.player.rebuildWithoutTag(1)
-    idle()
-
-    assertEquals("tag-b", player.getMediaItemAt(1).localConfiguration?.tag)
-  }
-
-  @Test
-  fun `a restamp made while casting comes back with the queue`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    player.replaceMediaItem(0, item("a", title = "Song – Artist"))
-    idle()
-
-    remote.endSession()
-    idle()
-
-    assertEquals("Song – Artist", local.items.single().mediaMetadata.title)
-  }
-
-  @Test
-  fun `queue changes while casting reach the receiver resolved and in order`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-
-    player.addMediaItem(item("b"))
-    player.removeMediaItem(0)
-    idle()
-    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
-
-    gate!!.complete(Unit)
-    idle()
-    assertEquals(listOf("b"), remote.player.items.map { it.mediaId })
-    assertTrue(item("b") in resolutions)
-  }
-
-  @Test
-  fun `a new local engine keeps the session`() {
+  fun `the last item's end ends playback`() {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
 
-    val engine = FakePlayer(looper, DeviceInfo.UNKNOWN)
-    player.setLocal(engine)
+    remote.end()
     idle()
-    assertTrue(player.isRemote)
-    assertFalse(remote.released)
 
-    remote.endSession()
-    idle()
-    assertSame(engine, player.local)
-    assertEquals(listOf("a"), engine.items.map { it.mediaId })
+    assertEquals(MediaPlayer.STATE_ENDED, player.playbackState)
+    assertEquals(1, remote.player.loads.size)
   }
 
   @Test
-  fun `release brings playback back and lets the remote go`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-
-    player.release()
-    idle()
-
-    assertTrue(remote.released)
-    assertEquals(listOf("a"), local.items.map { it.mediaId })
-    assertTrue(local.playWhenReady)
-  }
-
-  @Test
-  fun `a receiver's failure is the player error until prepare loads the queue again`() {
+  fun `repeat one plays the item again, and repeat all goes back to the first`() {
     playLocally(listOf("a", "b"), index = 1)
     remote.startSession()
     idle()
-    val sent = remote.player.sent.size
 
+    player.repeatMode = MediaPlayer.REPEAT_MODE_ONE
+    remote.end()
+    idle()
+    player.repeatMode = MediaPlayer.REPEAT_MODE_ALL
+    remote.end()
+    idle()
+
+    assertEquals(listOf("b", "b", "a"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(MediaPlayer.REPEAT_MODE_ALL, player.repeatMode)
+  }
+
+  @Test
+  fun `repeat and shuffle go over and come back`() {
+    playLocally(listOf("a", "b"))
+    local.repeatMode = MediaPlayer.REPEAT_MODE_ALL
+    local.shuffleModeEnabled = true
+    idle()
+
+    remote.startSession()
+    idle()
+    assertEquals(MediaPlayer.REPEAT_MODE_ALL, player.repeatMode)
+    assertTrue(player.shuffleModeEnabled)
+
+    player.shuffleModeEnabled = false
+    player.repeatMode = MediaPlayer.REPEAT_MODE_ONE
+    remote.endSession()
+    idle()
+
+    assertFalse(local.shuffleModeEnabled)
+    assertEquals(MediaPlayer.REPEAT_MODE_ONE, local.repeatMode)
+  }
+
+  @Test
+  fun `edits that leave the current item in place don't reload the receiver`() {
+    playLocally(listOf("a", "b", "c"), index = 1)
+    remote.startSession()
+    idle()
+
+    player.addMediaItems(0, items("x"))
+    player.removeMediaItem(3)
+    player.moveMediaItem(0, 2)
+    player.replaceMediaItem(0, item("a").buildUpon().setMediaMetadata(titled("now")).build())
+    idle()
+
+    assertEquals(1, remote.player.loads.size)
+    assertEquals(listOf("a", "b", "x"), queue())
+    assertEquals("b", player.currentMediaItem?.mediaId)
+    assertEquals(MediaPlayer.STATE_READY, player.playbackState)
+  }
+
+  @Test
+  fun `a metadata restamp of the current item doesn't reload the receiver`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    player.replaceMediaItem(0, item("a").buildUpon().setMediaMetadata(titled("now")).build())
+    idle()
+
+    assertEquals(1, remote.player.loads.size)
+    assertEquals("now", player.currentMediaItem?.mediaMetadata?.title)
+  }
+
+  @Test
+  fun `removing the current item plays the one in its place`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+
+    player.removeMediaItem(0)
+    idle()
+
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+  }
+
+  @Test
+  fun `a new queue plays its start item from its start position`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    player.setMediaItems(items("x", "y"), 1, 2_000)
+    idle()
+
+    assertEquals(Triple("y", 2_000L, true), remote.player.loads.last().short())
+    assertEquals(listOf("x", "y"), queue())
+  }
+
+  @Test
+  fun `a seek within the playing item seeks the receiver`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+
+    player.seekTo(30_000)
+    idle()
+
+    assertEquals(listOf(30_000L), remote.player.seeks)
+    assertEquals(1, remote.player.loads.size)
+  }
+
+  @Test
+  fun `a skip loads the next item`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+
+    player.seekToNextMediaItem()
+    idle()
+
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(1, player.currentMediaItemIndex)
+  }
+
+  @Test
+  fun `a receiver's failure is the player error until prepare loads the item again`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.positionMs = 12_000
+    remote.player.update()
     remote.fail()
     idle()
+
     assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
     assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
 
     player.prepare()
     idle()
     assertNull(player.playerError)
-    assertEquals(sent + 1, remote.player.sent.size)
-    assertEquals(listOf("a", "b"), remote.player.items.map { it.mediaId })
-    assertEquals(1, remote.player.index)
+    assertEquals(Triple("a", 12_000L, true), remote.player.loads.last().short())
   }
 
   @Test
-  fun `stop while casting pauses the receiver and keeps its queue`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-
-    player.stop()
-    idle()
-
-    assertEquals(0, remote.player.stops)
-    assertFalse(remote.player.playWhenReady)
-    assertEquals(listOf("a"), player.mediaItems())
-  }
-
-  @Test
-  fun `a change still waiting when the session ends applies once`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-
-    player.addMediaItem(item("b"))
-    idle()
-    remote.endSession()
-    gate!!.complete(Unit)
-    idle()
-
-    assertEquals(listOf("a", "b"), local.items.map { it.mediaId })
-  }
-
-  @Test
-  fun `an item added again after its removal shows as sent, not as restamped`() {
+  fun `an item that doesn't resolve is the player error`() {
+    unresolvable += "b"
     playLocally(listOf("a", "b"))
     remote.startSession()
     idle()
-    player.replaceMediaItem(1, item("b", title = "old song"))
-    player.removeMediaItem(1)
+
+    player.seekToNextMediaItem()
     idle()
 
-    player.addMediaItem(item("b", title = "b"))
-    idle()
-
-    assertEquals("b", player.getMediaItemAt(1).mediaMetadata.title)
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+    assertEquals(1, remote.player.loads.size)
   }
 
   @Test
-  fun `a session already up is handed the queue`() {
-    val local = FakePlayer(looper, DeviceInfo.UNKNOWN)
-    local.setMediaItems(listOf(item("a")))
-    local.prepare()
-    val remote = FakeRemote(looper).apply { sessionUp() }
-
-    val player = RemoteSwitchingPlayer(local, listOf(remote), resolutions, { null }, scope)
-    idle()
-
-    assertTrue(player.isRemote)
-    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
-  }
-
-  @Test
-  fun `a skip while a new queue resolves lands on the new queue`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-    val sent = remote.player.sent.size
-
-    player.setMediaItems(listOf(item("b"), item("c"), item("d")))
-    player.seekTo(2, 0)
-    assertEquals(2, player.currentMediaItemIndex)
-    gate!!.complete(Unit)
-    idle()
-
-    assertEquals(listOf("b", "c", "d"), remote.player.items.map { it.mediaId })
-    assertEquals(2, remote.player.index)
-    assertEquals(sent + 1, remote.player.sent.size)
-  }
-
-  @Test
-  fun `the session ending while a new queue resolves hands back the new queue`() {
-    playLocally(listOf("a", "b", "c"), index = 2)
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-
-    player.setMediaItems(listOf(item("d")))
-    remote.endSession()
-    gate!!.complete(Unit)
-    idle()
-
-    assertEquals(listOf("d"), local.items.map { it.mediaId })
-    assertEquals(0, local.index)
-  }
-
-  @Test
-  fun `prepare after a failure while a new queue resolves loads it once`() {
+  fun `a pause after a failure still reaches the receiver`() {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
     remote.fail()
     idle()
-    gate = CompletableDeferred()
-    val sent = remote.player.sent.size
 
-    player.setMediaItems(listOf(item("b")))
-    player.prepare()
+    player.pause()
+    idle()
+
+    assertFalse(remote.player.playWhenReady)
+  }
+
+  @Test
+  fun `a pause while the next item resolves reaches the receiver, and the item loads paused`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    gate = CompletableDeferred()
+    player.seekToNextMediaItem()
+    idle()
+
+    player.pause()
+    idle()
+    assertFalse(remote.player.playWhenReady)
+
     gate!!.complete(Unit)
     idle()
-
-    assertEquals(
-      listOf(listOf("b")),
-      remote.player.sent.drop(sent).map { items -> items.map { it.mediaId } },
-    )
-    assertNull(player.playerError)
+    assertEquals(Triple("b", C.TIME_UNSET, false), remote.player.loads.last().short())
   }
 
   @Test
-  fun `a receiver that dropped its queue is idle, and prepare loads it again`() {
+  fun `a play while the next item resolves doesn't play the last one`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    player.pause()
+    gate = CompletableDeferred()
+    player.seekToNextMediaItem()
+    idle()
+
+    player.play()
+    idle()
+    assertFalse(remote.player.playWhenReady)
+
+    gate!!.complete(Unit)
+    idle()
+    assertEquals(Triple("b", C.TIME_UNSET, true), remote.player.loads.last().short())
+  }
+
+  @Test
+  fun `the end of an item doesn't tell the receiver to play what it holds`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    val intentsBefore = remote.player.intents.size
+
+    remote.end()
+    idle()
+
+    assertEquals(intentsBefore, remote.player.intents.size)
+    assertTrue(remote.player.loads.last().autoplay)
+  }
+
+  @Test
+  fun `stop stops the receiver, and prepare loads the item again where it was`() {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
+    remote.player.positionMs = 8_000
+    remote.player.update()
 
-    remote.player.clearMediaItems()
+    player.stop()
     idle()
+    assertEquals(1, remote.player.stops)
     assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
-    assertEquals(listOf("a"), player.mediaItems())
 
     player.prepare()
     idle()
-    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
+    assertEquals(8_000, remote.player.loads.last().positionMs)
   }
 
   @Test
-  fun `an empty queue while casting stops the receiver`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-
-    player.setMediaItems(emptyList())
-    idle()
-
-    assertEquals(1, remote.player.stops)
-    assertEquals(0, player.mediaItemCount)
-  }
-
-  @Test
-  fun `the handover never shows an empty queue`() {
-    playLocally(listOf("a", "b"))
-    val counts = mutableListOf<Int>()
-    player.addListener(
-      object : MediaPlayer.Listener {
-        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
-          counts += timeline.windowCount
-        }
-      }
-    )
-
-    remote.startSession()
-    idle()
-
-    assertTrue(player.isRemote)
-    assertFalse(0 in counts)
-  }
-
-  @Test
-  fun `queue commands stay available while the receiver's own lag`() {
-    playLocally(listOf("a", "b"))
-    remote.player.commands =
-      MediaPlayer.Commands.Builder()
-        .addAllCommands()
-        .removeAll(
-          MediaPlayer.COMMAND_SEEK_TO_NEXT,
-          MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
-          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-        )
-        .build()
-    remote.startSession()
-    idle()
-
-    assertTrue(player.isCommandAvailable(MediaPlayer.COMMAND_SEEK_TO_NEXT))
-    player.seekToNext()
-    idle()
-    assertEquals(1, remote.player.index)
-  }
-
-  @Test
-  fun `a pause from another sender holds through a handback`() {
+  fun `a pause from elsewhere is the play intent`() {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
 
     remote.player.setIntentFromElsewhere(false)
     idle()
+
+    assertFalse(player.playWhenReady)
     remote.endSession()
     idle()
-
     assertFalse(local.playWhenReady)
   }
 
   @Test
-  fun `a load carries the play intent into the receiver's autoplay`() {
-    playLocally(listOf("a"))
-    player.playWhenReady = false
-    idle()
-
+  fun `a receiver still reporting the last item shows the sent one buffering`() {
+    playLocally(listOf("a", "b"))
     remote.startSession()
     idle()
+    remote.player.lagging = true
 
-    assertEquals(listOf(false), remote.player.intentAtLoads)
+    player.seekToNextMediaItem()
+    idle()
+
+    assertEquals("b", player.currentMediaItem?.mediaId)
+    assertEquals(MediaPlayer.STATE_BUFFERING, player.playbackState)
+
+    remote.player.catchUp()
+    idle()
+    assertEquals(MediaPlayer.STATE_READY, player.playbackState)
   }
 
   @Test
-  fun `the previous item's failure while a new queue resolves is not the new one's`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    gate = CompletableDeferred()
-
-    player.setMediaItems(listOf(item("b")))
-    remote.fail()
-    gate!!.complete(Unit)
-    idle()
-
-    assertNull(player.playerError)
-    assertEquals(listOf("b"), remote.player.items.map { it.mediaId })
-  }
-
-  @Test
-  fun `the remote with a session plays, whichever it is in the list`() {
-    playLocally(listOf("a"))
-
-    other.startSession()
-    idle()
-
-    assertTrue(player.isRemote)
-    assertEquals(listOf("a"), other.player.items.map { it.mediaId })
-    assertTrue(remote.player.items.isEmpty())
-  }
-
-  @Test
-  fun `a remote keeps playing while another starts a session`() {
+  fun `the volume is the receiver's device volume`() {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
 
-    other.startSession()
+    player.volume = 0.5f
     idle()
 
-    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
-    assertEquals(1, remote.player.sent.size)
-    assertTrue(other.player.items.isEmpty())
+    assertEquals(FakeReceiver.MAX_VOLUME / 2, remote.player.volume)
+    assertEquals(0.5f, player.volume)
   }
 
   @Test
-  fun `when the playing remote's session ends, the next one takes the queue through the phone`() {
+  fun `another remote's session moves playback straight there`() {
     playLocally(listOf("a", "b"), index = 1)
     remote.startSession()
     idle()
-    other.sessionUp()
+    remote.player.positionMs = 6_000
+    remote.player.update()
 
+    other.startSession()
     remote.endSession()
     idle()
 
-    assertEquals(listOf("a", "b"), other.player.items.map { it.mediaId })
-    assertEquals(1, other.player.index)
-    assertTrue(other.player.playWhenReady)
-    assertEquals(1, remote.player.stops)
-    assertEquals(2, local.stops)
+    assertEquals(Triple("b", 6_000L, true), other.player.loads.single().short())
+    assertEquals(1, local.stops)
+    assertEquals(1, local.prepares)
+  }
+
+  @Test
+  fun `a new session of the playing remote takes over from the last`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    val first = remote.player
+    first.positionMs = 9_000
+    first.update()
+
+    remote.startSession()
+    idle()
+
+    assertEquals(1, first.stops)
+    assertEquals(Triple("a", 9_000L, true), remote.player.loads.single().short())
+    assertTrue(player.isRemote)
   }
 
   @Test
@@ -574,6 +496,7 @@ class RemoteSwitchingPlayerTest {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
+    other.sessionUp()
 
     other.fail()
     idle()
@@ -582,40 +505,48 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
-  fun `a receiver's failure after a handback that cut a load short still reaches the app`() {
+  fun `a session ending while its handover resolves leaves the next remote to take over`() {
     playLocally(listOf("a"))
-    remote.startSession()
-    idle()
+    other.sessionUp()
     gate = CompletableDeferred()
-    player.setMediaItems(listOf(item("b")))
-    idle()
-    remote.endSession()
-    idle()
-    gate!!.complete(Unit)
-    player.stop()
-    idle()
-
     remote.startSession()
     idle()
-    remote.fail()
+
+    remote.endSession()
+    gate!!.complete(Unit)
     idle()
 
-    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+    assertEquals(1, other.player.loads.size)
+    assertTrue(player.isRemote)
   }
 
   @Test
-  fun `a session ending while its handover resolves leaves the next remote to take over`() {
+  fun `a remote turned off is released, and one that stays keeps playing`() {
     playLocally(listOf("a"))
-    gate = CompletableDeferred()
     remote.startSession()
     idle()
-    other.startSession()
-    remote.endSession()
-    gate!!.complete(Unit)
+
+    player.setRemotes(listOf(remote))
     idle()
 
-    assertTrue(remote.player.items.isEmpty())
-    assertEquals(listOf("a"), other.player.items.map { it.mediaId })
+    assertTrue(other.released)
+    assertFalse(remote.released)
+    assertTrue(player.isRemote)
+    assertEquals(1, remote.player.loads.size)
+  }
+
+  @Test
+  fun `release brings playback back and lets every remote go`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    player.release()
+    idle()
+
+    assertEquals(listOf("a"), local.items.map { it.mediaId })
+    assertTrue(remote.released)
+    assertTrue(other.released)
   }
 
   @Test
@@ -629,35 +560,27 @@ class RemoteSwitchingPlayerTest {
     gate!!.complete(Unit)
     idle()
 
-    assertTrue(remote.player.items.isEmpty())
     assertEquals(0, local.stops)
-    assertTrue(remote.released)
-  }
-
-  @Test
-  fun `release lets go of every remote`() {
-    player.release()
-
-    assertTrue(remote.released)
-    assertTrue(other.released)
+    assertTrue(remote.player.loads.isEmpty())
   }
 
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {
-    player.setMediaItems(ids.map { item(it) }, index, positionMs)
-    player.prepare()
-    player.playWhenReady = true
+    local.setMediaItems(items(*ids.toTypedArray()), index, positionMs)
+    local.playWhenReady = true
+    local.prepare()
     idle()
   }
 
-  private fun MediaPlayer.mediaItems() = (0 until mediaItemCount).map { getMediaItemAt(it).mediaId }
+  private fun queue() = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
 
-  private fun item(id: String, title: String = id) =
-    MediaItem.Builder()
-      .setMediaId(id)
-      .setUri("/listen/$id")
-      .setTag("tag-$id")
-      .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
-      .build()
+  private fun SentLoad.short() = Triple(item.mediaId, positionMs, autoplay)
+
+  private fun items(vararg ids: String) = ids.map(::item)
+
+  private fun item(id: String) = MediaItem.Builder().setMediaId(id).setUri("https://s/$id").build()
+
+  private fun titled(title: String) =
+    androidx.media3.common.MediaMetadata.Builder().setTitle(title).build()
 
   private fun idle() = shadowOf(looper).idle()
 }

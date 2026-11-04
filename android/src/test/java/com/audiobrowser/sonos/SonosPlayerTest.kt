@@ -1,6 +1,7 @@
 package com.audiobrowser.sonos
 
 import android.os.Looper
+import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -8,7 +9,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.extractor.metadata.icy.IcyInfo
-import com.audiobrowser.remote.RemoteMedia
+import com.audiobrowser.remote.remoteItemOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -82,15 +83,16 @@ class SonosPlayerTest {
   private val dispatcher = StandardTestDispatcher()
   private val scope = TestScope(dispatcher)
   private val room = FakeRoom()
-  private val resolved =
-    mapOf("a" to RemoteMedia("https://a.example/stream", "audio/mpeg", null, live = true))
   private val errors = mutableListOf<PlaybackException>()
+  private val volumes = mutableListOf<Int>()
+  private var ended = 0
   private val player =
     SonosPlayer(
       Looper.getMainLooper(),
       room,
-      mediaOf = { resolved[it.mediaId] },
+      onEnded = { ended++ },
       onError = { errors += it },
+      onVolume = { volumes += it },
       routingControllerId = { "routing-session-1" },
       scope = scope,
       io = dispatcher,
@@ -105,24 +107,27 @@ class SonosPlayerTest {
     scope.runCurrent()
   }
 
-  private fun station(id: String, uri: String = "https://$id.example/raw") =
-    MediaItem.Builder()
-      .setMediaId(id)
-      .setUri(uri)
-      .setMediaMetadata(
-        MediaMetadata.Builder()
-          .setTitle("Station $id")
-          .setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION)
-          .build()
-      )
-      .build()
+  private fun station(id: String) =
+    remoteItemOf(
+      MediaItem.Builder()
+        .setMediaId(id)
+        .setMediaMetadata(MediaMetadata.Builder().setTitle("Station $id").build())
+        .build(),
+      "https://$id.example/stream",
+      null,
+      live = true,
+    )
 
   private fun track(id: String) =
-    MediaItem.Builder()
-      .setMediaId(id)
-      .setUri("https://$id.example/track.mp3")
-      .setMediaMetadata(MediaMetadata.Builder().setTitle("Track $id").build())
-      .build()
+    remoteItemOf(
+      MediaItem.Builder()
+        .setMediaId(id)
+        .setMediaMetadata(MediaMetadata.Builder().setTitle("Track $id").build())
+        .build(),
+      "https://$id.example/track.mp3",
+      null,
+      live = false,
+    )
 
   /** Runs the commands and one poll. */
   private fun settle() {
@@ -135,15 +140,14 @@ class SonosPlayerTest {
     settle()
   }
 
-  private fun startPlaying(vararg items: MediaItem) {
-    player.setMediaItems(items.toList())
+  private fun startPlaying(item: MediaItem, positionMs: Long = C.TIME_UNSET) {
     player.playWhenReady = true
-    player.prepare()
+    player.setMediaItem(item, positionMs)
     settle()
   }
 
   @Test
-  fun `prepare loads the resolved URL of the current item and plays it`() {
+  fun `setting the item loads it on the speaker and plays it`() {
     startPlaying(station("a"))
 
     assertEquals(listOf("setUri https://a.example/stream Station a live=true", "play"), room.calls)
@@ -151,15 +155,35 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `an unresolved item loads its own URL`() {
-    startPlaying(station("b"))
+  fun `a track starts at the position it is set from`() {
+    startPlaying(track("t1"), positionMs = 90_000)
 
-    assertEquals("setUri https://b.example/raw Station b live=true", room.calls.first())
+    assertEquals(
+      listOf("setUri https://t1.example/track.mp3 Track t1 live=false", "seek 90000", "play"),
+      room.calls,
+    )
+    assertEquals(90_000, player.currentPosition)
   }
 
   @Test
-  fun `setting the items loads the current one, without playing it unless asked`() {
-    player.setMediaItems(listOf(station("a")))
+  fun `a station starts at its live edge, whatever the position it is set from`() {
+    startPlaying(station("a"), positionMs = 90_000)
+
+    assertEquals(listOf("setUri https://a.example/stream Station a live=true", "play"), room.calls)
+  }
+
+  @Test
+  fun `a start position the speaker refuses still plays the track`() {
+    room.failing = "seek 90000"
+    startPlaying(track("t1"), positionMs = 90_000)
+
+    assertEquals("play", room.calls.last())
+    assertTrue(errors.isEmpty())
+  }
+
+  @Test
+  fun `an item set paused loads without playing`() {
+    player.setMediaItem(station("a"))
     settle()
 
     assertEquals(listOf("setUri https://a.example/stream Station a live=true"), room.calls)
@@ -176,18 +200,6 @@ class SonosPlayerTest {
     settle()
 
     assertEquals(listOf("setUri https://a.example/stream Station a live=true", "play"), room.calls)
-  }
-
-  @Test
-  fun `an empty queue stops the speaker`() {
-    startPlaying(station("a"))
-    room.calls.clear()
-
-    player.setMediaItems(emptyList())
-    settle()
-
-    assertEquals(listOf("stop"), room.calls)
-    assertEquals(Player.STATE_IDLE, player.playbackState)
   }
 
   @Test
@@ -227,15 +239,14 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `skipping loads the next item on the speaker and plays it`() {
-    startPlaying(station("a"), station("b"))
+  fun `another item takes the last one's place on the speaker`() {
+    startPlaying(station("a"))
     room.calls.clear()
 
-    player.seekToNextMediaItem()
+    player.setMediaItem(station("b"))
     settle()
 
-    assertEquals(listOf("setUri https://b.example/raw Station b live=true", "play"), room.calls)
-    assertEquals(1, player.currentMediaItemIndex)
+    assertEquals(listOf("setUri https://b.example/stream Station b live=true", "play"), room.calls)
   }
 
   @Test
@@ -287,8 +298,8 @@ class SonosPlayerTest {
   }
 
   @Test
-  fun `a track that plays to its end moves on to the next one`() {
-    startPlaying(track("t1"), track("t2"))
+  fun `a track that plays to its end is reported ended`() {
+    startPlaying(track("t1"))
     room.state = "PLAYING"
     room.durationMs = 200_000
     room.positionMs = 199_500
@@ -297,32 +308,9 @@ class SonosPlayerTest {
     room.state = "STOPPED"
     poll()
 
-    assertEquals(1, player.currentMediaItemIndex)
-    assertEquals(
-      listOf("setUri https://t2.example/track.mp3 Track t2 live=false", "play"),
-      room.calls,
-    )
-  }
-
-  @Test
-  fun `with repeat all, the last finished track moves on to the first`() {
-    player.repeatMode = Player.REPEAT_MODE_ALL
-    startPlaying(track("t1"), track("t2"))
-    player.seekToNextMediaItem()
-    settle()
-    room.state = "PLAYING"
-    room.durationMs = 200_000
-    room.positionMs = 199_500
-    poll()
-    room.calls.clear()
-    room.state = "STOPPED"
-    poll()
-
-    assertEquals(0, player.currentMediaItemIndex)
-    assertEquals(
-      listOf("setUri https://t1.example/track.mp3 Track t1 live=false", "play"),
-      room.calls,
-    )
+    assertEquals(1, ended)
+    assertEquals(Player.STATE_ENDED, player.playbackState)
+    assertEquals(emptyList<String>(), room.calls)
   }
 
   @Test
@@ -339,6 +327,7 @@ class SonosPlayerTest {
     poll()
 
     assertEquals(Player.STATE_ENDED, player.playbackState)
+    assertEquals(1, ended)
   }
 
   @Test
@@ -369,7 +358,7 @@ class SonosPlayerTest {
 
   @Test
   fun `a track stopped on the speaker before its end reads as paused, not as its end`() {
-    startPlaying(track("t1"), track("t2"))
+    startPlaying(track("t1"))
     room.state = "PLAYING"
     room.durationMs = 200_000
     room.positionMs = 30_000
@@ -378,7 +367,7 @@ class SonosPlayerTest {
     room.state = "STOPPED"
     poll()
 
-    assertEquals(0, player.currentMediaItemIndex)
+    assertEquals(0, ended)
     assertFalse(player.playWhenReady)
     assertEquals(emptyList<String>(), room.calls)
   }
@@ -398,14 +387,14 @@ class SonosPlayerTest {
   @Test
   fun `a failure that a later command replaced is not reported`() {
     room.failing = "setUri https://a.example/stream Station a live=true"
-    player.setMediaItems(listOf(station("a"), station("b")))
     player.playWhenReady = true
-    player.seekToNextMediaItem()
+    player.setMediaItem(station("a"))
+    player.setMediaItem(station("b"))
     settle()
 
     assertTrue(errors.isEmpty())
     assertEquals(
-      listOf("setUri https://b.example/raw Station b live=true", "play"),
+      listOf("setUri https://b.example/stream Station b live=true", "play"),
       room.calls.takeLast(2),
     )
   }
@@ -435,7 +424,7 @@ class SonosPlayerTest {
 
   @Test
   fun `playing an item loaded paused long ago gives it the whole start time`() {
-    player.setMediaItems(listOf(station("a")))
+    player.setMediaItem(station("a"))
     settle()
     repeat(30) { poll() }
 
@@ -458,6 +447,19 @@ class SonosPlayerTest {
     settle()
 
     assertEquals(listOf("stop"), room.calls)
+  }
+
+  @Test
+  fun `after a failure, pausing still pauses the speaker`() {
+    room.failing = "play"
+    startPlaying(station("a"))
+    room.failing = null
+    room.calls.clear()
+
+    player.pause()
+    settle()
+
+    assertEquals(listOf("pause"), room.calls)
   }
 
   @Test
@@ -622,10 +624,31 @@ class SonosPlayerTest {
   }
 
   @Test
+  fun `the volume is read when the player starts, before anything loads`() {
+    assertFalse(player.isCommandAvailable(Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS))
+
+    settle()
+
+    assertEquals(20, player.deviceVolume)
+    assertEquals(listOf(20), volumes)
+    assertTrue(player.isCommandAvailable(Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS))
+  }
+
+  @Test
+  fun `a volume set before the first read is kept`() {
+    player.setDeviceVolume(5, 0)
+    settle()
+
+    assertEquals(5, player.deviceVolume)
+    assertEquals(listOf(5), volumes)
+  }
+
+  @Test
   fun `the volume is the speaker's`() {
     startPlaying(station("a"))
+    room.level = 30
     poll()
-    assertEquals(20, player.deviceVolume)
+    assertEquals(30, player.deviceVolume)
     room.calls.clear()
 
     player.setDeviceVolume(7, 0)
@@ -633,6 +656,7 @@ class SonosPlayerTest {
 
     assertEquals(listOf("setVolume 7"), room.calls)
     assertEquals(7, player.deviceVolume)
+    assertEquals(listOf(20, 30, 7), volumes)
   }
 
   @Test

@@ -38,7 +38,7 @@ internal class SoapClient(private val httpClient: OkHttpClient) {
         .build()
 
     httpClient.newCall(request).execute().use { response ->
-      val responseBody = response.body?.string().orEmpty()
+      val responseBody = response.speakerBody()
       if (!response.isSuccessful) {
         val fault = SoapResponseParser.fault(responseBody)
         throw SoapException(

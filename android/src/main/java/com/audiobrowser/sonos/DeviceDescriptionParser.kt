@@ -1,7 +1,5 @@
 package com.audiobrowser.sonos
 
-import java.io.ByteArrayInputStream
-import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 
@@ -28,12 +26,7 @@ internal object DeviceDescriptionParser {
   private const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
   fun parse(xml: String, location: String): SonosDevice? {
-    val doc =
-      runCatching {
-          val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = false }
-          factory.newDocumentBuilder().parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        }
-        .getOrNull() ?: return null
+    val doc = parseSpeakerXml(xml) ?: return null
 
     // From the root <device>, the direct child of <root>, not the first <device> in the document.
     val docElement = doc.documentElement ?: return null

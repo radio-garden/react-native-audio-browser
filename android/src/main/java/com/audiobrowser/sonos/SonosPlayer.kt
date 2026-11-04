@@ -5,14 +5,13 @@ import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.Util
 import androidx.media3.extractor.metadata.icy.IcyInfo
-import com.audiobrowser.remote.RemoteMedia
+import com.audiobrowser.remote.isRemoteLive
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CancellationException
@@ -70,25 +69,28 @@ internal interface SonosControl {
 }
 
 /**
- * Plays a queue on a Sonos room: Media3 commands in, UPnP out, and the room's transport state,
- * position, stream title and volume polled back in. As a [com.audiobrowser.remote.RemotePlayback]'s
- * player, setting its items loads the current one on the speaker, without [prepare]. The speaker
- * plays one item at a time: a track that ends there moves the queue on, and a track stopped there
- * early reads as paused. Once another app or the Sonos app plays something else there, it reads as
- * paused and leaves the room alone until played again. A title the speaker reads from the stream
- * arrives as an [IcyInfo] in the timed metadata, where the local player reports its own.
+ * Plays one item at a time on a Sonos room: Media3 commands in, UPnP out, and the room's transport
+ * state, position, stream title and volume polled back in. As a
+ * [com.audiobrowser.remote.RemotePlayback]'s player, setting its item loads it on the speaker from
+ * the start position given, without [prepare]. A track that plays to its end calls [onEnded]; one
+ * stopped there early reads as paused. Once another app or the Sonos app plays something else
+ * there, it reads as paused and leaves the room alone until played again. A title the speaker reads
+ * from the stream arrives as an [IcyInfo] in the timed metadata, where the local player reports its
+ * own. The room's volume is read when the player starts and with each poll, and goes to [onVolume].
  *
  * Commands run in the order they are made, one at a time, off the main thread, and run to the end
  * even once the player is released, so its last stop reaches the speaker. A failed command that no
  * later one replaced goes to [onError] and leaves the player idle; so does an item the speaker
  * hasn't started within [startTimeoutMs] of being asked to play, and a speaker that stops answering
- * [unreachableAfterPolls] polls in a row. A failed volume change is only logged.
+ * [unreachableAfterPolls] polls in a row. A room that played on after a failure still hears pause
+ * and stop. A failed seek or volume change is only logged.
  */
 internal class SonosPlayer(
   looper: Looper,
   private val control: SonosControl,
-  private val mediaOf: (MediaItem) -> RemoteMedia?,
+  private val onEnded: () -> Unit,
   private val onError: (PlaybackException) -> Unit,
+  private val onVolume: (Int) -> Unit,
   private val routingControllerId: () -> String?,
   private val scope: CoroutineScope,
   private val io: CoroutineDispatcher,
@@ -98,29 +100,24 @@ internal class SonosPlayer(
   private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : SimpleBasePlayer(looper) {
 
-  private class Entry(val uid: Long, val item: MediaItem)
-
-  private var entries: List<Entry> = emptyList()
-  private var nextUid = 0L
-  private var index = 0
+  private var item: MediaItem? = null
   private var playWhenReady = false
   private var playWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
   private var playbackState = Player.STATE_IDLE
-  private var volume = 0
-  private var repeatMode = Player.REPEAT_MODE_OFF
+  private var volume: Int? = null
   private var timedMetadata: Metadata? = null
 
-  // The current track's duration and position as last read; while it reads as playing, the time
-  // of that reading, from which its position runs on.
+  // The track's duration and position as last read; while it reads as playing, the time of that
+  // reading, from which its position runs on.
   private var durationMs = C.TIME_UNSET
   private var position: PositionSupplier = PositionSupplier.getConstant(0)
   private var readPositionMs = 0L
   private var playingSinceReadAtMs: Long? = null
 
-  // The URL the speaker holds for us, until stopped or taken over by another app. The entry it
-  // holds, ready to play without loading again; when it was asked to play; whether it has since.
+  // The URL the speaker holds for us, until stopped or taken over by another app; whether it holds
+  // it ready to play without loading again; when it was asked to play; whether it has since.
   private var loadedUrl: String? = null
-  private var loadedUid: Long? = null
+  private var ready = false
   private var playRequestedAtMs = 0L
   private var seenPlaying = false
 
@@ -132,28 +129,34 @@ internal class SonosPlayer(
   private var polling: Job? = null
   private var failedPolls = 0
 
-  override fun getState(): State =
-    State.Builder()
-      .setAvailableCommands(COMMANDS)
+  init {
+    command(fatal = false) {
+      val read = control.getVolume() ?: return@command
+      scope.launch { if (volume == null) setVolumeRead(read) }
+    }
+  }
+
+  override fun getState(): State {
+    val current = item
+    val live = current?.isRemoteLive == true
+    return State.Builder()
+      .setAvailableCommands(if (volume == null) COMMANDS else COMMANDS_WITH_VOLUME)
       .setPlayWhenReady(playWhenReady, playWhenReadyReason)
-      .setPlaybackState(if (entries.isEmpty()) Player.STATE_IDLE else playbackState)
-      .setRepeatMode(repeatMode)
+      .setPlaybackState(if (current == null) Player.STATE_IDLE else playbackState)
       .setPlaylist(
-        entries.mapIndexed { i, entry ->
-          val live = isLive(entry.item)
-          MediaItemData.Builder(entry.uid)
-            .setMediaItem(entry.item)
+        listOfNotNull(current).map {
+          MediaItemData.Builder(UID)
+            .setMediaItem(it)
             .setIsSeekable(!live)
             .setIsDynamic(live)
-            .apply { if (live) setLiveConfiguration(LIVE) }
+            .apply { if (live) setLiveConfiguration(it.liveConfiguration) }
             .setDurationUs(
-              if (i == index && !live && durationMs != C.TIME_UNSET) Util.msToUs(durationMs)
-              else C.TIME_UNSET
+              if (!live && durationMs != C.TIME_UNSET) Util.msToUs(durationMs) else C.TIME_UNSET
             )
             .build()
         }
       )
-      .setCurrentMediaItemIndex(if (entries.isEmpty()) C.INDEX_UNSET else index)
+      .setCurrentMediaItemIndex(if (current == null) C.INDEX_UNSET else 0)
       .setContentPositionMs(position)
       .setDeviceInfo(
         DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE)
@@ -161,29 +164,30 @@ internal class SonosPlayer(
           .setRoutingControllerId(routingControllerId())
           .build()
       )
-      .setDeviceVolume(volume)
+      .setDeviceVolume(volume ?: 0)
       .apply { timedMetadata?.let(::setTimedMetadata) }
       .build()
+  }
 
   override fun handlePrepare(): ListenableFuture<*> {
-    if (!isPrepared) load()
+    if (!isPrepared) load(C.TIME_UNSET)
     return done()
   }
 
   override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
     this.playWhenReady = playWhenReady
     playWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
+    if (!playWhenReady) {
+      freezePosition()
+      if (loadedUrl != null) command { pauseOrStop() }
+      return done()
+    }
     if (!isPrepared) return done()
-    when {
-      !playWhenReady -> {
-        freezePosition()
-        if (loadedUrl != null) command { pauseOrStop() }
-      }
-      loadedUid == entries.getOrNull(index)?.uid -> {
-        if (!seenPlaying) playRequestedAtMs = nowMs()
-        command { control.play() }
-      }
-      else -> loadCurrent()
+    if (ready) {
+      if (!seenPlaying) playRequestedAtMs = nowMs()
+      command { control.play() }
+    } else {
+      load(C.TIME_UNSET)
     }
     return done()
   }
@@ -193,10 +197,8 @@ internal class SonosPlayer(
     startIndex: Int,
     startPositionMs: Long,
   ): ListenableFuture<*> {
-    entries = mediaItems.map { Entry(nextUid++, it) }
-    index =
-      if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, maxOf(0, entries.lastIndex))
-    if (entries.isEmpty()) handleStop() else load()
+    item = mediaItems.getOrNull(if (startIndex == C.INDEX_UNSET) 0 else startIndex)
+    load(startPositionMs)
     return done()
   }
 
@@ -205,28 +207,20 @@ internal class SonosPlayer(
     positionMs: Long,
     seekCommand: Int,
   ): ListenableFuture<*> {
-    if (mediaItemIndex !in entries.indices) return done()
-    val moved = mediaItemIndex != index
-    index = mediaItemIndex
+    val current = item ?: return done()
     if (!isPrepared) return done()
-    val withinTrack =
-      !moved &&
-        loadedUid == entries[index].uid &&
-        !isLive(entries[index].item) &&
-        seekCommand == Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM &&
-        positionMs != C.TIME_UNSET
-    if (withinTrack) {
-      readPositionMs = positionMs
-      if (playingSinceReadAtMs != null) {
-        playingSinceReadAtMs = nowMs()
-        position = PositionSupplier.getExtrapolating(positionMs, 1f)
-      } else {
-        position = PositionSupplier.getConstant(positionMs)
-      }
-      command(fatal = false) { control.seek(positionMs) }
-    } else {
-      load()
+    if (current.isRemoteLive || positionMs == C.TIME_UNSET || !ready) {
+      load(positionMs)
+      return done()
     }
+    readPositionMs = positionMs
+    if (playingSinceReadAtMs != null) {
+      playingSinceReadAtMs = nowMs()
+      position = PositionSupplier.getExtrapolating(positionMs, 1f)
+    } else {
+      position = PositionSupplier.getConstant(positionMs)
+    }
+    command(fatal = false) { control.seek(positionMs) }
     return done()
   }
 
@@ -235,14 +229,9 @@ internal class SonosPlayer(
     freezePosition()
     if (loadedUrl != null) command { control.stop() }
     loadedUrl = null
-    loadedUid = null
+    ready = false
     playbackState = Player.STATE_IDLE
     timedMetadata = null
-    return done()
-  }
-
-  override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> {
-    this.repeatMode = repeatMode
     return done()
   }
 
@@ -255,41 +244,39 @@ internal class SonosPlayer(
   override fun handleSetDeviceVolume(deviceVolume: Int, flags: Int): ListenableFuture<*> {
     val target = deviceVolume.coerceIn(0, MAX_VOLUME)
     volume = target
+    onVolume(target)
     command(fatal = false) { control.setVolume(target) }
     return done()
   }
 
   override fun handleIncreaseDeviceVolume(flags: Int): ListenableFuture<*> =
-    handleSetDeviceVolume(volume + 1, flags)
+    volume?.let { handleSetDeviceVolume(it + 1, flags) } ?: done()
 
   override fun handleDecreaseDeviceVolume(flags: Int): ListenableFuture<*> =
-    handleSetDeviceVolume(volume - 1, flags)
+    volume?.let { handleSetDeviceVolume(it - 1, flags) } ?: done()
 
   private val isPrepared
     get() = playbackState != Player.STATE_IDLE
 
-  private fun load() {
-    if (entries.isEmpty()) return
-    playbackState = Player.STATE_BUFFERING
-    loadCurrent()
-    startPolling()
-  }
-
-  private fun loadCurrent() {
-    val entry = entries.getOrNull(index) ?: return
-    val item = entry.item
-    val media = mediaOf(item)
-    val url = media?.url ?: item.localConfiguration?.uri?.toString() ?: item.mediaId
-    val metadata = item.mediaMetadata
+  /**
+   * Loads the item on the speaker from [startPositionMs], playing it if asked, and polls the room.
+   */
+  private fun load(startPositionMs: Long) {
+    val current = item ?: return
+    val url = current.localConfiguration?.uri?.toString() ?: return
+    val metadata = current.mediaMetadata
+    val live = current.isRemoteLive
     val play = playWhenReady
+    val seekMs = startPositionMs.takeIf { !live && it != C.TIME_UNSET && it > 0 }
+    playbackState = Player.STATE_BUFFERING
     loadedUrl = url
-    loadedUid = entry.uid
+    ready = true
     playRequestedAtMs = nowMs()
     seenPlaying = false
     timedMetadata = null
     durationMs = C.TIME_UNSET
-    position = PositionSupplier.getConstant(0)
-    readPositionMs = 0
+    readPositionMs = seekMs ?: 0
+    position = PositionSupplier.getConstant(readPositionMs)
     playingSinceReadAtMs = null
     command {
       control.setUri(
@@ -297,13 +284,19 @@ internal class SonosPlayer(
         title = metadata.station?.toString() ?: metadata.title?.toString() ?: "",
         artist = metadata.artist?.toString(),
         album = metadata.albumTitle?.toString(),
-        artworkUri =
-          media?.artworkUrl
-            ?: metadata.artworkUri?.takeIf { it.scheme?.startsWith("http") == true }?.toString(),
-        live = media?.live ?: isLive(item),
+        artworkUri = metadata.artworkUri?.toString(),
+        live = live,
       )
+      if (seekMs != null) {
+        try {
+          control.seek(seekMs)
+        } catch (e: SoapException) {
+          Timber.w(e, "Sonos: could not start the track at %d ms", seekMs)
+        }
+      }
       if (play) control.play()
     }
+    startPolling()
   }
 
   /** A radio stream often refuses Pause (UPnP 701): it is stopped instead, and Play restarts it. */
@@ -340,13 +333,21 @@ internal class SonosPlayer(
     }
   }
 
+  /** Idle, with the room still held: what played on there still hears pause and stop. */
   private fun fail(e: PlaybackException) {
     playbackState = Player.STATE_IDLE
-    loadedUid = null
+    ready = false
     freezePosition()
     stopPolling()
     invalidateState()
     onError(e)
+  }
+
+  private fun setVolumeRead(read: Int) {
+    if (read == volume) return
+    volume = read
+    onVolume(read)
+    invalidateState()
   }
 
   private fun startPolling() {
@@ -408,7 +409,7 @@ internal class SonosPlayer(
   )
 
   private fun apply(reading: Reading) {
-    reading.volume?.let { volume = it }
+    reading.volume?.let(::setVolumeRead)
     val url = loadedUrl ?: return
     if (!reading.mediaUri.isNullOrEmpty() && !reading.mediaUri.contains(url)) {
       onTakenOver()
@@ -418,7 +419,7 @@ internal class SonosPlayer(
       timedMetadata = Metadata(0, IcyInfo(title.toByteArray(), title, null))
     }
     val state = reading.transportState?.uppercase() ?: return
-    val live = entries.getOrNull(index)?.let { isLive(it.item) } ?: true
+    val live = item?.isRemoteLive ?: true
     if (!live) reading.position?.durationMs?.let { durationMs = it }
     val positionMs = if (live) 0 else reading.position?.positionMs ?: 0
     if (state != "PLAYING" && playWhenReady && !seenPlaying && startTimedOut()) {
@@ -461,7 +462,7 @@ internal class SonosPlayer(
   /** Another app plays on the room: this player reads as paused and leaves the room alone. */
   private fun onTakenOver() {
     loadedUrl = null
-    loadedUid = null
+    ready = false
     timedMetadata = null
     playbackState = Player.STATE_READY
     position = PositionSupplier.getConstant(0)
@@ -482,35 +483,22 @@ internal class SonosPlayer(
       return
     }
     if (!seenPlaying) return
+    ready = false
     if (trackEnded()) {
-      val next =
-        when (repeatMode) {
-          Player.REPEAT_MODE_ONE -> index
-          Player.REPEAT_MODE_ALL -> (index + 1) % entries.size
-          else -> index + 1
-        }
-      if (next < entries.size) {
-        index = next
-        playbackState = Player.STATE_BUFFERING
-        loadCurrent()
-      } else {
-        playbackState = Player.STATE_ENDED
-        loadedUid = null
-        position = PositionSupplier.getConstant(durationMs)
-        playingSinceReadAtMs = null
-      }
+      playbackState = Player.STATE_ENDED
+      position = PositionSupplier.getConstant(durationMs)
+      playingSinceReadAtMs = null
+      onEnded()
       return
     }
     playbackState = Player.STATE_READY
-    loadedUid = null
     position = PositionSupplier.getConstant(0)
     setPlayWhenReadyFromSpeaker(false)
   }
 
-  /** Whether the current track played to its end, as its last position read says. */
+  /** Whether the track played to its end, as its last position read says. */
   private fun trackEnded(): Boolean {
-    val current = entries.getOrNull(index) ?: return false
-    if (isLive(current.item) || durationMs == C.TIME_UNSET) return false
+    if (item?.isRemoteLive != false || durationMs == C.TIME_UNSET) return false
     val reachedMs = readPositionMs + (playingSinceReadAtMs?.let { nowMs() - it } ?: 0)
     return reachedMs >= durationMs - END_TOLERANCE_MS
   }
@@ -520,15 +508,12 @@ internal class SonosPlayer(
     playWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_REMOTE
   }
 
-  private fun isLive(item: MediaItem) =
-    mediaOf(item)?.live ?: (item.mediaMetadata.mediaType == MediaMetadata.MEDIA_TYPE_RADIO_STATION)
-
   private fun done() = Futures.immediateVoidFuture()
 
   private companion object {
     const val MAX_VOLUME = 100
     const val END_TOLERANCE_MS = 1_000L
-    val LIVE: MediaItem.LiveConfiguration = MediaItem.LiveConfiguration.Builder().build()
+    val UID = Any()
     val COMMANDS: Player.Commands =
       Player.Commands.Builder()
         .addAll(
@@ -538,22 +523,17 @@ internal class SonosPlayer(
           Player.COMMAND_RELEASE,
           Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
           Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-          Player.COMMAND_SEEK_TO_MEDIA_ITEM,
-          Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-          Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-          Player.COMMAND_SEEK_TO_NEXT,
-          Player.COMMAND_SEEK_TO_PREVIOUS,
           Player.COMMAND_SET_MEDIA_ITEM,
-          // For setMediaItems of other than one item; the switch only ever sets the whole queue.
-          Player.COMMAND_CHANGE_MEDIA_ITEMS,
-          Player.COMMAND_SET_REPEAT_MODE,
           Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
           Player.COMMAND_GET_TIMELINE,
           Player.COMMAND_GET_METADATA,
-          Player.COMMAND_GET_DEVICE_VOLUME,
           Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
-          Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS,
         )
+        .build()
+    // Reading and stepping the volume wait for it to be known.
+    val COMMANDS_WITH_VOLUME: Player.Commands =
+      COMMANDS.buildUpon()
+        .addAll(Player.COMMAND_GET_DEVICE_VOLUME, Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS)
         .build()
   }
 }

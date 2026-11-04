@@ -23,6 +23,18 @@ class SoapResponseParserTest {
       "</UPnPError></detail></s:Fault></s:Body></s:Envelope>"
 
   @Test
+  fun `a response with a document type declaration is refused`() {
+    val withEntity =
+      transportInfo("&state;")
+        .replace(
+          "<?xml version=\"1.0\"?>",
+          "<?xml version=\"1.0\"?><!DOCTYPE s [<!ENTITY state \"PLAYING\">]>",
+        )
+
+    assertNull(SoapResponseParser.transportState(withEntity))
+  }
+
+  @Test
   fun `transportState reads CurrentTransportState`() {
     assertEquals("PLAYING", SoapResponseParser.transportState(transportInfo("PLAYING")))
     assertEquals(

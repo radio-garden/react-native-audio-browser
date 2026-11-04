@@ -79,10 +79,14 @@ internal object SoapEnvelopes {
 
 /** [s] as XML text or attribute content. */
 internal fun xmlEscape(s: String): String =
-  s.replace("&", "&amp;")
+  s.replace(XML_FORBIDDEN, "")
+    .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
     .replace("\"", "&quot;")
     // &#39; rather than &apos;, which some older XML readers, older Sonos firmware among them,
     // mishandle.
     .replace("'", "&#39;")
+
+// The characters XML 1.0 has no place for, even escaped.
+private val XML_FORBIDDEN = Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\uFFFE\\uFFFF]")

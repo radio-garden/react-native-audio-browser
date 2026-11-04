@@ -6,10 +6,11 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
-import com.audiobrowser.remote.FakePlayer
+import com.audiobrowser.remote.FakeReceiver
 import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,38 +27,49 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** What the player leaves to a Cast receiver while one plays: the local-only work steps aside. */
+/** What the player leaves to a remote receiver while one plays: the local-only work steps aside. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class PlayerCastTest {
   private val looper = Looper.getMainLooper()
-  private val player = Player(RuntimeEnvironment.getApplication())
   private val remote = FakeRemote(looper)
-  private val receiver = remote.player
+  private val player =
+    Player(
+      RuntimeEnvironment.getApplication(),
+      castRemote = { remote },
+      sonosRemote = { _, _ -> FakeRemote(looper) },
+    )
+  private val receiver: FakeReceiver
+    get() = remote.player
+
   private val callbacks = mock(Callbacks::class.java)
 
   @Before
   fun cast() {
-    player.castRemoteFactory = { _, _ -> remote }
-    player.setup(PlayerSetupOptions(cast = true))
+    player.setup(
+      PlayerSetupOptions(remoteOutputs = RemoteOutputsOptions(cast = true, sonos = null))
+    )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(
       listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
     )
     player.playWhenReady = true
     remote.startSession()
-    idleUntil("casting") { !player.isPlayingLocally }
+    idleUntil("remote") { player.isRemote }
+    player.sessionPlayer.prepare()
+    idleUntil("the item on the receiver") { receiver.loads.isNotEmpty() }
   }
 
   @After fun release() = player.destroy()
 
   @Test
-  fun `a receiver falling behind the live window is an error, not a local restart`() {
+  fun `a receiver falling behind the live window is a remote error, not a local restart`() {
     remote.fail(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
     idle()
 
     assertEquals(PlaybackState.ERROR, player.playbackState)
     assertTrue(calls("onPlaybackError").isNotEmpty())
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
   }
 
   @Test
@@ -71,7 +83,7 @@ class PlayerCastTest {
   }
 
   @Test
-  fun `a new queue while casting goes to the receiver`() {
+  fun `a new queue while remote plays its start item on the receiver`() {
     player.setQueue(
       arrayOf(
         TestFixtures.track(title = "b", src = "https://s/b.mp3"),
@@ -79,9 +91,10 @@ class PlayerCastTest {
       ),
       startIndex = 1,
     )
-    idleUntil("the queue on the receiver") { receiver.items.size == 2 }
+    idleUntil("the start item on the receiver") { receiver.loads.size == 2 }
 
-    assertEquals(1, receiver.index)
+    assertEquals("https://s/c.mp3", receiver.loads.last().item.localConfiguration?.uri.toString())
+    assertEquals(1, player.currentIndex)
   }
 
   @Test
@@ -89,7 +102,7 @@ class PlayerCastTest {
     player.volume = 0.5f
     idle()
 
-    assertEquals(FakePlayer.MAX_VOLUME / 2, receiver.deviceVolume)
+    assertEquals(FakeReceiver.MAX_VOLUME / 2, receiver.volume)
     assertEquals(1f, player.exoPlayer.volume)
     assertEquals(0.5f, player.volume)
   }
@@ -100,7 +113,7 @@ class PlayerCastTest {
     shadowOf(looper).idleFor(Duration.ofSeconds(3))
 
     assertFalse(receiver.playWhenReady)
-    assertEquals(emptyList<Int>(), receiver.volumeChanges)
+    assertEquals(10, receiver.volume)
   }
 
   private fun calls(name: String) =

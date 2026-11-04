@@ -3,28 +3,24 @@ package com.audiobrowser.sonos
 import android.content.Context
 import android.media.MediaRouter2
 import android.os.Build
-import androidx.media3.common.PlaybackException
-import com.audiobrowser.remote.RemoteMediaResolutions
 import com.audiobrowser.remote.RemotePlayback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
  * The Sonos room selected in the Output Switcher ([SonosOutputs.selected]) as a remote output: a
- * session while one is selected, with a [SonosPlayer] of its own. Selecting another room ends the
- * session before the next one starts, so playback moves through the phone's state.
+ * session while one is selected, with a [SonosPlayer] of its own. Selecting another room starts its
+ * session in place of the last, so playback moves from room to room.
  */
 internal class SonosRemote(
   private val context: Context,
-  private val resolutions: RemoteMediaResolutions,
   private val scope: CoroutineScope,
   private val controlOf: (SonosRoom) -> SonosControl = defaultControl(),
   private val routingControllerId: () -> String? = systemRoutingControllerId(context),
 ) : RemotePlayback {
   private var room: SonosRoom? = null
   private var session: SonosPlayer? = null
-  private var sessionListener: (() -> Unit)? = null
-  private var errorListener: ((PlaybackException) -> Unit)? = null
+  private var listener: RemotePlayback.Listener? = null
   private val onSelectionChanged: () -> Unit = ::follow
 
   init {
@@ -38,17 +34,13 @@ internal class SonosRemote(
   override val isSessionAvailable: Boolean
     get() = session != null
 
-  override fun setSessionListener(listener: (() -> Unit)?) {
-    sessionListener = listener
-  }
-
-  override fun setErrorListener(listener: ((PlaybackException) -> Unit)?) {
-    errorListener = listener
+  override fun setListener(listener: RemotePlayback.Listener?) {
+    this.listener = listener
   }
 
   override fun release() {
     SonosOutputs.removeListener(onSelectionChanged)
-    session?.release()
+    end(session, room)
     session = null
     room = null
   }
@@ -56,26 +48,34 @@ internal class SonosRemote(
   private fun follow() {
     val selected = SonosOutputs.selected
     if (selected == room) return
-    session?.let { ended ->
-      session = null
-      room = null
-      sessionListener?.invoke()
-      ended.release()
-    }
-    if (selected != null) {
-      room = selected
-      session =
-        SonosPlayer(
-          context.mainLooper,
-          controlOf(selected),
-          mediaOf = resolutions::get,
-          onError = { errorListener?.invoke(it) },
-          routingControllerId = routingControllerId,
-          scope = scope,
-          io = Dispatchers.IO,
-        )
-      sessionListener?.invoke()
-    }
+    val ended = session
+    val endedRoom = room
+    room = selected
+    session = selected?.let(::start)
+    listener?.onSessionChanged()
+    end(ended, endedRoom)
+  }
+
+  private fun start(room: SonosRoom): SonosPlayer {
+    lateinit var started: SonosPlayer
+    started =
+      SonosPlayer(
+        context.mainLooper,
+        controlOf(room),
+        onEnded = { if (session === started) listener?.onEnded() },
+        onError = { if (session === started) listener?.onFailed(it) },
+        onVolume = { SonosOutputs.reportVolume(room.id, it) },
+        routingControllerId = routingControllerId,
+        scope = scope,
+        io = Dispatchers.IO,
+      )
+    SonosOutputs.setSession(room.id) { started.setDeviceVolume(it, 0) }
+    return started
+  }
+
+  private fun end(player: SonosPlayer?, room: SonosRoom?) {
+    room?.let { SonosOutputs.setSession(it.id, null) }
+    player?.release()
   }
 
   private companion object {

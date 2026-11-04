@@ -82,6 +82,11 @@ it turns on transfer for any MediaRouter in the app, Cast's included:
 Without it, the switcher lists only the phone's own outputs, and the library
 logs a warning saying the receiver is missing.
 
+::: tip Migrating from `remoteOutputs: true`
+`remoteOutputs` was a boolean; it is now an object, with a flag for each output
+the library plays on. `remoteOutputs: true` becomes `remoteOutputs: {}`.
+:::
+
 A provider offers its routes by declaring the library's control category,
 `com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
 selection is reported: the library keeps playing locally, and rendering the
@@ -192,8 +197,7 @@ What plays:
 - Play, pause, skip and the volume act on the speaker. A live stream that
   refuses to pause is stopped instead, and playing it again restarts it.
 - A track shows the position and duration the speaker reports.
-- Pausing or stopping in the Sonos app shows up as paused here. A track that
-  plays to its end moves the queue on.
+- Pausing or stopping in the Sonos app shows up as paused here.
 
 Grouping:
 
@@ -215,17 +219,37 @@ Known limits:
 - Rooms are found by SSDP multicast on the local network, so the phone and the
   speakers must share it; guest and isolated Wi-Fi networks hide them.
 - A track that needs request headers won't play.
-- The speaker plays one track at a time: the queue stays in the app, which
-  loads the next track when one ends. A track moved there starts from the
-  beginning; seeking within it then works.
-- Moving from one room or Cast device straight to another goes through the
-  phone, which can play for a moment while the next one loads.
 - The state is polled every two seconds, so a change made in the Sonos app shows
   up here after a moment.
 - If another app or the Sonos app starts something else on the room, this app
   reads as paused and leaves the room alone; playing again loads its own track.
 - Android only. On iOS, a Sonos speaker with AirPlay 2 appears in the route
   picker as an AirPlay target.
+
+### On every remote output
+
+Cast and Sonos play the queue the same way:
+
+- The queue stays in the app. The receiver is sent one item at a time, at the
+  position it plays from, and the app sends the next when one ends, as the
+  repeat mode says. Editing the queue reaches the receiver only when the
+  current item changes.
+- The shuffle mode is kept and comes back to the phone, but a remote output
+  plays the queue in list order
+  ([#210](https://github.com/radio-garden/react-native-audio-browser/issues/210)).
+- Selecting an output moves the queue, the position, the play intent and the
+  repeat mode there. The phone plays on until the current item's URL is
+  resolved for the receiver, and the output already reports `'cast'` or
+  `'sonos'` meanwhile.
+- Moving from one room or Cast device to another goes straight there, without
+  the phone in between.
+- A receiver that fails to play reaches the app as a playback error with code
+  `remote-error`, as does an item whose URL can't be resolved for it. Playing
+  again loads the item there anew.
+
+The library's Sonos route provider service is exported, as the Output Switcher
+needs to bind it: another app on the phone can bind it too, list the rooms,
+select one and set its volume, as through any media route provider.
 
 Outside React, read a snapshot with `getOutput()` or subscribe with
 [`onOutputChanged`](/api/features/output/#onoutputchanged):

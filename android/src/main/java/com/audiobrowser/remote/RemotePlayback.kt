@@ -1,9 +1,7 @@
 package com.audiobrowser.remote
 
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A remote output's side of [RemoteSwitchingPlayer]: a Cast receiver or a Sonos room, each kept
@@ -11,55 +9,28 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal interface RemotePlayback {
   /**
-   * Plays on the receiver, read while [isSessionAvailable]: each session can bring a new player, so
-   * the switch keeps the one it handed over to until the handback. Setting its items loads them
-   * there and plays as its play intent says, without [MediaPlayer.prepare].
+   * Plays one item at a time on the receiver, read while [isSessionAvailable]. Setting its item
+   * loads it there, from the start position given, and plays as its play intent says, without
+   * [MediaPlayer.prepare]. A session can bring a new player: the switch moves playback to it.
    */
   val player: MediaPlayer
 
   val isSessionAvailable: Boolean
 
-  /** Calls [listener] on the main thread whenever [isSessionAvailable] changes. */
-  fun setSessionListener(listener: (() -> Unit)?)
-
-  /**
-   * Calls [listener] on the main thread when the receiver fails to play what it was sent: [player]
-   * reports no error of its own.
-   */
-  fun setErrorListener(listener: ((PlaybackException) -> Unit)?)
+  /** Calls [listener] on the main thread; null stops the calls. */
+  fun setListener(listener: Listener?)
 
   /** Ends the session on this side; the receiver stops or plays on as it was told. */
   fun release()
-}
 
-/**
- * What the receiver loads for a media item: it fetches [url] and [artworkUrl] itself, without
- * request headers. A [live] item loads as a live stream, at its live edge.
- */
-internal data class RemoteMedia(
-  val url: String,
-  val contentType: String,
-  val artworkUrl: String?,
-  val live: Boolean,
-)
+  interface Listener {
+    /** [isSessionAvailable] or [player] changed. */
+    fun onSessionChanged()
 
-/**
- * The [RemoteMedia] of each media item handed to the receiver. A receiver's media item converter
- * runs synchronously on the main thread, and resolving a URL can need the JS thread, so items are
- * resolved into here first and the converter only reads.
- */
-internal class RemoteMediaResolutions {
-  private val byKey = ConcurrentHashMap<String, RemoteMedia>()
+    /** The receiver played its item to the end: the only end the switch acts on. */
+    fun onEnded()
 
-  operator fun get(item: MediaItem): RemoteMedia? = byKey[key(item)]
-
-  operator fun contains(item: MediaItem): Boolean = byKey.containsKey(key(item))
-
-  operator fun set(item: MediaItem, media: RemoteMedia) {
-    byKey[key(item)] = media
+    /** The receiver failed to play its item: the only failure the switch acts on. */
+    fun onFailed(error: PlaybackException)
   }
-
-  fun clear() = byKey.clear()
-
-  private fun key(item: MediaItem) = "${item.mediaId}\u0000${item.localConfiguration?.uri}"
 }

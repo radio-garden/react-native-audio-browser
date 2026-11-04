@@ -84,6 +84,12 @@ class SoapEnvelopesTest {
   }
 
   @Test
+  fun `xmlEscape leaves out the characters XML has no place for`() {
+    assertEquals("Live &amp; Loud", xmlEscape("Live\u0001 &\u000B Loud\uFFFF"))
+    assertEquals("a\tb\nc", xmlEscape("a\tb\nc"))
+  }
+
+  @Test
   fun `setGroupVolume clamps to 0 through 100`() {
     assertEquals(
       envelope(

@@ -12,6 +12,7 @@ import com.audiobrowser.sonos.SonosPosition
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.sonos.SonosRoom
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
@@ -77,23 +78,27 @@ class PlayerSonosTest {
   }
 
   private val looper = Looper.getMainLooper()
-  private val player = Player(RuntimeEnvironment.getApplication())
   private val room = FakeRoom()
+  private val player =
+    Player(
+      RuntimeEnvironment.getApplication(),
+      castRemote = { null },
+      sonosRemote = { context, scope -> SonosRemote(context, scope, controlOf = { room }) },
+    )
   private val callbacks = mock(Callbacks::class.java)
 
   @Before
   fun selectRoom() {
-    player.sonosRemoteFactory = { resolutions, scope ->
-      SonosRemote(RuntimeEnvironment.getApplication(), resolutions, scope, controlOf = { room })
-    }
-    player.setup(PlayerSetupOptions(sonos = true))
+    player.setup(
+      PlayerSetupOptions(remoteOutputs = RemoteOutputsOptions(cast = null, sonos = true))
+    )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(
       listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
     )
     player.playWhenReady = true
     SonosOutputs.select(ROOM)
-    idleUntil("the handover") { !player.isPlayingLocally }
+    idleUntil("the handover") { player.isRemote }
     player.sessionPlayer.prepare()
     idleUntil("playing on the speaker") { "play" in room.calls }
   }
@@ -117,8 +122,21 @@ class PlayerSonosTest {
   @Test
   fun `the selected room plays the queue, and the phone stops`() {
     assertEquals(listOf("setUri https://s/a.mp3", "play"), room.calls)
-    assertEquals(false, player.isPlayingLocally)
+    assertEquals(true, player.isRemote)
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a new item plays on the speaker from the position it is set at`() {
+    room.calls.clear()
+
+    player.sessionPlayer.setMediaItem(
+      TrackFactory.toMedia3(TestFixtures.track(title = "b", src = "https://s/b.mp3")),
+      60_000,
+    )
+
+    idleUntil("playing on the speaker") { "play" in room.calls }
+    assertEquals(listOf("setUri https://s/b.mp3", "seek 60000", "play"), room.calls)
   }
 
   @Test
@@ -135,7 +153,7 @@ class PlayerSonosTest {
     SonosOutputs.unselect(ROOM)
 
     idleUntil("the speaker stopped") { "stop" in room.calls }
-    assertEquals(true, player.isPlayingLocally)
+    assertEquals(false, player.isRemote)
     assertEquals(true, player.exoPlayer.playWhenReady)
     assertEquals(1, player.exoPlayer.mediaItemCount)
   }

@@ -75,6 +75,11 @@ capabilities). Elsewhere, just omit a field to leave it unchanged.
 | `retry`, `keepSessionAliveOnError`, `remoteOutputs`                                      |       ✓       |        —        |
 | `android` / `ios` audio engine & session (`audioContentType`, `wakeMode`, `category`, …) |       ✓       |        —        |
 
+`remoteOutputs` (Android) turns on the outputs of the system Output Switcher
+beyond the phone's own: `{}` lists media route providers' speakers, and
+`{ cast: true, sonos: true }` plays on Cast devices and Sonos rooms; see
+[Remote outputs](/guide/audio-output#remote-outputs-android).
+
 `playWhenReady` and `repeatMode` set the _initial_ state; change them at runtime
 with [`setPlayWhenReady`](/guide/playback#play-when-ready) /
 [`setRepeatMode`](/guide/queue#repeat-and-shuffle), not `updateOptions`.

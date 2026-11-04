@@ -72,16 +72,18 @@ class OutputMonitorTest {
   }
 
   @Test
-  fun `leaving the remote output with no local reading reports the phone speaker`() {
-    RemoteOutputs.setCurrent(kitchen)
-    idle()
+  fun `leaving a remote output with no local reading reports the phone speaker`() {
+    for (type in listOf(OutputType.REMOTE, OutputType.CAST, OutputType.SONOS)) {
+      RemoteOutputs.setCurrent(Output(type = type, name = "Kitchen", external = true))
+      idle()
 
-    RemoteOutputs.setCurrent(null)
-    idle()
+      RemoteOutputs.setCurrent(null)
+      idle()
 
-    val phoneSpeaker = Output(type = OutputType.SPEAKER, name = "Phone speaker", external = false)
-    assertEquals(phoneSpeaker, emitted.last())
-    assertEquals(phoneSpeaker, monitor.current)
+      val phoneSpeaker = Output(type = OutputType.SPEAKER, name = "Phone speaker", external = false)
+      assertEquals("$type", phoneSpeaker, emitted.last())
+      assertEquals("$type", phoneSpeaker, monitor.current)
+    }
   }
 
   private fun routeMediaTo(deviceType: Int) {

@@ -5,6 +5,7 @@ import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
 
@@ -62,10 +63,8 @@ data class PlayerSetupOptions(
   // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
   // timed metadata. When null, the default mapping is used.
   var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
-  // Whether playback moves to a Cast device selected in the Output Switcher.
-  var cast: Boolean = false,
-  // Whether playback moves to a Sonos room selected in the Output Switcher.
-  var sonos: Boolean = false,
+  // The remote outputs offered in the Output Switcher, or null for none.
+  var remoteOutputs: RemoteOutputsOptions? = null,
 ) {
   /**
    * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
@@ -83,8 +82,7 @@ data class PlayerSetupOptions(
     copy(
       autoUpdateNowPlayingMetadata = true,
       nowPlayingMetadataFormatter = null,
-      cast = false,
-      sonos = false,
+      remoteOutputs = null,
     )
 
   fun update(options: NativeSetupPlayerOptions) {
@@ -146,9 +144,6 @@ data class PlayerSetupOptions(
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
     options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
-    options.remoteOutputs?.let {
-      cast = it.cast == true
-      sonos = it.sonos == true
-    }
+    options.remoteOutputs?.let { remoteOutputs = it }
   }
 }

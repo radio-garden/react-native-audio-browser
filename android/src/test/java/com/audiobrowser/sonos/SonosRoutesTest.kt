@@ -45,7 +45,7 @@ class SonosRoutesTest {
 
   @Test
   fun `offers each room as a remote output and as a Sonos room`() {
-    val routes = sonosRouteDescriptors(listOf(dining, living), null, emptyMap()).routes
+    val routes = sonosRouteDescriptors(listOf(dining, living), null) { null }.routes
 
     assertEquals(listOf("RINCON_A", "RINCON_C"), routes.map { it.id })
     assertEquals(listOf("Dining Room", "Living Room"), routes.map { it.name })
@@ -59,7 +59,7 @@ class SonosRoutesTest {
 
   @Test
   fun `reports the selected room connected, and only that one`() {
-    val routes = sonosRouteDescriptors(listOf(dining, living), "RINCON_C", emptyMap()).routes
+    val routes = sonosRouteDescriptors(listOf(dining, living), "RINCON_C") { null }.routes
 
     assertEquals(
       listOf(
@@ -72,7 +72,8 @@ class SonosRoutesTest {
 
   @Test
   fun `carries each room's speaker volume`() {
-    val routes = sonosRouteDescriptors(listOf(dining, living), null, mapOf("RINCON_C" to 12)).routes
+    val routes =
+      sonosRouteDescriptors(listOf(dining, living), null) { mapOf("RINCON_C" to 12)[it] }.routes
 
     assertEquals(listOf(0, 12), routes.map { it.volume })
     assertEquals(MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE, routes[0].volumeHandling)

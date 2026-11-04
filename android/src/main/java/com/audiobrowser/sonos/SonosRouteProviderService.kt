@@ -48,9 +48,10 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
   private var rooms: List<SonosRoom> = listOfNotNull(SonosOutputs.selected)
   private var lastScanMs = 0L
   private var scanJob: Job? = null
-  private val volumes = HashMap<String, Int>()
+  private val onVolumeChanged: () -> Unit = ::publish
 
   init {
+    SonosOutputs.addVolumeListener(onVolumeChanged)
     // A new provider, after the system rebound the service, lists the room still selected, which
     // MediaRouter2 looks up in the descriptor before it creates the room's session.
     publish()
@@ -73,8 +74,6 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
           val selected = SonosOutputs.selected
           rooms =
             if (selected != null && found.none { it.id == selected.id }) found + selected else found
-          // The volume may have moved since: by the media session, the Sonos app or the speaker.
-          selected?.let { room -> readVolume(room)?.let { volumes[room.id] = it } }
           publish()
           if (!request.isActiveScan) break
           delay(ACTIVE_RESCAN_MS)
@@ -83,6 +82,7 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
   }
 
   fun release() {
+    SonosOutputs.removeVolumeListener(onVolumeChanged)
     scope.cancel()
   }
 
@@ -92,18 +92,23 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
   }
 
   private fun publish() {
-    descriptor = sonosRouteDescriptors(rooms, SonosOutputs.selected?.id, volumes)
+    descriptor = sonosRouteDescriptors(rooms, SonosOutputs.selected?.id, SonosOutputs::volumeOf)
     Timber.d("Sonos: %d room(s)", rooms.size)
   }
 
-  private suspend fun readVolume(room: SonosRoom): Int? =
-    withContext(Dispatchers.IO) {
-      runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
-    }
+  /** Reads [room]'s volume itself, for a room no session plays on, which would read it instead. */
+  private suspend fun readVolume(room: SonosRoom): Int? {
+    val volume =
+      withContext(Dispatchers.IO) {
+        runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
+      } ?: return null
+    SonosOutputs.reportVolume(room.id, volume)
+    return volume
+  }
 
   private fun setVolume(room: SonosRoom, volume: Int) {
-    volumes[room.id] = volume
-    publish()
+    if (SonosOutputs.setVolumeThroughSession(room.id, volume)) return
+    SonosOutputs.reportVolume(room.id, volume)
     scope.launch(Dispatchers.IO) {
       runCatching { SonosTransport(room.device, soap).setVolume(volume) }
         .onFailure { Timber.w(it, "Sonos: failed to set the volume of %s", room.name) }
@@ -114,13 +119,7 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     override fun onSelect() {
       SonosOutputs.select(room)
       publish()
-      scope.launch {
-        val volume = readVolume(room)
-        if (volume != null && SonosOutputs.selected?.id == room.id) {
-          volumes[room.id] = volume
-          publish()
-        }
-      }
+      if (!SonosOutputs.hasSession(room.id)) scope.launch { readVolume(room) }
     }
 
     override fun onUnselect(reason: Int) {
@@ -133,7 +132,11 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     override fun onUpdateVolume(delta: Int) {
       scope.launch {
         // From the speaker's own volume: the Sonos app or the speaker's buttons may have moved it.
-        val current = readVolume(room) ?: volumes[room.id] ?: return@launch
+        // A session reads it as it plays.
+        val current =
+          (if (SonosOutputs.hasSession(room.id)) null else readVolume(room))
+            ?: SonosOutputs.volumeOf(room.id)
+            ?: return@launch
         setVolume(room, (current + delta).coerceIn(0, MAX_VOLUME))
       }
     }
@@ -154,7 +157,7 @@ private const val MAX_VOLUME = 100
 internal fun sonosRouteDescriptors(
   rooms: List<SonosRoom>,
   selectedId: String?,
-  volumes: Map<String, Int>,
+  volumeOf: (String) -> Int?,
 ): MediaRouteProviderDescriptor {
   val filter =
     IntentFilter().apply {
@@ -171,7 +174,7 @@ internal fun sonosRouteDescriptors(
         .setDeviceType(MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER)
         .setVolumeHandling(MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE)
         .setVolumeMax(MAX_VOLUME)
-        .setVolume(volumes[room.id] ?: 0)
+        .setVolume(volumeOf(room.id) ?: 0)
         .setConnectionState(
           if (room.id == selectedId) MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED
           else MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED
