@@ -1,3 +1,44 @@
+## [0.2.0-next.51](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.50...v0.2.0-next.51) (2026-11-04)
+
+### ⚠ BREAKING CHANGES
+
+* **android:** remoteOutputs is an object with a flag per output;
+remoteOutputs: true becomes remoteOutputs: {}.
+
+### Features
+
+* **android:** play on Cast devices selected in the Output Switcher ([f53b9e0](https://github.com/radio-garden/react-native-audio-browser/commit/f53b9e005099506a417316706df8c1f84c547940))
+* **android:** play on Sonos rooms selected in the Output Switcher ([7be7081](https://github.com/radio-garden/react-native-audio-browser/commit/7be7081a253378c8a51a85ed5681f304d7f6ceed))
+
+### Bug Fixes
+
+* **android:** hand back before a remote output goes, and report each Cast load's end once ([c44c4d9](https://github.com/radio-garden/react-native-audio-browser/commit/c44c4d9972ee2871f682a20d985513ca69e0fe94))
+* **android:** keep a Cast playing report that arrives before the item shows ([2e67eca](https://github.com/radio-garden/react-native-audio-browser/commit/2e67ecad26c098fd52abd427720f384fba35faf0))
+* **android:** keep a Cast queue's duration, skips and play intent ([206e202](https://github.com/radio-garden/react-native-audio-browser/commit/206e2023bdbd3504367d8d396c4694b237ac072f))
+* **android:** keep a Cast session's queue, errors and controls right ([bcf601e](https://github.com/radio-garden/react-native-audio-browser/commit/bcf601ed5b05031fbbe5132bd332ce22c08db500))
+* **android:** keep a Sonos room's errors, stops, tracks and volume right ([f98d09e](https://github.com/radio-garden/react-native-audio-browser/commit/f98d09e4669ed7d7dcb5d84a30050defb6f78c51))
+* **android:** leave a Sonos room alone once another app plays there ([46132a9](https://github.com/radio-garden/react-native-audio-browser/commit/46132a9112c91d71d5720bb4196e0bfea462c56b))
+* **android:** own the queue on this side while casting ([cb6837e](https://github.com/radio-garden/react-native-audio-browser/commit/cb6837ec87dd2139380b466afc119438cf814cbf))
+* **android:** send a Sonos room a track as a file, so it knows its length ([1ae2ee0](https://github.com/radio-garden/react-native-audio-browser/commit/1ae2ee01a690a9e48b1496e814dd71472e1f1aa6))
+* **android:** tell a Sonos room's own stream by the URI it was sent ([06c7845](https://github.com/radio-garden/react-native-audio-browser/commit/06c784516317952c3ae4619f3ad2a0672bd50f37))
+* **android:** time out a play no remote output reports playing ([63101b2](https://github.com/radio-garden/react-native-audio-browser/commit/63101b208d93b7067c9f9a5db31a6ec3b605c78d))
+* **android:** time out only an item a remote output never starts, and end on removing the last ([b23d2b1](https://github.com/radio-garden/react-native-audio-browser/commit/b23d2b1fbc5970d88c4c2dccf3bc71b8a50a8717))
+
+### Code Refactors
+
+* **android:** generalise the Cast switch to a list of remote outputs ([802b015](https://github.com/radio-garden/react-native-audio-browser/commit/802b015dcd254240d98faeb450a29d2766f1f10f))
+* **android:** send remote outputs one item at a time, from one controller ([ae6867e](https://github.com/radio-garden/react-native-audio-browser/commit/ae6867ee1af03aa4f9ad8f5101bce4ff5d941f9e)), closes [#210](https://github.com/radio-garden/react-native-audio-browser/issues/210)
+
+### Documentation
+
+* describe Google Cast in the audio output guide ([5948d46](https://github.com/radio-garden/react-native-audio-browser/commit/5948d46e12b7e507faec1279a06c37a741b5ec8f))
+* describe Sonos in the audio output guide ([e2b4902](https://github.com/radio-garden/react-native-audio-browser/commit/e2b4902c17587ce933d28f228eeacf550a332c05))
+* record that a remote plays one item and the switch owns the queue ([427bdd9](https://github.com/radio-garden/react-native-audio-browser/commit/427bdd9fd981586b3cd09f015ee59e59361b3688))
+
+### Other changes
+
+* trim the comments the Cast work added ([24ec16d](https://github.com/radio-garden/react-native-audio-browser/commit/24ec16dc641c642e170f0d0e85c40795197d0146))
+
 ## [0.2.0-next.50](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.49...v0.2.0-next.50) (2026-11-03)
 
 ### ⚠ BREAKING CHANGES
