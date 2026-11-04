@@ -240,6 +240,8 @@ dependencies {
   mockitoAgent "org.mockito:mockito-core:${mockitoVersion}"
   testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
   testImplementation 'org.robolectric:robolectric:4.11.1'
+  // Stands in for a Sonos speaker in the UPnP round-trip tests.
+  testImplementation 'com.squareup.okhttp3:mockwebserver'
 
   api 'com.jakewharton.timber:timber:5.0.1'
 }

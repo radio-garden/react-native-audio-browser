@@ -1,0 +1,159 @@
+package com.audiobrowser.player
+
+import android.os.Looper
+import androidx.media3.common.Player as MediaPlayer
+import com.audiobrowser.Callbacks
+import com.audiobrowser.TestFixtures
+import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.sonos.SonosControl
+import com.audiobrowser.sonos.SonosDevice
+import com.audiobrowser.sonos.SonosOutputs
+import com.audiobrowser.sonos.SonosRemote
+import com.audiobrowser.sonos.SonosRoom
+import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.TimedMetadata
+import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.mockingDetails
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+/** A Sonos room selected in the Output Switcher, played through the player's remote switch. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class PlayerSonosTest {
+  private class FakeRoom : SonosControl {
+    val calls = CopyOnWriteArrayList<String>()
+    @Volatile var title: String? = null
+
+    override fun setUri(
+      streamUrl: String,
+      title: String,
+      artist: String?,
+      album: String?,
+      artworkUri: String?,
+      live: Boolean,
+    ) {
+      calls += "setUri $streamUrl"
+    }
+
+    override fun play() {
+      calls += "play"
+    }
+
+    override fun pause() {
+      calls += "pause"
+    }
+
+    override fun stop() {
+      calls += "stop"
+    }
+
+    override fun getTransportState() = "PLAYING"
+
+    override fun getStreamContent() = title
+
+    override fun getVolume() = 0
+
+    override fun setVolume(volume: Int) {
+      calls += "setVolume $volume"
+    }
+  }
+
+  private val looper = Looper.getMainLooper()
+  private val player = Player(RuntimeEnvironment.getApplication())
+  private val room = FakeRoom()
+  private val callbacks = mock(Callbacks::class.java)
+
+  @Before
+  fun selectRoom() {
+    player.sonosRemoteFactory = { resolutions, scope ->
+      SonosRemote(RuntimeEnvironment.getApplication(), resolutions, scope, controlOf = { room })
+    }
+    player.setup(PlayerSetupOptions(sonos = true))
+    player.setCallbacks(callbacks)
+    player.sessionPlayer.setMediaItems(
+      listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
+    )
+    player.playWhenReady = true
+    SonosOutputs.select(ROOM)
+    idleUntil("the handover") { !player.isPlayingLocally }
+    player.sessionPlayer.prepare()
+    idleUntil("playing on the speaker") { "play" in room.calls }
+  }
+
+  @After
+  fun release() {
+    SonosOutputs.unselect(ROOM)
+    player.destroy()
+  }
+
+  @Test
+  fun `the selected room plays the queue, and the phone stops`() {
+    assertEquals(listOf("setUri https://s/a.mp3", "play"), room.calls)
+    assertEquals(false, player.isPlayingLocally)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `the speaker's stream title reaches the app as timed metadata`() {
+    room.title = "Santana - Smooth"
+
+    idleUntil("the title") { timedMetadata().isNotEmpty() }
+
+    assertEquals("Santana - Smooth", timedMetadata().last().title)
+  }
+
+  @Test
+  fun `unselecting the room stops the speaker and brings playback back to the phone`() {
+    SonosOutputs.unselect(ROOM)
+
+    idleUntil("the speaker stopped") { "stop" in room.calls }
+    assertEquals(true, player.isPlayingLocally)
+    assertEquals(true, player.exoPlayer.playWhenReady)
+    assertEquals(1, player.exoPlayer.mediaItemCount)
+  }
+
+  private fun timedMetadata() =
+    mockingDetails(callbacks)
+      .invocations
+      .filter { it.method.name == "onTimedMetadata" }
+      .map { it.arguments[0] as TimedMetadata }
+
+  /** Commands run on a background thread, and the speaker is polled every two seconds. */
+  private fun idleUntil(what: String, condition: () -> Boolean) {
+    repeat(300) {
+      shadowOf(looper).idleFor(Duration.ofMillis(100))
+      if (condition()) return
+      Thread.sleep(10)
+    }
+    fail("never $what")
+  }
+
+  private companion object {
+    val ROOM =
+      SonosRoom(
+        id = "RINCON_TEST",
+        name = "Test Room",
+        device =
+          SonosDevice(
+            udn = "uuid:RINCON_TEST",
+            name = "Test Room",
+            baseUrl = "http://192.0.2.1:1400",
+            avTransportControlUrl = "http://192.0.2.1:1400/MediaRenderer/AVTransport/Control",
+            renderingControlControlUrl =
+              "http://192.0.2.1:1400/MediaRenderer/RenderingControl/Control",
+            zoneGroupTopologyControlUrl = null,
+          ),
+      )
+  }
+}

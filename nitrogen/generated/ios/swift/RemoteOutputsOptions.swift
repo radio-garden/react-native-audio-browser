@@ -18,9 +18,15 @@ public extension RemoteOutputsOptions {
   /**
    * Create a new instance of `RemoteOutputsOptions`.
    */
-  init(cast: Bool?) {
+  init(cast: Bool?, sonos: Bool?) {
     self.init({ () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = cast {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = sonos {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
@@ -33,6 +39,18 @@ public extension RemoteOutputsOptions {
     return { () -> Bool? in
       if bridge.has_value_std__optional_bool_(self.__cast) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__cast)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var sonos: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__sonos) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__sonos)
         return __unwrapped
       } else {
         return nil

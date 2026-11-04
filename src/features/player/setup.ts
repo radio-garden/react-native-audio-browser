@@ -494,6 +494,13 @@ export interface RemoteOutputsOptions {
    * @default false
    */
   cast?: boolean
+  /**
+   * Plays on Sonos rooms selected in the Output Switcher, over the speakers' UPnP control: the
+   * speaker fetches the media URL the media transform resolves, without its headers. Sonos calls
+   * UPnP unsupported and lets the listener switch it off; then no rooms are listed.
+   * @default false
+   */
+  sonos?: boolean
 }
 
 /**
@@ -620,7 +627,7 @@ export type SetupPlayerOptions = Pick<
   /**
    * Offers remote speakers and TVs in the system Output Switcher (`openOutputPicker`), and
    * reports the selected one as the `Output`, with `type: 'remote'`, or `'cast'` for a Cast
-   * device. `{}` reports the selection only: the library keeps playing locally, and rendering the
+   * device and `'sonos'` for a Sonos room. `{}` reports the selection only: the library keeps playing locally, and rendering the
    * audio on the speaker is the provider's job. The speakers come from media route providers that
    * declare the library's remote-output control category (`RemoteOutputs.CATEGORY` on Android).
    * The app declares AndroidX's `MediaTransferReceiver` in its manifest for the switcher to move

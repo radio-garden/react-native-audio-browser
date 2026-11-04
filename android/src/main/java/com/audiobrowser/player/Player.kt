@@ -31,6 +31,7 @@ import com.audiobrowser.remote.RemoteMedia
 import com.audiobrowser.remote.RemoteMediaResolutions
 import com.audiobrowser.remote.RemotePlayback
 import com.audiobrowser.remote.RemoteSwitchingPlayer
+import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
 import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
@@ -66,6 +67,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
@@ -118,6 +120,12 @@ class Player(internal val context: Context) {
   /** Builds the Cast session's remote player; replaced in tests. */
   internal var castRemoteFactory: (Context, RemoteMediaResolutions) -> RemotePlayback? =
     ::createCastRemote
+
+  /** Builds the selected Sonos room's remote player; replaced in tests. */
+  internal var sonosRemoteFactory: (RemoteMediaResolutions, CoroutineScope) -> RemotePlayback =
+    { resolutions, scope ->
+      SonosRemote(context, resolutions, scope)
+    }
 
   internal val isPlayingLocally: Boolean
     get() = remotePlayer?.isRemote != true
@@ -467,7 +475,7 @@ class Player(internal val context: Context) {
       buildEngine(setupOptions)
       engineOptions = newEngineOptions
     }
-    setRemoteOutputs(cast = setupOptions.cast)
+    setRemoteOutputs(cast = setupOptions.cast, sonos = setupOptions.sonos)
   }
 
   private fun buildEngine(setupOptions: PlayerSetupOptions) {
@@ -564,28 +572,34 @@ class Player(internal val context: Context) {
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
   }
 
-  private var castRequested = false
+  private var remotesRequested = false to false
   private val remoteScope = MainScope()
 
   /**
    * Starts or stops moving playback to the remote outputs selected in the Output Switcher: a Cast
-   * device with [cast]. Turning one off while it plays brings playback back here. Cast stays off
-   * where it is unavailable.
+   * device with [cast], a Sonos room with [sonos]. Turning one off while it plays brings playback
+   * back here. Cast stays off where it is unavailable.
    */
-  private fun setRemoteOutputs(cast: Boolean) {
-    if (cast == castRequested) return
-    castRequested = cast
-    val previous = remotePlayer
-    val remotes = listOfNotNull(if (cast) castRemoteFactory(context, remoteResolutions) else null)
-    remotePlayer =
-      remotes
-        .takeIf { it.isNotEmpty() }
-        ?.let {
-          RemoteSwitchingPlayer(exoPlayer, it, remoteResolutions, ::resolveRemoteMedia, remoteScope)
-        }
-    if (remotePlayer === previous) return
-    previous?.release()
+  private fun setRemoteOutputs(cast: Boolean, sonos: Boolean) {
+    if (cast to sonos == remotesRequested) return
+    remotesRequested = cast to sonos
+    remotePlayer?.release()
     remoteResolutions.clear()
+    val remotes =
+      listOfNotNull(
+        if (cast) castRemoteFactory(context, remoteResolutions) else null,
+        if (sonos) sonosRemoteFactory(remoteResolutions, remoteScope) else null,
+      )
+    remotePlayer =
+      if (remotes.isEmpty()) null
+      else
+        RemoteSwitchingPlayer(
+          exoPlayer,
+          remotes,
+          remoteResolutions,
+          ::resolveRemoteMedia,
+          remoteScope,
+        )
     attachSessionPlayer()
   }
 

@@ -40,10 +40,11 @@ namespace margelo::nitro::audiobrowser {
   struct RemoteOutputsOptions final {
   public:
     std::optional<bool> cast     SWIFT_PRIVATE;
+    std::optional<bool> sonos     SWIFT_PRIVATE;
 
   public:
     RemoteOutputsOptions() = default;
-    explicit RemoteOutputsOptions(std::optional<bool> cast): cast(cast) {}
+    explicit RemoteOutputsOptions(std::optional<bool> cast, std::optional<bool> sonos): cast(cast), sonos(sonos) {}
 
   public:
     friend bool operator==(const RemoteOutputsOptions& lhs, const RemoteOutputsOptions& rhs) = default;
@@ -59,12 +60,14 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RemoteOutputsOptions fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::RemoteOutputsOptions(
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cast")))
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cast"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "sonos")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RemoteOutputsOptions& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "cast"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.cast));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "sonos"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.sonos));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -76,6 +79,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "cast")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "sonos")))) return false;
       return true;
     }
   };

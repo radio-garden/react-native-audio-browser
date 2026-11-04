@@ -29,6 +29,7 @@ import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.sonos.SonosOutputs
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
@@ -870,6 +871,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         enabled = remoteOutputs != null,
         castCategory = castRouteCategory.takeIf { remoteOutputs?.cast == true },
       )
+      SonosOutputs.setEnabled(context, remoteOutputs?.sonos == true)
       // The bundled runtime options and initial state are part of the atomic launch
       // description: stage them here, apply them together with the engine below (or at
       // service connect). Last-write-wins with their imperative counterparts.

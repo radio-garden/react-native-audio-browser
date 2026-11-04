@@ -8,6 +8,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaTransferReceiver
+import com.audiobrowser.sonos.SonosOutputs
 import com.audiobrowser.util.OutputSwitcher
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
@@ -140,6 +141,7 @@ object RemoteOutputs {
         name = route.name,
         offersCategory = route.matchesSelector(selector),
         isCast = castCategory?.let(route::supportsControlCategory) == true,
+        isSonos = route.supportsControlCategory(SonosOutputs.CATEGORY),
       )
     )
   }
@@ -155,9 +157,15 @@ object RemoteOutputs {
 }
 
 /** The [Output] a selected route stands for: null for a route the remote outputs don't offer. */
-internal fun remoteOutputOf(name: String, offersCategory: Boolean, isCast: Boolean): Output? =
+internal fun remoteOutputOf(
+  name: String,
+  offersCategory: Boolean,
+  isCast: Boolean,
+  isSonos: Boolean,
+): Output? =
   when {
     !offersCategory -> null
     isCast -> Output(type = OutputType.CAST, name = name, external = true)
+    isSonos -> Output(type = OutputType.SONOS, name = name, external = true)
     else -> Output(type = OutputType.REMOTE, name = name, external = true)
   }
