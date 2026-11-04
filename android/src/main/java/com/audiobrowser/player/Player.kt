@@ -119,7 +119,6 @@ class Player(internal val context: Context) {
   internal var castRemoteFactory: (Context, CastMediaResolutions) -> CastRemote? =
     ::createCastRemote
 
-  /** Whether playback is on this device rather than a Cast receiver. */
   internal val isPlayingLocally: Boolean
     get() = castPlayer?.isRemote != true
 
@@ -646,7 +645,7 @@ class Player(internal val context: Context) {
       if (isOnline && pendingNetworkRetry) {
         Timber.d("Network restored with pending retry, triggering immediate retry")
         pendingNetworkRetry = false
-        // Only retry if player is still expecting to play, here: a receiver reconnects itself.
+        // Only while the play intent holds, and only locally: a receiver reconnects by itself.
         if (playWhenReadyCache && isPlayingLocally) {
           exoPlayer.prepare()
         }

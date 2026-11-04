@@ -42,7 +42,6 @@ internal class CastSwitchingPlayer(
   var local: MediaPlayer = local
     private set
 
-  /** Whether playback is on the receiver. */
   val isRemote: Boolean
     get() = player === remote.player
 
