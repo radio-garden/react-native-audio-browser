@@ -6,6 +6,7 @@
   "exclude": [
     "**/node_modules",
     "**/lib",
+    "scripts/**",
     "src/web/**",
     "**/*.web.ts",
     "**/.eslintrc.js",

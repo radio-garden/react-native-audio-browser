@@ -31,5 +31,11 @@
     "**/metro.config.js",
     "**/tsconfig.json"
   ],
-  "include": ["src/**/*", "nitrogen/**/*.json", "api-sketch.d.ts", "types/**/*"]
+  "include": [
+    "src/**/*",
+    "scripts/**/*.ts",
+    "nitrogen/**/*.json",
+    "api-sketch.d.ts",
+    "types/**/*"
+  ]
 }
