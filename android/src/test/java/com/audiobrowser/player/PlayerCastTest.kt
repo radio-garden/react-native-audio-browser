@@ -2,7 +2,7 @@ package com.audiobrowser.player
 
 import android.os.Looper
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.util.StuckPlayerException
+import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.cast.FakeCastRemote
@@ -53,9 +53,7 @@ class PlayerCastTest {
 
   @Test
   fun `a receiver falling behind the live window is an error, not a local restart`() {
-    receiver.error =
-      PlaybackException("behind", null, PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
-    receiver.update()
+    remote.fail(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
     idle()
 
     assertEquals(PlaybackState.ERROR, player.playbackState)
@@ -63,18 +61,27 @@ class PlayerCastTest {
   }
 
   @Test
-  fun `a stuck receiver is an error, not a local restart`() {
-    receiver.error =
-      PlaybackException(
-        "stuck",
-        StuckPlayerException(StuckPlayerException.STUCK_BUFFERING_NO_PROGRESS, 60_000),
-        PlaybackException.ERROR_CODE_UNSPECIFIED,
-      )
-    receiver.update()
+  fun `a receiver failing to play is an error, not a local restart`() {
+    remote.fail()
     idle()
 
     assertEquals(PlaybackState.ERROR, player.playbackState)
     assertTrue(calls("onPlaybackError").isNotEmpty())
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a new queue while casting goes to the receiver`() {
+    player.setQueue(
+      arrayOf(
+        TestFixtures.track(title = "b", src = "https://s/b.mp3"),
+        TestFixtures.track(title = "c", src = "https://s/c.mp3"),
+      ),
+      startIndex = 1,
+    )
+    idleUntil("the queue on the receiver") { receiver.items.size == 2 }
+
+    assertEquals(1, receiver.index)
   }
 
   @Test

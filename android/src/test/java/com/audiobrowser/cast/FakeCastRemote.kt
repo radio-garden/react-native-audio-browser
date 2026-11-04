@@ -21,7 +21,6 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
   private var intent = false
   private var readiness = STATE_IDLE
   private var volumeLevel = MAX_VOLUME
-  var error: PlaybackException? = null
 
   /** Every list of items sent to it, as set, added or replaced. */
   val sent = mutableListOf<List<MediaItem>>()
@@ -30,6 +29,24 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
   private val uids = mutableListOf<Any>()
 
   fun update() = invalidateState()
+
+  /** Reports [item] at [index], as a receiver that reused an earlier queue item's id does. */
+  fun report(index: Int, item: MediaItem) {
+    items[index] = item
+    invalidateState()
+  }
+
+  /** Reports the item at [index] as one the receiver hasn't matched to one sent yet. */
+  fun forget(index: Int) {
+    items[index] = MediaItem.EMPTY
+    invalidateState()
+  }
+
+  /** Reports the item at [index] as a receiver rebuilds it from its own queue: without its tag. */
+  fun rebuildWithoutTag(index: Int) {
+    items[index] = items[index].buildUpon().setTag(null).build()
+    invalidateState()
+  }
 
   override fun getState(): State =
     State.Builder()
@@ -40,23 +57,43 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
       .setCurrentMediaItemIndex(if (items.isEmpty()) C.INDEX_UNSET else index)
       .setContentPositionMs(positionMs)
       .setPlayWhenReady(intent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-      .setPlaybackState(if (items.isEmpty() || error != null) STATE_IDLE else readiness)
-      .setPlayerError(error)
+      .setPlaybackState(if (items.isEmpty()) STATE_IDLE else readiness)
       .setDeviceInfo(deviceInfo)
       .setDeviceVolume(volumeLevel)
       .build()
+
+  /**
+   * While set, a new queue is kept back from the reported state until [catchUp], as a receiver
+   * lags.
+   */
+  var lagging = false
+  private var held: (() -> Unit)? = null
+
+  fun catchUp() {
+    held?.invoke()
+    held = null
+    invalidateState()
+  }
 
   override fun handleSetMediaItems(
     mediaItems: List<MediaItem>,
     startIndex: Int,
     startPositionMs: Long,
   ): ListenableFuture<*> {
+    if (lagging) {
+      held = { setNow(mediaItems, startIndex, startPositionMs) }
+      return done()
+    }
+    setNow(mediaItems, startIndex, startPositionMs)
+    return done()
+  }
+
+  private fun setNow(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
     items.clear()
     uids.clear()
     insert(0, mediaItems)
     index = if (startIndex == C.INDEX_UNSET) 0 else startIndex
     positionMs = if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs
-    return done()
   }
 
   override fun handleAddMediaItems(index: Int, mediaItems: List<MediaItem>): ListenableFuture<*> {
@@ -156,10 +193,25 @@ internal class FakeCastRemote(looper: Looper) : CastRemote {
     private set
 
   private var listener: (() -> Unit)? = null
+  private var errorListener: ((PlaybackException) -> Unit)? = null
   var released = false
 
   override fun setSessionListener(listener: (() -> Unit)?) {
     this.listener = listener
+  }
+
+  override fun setErrorListener(listener: ((PlaybackException) -> Unit)?) {
+    errorListener = listener
+  }
+
+  /** The receiver fails to play what it was sent. */
+  fun fail(code: Int = PlaybackException.ERROR_CODE_REMOTE_ERROR) {
+    errorListener?.invoke(PlaybackException("receiver failed", null, code))
+  }
+
+  /** A session already up, as one the Cast framework resumes. */
+  fun sessionUp() {
+    isSessionAvailable = true
   }
 
   fun startSession() {

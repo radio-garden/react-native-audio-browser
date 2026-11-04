@@ -5,6 +5,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.Util
 import java.util.concurrent.ConcurrentHashMap
@@ -23,7 +24,13 @@ internal interface CastRemote {
   /** Calls [listener] on the main thread whenever [isSessionAvailable] changes. */
   fun setSessionListener(listener: (() -> Unit)?)
 
-  /** Leaves the session to play on, as the receiver holds it. */
+  /**
+   * Calls [listener] on the main thread when the receiver fails to play what it was sent: [player]
+   * reports no error of its own.
+   */
+  fun setErrorListener(listener: ((PlaybackException) -> Unit)?)
+
+  /** Ends the session on this side; the receiver stops or plays on as it was told. */
   fun release()
 }
 

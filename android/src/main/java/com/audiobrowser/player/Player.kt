@@ -798,7 +798,8 @@ class Player(internal val context: Context) {
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
-    if (mediaItems.isNotEmpty()) {
+    // The order is the local engine's; a receiver shuffles by its own.
+    if (mediaItems.isNotEmpty() && isPlayingLocally) {
       exoPlayer.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
     }
     queueSourcePath = sourcePath
