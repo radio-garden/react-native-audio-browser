@@ -607,6 +607,7 @@ class RemoteSwitchingPlayerTest {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
+    remote.playing()
 
     shadowOf(looper).idleFor(Duration.ofSeconds(31))
 
@@ -618,6 +619,7 @@ class RemoteSwitchingPlayerTest {
     playLocally(listOf("a"))
     remote.startSession()
     idle()
+    remote.playing()
 
     remote.player.readiness = MediaPlayer.STATE_BUFFERING
     remote.player.update()
@@ -640,6 +642,37 @@ class RemoteSwitchingPlayerTest {
     shadowOf(looper).idleFor(Duration.ofSeconds(31))
 
     assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
+  fun `a play after a paused handover that the receiver never reports playing is the player error`() {
+    local.setMediaItems(items("a"))
+    local.prepare()
+    idle()
+    remote.startSession()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+    assertNull(player.playerError)
+
+    player.play()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
+  fun `a play after a paused handover that the receiver reports playing is not timed out`() {
+    local.setMediaItems(items("a"))
+    local.prepare()
+    idle()
+    remote.startSession()
+    idle()
+
+    player.play()
+    remote.playing()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertNull(player.playerError)
   }
 
   @Test

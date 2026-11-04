@@ -73,6 +73,7 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
     object : RemoteMediaClient.Callback() {
       override fun onStatusUpdated() {
         val status = client?.mediaStatus ?: return
+        if (status.playerState == MediaStatus.PLAYER_STATE_PLAYING) listener?.onPlaying()
         when (ends.report(status.mediaInfo?.contentId, status.playerState, status.idleReason)) {
           CastEnds.Report.ENDED -> listener?.onEnded()
           CastEnds.Report.FAILED ->

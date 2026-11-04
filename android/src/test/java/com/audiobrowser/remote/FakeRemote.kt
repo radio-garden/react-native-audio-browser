@@ -250,6 +250,11 @@ internal class FakeRemote(private val looper: Looper) : RemotePlayback {
     listener?.onSessionChanged()
   }
 
+  /** The receiver reports its item playing. */
+  fun playing() {
+    listener?.onPlaying()
+  }
+
   /** The receiver played its item to the end. */
   fun end() {
     player.readiness = MediaPlayer.STATE_ENDED

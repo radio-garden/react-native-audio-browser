@@ -64,7 +64,9 @@ class PlayerSonosTest {
       calls += "seek $positionMs"
     }
 
-    override fun getTransportState() = "PLAYING"
+    @Volatile var state = "PLAYING"
+
+    override fun getTransportState() = state
 
     override fun getPosition() = SonosPosition(title, null, null)
 
@@ -112,6 +114,20 @@ class PlayerSonosTest {
   fun release() {
     SonosOutputs.selected?.let(SonosOutputs::unselect)
     if (!destroyed) player.destroy()
+  }
+
+  @Test
+  fun `a play the speaker accepts but never starts is a playback error`() {
+    player.playWhenReady = false
+    room.state = "PAUSED_PLAYBACK"
+    idleUntil("paused on the speaker") { "pause" in room.calls }
+    room.state = "TRANSITIONING"
+
+    player.playWhenReady = true
+
+    idleUntil("the start timed out", steps = 500) {
+      player.playbackState == com.margelo.nitro.audiobrowser.PlaybackState.ERROR
+    }
   }
 
   @Test
@@ -168,8 +184,8 @@ class PlayerSonosTest {
       .map { it.arguments[0] as TimedMetadata }
 
   /** Commands run on a background thread, and the speaker is polled every two seconds. */
-  private fun idleUntil(what: String, condition: () -> Boolean) {
-    repeat(300) {
+  private fun idleUntil(what: String, steps: Int = 300, condition: () -> Boolean) {
+    repeat(steps) {
       shadowOf(looper).idleFor(Duration.ofMillis(100))
       if (condition()) return
       Thread.sleep(10)

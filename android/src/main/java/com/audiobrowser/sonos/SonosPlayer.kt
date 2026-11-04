@@ -72,11 +72,12 @@ internal interface SonosControl {
  * Plays one item at a time on a Sonos room: Media3 commands in, UPnP out, and the room's transport
  * state, position, stream title and volume polled back in. As a
  * [com.audiobrowser.remote.RemotePlayback]'s player, setting its item loads it on the speaker from
- * the start position given, without [prepare]. A track that plays to its end calls [onEnded]; one
- * stopped there early reads as paused. Once another app or the Sonos app plays something else
- * there, it reads as paused and leaves the room alone until played again. A title the speaker reads
- * from the stream arrives as an [IcyInfo] in the timed metadata, where the local player reports its
- * own. The room's volume is read when the player starts and with each poll, and goes to [onVolume].
+ * the start position given, without [prepare]. Each poll that reads it playing calls [onPlaying]. A
+ * track that plays to its end calls [onEnded]; one stopped there early reads as paused. Once
+ * another app or the Sonos app plays something else there, it reads as paused and leaves the room
+ * alone until played again. A title the speaker reads from the stream arrives as an [IcyInfo] in
+ * the timed metadata, where the local player reports its own. The room's volume is read when the
+ * player starts and with each poll, and goes to [onVolume].
  *
  * Commands run in the order they are made, one at a time, off the main thread, and run to the end
  * even once the player is released, so its last stop reaches the speaker. A failed command that no
@@ -89,6 +90,7 @@ internal class SonosPlayer(
   looper: Looper,
   private val control: SonosControl,
   private val onEnded: () -> Unit,
+  private val onPlaying: () -> Unit,
   private val onError: (PlaybackException) -> Unit,
   private val onVolume: (Int) -> Unit,
   private val routingControllerId: () -> String?,
@@ -427,6 +429,7 @@ internal class SonosPlayer(
         readPositionMs = positionMs
         playingSinceReadAtMs = nowMs()
         position = PositionSupplier.getExtrapolating(positionMs, 1f)
+        onPlaying()
       }
       "PAUSED_PLAYBACK",
       "PAUSED_RECORDING" -> {

@@ -41,6 +41,8 @@ class SonosRemoteTest {
           sessions += remote.isSessionAvailable
         }
 
+        override fun onPlaying() = Unit
+
         override fun onEnded() = Unit
 
         override fun onFailed(error: PlaybackException) = Unit

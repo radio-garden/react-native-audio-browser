@@ -63,6 +63,7 @@ internal class SonosRemote(
         context.mainLooper,
         controlOf(room),
         onEnded = { if (session === started) listener?.onEnded() },
+        onPlaying = { if (session === started) listener?.onPlaying() },
         onError = { if (session === started) listener?.onFailed(it) },
         onVolume = { SonosOutputs.reportVolume(room.id, it) },
         routingControllerId = routingControllerId,

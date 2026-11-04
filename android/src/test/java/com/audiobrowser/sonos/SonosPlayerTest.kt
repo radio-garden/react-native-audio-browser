@@ -86,11 +86,13 @@ class SonosPlayerTest {
   private val errors = mutableListOf<PlaybackException>()
   private val volumes = mutableListOf<Int>()
   private var ended = 0
+  private var playings = 0
   private val player =
     SonosPlayer(
       Looper.getMainLooper(),
       room,
       onEnded = { ended++ },
+      onPlaying = { playings++ },
       onError = { errors += it },
       onVolume = { volumes += it },
       routingControllerId = { "routing-session-1" },
@@ -199,6 +201,19 @@ class SonosPlayerTest {
     settle()
 
     assertEquals(listOf("setUri https://a.example/stream Station a live=true", "play"), room.calls)
+  }
+
+  @Test
+  fun `a poll that reads the room playing reports it, and a play alone doesn't`() {
+    startPlaying(station("a"))
+    room.state = "TRANSITIONING"
+    poll()
+    assertEquals(0, playings)
+
+    room.state = "PLAYING"
+    poll()
+
+    assertEquals(1, playings)
   }
 
   @Test

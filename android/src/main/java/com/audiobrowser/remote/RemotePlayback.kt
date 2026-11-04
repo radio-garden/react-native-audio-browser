@@ -27,6 +27,12 @@ internal interface RemotePlayback {
     /** [isSessionAvailable] or [player] changed. */
     fun onSessionChanged()
 
+    /**
+     * The receiver reports its item playing, as it plays it: [player]'s own play state follows a
+     * play as soon as it is asked.
+     */
+    fun onPlaying()
+
     /** The receiver played its item to the end: the only end the switch acts on. */
     fun onEnded()
 
