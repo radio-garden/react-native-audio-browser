@@ -1,3 +1,10 @@
+## [0.2.0-next.52](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.51...v0.2.0-next.52) (2026-11-04)
+
+### Documentation
+
+* give each glossary term its own heading ([20e5a50](https://github.com/radio-garden/react-native-audio-browser/commit/20e5a50b8ab0c0f5c214338de456ddd76bc94e90))
+* rename CONTEXT.md to GLOSSARY.md ([2aa7f5c](https://github.com/radio-garden/react-native-audio-browser/commit/2aa7f5c9fa6171c3f69d33f52d130dfaa0902413))
+
 ## [0.2.0-next.51](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.50...v0.2.0-next.51) (2026-11-04)
 
 ### ⚠ BREAKING CHANGES
