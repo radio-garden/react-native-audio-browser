@@ -461,6 +461,70 @@ class CastSwitchingPlayerTest {
     assertFalse(0 in counts)
   }
 
+  @Test
+  fun `queue commands stay available while the receiver's own lag`() {
+    playLocally(listOf("a", "b"))
+    remote.player.commands =
+      MediaPlayer.Commands.Builder()
+        .addAllCommands()
+        .removeAll(
+          MediaPlayer.COMMAND_SEEK_TO_NEXT,
+          MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        )
+        .build()
+    remote.startSession()
+    idle()
+
+    assertTrue(player.isCommandAvailable(MediaPlayer.COMMAND_SEEK_TO_NEXT))
+    player.seekToNext()
+    idle()
+    assertEquals(1, remote.player.index)
+  }
+
+  @Test
+  fun `a pause from another sender holds through a handback`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    remote.player.setIntentFromElsewhere(false)
+    idle()
+    remote.endSession()
+    idle()
+
+    assertFalse(local.playWhenReady)
+  }
+
+  @Test
+  fun `a load carries the play intent into the receiver's autoplay`() {
+    playLocally(listOf("a"))
+    player.playWhenReady = false
+    idle()
+
+    remote.startSession()
+    idle()
+
+    assertEquals(listOf(false), remote.player.intentAtLoads)
+  }
+
+  @Test
+  fun `the previous item's failure while a new queue resolves is not the new one's`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    gate = CompletableDeferred()
+
+    player.setMediaItems(listOf(item("b")))
+    remote.fail()
+    gate!!.complete(Unit)
+    idle()
+
+    assertNull(player.playerError)
+    assertEquals(listOf("b"), remote.player.items.map { it.mediaId })
+  }
+
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {
     player.setMediaItems(ids.map { item(it) }, index, positionMs)
     player.prepare()

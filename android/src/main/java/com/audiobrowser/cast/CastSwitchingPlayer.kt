@@ -62,6 +62,9 @@ internal class CastSwitchingPlayer(
   // until the receiver reports it current.
   private var load: Job? = null
   private var loading: Any? = null
+  // Until the load is sent, the receiver still reports the old queue: its items can be the same
+  // objects, and its errors are the old item's.
+  private var sending = false
   private var loadPositionMs = 0L
 
   // What the receiver last failed to play, until the queue is loaded there again.
@@ -110,10 +113,9 @@ internal class CastSwitchingPlayer(
         playIntent = local.playWhenReady
         remote.player.repeatMode = local.repeatMode
         val positionMs = if (isCurrentItemLive()) C.TIME_UNSET else local.currentPosition
-        val wasIdle = local.playbackState == STATE_IDLE
-        local.stop()
+        if (local.playbackState != STATE_IDLE) loadOnReceiver(positionMs)
         setPlayer(remote.player)
-        if (!wasIdle) loadOnReceiver(positionMs)
+        local.stop()
       }
   }
 
@@ -143,7 +145,7 @@ internal class CastSwitchingPlayer(
   }
 
   private fun onRemoteError(error: PlaybackException) {
-    if (!isRemote || remoteError != null) return
+    if (!isRemote || remoteError != null || sending) return
     Timber.w(error, "Cast: the receiver failed to play")
     remoteError = error
     loading = null
@@ -174,6 +176,7 @@ internal class CastSwitchingPlayer(
     remoteError = null
     if (items.isEmpty()) {
       loading = null
+      sending = false
       remote.player.stop()
       return
     }
@@ -183,12 +186,15 @@ internal class CastSwitchingPlayer(
     uids.forEachIndexed { i, uid -> sent[uid] = queue[i] }
     loading = uids[current]
     loadPositionMs = if (positionMs == C.TIME_UNSET) 0 else positionMs
+    sending = true
     load =
       scope.launch {
         resolveAll(queue.filter { it !in resolutions && it !in unresolvable })
+        sending = false
         try {
-          remote.player.setMediaItems(queue, current, positionMs)
+          // Before the load, which autoplays as this says.
           remote.player.playWhenReady = playIntent
+          remote.player.setMediaItems(queue, current, positionMs)
         } catch (e: IllegalStateException) {
           // The session ended under it: the handback, already on its way, plays on locally.
           Timber.e(e, "Cast: could not load the queue on the receiver")
@@ -227,13 +233,22 @@ internal class CastSwitchingPlayer(
     val state = super.getState()
     if (!isRemote) return state
     followReceiver()
+    // Duration, seekability and liveness come from the receiver's data for the item it plays.
+    val playing =
+      state.playlist.getOrNull(state.currentMediaItemIndex).takeIf { receiverPlaysCurrent() }
     val playlist =
-      items.indices.map { MediaItemData.Builder(uids[it]).setMediaItem(items[it]).build() }
+      items.indices.map { i ->
+        val data =
+          if (i == index && playing != null) playing.buildUpon().setUid(uids[i])
+          else MediaItemData.Builder(uids[i])
+        data.setMediaItem(items[i]).build()
+      }
     val error = remoteError
     return state
       .buildUpon()
       .setPlaylist(playlist)
       .setCurrentMediaItemIndex(index)
+      .setAvailableCommands(state.availableCommands.buildUpon().addAll(*QUEUE_COMMANDS).build())
       .apply {
         when {
           items.isEmpty() -> setPlaybackState(STATE_IDLE)
@@ -256,11 +271,13 @@ internal class CastSwitchingPlayer(
     val reported = remote.player.currentMediaItem ?: return
     val loadingUid = loading
     if (loadingUid != null) {
-      if (reported === sent[loadingUid]) loading = null
+      if (!sending && reported === sent[loadingUid]) loading = null
       return
     }
     val moved = entryOf(reported)
     if (moved >= 0) index = moved
+    // A pause or play from the TV or another sender.
+    if (receiverPlaysCurrent()) playIntent = remote.player.playWhenReady
   }
 
   override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
@@ -408,6 +425,26 @@ internal class CastSwitchingPlayer(
     remote.release()
     setPlayer(ReleasedPlayer(applicationLooper))
     return Futures.immediateVoidFuture()
+  }
+
+  private companion object {
+    // Available from the queue this side keeps, however far the receiver's own lags.
+    val QUEUE_COMMANDS =
+      intArrayOf(
+        MediaPlayer.COMMAND_PLAY_PAUSE,
+        MediaPlayer.COMMAND_PREPARE,
+        MediaPlayer.COMMAND_STOP,
+        MediaPlayer.COMMAND_SEEK_TO_DEFAULT_POSITION,
+        MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+        MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+        MediaPlayer.COMMAND_SEEK_TO_NEXT,
+        MediaPlayer.COMMAND_SEEK_TO_MEDIA_ITEM,
+        MediaPlayer.COMMAND_SET_MEDIA_ITEM,
+        MediaPlayer.COMMAND_CHANGE_MEDIA_ITEMS,
+        MediaPlayer.COMMAND_GET_TIMELINE,
+        MediaPlayer.COMMAND_GET_CURRENT_MEDIA_ITEM,
+      )
   }
 
   /** Stands in once released, so this player stops listening to the local one. */

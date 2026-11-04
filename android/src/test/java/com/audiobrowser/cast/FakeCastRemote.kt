@@ -25,10 +25,22 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
   /** Every list of items sent to it, as set, added or replaced. */
   val sent = mutableListOf<List<MediaItem>>()
   var stops = 0
+
+  /** What it advertises; a remote player's lagging timeline can hide queue commands. */
+  var commands: MediaPlayer.Commands = MediaPlayer.Commands.Builder().addAllCommands().build()
+
+  /** The play intent at each load, which the receiver autoplays from. */
+  val intentAtLoads = mutableListOf<Boolean>()
   val volumeChanges = mutableListOf<Int>()
   private val uids = mutableListOf<Any>()
 
   fun update() = invalidateState()
+
+  /** The receiver is paused or played by another sender. */
+  fun setIntentFromElsewhere(playWhenReady: Boolean) {
+    intent = playWhenReady
+    invalidateState()
+  }
 
   /** Reports [item] at [index], as a receiver that reused an earlier queue item's id does. */
   fun report(index: Int, item: MediaItem) {
@@ -50,7 +62,7 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
 
   override fun getState(): State =
     State.Builder()
-      .setAvailableCommands(MediaPlayer.Commands.Builder().addAllCommands().build())
+      .setAvailableCommands(commands)
       .setPlaylist(
         items.mapIndexed { i, item -> MediaItemData.Builder(uids[i]).setMediaItem(item).build() }
       )
@@ -89,6 +101,7 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
   }
 
   private fun setNow(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
+    intentAtLoads += intent
     items.clear()
     uids.clear()
     insert(0, mediaItems)
