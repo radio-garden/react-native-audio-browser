@@ -35,7 +35,7 @@ class SonosPlayerTest {
     var level: Int? = 20
     var positionMs: Long? = null
     var durationMs: Long? = null
-    var trackUri: String? = null
+    var currentUri: String? = null
     var failing: String? = null
     var unreachable = false
 
@@ -70,7 +70,9 @@ class SonosPlayerTest {
       return state
     }
 
-    override fun getPosition() = SonosPosition(title, positionMs, durationMs, trackUri)
+    override fun getPosition() = SonosPosition(title, positionMs, durationMs)
+
+    override fun getMediaUri() = currentUri
 
     override fun getVolume() = level
 
@@ -340,6 +342,21 @@ class SonosPlayerTest {
   }
 
   @Test
+  fun `the last track ends at its duration`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 199_000
+    poll()
+    shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3))
+    room.state = "STOPPED"
+    poll()
+
+    assertEquals(Player.STATE_ENDED, player.playbackState)
+    assertEquals(200_000, player.currentPosition)
+  }
+
+  @Test
   fun `a poll that overlapped a command does not undo it`() {
     startPlaying(station("a"))
     room.state = "PLAYING"
@@ -469,9 +486,9 @@ class SonosPlayerTest {
   fun `another app taking the room reads as paused, and the room is left alone`() {
     startPlaying(station("a"))
     room.state = "PLAYING"
-    room.trackUri = "x-rincon-mp3radio://https://a.example/stream"
+    room.currentUri = "x-rincon-mp3radio://https://a.example/stream"
     poll()
-    room.trackUri = "x-sonos-spotify:spotify%3atrack%3a1"
+    room.currentUri = "x-sonos-vli:RINCON_A:2,spotify:abc"
     room.title = "Someone else - Their song"
     poll()
 

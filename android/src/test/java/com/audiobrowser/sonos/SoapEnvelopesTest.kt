@@ -46,6 +46,13 @@ class SoapEnvelopesTest {
   }
 
   @Test
+  fun `getMediaInfo`() {
+    val a = SoapEnvelopes.getMediaInfo()
+    assertEquals("$avt#GetMediaInfo", a.soapAction)
+    assertEquals(envelope(avt, "GetMediaInfo", "<InstanceID>0</InstanceID>"), a.body)
+  }
+
+  @Test
   fun `getPositionInfo`() {
     val a = SoapEnvelopes.getPositionInfo()
     assertEquals("$avt#GetPositionInfo", a.soapAction)

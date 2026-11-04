@@ -33,7 +33,6 @@ internal data class SonosPosition(
   val streamContent: String?,
   val positionMs: Long?,
   val durationMs: Long?,
-  val trackUri: String? = null,
 )
 
 /** The UPnP control of one Sonos room, as [SonosPlayer] drives it. Every call blocks. */
@@ -58,6 +57,12 @@ internal interface SonosControl {
   fun getTransportState(): String?
 
   fun getPosition(): SonosPosition?
+
+  /**
+   * The URI the room was last told to play, as it was sent; the track it plays may be another, the
+   * one a redirect led to.
+   */
+  fun getMediaUri(): String?
 
   fun getVolume(): Int?
 
@@ -366,7 +371,12 @@ internal class SonosPlayer(
       try {
         commands.withLock {
           withContext(io) {
-            Reading(control.getTransportState(), control.getPosition(), control.getVolume())
+            Reading(
+              control.getTransportState(),
+              control.getPosition(),
+              control.getMediaUri(),
+              control.getVolume(),
+            )
           }
         }
       } catch (e: CancellationException) {
@@ -393,14 +403,14 @@ internal class SonosPlayer(
   private class Reading(
     val transportState: String?,
     val position: SonosPosition?,
+    val mediaUri: String?,
     val volume: Int?,
   )
 
   private fun apply(reading: Reading) {
     reading.volume?.let { volume = it }
     val url = loadedUrl ?: return
-    val trackUri = reading.position?.trackUri
-    if (!trackUri.isNullOrEmpty() && !trackUri.contains(url)) {
+    if (!reading.mediaUri.isNullOrEmpty() && !reading.mediaUri.contains(url)) {
       onTakenOver()
       return
     }
@@ -486,7 +496,8 @@ internal class SonosPlayer(
       } else {
         playbackState = Player.STATE_ENDED
         loadedUid = null
-        freezePosition()
+        position = PositionSupplier.getConstant(durationMs)
+        playingSinceReadAtMs = null
       }
       return
     }

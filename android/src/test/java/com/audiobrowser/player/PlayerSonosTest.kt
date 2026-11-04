@@ -67,6 +67,8 @@ class PlayerSonosTest {
 
     override fun getPosition() = SonosPosition(title, null, null)
 
+    override fun getMediaUri() = null
+
     override fun getVolume() = 0
 
     override fun setVolume(volume: Int) {

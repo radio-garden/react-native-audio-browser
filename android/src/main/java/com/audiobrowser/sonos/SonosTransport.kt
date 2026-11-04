@@ -46,6 +46,11 @@ internal class SonosTransport(private val device: SonosDevice, private val soap:
       soap.execute(device.avTransportControlUrl, SoapEnvelopes.getPositionInfo())
     )
 
+  override fun getMediaUri(): String? =
+    SoapResponseParser.currentUri(
+      soap.execute(device.avTransportControlUrl, SoapEnvelopes.getMediaInfo())
+    )
+
   override fun setVolume(volume: Int) {
     soap.execute(device.groupRenderingControlUrl, SoapEnvelopes.setGroupVolume(volume))
   }

@@ -154,6 +154,22 @@ class SonosTransportTest {
   }
 
   @Test
+  fun `getMediaUri reads the URI the room was sent, from GetMediaInfo`() {
+    server.enqueue(
+      okResponse(
+        "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
+          "<s:Body><u:GetMediaInfoResponse><CurrentURI>x-rincon-mp3radio://https://h/listen</CurrentURI>" +
+          "</u:GetMediaInfoResponse></s:Body></s:Envelope>"
+      )
+    )
+    assertEquals("x-rincon-mp3radio://https://h/listen", transport.getMediaUri())
+    assertEquals(
+      "\"urn:schemas-upnp-org:service:AVTransport:1#GetMediaInfo\"",
+      server.takeRequest().getHeader("SOAPACTION"),
+    )
+  }
+
+  @Test
   fun `the volume is the group's, through GroupRenderingControl`() {
     server.enqueue(okResponse())
     transport.setVolume(33)

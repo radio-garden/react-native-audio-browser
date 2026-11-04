@@ -136,10 +136,23 @@ class SoapResponseParserTest {
   }
 
   @Test
-  fun `position carries the stream title and track URI, and is null for a fault`() {
+  fun `position carries the stream title, and is null for a fault`() {
     val position = SoapResponseParser.position(positionInfo(trackDidl("Santana - Smooth")))
     assertEquals("Santana - Smooth", position?.streamContent)
-    assertEquals("x-rincon-mp3radio://https://h/stream", position?.trackUri)
     assertNull(SoapResponseParser.position(fault))
+  }
+
+  @Test
+  fun `currentUri reads GetMediaInfo's CurrentURI, and is null for a fault`() {
+    val mediaInfo =
+      "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
+        "<s:Body><u:GetMediaInfoResponse xmlns:u=\"urn:schemas-upnp-org:service:AVTransport:1\">" +
+        "<NrTracks>1</NrTracks><CurrentURI>x-rincon-mp3radio://https://h/listen?a=1&amp;b=2</CurrentURI>" +
+        "</u:GetMediaInfoResponse></s:Body></s:Envelope>"
+    assertEquals(
+      "x-rincon-mp3radio://https://h/listen?a=1&b=2",
+      SoapResponseParser.currentUri(mediaInfo),
+    )
+    assertNull(SoapResponseParser.currentUri(fault))
   }
 }

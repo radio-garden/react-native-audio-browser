@@ -52,8 +52,14 @@ internal object SoapResponseParser {
       streamContent = streamContent(xml),
       positionMs = firstText(doc, "RelTime")?.let(::upnpTimeMs),
       durationMs = firstText(doc, "TrackDuration")?.let(::upnpTimeMs)?.takeIf { it > 0 },
-      trackUri = firstText(doc, "TrackURI"),
     )
+  }
+
+  /** The `<CurrentURI>` from a `GetMediaInfo` response, or null (incl. faults). */
+  fun currentUri(xml: String): String? {
+    val doc = parse(xml) ?: return null
+    if (faultOf(doc) != null) return null
+    return firstText(doc, "CurrentURI")
   }
 
   /** `H+:MM:SS` (with optional fractions) in milliseconds, or null for anything else. */

@@ -45,6 +45,9 @@ internal object SoapEnvelopes {
   fun getTransportInfo(): SoapAction =
     action(AV_TRANSPORT, "GetTransportInfo", "<InstanceID>0</InstanceID>")
 
+  fun getMediaInfo(): SoapAction =
+    action(AV_TRANSPORT, "GetMediaInfo", "<InstanceID>0</InstanceID>")
+
   fun getPositionInfo(): SoapAction =
     action(AV_TRANSPORT, "GetPositionInfo", "<InstanceID>0</InstanceID>")
 
