@@ -71,7 +71,8 @@
     "lint": "oxlint --fix",
     "release": "semantic-release",
     "test": "vitest run",
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "vocab-check": "node scripts/vocab-check.ts"
   },
   "devDependencies": {
     "@react-native-community/cli": "15.0.0-alpha.2",

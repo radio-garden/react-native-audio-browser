@@ -44,6 +44,9 @@ jobs:
       - name: Test
         run: yarn test
 
+      - name: Glossary
+        run: yarn vocab-check
+
   ios:
     # These three job names are the required status check contexts on main's
     # ruleset. Renaming one leaves its context permanently pending and blocks

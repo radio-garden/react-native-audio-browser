@@ -13,7 +13,7 @@ import com.margelo.nitro.audiobrowser.TrackStyle
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
  * displayed artwork is the transformed `artworkSource.uri` falling back to the raw `artwork` field,
  * and the mediaId is the stable `id` for playable tracks, falling back to `path` then `src` (a
- * Track must have one of the latter two — see the `src` vs `path` note in CONTEXT.md). The list
+ * Track must have one of the latter two — see the `src` vs `path` note in GLOSSARY.md). The list
  * line renders from `subtitle` (the now-playing line is re-stamped from `artist` by the now-playing
  * pipeline; see the Now Playing Metadata guide).
  */

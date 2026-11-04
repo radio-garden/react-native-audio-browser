@@ -1,6 +1,6 @@
 # Claude Development Notes
 
-Domain vocabulary lives in [`CONTEXT.md`](CONTEXT.md) — the glossary for terms used across the codebase. Follow it when naming things. Architectural decisions, when recorded, live as ADRs in [`docs/adr/`](docs/adr/).
+Domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) — the glossary for terms used across the codebase. Follow it when naming things, and run `yarn vocab-check` after editing it. Architectural decisions, when recorded, live as ADRs in [`docs/adr/`](docs/adr/).
 
 ## Building
 

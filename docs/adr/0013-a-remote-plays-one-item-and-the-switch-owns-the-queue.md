@@ -2,7 +2,7 @@
 
 **Status:** accepted
 
-On Android, playback can move from the phone to a **Remote output**: a Cast receiver or a Sonos room. `RemoteSwitchingPlayer` (the switch) stands in front of the phone's ExoPlayer and every remote output's player.
+On Android, playback can move from the phone to a **Remote Output**: a Cast receiver or a Sonos room. `RemoteSwitchingPlayer` (the switch) stands in front of the phone's ExoPlayer and every remote output's player.
 
 While a remote output plays, the switch keeps the **Queue** itself, in `RemoteQueue`. It resolves the current **Track**'s URL and sends the remote output that one item. When that item ends, the switch sends the next. The remote output never holds a queue.
 

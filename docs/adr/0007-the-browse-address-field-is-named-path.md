@@ -20,7 +20,7 @@ The timing made the rename cheap: no app using the library had shipped (npm 0.2.
 ## Consequences
 
 - **Servers must emit `path`/`albumPath`.** A server still emitting `url` produces tracks that are neither browsable nor playable-with-context; the failure is immediate and visible (and schema validation downstream can reject the old key outright).
-- **`path` now has two senses** — `Track.path` (tree address) and `RequestConfig.path` (HTTP request path). They never co-occur on one object, and sharing the name is deliberate; the ambiguity is documented in CONTEXT.md's flagged ambiguities.
+- **`path` now has two senses** — `Track.path` (tree address) and `RequestConfig.path` (HTTP request path). They never co-occur on one object, and sharing the name is deliberate; the ambiguity is documented in GLOSSARY.md's flagged ambiguities.
 - **Static-page detection changed.** A `BrowserSource` was classified as a request config partly by the presence of a `path` key; a static `ResolvedTrack` page now also carries a top-level `path`, so pages are recognized first by their required `title` (no RequestConfig field is named `title`). Regression tests pin this.
 - **Old persisted resume state degrades gracefully, once.** State written under the old keys resumes the track by `src` at the saved position; only the contextual queue expansion is skipped. The next save writes the new keys.
 - **The old name may not be reintroduced as an alias** — a `url` field on Track-shaped types is reserved for consumers' own stream-URL fields.
