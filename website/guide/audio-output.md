@@ -180,8 +180,10 @@ Sonos's cloud or local Control APIs, which need Sonos's approval.
 What plays:
 
 - The speaker fetches the stream itself, from the URL your media transform
-  resolves, without its headers. It follows redirects and works out the codec:
-  MP3, AAC and HLS streams play, over `https` and plain `http`.
+  resolves, without its headers. A live stream goes as a radio stream: the
+  speaker follows redirects and works out the codec, so MP3, AAC and HLS
+  streams play, over `https` and plain `http`. A track goes as a file, in a
+  format the speaker plays, so the speaker knows its duration and can seek in it.
 - The speaker is sent the track's title, artist and artwork to show.
 - The speaker reads song titles from the stream (ICY titles, and the ID3 titles
   of HLS streams). The library polls them and reports them through

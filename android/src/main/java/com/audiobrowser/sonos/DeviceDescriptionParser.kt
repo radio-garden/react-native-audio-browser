@@ -5,10 +5,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 
-/**
- * A discovered Sonos speaker, reduced to what control needs: its identity, a display name, and the
- * absolute control URLs for the two UPnP services we drive.
- */
+/** A discovered Sonos speaker: its identity, its name, and the absolute control URLs. */
 internal data class SonosDevice(
   val udn: String,
   val name: String,
@@ -19,13 +16,10 @@ internal data class SonosDevice(
 )
 
 /**
- * Pure parse of a UPnP `device_description.xml` (fetched from an SSDP `LOCATION`) into a
- * [SonosDevice]. Uses DOM (`javax.xml`, available on both the JVM and Android) so it is
- * unit-testable without Robolectric.
- *
- * Sonos nests the `AVTransport` and `RenderingControl` services under an embedded `MediaRenderer`
- * device, so the whole device tree is searched. Returns null for a non-Sonos device, a description
- * missing either required service, or malformed XML.
+ * Parses a UPnP `device_description.xml` (fetched from an SSDP `LOCATION`) into a [SonosDevice].
+ * Sonos nests its services under embedded devices, so the whole device tree is searched. Returns
+ * null for a non-Sonos device, malformed XML, or a description without `AVTransport` and
+ * `GroupRenderingControl`; `ZoneGroupTopology` is optional.
  */
 internal object DeviceDescriptionParser {
   private const val SONOS_MANUFACTURER = "Sonos, Inc."

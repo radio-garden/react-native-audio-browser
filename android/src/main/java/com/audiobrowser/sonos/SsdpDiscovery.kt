@@ -6,10 +6,7 @@ import java.net.InetAddress
 import java.net.SocketTimeoutException
 import timber.log.Timber
 
-/**
- * Acquire/release wrapper around a Wi-Fi multicast lock (`WifiManager.MulticastLock`), so the
- * socket I/O here stays decoupled from Android. The provider supplies one built from a `Context`.
- */
+/** A Wi-Fi multicast lock, held while discovery listens for replies. */
 internal interface MulticastLockHandle {
   fun acquire()
 
@@ -17,12 +14,8 @@ internal interface MulticastLockHandle {
 }
 
 /**
- * The real [SsdpScanner]: sends the SSDP `M-SEARCH` datagram to the UPnP multicast group and
- * collects the unicast replies for a bounded window. Blocking — run off the main thread.
- *
- * Not unit-tested (it does real UDP I/O); the message build/parse it relies on is covered by
- * [SsdpMessagesTest], and the end-to-end path is on the manual hardware checklist. A
- * [MulticastLockHandle] is held for the duration so Wi-Fi power-saving does not drop replies.
+ * Sends the SSDP `M-SEARCH` datagram to the UPnP multicast group and collects the unicast replies
+ * for a bounded window, holding the multicast lock meanwhile. Blocking: run it off the main thread.
  */
 internal class SsdpDiscovery(private val multicastLock: MulticastLockHandle? = null) : SsdpScanner {
 

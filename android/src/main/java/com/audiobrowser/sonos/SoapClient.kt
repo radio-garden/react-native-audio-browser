@@ -10,22 +10,21 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * The HTTP client for the speakers, which answer on the local network within moments: a speaker
  * that doesn't is gone, and waiting OkHttp's default 10 s per call would hold up every command.
  */
-internal fun sonosHttpClient(): OkHttpClient =
+internal val sonosHttpClient: OkHttpClient by lazy {
   OkHttpClient.Builder()
     .connectTimeout(3, TimeUnit.SECONDS)
     .readTimeout(5, TimeUnit.SECONDS)
     .writeTimeout(5, TimeUnit.SECONDS)
     .build()
+}
 
 /** Thrown when a SOAP control call fails (non-2xx HTTP or a SOAP fault). */
 internal class SoapException(message: String, val httpCode: Int?, val fault: SoapFault?) :
   Exception(message)
 
 /**
- * Posts UPnP SOAP control actions to a device's control URL over HTTP. Blocking — callers run it
- * off the main thread (the [SonosPlayer] uses `Dispatchers.IO`). On a non-2xx response it parses
- * any SOAP fault out of the body and throws [SoapException]; on 2xx it returns the response body
- * verbatim for the caller to parse.
+ * Posts UPnP SOAP actions to a control URL, blocking. Returns the response body, or throws
+ * [SoapException] with any SOAP fault on a non-2xx response.
  */
 internal class SoapClient(private val httpClient: OkHttpClient) {
   fun execute(controlUrl: String, action: SoapAction): String {

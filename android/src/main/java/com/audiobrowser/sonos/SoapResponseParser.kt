@@ -7,10 +7,7 @@ import org.w3c.dom.Document
 /** A parsed UPnP SOAP fault (the `<UPnPError>` detail). */
 internal data class SoapFault(val errorCode: Int?, val errorDescription: String?)
 
-/**
- * Pure parse of the UPnP SOAP responses the Sonos backend reads. DOM-based (`javax.xml`), so it is
- * unit-testable on the JVM. Each accessor returns null when the field/response shape is absent.
- */
+/** Parses the UPnP SOAP responses the speakers send. Each returns null when its field is absent. */
 internal object SoapResponseParser {
   /** Parses a SOAP fault envelope into its UPnP error, or null when the response is not a fault. */
   fun fault(xml: String): SoapFault? {

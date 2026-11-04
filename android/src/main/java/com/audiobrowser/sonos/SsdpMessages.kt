@@ -1,6 +1,6 @@
 package com.audiobrowser.sonos
 
-/** Parsed fields of an SSDP discovery response we care about. */
+/** The fields of an SSDP search response that discovery reads. */
 internal data class SsdpResponse(
   val location: String,
   val usn: String,
@@ -8,10 +8,7 @@ internal data class SsdpResponse(
   val server: String?,
 )
 
-/**
- * Pure build/parse of the two SSDP messages Sonos discovery needs: the outbound `M-SEARCH` datagram
- * and the inbound search responses. No sockets — [SsdpDiscovery] owns the I/O.
- */
+/** The two SSDP messages Sonos discovery needs: the `M-SEARCH` it sends and the replies. */
 internal object SsdpMessages {
   const val MULTICAST_HOST = "239.255.255.250"
   const val MULTICAST_PORT = 1900
@@ -21,13 +18,7 @@ internal object SsdpMessages {
 
   private const val USER_AGENT = "AudioBrowser/1.0 UPnP/1.1"
 
-  /**
-   * Builds the canonical SSDP `M-SEARCH` request datagram. Header order and CRLF framing are fixed
-   * (some stacks are picky); the body is always terminated by a blank line. Includes a `USER-AGENT`
-   * (recommended by UPnP DA 1.1). `MX` defaults to 2 — a wider response-jitter window than 1, which
-   * improves reliability on busy networks; [SsdpDiscovery] sends the datagram several times and
-   * waits accordingly.
-   */
+  /** Builds the SSDP `M-SEARCH` request datagram, in CRLF framing. */
   fun buildMSearch(searchTarget: String = SONOS_SEARCH_TARGET, mx: Int = 2): ByteArray =
     ("M-SEARCH * HTTP/1.1\r\n" +
         "HOST: $MULTICAST_HOST:$MULTICAST_PORT\r\n" +
@@ -57,7 +48,6 @@ internal object SsdpMessages {
       if (colon <= 0) continue
       val key = line.substring(0, colon).trim().lowercase()
       val value = line.substring(colon + 1).trim()
-      // First occurrence wins (RFC header semantics are header-specific; these are single-valued).
       headers.putIfAbsent(key, value)
     }
 

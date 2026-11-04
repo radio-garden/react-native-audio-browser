@@ -1,10 +1,8 @@
 package com.audiobrowser.sonos
 
 /**
- * Blocking UPnP control of a single Sonos device — the integration seam between the tested protocol
- * units ([SoapEnvelopes], [SoapClient], [SonosStreamUri], [DidlLite], [SoapResponseParser]) and the
- * [SonosPlayer]. Every call blocks on a SOAP round-trip and throws [SoapException] on failure, so
- * callers invoke it off the main thread (the player uses `Dispatchers.IO`).
+ * UPnP control of one Sonos device. Every call blocks on a SOAP round-trip, so call it off the main
+ * thread, and throws [SoapException] on failure.
  */
 internal class SonosTransport(private val device: SonosDevice, private val soap: SoapClient) :
   SonosControl {
@@ -17,7 +15,7 @@ internal class SonosTransport(private val device: SonosDevice, private val soap:
     artworkUri: String?,
     live: Boolean,
   ) {
-    val uri = SonosStreamUri.forTransport(streamUrl)
+    val uri = SonosStreamUri.forTransport(streamUrl, live)
     val didl =
       DidlLite.build(
         title = title,

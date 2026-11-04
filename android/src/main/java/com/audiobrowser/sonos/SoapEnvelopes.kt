@@ -6,10 +6,8 @@ import java.util.Locale
 internal data class SoapAction(val soapAction: String, val body: String)
 
 /**
- * Builds the SOAP request bodies + SOAPAction headers for the UPnP actions the Sonos backend
- * issues. Bodies are deterministic and entity-escaped; the DIDL metadata is escaped a second time
- * because it is embedded as element text inside `CurrentURIMetaData` (UPnP requires the nested
- * document be entity-encoded). All actions use `InstanceID` 0.
+ * Builds the UPnP SOAP requests sent to a speaker. The DIDL metadata is a document escaped as the
+ * text of `CurrentURIMetaData`.
  */
 internal object SoapEnvelopes {
   const val AV_TRANSPORT = "urn:schemas-upnp-org:service:AVTransport:1"

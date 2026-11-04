@@ -1,10 +1,8 @@
 package com.audiobrowser.sonos
 
 /**
- * Builds the DIDL-Lite metadata document Sonos wants as `CurrentURIMetaData` in
- * `SetAVTransportURI`. Output is deterministic (fixed namespace and field order) and XML-escaped;
- * the SOAP layer escapes it again when embedding it in the envelope. Empty/blank optional fields
- * are omitted.
+ * Builds the DIDL-Lite metadata Sonos takes as `SetAVTransportURI`'s `CurrentURIMetaData`. Blank
+ * fields are left out.
  */
 internal object DidlLite {
   private const val HEADER =

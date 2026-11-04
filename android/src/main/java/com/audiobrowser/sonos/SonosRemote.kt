@@ -91,7 +91,7 @@ internal class SonosRemote(
     }
 
     fun defaultControl(): (SonosRoom) -> SonosControl {
-      val soap = SoapClient(sonosHttpClient())
+      val soap = SoapClient(sonosHttpClient)
       return { room -> SonosTransport(room.device, soap) }
     }
   }

@@ -324,6 +324,22 @@ class SonosPlayerTest {
   }
 
   @Test
+  fun `the end of the last track stays ended`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 198_500
+    poll()
+    room.state = "STOPPED"
+    poll()
+    assertEquals(Player.STATE_ENDED, player.playbackState)
+
+    poll()
+
+    assertEquals(Player.STATE_ENDED, player.playbackState)
+  }
+
+  @Test
   fun `a poll that overlapped a command does not undo it`() {
     startPlaying(station("a"))
     room.state = "PLAYING"
@@ -495,6 +511,46 @@ class SonosPlayerTest {
     settle()
 
     assertEquals(listOf("seek 60000"), room.calls)
+  }
+
+  @Test
+  fun `seeking while playing keeps the position running`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+
+    player.seekTo(60_000)
+    settle()
+    shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1))
+
+    assertTrue(player.currentPosition > 60_000)
+  }
+
+  @Test
+  fun `a seek the speaker refuses leaves the track playing`() {
+    startPlaying(track("t1"))
+    room.state = "PLAYING"
+    room.durationMs = 200_000
+    room.positionMs = 30_000
+    poll()
+    room.failing = "seek 60000"
+
+    player.seekTo(60_000)
+    settle()
+
+    assertEquals(emptyList<PlaybackException>(), errors)
+    assertEquals(Player.STATE_READY, player.playbackState)
+  }
+
+  @Test
+  fun `a track is seekable, a station is not`() {
+    startPlaying(track("t1"))
+    assertTrue(player.isCurrentMediaItemSeekable)
+
+    startPlaying(station("a"))
+    assertFalse(player.isCurrentMediaItemSeekable)
   }
 
   @Test

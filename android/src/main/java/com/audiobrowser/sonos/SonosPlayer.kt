@@ -138,7 +138,7 @@ internal class SonosPlayer(
           val live = isLive(entry.item)
           MediaItemData.Builder(entry.uid)
             .setMediaItem(entry.item)
-            .setIsSeekable(false)
+            .setIsSeekable(!live)
             .setIsDynamic(live)
             .apply { if (live) setLiveConfiguration(LIVE) }
             .setDurationUs(
@@ -212,9 +212,13 @@ internal class SonosPlayer(
         positionMs != C.TIME_UNSET
     if (withinTrack) {
       readPositionMs = positionMs
-      if (playingSinceReadAtMs != null) playingSinceReadAtMs = nowMs()
-      position = PositionSupplier.getConstant(positionMs)
-      command { control.seek(positionMs) }
+      if (playingSinceReadAtMs != null) {
+        playingSinceReadAtMs = nowMs()
+        position = PositionSupplier.getExtrapolating(positionMs, 1f)
+      } else {
+        position = PositionSupplier.getConstant(positionMs)
+      }
+      command(fatal = false) { control.seek(positionMs) }
     } else {
       load()
     }
@@ -462,6 +466,7 @@ internal class SonosPlayer(
 
   /** The speaker is stopped: not started yet, done with the item, or stopped from elsewhere. */
   private fun onStopped() {
+    if (playbackState == Player.STATE_ENDED) return
     if (!playWhenReady) {
       playbackState = Player.STATE_READY
       return

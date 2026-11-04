@@ -38,18 +38,23 @@ class SonosRouteProviderService : MediaRouteProviderService() {
   }
 }
 
-private class SonosRouteProvider(context: Context) : MediaRouteProvider(context) {
+@VisibleForTesting
+internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context) {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-  private val httpClient = sonosHttpClient()
   private val discoverer =
-    SonosDiscoverer(httpClient, SsdpDiscovery(wifiMulticastLock(context.applicationContext)))
-  private val soap = SoapClient(httpClient)
+    SonosDiscoverer(sonosHttpClient, SsdpDiscovery(wifiMulticastLock(context.applicationContext)))
+  private val soap = SoapClient(sonosHttpClient)
 
-  // A new provider, after the system rebound the service, starts from the room still selected.
   private var rooms: List<SonosRoom> = listOfNotNull(SonosOutputs.selected)
   private var lastScanMs = 0L
   private var scanJob: Job? = null
   private val volumes = HashMap<String, Int>()
+
+  init {
+    // A new provider, after the system rebound the service, lists the room still selected, which
+    // MediaRouter2 looks up in the descriptor before it creates the room's session.
+    publish()
+  }
 
   override fun onDiscoveryRequestChanged(request: MediaRouteDiscoveryRequest?) {
     scanJob?.cancel()
@@ -68,6 +73,8 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
           val selected = SonosOutputs.selected
           rooms =
             if (selected != null && found.none { it.id == selected.id }) found + selected else found
+          // The volume may have moved since: by the media session, the Sonos app or the speaker.
+          selected?.let { room -> readVolume(room)?.let { volumes[room.id] = it } }
           publish()
           if (!request.isActiveScan) break
           delay(ACTIVE_RESCAN_MS)
@@ -89,6 +96,11 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
     Timber.d("Sonos: %d room(s)", rooms.size)
   }
 
+  private suspend fun readVolume(room: SonosRoom): Int? =
+    withContext(Dispatchers.IO) {
+      runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
+    }
+
   private fun setVolume(room: SonosRoom, volume: Int) {
     volumes[room.id] = volume
     publish()
@@ -103,10 +115,7 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
       SonosOutputs.select(room)
       publish()
       scope.launch {
-        val volume =
-          withContext(Dispatchers.IO) {
-            runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
-          }
+        val volume = readVolume(room)
         if (volume != null && SonosOutputs.selected?.id == room.id) {
           volumes[room.id] = volume
           publish()
@@ -124,10 +133,7 @@ private class SonosRouteProvider(context: Context) : MediaRouteProvider(context)
     override fun onUpdateVolume(delta: Int) {
       scope.launch {
         // From the speaker's own volume: the Sonos app or the speaker's buttons may have moved it.
-        val current =
-          withContext(Dispatchers.IO) {
-            runCatching { SonosTransport(room.device, soap).getVolume() }.getOrNull()
-          } ?: volumes[room.id] ?: return@launch
+        val current = readVolume(room) ?: volumes[room.id] ?: return@launch
         setVolume(room, (current + delta).coerceIn(0, MAX_VOLUME))
       }
     }

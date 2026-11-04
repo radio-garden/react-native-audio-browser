@@ -80,6 +80,16 @@ class SonosRoutesTest {
   }
 
   @Test
+  fun `a provider created again lists the selected room before any scan`() {
+    SonosOutputs.select(living)
+
+    val provider = SonosRouteProvider(RuntimeEnvironment.getApplication())
+
+    assertEquals(listOf("RINCON_C"), provider.descriptor?.routes?.map { it.id })
+    provider.release()
+  }
+
+  @Test
   fun `a late unselect of a room left behind keeps the room selected since`() {
     SonosOutputs.select(dining)
     SonosOutputs.select(living)

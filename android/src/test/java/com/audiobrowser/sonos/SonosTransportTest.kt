@@ -73,6 +73,25 @@ class SonosTransportTest {
   }
 
   @Test
+  fun `setUri sends a track by its URL`() {
+    server.enqueue(okResponse())
+
+    transport.setUri(
+      streamUrl = "https://h/song.mp3",
+      title = "Song",
+      artist = null,
+      album = null,
+      artworkUri = null,
+      live = false,
+    )
+
+    assertEquals(
+      true,
+      server.takeRequest().body.readUtf8().contains("<CurrentURI>https://h/song.mp3</CurrentURI>"),
+    )
+  }
+
+  @Test
   fun `pause stop play map to their AVTransport actions`() {
     server.enqueue(okResponse())
     transport.pause()
