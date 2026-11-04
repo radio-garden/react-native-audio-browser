@@ -676,6 +676,42 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a playing report before the receiver shows any item counts for the item sent`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.player.lagging = true
+    player.seekToNextMediaItem()
+    idle()
+
+    remote.player.item = null
+    remote.player.update()
+    remote.playing()
+    remote.player.catchUp()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `a playing report while the receiver shows the last item doesn't count for the item sent`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.player.lagging = true
+    player.seekToNextMediaItem()
+    idle()
+
+    remote.playing()
+    remote.player.catchUp()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
   fun `removing the current item when it is the last ends playback`() {
     playLocally(listOf("a", "b"), index = 1)
     remote.startSession()

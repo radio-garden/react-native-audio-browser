@@ -380,9 +380,16 @@ internal class RemoteSwitchingPlayer(
   private fun onReceiverPlaying() {
     val remote = remoteRoute ?: return
     val changed = followReceiver(remote)
-    if (remote.load !is Load.Playing) return
-    remote.reportedPlaying = true
-    disarmStart(remote)
+    when (remote.load) {
+      is Load.Playing -> {
+        remote.reportedPlaying = true
+        disarmStart(remote)
+      }
+      // Cast reports the item sent playing before its player shows it, and only once. A receiver
+      // still showing the last item reports that one.
+      is Load.Sent -> if (remote.receiver.currentMediaItem == null) remote.reportedPlaying = true
+      else -> Unit
+    }
     if (changed) invalidateState()
   }
 
@@ -479,6 +486,7 @@ internal class RemoteSwitchingPlayer(
         if (receiverHolds(remote, load.item)) {
           remote.load = Load.Playing(load.item)
           playIntent = remote.receiver.playWhenReady
+          if (remote.reportedPlaying) disarmStart(remote)
           return true
         }
       is Load.Playing ->
