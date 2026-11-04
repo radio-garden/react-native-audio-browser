@@ -76,7 +76,7 @@ import timber.log.Timber
 class Player
 internal constructor(
   internal val context: Context,
-  castRemote: (Context) -> RemotePlayback?,
+  castRemote: (Context, String?) -> RemotePlayback?,
   sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
 ) {
   constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
@@ -104,13 +104,14 @@ internal constructor(
     )
 
   /** The local engine. Rebuilt when the engine options change. */
-  lateinit var exoPlayer: ExoPlayer
+  internal lateinit var exoPlayer: ExoPlayer
+    private set
 
   /**
    * What plays: [exoPlayer], or while a remote output is on, the [RemoteSwitchingPlayer] around it.
-   * Every playback read and command goes here; local-only work (retry, stuck recovery, buffering,
-   * the equalizer, the volume fade) goes to [exoPlayer], or to [localEngine] where it would disturb
-   * a remote.
+   * Every playback read and command goes here. Local-only work that would disturb a remote (retry,
+   * reconnect, stuck recovery, the shuffle order) goes through [localEngine]; the equalizer,
+   * skip-silence, buffering and the volume fade act on [exoPlayer] alone.
    */
   lateinit var sessionPlayer: MediaPlayer
     private set
@@ -125,8 +126,7 @@ internal constructor(
   internal val isRemote: Boolean
     get() = remoteOutputs.player?.isRemote == true
 
-  private val localEngine: ExoPlayer?
-    get() = exoPlayer.takeIf { !isRemote }
+  internal val localEngine = LocalEngine({ exoPlayer }, { isRemote })
 
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
@@ -531,7 +531,7 @@ internal constructor(
     if (isInitialSetup) {
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
       equalizer.initialize(exoPlayer.audioSessionId)
-    } else if (localEngine != null) {
+    } else if (localEngine.isActive) {
       // No listener heard the restore; its prepare() leaves the engine buffering. While remote,
       // the receiver plays on unchanged.
       setPlaybackState(
@@ -610,9 +610,7 @@ internal constructor(
         Timber.d("Network restored with pending retry, triggering immediate retry")
         pendingNetworkRetry = false
         // Only while the play intent holds, and only locally: a receiver reconnects by itself.
-        if (playWhenReadyCache) {
-          localEngine?.prepare()
-        }
+        if (playWhenReadyCache) localEngine.retry()
       }
     }
   }
@@ -763,7 +761,7 @@ internal constructor(
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
     // While remote, the queue plays in list order.
     if (mediaItems.isNotEmpty()) {
-      localEngine?.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
+      localEngine.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
     }
     queueSourcePath = sourcePath
     sessionPlayer.prepare()
@@ -1064,16 +1062,7 @@ internal constructor(
   fun seekToLiveEdge() {
     if (currentTrack?.live != true) return
     // A receiver loads a live stream again on a seek to its default position.
-    val engine = localEngine
-    if (engine == null || engine.isCurrentMediaItemLive) {
-      sessionPlayer.seekToDefaultPosition()
-      return
-    }
-    // ExoPlayer.prepare() only re-prepares from STATE_IDLE, hence the raw stop() — not
-    // Player.stop(), which would drop the play intent this reconnect must preserve.
-    engine.stop()
-    engine.seekToDefaultPosition()
-    engine.prepare()
+    if (!localEngine.reconnectAtLiveEdge()) sessionPlayer.seekToDefaultPosition()
   }
 
   /**

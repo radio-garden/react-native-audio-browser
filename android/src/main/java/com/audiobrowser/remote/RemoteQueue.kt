@@ -10,28 +10,36 @@ import androidx.media3.common.util.Util
  * the current one. It plays in list order.
  */
 internal class RemoteQueue {
-  val items = mutableListOf<MediaItem>()
-  val uids = mutableListOf<Any>()
+  private val itemList = mutableListOf<MediaItem>()
+  private val uidList = mutableListOf<Any>()
+
+  val items: List<MediaItem>
+    get() = itemList
+
+  val uids: List<Any>
+    get() = uidList
+
   var index = C.INDEX_UNSET
+    private set
 
   val current: MediaItem?
-    get() = items.getOrNull(index)
+    get() = itemList.getOrNull(index)
 
   val isEmpty: Boolean
-    get() = items.isEmpty()
+    get() = itemList.isEmpty()
 
   fun set(newItems: List<MediaItem>, newIndex: Int) {
-    items.clear()
-    items.addAll(newItems)
-    uids.clear()
-    uids.addAll(newItems.map { Any() })
+    itemList.clear()
+    itemList.addAll(newItems)
+    uidList.clear()
+    uidList.addAll(newItems.map { Any() })
     index = if (newItems.isEmpty()) C.INDEX_UNSET else newIndex.coerceIn(0, newItems.size - 1)
   }
 
   fun add(at: Int, newItems: List<MediaItem>) {
-    val to = at.coerceIn(0, items.size)
-    items.addAll(to, newItems)
-    uids.addAll(to, newItems.map { Any() })
+    val to = at.coerceIn(0, itemList.size)
+    itemList.addAll(to, newItems)
+    uidList.addAll(to, newItems.map { Any() })
     when {
       index == C.INDEX_UNSET -> index = 0
       index >= to -> index += newItems.size
@@ -40,14 +48,14 @@ internal class RemoteQueue {
 
   /** Removes the items from [fromIndex] to [toIndex]; true when the current one went with them. */
   fun remove(fromIndex: Int, toIndex: Int): Boolean {
-    val to = toIndex.coerceAtMost(items.size)
+    val to = toIndex.coerceAtMost(itemList.size)
     val removesCurrent = index in fromIndex until to
-    items.subList(fromIndex, to).clear()
-    uids.subList(fromIndex, to).clear()
+    itemList.subList(fromIndex, to).clear()
+    uidList.subList(fromIndex, to).clear()
     index =
       when {
-        items.isEmpty() -> C.INDEX_UNSET
-        removesCurrent -> fromIndex.coerceAtMost(items.size - 1)
+        itemList.isEmpty() -> C.INDEX_UNSET
+        removesCurrent -> fromIndex.coerceAtMost(itemList.size - 1)
         index >= to -> index - (to - fromIndex)
         else -> index
       }
@@ -59,10 +67,10 @@ internal class RemoteQueue {
    * is now another media; a restamp of its metadata alone is not.
    */
   fun replace(fromIndex: Int, toIndex: Int, newItems: List<MediaItem>): Boolean {
-    val to = toIndex.coerceAtMost(items.size)
+    val to = toIndex.coerceAtMost(itemList.size)
     if (to - fromIndex == newItems.size) {
       val before = current
-      newItems.forEachIndexed { offset, item -> items[fromIndex + offset] = item }
+      newItems.forEachIndexed { offset, item -> itemList[fromIndex + offset] = item }
       val after = current
       return before != null &&
         after != null &&
@@ -71,16 +79,21 @@ internal class RemoteQueue {
     }
     val replacesCurrent = remove(fromIndex, to)
     add(fromIndex, newItems)
-    if (replacesCurrent) index = fromIndex.coerceAtMost(items.size - 1)
+    if (replacesCurrent) index = fromIndex.coerceAtMost(itemList.size - 1)
     return replacesCurrent
   }
 
   fun move(fromIndex: Int, toIndex: Int, newIndex: Int) {
-    val current = uids.getOrNull(index)
-    val to = toIndex.coerceAtMost(items.size)
-    Util.moveItems(items, fromIndex, to, newIndex)
-    Util.moveItems(uids, fromIndex, to, newIndex)
-    index = uids.indexOf(current)
+    val current = uidList.getOrNull(index)
+    val to = toIndex.coerceAtMost(itemList.size)
+    Util.moveItems(itemList, fromIndex, to, newIndex)
+    Util.moveItems(uidList, fromIndex, to, newIndex)
+    index = uidList.indexOf(current)
+  }
+
+  fun moveTo(newIndex: Int) {
+    require(newIndex in itemList.indices) { "No item at $newIndex" }
+    index = newIndex
   }
 
   /**
@@ -90,7 +103,7 @@ internal class RemoteQueue {
     when {
       isEmpty -> C.INDEX_UNSET
       repeatMode == MediaPlayer.REPEAT_MODE_ONE -> index
-      index + 1 < items.size -> index + 1
+      index + 1 < itemList.size -> index + 1
       repeatMode == MediaPlayer.REPEAT_MODE_ALL -> 0
       else -> C.INDEX_UNSET
     }

@@ -243,8 +243,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlayerError(error: PlaybackException) {
-    // Only the local engine raises the errors these recover from.
-    if (recoverLocally(error)) return
+    if (player.localEngine.isActive && recoverLocally(error)) return
     surface(error)
   }
 
@@ -253,8 +252,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Handle live stream recovery when playback position falls behind the live window
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
       Timber.d("Playback fell behind live window, recovering to live edge")
-      player.exoPlayer.seekToDefaultPosition()
-      player.exoPlayer.prepare()
+      player.localEngine.retry(toLiveEdge = true)
       return true
     }
 
@@ -317,10 +315,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           "Stuck player recovery: type=${error.stuckType} timeoutMs=${error.timeoutMs} " +
             "live=${player.isCurrentItemLive}"
         )
-        if (player.isCurrentItemLive) {
-          player.exoPlayer.seekToDefaultPosition()
-        }
-        player.exoPlayer.prepare()
+        player.localEngine.retry(toLiveEdge = player.isCurrentItemLive)
       }
       StuckRecoveryPolicy.Decision.GIVE_UP -> {
         Timber.w("Stuck player recovery exhausted (type=${error.stuckType}), surfacing error")

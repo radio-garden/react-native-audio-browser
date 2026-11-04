@@ -31,8 +31,10 @@ internal object SonosOutputs {
   private val volumeListeners = CopyOnWriteArraySet<() -> Unit>()
   private val volumes = ConcurrentHashMap<String, Int>()
 
-  // The session playing on a room, by room id, and how it sets the room's volume.
-  private var session: Pair<String, (Int) -> Unit>? = null
+  /** The session playing on room [roomId], and how it sets the room's volume. */
+  private class Session(val roomId: String, val setVolume: (Int) -> Unit)
+
+  private var session: Session? = null
 
   /**
    * Enables or disables the provider service. The component state persists, so the system can bind
@@ -89,19 +91,19 @@ internal object SonosOutputs {
   /** While a session plays on [roomId], [setVolume] sets its volume; null when it ends. */
   @MainThread
   fun setSession(roomId: String, setVolume: ((Int) -> Unit)?) {
-    if (setVolume != null) session = roomId to setVolume
-    else if (session?.first == roomId) session = null
+    if (setVolume != null) session = Session(roomId, setVolume)
+    else if (session?.roomId == roomId) session = null
   }
 
   /** Whether a session plays on [roomId]. */
-  fun hasSession(roomId: String): Boolean = session?.first == roomId
+  fun hasSession(roomId: String): Boolean = session?.roomId == roomId
 
   /** Sets [roomId]'s volume through the session playing there: false when none does. */
   @MainThread
   fun setVolumeThroughSession(roomId: String, volume: Int): Boolean {
-    val (id, setVolume) = session ?: return false
-    if (id != roomId) return false
-    setVolume(volume)
+    val session = session ?: return false
+    if (session.roomId != roomId) return false
+    session.setVolume(volume)
     return true
   }
 

@@ -13,6 +13,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -27,7 +28,8 @@ import timber.log.Timber
  *   in list order (radio-garden/react-native-audio-browser#210).
  * - Moving between remotes, or to a remote's new session, goes straight from receiver to receiver.
  * - A receiver's failure to play is the player error, which [prepare] clears by loading the item
- *   again. [stop] stops the receiver; [prepare] loads the item there again.
+ *   again; so is an item the receiver hasn't started within [startTimeoutMs]. [stop] stops the
+ *   receiver; [prepare] loads the item there again.
  * - [setVolume] is the receiver's device volume while remote.
  */
 internal class RemoteSwitchingPlayer(
@@ -35,6 +37,7 @@ internal class RemoteSwitchingPlayer(
   remotes: List<RemotePlayback>,
   private val resolve: suspend (MediaItem) -> MediaItem,
   private val scope: CoroutineScope,
+  private val startTimeoutMs: Long = 30_000,
 ) : ForwardingSimpleBasePlayer(local) {
 
   var local: MediaPlayer = local
@@ -59,6 +62,7 @@ internal class RemoteSwitchingPlayer(
 
     class Remote(val output: RemotePlayback, val receiver: MediaPlayer) : Route {
       var load: Load = Load.Idle(C.TIME_UNSET)
+      var startTimeout: Job? = null
     }
   }
 
@@ -84,7 +88,8 @@ internal class RemoteSwitchingPlayer(
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
-    data object Ended : Load
+    /** The last item played to its end, at [positionMs]. */
+    class Ended(val positionMs: Long) : Load
   }
 
   init {
@@ -126,10 +131,34 @@ internal class RemoteSwitchingPlayer(
   private val remoteRoute: Route.Remote?
     get() = route as? Route.Remote
 
+  private val receiverListener =
+    object : MediaPlayer.Listener {
+      override fun onEvents(player: MediaPlayer, events: MediaPlayer.Events) {
+        val remote = remoteRoute ?: return
+        if (player === remote.receiver && followReceiver(remote)) invalidateState()
+      }
+    }
+
+  /** Plays on [remote]'s receiver from now on, with [load] where it is with the current item. */
+  private fun enter(remote: Route.Remote, load: Load) {
+    remote.load = load
+    route = remote
+    remote.receiver.addListener(receiverListener)
+    setPlayer(remote.receiver)
+  }
+
+  /** Lets go of [remote]'s receiver: its load is cut short and the receiver stopped. */
+  private fun leave(remote: Route.Remote) {
+    cancelLoad(remote)
+    remote.receiver.removeListener(receiverListener)
+    stopReceiver(remote.receiver)
+  }
+
   private fun updateActivePlayer() {
     val current = remoteRoute
     if (
       current != null &&
+        current.output in remotes &&
         current.output.isSessionAvailable &&
         current.output.player === current.receiver
     ) {
@@ -174,46 +203,38 @@ internal class RemoteSwitchingPlayer(
     val prepared = local.playbackState != STATE_IDLE && items.isNotEmpty()
     val localPositionMs = local.currentPosition
     val remote = Route.Remote(target, target.player)
-    route = remote
-    setPlayer(remote.receiver)
+    enter(remote, Load.Idle(localPositionMs))
     local.stop()
-    if (!prepared) {
-      remote.load = Load.Idle(localPositionMs)
-      return
+    if (prepared) {
+      resolved
+        ?.onSuccess { send(remote, it, if (it.isRemoteLive) C.TIME_UNSET else localPositionMs) }
+        ?.onFailure { fail(remote, it, localPositionMs) }
     }
-    resolved
-      ?.onSuccess { send(remote, it, if (it.isRemoteLive) C.TIME_UNSET else localPositionMs) }
-      ?.onFailure { fail(remote, it, localPositionMs) }
+    invalidateState()
   }
 
   /** Moves what plays from [from]'s receiver to [to]'s, without the phone in between. */
   private fun moveTo(from: Route.Remote, to: RemotePlayback) {
     val positionMs = positionOn(from)
     val load = from.load
-    cancelLoad(from)
-    stopReceiver(from.receiver)
+    leave(from)
     val remote = Route.Remote(to, to.player)
-    route = remote
-    setPlayer(remote.receiver)
-    when (load) {
-      is Load.Idle,
-      Load.Ended -> remote.load = Load.Idle(positionMs)
-      is Load.Failed -> remote.load = load
-      else -> load(remote, positionMs)
-    }
+    enter(remote, if (load is Load.Failed) load else Load.Idle(positionMs))
+    if (load is Load.Resolving || load is Load.Sent || load is Load.Playing)
+      load(remote, positionMs)
+    invalidateState()
   }
 
   private fun handOverToLocal(from: Route.Remote) {
     val positionMs = positionOn(from)
     val prepared = from.load.let { it is Load.Resolving || it is Load.Sent || it is Load.Playing }
-    cancelLoad(from)
+    leave(from)
     local.repeatMode = repeat
     local.shuffleModeEnabled = shuffle
     if (queue.isEmpty) local.clearMediaItems()
     else local.setMediaItems(queue.items.toList(), queue.index, positionMs)
     local.playWhenReady = playIntent
     if (prepared && !queue.isEmpty) local.prepare()
-    stopReceiver(from.receiver)
     route = Route.Local
     setPlayer(local)
   }
@@ -228,11 +249,13 @@ internal class RemoteSwitchingPlayer(
       is Load.Playing ->
         if (load.item.isRemoteLive || !receiverHolds(remote, load.item)) C.TIME_UNSET
         else remote.receiver.currentPosition
-      Load.Ended -> C.TIME_UNSET
+      is Load.Ended -> C.TIME_UNSET
     }
 
   private fun cancelLoad(remote: Route.Remote) {
     (remote.load as? Load.Resolving)?.job?.cancel()
+    remote.startTimeout?.cancel()
+    remote.startTimeout = null
   }
 
   /** A receiver whose session already ended refuses commands: it stops by itself. */
@@ -269,6 +292,20 @@ internal class RemoteSwitchingPlayer(
 
   private fun send(remote: Route.Remote, item: MediaItem, positionMs: Long) {
     remote.load = Load.Sent(item, positionMs)
+    remote.startTimeout?.cancel()
+    remote.startTimeout =
+      scope.launch {
+        delay(startTimeoutMs)
+        if (route === remote && !started(remote)) {
+          onReceiverFailed(
+            PlaybackException(
+              "The remote output did not start the item",
+              null,
+              PlaybackException.ERROR_CODE_REMOTE_ERROR,
+            )
+          )
+        }
+      }
     try {
       // Before the load, which autoplays as this says. Told again, a receiver plays what it holds.
       if (remote.receiver.playWhenReady != playIntent) remote.receiver.playWhenReady = playIntent
@@ -301,14 +338,25 @@ internal class RemoteSwitchingPlayer(
       Result.failure(e)
     }
 
+  /** Whether [remote]'s receiver holds the item sent and has it ready, playing or paused. */
+  private fun started(remote: Route.Remote): Boolean {
+    val load = remote.load as? Load.Playing ?: return remote.load !is Load.Sent
+    if (!receiverHolds(remote, load.item)) return false
+    val state = remote.receiver.playbackState
+    return state == STATE_READY || state == STATE_ENDED
+  }
+
   private fun onReceiverEnded() {
     val remote = remoteRoute ?: return
-    if (remote.load !is Load.Playing && remote.load !is Load.Sent) return
+    followReceiver(remote)
+    // An end reported before the receiver holds the item sent is the last item's.
+    if (remote.load !is Load.Playing) return
     val next = queue.nextAtEnd(repeat)
     if (next == C.INDEX_UNSET) {
-      remote.load = Load.Ended
+      val duration = remote.receiver.duration
+      remote.load = Load.Ended(if (duration == C.TIME_UNSET) positionOn(remote) else duration)
     } else {
-      queue.index = next
+      queue.moveTo(next)
       load(remote, C.TIME_UNSET)
     }
     invalidateState()
@@ -323,7 +371,9 @@ internal class RemoteSwitchingPlayer(
     val remoteError =
       if (error.errorCode == PlaybackException.ERROR_CODE_REMOTE_ERROR) error
       else PlaybackException(error.message, error, PlaybackException.ERROR_CODE_REMOTE_ERROR)
-    remote.load = Load.Failed(remoteError, positionOn(remote))
+    val positionMs = positionOn(remote)
+    cancelLoad(remote)
+    remote.load = Load.Failed(remoteError, positionMs)
     invalidateState()
   }
 
@@ -334,7 +384,6 @@ internal class RemoteSwitchingPlayer(
   override fun getState(): State {
     val state = super.getState()
     val remote = remoteRoute ?: return state
-    followReceiver(remote)
     val load = remote.load
     val holds = load is Load.Playing && receiverHolds(remote, load.item)
     // Duration, seekability and liveness come from the receiver's data for the item it plays.
@@ -369,7 +418,8 @@ internal class RemoteSwitchingPlayer(
             setPlayerError(load.error)
               .setPlaybackState(STATE_IDLE)
               .setContentPositionMs(position(load.positionMs))
-          Load.Ended -> setPlaybackState(STATE_ENDED)
+          is Load.Ended ->
+            setPlaybackState(STATE_ENDED).setContentPositionMs(position(load.positionMs))
           is Load.Playing -> if (!holds) setPlaybackState(STATE_IDLE).setContentPositionMs(0)
         }
         if (queue.isEmpty) setPlaybackState(STATE_IDLE)
@@ -379,14 +429,26 @@ internal class RemoteSwitchingPlayer(
 
   private fun position(positionMs: Long) = if (positionMs == C.TIME_UNSET) 0 else positionMs
 
-  /** Catches up with the receiver: the item arriving there, or a pause or play from elsewhere. */
-  private fun followReceiver(remote: Route.Remote) {
+  /**
+   * Catches up with the receiver: the item arriving there, or a pause or play from elsewhere.
+   * Returns whether anything changed.
+   */
+  private fun followReceiver(remote: Route.Remote): Boolean {
     when (val load = remote.load) {
-      is Load.Sent -> if (receiverHolds(remote, load.item)) remote.load = Load.Playing(load.item)
+      is Load.Sent ->
+        if (receiverHolds(remote, load.item)) {
+          remote.load = Load.Playing(load.item)
+          playIntent = remote.receiver.playWhenReady
+          return true
+        }
       is Load.Playing ->
-        if (receiverHolds(remote, load.item)) playIntent = remote.receiver.playWhenReady
+        if (receiverHolds(remote, load.item) && playIntent != remote.receiver.playWhenReady) {
+          playIntent = remote.receiver.playWhenReady
+          return true
+        }
       else -> Unit
     }
+    return false
   }
 
   override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
@@ -501,7 +563,7 @@ internal class RemoteSwitchingPlayer(
     ) {
       remote.receiver.seekTo(positionMs)
     } else {
-      queue.index = target
+      queue.moveTo(target)
       reloadCurrent(remote, positionMs)
     }
     return done()

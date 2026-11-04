@@ -5,6 +5,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import java.time.Duration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -533,6 +534,98 @@ class RemoteSwitchingPlayerTest {
     assertFalse(remote.released)
     assertTrue(player.isRemote)
     assertEquals(1, remote.player.loads.size)
+  }
+
+  @Test
+  fun `turning off the remote that plays brings playback back before letting it go`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    val receiver = remote.player
+
+    player.setRemotes(listOf(other))
+    idle()
+
+    assertFalse(player.isRemote)
+    assertTrue(remote.released)
+    assertEquals(1, receiver.stops)
+    assertEquals(listOf("a"), local.items.map { it.mediaId })
+    assertTrue(local.playWhenReady)
+  }
+
+  @Test
+  fun `an item that doesn't resolve at the handover is the player error at once`() {
+    unresolvable += "a"
+    playLocally(listOf("a"))
+    val errors = mutableListOf<PlaybackException>()
+    player.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+          errors += error
+        }
+      }
+    )
+
+    remote.startSession()
+    idle()
+
+    assertEquals(listOf(PlaybackException.ERROR_CODE_REMOTE_ERROR), errors.map { it.errorCode })
+  }
+
+  @Test
+  fun `an end reported before the receiver holds the item sent is the last item's`() {
+    playLocally(listOf("a", "b", "c"))
+    remote.startSession()
+    idle()
+    remote.player.lagging = true
+    player.seekToNextMediaItem()
+    idle()
+
+    remote.end()
+    idle()
+
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals(1, player.currentMediaItemIndex)
+  }
+
+  @Test
+  fun `an item the receiver doesn't start in time is the player error`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.lagging = true
+    player.seekToDefaultPosition()
+    idle()
+
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+  }
+
+  @Test
+  fun `an item the receiver started is not timed out`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `the last item's end stands where the receiver ended it`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.positionMs = 200_000
+    remote.player.update()
+
+    remote.end()
+    idle()
+
+    assertEquals(MediaPlayer.STATE_ENDED, player.playbackState)
+    assertEquals(200_000, player.currentPosition)
   }
 
   @Test

@@ -82,6 +82,9 @@ it turns on transfer for any MediaRouter in the app, Cast's included:
 Without it, the switcher lists only the phone's own outputs, and the library
 logs a warning saying the receiver is missing.
 
+Each `setupPlayer` sets the remote outputs: a call that leaves `remoteOutputs`
+out turns them off, and playback on one comes back to the phone.
+
 ::: tip Migrating from `remoteOutputs: true`
 `remoteOutputs` was a boolean; it is now an object, with a flag for each output
 the library plays on. `remoteOutputs: true` becomes `remoteOutputs: {}`.
@@ -95,7 +98,8 @@ audio on the speaker is the provider's job.
 ### Google Cast (Android)
 
 With `remoteOutputs: { cast: true }`, selecting a Cast device in the switcher
-moves playback there, through Google's Default Media Receiver. The output
+moves playback there, through Google's Default Media Receiver, or the receiver
+`castReceiverApplicationId` names. The output
 reports `type: 'cast'`, and the queue, the position and the play intent move
 across both ways: **Stop casting** brings playback back to the phone, at the
 same track.
@@ -110,6 +114,18 @@ services' Cast framework. Turn it on in the app's `gradle.properties`:
 ```properties
 # android/gradle.properties
 AudioBrowser_castEnabled=true
+```
+
+The device and its notifications show the receiver's name: "Default Media
+Receiver" for Google's. To show the app's own, register a Styled Media Receiver
+in the [Google Cast SDK Developer Console](https://cast.google.com/publish) and
+pass its ID; Cast takes it once per app process, so a change takes effect after
+a restart:
+
+```ts
+await setupPlayer({
+  remoteOutputs: { cast: true, castReceiverApplicationId: 'ABCD1234' }
+})
 ```
 
 The app also declares `MediaTransferReceiver`, as above. Without the build
@@ -137,7 +153,8 @@ Known limits:
 
 - No live song titles on the receiver or the phone while casting: the Default
   Media Receiver keeps the metadata it was loaded with.
-- No custom or styled receiver; the receiver is Google's Default Media Receiver.
+- No custom receiver: the receiver is Google's Default Media Receiver, or a
+  Styled Media Receiver, which takes the same media.
 - Android only. On iOS, the route picker lists AirPlay devices.
 - A receiver error is not retried; the app decides what to do with it.
 
@@ -244,8 +261,9 @@ Cast and Sonos play the queue the same way:
 - Moving from one room or Cast device to another goes straight there, without
   the phone in between.
 - A receiver that fails to play reaches the app as a playback error with code
-  `remote-error`, as does an item whose URL can't be resolved for it. Playing
-  again loads the item there anew.
+  `remote-error`, as does an item whose URL can't be resolved for it, and one
+  the receiver hasn't started within 30 seconds. Playing again loads the item
+  there anew.
 
 The library's Sonos route provider service is exported, as the Output Switcher
 needs to bind it: another app on the phone can bind it too, list the rooms,

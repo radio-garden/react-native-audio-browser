@@ -82,7 +82,7 @@ class PlayerSonosTest {
   private val player =
     Player(
       RuntimeEnvironment.getApplication(),
-      castRemote = { null },
+      castRemote = { _, _ -> null },
       sonosRemote = { context, scope -> SonosRemote(context, scope, controlOf = { room }) },
     )
   private val callbacks = mock(Callbacks::class.java)
@@ -90,7 +90,10 @@ class PlayerSonosTest {
   @Before
   fun selectRoom() {
     player.setup(
-      PlayerSetupOptions(remoteOutputs = RemoteOutputsOptions(cast = null, sonos = true))
+      PlayerSetupOptions(
+        remoteOutputs =
+          RemoteOutputsOptions(cast = null, castReceiverApplicationId = null, sonos = true)
+      )
     )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(

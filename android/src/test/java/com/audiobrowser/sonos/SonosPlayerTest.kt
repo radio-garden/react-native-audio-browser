@@ -502,6 +502,16 @@ class SonosPlayerTest {
   }
 
   @Test
+  fun `a room holding another URI that contains ours is another app's`() {
+    startPlaying(station("a"))
+    room.state = "PLAYING"
+    room.currentUri = "x-sonos-http:proxy?u=https://a.example/stream&x=1"
+    poll()
+
+    assertFalse(player.playWhenReady)
+  }
+
+  @Test
   fun `pausing stops the position running`() {
     startPlaying(track("t1"))
     room.state = "PLAYING"

@@ -157,6 +157,9 @@ android {
         ]
       }
     }
+    test {
+      if (castEnabled) java.srcDirs += ["src/testCast/java"]
+    }
   }
 }
 

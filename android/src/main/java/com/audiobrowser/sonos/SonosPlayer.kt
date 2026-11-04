@@ -411,7 +411,8 @@ internal class SonosPlayer(
   private fun apply(reading: Reading) {
     reading.volume?.let(::setVolumeRead)
     val url = loadedUrl ?: return
-    if (!reading.mediaUri.isNullOrEmpty() && !reading.mediaUri.contains(url)) {
+    val sent = SonosStreamUri.forTransport(url, item?.isRemoteLive == true)
+    if (!reading.mediaUri.isNullOrEmpty() && reading.mediaUri != sent) {
       onTakenOver()
       return
     }

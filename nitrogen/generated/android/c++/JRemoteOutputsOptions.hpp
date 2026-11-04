@@ -11,6 +11,7 @@
 #include "RemoteOutputsOptions.hpp"
 
 #include <optional>
+#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,10 +34,13 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldCast = clazz->getField<jni::JBoolean>("cast");
       jni::local_ref<jni::JBoolean> cast = this->getFieldValue(fieldCast);
+      static const auto fieldCastReceiverApplicationId = clazz->getField<jni::JString>("castReceiverApplicationId");
+      jni::local_ref<jni::JString> castReceiverApplicationId = this->getFieldValue(fieldCastReceiverApplicationId);
       static const auto fieldSonos = clazz->getField<jni::JBoolean>("sonos");
       jni::local_ref<jni::JBoolean> sonos = this->getFieldValue(fieldSonos);
       return RemoteOutputsOptions(
         cast != nullptr ? std::make_optional(static_cast<bool>(cast->value())) : std::nullopt,
+        castReceiverApplicationId != nullptr ? std::make_optional(castReceiverApplicationId->toStdString()) : std::nullopt,
         sonos != nullptr ? std::make_optional(static_cast<bool>(sonos->value())) : std::nullopt
       );
     }
@@ -47,12 +51,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRemoteOutputsOptions::javaobject> fromCpp(const RemoteOutputsOptions& value) {
-      using JSignature = JRemoteOutputsOptions(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JRemoteOutputsOptions(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.cast.has_value() ? jni::JBoolean::valueOf(value.cast.value()) : nullptr,
+        value.castReceiverApplicationId.has_value() ? jni::make_jstring(value.castReceiverApplicationId.value()) : nullptr,
         value.sonos.has_value() ? jni::JBoolean::valueOf(value.sonos.value()) : nullptr
       );
     }

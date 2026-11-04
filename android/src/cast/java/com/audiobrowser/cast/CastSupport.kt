@@ -20,25 +20,36 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import timber.log.Timber
 
-private const val RECEIVER_APPLICATION_ID =
-  CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
+/** [receiverApplicationId], or the Default Media Receiver's when null. */
+private fun receiverOrDefault(receiverApplicationId: String?) =
+  receiverApplicationId ?: CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
 
-/** The MediaRouter control category of the receiver's routes. */
-internal val castRouteCategory: String? =
-  CastMediaControlIntent.categoryForCast(RECEIVER_APPLICATION_ID)
+/** The MediaRouter control category of the routes that can run the receiver. */
+internal fun castRouteCategory(receiverApplicationId: String?): String? =
+  CastMediaControlIntent.categoryForCast(receiverOrDefault(receiverApplicationId))
+
+// Cast takes its receiver once per process.
+private var initializedReceiver: String? = null
 
 /**
- * Starts Cast with the Default Media Receiver and builds its remote player, or returns null on a
- * device without Google Play services.
+ * Starts Cast with the receiver application (the Default Media Receiver when null) and builds its
+ * remote player, or returns null on a device without Google Play services.
  */
-internal fun createCastRemote(context: Context): RemotePlayback? {
+internal fun createCastRemote(context: Context, receiverApplicationId: String?): RemotePlayback? {
   val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
   if (availability != ConnectionResult.SUCCESS) {
     Timber.w("Cast: Google Play services unavailable (%d), playing locally only", availability)
     return null
   }
-  Cast.getSingletonInstance(context)
-    .initialize(CastParams.Builder().setReceiverApplicationId(RECEIVER_APPLICATION_ID).build())
+  val receiver = receiverOrDefault(receiverApplicationId)
+  val initialized = initializedReceiver
+  if (initialized == null) {
+    Cast.getSingletonInstance(context)
+      .initialize(CastParams.Builder().setReceiverApplicationId(receiver).build())
+    initializedReceiver = receiver
+  } else if (initialized != receiver) {
+    Timber.w("Cast: the receiver %s takes effect after a restart; %s stays", receiver, initialized)
+  }
   val player =
     RemoteCastPlayer.Builder(context)
       .setMediaItemConverter(SendingMediaItemConverter())
@@ -51,21 +62,15 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   private var listener: RemotePlayback.Listener? = null
   private var client: RemoteMediaClient? = null
 
-  // The receiver's last idle reason, so each end and each failure is reported once.
-  private var idleReason = MediaStatus.IDLE_REASON_NONE
+  private val ends = CastEnds()
 
   private val statusCallback =
     object : RemoteMediaClient.Callback() {
       override fun onStatusUpdated() {
         val status = client?.mediaStatus ?: return
-        val reason =
-          if (status.playerState == MediaStatus.PLAYER_STATE_IDLE) status.idleReason
-          else MediaStatus.IDLE_REASON_NONE
-        if (reason == idleReason) return
-        idleReason = reason
-        when (reason) {
-          MediaStatus.IDLE_REASON_FINISHED -> listener?.onEnded()
-          MediaStatus.IDLE_REASON_ERROR ->
+        when (ends.report(status.mediaInfo?.contentId, status.playerState, status.idleReason)) {
+          CastEnds.Report.ENDED -> listener?.onEnded()
+          CastEnds.Report.FAILED ->
             listener?.onFailed(
               PlaybackException(
                 "The Cast receiver failed to play the media",
@@ -73,6 +78,7 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
                 PlaybackException.ERROR_CODE_REMOTE_ERROR,
               )
             )
+          null -> Unit
         }
       }
     }
@@ -104,7 +110,7 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   }
 
   private fun watch(session: CastSession?) {
-    idleReason = MediaStatus.IDLE_REASON_NONE
+    ends.reset()
     client?.unregisterCallback(statusCallback)
     client = session?.remoteMediaClient
     client?.registerCallback(statusCallback)
@@ -129,6 +135,40 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
     cast.removeSessionManagerListener(sessions)
     watch(null)
     player.release()
+  }
+}
+
+/**
+ * The end or failure of each load a receiver's media statuses report, once. A load is told by its
+ * content id, which [SendingMediaItemConverter] makes its own; a failed load's status carries no
+ * media, so it counts as the last load seen.
+ */
+internal class CastEnds {
+  enum class Report {
+    ENDED,
+    FAILED,
+  }
+
+  private var lastContentId: String? = null
+  private var reported: Pair<String?, Int>? = null
+
+  fun report(contentId: String?, playerState: Int, idleReason: Int): Report? {
+    contentId?.let { lastContentId = it }
+    val report =
+      when (idleReason.takeIf { playerState == MediaStatus.PLAYER_STATE_IDLE }) {
+        MediaStatus.IDLE_REASON_FINISHED -> Report.ENDED
+        MediaStatus.IDLE_REASON_ERROR -> Report.FAILED
+        else -> return null
+      }
+    val key = lastContentId to idleReason
+    if (key == reported) return null
+    reported = key
+    return report
+  }
+
+  fun reset() {
+    lastContentId = null
+    reported = null
   }
 }
 

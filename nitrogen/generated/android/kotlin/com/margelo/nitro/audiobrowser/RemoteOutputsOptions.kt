@@ -23,6 +23,9 @@ data class RemoteOutputsOptions(
   val cast: Boolean?,
   @DoNotStrip
   @Keep
+  val castReceiverApplicationId: String?,
+  @DoNotStrip
+  @Keep
   val sonos: Boolean?
 ) {
   /* primary constructor */
@@ -31,12 +34,14 @@ data class RemoteOutputsOptions(
     if (this === other) return true
     if (other !is RemoteOutputsOptions) return false
     return Objects.deepEquals(this.cast, other.cast)
+      && Objects.deepEquals(this.castReceiverApplicationId, other.castReceiverApplicationId)
       && Objects.deepEquals(this.sonos, other.sonos)
   }
 
   override fun hashCode(): Int {
     return arrayOf<Any?>(
       cast,
+      castReceiverApplicationId,
       sonos
     ).contentDeepHashCode()
   }
@@ -49,8 +54,8 @@ data class RemoteOutputsOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(cast: Boolean?, sonos: Boolean?): RemoteOutputsOptions {
-      return RemoteOutputsOptions(cast, sonos)
+    private fun fromCpp(cast: Boolean?, castReceiverApplicationId: String?, sonos: Boolean?): RemoteOutputsOptions {
+      return RemoteOutputsOptions(cast, castReceiverApplicationId, sonos)
     }
   }
 }

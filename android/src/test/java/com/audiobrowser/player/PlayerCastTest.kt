@@ -36,7 +36,7 @@ class PlayerCastTest {
   private val player =
     Player(
       RuntimeEnvironment.getApplication(),
-      castRemote = { remote },
+      castRemote = { _, _ -> remote },
       sonosRemote = { _, _ -> FakeRemote(looper) },
     )
   private val receiver: FakeReceiver
@@ -47,7 +47,10 @@ class PlayerCastTest {
   @Before
   fun cast() {
     player.setup(
-      PlayerSetupOptions(remoteOutputs = RemoteOutputsOptions(cast = true, sonos = null))
+      PlayerSetupOptions(
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+      )
     )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(

@@ -63,7 +63,7 @@ data class PlayerSetupOptions(
   // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
   // timed metadata. When null, the default mapping is used.
   var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
-  // The remote outputs offered in the Output Switcher, or null for none.
+  // The remote outputs offered in the Output Switcher, or null for none: each setup sets it.
   var remoteOutputs: RemoteOutputsOptions? = null,
 ) {
   /**
@@ -144,6 +144,6 @@ data class PlayerSetupOptions(
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
     options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
-    options.remoteOutputs?.let { remoteOutputs = it }
+    remoteOutputs = options.remoteOutputs
   }
 }

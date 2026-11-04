@@ -7,34 +7,33 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RemoteOutputsTest {
+  private val types = mapOf("cast" to OutputType.CAST, "sonos" to OutputType.SONOS)
+
+  private fun outputOf(name: String, vararg categories: String) =
+    remoteOutputOf(name, types) { it in categories }
+
   @Test
   fun `a selected route in the category is a remote output`() {
     assertEquals(
       Output(type = OutputType.REMOTE, name = "Kitchen", external = true),
-      remoteOutputOf("Kitchen", offersCategory = true, isCast = false, isSonos = false),
+      outputOf("Kitchen", RemoteOutputs.CATEGORY),
     )
   }
 
   @Test
-  fun `a selected route outside the category leaves the output to the local device`() {
-    assertNull(
-      remoteOutputOf("Living room TV", offersCategory = false, isCast = false, isSonos = false)
-    )
+  fun `a selected route outside every category leaves the output to the local device`() {
+    assertNull(outputOf("Living room TV", "other"))
   }
 
   @Test
-  fun `a selected Cast route is a cast output`() {
+  fun `a route of a category turned on has that category's type`() {
     assertEquals(
       Output(type = OutputType.CAST, name = "Living room TV", external = true),
-      remoteOutputOf("Living room TV", offersCategory = true, isCast = true, isSonos = false),
+      outputOf("Living room TV", "cast"),
     )
-  }
-
-  @Test
-  fun `a selected Sonos room is a sonos output`() {
     assertEquals(
       Output(type = OutputType.SONOS, name = "Dining Room", external = true),
-      remoteOutputOf("Dining Room", offersCategory = true, isCast = false, isSonos = true),
+      outputOf("Dining Room", RemoteOutputs.CATEGORY, "sonos"),
     )
   }
 }

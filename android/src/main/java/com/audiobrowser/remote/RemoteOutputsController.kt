@@ -7,6 +7,7 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.RemoteOutputs
 import com.audiobrowser.cast.castRouteCategory
 import com.audiobrowser.sonos.SonosOutputs
+import com.margelo.nitro.audiobrowser.OutputType
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +29,7 @@ internal data class RemoteUrls(val url: String, val artworkUrl: String?)
 internal class RemoteOutputsController(
   private val context: Context,
   private val resolveUrls: suspend (Track) -> RemoteUrls,
-  private val castRemote: (Context) -> RemotePlayback?,
+  private val castRemote: (Context, String?) -> RemotePlayback?,
   private val sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
 ) {
   private val scope = MainScope()
@@ -48,11 +49,17 @@ internal class RemoteOutputsController(
   fun apply(options: RemoteOutputsOptions?, local: MediaPlayer): Boolean {
     val wantCast = options?.cast == true
     val wantSonos = options?.sonos == true
-    RemoteOutputs.setEnabled(context, options != null, castRouteCategory.takeIf { wantCast })
+    val receiver = options?.castReceiverApplicationId
+    val types = buildMap {
+      castRouteCategory(receiver)?.takeIf { wantCast }?.let { put(it, OutputType.CAST) }
+      if (wantSonos) put(SonosOutputs.CATEGORY, OutputType.SONOS)
+    }
+    RemoteOutputs.setEnabled(context, options != null, types)
     SonosOutputs.setEnabled(context, wantSonos)
     val had = this.options
     this.options = options
-    if (wantCast != (had?.cast == true)) cast = if (wantCast) castRemote(context) else null
+    if (wantCast != (had?.cast == true))
+      cast = if (wantCast) castRemote(context, receiver) else null
     if (wantSonos != (had?.sonos == true))
       sonos = if (wantSonos) sonosRemote(context, scope) else null
     val remotes = listOfNotNull(cast, sonos)

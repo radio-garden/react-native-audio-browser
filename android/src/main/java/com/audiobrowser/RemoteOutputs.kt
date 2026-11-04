@@ -8,7 +8,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaTransferReceiver
-import com.audiobrowser.sonos.SonosOutputs
 import com.audiobrowser.util.OutputSwitcher
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
@@ -22,16 +21,16 @@ import timber.log.Timber
  * session's for a Cast device.
  *
  * Holds the process's one [MediaRouter] while enabled, on Android 11+ where the switcher exists. A
- * provider's routes are offered when they declare [CATEGORY] in a control filter; with Cast on, the
- * Cast receiver's routes are too.
+ * provider's routes are offered when they declare [CATEGORY] or one of the categories the outputs
+ * are turned on with in a control filter.
  */
 object RemoteOutputs {
   /** The control category a media route provider's routes declare to be offered as outputs. */
   const val CATEGORY = "com.audiobrowser.CATEGORY_REMOTE_OUTPUT"
 
-  private var selector = selectorFor(castCategory = null)
+  private var types: Map<String, OutputType> = emptyMap()
 
-  private var castCategory: String? = null
+  private var selector = selectorFor(types)
 
   // The global router holds routers weakly: let this one go and the system Output Switcher stops
   // listing the category's routes, as the app's discovery preference empties on the next GC.
@@ -65,25 +64,29 @@ object RemoteOutputs {
     }
 
   /**
-   * Turns remote outputs on or off, and with them, when [castCategory] is set, the Cast routes that
-   * declare it. Idempotent.
+   * Turns remote outputs on or off, and with them the routes of each control category in [types],
+   * reported as its output type. Idempotent.
    */
   @MainThread
-  internal fun setEnabled(context: Context, enabled: Boolean, castCategory: String? = null) {
-    val castCategory = castCategory.takeIf { enabled }
+  internal fun setEnabled(
+    context: Context,
+    enabled: Boolean,
+    types: Map<String, OutputType> = emptyMap(),
+  ) {
+    val types = types.takeIf { enabled }.orEmpty()
     if (!enabled) stop()
-    if (castCategory != this.castCategory) {
-      this.castCategory = castCategory
-      selector = selectorFor(castCategory)
+    if (types != this.types) {
+      this.types = types
+      selector = selectorFor(types)
       router?.let(::listen)
     }
     if (enabled) start(context)
   }
 
-  private fun selectorFor(castCategory: String?) =
+  private fun selectorFor(types: Map<String, OutputType>) =
     MediaRouteSelector.Builder()
       .addControlCategory(CATEGORY)
-      .apply { castCategory?.let(::addControlCategory) }
+      .apply { types.keys.forEach(::addControlCategory) }
       .build()
 
   /** Calls [listener] on the main thread whenever [current] changes. */
@@ -136,14 +139,7 @@ object RemoteOutputs {
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
-    setCurrent(
-      remoteOutputOf(
-        name = route.name,
-        offersCategory = route.matchesSelector(selector),
-        isCast = castCategory?.let(route::supportsControlCategory) == true,
-        isSonos = route.supportsControlCategory(SonosOutputs.CATEGORY),
-      )
-    )
+    setCurrent(remoteOutputOf(route.name, types, route::supportsControlCategory))
   }
 
   @VisibleForTesting
@@ -156,16 +152,18 @@ object RemoteOutputs {
   }
 }
 
-/** The [Output] a selected route stands for: null for a route the remote outputs don't offer. */
+/**
+ * The [Output] a selected route stands for, its type that of the first category in [types] it
+ * [supports]: null for a route the remote outputs don't offer.
+ */
 internal fun remoteOutputOf(
   name: String,
-  offersCategory: Boolean,
-  isCast: Boolean,
-  isSonos: Boolean,
-): Output? =
-  when {
-    !offersCategory -> null
-    isCast -> Output(type = OutputType.CAST, name = name, external = true)
-    isSonos -> Output(type = OutputType.SONOS, name = name, external = true)
-    else -> Output(type = OutputType.REMOTE, name = name, external = true)
-  }
+  types: Map<String, OutputType>,
+  supports: (category: String) -> Boolean,
+): Output? {
+  val type =
+    types.entries.firstOrNull { supports(it.key) }?.value
+      ?: OutputType.REMOTE.takeIf { supports(RemoteOutputs.CATEGORY) }
+      ?: return null
+  return Output(type = type, name = name, external = true)
+}

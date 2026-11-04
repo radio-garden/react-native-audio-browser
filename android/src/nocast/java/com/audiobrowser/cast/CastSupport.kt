@@ -5,11 +5,12 @@ import android.content.Context
 import timber.log.Timber
 
 /** The library is built without Cast: no Cast routes. */
-internal val castRouteCategory: String? = null
+@Suppress("UNUSED_PARAMETER")
+internal fun castRouteCategory(receiverApplicationId: String?): String? = null
 
 /** The library is built without Cast: always null, with a warning. */
 @Suppress("UNUSED_PARAMETER")
-internal fun createCastRemote(context: Context): RemotePlayback? {
+internal fun createCastRemote(context: Context, receiverApplicationId: String?): RemotePlayback? {
   Timber.w(
     "Cast: remoteOutputs.cast is on, but the library was built without AudioBrowser_castEnabled=true, so playback stays local"
   )

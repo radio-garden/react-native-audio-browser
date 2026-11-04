@@ -18,10 +18,16 @@ public extension RemoteOutputsOptions {
   /**
    * Create a new instance of `RemoteOutputsOptions`.
    */
-  init(cast: Bool?, sonos: Bool?) {
+  init(cast: Bool?, castReceiverApplicationId: String?, sonos: Bool?) {
     self.init({ () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = cast {
         return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = castReceiverApplicationId {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -40,6 +46,18 @@ public extension RemoteOutputsOptions {
       if bridge.has_value_std__optional_bool_(self.__cast) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__cast)
         return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var castReceiverApplicationId: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__castReceiverApplicationId) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__castReceiverApplicationId)
+        return String(__unwrapped)
       } else {
         return nil
       }
