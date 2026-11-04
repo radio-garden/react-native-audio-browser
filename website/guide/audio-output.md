@@ -51,8 +51,8 @@ An [`Output`](/api/features/output/#output) is:
 | `external` | `boolean`    | `false` only for the built-in speaker/receiver; `true` for everything external. |
 
 `type` is one of `'speaker'`, `'receiver'` (the iOS earpiece), `'headphones'`,
-`'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` (reserved),
-`'remote'` (a remote speaker or TV, see below), or `'other'`. Both platforms map their native ports/routes into
+`'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` and `'sonos'`
+(see below), `'remote'` (a remote speaker or TV, see below), or `'other'`. Both platforms map their native ports/routes into
 this shared set — e.g. iOS's separate Bluetooth ports all collapse to
 `'bluetooth'`.
 
@@ -136,6 +136,92 @@ Known limits:
 - Android only. On iOS, the route picker lists AirPlay devices.
 - A receiver error is not retried; the app decides what to do with it.
 
+### Sonos (Android)
+
+With `remoteOutputs: { sonos: true }`, the switcher lists the Sonos rooms on the
+local network, and selecting one moves playback there. The output reports
+`type: 'sonos'` and the room's name.
+
+```ts
+await setupPlayer({ remoteOutputs: { sonos: true } })
+```
+
+The app declares `MediaTransferReceiver`, as above, and the permission to hold
+a Wi-Fi multicast lock while it looks for rooms. No build property is needed:
+the library talks to the speakers itself.
+
+```xml
+<!-- android/app/src/main/AndroidManifest.xml -->
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+```
+
+Without the permission, the library logs a warning and looks for rooms without
+the lock, so a room can be missed while the phone saves power on Wi-Fi.
+
+Local network access: the library finds and controls the rooms itself, over
+the local network. An app that targets SDK 36 or lower has that access through
+`INTERNET`, and needs nothing more. From target SDK 37 (Android 17), Android
+blocks the local network until the app is granted the runtime permission
+`ACCESS_LOCAL_NETWORK`, which the library doesn't request yet. Without it, rooms
+don't appear and can't be controlled. Android exempts apps that use the Output
+Switcher for Cast, whose discovery the system runs; its docs don't yet say
+whether that covers rooms the library finds itself, so plan for the permission.
+See Android's
+[local network permission](https://developer.android.com/privacy-and-security/local-network-permission).
+
+::: warning Sonos support is a bonus, not a promise
+The library controls the speakers over UPnP, on port 1400 of each speaker. Sonos
+calls UPnP unsupported and no longer maintained, and lets the listener switch it
+off in the Sonos app (Account › Privacy & Security). When it is off, or Sonos
+removes it, the rooms don't appear in the switcher. The library doesn't use
+Sonos's cloud or local Control APIs, which need Sonos's approval.
+:::
+
+What plays:
+
+- The speaker fetches the stream itself, from the URL your media transform
+  resolves, without its headers. It follows redirects and works out the codec:
+  MP3, AAC and HLS streams play, over `https` and plain `http`.
+- The speaker is sent the track's title, artist and artwork to show.
+- The speaker reads song titles from the stream (ICY titles, and the ID3 titles
+  of HLS streams). The library polls them and reports them through
+  `onTimedMetadata`, as it does for local playback, so the live song keeps
+  updating.
+- Play, pause, skip and the volume act on the speaker. A live stream that
+  refuses to pause is stopped instead, and playing it again restarts it.
+- Pausing or stopping in the Sonos app shows up as paused here.
+
+Grouping:
+
+- The switcher lists rooms, not speakers. A stereo pair or a home theatre is one
+  room.
+- Rooms grouped in the Sonos app are listed once, named after the room that
+  leads the group: "Kitchen + 2". Playing there plays in every room of the group.
+- The library doesn't group or ungroup rooms; the listener does that in the
+  Sonos app.
+
+While on Sonos, local-only behaviour steps aside as it does for Cast: the
+volume is the speaker's, the equalizer waits for the phone, and a speaker error
+reaches the app as a playback error, as does a stream the speaker doesn't start
+within 20 seconds.
+
+Known limits:
+
+- Rooms are found by SSDP multicast on the local network, so the phone and the
+  speakers must share it; guest and isolated Wi-Fi networks hide them.
+- A track that needs request headers won't play.
+- The speaker plays one track at a time: the queue stays in the app, which
+  loads the next track when one ends. A track starts from the beginning, and
+  seeking within it isn't supported.
+- Moving from one room or Cast device straight to another goes through the
+  phone, which can play for a moment while the next one loads.
+- The state is polled every two seconds, so a change made in the Sonos app shows
+  up here after a moment.
+- If another app or the Sonos app starts something else on the room, this app
+  doesn't notice it until it stops.
+- Android only. On iOS, a Sonos speaker with AirPlay 2 appears in the route
+  picker as an AirPlay target.
+
 Outside React, read a snapshot with `getOutput()` or subscribe with
 [`onOutputChanged`](/api/features/output/#onoutputchanged):
 
@@ -182,7 +268,7 @@ On Android the switcher is the system one (the picker from the media
 notification); selecting a Bluetooth speaker there routes audio at the OS level.
 The library can't force playback to a _specific_ Bluetooth device itself — route
 selection is the system's job, which is what this hands off to. Sonos appears on
-iOS (as an AirPlay target); on Android it isn't a system route, so it won't show.
+iOS as an AirPlay target, and on Android with `remoteOutputs: { sonos: true }`.
 
 ## You may not need this for unplug handling
 
