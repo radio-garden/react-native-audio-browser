@@ -141,6 +141,18 @@ class EqualizerControllerTest {
   }
 
   @Test
+  fun `playback leaving for a receiver keeps the effect on the local session`() {
+    val fixture = Fixture()
+    fixture.controller.initialize(42)
+
+    fixture.controller.onAudioSessionChanged(C.AUDIO_SESSION_ID_UNSET)
+
+    val effect = fixture.created.single()
+    assertFalse("released", effect.released)
+    assertEquals("session", 42, effect.audioSessionId)
+  }
+
+  @Test
   fun `a session change carries the active preset to the new effect`() {
     val fixture = Fixture()
     fixture.controller.initialize(42)

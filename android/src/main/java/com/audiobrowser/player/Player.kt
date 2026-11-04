@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
@@ -18,11 +19,17 @@ import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
+import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.browser.unattributedArtworkSource
+import com.audiobrowser.cast.createCastRemote
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.remote.RemoteOutputsController
+import com.audiobrowser.remote.RemotePlayback
+import com.audiobrowser.remote.RemoteUrls
+import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
 import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
@@ -57,6 +64,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
@@ -65,7 +73,14 @@ import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
-class Player(internal val context: Context) {
+class Player
+internal constructor(
+  internal val context: Context,
+  castRemote: (Context, String?) -> RemotePlayback?,
+  sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+) {
+  constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
+
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
 
@@ -78,7 +93,9 @@ class Player(internal val context: Context) {
     EqualizerController(onSettingsChanged = { settings -> callbacks?.onEqualizerChanged(settings) })
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
-  internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
+  // The local engine's own volume: a receiver plays on at its own while the fade runs here.
+  internal val volumeFader =
+    VolumeFader(getVolume = { exoPlayer.volume }, setVolume = { exoPlayer.volume = it })
   internal val sleepTimer =
     SleepTimerManager(
       volumeFader,
@@ -86,8 +103,30 @@ class Player(internal val context: Context) {
       onChanged = { callbacks?.onSleepTimerChanged(it) },
     )
 
-  lateinit var exoPlayer: ExoPlayer
-  lateinit var forwardingPlayer: androidx.media3.common.Player
+  /** The local engine. Rebuilt when the engine options change. */
+  internal lateinit var exoPlayer: ExoPlayer
+    private set
+
+  /**
+   * What plays: [exoPlayer], or while a remote output is on, the [RemoteSwitchingPlayer] around it.
+   * Every playback read and command goes here. Local-only work that would disturb a remote (retry,
+   * reconnect, stuck recovery, the shuffle order) goes through [localEngine]; the equalizer,
+   * skip-silence, buffering and the volume fade act on [exoPlayer] alone.
+   */
+  lateinit var sessionPlayer: MediaPlayer
+    private set
+
+  /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
+  lateinit var forwardingPlayer: MediaPlayer
+
+  private val remoteOutputs =
+    RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
+
+  internal val localEngine =
+    LocalEngine({ exoPlayer }, isRemote = { remoteOutputs.player?.isRemote == true })
+
+  private var keepSessionAliveOnError = true
+
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
 
@@ -250,7 +289,7 @@ class Player(internal val context: Context) {
     private set
 
   val currentTrack: Track?
-    get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
+    get() = sessionPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
 
   internal var lastTrack: Track? = null
   internal var lastIndex: Int? = null
@@ -285,47 +324,50 @@ class Player(internal val context: Context) {
   }
 
   var playWhenReady: Boolean
-    get() = exoPlayer.playWhenReady
+    get() = sessionPlayer.playWhenReady
     set(value) {
       // Raising the intent at STATE_ENDED must replay, not silently no-op:
       // ExoPlayer's setPlayWhenReady(true) never restarts an ended player (the
       // ENDED→seekToDefaultPosition replay lives in media3's media-button
       // path, not the Player API). In the setter so every writer gets it —
       // play(), togglePlayback() and JS setPlayWhenReady alike.
-      if (value && exoPlayer.playbackState == ExoPlayer.STATE_ENDED) {
-        exoPlayer.seekToDefaultPosition()
+      if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
+        sessionPlayer.seekToDefaultPosition()
       }
       playWhenReadyCache = value
-      exoPlayer.playWhenReady = value
+      sessionPlayer.playWhenReady = value
     }
 
   val duration: Long
-    get() = if (exoPlayer.duration == C.TIME_UNSET) 0 else exoPlayer.duration
+    get() = if (sessionPlayer.duration == C.TIME_UNSET) 0 else sessionPlayer.duration
 
   internal var oldPosition = 0L
 
   val position: Long
     get() =
-      if (exoPlayer.currentPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.currentPosition
+      if (sessionPlayer.currentPosition == C.INDEX_UNSET.toLong()) 0
+      else sessionPlayer.currentPosition
 
   val bufferedPosition: Long
     get() =
-      if (exoPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.bufferedPosition
+      if (sessionPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0
+      else sessionPlayer.bufferedPosition
 
+  /** The volume, from 0 to 1: the local engine's, or while remote, the receiver's. */
   var volume: Float
-    get() = exoPlayer.volume
+    get() = sessionPlayer.volume
     set(value) {
-      exoPlayer.volume = value
+      sessionPlayer.volume = value
     }
 
   var playbackSpeed: Float
-    get() = exoPlayer.playbackParameters.speed
+    get() = sessionPlayer.playbackParameters.speed
     set(value) {
-      exoPlayer.setPlaybackSpeed(value)
+      sessionPlayer.setPlaybackSpeed(value)
     }
 
   val isPlaying
-    get() = exoPlayer.isPlaying
+    get() = sessionPlayer.isPlaying
 
   /**
    * False while ExoPlayer suppresses output (a transient audio focus loss) though [playWhenReady]
@@ -333,36 +375,36 @@ class Player(internal val context: Context) {
    */
   internal val shouldPlayWhenReady
     get() =
-      exoPlayer.playWhenReady &&
-        exoPlayer.playbackSuppressionReason == ExoPlayer.PLAYBACK_SUPPRESSION_REASON_NONE
+      sessionPlayer.playWhenReady &&
+        sessionPlayer.playbackSuppressionReason == MediaPlayer.PLAYBACK_SUPPRESSION_REASON_NONE
 
   var repeatMode: RepeatMode
-    get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
+    get() = RepeatModeFactory.fromMedia3(sessionPlayer.repeatMode)
     internal set(value) {
-      exoPlayer.repeatMode = RepeatModeFactory.toMedia3(value)
+      sessionPlayer.repeatMode = RepeatModeFactory.toMedia3(value)
     }
 
   val currentIndex: Int?
     get() =
-      if (exoPlayer.currentMediaItemIndex == C.INDEX_UNSET) null
-      else exoPlayer.currentMediaItemIndex
+      if (sessionPlayer.currentMediaItemIndex == C.INDEX_UNSET) null
+      else sessionPlayer.currentMediaItemIndex
 
   var shuffleMode: Boolean
-    get() = exoPlayer.shuffleModeEnabled
+    get() = sessionPlayer.shuffleModeEnabled
     set(value) {
-      exoPlayer.shuffleModeEnabled = value
+      sessionPlayer.shuffleModeEnabled = value
     }
 
   val trackCount: Int
-    get() = exoPlayer.mediaItemCount
+    get() = sessionPlayer.mediaItemCount
 
   val isEmpty: Boolean
-    get() = exoPlayer.mediaItemCount == 0
+    get() = sessionPlayer.mediaItemCount == 0
 
   val tracks: Array<Track>
     get() =
-      (0 until exoPlayer.mediaItemCount)
-        .map { index -> TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index)) }
+      (0 until sessionPlayer.mediaItemCount)
+        .map { index -> TrackFactory.fromMedia3(sessionPlayer.getMediaItemAt(index)) }
         .toTypedArray()
 
   /**
@@ -372,7 +414,7 @@ class Player(internal val context: Context) {
    * `isLastInPlaybackOrder`.
    */
   val isLastInPlaybackOrder: Boolean
-    get() = exoPlayer.nextMediaItemIndex == C.INDEX_UNSET
+    get() = sessionPlayer.nextMediaItemIndex == C.INDEX_UNSET
 
   /**
    * The source path from which the current queue was expanded (e.g., from a contextual path). Used
@@ -388,12 +430,12 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   fun getTrack(index: Int): Track {
-    if (index < 0 || index >= exoPlayer.mediaItemCount) {
+    if (index < 0 || index >= sessionPlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Track index $index is out of bounds (size: ${exoPlayer.mediaItemCount})"
+        "Track index $index is out of bounds (size: ${sessionPlayer.mediaItemCount})"
       )
     }
-    return TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index))
+    return TrackFactory.fromMedia3(sessionPlayer.getMediaItemAt(index))
   }
 
   var skipSilence: Boolean
@@ -419,8 +461,14 @@ class Player(internal val context: Context) {
     val newEngineOptions = setupOptions.engineOptions()
     if (newEngineOptions == engineOptions) {
       Timber.Forest.d("Setup options unchanged: keeping the player")
-      return
+    } else {
+      buildEngine(setupOptions)
+      engineOptions = newEngineOptions
     }
+    if (remoteOutputs.apply(setupOptions.remoteOutputs, exoPlayer)) attachSessionPlayer()
+  }
+
+  private fun buildEngine(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
     val isInitialSetup = engineOptions == null
     val carried = if (isInitialSetup) null else EnginePlayback.of(exoPlayer)
@@ -473,35 +521,18 @@ class Player(internal val context: Context) {
     exoPlayer = engine.exoPlayer
     // Before the listener and the session are attached, so neither hears the playback replayed.
     carried?.restoreTo(exoPlayer)
+    remoteOutputs.setLocal(exoPlayer)
+    keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
 
-    // Recreate forwarding player with new ExoPlayer
-    forwardingPlayer =
-      InterceptingPlayer(
-        exoPlayer,
-        { callbacks },
-        { options },
-        keepSessionAliveOnError = setupOptions.keepSessionAliveOnError,
-      )
+    if (isInitialSetup) playerListener = PlayerListener(this)
+    attachSessionPlayer()
 
     if (isInitialSetup) {
-      // Initial setup - create player listener and emit initial state
-      playerListener = PlayerListener(this)
-      forwardingPlayer.addListener(playerListener)
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
-
-      // Initialize equalizer with audio session ID
       equalizer.initialize(exoPlayer.audioSessionId)
-    } else {
-      // Re-setup - re-add listener and update MediaSession
-      forwardingPlayer.addListener(playerListener)
-
-      // Update MediaSession with new forwardingPlayer reference if MediaSession exists
-      if (::mediaSession.isInitialized) {
-        Timber.Forest.d("Updating MediaSession with new forwardingPlayer reference")
-        mediaSession.player = forwardingPlayer
-      }
-
-      // No listener heard the restore; its prepare() leaves the engine buffering.
+    } else if (localEngine.isActive) {
+      // No listener heard the restore; its prepare() leaves the engine buffering. While remote,
+      // the receiver plays on unchanged.
       setPlaybackState(
         if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
         else PlaybackState.BUFFERING
@@ -514,7 +545,31 @@ class Player(internal val context: Context) {
 
     // Set up automatic buffer management if enabled
     setupAutomaticBufferManager(setupOptions.automaticBuffer)
-    engineOptions = newEngineOptions
+  }
+
+  /**
+   * Wraps [sessionPlayer] for the session: the remote switch while there is one, else [exoPlayer].
+   * Called when either changes.
+   */
+  private fun attachSessionPlayer() {
+    if (::forwardingPlayer.isInitialized) forwardingPlayer.removeListener(playerListener)
+    sessionPlayer = remoteOutputs.player ?: exoPlayer
+    forwardingPlayer =
+      InterceptingPlayer(sessionPlayer, { callbacks }, { options }, keepSessionAliveOnError)
+    forwardingPlayer.addListener(playerListener)
+    if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
+  }
+
+  /**
+   * The URLs a receiver fetches for [track]: through the media transform, which can call into JS.
+   */
+  private suspend fun resolveRemoteUrls(track: Track): RemoteUrls {
+    val src = checkNotNull(track.src) { "The track has no src" }
+    val browserManager = browser?.browserManager
+    return RemoteUrls(
+      url = browserManager?.resolveMediaUrl(src, track)?.url() ?: src,
+      artworkUrl = browserManager?.resolveArtworkUrl(track)?.uri,
+    )
   }
 
   /** Sets up or tears down the automatic buffer manager based on the enabled flag. */
@@ -551,10 +606,8 @@ class Player(internal val context: Context) {
       if (isOnline && pendingNetworkRetry) {
         Timber.d("Network restored with pending retry, triggering immediate retry")
         pendingNetworkRetry = false
-        // Only retry if player is still expecting to play
-        if (playWhenReadyCache) {
-          exoPlayer.prepare()
-        }
+        // Only while the play intent holds, and only locally: a receiver reconnects by itself.
+        if (playWhenReadyCache) localEngine.retry()
       }
     }
   }
@@ -566,13 +619,13 @@ class Player(internal val context: Context) {
    * @param track The [Track] to load.
    */
   fun load(track: Track) {
-    if (exoPlayer.mediaItemCount == 0) {
+    if (sessionPlayer.mediaItemCount == 0) {
       add(track)
     } else {
-      val index = exoPlayer.currentMediaItemIndex
+      val index = sessionPlayer.currentMediaItemIndex
       replaceTrack(index, track)
-      exoPlayer.seekTo(index, C.TIME_UNSET)
-      exoPlayer.prepare()
+      sessionPlayer.seekTo(index, C.TIME_UNSET)
+      sessionPlayer.prepare()
     }
   }
 
@@ -584,8 +637,8 @@ class Player(internal val context: Context) {
    */
   fun add(track: Track) {
     val mediaItem = TrackFactory.toMedia3(track)
-    exoPlayer.addMediaItem(mediaItem)
-    exoPlayer.prepare()
+    sessionPlayer.addMediaItem(mediaItem)
+    sessionPlayer.prepare()
   }
 
   /**
@@ -596,8 +649,8 @@ class Player(internal val context: Context) {
    */
   fun add(tracks: Array<Track>) {
     val mediaItems = TrackFactory.toMedia3(tracks)
-    exoPlayer.addMediaItems(mediaItems.toList())
-    exoPlayer.prepare()
+    sessionPlayer.addMediaItems(mediaItems.toList())
+    sessionPlayer.prepare()
   }
 
   /**
@@ -609,10 +662,10 @@ class Player(internal val context: Context) {
    */
   fun add(tracks: Array<Track>, atIndex: Int) {
     validateInsertIndex(atIndex)
-    val index = if (atIndex == -1) exoPlayer.mediaItemCount else atIndex
+    val index = if (atIndex == -1) sessionPlayer.mediaItemCount else atIndex
     val mediaItems = tracks.map { TrackFactory.toMedia3(it) }
-    exoPlayer.addMediaItems(index, mediaItems)
-    exoPlayer.prepare()
+    sessionPlayer.addMediaItems(index, mediaItems)
+    sessionPlayer.prepare()
   }
 
   /**
@@ -623,7 +676,7 @@ class Player(internal val context: Context) {
    */
   fun remove(index: Int) {
     validateIndex(index)
-    exoPlayer.removeMediaItem(index)
+    sessionPlayer.removeMediaItem(index)
   }
 
   /**
@@ -639,7 +692,7 @@ class Player(internal val context: Context) {
     }
     indexes.forEach { validateIndex(it) }
     val sorted = indexes.sortedDescending()
-    sorted.forEach { exoPlayer.removeMediaItem(it) }
+    sorted.forEach { sessionPlayer.removeMediaItem(it) }
   }
 
   /**
@@ -647,8 +700,8 @@ class Player(internal val context: Context) {
    * if there is no next track to skip to.
    */
   fun next() {
-    exoPlayer.seekToNextMediaItem()
-    exoPlayer.prepare()
+    sessionPlayer.seekToNextMediaItem()
+    sessionPlayer.prepare()
   }
 
   /**
@@ -656,8 +709,8 @@ class Player(internal val context: Context) {
    * nothing if there is no previous track to skip to.
    */
   fun previous() {
-    exoPlayer.seekToPreviousMediaItem()
-    exoPlayer.prepare()
+    sessionPlayer.seekToPreviousMediaItem()
+    sessionPlayer.prepare()
   }
 
   /**
@@ -670,7 +723,7 @@ class Player(internal val context: Context) {
    */
   fun move(fromIndex: Int, toIndex: Int) {
     validateIndex(fromIndex)
-    exoPlayer.moveMediaItem(fromIndex, toIndex)
+    sessionPlayer.moveMediaItem(fromIndex, toIndex)
   }
 
   /**
@@ -681,8 +734,8 @@ class Player(internal val context: Context) {
    */
   fun skipTo(index: Int) {
     validateIndex(index)
-    exoPlayer.seekTo(index, C.TIME_UNSET)
-    exoPlayer.prepare()
+    sessionPlayer.seekTo(index, C.TIME_UNSET)
+    sessionPlayer.prepare()
   }
 
   /**
@@ -702,12 +755,13 @@ class Player(internal val context: Context) {
     sourcePath: String? = null,
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
-    exoPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    // While remote, the queue plays in list order.
     if (mediaItems.isNotEmpty()) {
-      exoPlayer.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
+      localEngine.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
     }
     queueSourcePath = sourcePath
-    exoPlayer.prepare()
+    sessionPlayer.prepare()
   }
 
   /**
@@ -719,7 +773,7 @@ class Player(internal val context: Context) {
     validateIndex(index)
     val isCurrent = index == currentIndex
     if (isCurrent) nowPlaying.forgetPublished()
-    exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
+    sessionPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
     if (isCurrent) nowPlaying.render()
   }
 
@@ -745,7 +799,7 @@ class Player(internal val context: Context) {
     // Cache written above: the gesture is durably recorded even without a media
     // item to restamp (queue tear-down, between-track gaps) — that counts as
     // applied; there is also no visible heart to revert in that state.
-    val index = exoPlayer.currentMediaItemIndex
+    val index = sessionPlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return true
 
     val updatedTrack = currentTrack.copy(favorited = favorited)
@@ -860,14 +914,14 @@ class Player(internal val context: Context) {
    * replacement: each separate one would be a timeline change, and a queue event to JS.
    */
   private fun restampFavorites() {
-    if (!::exoPlayer.isInitialized || exoPlayer.mediaItemCount == 0) return
+    if (!::sessionPlayer.isInitialized || sessionPlayer.mediaItemCount == 0) return
     val items =
-      (0 until exoPlayer.mediaItemCount).map { index ->
-        val item = exoPlayer.getMediaItemAt(index)
+      (0 until sessionPlayer.mediaItemCount).map { index ->
+        val item = sessionPlayer.getMediaItemAt(index)
         val track = item.localConfiguration?.tag as? Track ?: return@map item
         item.restamped(track) { setFavorite(track.favorited) }
       }
-    exoPlayer.replaceMediaItems(0, items.size, items)
+    sessionPlayer.replaceMediaItems(0, items.size, items)
   }
 
   /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
@@ -876,7 +930,10 @@ class Player(internal val context: Context) {
     track: Track,
     mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
   ) {
-    exoPlayer.replaceMediaItem(index, exoPlayer.getMediaItemAt(index).restamped(track, mutate))
+    sessionPlayer.replaceMediaItem(
+      index,
+      sessionPlayer.getMediaItemAt(index).restamped(track, mutate),
+    )
   }
 
   /**
@@ -918,8 +975,8 @@ class Player(internal val context: Context) {
    * resolution registry). Must run on the main thread (ExoPlayer access).
    */
   private fun findQueueTrackByArtworkUri(uri: String): Track? {
-    for (i in 0 until exoPlayer.mediaItemCount) {
-      val item = exoPlayer.getMediaItemAt(i)
+    for (i in 0 until sessionPlayer.mediaItemCount) {
+      val item = sessionPlayer.getMediaItemAt(i)
       if (item.mediaMetadata.artworkUri?.toString() == uri) {
         return item.localConfiguration?.tag as? Track
       }
@@ -971,12 +1028,12 @@ class Player(internal val context: Context) {
 
   /** Removes all the upcoming tracks, if any (the ones returned by [next]). */
   fun removeUpcomingTracks() {
-    val index = exoPlayer.currentMediaItemIndex
+    val index = sessionPlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return
-    val lastIndex = exoPlayer.mediaItemCount
+    val lastIndex = sessionPlayer.mediaItemCount
     val fromIndex = index + 1
 
-    exoPlayer.removeMediaItems(fromIndex, lastIndex)
+    sessionPlayer.removeMediaItems(fromIndex, lastIndex)
   }
 
   fun play() {
@@ -988,7 +1045,7 @@ class Player(internal val context: Context) {
       // otherwise), so this only reconnects after a stop() or error and never
       // re-buffers a healthy stream. Reconnecting is also how live streams
       // rejoin the live edge on resume.
-      exoPlayer.prepare()
+      sessionPlayer.prepare()
     }
   }
 
@@ -1001,15 +1058,8 @@ class Player(internal val context: Context) {
    */
   fun seekToLiveEdge() {
     if (currentTrack?.live != true) return
-    if (exoPlayer.isCurrentMediaItemLive) {
-      exoPlayer.seekToDefaultPosition()
-    } else {
-      // ExoPlayer.prepare() only re-prepares from STATE_IDLE, hence the raw stop() — not
-      // Player.stop(), which would drop the play intent this reconnect must preserve.
-      exoPlayer.stop()
-      exoPlayer.seekToDefaultPosition()
-      exoPlayer.prepare()
-    }
+    // A receiver loads a live stream again on a seek to its default position.
+    if (!localEngine.reconnectAtLiveEdge()) sessionPlayer.seekToDefaultPosition()
   }
 
   /**
@@ -1058,7 +1108,7 @@ class Player(internal val context: Context) {
 
   fun prepare() {
     if (currentTrack != null) {
-      exoPlayer.prepare()
+      sessionPlayer.prepare()
     }
   }
 
@@ -1090,11 +1140,11 @@ class Player(internal val context: Context) {
     // is emitted (direct field assignment bypasses events — see its docstring).
     setPlaybackState(PlaybackState.STOPPED)
     playWhenReady = false
-    exoPlayer.stop()
+    sessionPlayer.stop()
   }
 
   fun clear() {
-    exoPlayer.clearMediaItems()
+    sessionPlayer.clearMediaItems()
     queueSourcePath = null
   }
 
@@ -1115,6 +1165,7 @@ class Player(internal val context: Context) {
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null
+    remoteOutputs.release()
     exoPlayer.release()
     cache?.release()
     cache = null
@@ -1124,12 +1175,12 @@ class Player(internal val context: Context) {
 
   fun seekTo(duration: Long, unit: TimeUnit) {
     val positionMs = TimeUnit.MILLISECONDS.convert(duration, unit)
-    exoPlayer.seekTo(positionMs)
+    sessionPlayer.seekTo(positionMs)
   }
 
   fun seekBy(offset: Long, unit: TimeUnit) {
-    val positionMs = exoPlayer.currentPosition + TimeUnit.MILLISECONDS.convert(offset, unit)
-    exoPlayer.seekTo(positionMs)
+    val positionMs = sessionPlayer.currentPosition + TimeUnit.MILLISECONDS.convert(offset, unit)
+    sessionPlayer.seekTo(positionMs)
   }
 
   /**
@@ -1408,9 +1459,9 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   private fun validateIndex(index: Int) {
-    if (index < 0 || index >= exoPlayer.mediaItemCount) {
+    if (index < 0 || index >= sessionPlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Track index $index is out of bounds (size: ${exoPlayer.mediaItemCount})"
+        "Track index $index is out of bounds (size: ${sessionPlayer.mediaItemCount})"
       )
     }
   }
@@ -1422,9 +1473,9 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   private fun validateInsertIndex(index: Int) {
-    if (index < -1 || index > exoPlayer.mediaItemCount) {
+    if (index < -1 || index > sessionPlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Insert index $index is out of bounds (size: ${exoPlayer.mediaItemCount}, use -1 to append)"
+        "Insert index $index is out of bounds (size: ${sessionPlayer.mediaItemCount}, use -1 to append)"
       )
     }
   }
@@ -1461,7 +1512,7 @@ class Player(internal val context: Context) {
 
   /** Returns true if the current media item is a live stream. */
   val isCurrentItemLive: Boolean
-    get() = exoPlayer.isCurrentMediaItemLive
+    get() = sessionPlayer.isCurrentMediaItemLive
 
   // MARK: - Buffer Configuration
 

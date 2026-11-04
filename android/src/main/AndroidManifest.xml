@@ -41,6 +41,17 @@
             android:exported="true"
             android:grantUriPermissions="false" />
 
+        <!-- Serves Sonos rooms to the system Output Switcher; enabled at setup with remoteOutputs.sonos -->
+        <service
+            android:name="com.audiobrowser.sonos.SonosRouteProviderService"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.MediaRouteProviderService" />
+                <action android:name="android.media.MediaRoute2ProviderService" />
+            </intent-filter>
+        </service>
+
         <!-- Headless Task Service for background JS execution -->
         <service android:name="com.audiobrowser.HeadlessTaskService" android:enabled="true" android:exported="false" />
         <!-- Media button receiver for playback resumption -->

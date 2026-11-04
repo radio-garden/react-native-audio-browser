@@ -136,7 +136,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     // speaker stands in, so listeners hear that the remote output is gone.
     val output =
       computeOutput()
-        ?: if (cached?.type == OutputType.REMOTE)
+        ?: if (cached?.type in REMOTE_TYPES)
           Output(
             type = OutputType.SPEAKER,
             name = defaultName(OutputType.SPEAKER),
@@ -200,6 +200,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
 
   companion object {
     private const val POLL_INTERVAL_MS = 1000L
+    private val REMOTE_TYPES = setOf(OutputType.REMOTE, OutputType.CAST, OutputType.SONOS)
 
     /** Maps an [AudioDeviceInfo] type to a cross-platform [OutputType]. */
     fun outputTypeOf(deviceType: Int): OutputType =

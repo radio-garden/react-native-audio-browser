@@ -25,8 +25,9 @@ enum class OutputType(@DoNotStrip @Keep val value: Int) {
   HDMI(6),
   USB(7),
   CAST(8),
-  REMOTE(9),
-  OTHER(10);
+  SONOS(9),
+  REMOTE(10),
+  OTHER(11);
 
   companion object
 }

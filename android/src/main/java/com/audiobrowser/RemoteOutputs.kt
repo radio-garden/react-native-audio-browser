@@ -17,16 +17,20 @@ import timber.log.Timber
 /**
  * Remote outputs: the speakers and TVs of media route providers, offered in the system Output
  * Switcher next to the phone and Bluetooth, and the one selected there reported as the [Output].
- * Only the selection is reported; rendering the audio there is the provider's job.
+ * Only the selection is reported; rendering the audio there is the provider's job, or the Cast
+ * session's for a Cast device.
  *
  * Holds the process's one [MediaRouter] while enabled, on Android 11+ where the switcher exists. A
- * provider's routes are offered when they declare [CATEGORY] in a control filter.
+ * provider's routes are offered when they declare [CATEGORY] or one of the categories the outputs
+ * are turned on with in a control filter.
  */
 object RemoteOutputs {
   /** The control category a media route provider's routes declare to be offered as outputs. */
   const val CATEGORY = "com.audiobrowser.CATEGORY_REMOTE_OUTPUT"
 
-  private val selector = MediaRouteSelector.Builder().addControlCategory(CATEGORY).build()
+  private var types: Map<String, OutputType> = emptyMap()
+
+  private var selector = selectorFor(types)
 
   // The global router holds routers weakly: let this one go and the system Output Switcher stops
   // listing the category's routes, as the app's discovery preference empties on the next GC.
@@ -59,11 +63,27 @@ object RemoteOutputs {
         update(router)
     }
 
-  /** Turns remote outputs on or off. Idempotent. */
+  /**
+   * Turns remote outputs on or off, and with them the routes of each control category in [types],
+   * reported as its output type. Idempotent.
+   */
   @MainThread
-  internal fun setEnabled(context: Context, enabled: Boolean) {
-    if (enabled) start(context) else stop()
+  internal fun setEnabled(context: Context, enabled: Boolean, types: Map<String, OutputType>) {
+    val types = types.takeIf { enabled }.orEmpty()
+    if (!enabled) stop()
+    if (types != this.types) {
+      this.types = types
+      selector = selectorFor(types)
+      router?.let(::listen)
+    }
+    if (enabled) start(context)
   }
+
+  private fun selectorFor(types: Map<String, OutputType>) =
+    MediaRouteSelector.Builder()
+      .addControlCategory(CATEGORY)
+      .apply { types.keys.forEach(::addControlCategory) }
+      .build()
 
   /** Calls [listener] on the main thread whenever [current] changes. */
   internal fun addListener(listener: () -> Unit) {
@@ -79,6 +99,11 @@ object RemoteOutputs {
     warnWithoutTransferReceiver(context)
     val router = MediaRouter.getInstance(context.applicationContext)
     this.router = router
+    listen(router)
+  }
+
+  private fun listen(router: MediaRouter) {
+    router.removeCallback(callback)
     router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
     update(router)
   }
@@ -110,7 +135,7 @@ object RemoteOutputs {
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
-    setCurrent(remoteOutputOf(name = route.name, offersCategory = route.matchesSelector(selector)))
+    setCurrent(remoteOutputOf(route.name, types, route::supportsControlCategory))
   }
 
   @VisibleForTesting
@@ -123,6 +148,18 @@ object RemoteOutputs {
   }
 }
 
-/** The [Output] a selected route stands for: null for a route outside [RemoteOutputs.CATEGORY]. */
-internal fun remoteOutputOf(name: String, offersCategory: Boolean): Output? =
-  if (offersCategory) Output(type = OutputType.REMOTE, name = name, external = true) else null
+/**
+ * The [Output] a selected route stands for, its type that of the first category in [types] it
+ * [supports]: null for a route the remote outputs don't offer.
+ */
+internal fun remoteOutputOf(
+  name: String,
+  types: Map<String, OutputType>,
+  supports: (category: String) -> Boolean,
+): Output? {
+  val type =
+    types.entries.firstOrNull { supports(it.key) }?.value
+      ?: OutputType.REMOTE.takeIf { supports(RemoteOutputs.CATEGORY) }
+      ?: return null
+  return Output(type = type, name = name, external = true)
+}

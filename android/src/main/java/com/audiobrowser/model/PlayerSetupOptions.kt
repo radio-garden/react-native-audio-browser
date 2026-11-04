@@ -5,6 +5,7 @@ import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
 
@@ -62,6 +63,8 @@ data class PlayerSetupOptions(
   // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
   // timed metadata. When null, the default mapping is used.
   var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
+  // The remote outputs offered in the Output Switcher, or null for none: each setup sets it.
+  var remoteOutputs: RemoteOutputsOptions? = null,
 ) {
   /**
    * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
@@ -71,11 +74,16 @@ data class PlayerSetupOptions(
     get() = rebufferBuffer == null
 
   /**
-   * A copy that equals another's when both build the same engine: without the now-playing options,
-   * which apply without a rebuild. A formatter is a new object on every setup call.
+   * A copy that equals another's when both build the same engine: without the now-playing options
+   * and the remote outputs, which apply without a rebuild. A formatter is a new object on every
+   * setup call.
    */
   fun engineOptions() =
-    copy(autoUpdateNowPlayingMetadata = true, nowPlayingMetadataFormatter = null)
+    copy(
+      autoUpdateNowPlayingMetadata = true,
+      nowPlayingMetadataFormatter = null,
+      remoteOutputs = null,
+    )
 
   fun update(options: NativeSetupPlayerOptions) {
     // Android-specific options
@@ -136,5 +144,6 @@ data class PlayerSetupOptions(
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
     options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
+    remoteOutputs = options.remoteOutputs
   }
 }

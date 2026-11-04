@@ -210,11 +210,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       val event =
         when (events[i]) {
           MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED ->
-            // Read the real ExoPlayer state, not the forwarding player's — the InterceptingPlayer
-            // masks STATE_IDLE→READY on a terminal error, and that mask must not feed back into
-            // our own state machine (it would clear the ERROR state/subtitle).
+            // Read the session player's real state, not the forwarding player's: the
+            // InterceptingPlayer masks STATE_IDLE→READY on a terminal error, and that mask must
+            // not feed back into our own state machine (it would clear the ERROR state/subtitle).
             PlaybackEvent.ExoPlaybackStateChanged(
-              player.exoPlayer.playbackState,
+              player.sessionPlayer.playbackState,
               media3Player.mediaItemCount,
               player.shouldPlayWhenReady,
             )
@@ -224,7 +224,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           MediaPlayer.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED ->
             PlaybackEvent.ShouldPlayWhenReadyChanged(
               player.shouldPlayWhenReady,
-              player.exoPlayer.playbackState,
+              player.sessionPlayer.playbackState,
             )
           MediaPlayer.EVENT_IS_PLAYING_CHANGED -> PlaybackEvent.IsPlayingChanged(player.isPlaying)
           else -> null
@@ -243,12 +243,17 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlayerError(error: PlaybackException) {
+    if (player.localEngine.isActive && recoverLocally(error)) return
+    surface(error)
+  }
+
+  /** Recovers what the local engine can recover by itself; false for an error to surface. */
+  private fun recoverLocally(error: PlaybackException): Boolean {
     // Handle live stream recovery when playback position falls behind the live window
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
       Timber.d("Playback fell behind live window, recovering to live edge")
-      player.exoPlayer.seekToDefaultPosition()
-      player.exoPlayer.prepare()
-      return
+      player.localEngine.retry(toLiveEdge = true)
+      return true
     }
 
     // media3 1.9.0+ stuck-player detection arrives here wrapped in a PlaybackException: the actual
@@ -261,9 +266,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         .firstOrNull()
     if (stuck != null) {
       handleStuckPlayer(stuck)
-      return
+      return true
     }
+    return false
+  }
 
+  private fun surface(error: PlaybackException) {
     val online = player.networkMonitor.getOnline()
     // `code` stays the raw ExoPlayer name for telemetry; `kind` is the normalized classification
     // consumers branch on. Offline is the one distinction ExoPlayer's codes cannot make on their
@@ -307,10 +315,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           "Stuck player recovery: type=${error.stuckType} timeoutMs=${error.timeoutMs} " +
             "live=${player.isCurrentItemLive}"
         )
-        if (player.isCurrentItemLive) {
-          player.exoPlayer.seekToDefaultPosition()
-        }
-        player.exoPlayer.prepare()
+        player.localEngine.retry(toLiveEdge = player.isCurrentItemLive)
       }
       StuckRecoveryPolicy.Decision.GIVE_UP -> {
         Timber.w("Stuck player recovery exhausted (type=${error.stuckType}), surfacing error")

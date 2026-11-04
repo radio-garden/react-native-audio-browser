@@ -56,6 +56,11 @@ def getExtOrIntegerDefault(name) {
 
 def kotlin_version = getExtOrDefault("kotlinVersion") ?: "1.9.0"
 
+// Google Cast is opt-in at build time (AudioBrowser_castEnabled=true in the app's
+// gradle.properties, or rootProject.ext.castEnabled), so apps that don't cast don't ship
+// Play Services' Cast framework.
+def castEnabled = (getExtOrDefault("castEnabled") ?: "false").toString().toBoolean()
+
 android {
   namespace "com.audiobrowser"
 
@@ -144,12 +149,16 @@ android {
 
   sourceSets {
     main {
+      java.srcDirs += [castEnabled ? "src/cast/java" : "src/nocast/java"]
       if (isNewArchitectureEnabled()) {
         java.srcDirs += [
           // React Codegen files
           "${project.buildDir}/generated/source/codegen/java"
         ]
       }
+    }
+    test {
+      if (castEnabled) java.srcDirs += ["src/testCast/java"]
     }
   }
 }
@@ -202,6 +211,10 @@ dependencies {
   implementation("androidx.media3:media3-exoplayer-smoothstreaming:${media3Version}")
   implementation("androidx.media3:media3-common:${media3Version}")
   implementation("androidx.media3:media3-datasource-okhttp:${media3Version}")
+  if (castEnabled) {
+    implementation("androidx.media3:media3-cast:${media3Version}")
+    implementation("com.google.android.gms:play-services-cast-framework:22.3.1")
+  }
 
   implementation "com.google.guava:guava:33.0.0-android"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0"
@@ -230,6 +243,8 @@ dependencies {
   mockitoAgent "org.mockito:mockito-core:${mockitoVersion}"
   testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
   testImplementation 'org.robolectric:robolectric:4.11.1'
+  // Stands in for a Sonos speaker in the UPnP round-trip tests.
+  testImplementation 'com.squareup.okhttp3:mockwebserver'
 
   api 'com.jakewharton.timber:timber:5.0.1'
 }

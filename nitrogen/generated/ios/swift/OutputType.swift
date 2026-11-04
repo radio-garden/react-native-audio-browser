@@ -35,6 +35,8 @@ public extension OutputType {
         self = .usb
       case "cast":
         self = .cast
+      case "sonos":
+        self = .sonos
       case "remote":
         self = .remote
       case "other":
@@ -67,6 +69,8 @@ public extension OutputType {
         return "usb"
       case .cast:
         return "cast"
+      case .sonos:
+        return "sonos"
       case .remote:
         return "remote"
       case .other:

@@ -229,7 +229,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
-  private var remoteOutputs = false
   // Written only on the main thread (ServiceConnection callbacks, dispose); read from main or,
   // in a few places, straight from the JS thread. @Volatile gives those reads visibility — they
   // must still tolerate staleness in both directions (a just-detached service, or null while
@@ -861,9 +860,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
     return Promise.async(mainScope) {
       setupOptions.update(options)
-      options.remoteOutputs?.let { remoteOutputs = it }
-      // Applied even when omitted, so a reloaded bundle that omits the option turns it off.
-      RemoteOutputs.setEnabled(context, remoteOutputs)
       // The bundled runtime options and initial state are part of the atomic launch
       // description: stage them here, apply them together with the engine below (or at
       // service connect). Last-write-wins with their imperative counterparts.

@@ -47,12 +47,12 @@ data class NativeSetupPlayerOptions(
   val keepSessionAliveOnError: Boolean?,
   @DoNotStrip
   @Keep
-  val remoteOutputs: Boolean?
+  val remoteOutputs: RemoteOutputsOptions?
 ) {
   /**
    * Create a new instance of NativeSetupPlayerOptions from Kotlin
    */
-  constructor(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: Boolean?):
+  constructor(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: RemoteOutputsOptions?):
          this(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter?.let { Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_java(it) }, playWhenReady, repeatMode, retry, keepSessionAliveOnError, remoteOutputs)
 
   override fun equals(other: Any?): Boolean {
@@ -93,7 +93,7 @@ data class NativeSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: Boolean?): NativeSetupPlayerOptions {
+    private fun fromCpp(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: RemoteOutputsOptions?): NativeSetupPlayerOptions {
       return NativeSetupPlayerOptions(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter, playWhenReady, repeatMode, retry, keepSessionAliveOnError, remoteOutputs)
     }
   }

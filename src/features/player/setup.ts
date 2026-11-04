@@ -483,6 +483,33 @@ export interface IOSSetupOptions extends IOSUpdateOptions {
   categoryPolicy?: IOSCategoryPolicy
 }
 
+/** Which remote outputs `setupPlayer({ remoteOutputs })` turns on. */
+export interface RemoteOutputsOptions {
+  /**
+   * Plays on Cast devices selected in the Output Switcher, through the Default Media Receiver:
+   * the receiver fetches the track's media URL itself, so it gets the URL the media transform
+   * resolves, without its headers. Needs the app built with `AudioBrowser_castEnabled=true` in
+   * its `gradle.properties` and Google Play services on the device; without either, playback
+   * stays on the phone and a warning is logged.
+   * @default false
+   */
+  cast?: boolean
+  /**
+   * The Cast receiver application `cast` loads, as registered in the Google Cast SDK Developer
+   * Console: a Styled Media Receiver shows the app's own name on the device and in its
+   * notifications. Cast takes it once per app process: a change takes effect after a restart.
+   * @default the Default Media Receiver, `'CC1AD845'`
+   */
+  castReceiverApplicationId?: string
+  /**
+   * Plays on Sonos rooms selected in the Output Switcher, over the speakers' UPnP control: the
+   * speaker fetches the media URL the media transform resolves, without its headers. Sonos calls
+   * UPnP unsupported and lets the listener switch it off; then no rooms are listed.
+   * @default false
+   */
+  sonos?: boolean
+}
+
 /**
  * @internal The wire shape `setupPlayer` sends across the bridge: the platform bags hold only
  * construction fields, the runtime options nest under `options`, and the public `nowPlaying`
@@ -606,16 +633,20 @@ export type SetupPlayerOptions = Pick<
 
   /**
    * Offers remote speakers and TVs in the system Output Switcher (`openOutputPicker`), and
-   * reports the selected one as the `Output`, with `type: 'remote'`. Only the selection is
-   * reported: the library keeps playing locally, and rendering the audio on the speaker is the
-   * provider's job. The speakers come from media route providers that declare the library's
-   * remote-output control category (`RemoteOutputs.CATEGORY` on Android). The app declares
-   * AndroidX's `MediaTransferReceiver` in its manifest for the switcher to move the session.
+   * reports the selected one as the `Output`, with `type: 'remote'`, or `'cast'` for a Cast
+   * device and `'sonos'` for a Sonos room. `{}` reports the selection only: the library keeps
+   * playing locally, and rendering the audio on the speaker is the provider's job. The speakers
+   * come from media route providers that declare the library's remote-output control category
+   * (`RemoteOutputs.CATEGORY` on Android). The app declares AndroidX's `MediaTransferReceiver` in
+   * its manifest for the switcher to move the session.
+   *
+   * Each `setupPlayer` sets it: left out, remote outputs are off, and playback on one comes back
+   * to the phone.
    *
    * Android 11+ only for now; ignored on iOS, whose route picker already lists AirPlay devices.
-   * @default false
+   * @default off
    */
-  remoteOutputs?: boolean
+  remoteOutputs?: RemoteOutputsOptions
 
   /** Android-specific options: engine construction and runtime, merged. */
   android?: AndroidSetupOptions
