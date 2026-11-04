@@ -6,18 +6,13 @@ import androidx.media3.common.ForwardingSimpleBasePlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
-import androidx.media3.common.PlayerTransferState
 import androidx.media3.common.SimpleBasePlayer
-import androidx.media3.common.Timeline
 import androidx.media3.common.util.Util
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -25,12 +20,14 @@ import timber.log.Timber
  * The session's player while Cast is on: the local player while no Cast session is up, the
  * [remote]'s player while one is, carrying the queue, position and play intent across each change,
  * as Media3's `CastPlayer` does. Unlike it:
- * - each item's [CastMedia] is resolved before the queue reaches the receiver, playing on locally
- *   meanwhile at the handover; while casting, queue changes and seeks wait their turn behind the
- *   resolutions, so they apply in the order they were made;
  * - the remote outlives a local engine ([setLocal]), so a new engine keeps the session;
- * - while casting, a replacement that changes only an item's metadata (a now-playing restamp) stays
- *   on this side, because the receiver reloads any item it is sent again;
+ * - each item's [CastMedia] is resolved before the queue reaches the receiver, playing on locally
+ *   meanwhile at the handover;
+ * - while casting, this side owns the queue and the current item, and shows them at once. The
+ *   remote player reports a change only once the receiver has, and reports items outside the
+ *   receiver's window empty, so it supplies only the playback state and position. Each change loads
+ *   the whole queue on the receiver again, which restarts the current stream; a change to an item's
+ *   metadata only (a now-playing restamp) stays on this side;
  * - a receiver's failure to play is the player error, which [prepare] clears by loading the queue
  *   again, and [stop] pauses the receiver, which forgets its queue when stopped.
  */
@@ -51,33 +48,28 @@ internal class CastSwitchingPlayer(
 
   private var handover: Job? = null
 
-  // The queue changes and seeks waiting on a resolution while casting, the last one last.
-  private val queue = SupervisorJob(scope.coroutineContext[Job])
-  private var queued: Job? = null
+  // While casting: the queue and current item as set on this side, which is what shows.
+  private val items = mutableListOf<MediaItem>()
+  private val uids = mutableListOf<Any>()
+  private var index = C.INDEX_UNSET
+  private var playIntent = false
+
+  // The item sent to the receiver for each entry, by uid: a restamp replaces the entry's item on
+  // this side only.
+  private val sent = HashMap<Any, MediaItem>()
+
+  // The resolution and load of the queue on the receiver, and the entry it is to make current,
+  // until the receiver reports it current.
+  private var load: Job? = null
+  private var loading: Any? = null
+  private var loadPositionMs = 0L
 
   // What the receiver last failed to play, until the queue is loaded there again.
   private var remoteError: PlaybackException? = null
 
-  // Items whose resolution failed during this handover, so it isn't retried in a loop; the
-  // converter then sends their URL as it is.
+  // Items whose resolution failed, so it isn't retried in a loop; the converter then sends their
+  // URL as it is.
   private val unresolvable = HashSet<MediaItem>()
-
-  // Metadata-only replacements made while casting, by media id, laid over the receiver's items.
-  private val restamped = HashMap<String, MediaItem>()
-
-  // The receiver's queue as it was sent, which is what shows. The remote player reports as sent
-  // only the items around the current one; the rest come as `MediaItem.EMPTY`, rebuilt without the
-  // tag the caller's data rides on, or as an earlier queue's item whose id the receiver reused.
-  private val sent = mutableListOf<MediaItem>()
-
-  // The last state shown as sent, shown again while the reported queue and [sent] differ in
-  // length: for a status or two after a change.
-  private var lastSettled: State? = null
-
-  // The uids of the items a restamp just replaced: kept in the placeholder state shown while
-  // another change waits, which would otherwise give them new ones, read as a track change.
-  private var restampedUids: List<Any>? = null
-  private var restampedFrom = 0
 
   init {
     remote.setSessionListener(::updateActivePlayer)
@@ -114,13 +106,48 @@ internal class CastSwitchingPlayer(
           resolveAll(pending)
         }
         handover = null
-        // The receiver can refuse the queue (its session ending under it); playback stays here.
-        try {
-          transfer(from = local, to = remote.player)
-        } catch (e: IllegalStateException) {
-          Timber.e(e, "Cast: could not hand playback to the receiver")
-        }
+        replaceQueue(local.mediaItems(), local.currentMediaItemIndex)
+        playIntent = local.playWhenReady
+        remote.player.repeatMode = local.repeatMode
+        val positionMs = if (isCurrentItemLive()) C.TIME_UNSET else local.currentPosition
+        val wasIdle = local.playbackState == STATE_IDLE
+        local.stop()
+        setPlayer(remote.player)
+        if (!wasIdle) loadOnReceiver(positionMs)
       }
+  }
+
+  private fun handOverToLocal() {
+    load?.cancel()
+    val positionMs =
+      when {
+        isCurrentItemLive() -> C.TIME_UNSET
+        receiverPlaysCurrent() -> remote.player.currentPosition
+        loading != null -> loadPositionMs
+        else -> C.TIME_UNSET
+      }
+    val wasIdle = loading == null && remote.player.playbackState == STATE_IDLE
+    local.repeatMode = remote.player.repeatMode
+    if (items.isEmpty()) local.clearMediaItems()
+    else local.setMediaItems(items.toList(), index, positionMs)
+    local.playWhenReady = playIntent
+    if (!wasIdle && items.isNotEmpty()) local.prepare()
+    remote.player.stop()
+    setPlayer(local)
+    items.clear()
+    uids.clear()
+    sent.clear()
+    index = C.INDEX_UNSET
+    loading = null
+    remoteError = null
+  }
+
+  private fun onRemoteError(error: PlaybackException) {
+    if (!isRemote || remoteError != null) return
+    Timber.w(error, "Cast: the receiver failed to play")
+    remoteError = error
+    loading = null
+    invalidateState()
   }
 
   private suspend fun resolveAll(items: List<MediaItem>) {
@@ -138,112 +165,144 @@ internal class CastSwitchingPlayer(
     }
   }
 
-  private fun handOverToLocal() {
-    // What still waits is in the reported queue already, which is what moves across.
-    queue.cancelChildren()
-    transfer(from = remote.player, to = local)
-    restamped.clear()
-    sent.clear()
-    lastSettled = null
+  /**
+   * Loads the queue on the receiver, from [positionMs] in the current item, once its items are
+   * resolved; a later call takes the place of one still resolving.
+   */
+  private fun loadOnReceiver(positionMs: Long) {
+    load?.cancel()
     remoteError = null
+    if (items.isEmpty()) {
+      loading = null
+      remote.player.stop()
+      return
+    }
+    val queue = items.toList()
+    val current = index
+    sent.clear()
+    uids.forEachIndexed { i, uid -> sent[uid] = queue[i] }
+    loading = uids[current]
+    loadPositionMs = if (positionMs == C.TIME_UNSET) 0 else positionMs
+    load =
+      scope.launch {
+        resolveAll(queue.filter { it !in resolutions && it !in unresolvable })
+        try {
+          remote.player.setMediaItems(queue, current, positionMs)
+          remote.player.playWhenReady = playIntent
+        } catch (e: IllegalStateException) {
+          // The session ended under it: the handback, already on its way, plays on locally.
+          Timber.e(e, "Cast: could not load the queue on the receiver")
+        }
+      }
   }
 
-  private fun onRemoteError(error: PlaybackException) {
-    if (!isRemote || remoteError != null) return
-    Timber.w(error, "Cast: the receiver failed to play")
-    remoteError = error
-    invalidateState()
+  private fun replaceQueue(newItems: List<MediaItem>, newIndex: Int) {
+    items.clear()
+    items.addAll(newItems)
+    uids.clear()
+    uids.addAll(newItems.map { Any() })
+    index = if (newItems.isEmpty()) C.INDEX_UNSET else newIndex.coerceIn(0, newItems.size - 1)
   }
 
-  private fun transfer(from: MediaPlayer, to: MediaPlayer) {
-    val state = PlayerTransferState.builderFromPlayer(from)
-    if (from === remote.player) state.setMediaItems(this.mediaItems())
-    if (to === remote.player && isCurrentItemLive(from)) state.setCurrentPosition(C.TIME_UNSET)
-    val transferred = state.build()
-    if (to === remote.player) sent.replaceWith(transferred.mediaItems)
-    transferred.setToPlayer(to)
-    if (from.playbackState != STATE_IDLE) to.prepare()
-    from.stop()
-    setPlayer(to)
+  /**
+   * Whether the receiver plays the current entry, as far as it says: an item it reports that this
+   * side can't place (empty, or rebuilt from its own queue) counts as the current one.
+   */
+  private fun receiverPlaysCurrent(): Boolean {
+    if (loading != null || remote.player.mediaItemCount == 0) return false
+    val reported = remote.player.currentMediaItem ?: return false
+    val at = entryOf(reported)
+    return at < 0 || at == index
   }
 
-  private fun isCurrentItemLive(player: MediaPlayer) =
-    player.currentMediaItem?.let { resolutions[it]?.live } == true
+  /** The entry the receiver's [item] was sent for, or -1. */
+  private fun entryOf(item: MediaItem) = uids.indexOfFirst { sent[it] === item }
+
+  private fun isCurrentItemLive() =
+    (if (isRemote) items.getOrNull(index) else local.currentMediaItem)?.let {
+      resolutions[it]?.live
+    } == true
 
   override fun getState(): State {
-    restampedUids = null
     val state = super.getState()
     if (!isRemote) return state
-    val asSent = sent.takeIf { it.size == state.playlist.size }
+    followReceiver()
     val playlist =
-      state.playlist.mapIndexed { index, data ->
-        val item = asSent?.get(index) ?: data.mediaItem
-        val shown = restamped[item.mediaId] ?: item
-        if (shown === data.mediaItem) data else data.buildUpon().setMediaItem(shown).build()
-      }
-    val settled =
-      asSent != null ||
-        (sent.isEmpty() && playlist.all { it.mediaItem.localConfiguration?.tag != null })
-    if (!settled) {
-      return lastSettled
-        ?: state
-          .buildUpon()
-          .setPlaylist(emptyList())
-          .setCurrentMediaItemIndex(C.INDEX_UNSET)
-          .setPlaybackState(STATE_IDLE)
-          .build()
-    }
+      items.indices.map { MediaItemData.Builder(uids[it]).setMediaItem(items[it]).build() }
     val error = remoteError
     return state
       .buildUpon()
       .setPlaylist(playlist)
-      .apply { if (error != null) setPlayerError(error).setPlaybackState(STATE_IDLE) }
+      .setCurrentMediaItemIndex(index)
+      .apply {
+        when {
+          items.isEmpty() -> setPlaybackState(STATE_IDLE)
+          error != null -> setPlayerError(error).setPlaybackState(STATE_IDLE)
+          loading != null ->
+            setPlaybackState(STATE_BUFFERING)
+              .setPlayWhenReady(playIntent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+              .setContentPositionMs(loadPositionMs)
+          !receiverPlaysCurrent() -> setPlaybackState(STATE_IDLE).setContentPositionMs(0)
+        }
+      }
       .build()
-      .also { lastSettled = it }
   }
 
-  override fun getPlaceholderState(suggestedPlaceholderState: State): State {
-    val uids = restampedUids ?: return suggestedPlaceholderState
-    restampedUids = null
-    val playlist = suggestedPlaceholderState.playlist.toMutableList()
-    uids.forEachIndexed { offset, uid ->
-      val index = restampedFrom + offset
-      playlist[index] = playlist[index].buildUpon().setUid(uid).setIsPlaceholder(false).build()
+  /**
+   * Catches up with the receiver: the load arriving there, or the receiver moving to another item
+   * of the queue by itself (the end of an item, or a skip from another sender).
+   */
+  private fun followReceiver() {
+    val reported = remote.player.currentMediaItem ?: return
+    val loadingUid = loading
+    if (loadingUid != null) {
+      if (reported === sent[loadingUid]) loading = null
+      return
     }
-    return suggestedPlaceholderState.buildUpon().setPlaylist(playlist).build()
+    val moved = entryOf(reported)
+    if (moved >= 0) index = moved
+  }
+
+  override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
+    if (isRemote) playIntent = playWhenReady
+    return super.handleSetPlayWhenReady(playWhenReady)
   }
 
   override fun handlePrepare(): ListenableFuture<*> {
-    if (!isRemote || remoteError == null) return super.handlePrepare()
-    remoteError = null
-    val items = this.mediaItems()
-    if (items.isEmpty()) return Futures.immediateVoidFuture()
-    sent.replaceWith(items)
-    return super.handleSetMediaItems(items, currentMediaItemIndex, C.TIME_UNSET)
+    if (!isRemote) return super.handlePrepare()
+    val idle = remoteError != null || remote.player.mediaItemCount == 0
+    if (loading == null && idle) loadOnReceiver(C.TIME_UNSET)
+    return Futures.immediateVoidFuture()
   }
 
-  override fun handleStop(): ListenableFuture<*> =
-    if (isRemote) super.handleSetPlayWhenReady(false) else super.handleStop()
+  override fun handleStop(): ListenableFuture<*> {
+    if (!isRemote) return super.handleStop()
+    playIntent = false
+    return super.handleSetPlayWhenReady(false)
+  }
 
   override fun handleSetMediaItems(
     mediaItems: List<MediaItem>,
     startIndex: Int,
     startPositionMs: Long,
   ): ListenableFuture<*> {
-    restamped.clear()
-    return inTurn(mediaItems) {
-      remoteError = null
-      whileRemote { sent.replaceWith(mediaItems) }
-      super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
-    }
+    if (!isRemote) return super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
+    replaceQueue(mediaItems, if (startIndex == C.INDEX_UNSET) 0 else startIndex)
+    loadOnReceiver(startPositionMs)
+    return Futures.immediateVoidFuture()
   }
 
   override fun handleAddMediaItems(index: Int, mediaItems: List<MediaItem>): ListenableFuture<*> {
-    forgetRestamps(mediaItems)
-    return inTurn(mediaItems) {
-      whileRemote { sent.addAll(index.coerceAtMost(sent.size), mediaItems) }
-      super.handleAddMediaItems(index, mediaItems)
+    if (!isRemote) return super.handleAddMediaItems(index, mediaItems)
+    val at = index.coerceAtMost(items.size)
+    items.addAll(at, mediaItems)
+    uids.addAll(at, mediaItems.map { Any() })
+    when {
+      this.index == C.INDEX_UNSET -> this.index = 0
+      this.index >= at -> this.index += mediaItems.size
     }
+    loadOnReceiver(currentPositionOnReceiver())
+    return Futures.immediateVoidFuture()
   }
 
   override fun handleReplaceMediaItems(
@@ -251,108 +310,88 @@ internal class CastSwitchingPlayer(
     toIndex: Int,
     mediaItems: List<MediaItem>,
   ): ListenableFuture<*> {
-    if (isRemote && isMetadataOnly(fromIndex, toIndex, mediaItems)) {
-      mediaItems.forEach { restamped[it.mediaId] = it }
-      mediaItems.forEachIndexed { offset, item -> sent.restamp(fromIndex + offset, item) }
-      val window = Timeline.Window()
-      restampedFrom = fromIndex
-      restampedUids = (fromIndex until toIndex).map { currentTimeline.getWindow(it, window).uid }
+    if (!isRemote) return super.handleReplaceMediaItems(fromIndex, toIndex, mediaItems)
+    val to = toIndex.coerceAtMost(items.size)
+    if (isMetadataOnly(fromIndex, to, mediaItems)) {
+      mediaItems.forEachIndexed { offset, item -> items[fromIndex + offset] = item }
       return Futures.immediateVoidFuture()
     }
-    forgetRestamps(itemsBetween(fromIndex, toIndex) + mediaItems)
-    return inTurn(mediaItems) {
-      whileRemote {
-        sent.removeBetween(fromIndex, toIndex)
-        sent.addAll(fromIndex.coerceAtMost(sent.size), mediaItems)
+    val replacesCurrent = index in fromIndex until to
+    val positionMs = if (replacesCurrent) C.TIME_UNSET else currentPositionOnReceiver()
+    items.subList(fromIndex, to).clear()
+    uids.subList(fromIndex, to).clear()
+    items.addAll(fromIndex, mediaItems)
+    uids.addAll(fromIndex, mediaItems.map { Any() })
+    index =
+      when {
+        items.isEmpty() -> C.INDEX_UNSET
+        replacesCurrent -> fromIndex.coerceAtMost(items.size - 1)
+        index >= to -> index - (to - fromIndex) + mediaItems.size
+        else -> index
       }
-      super.handleReplaceMediaItems(fromIndex, toIndex, mediaItems)
-    }
+    loadOnReceiver(positionMs)
+    return Futures.immediateVoidFuture()
   }
 
   override fun handleRemoveMediaItems(fromIndex: Int, toIndex: Int): ListenableFuture<*> {
-    forgetRestamps(itemsBetween(fromIndex, toIndex))
-    return inTurn {
-      whileRemote { sent.removeBetween(fromIndex, toIndex) }
-      super.handleRemoveMediaItems(fromIndex, toIndex)
-    }
+    if (!isRemote) return super.handleRemoveMediaItems(fromIndex, toIndex)
+    val to = toIndex.coerceAtMost(items.size)
+    val removesCurrent = index in fromIndex until to
+    val positionMs = if (removesCurrent) C.TIME_UNSET else currentPositionOnReceiver()
+    items.subList(fromIndex, to).clear()
+    uids.subList(fromIndex, to).clear()
+    index =
+      when {
+        items.isEmpty() -> C.INDEX_UNSET
+        removesCurrent -> fromIndex.coerceAtMost(items.size - 1)
+        index >= to -> index - (to - fromIndex)
+        else -> index
+      }
+    loadOnReceiver(positionMs)
+    return Futures.immediateVoidFuture()
   }
-
-  /** Drops the restamps of [items], which the receiver is sent or drops as they are now. */
-  private fun forgetRestamps(items: List<MediaItem>) {
-    items.forEach { restamped.remove(it.mediaId) }
-  }
-
-  private fun itemsBetween(fromIndex: Int, toIndex: Int) =
-    (fromIndex until minOf(toIndex, mediaItemCount)).map(::getMediaItemAt)
 
   override fun handleMoveMediaItems(
     fromIndex: Int,
     toIndex: Int,
     newIndex: Int,
-  ): ListenableFuture<*> = inTurn {
-    whileRemote { if (toIndex <= sent.size) Util.moveItems(sent, fromIndex, toIndex, newIndex) }
-    super.handleMoveMediaItems(fromIndex, toIndex, newIndex)
+  ): ListenableFuture<*> {
+    if (!isRemote) return super.handleMoveMediaItems(fromIndex, toIndex, newIndex)
+    val current = uids.getOrNull(index)
+    Util.moveItems(items, fromIndex, toIndex.coerceAtMost(items.size), newIndex)
+    Util.moveItems(uids, fromIndex, toIndex.coerceAtMost(uids.size), newIndex)
+    index = uids.indexOf(current)
+    loadOnReceiver(currentPositionOnReceiver())
+    return Futures.immediateVoidFuture()
   }
 
   override fun handleSeek(
     mediaItemIndex: Int,
     positionMs: Long,
     seekCommand: Int,
-  ): ListenableFuture<*> = inTurn { super.handleSeek(mediaItemIndex, positionMs, seekCommand) }
-
-  /**
-   * Runs [apply] on the active player now, unless it is the remote and [items] need resolving or an
-   * earlier change still waits: then after those, in order. The returned future completes once
-   * [apply] has run, which holds the player's reported state at what it will be until then.
-   */
-  private fun inTurn(
-    items: List<MediaItem> = emptyList(),
-    apply: () -> ListenableFuture<*>,
   ): ListenableFuture<*> {
-    val pending = if (isRemote) items.filter { it !in resolutions } else emptyList()
-    val previous = queued
-    if (pending.isEmpty() && previous == null) return apply()
-    val done = SettableFuture.create<Unit>()
-    val job =
-      scope.launch(queue) {
-        try {
-          previous?.join()
-          resolveAll(pending)
-          apply()
-        } catch (e: IllegalStateException) {
-          Timber.e(e, "Cast: could not apply a queue change")
-        } finally {
-          done.set(Unit)
-        }
-      }
-    queued = job
-    job.invokeOnCompletion { if (queued === job) queued = null }
-    return done
+    if (!isRemote) return super.handleSeek(mediaItemIndex, positionMs, seekCommand)
+    val target = if (mediaItemIndex == C.INDEX_UNSET) index else mediaItemIndex
+    if (target == index && receiverPlaysCurrent()) {
+      remote.player.seekTo(if (positionMs == C.TIME_UNSET) 0 else positionMs)
+    } else if (target in items.indices) {
+      index = target
+      loadOnReceiver(positionMs)
+    }
+    return Futures.immediateVoidFuture()
   }
 
-  private inline fun whileRemote(block: () -> Unit) {
-    if (isRemote) block()
-  }
-
-  private fun MutableList<MediaItem>.replaceWith(items: List<MediaItem>) {
-    clear()
-    addAll(items)
-  }
-
-  private fun MutableList<MediaItem>.removeBetween(fromIndex: Int, toIndex: Int) {
-    if (fromIndex < size) subList(fromIndex, toIndex.coerceAtMost(size)).clear()
-  }
-
-  /** Puts [item] at [index] if that is where it is: a restamp can come from a queue since gone. */
-  private fun MutableList<MediaItem>.restamp(index: Int, item: MediaItem) {
-    if (getOrNull(index)?.mediaId == item.mediaId) set(index, item)
-  }
+  private fun currentPositionOnReceiver() =
+    when {
+      loading != null -> loadPositionMs
+      receiverPlaysCurrent() -> remote.player.currentPosition
+      else -> C.TIME_UNSET
+    }
 
   private fun isMetadataOnly(fromIndex: Int, toIndex: Int, mediaItems: List<MediaItem>) =
     toIndex - fromIndex == mediaItems.size &&
       mediaItems.withIndex().all { (offset, item) ->
-        // As reported, which already shows the changes still waiting.
-        val replaced = getMediaItemAt(fromIndex + offset)
+        val replaced = items[fromIndex + offset]
         replaced.mediaId == item.mediaId &&
           replaced.localConfiguration?.uri == item.localConfiguration?.uri
       }
@@ -363,7 +402,6 @@ internal class CastSwitchingPlayer(
    */
   override fun handleRelease(): ListenableFuture<*> {
     handover?.cancel()
-    queue.cancelChildren()
     remote.setSessionListener(null)
     remote.setErrorListener(null)
     if (isRemote) handOverToLocal()

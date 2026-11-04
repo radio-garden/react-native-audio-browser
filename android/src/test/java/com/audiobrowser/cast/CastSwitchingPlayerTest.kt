@@ -190,26 +190,6 @@ class CastSwitchingPlayerTest {
   }
 
   @Test
-  fun `a restamp of the previous queue's item leaves the new queue as sent`() {
-    playLocally(listOf("a"))
-    remote.startSession()
-    idle()
-    remote.player.lagging = true
-    player.setMediaItems(listOf(item("b"), item("c")))
-    idle()
-
-    // The receiver still reports the old queue, which still shows: the restamp is of its item.
-    player.replaceMediaItem(0, item("a", title = "Song – Artist"))
-    remote.player.catchUp()
-    idle()
-
-    assertEquals(
-      listOf("b", "c"),
-      (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId },
-    )
-  }
-
-  @Test
   fun `an earlier queue's item the receiver reports shows as the item sent`() {
     playLocally(listOf("a", "b"))
     remote.startSession()
@@ -366,6 +346,7 @@ class CastSwitchingPlayerTest {
   fun `a session already up is handed the queue`() {
     val local = FakePlayer(looper, DeviceInfo.UNKNOWN)
     local.setMediaItems(listOf(item("a")))
+    local.prepare()
     val remote = FakeCastRemote(looper).apply { sessionUp() }
 
     val player = CastSwitchingPlayer(local, remote, resolutions, { null }, scope)
@@ -373,6 +354,111 @@ class CastSwitchingPlayerTest {
 
     assertTrue(player.isRemote)
     assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
+  }
+
+  @Test
+  fun `a skip while a new queue resolves lands on the new queue`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    gate = CompletableDeferred()
+    val sent = remote.player.sent.size
+
+    player.setMediaItems(listOf(item("b"), item("c"), item("d")))
+    player.seekTo(2, 0)
+    assertEquals(2, player.currentMediaItemIndex)
+    gate!!.complete(Unit)
+    idle()
+
+    assertEquals(listOf("b", "c", "d"), remote.player.items.map { it.mediaId })
+    assertEquals(2, remote.player.index)
+    assertEquals(sent + 1, remote.player.sent.size)
+  }
+
+  @Test
+  fun `the session ending while a new queue resolves hands back the new queue`() {
+    playLocally(listOf("a", "b", "c"), index = 2)
+    remote.startSession()
+    idle()
+    gate = CompletableDeferred()
+
+    player.setMediaItems(listOf(item("d")))
+    remote.endSession()
+    gate!!.complete(Unit)
+    idle()
+
+    assertEquals(listOf("d"), local.items.map { it.mediaId })
+    assertEquals(0, local.index)
+  }
+
+  @Test
+  fun `prepare after a failure while a new queue resolves loads it once`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.fail()
+    idle()
+    gate = CompletableDeferred()
+    val sent = remote.player.sent.size
+
+    player.setMediaItems(listOf(item("b")))
+    player.prepare()
+    gate!!.complete(Unit)
+    idle()
+
+    assertEquals(
+      listOf(listOf("b")),
+      remote.player.sent.drop(sent).map { items -> items.map { it.mediaId } },
+    )
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `a receiver that dropped its queue is idle, and prepare loads it again`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    remote.player.clearMediaItems()
+    idle()
+    assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
+    assertEquals(listOf("a"), player.mediaItems())
+
+    player.prepare()
+    idle()
+    assertEquals(listOf("a"), remote.player.items.map { it.mediaId })
+  }
+
+  @Test
+  fun `an empty queue while casting stops the receiver`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    player.setMediaItems(emptyList())
+    idle()
+
+    assertEquals(1, remote.player.stops)
+    assertEquals(0, player.mediaItemCount)
+  }
+
+  @Test
+  fun `the handover never shows an empty queue`() {
+    playLocally(listOf("a", "b"))
+    val counts = mutableListOf<Int>()
+    player.addListener(
+      object : MediaPlayer.Listener {
+        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+          counts += timeline.windowCount
+        }
+      }
+    )
+
+    remote.startSession()
+    idle()
+
+    assertTrue(player.isRemote)
+    assertFalse(0 in counts)
   }
 
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {

@@ -94,6 +94,7 @@ internal class FakePlayer(looper: Looper, private val deviceInfo: DeviceInfo = D
     insert(0, mediaItems)
     index = if (startIndex == C.INDEX_UNSET) 0 else startIndex
     positionMs = if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs
+    readiness = STATE_READY
   }
 
   override fun handleAddMediaItems(index: Int, mediaItems: List<MediaItem>): ListenableFuture<*> {
