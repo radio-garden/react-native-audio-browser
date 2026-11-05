@@ -3,14 +3,6 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Handles all image loading and rendering for CarPlay.
-///
-/// Responsibilities:
-/// - SF Symbol rendering, with light/dark variants
-/// - Artwork loading via BrowserManager's artwork URL resolution
-/// - Direct artwork loading as fallback
-/// - Adaptive image tinting for monochrome icons
-/// - Placeholder image generation
 @MainActor
 final class CarPlayImageLoader {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayImageLoader")
@@ -25,9 +17,8 @@ final class CarPlayImageLoader {
 
   // MARK: - SF Symbols
 
-  /// Renders an SF Symbol from an artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff"). With an
-  /// `fg` it is drawn in that color; without one it is black or white by appearance, over a grey
-  /// tile.
+  /// Renders an `sf:` artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff"). With `fg` it is
+  /// drawn in that color; without, black or white by appearance over a grey tile.
   private func sfSymbolImage(forArtwork artwork: String, canvasSize: CGSize) -> UIImage? {
     let (name, background, tint) = SFSymbolRenderer.parseArtwork(artwork)
     let scale = carTraitCollection.displayScale
@@ -50,11 +41,9 @@ final class CarPlayImageLoader {
     return .adaptive(light: light, dark: dark, for: carTraitCollection)
   }
 
-  /// Cached empty placeholders, keyed by point size — list items and image-row
-  /// cells reserve different footprints.
   private var placeholders: [String: UIImage] = [:]
 
-  /// Empty placeholder image reserving a `size`-point slot while artwork loads.
+  /// An empty image that reserves a `size`-point slot while artwork loads.
   func placeholderImage(size: CGSize) -> UIImage? {
     let key = "\(size.width)×\(size.height)"
     if let cached = placeholders[key] { return cached }
@@ -67,14 +56,14 @@ final class CarPlayImageLoader {
 
   // MARK: - Artwork Loading
 
-  /// A track's artwork at `size` points, through the artwork transform when one is configured;
-  /// nil when it has none or the load fails.
-  /// - Parameter style: the track's resolved style block; nil for the track's own declaration,
-  ///   when there is no section to inherit from (tabs, Up Next).
+  /// A track's artwork at `size` points, through the artwork resolve transform when one is
+  /// configured; nil when it has none or the load fails.
+  /// - Parameter style: the track's resolved style; nil uses the track's own, for places with
+  ///   no section to inherit from (tabs, Up Next).
   func artwork(for track: Track, style: TrackStyle? = nil, size: CGSize) async -> UIImage? {
-    // Each variant goes through the whole single-URL path (route config, headers, SVG, the
-    // resolve transform), so the pair cannot drift from it.
     if let variants = track.artwork?.variants {
+      // Each variant runs the whole single-URL path (route config, headers, SVG, the resolve
+      // transform), so the pair cannot drift from it.
       return await artwork(for: track, style: style, variants: variants, size: size)
     }
 
@@ -119,10 +108,8 @@ final class CarPlayImageLoader {
     return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
   }
 
-  /// Fetches an image from a URL with optional headers and SVG processing.
-  /// Rasters are downsampled to `size` points at the car's display scale —
-  /// CPListItem.h: "size them to the display scale of the car screen". SVGs
-  /// already rasterize at car scale via SVGProcessor.
+  /// Rasters downsample to `size` points at the car's display scale (CPListItem.h: "size them
+  /// to the display scale of the car screen"); SVGs already rasterize at car scale.
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
     let scale = carTraitCollection.displayScale
@@ -132,7 +119,6 @@ final class CarPlayImageLoader {
     return await ArtworkImageFetcher.fetchImage(from: source, downsampleTo: (size, scale))
   }
 
-  /// Renders an image to a bitmap with the specified tint color (for monochrome icons).
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
     defer { UIGraphicsEndImageContext() }
@@ -146,7 +132,6 @@ final class CarPlayImageLoader {
     return rendered.withRenderingMode(.alwaysOriginal)
   }
 
-  /// A monochrome image drawn black for light appearance and white for dark.
   private func tinted(_ image: UIImage) -> UIImage {
     .adaptive(
       light: renderImageToBitmap(image, tintColor: .black),

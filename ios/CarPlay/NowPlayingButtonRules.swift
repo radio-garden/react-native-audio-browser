@@ -4,8 +4,8 @@ enum NowPlayingButtonRules {
   /// more.
   static let maximumButtonCount = 5
 
-  /// The configured buttons, first occurrence of each kept, capped at `maximumButtonCount`:
-  /// the configuration comes from JS, where duplicates and excess are representable.
+  /// The configured buttons, first occurrence of each kept, capped at `maximumButtonCount`: JS
+  /// can configure duplicates and more than fit.
   static func buttons<Button: Equatable>(_ configured: [Button]) -> [Button] {
     var buttons: [Button] = []
     for button in configured where !buttons.contains(button) {
@@ -14,7 +14,6 @@ enum NowPlayingButtonRules {
     return Array(buttons.prefix(maximumButtonCount))
   }
 
-  /// The repeat button cycles off → track → queue → off.
   static func repeatMode(after mode: RepeatMode) -> RepeatMode {
     switch mode {
     case .off: .track
@@ -24,7 +23,7 @@ enum NowPlayingButtonRules {
   }
 
   /// The rate after `current` in `rates`: the next one, wrapping, when `current` is one of them;
-  /// else the first rate above it, else the first. Nil when there are no rates.
+  /// else the first rate above it, else the first. Nil when `rates` is empty.
   static func rate(after current: Double, in rates: [Double]) -> Double? {
     guard !rates.isEmpty else { return nil }
     if let index = rates.firstIndex(where: { (current - $0).magnitude < 0.01 }) {

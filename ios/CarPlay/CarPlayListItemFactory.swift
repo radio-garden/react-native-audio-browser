@@ -5,10 +5,9 @@ import os.log
 
 // MARK: - Typed Item Info
 
-/// Typed metadata stored on CPListItems, replacing stringly-typed userInfo dictionaries.
+/// Stored in a CPListItem's `userInfo`; the playing-indicator sweep finds its rows by it.
 struct CarPlayItemInfo {
-  /// The track's identity (`id` when non-blank, else `src`) — the comparison
-  /// key for the now-playing indicator repaint sweep.
+  /// `id` when non-blank, else `src`.
   let identity: String?
 }
 
@@ -24,20 +23,19 @@ extension CPListItem {
 
 // MARK: - Factory
 
-/// Creates CPListItems and CPListSections from Track data for CarPlay templates.
 @MainActor
 final class CarPlayListItemFactory {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayListItemFactory")
 
   private let imageLoader: CarPlayImageLoader
-  /// The last-applied location; the factory never reads options itself.
+  /// The last-applied location; the session sets it, the factory never reads options itself.
   var playingIndicatorLocation: CPListItemPlayingIndicatorLocation
   private let isActiveTrack: (_ identity: String?) -> Bool
-  /// Runs an artwork load as a task the session owns, so ending the session cancels it.
+  /// Runs work as a task the session owns, so ending the session cancels it.
   private let spawn: (@escaping @MainActor () async -> Void) -> Void
-  /// A row or tile was tapped; call `completion` once CarPlay may take the next tap.
+  /// Call `completion` once CarPlay may take the next tap.
   private let onItemSelected: (Track, @escaping () -> Void) -> Void
-  /// A section header's "view all" was tapped.
+  /// A tile section's header ("view all") was tapped.
   private let onNavigate: (_ path: String, _ title: String) -> Void
 
   init(
@@ -56,7 +54,6 @@ final class CarPlayListItemFactory {
     self.onNavigate = onNavigate
   }
 
-  /// Loads `track`'s artwork and hands it to `apply` unless the session ended meanwhile.
   private func loadArtwork(
     for track: Track, style: TrackStyle?, size: CGSize, apply: @escaping @MainActor (UIImage?) -> Void,
   ) {
@@ -69,9 +66,8 @@ final class CarPlayListItemFactory {
 
   // MARK: - Sections
 
-  /// Whether this OS has CarPlay's iOS 26 element API — the wrapping tile
-  /// container and the text-less image row `SectionPresentation` degrades
-  /// against.
+  /// Whether this OS has CarPlay's iOS 26 element API: the wrapping tile container and the
+  /// text-less image row.
   private static var supportsElements: Bool {
     if #available(iOS 26.0, *) { return true }
     return false
@@ -84,16 +80,10 @@ final class CarPlayListItemFactory {
     return CPListSection(items: items)
   }
 
-  /// Maps the page's sections 1:1 to CPListSections (ADR 0010), respecting
-  /// CarPlay's section and total-item budgets. Style blocks declare the
-  /// requested presentation (resolved `section ?? page` here — ADR 0011);
-  /// this renders CarPlay's nearest supported form (`SectionPresentation`):
-  /// - list (default): a titled/headerless section of list rows.
-  /// - single-line grid (`gridWrap: false`): a section holding one
-  ///   single-line image-row item — the tiles that fit render, the rest
-  ///   truncate (the platform doesn't report the fit).
-  /// - wrapping grid: a wrapping, titled tile grid on iOS 26+; a plain list
-  ///   before that.
+  /// One CPListSection per non-empty page section (ADR 0010), within CarPlay's section and
+  /// total-item limits; a tile section counts as one item. Style resolves `section ?? page`
+  /// (ADR 0011) to a `SectionPresentation`: list rows, a single-line tile row whose overflow
+  /// truncates unreported, or a wrapping tile grid (iOS 26+; a list before).
   func createSections(from resolvedTrack: ResolvedTrack) -> [CPListSection] {
     guard let sections = resolvedTrack.normalizedSections else {
       return []
@@ -108,9 +98,6 @@ final class CarPlayListItemFactory {
     for section in sections {
       guard listSections.count < maxSections else { break }
       guard totalItemCount < maxTotalItems else { break }
-      // An empty section is a dead end regardless of style (a "popular"
-      // section with no entries yet) — skip it rather than render a header
-      // with nothing under it.
       guard !section.children.isEmpty else { continue }
 
       let style = StyleResolver.sectionStyle(section: section.style, page: resolvedTrack.style)
@@ -124,9 +111,6 @@ final class CarPlayListItemFactory {
         listSections.append(Self.listSection(items, header: section.title))
         totalItemCount += items.count
       case .singleLineRow, .wrappingGrid:
-        // Tile presentations render as one image-row item in its own
-        // CPListSection. The title is drawn once: as the section's header
-        // (`SectionPresentation.tileSectionHeader`), or as the item's text.
         let header = SectionPresentation.tileSectionHeader(section, supportsElements: Self.supportsElements)
         guard let item = createImageRowItem(
           for: section, text: header == nil ? section.title : nil, style: style, presentation: presentation,
@@ -141,11 +125,10 @@ final class CarPlayListItemFactory {
 
   // MARK: - List Item
 
-  /// A list row for `track`: its identity, accessory, playing flag, artwork and tap handler.
   /// - Parameters:
-  ///   - style: The track's resolved style block (`track ?? section ?? page`); nil for the
-  ///     track's own declaration, when there is no section (Up Next).
-  ///   - handler: Replaces the default browse or play on tap.
+  ///   - style: The resolved style (`track ?? section ?? page`); nil uses the track's own,
+  ///     for rows outside a section (Up Next).
+  ///   - handler: Replaces the default browse or play on tap; a disabled track still ignores the tap.
   func createListItem(
     for track: Track,
     style: TrackStyle? = nil,
@@ -160,9 +143,9 @@ final class CarPlayListItemFactory {
 
     if let src = track.src {
       item.accessoryType = .none
+      item.playingIndicatorLocation = playingIndicatorLocation
       // The phone's CarPlay service draws the indicator, and some iOS and CarPlay Simulator
       // combinations draw none for any app: check a real head unit before suspecting this code.
-      item.playingIndicatorLocation = playingIndicatorLocation
       item.isPlaying = isActiveTrack(track.identity)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
@@ -171,20 +154,14 @@ final class CarPlayListItemFactory {
       item.accessoryType = .disclosureIndicator
     }
 
-    // A resolved accessorySymbol replaces the derived accessory above
-    // (accessoryImage outranks accessoryType in the SDK). 'none' — the
-    // inheritance escape — keeps the derived behavior instead.
+    // accessoryImage outranks accessoryType in the SDK, and its setter clears accessoryType;
+    // 'none' resolves to nil and keeps the derived accessory.
     if let symbol = SectionPresentation.effectiveAccessorySymbol(style ?? track.style),
        let accessory = UIImage(systemName: symbol)
     {
-      // `accessoryImage` is readonly on CPListItem; post-init updates go
-      // through the setter (which also clears `accessoryType`, per the SDK).
       item.setAccessoryImage(accessory)
     }
 
-    // An unavailable track grays out and goes inert — list rows are the
-    // surface that CAN draw the fact, so it shows rather than hides
-    // (Track.disabled's rendering ladder).
     if track.disabled == true {
       item.isEnabled = false
     }
@@ -196,11 +173,10 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // The disabled guard wraps custom handlers too (Up Next rows), so an unavailable track
-    // stays inert even if a surface delivers the tap.
     let selection = handler ?? { [onItemSelected] _, completion in
       onItemSelected(track, completion)
     }
+    // Guards custom handlers too, so a disabled row stays inert if a surface delivers the tap.
     item.handler = { item, completion in
       guard track.disabled != true else {
         completion()
@@ -214,9 +190,7 @@ final class CarPlayListItemFactory {
 
   // MARK: - Image Row Item
 
-  /// Target size for images inside an image row. The iOS 26 SDK deprecates
-  /// `CPListImageRowItem.maximumImageSize` in favor of the element-based API,
-  /// so read whichever the running OS considers canonical.
+  /// iOS 26 deprecates `CPListImageRowItem.maximumImageSize` for the element API's.
   private static var rowImageSize: CGSize {
     if #available(iOS 26.0, *) {
       return CPListImageRowItemElement.maximumImageSize
@@ -224,9 +198,6 @@ final class CarPlayListItemFactory {
     return CPListImageRowItem.maximumImageSize
   }
 
-  /// Target artwork size for one tile. Cards, image tiles and plain row
-  /// elements read their own class maximums ('background' selects the larger
-  /// full-height card target); condensed tiles use the shared element size.
   private static func tileImageSize(
     family: SectionPresentation.TileElementFamily, cardImage: CardImage?,
   ) -> CGSize {
@@ -245,32 +216,23 @@ final class CarPlayListItemFactory {
     }
   }
 
-  /// Creates the image-row item rendering a tile-presented section: a single
-  /// truncating line (`.singleLineRow`) or a wrapping multi-line grid
-  /// (`.wrappingGrid` — constructed on iOS 26+ only, by `SectionPresentation`).
-  ///
-  /// Returns nil when nothing is drawable — every child hidden by the
-  /// disabled ladder (pre-26 only; the element APIs gray instead).
-  ///
-  /// - Parameter text: the row's own title; nil when the list section's
-  ///   header carries it.
+  /// The single image-row item a tile section renders as; nil when pre-iOS 26 hides every
+  /// child as disabled.
+  /// - Parameter text: The row's title; nil when the section header carries it.
   private func createImageRowItem(
     for section: Section, text rowText: String?, style: SectionStyle, presentation: SectionPresentation,
   ) -> CPListImageRowItem? {
     let singleLine = presentation == .singleLineRow
     let family = SectionPresentation.tileFamily(for: style)
-    // Disabled ladder: iOS 26 elements can draw unavailability (grayed +
-    // inert, below); the legacy image row can't, so there a disabled track
-    // hides — never a normal-looking dead tile.
+    // iOS 26 elements can draw a disabled track grayed and inert; the legacy row cannot, so it
+    // hides the track rather than show a dead tile.
     let visibleChildren: [Track] = if #available(iOS 26.0, *) {
       section.children
     } else {
       section.children.filter { $0.disabled != true }
     }
     guard !visibleChildren.isEmpty else { return nil }
-    // A single line shows at most CPMaximumNumberOfGridImages; the wrapping
-    // grid takes every child (queue scope is declared, never rendered — the
-    // cap here only limits what's drawn, and only where the platform does).
+    // The cap limits only what is drawn, where the platform truncates; the queue is unaffected.
     let tracks = singleLine
       ? Array(visibleChildren.prefix(CPMaximumNumberOfGridImages))
       : visibleChildren
@@ -279,13 +241,10 @@ final class CarPlayListItemFactory {
     }
 
     let item: CPListImageRowItem
-    // Sets a loaded image on its tile's element; nil on the legacy gridImages path, which has
-    // no elements (their types do not exist before iOS 26).
+    // Nil on the legacy path, whose element types do not exist before iOS 26.
     var applyImage: (@MainActor (Int, UIImage) -> Void)?
     let resolvedStyles = tracks.map { StyleResolver.trackStyle(track: $0.style, section: style) }
     if #available(iOS 26.0, *) {
-      // One element per track, grayed when disabled, built into the row by the family's
-      // initializer; each tile's image lands on its element.
       func row<Element: CPListImageRowItemElement>(
         _ build: (String?, [Element], Bool) -> CPListImageRowItem,
         element make: (Track, TrackStyle) -> Element,
@@ -303,11 +262,8 @@ final class CarPlayListItemFactory {
         }
         return build(rowText, elements, !singleLine)
       }
-      // Pre-26 the family's treatment drops and the layout survives (the legacy branch below).
       switch family {
       case .cardElements:
-        // Cards have no shape and no accessory slot; 'background' fills the card full-height
-        // and fades the tint in behind the labels.
         item = row(CPListImageRowItem.init(text:cardElements:allowsMultipleLines:)) { track, resolved in
           CPListImageRowItemCardElement(
             image: placeholder(),
@@ -328,8 +284,7 @@ final class CarPlayListItemFactory {
           )
         }
       case .imageGridElements:
-        // imageGridElements, never the title-less gridElements: an
-        // artwork-less track must keep its name on screen (ADR 0010).
+        // Never the title-less gridElements: an artwork-less track keeps its name (ADR 0010).
         item = row(CPListImageRowItem.init(text:imageGridElements:allowsMultipleLines:)) { track, resolved in
           CPListImageRowItemImageGridElement(
             image: placeholder(),
@@ -339,8 +294,6 @@ final class CarPlayListItemFactory {
           )
         }
       case .rowElements:
-        // Titled, so an artwork-less track keeps its name on screen
-        // (ADR 0010); no shape and no accessory slot.
         item = row(CPListImageRowItem.init(text:elements:allowsMultipleLines:)) { track, _ in
           CPListImageRowItemRowElement(
             image: placeholder(), title: track.title, subtitle: track.subtitle,
@@ -349,7 +302,6 @@ final class CarPlayListItemFactory {
       }
     } else {
       let placeholders = tracks.map { _ in placeholder() }
-      // Use imageTitles variant on iOS 17.4+ to show titles below each thumbnail
       if #available(iOS 17.4, *) {
         item = CPListImageRowItem(text: rowText ?? "", images: placeholders, imageTitles: tracks.map(\.title))
       } else {
@@ -357,8 +309,7 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // Header tap → navigate to section.path ("view all"). A path-less
-    // section is a pure preview and gets no handler.
+    // `handler` is the header tap; a path-less section is a preview with nothing to open.
     if let path = section.path {
       let title = section.title ?? ""
       item.handler = { [onNavigate] _, completion in
@@ -367,8 +318,7 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // A disabled tile is grayed and inert (iOS 26 elements); the guard keeps it inert even if
-    // the surface delivers the tap.
+    // Keeps a disabled tile inert even if the surface delivers the tap.
     item.listImageRowHandler = { [onItemSelected] _, index, completion in
       guard index < tracks.count, tracks[index].disabled != true else {
         completion()

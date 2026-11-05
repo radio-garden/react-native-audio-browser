@@ -32,8 +32,8 @@ extension CarPlaySession {
     } catch {
       outcome = .failure(error)
     }
-    // As soon as the resolve settles: formatting its error is a JS round trip the timeout must
-    // not overwrite.
+    // Cancelled as soon as the resolve settles: formatting its error is a JS round trip the
+    // timeout must not overwrite.
     watchdog.cancel()
 
     switch outcome {
@@ -62,8 +62,8 @@ extension CarPlaySession {
     }
   }
 
-  /// Shows a navigation error, as the app's `formatNavigationError` formats it, as the
-  /// template's centered message (ADR 0001).
+  /// Shows `error`, as the app's `formatNavigationError` formats it, as the template's centered
+  /// message (ADR 0001).
   private func showNavigationError(_ error: NavigationError, path: String, on template: CPListTemplate) async {
     let formatted = await audioBrowser.browserManager.formatted(error, path: path)
     guard !Task.isCancelled else { return }
@@ -78,7 +78,8 @@ extension CarPlaySession {
       template.updateSections([])
     } else {
       // A pushed template's empty view renders reliably only as its initial state, so it is
-      // replaced. The message has no path: backing out and re-tapping retries.
+      // replaced. The message has no path, so no refresh reloads it: backing out and
+      // re-tapping retries.
       interfaceController.safeReplaceTop(
         template, with: CPListTemplate.message(title, subtitle: formatted.message, listTitle: template.title), animated: false,
       )

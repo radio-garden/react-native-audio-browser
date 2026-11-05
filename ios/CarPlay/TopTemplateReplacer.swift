@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-/// The stack mutations a top-template replacement is made of:
+/// The stack operations a top-template replacement needs:
 /// `CPInterfaceController` in the app, a fake in tests.
 @MainActor
 protocol TemplateStack {
@@ -15,8 +15,8 @@ protocol TemplateStack {
   func push(_ template: Template, animated: Bool, completion: @escaping (Bool, Error?) -> Void)
 }
 
-/// Pushes onto a full template stack by replacing its top template — an
-/// unanimated pop, then the push — and holds back every other stack mutation
+/// Pushes onto a full template stack by replacing its top template (an
+/// unanimated pop, then the push) and holds back every other stack mutation
 /// until both have completed. See "Template Depth" in
 /// `website/guide/carplay.md`.
 @MainActor
@@ -24,10 +24,9 @@ final class TopTemplateReplacer {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TemplateStack")
   private var deferred: [() -> Void] = []
 
-  /// True from the pop until the push completes.
   private(set) var isReplacing = false
 
-  /// Runs `mutation` now, or — while a replacement is in flight — once it has
+  /// Runs `mutation` now or, while a replacement is in flight, once it has
   /// settled, after the mutations that arrived before it.
   func whenSettled(_ mutation: @escaping () -> Void) {
     guard isReplacing else {
@@ -38,11 +37,11 @@ final class TopTemplateReplacer {
   }
 
   /// Pushes `template` onto `stack` in place of its top template. When the
-  /// push fails, the popped template is pushed back, so the user stays where
-  /// they were. `completion` reports the push of `template` itself.
+  /// push fails, the popped template is pushed back. `completion` reports the
+  /// push of `template` itself.
   ///
-  /// Refuses a stack with nothing above the root to replace, and a call made
-  /// while a replacement is in flight: route it through `whenSettled`.
+  /// Refuses a stack with nothing above the root, and a call made while a
+  /// replacement is in flight: route it through `whenSettled`.
   func push<Stack: TemplateStack>(
     _ template: Stack.Template,
     replacingTopOf stack: Stack,

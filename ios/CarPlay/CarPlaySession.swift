@@ -3,8 +3,8 @@ import NitroModules
 import os.log
 
 /// One CarPlay run, from the moment the player and a configured browser exist until the scene
-/// stops or the bridge is replaced. It owns its subscriptions and tasks: `end()` cancels them,
-/// so nothing a stopped run started can paint over the next one.
+/// stops or the bridge is replaced. `end()` cancels its subscriptions and tasks, so nothing a
+/// stopped run started paints over the next one.
 @MainActor
 final class CarPlaySession {
   let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlaySession")
@@ -29,23 +29,21 @@ final class CarPlaySession {
   private var tasks: [UUID: Task<Void, Never>] = [:]
   private(set) var ended = false
 
-  /// Paths whose pushed template has not appeared yet; guards a double tap, since
-  /// `topTemplate` only shows a push once it lands.
+  /// Paths pushed but not yet appeared; `topTemplate` shows a push only once it lands, so this
+  /// catches a double tap.
   var navigatingPaths: Set<String> = []
 
-  /// Templates with a content load in flight, so a re-appearing one doesn't start another.
+  /// Templates with a load in flight, so a re-appearing one does not start another.
   var loadingTemplates: Set<ObjectIdentifier> = []
 
-  /// Set when the tabs change while the user is browsing: rebuilding the tab bar would tear
-  /// down the pushed stack, so it waits until they are back at the root.
+  /// Rebuilding the tab bar tears down the pushed stack, so a tab change waits for the root.
   var needsTabRebuild = false
 
-  /// The tabs the current root was built from; their change event, which the browser delivers
-  /// after the build has begun, has nothing left to change.
+  /// The tabs the current root was built from; their change event, which arrives after the
+  /// build began, has nothing left to change.
   var builtTabs: [Track]?
 
-  /// Bumped by every root build (initial interface, tab bar, root error). A build that
-  /// suspended and finds it bumped has been superseded, and leaves the root alone.
+  /// Bumped by every root build; a suspended build that finds it bumped leaves the root alone.
   private var rootBuildGeneration: UInt = 0
 
   /// How long a destination may spin before it shows an error.
@@ -135,8 +133,8 @@ final class CarPlaySession {
   // MARK: - Template Events
 
   func templateDidAppear(_ template: CPTemplate) {
-    // Popping back from Now Playing reveals the tab bar, not a list; both repaint the playing
-    // indicator, which may have changed while the list was covered.
+    // Popping Now Playing reports the tab bar appearing, not the list; both repaint the
+    // indicator, which may have changed while covered.
     guard template is CPListTemplate || template is CPTabBarTemplate else { return }
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
     if rebuildTabsIfAtRoot() { return }
@@ -146,7 +144,7 @@ final class CarPlaySession {
 
   func templateDidDisappear(_ template: CPTemplate) {
     // Whether popping Now Playing reports the list appearing or only Now Playing leaving is a
-    // platform detail; both repaint the indicator.
+    // platform detail; both repaint.
     guard template is CPNowPlayingTemplate else { return }
     updatePlayingIndicators()
   }
@@ -161,14 +159,12 @@ final class CarPlaySession {
   }
 
   private func playerOptionsChanged() {
-    // The factory's copy is the last-applied location: sweep only on a real change.
     let location = playingIndicatorLocation
     guard listItemFactory.playingIndicatorLocation != location else { return }
     listItemFactory.playingIndicatorLocation = location
     updatePlayingIndicators()
   }
 
-  /// Updates every displayed list item's playing flag and indicator location.
   func updatePlayingIndicators() {
     let location = playingIndicatorLocation
     for template in displayedListTemplates() {
@@ -188,7 +184,7 @@ final class CarPlaySession {
         }
       }
       // A flag set on a displayed item does not reliably reach the car screen; re-pushing the
-      // sections re-serializes every item, so it is done only when something changed.
+      // sections re-serializes every item, so it is done only on a change.
       if changed { template.updateSections(template.sections) }
     }
   }
