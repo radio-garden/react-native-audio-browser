@@ -40,12 +40,11 @@ import kotlinx.coroutines.cancel
 import timber.log.Timber
 
 /**
- * MediaLibraryService for background audio playback and Android Auto/external controller support.
+ * The MediaLibraryService behind background playback, Android Auto and other external controllers.
  *
- * Implements [MediaSessionService.Listener] to receive
- * [onForegroundServiceStartNotAllowedException] callbacks when Android 12+ blocks foreground
- * service starts from background (e.g., Bluetooth resume while app is killed). This allows us to
- * record the failure and notify the user on their next session.
+ * As a [MediaSessionService.Listener] it records when Android 12+ refuses a foreground service
+ * start from the background (a Bluetooth resume while the app is killed, under battery
+ * restrictions), so the user can be warned on their next session.
  */
 @MainThread
 class Service : MediaLibraryService(), MediaSessionService.Listener {
@@ -55,7 +54,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   private lateinit var mediaSession: MediaLibrarySession
   private lateinit var imageLoader: ImageLoader
 
-  // Callback for battery warning events to notify JS layer
   var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
 
   private var artworkProviderDeps: ArtworkProviderDeps? = null
@@ -66,7 +64,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
    */
   private var moduleBound = false
 
-  // Headless service binding
   private var headlessBound = false
   private val headlessConnection: ServiceConnection =
     object : ServiceConnection {
@@ -105,15 +102,13 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     player = Player(this)
     player.setup(PlayerSetupOptions())
 
-    // Create shared Coil ImageLoader with SVG support and disk caching
-    // Disk cache uses Coil defaults: 2% of disk space, max ~250MB
+    // The disk cache keeps Coil's default size limit: 2% of the disk, at most 250 MB.
     imageLoader =
       ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).build() }
         .build()
 
-    // Create CoilBitmapLoader for artwork loading with custom headers/auth support
     val coilBitmapLoader =
       CoilBitmapLoader(
         context = this,
@@ -122,13 +117,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         getArtworkSizeHint = { player.artworkSizeHintPixels },
       )
 
-    // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
     player.imageLoader = imageLoader
     player.onPlaybackResumptionFailed = { releasePlaceholder() }
 
-    // Populate the artwork content provider holder so ArtworkContentProvider can serve
-    // browse artwork to Android Auto / AAOS over content:// URIs.
+    // ArtworkContentProvider reads the holder to serve browse artwork to Android Auto and AAOS over
+    // content:// URIs.
     val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     artworkProviderDeps =
       ArtworkProviderDeps(
@@ -138,8 +132,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         artworkSizeHint = { player.artworkSizeHintPixels },
       )
     CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
-    // Best-effort: clear stale artwork cache from previous process so the disk doesn't grow
-    // unboundedly across restarts. Fresh files will be re-fetched on demand.
+    // Best-effort: the previous process's files are stale, and keeping them grows the disk across
+    // restarts. The provider fetches again on demand.
     runCatching {
       java.io
         .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
@@ -149,13 +143,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        // Add the Uri data so apps can identify that it was a notification click
+        // Lets the app tell that a notification click opened it.
         data = "audiobrowser://notification".toUri()
         action = Intent.ACTION_VIEW
       }
     mediaSession =
       MediaLibrarySession.Builder(this, player.forwardingPlayer, player.getMediaSessionCallback())
-        // Use Coil for artwork loading (enables custom headers, SVG support)
         .setBitmapLoader(CacheBitmapLoader(coilBitmapLoader))
         // https://github.com/androidx/media/issues/1218
         .setSessionActivity(
@@ -168,11 +161,9 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         )
         .build()
 
-    // Register this service as a listener to catch foreground service start exceptions
     setListener(this)
     player.setMediaSession(mediaSession)
 
-    // Bind headless service once at startup for JS task execution
     Intent(applicationContext, HeadlessTaskService::class.java).also { headlessIntent ->
       Timber.d("Binding to HeadlessTaskService for JS execution")
       headlessBound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
@@ -183,7 +174,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Timber.d("onStartCommand: action=${intent?.action}")
 
-    // Handle MEDIA_PLAY_FROM_SEARCH intent for voice commands
     intent
       ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
       ?.let { searchIntent ->
@@ -201,41 +191,24 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     return super.onStartCommand(intent, flags, startId)
   }
 
-  /**
-   * Parses MEDIA_PLAY_FROM_SEARCH intent into structured SearchParams.
-   *
-   * Extracts search mode from EXTRA_MEDIA_FOCUS and relevant metadata fields:
-   * - "vnd.android.cursor.item/\*" with empty query → ANY ("play music")
-   * - "vnd.android.cursor.item/\*" with query → null (unstructured search)
-   * - Audio.Genres.ENTRY_CONTENT_TYPE → GENRE
-   * - Audio.Artists.ENTRY_CONTENT_TYPE → ARTIST
-   * - Audio.Albums.ENTRY_CONTENT_TYPE → ALBUM
-   * - "vnd.android.cursor.item/audio" → SONG
-   * - Audio.Playlists.ENTRY_CONTENT_TYPE → PLAYLIST
-   * - null or unknown → null (unstructured search)
-   *
-   * See: https://developer.android.com/guide/components/intents-common#PlaySearch
-   */
+  /** See https://developer.android.com/guide/components/intents-common#PlaySearch */
   private fun parseSearchIntent(intent: Intent): SearchParams {
-    // Get the search query from SearchManager.QUERY
     val query = intent.getStringExtra(SearchManager.QUERY) ?: ""
 
-    // Get the media focus type (what kind of media to search for)
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
-    // Determine search mode (container vertical) from the media focus. Genre/
-    // artist/album focuses are FILTERS, not verticals — they yield no mode; the
-    // extras below carry them. Android has no station/podcast/etc. focus, so
-    // those verticals are iOS-only.
+    // The focus picks a vertical. Genre, artist and album focuses are filters, carried by the
+    // extras
+    // below, so they yield no mode. Android has no station or podcast focus: those verticals are
+    // iOS-only.
     val mode =
       when (mediaFocus) {
         "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
         "vnd.android.cursor.item/audio" -> SearchMode.SONG
         MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
-        else -> null // genre/artist/album/unknown focus → no vertical
+        else -> null
       }
 
-    // Extract structured metadata fields
     val genre = intent.getStringExtra("android.intent.extra.genre")
     val artist = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ARTIST)
     val album = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ALBUM)
@@ -276,11 +249,10 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
     Timber.d("player = $player, appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
 
-    // Check if there are still external controllers connected (like Android Auto)
+    // The system UI's controller backs the notification, so it doesn't count as external.
     val hasExternalControllers =
       mediaSession.connectedControllers.any { controller ->
-        controller.packageName != packageName && // Not our own app
-          controller.packageName != "com.android.systemui" // Not system UI
+        controller.packageName != packageName && controller.packageName != "com.android.systemui"
       }
 
     Timber.d("hasExternalControllers = $hasExternalControllers")
@@ -289,13 +261,11 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> {
         Timber.d("Pausing playback - appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
         player.pause()
-        // Service continues running for Android Auto
       }
 
       AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> {
         if (hasExternalControllers) {
           Timber.d("External controllers still connected - deferring aggressive cleanup")
-          // Just pause and remove notification, but keep service alive for external controllers
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
         } else if (moduleBound) {
@@ -316,7 +286,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
             stopSelf()
           } catch (e: Exception) {
             Timber.e(e, "Error during aggressive cleanup in onTaskRemoved")
-            // Still try to stop the service
             stopSelf()
           }
         }
@@ -324,7 +293,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
       AppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> {
         Timber.d("Continuing playback - service remains available for Android Auto")
-        // Service continues running for Android Auto with existing callbacks
       }
     }
   }
@@ -359,11 +327,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     return super.onUnbind(intent)
   }
 
-  /**
-   * Called when Android 12+ blocks a foreground service start from background. This happens when an
-   * external controller (Bluetooth, car head unit) tries to resume playback while the app is killed
-   * and battery restrictions are in place.
-   */
   @OptIn(UnstableApi::class)
   override fun onForegroundServiceStartNotAllowedException() {
     Timber.w("Foreground service start blocked by Android - recording battery warning")
@@ -372,9 +335,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   }
 
   /**
-   * Cancels the artwork-provider coroutine scope and clears the Coil loader holder. Idempotent —
-   * safe to call more than once; the second call is a no-op because the field is null after the
-   * first. Must be called BEFORE player.destroy() on every teardown path.
+   * Cancels the artwork provider's scope and clears its holder. Idempotent. Call it before
+   * player.destroy() on every teardown path, so no in-flight load reaches a destroyed player.
    */
   private fun tearDownArtworkProvider() {
     artworkProviderDeps?.let {
@@ -387,15 +349,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Unbind from HeadlessTaskService to avoid ServiceConnection leak.
     // Unbinding a connection that never bound throws IllegalArgumentException.
     if (headlessBound) {
       unbindService(headlessConnection)
       headlessBound = false
     }
 
-    // Tear down artwork provider deps before player is destroyed so no in-flight
-    // coroutine can deref a torn-down player.
     tearDownArtworkProvider()
 
     Timber.d("Releasing media session and destroying player")

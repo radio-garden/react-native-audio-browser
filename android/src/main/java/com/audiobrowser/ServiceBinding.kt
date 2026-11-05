@@ -6,12 +6,8 @@ import android.content.ServiceConnection
 import timber.log.Timber
 
 /**
- * Exactly-once bookkeeping for a [ServiceConnection].
- *
- * `bindService` may be called from more than one place — an auto-bind at construction and again
- * from setup — but the binding must be released exactly once, and only if one was ever taken:
- * [Context.unbindService] throws when the connection was never registered. Kept apart from the
- * caller so the rule is one object's job, and so it can be tested without a JSI runtime.
+ * Takes a [ServiceConnection]'s binding at most once, and releases it once and only if taken:
+ * [Context.unbindService] throws for a connection that was never registered.
  */
 internal class ServiceBinding(private val context: Context) {
 
@@ -22,30 +18,26 @@ internal class ServiceBinding(private val context: Context) {
   @Volatile private var bindSucceeded: Boolean = false
 
   /**
-   * Binds if not already bound, and returns whether the service will connect: what
-   * [Context.bindService] returned for the binding held. A second call while bound is a no-op that
-   * returns the same answer: Android would otherwise count the extra bind and expect a matching
-   * unbind.
+   * Binds unless already bound, and returns what [Context.bindService] returned for the binding
+   * held: a second call while bound repeats that answer without binding again.
    */
   fun bind(intent: Intent, connection: ServiceConnection): Boolean {
     if (isBound) return bindSucceeded
-    // Marked bound whatever the result: Android registers the connection before it asks the
-    // ActivityManager, so a false return still leaves one to release — "regardless of the return
-    // value, you should later call unbindService()".
+    // Bound even when bindService returns false: Android has already registered the connection,
+    // and "regardless of the return value, you should later call unbindService()".
     isBound = true
     bindSucceeded = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
     return bindSucceeded
   }
 
   /**
-   * Releases the binding if one is held. Safe to call repeatedly, and safe when the service has
-   * already died — [onServiceDisconnected][ServiceConnection.onServiceDisconnected] means the
-   * service went away, not that the binding did, so the unbind is still required.
+   * Releases the binding if one is held; a no-op otherwise. Still required after
+   * [ServiceConnection.onServiceDisconnected], which means the service died, not the binding.
    */
   fun unbind(connection: ServiceConnection) {
     if (!isBound) return
     isBound = false
-    // Throws if the binding is somehow already gone, which is the outcome we wanted anyway.
+    // A throw means the binding is already gone, which is the outcome wanted.
     runCatching { context.unbindService(connection) }
       .onFailure { Timber.w(it, "unbindService failed") }
   }

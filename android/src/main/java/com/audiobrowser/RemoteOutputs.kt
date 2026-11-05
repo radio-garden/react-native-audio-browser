@@ -16,13 +16,11 @@ import timber.log.Timber
 
 /**
  * Remote outputs: the speakers and TVs of media route providers, offered in the system Output
- * Switcher next to the phone and Bluetooth, and the one selected there reported as the [Output].
- * Only the selection is reported; rendering the audio there is the provider's job, or the Cast
- * session's for a Cast device.
+ * Switcher next to the phone and Bluetooth, the one selected there reported as the [Output]. Only
+ * the selection is reported; rendering the audio there is the provider's job, or the Cast session's
+ * for a Cast device.
  *
- * Holds the process's one [MediaRouter] while enabled, on Android 11+ where the switcher exists. A
- * provider's routes are offered when they declare [CATEGORY] or one of the categories the outputs
- * are turned on with in a control filter.
+ * Holds the process's one [MediaRouter] while enabled, on Android 11+ where the switcher exists.
  */
 object RemoteOutputs {
   /** The control category a media route provider's routes declare to be offered as outputs. */
@@ -32,8 +30,8 @@ object RemoteOutputs {
 
   private var selector = selectorFor(types)
 
-  // The global router holds routers weakly: let this one go and the system Output Switcher stops
-  // listing the category's routes, as the app's discovery preference empties on the next GC.
+  // MediaRouter holds routers weakly: let this one go and the Output Switcher stops listing the
+  // category's routes, as the app's discovery preference empties on the next GC.
   private var router: MediaRouter? = null
 
   private val listeners = CopyOnWriteArraySet<() -> Unit>()
@@ -149,8 +147,8 @@ object RemoteOutputs {
 }
 
 /**
- * The [Output] a selected route stands for, its type that of the first category in [types] it
- * [supports]: null for a route the remote outputs don't offer.
+ * The [Output] a selected route stands for, typed by the first category in [types] it [supports],
+ * else [OutputType.REMOTE] for [RemoteOutputs.CATEGORY]; null for a route the outputs don't offer.
  */
 internal fun remoteOutputOf(
   name: String,

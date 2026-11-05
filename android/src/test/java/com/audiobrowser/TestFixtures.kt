@@ -21,9 +21,8 @@ import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 
 /**
- * Shared builders for Nitro structs, whose generated constructors require every field. Tests set
- * only what they assert on; a new Track/config field breaks exactly this file instead of every
- * test.
+ * Builders for Nitro structs, whose generated constructors take every field, so a new field breaks
+ * only this file instead of every test.
  */
 object TestFixtures {
 
@@ -60,7 +59,6 @@ object TestFixtures {
       icyCharset = null,
     )
 
-  /** A page [Section] — plain list by default. */
   fun section(
     children: Array<Track> = emptyArray(),
     title: String? = null,
@@ -109,11 +107,6 @@ object TestFixtures {
       userAgent = null,
     )
 
-  /**
-   * Builds a minimal browse-only Track (no src → browsable, not playable). Pass [artworkSource] for
-   * a pre-resolved HTTP artwork URL or [artwork] for a raw resource/file URI; omit both for no
-   * artwork.
-   */
   fun browseTrack(
     title: String = "T",
     path: String = "https://api.example.com/channel/abc",
@@ -124,7 +117,7 @@ object TestFixtures {
     Track(
       id = null,
       path = path,
-      src = null, // browsable, not playable
+      src = null,
       artwork = artworkOf(artwork),
       artworkSource = artworkSource,
       request = null,
@@ -143,7 +136,6 @@ object TestFixtures {
       icyCharset = null,
     )
 
-  /** A container [ResolvedTrack] — what a browse route hands back for a path. */
   fun resolvedTrack(
     path: String = "/container",
     title: String = "Container",
@@ -177,9 +169,8 @@ object TestFixtures {
     )
 
   /**
-   * A route serving [browseStatic] verbatim. `browseStatic` is the only one of the three browse
-   * arms (callback > config > static) that needs neither the JNI bridge nor HTTP, so it is how a
-   * unit test gives [com.audiobrowser.browser.BrowserManager] page content to resolve.
+   * A route serving [browseStatic] verbatim: the one browse arm that needs neither the JNI bridge
+   * nor HTTP.
    */
   fun staticRoute(path: String, browseStatic: ResolvedTrack) =
     NativeRouteEntry(

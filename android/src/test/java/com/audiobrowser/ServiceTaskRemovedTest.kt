@@ -18,8 +18,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
-// Robolectric: the Service builds a real ExoPlayer and MediaLibrarySession, and ServiceController
-// drives onBind/onUnbind/onRebind as the framework would.
 @RunWith(RobolectricTestRunner::class)
 class ServiceTaskRemovedTest {
 
@@ -80,6 +78,7 @@ class ServiceTaskRemovedTest {
 
     removeTask()
 
+    // The first variant is null: no timer.
     assertTrue(player.sleepTimer.get().isFirst)
   }
 
@@ -93,7 +92,7 @@ class ServiceTaskRemovedTest {
 
     assertFalse(player.exoPlayer.isReleased)
     assertEquals(listOf("b"), player.tracks.map { it.title })
-    // Moves only on events from a live engine.
+    // Moves past BUFFERING only on events from a live engine.
     assertEquals(PlaybackState.BUFFERING, player.playbackState)
   }
 
