@@ -23,7 +23,7 @@ private final class MediaLoaderSpy {
   }
 }
 
-/// Resolves and loads `src`, returning once the resolved URL is handed to the asset load.
+/// Returns once the resolved URL is handed to the asset load, not once the asset has loaded.
 @MainActor
 private func load(_ loader: MediaLoader, _ src: String) async {
   loader.resolveAndLoad(src: src)
@@ -122,22 +122,17 @@ struct ResolveAndLoadTests {
     var callCount = 0
     let (loader, _) = makeLoader { src, _ in
       callCount += 1
-      // Simulate slow resolution
       try? await Task.sleep(for: .milliseconds(100))
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
 
-    // Start first resolve
     loader.resolveAndLoad(src: "https://example.com/first.mp3")
-    // Immediately start second — should cancel first
     loader.resolveAndLoad(src: "https://example.com/second.mp3")
 
-    // Await the surviving task; the cancelled one bailed before its resolver.
     await loader.mediaResolverTask?.value
 
-    // Only the second resolver should have run (first was cancelled before calling resolver)
+    // Both calls run before either task starts, so the first is cancelled before its resolver.
     #expect(callCount == 1)
-    // The asset should be from the second call
     #expect(loader.asset?.url.absoluteString == "https://example.com/second.mp3")
   }
 }
@@ -153,8 +148,7 @@ struct CancelAllTests {
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
-    // cancelAll() drops the handle, so grab it first to await the point where
-    // the callback would have fired.
+    // cancelAll() drops the handle, so take it first to await where the callback would fire.
     let resolve = loader.mediaResolverTask
     loader.cancelAll()
     await resolve?.value
@@ -179,7 +173,6 @@ struct ClearAssetTests {
 
   @Test func noopWhenAssetIsNil() {
     let (loader, _) = makeLoader()
-    // Should not crash
     loader.clearAsset()
     #expect(loader.asset == nil)
   }
@@ -194,7 +187,6 @@ struct AsyncLoadingTests {
     let (loader, spy) = makeLoader()
     await load(loader, "file:///nonexistent/path.mp3")
 
-    // Poll for delegate callback — asset loading is async
     for _ in 0 ..< 50 {
       if !spy.retryableErrors.isEmpty || !spy.playbackErrors.isEmpty || !spy.preparedItems.isEmpty {
         break
@@ -202,7 +194,6 @@ struct AsyncLoadingTests {
       try? await Task.sleep(for: .milliseconds(100))
     }
 
-    // AVFoundation will fail deterministically for a non-existent local file
     let hasError = !spy.retryableErrors.isEmpty || spy.unplayableCount > 0
     #expect(hasError, "expected a retryable error or unplayable callback for non-existent file")
   }

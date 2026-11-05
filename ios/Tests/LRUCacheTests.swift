@@ -6,7 +6,6 @@ import Testing
 @Suite("LRUCache")
 @MainActor
 struct LRUCacheTests {
-  /// A class so the tests can observe release through a weak reference.
   private final class Box {
     let id: Int
     init(_ id: Int) { self.id = id }
@@ -24,7 +23,6 @@ struct LRUCacheTests {
     #expect(cache.count == 2)
   }
 
-  /// A read is a use: it must move the entry off the eviction end.
   @Test func readingPromotesAnEntry() {
     let cache = LRUCache<String, Int>(maxSize: 2)
     cache.set("a", value: 1)
@@ -50,13 +48,13 @@ struct LRUCacheTests {
     #expect(cache.count == 2)
   }
 
-  /// Clearing releases every value the cache held (#96).
   @Test func clearReleasesEveryNode() {
     let cache = LRUCache<String, Box>(maxSize: 10)
     weak var first: Box?
     weak var middle: Box?
     weak var last: Box?
 
+    // The scope ends the test's own references, so only the cache keeps the boxes alive.
     do {
       let a = Box(1), b = Box(2), c = Box(3)
       (first, middle, last) = (a, b, c)
@@ -75,7 +73,6 @@ struct LRUCacheTests {
     #expect(cache.count == 0)
   }
 
-  /// So does dropping the cache itself.
   @Test func droppingTheCacheReleasesEveryNode() {
     weak var first: Box?
     weak var last: Box?
@@ -93,7 +90,6 @@ struct LRUCacheTests {
     #expect(last == nil)
   }
 
-  /// And evicting an entry releases its value.
   @Test func evictionReleasesTheEvictedNode() {
     let cache = LRUCache<String, Box>(maxSize: 1)
     weak var evicted: Box?

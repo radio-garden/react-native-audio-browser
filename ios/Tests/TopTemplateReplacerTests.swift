@@ -9,7 +9,7 @@ private final class Page {
 }
 
 /// A template stack whose mutations complete only when the test steps them,
-/// the way CarPlay's complete on a later run-loop turn.
+/// as CarPlay's complete on a later run-loop turn.
 @MainActor
 private final class FakeStack: TemplateStack {
   private(set) var templates: [Page]

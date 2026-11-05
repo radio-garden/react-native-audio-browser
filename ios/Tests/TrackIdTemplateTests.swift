@@ -1,11 +1,8 @@
 @testable import AudioBrowserTestable
 import Testing
 
-/// `{id}` template substitution used by artwork URL resolution
-/// (RequestPipeline.substituteTrackId). A track without a non-blank id must leave
-/// the token LITERALLY in place — never substitute an empty string, never skip — so the
-/// resulting request 404s with a self-describing URL (the resolver logs a warning keyed off
-/// `containsToken`). Mirrors Android's `substituteTrackId` / `configContainsIdToken`.
+/// Without a non-blank id the `{id}` token stays literal, never blanked or skipped, so the
+/// request fails with a self-describing URL. Android's `substituteTrackId` must match.
 struct TrackIdTemplateTests {
   // MARK: substitution with an id
 
@@ -60,7 +57,6 @@ struct TrackIdTemplateTests {
   }
 
   @Test func substitutionThenDetectionNeverBothMatch() {
-    // With an id, substitution clears the token, so no warning fires.
     let subbed = TrackIdTemplate.substitute("/artwork/{id}", id: "abc")
     #expect(!TrackIdTemplate.containsToken(subbed))
   }

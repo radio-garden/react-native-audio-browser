@@ -1,7 +1,6 @@
 @testable import AudioBrowserTestable
 import AVFoundation
 
-/// Creates an AVMetadataItem with the specified properties for testing.
 func makeMetadataItem(
   identifier: AVMetadataIdentifier? = nil,
   commonKey: AVMetadataKey? = nil,
@@ -31,12 +30,10 @@ func makeMetadataItem(
 final class MockPlayerEngine: PlayerEngine {
   var onEvent: (@MainActor (EngineEvent) -> Void)?
 
-  /// Reports `event` as the media stack would.
   func emit(_ event: EngineEvent) {
     onEvent?(event)
   }
 
-  // The current item
   var hasItem = false
   var hasLoadedAsset = false
   var currentTime: Double = 0
@@ -48,7 +45,6 @@ final class MockPlayerEngine: PlayerEngine {
   var isAirPlayRoute = false
   var volume: Float = 1
 
-  // Loading
   var resolveAndLoadCalls: [String] = []
   var cancelLoadingCount = 0
   var dropAssetCount = 0
@@ -63,7 +59,6 @@ final class MockPlayerEngine: PlayerEngine {
   func stopObservingItem() { stopObservingItemCount += 1 }
   func recreate() { recreateCount += 1 }
 
-  // Transport
   var startPlaybackCallCount = 0
   var pausePlaybackCallCount = 0
   var setTimePitchCallCount = 0
@@ -82,7 +77,6 @@ final class MockPlayerEngine: PlayerEngine {
     if let seekResult { completion(seekResult) } else { seeksInFlight.append(completion) }
   }
 
-  /// Lands the seeks left in flight while `seekResult` was nil.
   func completeSeeks(_ finished: Bool) {
     let pending = seeksInFlight
     seeksInFlight = []
@@ -93,7 +87,6 @@ final class MockPlayerEngine: PlayerEngine {
 
   func applyTimePitchAlgorithm() { setTimePitchCallCount += 1 }
 
-  // Now playing and remote commands
   var primeCount = 0
   var loadNowPlayingMetadataCalls: [Track] = []
   var clearNowPlayingCallCount = 0
@@ -110,14 +103,13 @@ final class MockPlayerEngine: PlayerEngine {
     updateSkipAvailabilityCalls.append((canNext, canPrevious))
   }
 
-  // Now-playing lines and the audio session, in the order the Player drove them
   var nowPlayingRenderCount = 0
   var nowPlayingTrackChangedCount = 0
   var appliedTimedMetadata: [TimedMetadata] = []
   var activateAudioSessionCount = 0
   var cancelAudioSessionReleaseCount = 0
   var scheduleAudioSessionReleaseCount = 0
-  /// Called with the name of each of these calls, so a test can interleave them with callbacks.
+  /// Called with the name of each seam call above, so a test can interleave them with callbacks.
   var onSeamCall: ((String) -> Void)?
 
   func renderNowPlaying() {
@@ -151,8 +143,8 @@ final class MockPlayerEngine: PlayerEngine {
   }
 }
 
-/// A Player over `engine` whose retries reload while `retries` and otherwise give up, keeping
-/// its resume snapshot out of the app's defaults.
+/// A Player whose retries reload while `retries` and otherwise give up, persisting to a
+/// test-only defaults suite.
 @MainActor
 func makePlayer(
   engine: MockPlayerEngine = MockPlayerEngine(),
@@ -165,6 +157,7 @@ func makePlayer(
     engine: engine, retry: retry, sleepTimerScheduler: sleepTimerScheduler,
     persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
+  // Player's init installs its own `shouldRetry`; replace it afterwards.
   retry.shouldRetry = { retries }
   return player
 }
@@ -180,7 +173,6 @@ final class MockPlayerCallbacks: PlayerCallbacks {
   var playingStateChanges: [PlayingState] = []
   var queueEndedEvents: [PlaybackQueueEndedEvent] = []
   var queueChanges: [[Track]] = []
-  /// The order in which the queue and active-track callbacks arrived.
   var queueAndTrackOrder: [String] = []
   var repeatModeChanges: [RepeatModeChangedEvent] = []
   var shuffleEnabledChanges: [Bool] = []
@@ -188,7 +180,6 @@ final class MockPlayerCallbacks: PlayerCallbacks {
   var playbackIntervalFiredCount = 0
   var timedMetadata: [TimedMetadata] = []
 
-  /// The order playback, intent and playing-state changes arrived in.
   var publishOrder: [String] = []
 
   func playerDidChangePlayback(_ playback: Playback) {
@@ -253,8 +244,7 @@ final class MockPlayerCallbacks: PlayerCallbacks {
 
 // MARK: - RetryLoop
 
-/// A RetryLoop for tests: enabled, with an instant backoff unless `delay`, whose attempts reload
-/// while `retries` and otherwise give up, as an exhausted budget does.
+/// An enabled RetryLoop that backs off for `delay` seconds and reloads while `retries`.
 @MainActor
 func makeRetryLoop(retries: Bool = true, delay: TimeInterval = 0) -> RetryLoop {
   let loop = RetryLoop(sleep: { _ in

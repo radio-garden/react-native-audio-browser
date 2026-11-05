@@ -28,7 +28,7 @@ struct TimedMetadataICYTests {
     return item
   }
 
-  // "Песня" as windows-1251 bytes, decoded as Latin-1 the way AVFoundation does when it guesses wrong.
+  // "Песня" as windows-1251 bytes read as Latin-1, as AVFoundation decodes it when it guesses wrong.
   private let latin1Shaped = "\u{CF}\u{E5}\u{F1}\u{ED}\u{FF}"
 
   @Test func icyCharset_redecodesLatin1ShapedTitle() {
@@ -115,11 +115,10 @@ struct TimedMetadataID3Tests {
   }
 
   @Test func id3AllEmpty_returnsNil() {
-    // Items exist but don't match any known ID3 identifiers
+    // An ID3 item, but not one any field is read from.
     let item = makeMetadataItem(identifier: .id3MetadataEncodedBy, value: "encoder")
 
     let result = TimedMetadata.from(items: [item])
-    // The item has id3 keySpace, so it enters fromId3 which doesn't match .id3MetadataEncodedBy
     #expect(result == nil)
   }
 }

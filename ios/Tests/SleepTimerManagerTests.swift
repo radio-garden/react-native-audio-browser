@@ -2,9 +2,6 @@
 import Foundation
 import Testing
 
-// Timing tests drive a ManualSleepTimerScheduler rather than the main queue:
-// every deadline below is virtual, so nothing races the real clock.
-
 @MainActor
 private final class Volume {
   var level: Float = 0.8
@@ -31,7 +28,7 @@ struct SleepTimerManagerTests {
     }
     manager.set(seconds: 0.3, fadeDuration: 0.15)
 
-    clock.advance(to: 0.05) // before the fade window
+    clock.advance(to: 0.05) // before the fade window opens at 0.15
     #expect(!manager.isFading)
     #expect(manager.get() != nil)
 
@@ -40,9 +37,9 @@ struct SleepTimerManagerTests {
     #expect(fader.duration == 0.15)
     #expect(fader.originalVolume == 0.8)
     #expect(completes == 0)
-    volume.level = 0.1 // mid-fade
+    volume.level = 0.1 // stands in for the fade lowering it
 
-    clock.advance(to: 0.4) // past the deadline
+    clock.advance(to: 0.4)
     #expect(completes == 1)
     #expect(volumeAtHalt == 0.1) // halted before the restore
     #expect(volume.level == 0.8)
@@ -56,7 +53,7 @@ struct SleepTimerManagerTests {
 
     manager.set(seconds: 0.2, fadeDuration: 5)
 
-    clock.advance(to: 0.1) // fade should have begun
+    clock.advance(to: 0.1)
     #expect(manager.isFading)
     #expect(fader.duration == 0.2)
   }
@@ -66,13 +63,13 @@ struct SleepTimerManagerTests {
     let (manager, clock, volume, _) = makeManager()
     manager.set(seconds: 0.2, fadeDuration: 0.15)
     clock.advance(to: 0.1)
-    volume.level = 0.1 // mid-fade
+    volume.level = 0.1 // stands in for the fade lowering it
 
     #expect(manager.clear())
     #expect(volume.level == 0.8)
     #expect(!manager.isFading)
 
-    clock.advance(to: 0.3) // well past the would-be deadline
+    clock.advance(to: 0.3)
     #expect(!manager.isFading)
   }
 
@@ -92,7 +89,7 @@ struct SleepTimerManagerTests {
     let (manager, clock, volume, _) = makeManager()
     manager.set(seconds: 60, fadeDuration: 10)
     clock.advance(to: 55)
-    volume.level = 0.1 // mid-fade
+    volume.level = 0.1 // stands in for the fade lowering it
 
     manager.set(seconds: 30)
 
@@ -105,7 +102,7 @@ struct SleepTimerManagerTests {
     let (manager, clock, volume, _) = makeManager()
     manager.set(seconds: 60, fadeDuration: 10)
     clock.advance(to: 55)
-    volume.level = 0.1 // mid-fade
+    volume.level = 0.1 // stands in for the fade lowering it
 
     manager.setToEndOfTrack()
 

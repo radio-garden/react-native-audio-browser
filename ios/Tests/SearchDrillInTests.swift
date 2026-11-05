@@ -9,7 +9,6 @@ private struct Item: PlayableSearchItem {
 
 @Suite("SearchDrillIn.playable")
 struct SearchDrillInTests {
-  /// A resolver that fails the test if the drill-in path calls it.
   private func unusedResolver(_ path: String) async throws -> [Item] {
     Issue.record("resolveChildren should not have been called (path: \(path))")
     return []
@@ -23,7 +22,7 @@ struct SearchDrillInTests {
   @Test func firstPlayable_returnsFlatPlayable_inOrder_withoutResolving() async throws {
     let items = [
       Item(src: "/a.mp3", path: nil),
-      Item(src: nil, path: "/page/x"), // browsable, filtered out
+      Item(src: nil, path: "/page/x"),
       Item(src: "/b.mp3", path: nil),
     ]
     let result = try await SearchDrillIn.playable(from: items, resolveChildren: unusedResolver)
@@ -32,8 +31,8 @@ struct SearchDrillInTests {
 
   @Test func firstBrowsable_drillsIntoIt_andPlaysItsChildren() async throws {
     let items = [
-      Item(src: nil, path: "/page/place"), // browsable first result
-      Item(src: "/later.mp3", path: nil), // would win without drill-in
+      Item(src: nil, path: "/page/place"),
+      Item(src: "/later.mp3", path: nil), // would win without the drill-in
     ]
     let result = try await SearchDrillIn.playable(from: items) { path in
       #expect(path == "/page/place")
@@ -48,7 +47,7 @@ struct SearchDrillInTests {
       Item(src: "/fallback.mp3", path: nil),
     ]
     let result = try await SearchDrillIn.playable(from: items) { _ in
-      [Item(src: nil, path: "/page/nested")] // nothing playable inside
+      [Item(src: nil, path: "/page/nested")] // the drill-in goes one level, so nothing playable
     }
     #expect(result?.compactMap(\.src) == ["/fallback.mp3"])
   }

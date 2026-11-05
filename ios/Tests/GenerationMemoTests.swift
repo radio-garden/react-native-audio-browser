@@ -29,8 +29,8 @@ struct GenerationMemoTests {
       }
     }
 
-    /// Yields until `count` runs have started, recording an issue rather than hanging when they
-    /// never do.
+    /// Yields until `count` runs have started; when they never do, records an issue and releases
+    /// the waiters so the test fails rather than hangs.
     func waitForRuns(_ count: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
       for _ in 0 ..< 1000 where runs < count {
         await Task.yield()

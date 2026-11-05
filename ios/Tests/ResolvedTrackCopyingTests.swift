@@ -223,7 +223,6 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.artist == "New Artist")
   #expect(copy.duration == 240.0)
   #expect(copy.favorited == true)
-  // Unchanged fields
   #expect(copy.src == nil)
   #expect(copy.artwork == nil)
   #expect(copy.children == nil)
@@ -235,7 +234,6 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let original = makeFullResolvedTrack()
   let copy = original.copying(title: "Changed Only Title")
   #expect(copy.title == "Changed Only Title")
-  // All other fields unchanged
   #expect(copy.path == "/original")
   #expect(copy.children?.count == 1)
   #expect(copy.carPlaySiriListButton == .top)

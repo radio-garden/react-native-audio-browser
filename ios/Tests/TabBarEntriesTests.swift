@@ -60,8 +60,6 @@ struct TabBarEntriesTests {
   }
 
   @Test func nonRenderedFieldChangeIsSame() {
-    // Only fields the tab bar renders are compared; other track fields may
-    // drift without churning the tab bar.
     #expect(
       TabBarEntries.same(
         [tab("Explore", path: "/explore", artist: "a")],

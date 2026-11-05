@@ -39,8 +39,6 @@ struct DeferredSeekTests {
     #expect(seek.target == 15)
   }
 
-  /// A target captured while a seek is in flight is issued when that seek lands, and only its
-  /// own landing makes the load ready.
   @Test func aCaptureInFlightIsReissuedOnLanding() {
     var seek = DeferredSeek()
     seek.capture(10)
@@ -52,7 +50,7 @@ struct DeferredSeekTests {
     #expect(seek.land() == .done)
   }
 
-  /// A seek issued while playing, not deferred, lands as nothing to do.
+  /// A seek issued while playing is never deferred, so its landing has nothing to do.
   @Test func aLandingWithNothingInFlightIsNone() {
     var seek = DeferredSeek()
     #expect(seek.land() == .none)

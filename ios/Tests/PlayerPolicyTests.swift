@@ -2,8 +2,6 @@
 import Foundation
 import Testing
 
-/// The decisions the Player makes over its engine: seeking, reloading, recovering, and what an
-/// engine event leads to.
 @MainActor
 private func makeLoading(
   src: String? = "https://example.com/a.mp3",
@@ -17,7 +15,6 @@ private func makeLoading(
   return (player, engine, callbacks)
 }
 
-/// Loaded and playing: the item is in place and audio has started.
 @MainActor
 private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let (player, engine, callbacks) = try makeLoading(live: live)
@@ -62,8 +59,6 @@ struct PlayerSeekingTests {
     #expect(player.deferredSeek.target == 45)
   }
 
-  /// A completion from before a track change belongs to the old item: it reports false and
-  /// leaves the new track's start position pending.
   @Test func aCompletionFromBeforeATrackChangeIsDropped() throws {
     let (player, engine, _) = try makePlaying()
     engine.seekResult = nil
@@ -73,6 +68,7 @@ struct PlayerSeekingTests {
     try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")], startPositionMs: 25000)
     engine.completeSeeks(true)
 
+    // The old item's seek reports false; the new track's start stays pending.
     #expect(landed == [false])
     #expect(player.deferredSeek.target == 25)
     #expect(player.state == .loading)
@@ -213,8 +209,6 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == loadsBefore + 1)
   }
 
-  /// A restart from a terminal error is a new Load: fresh retry budgets, unproven playback, the
-  /// primer allowed again; a retry within a Load keeps its Load.
   @Test func aRestartFromAnErrorBeginsANewLoad() async throws {
     let (player, engine, _) = try makePlaying()
     engine.emit(.audioDidStart)
@@ -273,34 +267,35 @@ struct PlayerRecoveringTests {
     engine.currentTime = 10
     engine.isPlaybackLikelyToKeepUp = false
     #expect(player.isStalled)
+    // Within Player.stallGraceSeconds.
     engine.currentTime = 0.2
     #expect(!player.isStalled)
   }
 }
 
+// Serialized: every test shares makePlayer's "PlayerTests" defaults suite.
 @Suite("Player - review regressions", .serialized)
 @MainActor
 struct PlayerReviewRegressionTests {
-  /// An end-of-track sleep timer drops the intent while still .playing; the snapshot must still
-  /// be rewritten on entering .ended, or a cold resume seeks to the end and re-ends.
   @Test func endingWithTheIntentAlreadyOffSavesPositionZero() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
     engine.currentTime = 300
     engine.duration = 300
     player.pause()
+    // An end-of-track sleep timer drops the intent while still .playing; without the save on
+    // entering .ended, a cold resume seeks to the end and re-ends.
     player.transition(.trackEndedNaturally)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
     #expect(saved?.positionMs == 0)
   }
 
-  /// A track change while paused saves the new track at its start, not at the old item's
-  /// position, which the engine still reports until the new item is prepared.
   @Test func skippingWhilePausedSavesTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
     try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     player.pause()
+    // The engine still reports the old item's position until the new item is prepared.
     engine.currentTime = 1800
     player.next()
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
@@ -308,22 +303,19 @@ struct PlayerReviewRegressionTests {
     #expect(saved?.positionMs == 0)
   }
 
-  /// A reload while paused holds its resume position before the loading transition saves the
-  /// snapshot.
   @Test func aRetryWhilePausedSavesWhereItWas() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
     player.pause()
     engine.currentTime = 120
     engine.resumePosition = 120
+    // The reload holds its resume position before the loading transition saves the snapshot.
     player.reloadResolving(startFromCurrentTime: true)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
     #expect(saved?.positionMs == 120_000)
     #expect(player.deferredSeek.target == 120)
   }
 
-  /// A skip whose load fails leaves the previous item in the engine: the snapshot and the restart
-  /// from the error start the new track at its start, not at the old one's position.
   @Test func aFailedSkipKeepsTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
@@ -331,6 +323,7 @@ struct PlayerReviewRegressionTests {
     engine.currentTime = 1800
     engine.resumePosition = 1800
     player.next()
+    // The failed load leaves the previous item, and its position, in the engine.
     engine.emit(.unplayable)
     #expect(player.state == .error)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
@@ -342,8 +335,6 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == nil)
   }
 
-  /// A queue's start position is in the snapshot the track change saves, not only in the next
-  /// periodic save.
   @Test func aStartPositionIsSavedWithTheTrackChange() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let player = makePlayer(retries: false)
@@ -353,14 +344,13 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == 30)
   }
 
-  /// Play on a track without a source fails as an invalid source; it never reloads the media
-  /// loader's last URL, which belongs to an earlier track.
   @Test func playOnATrackWithoutASourceFailsInsteadOfReloading() throws {
     let (player, engine, _) = try makePlaying()
     try player.setQueue([Track(id: "t2", path: "/no-source", src: nil, title: "No source")])
     #expect(player.state == .error)
     let resolves = engine.resolveAndLoadCalls.count
 
+    // The media loader's last URL belongs to the earlier track: play must not reload it.
     player.play()
 
     #expect(player.state == .error)
@@ -368,19 +358,18 @@ struct PlayerReviewRegressionTests {
     #expect(engine.resolveAndLoadCalls.count == resolves)
   }
 
-  /// While nothing plays, a transition alone rewrites the snapshot.
   @Test func anErrorWhilePausedSavesWhereItStopped() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
     player.pause()
     engine.currentTime = 42
+    // Nothing plays, so no periodic save runs: the transition alone rewrites the snapshot.
     engine.emit(.failed(nil, httpStatusCode: nil))
     #expect(player.state == .error)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
     #expect(saved?.positionMs == 42000)
   }
 
-  /// An active play intent saves the snapshot periodically.
   @Test func playingSavesPeriodically() async throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let engine = MockPlayerEngine()
@@ -399,7 +388,6 @@ struct PlayerReviewRegressionTests {
     player.pause()
   }
 
-  /// A persisted session resumes its settings, then its track at the saved position.
   @Test func aPersistedSessionResumesWhereItWasSaved() throws {
     let defaults = UserDefaults(suiteName: "PlayerTests")!
     defaults.removePersistentDomain(forName: "PlayerTests")
@@ -430,8 +418,6 @@ struct PlayerReviewRegressionTests {
     #expect(makePlayer(retries: false).persistedSession() == nil)
   }
 
-  /// A track change while the old track loads with a retrying error publishes the new track's
-  /// loading state without that error.
   @Test func aTrackChangeClearsTheRetryingErrorOfTheTrackItLeaves() async throws {
     let (player, engine, callbacks) = try makeLoading()
     player.retry.shouldRetry = { true }
@@ -446,8 +432,6 @@ struct PlayerReviewRegressionTests {
     player.retry.cancel()
   }
 
-  /// Leaving an errored track publishes the new track's loading state once, never an error
-  /// state without its error.
   @Test func skippingAwayFromAnErrorNeverPublishesAnErrorlessError() throws {
     let (player, engine, callbacks) = try makeLoading()
     engine.emit(.unplayable)

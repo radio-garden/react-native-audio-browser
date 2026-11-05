@@ -6,7 +6,6 @@ import Testing
 @MainActor
 @Suite("PlayerObserver")
 struct PlayerObserverTests {
-  /// An AVPlayer retains its time observers, so one left registered outlives the observer (#96).
   @Test func invalidatingRemovesTheBoundaryObserver() {
     let observer = PlayerObserver(player: AVPlayer()) { _ in }
     #expect(observer.boundaryObserverToken != nil)
@@ -25,6 +24,7 @@ struct PlayerObserverTests {
     late.invalidate()
     await drain()
     #expect(events.isEmpty)
+    // Keeps the first observer alive until its delivery has been checked.
     _ = observer
   }
 }
@@ -42,18 +42,18 @@ struct ItemObserverTests {
     let observer = ItemObserver(item: item) { events.append($0) }
     NotificationCenter.default.post(name: .AVPlayerItemPlaybackStalled, object: item)
     NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
+    // Another item's notification is not delivered.
     NotificationCenter.default.post(name: .AVPlayerItemPlaybackStalled, object: makeItem())
     await drain()
     #expect(events.map(label) == ["stalled", "playedToEnd"])
     observer.invalidate()
   }
 
-  /// A notification posted off the main thread hops to it; one landing after the switch to the
-  /// next item belongs to the old item and is dropped.
   @Test func dropsADeliveryThatLandsAfterInvalidate() async {
     let item = makeItem()
     var events: [ItemObserver.Event] = []
     let observer = ItemObserver(item: item) { events.append($0) }
+    // Delivery hops to the main actor in a Task, so it lands after this invalidate.
     NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: item)
     observer.invalidate()
     await drain()

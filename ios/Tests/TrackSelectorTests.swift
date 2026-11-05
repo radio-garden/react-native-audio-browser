@@ -10,7 +10,6 @@ private final class BrowserMock: TrackSelectionBrowser {
   var expandQueueResult: (tracks: [Track], selectedIndex: Int)?
   var expandQueueError: Error?
 
-  // Record calls for verification
   var trackLoadEvents: [TrackLoadEvent] = []
   var expandedPaths: [String] = []
 
@@ -126,7 +125,7 @@ struct ContextualPathQueueReuseTests {
     let trackSrc = "song.mp3"
     let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
-    // Id-less queue tracks: identity falls back to src.
+    // Queue tracks carry no id, so identity falls back to src.
     player.queueSourcePath = parentPath
     player.tracks = [
       Track(src: "other.mp3"),
@@ -149,9 +148,6 @@ struct ContextualPathQueueReuseTests {
     #expect(browser.expandedPaths.isEmpty)
   }
 
-  // Skip-in-place matches by id when queue tracks carry ids: the contextual
-  // trackId is the row's identity (its id), and the queue row is found even
-  // though its src differs textually from the tapped track's.
   @Test func matchingQueueSourcePath_skipsToTrackByIdWhenSrcDiffers() async {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/library/radio"
@@ -199,9 +195,6 @@ struct ContextualPathQueueReuseTests {
     #expect(browser.expandedPaths.isEmpty)
   }
 
-  // A queue holding the same identity twice (normal for music playlists):
-  // exact contextual-path equality — which carries the stamped page index —
-  // pins the tapped copy instead of the first one.
   @Test func duplicateIdentityInQueue_pathMatchPinsTheTappedCopy() async {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/playlist"
@@ -226,10 +219,6 @@ struct ContextualPathQueueReuseTests {
     #expect(browser.expandedPaths.isEmpty)
   }
 
-  // A tap in section B whose identity also sits in the active section-A
-  // queue: the exact surface is not in the queue, so the selection
-  // re-expands (re-scoping to the tapped section) instead of silently
-  // skipping inside the old section's queue.
   @Test func indexStampedPathNotInQueue_reExpandsInsteadOfIdentitySkip() async {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/city"
@@ -237,6 +226,8 @@ struct ContextualPathQueueReuseTests {
       BrowserPathHelper.build(parentPath: parentPath, trackId: id, index: index)
     }
 
+    // "dup" is in the queue at another stamped index: an identity match would skip to it,
+    // but a tap on another surface re-expands to scope the queue to that surface.
     player.queueSourcePath = parentPath
     player.tracks = [
       Track(path: stamped("dup", 0), src: "dup"),
@@ -371,13 +362,10 @@ struct DisabledTrackTests {
       Issue.record("Expected .none for a disabled track, got \(result)")
       return
     }
-    // Refused outright: not even the JS load handler hears about it.
     #expect(browser.trackLoadEvents.isEmpty)
   }
 
   @Test func disabledBrowsable_returnsNone() async {
-    // Unavailable means unavailable — a disabled browsable doesn't navigate
-    // either (the ladder grays or hides it; a delivered tap stays inert).
     let (selector, _, player) = makeSelector()
     let track = Track(id: "t1", path: "/gone", disabled: true)
     let result = await selector.select(track: track, player: player)

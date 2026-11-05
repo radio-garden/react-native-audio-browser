@@ -2,10 +2,8 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-// The dev diagnostic for declarations that can never render (ADR 0011): the
-// recovery for the compile-time invalid-combination errors the block model
-// deliberately gave up. Structural inertness only — a surface that can't draw
-// a property it understands is intended usage, never a finding.
+// The diagnostic reports structural inertness only (ADR 0011): a surface that cannot draw a
+// property it understands is intended usage, never a finding.
 
 @Suite("InertStyleDiagnostic")
 struct InertStyleDiagnosticTests {
@@ -40,8 +38,6 @@ struct InertStyleDiagnosticTests {
   }
 
   @Test func aSectionInheritsThePagesGridDisplay() {
-    // `display` resolves by scope override, so the page's grid makes the
-    // section's `gridWrap` live without the section restating it.
     let found = findings(
       [Section(style: SectionStyle(gridWrap: false), children: [])],
       page: SectionStyle(display: .grid),
@@ -134,7 +130,6 @@ struct InertStyleDiagnosticTests {
   // MARK: - The page block
 
   @Test func aPageDeclarationLiveInOneSectionIsNotReported() {
-    // Card tint reaches both sections; one renders cards. Live is live.
     let found = findings(
       [
         Section(style: SectionStyle(gridTile: .card, display: .grid), children: []),
@@ -159,9 +154,8 @@ struct InertStyleDiagnosticTests {
   }
 
   @Test func aSectionOverrideShadowsThePageValue() {
-    // Every section declares its own tint, so the page's is never resolved —
-    // shadowed, not inert; the diagnostic reports what can't render, not what
-    // isn't reached.
+    // The page tint is shadowed, not inert: the diagnostic reports what cannot render, not what
+    // is never reached.
     let found = findings(
       [Section(style: SectionStyle(gridTile: .card, display: .grid, cardTint: "#000"), children: [])],
       page: SectionStyle(cardTint: "#1e3a8a"),

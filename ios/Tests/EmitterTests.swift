@@ -37,7 +37,6 @@ struct EmitTests {
   @Test func noCrashWithZeroListeners() {
     let emitter = Emitter<Int>()
     emitter.emit(99)
-    // reaching here without crash is the assertion
   }
 }
 

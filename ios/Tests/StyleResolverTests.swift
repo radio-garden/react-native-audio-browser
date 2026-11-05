@@ -2,10 +2,7 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-// Resolution semantics (ADR 0011): container properties and `display` resolve
-// by scope override (`section ?? page`), inherited item properties resolve
-// `track ?? section ?? page` — and `display` never inherits onto an item.
-
+// Resolution rules: docs/adr/0011-style-is-a-declaration-block.md
 @Suite("StyleResolver.sectionStyle")
 struct SectionStyleResolutionTests {
   @Test func sectionOverridesThePagePerProperty() {
@@ -13,7 +10,6 @@ struct SectionStyleResolutionTests {
       section: SectionStyle(gridWrap: nil, display: .list, artworkRendering: nil),
       page: SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil),
     )
-    // Declared on the section: wins. Undeclared: the page's scope-wide value.
     #expect(resolved.display == .list)
     #expect(resolved.artworkRendering == .stencil)
     #expect(resolved.gridWrap == false)
@@ -37,7 +33,6 @@ struct SectionStyleResolutionTests {
   }
 
   @Test func gridTileResolvesByScopeOverride() {
-    // A page-wide card treatment; one section opts back to plain tiles.
     let inherited = StyleResolver.sectionStyle(
       section: nil,
       page: SectionStyle(gridTile: .card),
@@ -75,9 +70,8 @@ struct TrackStyleResolutionTests {
   }
 
   @Test func displayNeverInheritsOntoAnItem() {
-    // The track's own `display` is the page promise for the page IT opens;
-    // the section's describes its children's layout. Neither may surface as
-    // the item's resolved display.
+    // The track's own `display` is the layout of the page it opens, not of the
+    // row it sits in; neither it nor the section's may resolve onto the item.
     let resolved = StyleResolver.trackStyle(
       track: TrackStyle(display: .grid, artworkRendering: nil),
       section: SectionStyle(gridWrap: nil, display: .grid, artworkRendering: nil),
@@ -86,7 +80,6 @@ struct TrackStyleResolutionTests {
   }
 
   @Test func imageShapeInheritsAndOverridesPerItem() {
-    // Section-wide circular (an artists shelf); one album overrides.
     let inherited = StyleResolver.trackStyle(
       track: nil,
       section: SectionStyle(imageShape: .circular),
@@ -105,8 +98,7 @@ struct TrackStyleResolutionTests {
       section: SectionStyle(accessorySymbol: "lock.fill"),
     )
     #expect(inherited.accessorySymbol == "lock.fill")
-    // 'none' is the inheritance escape — it must survive resolution intact
-    // (the renderer, not the resolver, maps it to "no accessory").
+    // "none" stays a value here: the renderer, not the resolver, maps it to no accessory.
     let escaped = StyleResolver.trackStyle(
       track: TrackStyle(accessorySymbol: "none"),
       section: SectionStyle(accessorySymbol: "lock.fill"),
@@ -115,7 +107,6 @@ struct TrackStyleResolutionTests {
   }
 
   @Test func cardPropertiesInheritAndOverridePerItem() {
-    // Section-wide tint/mode; one card overrides its image mode.
     let inherited = StyleResolver.trackStyle(
       track: nil,
       section: SectionStyle(accessorySymbol: nil, cardTint: "#1e3a8a", cardImage: .background),

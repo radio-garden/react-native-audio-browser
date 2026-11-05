@@ -21,6 +21,7 @@ struct FavoriteSetTests {
     #expect(set.hydrate(Track(src: "a")).favorited == true)
     #expect(set.hydrate(Track(src: "b")).favorited == false)
     #expect(set.hydrate(Track(id: "stable", src: "x")).favorited == true)
+    // An id, when present, is the identity, so the src no longer matches.
     #expect(set.hydrate(Track(id: "other", src: "a")).favorited == false)
   }
 

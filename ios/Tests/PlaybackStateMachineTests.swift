@@ -95,17 +95,11 @@ struct AVPlayerPausedTests {
     #expect(nextPlaybackState(from: .error, on: .avPlayerPaused(hasAsset: true)) == nil)
   }
 
-  /// After a natural end the play intent is cleared, so the call-site
-  /// `!playWhenReady` gate no longer swallows stray pause observations —
-  /// without this guard a late timeControlStatus pause would re-report
-  /// .ended as .paused. (hasAsset: false still maps to .none: an emptied
-  /// element after ended is "nothing loaded".)
   @Test func fromEnded_hasAssetTrue_isSuppressed() {
     #expect(nextPlaybackState(from: .ended, on: .avPlayerPaused(hasAsset: true)) == nil)
   }
 
   @Test func hasAssetFalse_transitionsToNone() {
-    // hasAsset: false → .none from any non-stopped state
     let nonStoppedStates = allStates.filter { $0 != .stopped }
     for state in nonStoppedStates {
       #expect(
@@ -116,7 +110,6 @@ struct AVPlayerPausedTests {
   }
 
   @Test func hasAssetTrue_transitionsToPaused() {
-    // hasAsset: true → .paused from states that aren't stopped, error, or ended
     let validStates = allStates.filter { $0 != .stopped && $0 != .error && $0 != .ended }
     for state in validStates {
       #expect(
@@ -137,23 +130,15 @@ struct BufferingSufficientTests {
     #expect(nextPlaybackState(from: .playing, on: .bufferingSufficient) == nil)
   }
 
-  /// A late playbackLikelyToKeepUp observation after a natural track end must not
-  /// leave .ended — playWhenReady is still true, so entering .ready would restart
-  /// playback of the completed track.
   @Test func fromEnded_isSuppressed() {
     #expect(nextPlaybackState(from: .ended, on: .bufferingSufficient) == nil)
   }
 
-  /// stop() seeks non-live tracks back to 0 with the asset still loaded, so the
-  /// buffer refill flips playbackLikelyToKeepUp right after stopping. Leaving
-  /// .stopped would both surface a wrong state and skip the reload-on-play path
-  /// (which only triggers from .stopped/.error).
+  // stop() seeks a non-live track to 0 with its asset loaded, so a buffer refill follows every stop.
   @Test func fromStopped_isSuppressed() {
     #expect(nextPlaybackState(from: .stopped, on: .bufferingSufficient) == nil)
   }
 
-  /// Recovery from .error always goes through a reload (→ .loading); a direct
-  /// jump to .ready would clear playbackError without recovering anything.
   @Test func fromError_isSuppressed() {
     #expect(nextPlaybackState(from: .error, on: .bufferingSufficient) == nil)
   }

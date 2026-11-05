@@ -1,15 +1,12 @@
 @testable import AudioBrowserTestable
 import Foundation
 
-/// A job handed back by `ManualSleepTimerScheduler`.
 private final class ManualJob: SleepTimerJob {
   nonisolated(unsafe) var isCancelled = false
   func cancel() { isCancelled = true }
 }
 
-/// Deterministic stand-in for the main-queue scheduler: jobs fire only when the
-/// test advances the clock, so an assertion can never lose a race against a
-/// real deadline on a loaded CI runner.
+/// Fires jobs only when the test calls `advance(to:)`, so no assertion races a real deadline.
 @MainActor
 final class ManualSleepTimerScheduler: SleepTimerScheduling {
   private struct Entry {
@@ -30,10 +27,8 @@ final class ManualSleepTimerScheduler: SleepTimerScheduling {
     return job
   }
 
-  /// Moves the virtual clock to `time`, firing every due job in deadline order.
-  /// Jobs run one at a time so a job that schedules or cancels another (the
-  /// fade landing before completion) sees the same ordering it would in
-  /// production.
+  /// Moves the clock to `time` and runs each due job one at a time in deadline order, so a job
+  /// that schedules or cancels another sees the same ordering it would in production.
   func advance(to time: TimeInterval) {
     now = time
     while let next = entries
