@@ -158,7 +158,11 @@ internal class RemoteSwitchingPlayer(
     setPlayer(remote.receiver)
   }
 
-  /** Lets go of [remote]'s receiver: its load is cut short and the receiver stopped. */
+  /**
+   * Lets go of [remote]'s receiver: its load is cut short and the receiver stopped. Call it after
+   * [setPlayer] has moved off the receiver: removing a listener delivers its pending events, and
+   * the stop's would show the receiver's own state.
+   */
   private fun leave(remote: Route.Remote) {
     cancelLoad(remote)
     remote.receiver.removeListener(receiverListener)
@@ -213,6 +217,7 @@ internal class RemoteSwitchingPlayer(
     shuffle = local.shuffleModeEnabled
     val prepared = local.playbackState != STATE_IDLE && items.isNotEmpty()
     val localPositionMs = local.currentPosition
+    val live = local.isCurrentMediaItemLive
     val remote = Route.Remote(target, target.player)
     enter(remote, Load.Idle(localPositionMs))
     local.stop()
@@ -220,7 +225,7 @@ internal class RemoteSwitchingPlayer(
     if (prepared) {
       resolved
         ?.onSuccess { send(remote, it, if (it.isRemoteLive) C.TIME_UNSET else localPositionMs) }
-        ?.onFailure { fail(remote, it, localPositionMs) }
+        ?.onFailure { fail(remote, it, if (live) C.TIME_UNSET else localPositionMs) }
     }
     invalidateState()
   }
@@ -229,9 +234,9 @@ internal class RemoteSwitchingPlayer(
   private fun moveTo(from: Route.Remote, to: RemotePlayback) {
     val positionMs = positionOn(from)
     val load = from.load
-    leave(from)
     val remote = Route.Remote(to, to.player)
     enter(remote, if (load is Load.Failed) load else Load.Idle(positionMs))
+    leave(from)
     if (load is Load.Resolving || load is Load.Sent || load is Load.Playing)
       load(remote, positionMs)
     invalidateState()
@@ -239,8 +244,8 @@ internal class RemoteSwitchingPlayer(
 
   private fun handOverToLocal(from: Route.Remote) {
     val positionMs = positionOn(from)
-    val prepared = from.load.let { it is Load.Resolving || it is Load.Sent || it is Load.Playing }
-    leave(from)
+    // A failure is the receiver's: the phone still plays the item.
+    val prepared = from.load !is Load.Idle && from.load !is Load.Ended
     local.repeatMode = repeat
     local.shuffleModeEnabled = shuffle
     if (queue.isEmpty) local.clearMediaItems()
@@ -249,6 +254,7 @@ internal class RemoteSwitchingPlayer(
     if (prepared && !queue.isEmpty) local.prepare()
     route = Route.Local
     setPlayer(local)
+    leave(from)
   }
 
   /** Where the current item is on [remote]'s receiver, for the next player to go on from. */

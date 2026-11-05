@@ -15,6 +15,7 @@ import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -83,6 +84,19 @@ class PlayerCastTest {
     assertEquals(PlaybackState.ERROR, player.playbackState)
     assertTrue(calls("onPlaybackError").isNotEmpty())
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `stopping a cast after the receiver failed plays on the phone`() {
+    remote.fail()
+    idle()
+    assertEquals(PlaybackState.ERROR, player.playbackState)
+
+    remote.endSession()
+
+    idleUntil("the phone playing") { player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE }
+    assertTrue(player.exoPlayer.playWhenReady)
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
   }
 
   @Test

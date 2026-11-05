@@ -29,7 +29,12 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
     State.Builder()
       .setAvailableCommands(MediaPlayer.Commands.Builder().addAllCommands().build())
       .setPlaylist(
-        items.mapIndexed { i, item -> MediaItemData.Builder(uids[i]).setMediaItem(item).build() }
+        items.mapIndexed { i, item ->
+          MediaItemData.Builder(uids[i])
+            .setMediaItem(item)
+            .setLiveConfiguration(item.liveConfiguration.takeIf { item.isRemoteLive })
+            .build()
+        }
       )
       .setCurrentMediaItemIndex(if (items.isEmpty()) C.INDEX_UNSET else index)
       .setContentPositionMs(positionMs)

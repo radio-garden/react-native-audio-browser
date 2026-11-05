@@ -150,6 +150,113 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `the session ending never shows the receiver's own item`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    val shown = mutableListOf<String?>()
+    player.addListener(
+      object : MediaPlayer.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+          shown += mediaItem?.localConfiguration?.uri?.toString()
+        }
+      }
+    )
+
+    remote.endSession()
+    idle()
+
+    assertEquals(emptyList<String>(), shown.filterNot { it == "https://s/a" })
+  }
+
+  @Test
+  fun `the session ending after the receiver failed plays the item on the phone where it was`() {
+    playLocally(listOf("a", "b"), index = 1)
+    remote.startSession()
+    idle()
+    remote.player.positionMs = 7_000
+    remote.player.update()
+    remote.fail()
+    idle()
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+
+    remote.endSession()
+    idle()
+
+    assertFalse(player.isRemote)
+    assertEquals(1, local.index)
+    assertEquals(7_000, local.positionMs)
+    assertTrue(local.playWhenReady)
+    assertEquals(2, local.prepares)
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `the session ending after the item didn't resolve plays it on the phone`() {
+    unresolvable += "a"
+    playLocally(listOf("a"), positionMs = 4_000)
+    remote.startSession()
+    idle()
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+
+    remote.endSession()
+    idle()
+
+    assertEquals(4_000, local.positionMs)
+    assertTrue(local.playWhenReady)
+    assertEquals(2, local.prepares)
+  }
+
+  @Test
+  fun `the session ending after a live item didn't resolve plays it on the phone at its live edge`() {
+    unresolvable += "a"
+    local.setMediaItems(listOf(item("a").buildUpon().setLiveConfiguration(LIVE).build()), 0, 90_000)
+    local.playWhenReady = true
+    local.prepare()
+    idle()
+    remote.startSession()
+    idle()
+
+    remote.endSession()
+    idle()
+
+    assertEquals(0, local.positionMs)
+    assertEquals(2, local.prepares)
+  }
+
+  @Test
+  fun `the session ending after the receiver didn't start in time plays the item on the phone`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.lagging = true
+    player.seekToDefaultPosition()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+    assertEquals(PlaybackException.ERROR_CODE_REMOTE_ERROR, player.playerError?.errorCode)
+
+    remote.endSession()
+    idle()
+
+    assertTrue(local.playWhenReady)
+    assertEquals(2, local.prepares)
+  }
+
+  @Test
+  fun `the session ending after a stop leaves the phone unprepared`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    player.stop()
+    idle()
+
+    remote.endSession()
+    idle()
+
+    assertEquals(1, local.prepares)
+  }
+
+  @Test
   fun `the receiver's end plays the next item from its start`() {
     playLocally(listOf("a", "b"), positionMs = 4_000)
     remote.startSession()
@@ -812,4 +919,9 @@ class RemoteSwitchingPlayerTest {
     androidx.media3.common.MediaMetadata.Builder().setTitle(title).build()
 
   private fun idle() = shadowOf(looper).idle()
+
+  private companion object {
+    val LIVE: MediaItem.LiveConfiguration =
+      MediaItem.LiveConfiguration.Builder().setTargetOffsetMs(5_000).build()
+  }
 }
