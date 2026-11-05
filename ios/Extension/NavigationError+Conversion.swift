@@ -1,8 +1,8 @@
 import Foundation
 
 extension NavigationError {
-  /// Converts a generic Error to a NavigationError.
-  /// Handles BrowserError, HttpClient.HttpException, URLError, and fallback.
+  /// Maps any thrown error to a NavigationError. `BrowserError.invalidConfiguration`,
+  /// and any error that is not a BrowserError, HttpException or URLError, becomes `.unknownError`.
   static func from(_ error: Error) -> NavigationError {
     if let browserError = error as? BrowserError {
       switch browserError {
@@ -22,7 +22,7 @@ extension NavigationError {
     }
   }
 
-  /// Returns the default user-facing formatted error.
+  /// The English copy passed to the app's `formatNavigationError`, and used when it has none.
   func defaultFormatted() -> FormattedNavigationError {
     let title: String = switch code {
     case .contentNotFound:
@@ -40,13 +40,11 @@ extension NavigationError {
     case .unknownError:
       "Error"
     case .emptyContent:
-      // Not a failure — a container that resolved with no children. Neutral copy;
-      // the message (carried on the NavigationError) is typically empty. See ADR 0001.
+      // Not a failure: a container with no children (ADR 0001).
       "Nothing here"
     case .timeout:
       "Couldn't load"
     }
-    // Omit an empty message so it renders as title-only (e.g. the empty-content case).
     return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
   }
 }
@@ -59,7 +57,6 @@ extension NavigationError {
 }
 
 extension NavigationErrorKind {
-  /// The kind of request a navigation error on `path` came from.
   init(path: String) {
     self = BrowserPathHelper.isSearchPath(path) ? .search : .browse
   }

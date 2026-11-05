@@ -5,7 +5,9 @@ import AVFoundation
 #endif
 
 extension TrackMetadata {
-  /// Creates TrackMetadata from AVMetadataItem array using common identifiers.
+  /// Reads common, ID3 and iTunes metadata items. A common identifier wins over the other key
+  /// spaces; among those, the first item to set a field keeps it. `creationYear` falls back to the
+  /// first four characters of `creationDate`.
   static func from(items: [AVMetadataItem]) -> TrackMetadata {
     var title: String?
     var artist: String?
@@ -21,7 +23,6 @@ extension TrackMetadata {
     var creationYear: String?
 
     for item in items {
-      // Try common identifiers first
       switch item.identifier {
       case .commonIdentifierTitle:
         title = item.stringValue
@@ -37,7 +38,6 @@ extension TrackMetadata {
         break
       }
 
-      // Also check commonKey for broader compatibility
       if let commonKey = item.commonKey {
         switch commonKey {
         case .commonKeyTitle:
@@ -59,29 +59,27 @@ extension TrackMetadata {
         }
       }
 
-      // Check ID3-specific identifiers for additional fields
       if item.keySpace == .id3, let key = item.key as? String {
         switch key {
-        case "TIT3": // Subtitle
+        case "TIT3":
           subtitle = subtitle ?? item.stringValue
-        case "TRCK": // Track number
+        case "TRCK":
           trackNumber = trackNumber ?? item.stringValue
-        case "TCOM": // Composer
+        case "TCOM":
           composer = composer ?? item.stringValue
-        case "TPE3": // Conductor
+        case "TPE3":
           conductor = conductor ?? item.stringValue
-        case "TCON": // Content type (genre)
+        case "TCON":
           genre = genre ?? item.stringValue
-        case "TDRC": // Recording time (ID3v2.4)
+        case "TDRC": // ID3v2.4 recording time; v2.3 has only TYER, the year
           creationDate = creationDate ?? item.stringValue
-        case "TYER": // Year (ID3v2.3)
+        case "TYER":
           creationYear = creationYear ?? item.stringValue
         default:
           break
         }
       }
 
-      // Check iTunes-specific identifiers
       switch item.identifier {
       case .iTunesMetadataSongName:
         title = title ?? item.stringValue
@@ -104,7 +102,6 @@ extension TrackMetadata {
       }
     }
 
-    // Extract year from creationDate if creationYear not set
     if creationYear == nil, let date = creationDate, date.count >= 4 {
       creationYear = String(date.prefix(4))
     }

@@ -1,12 +1,8 @@
 import NitroModules
 
 extension RequestConfig {
-  /// Returns a copy of this RequestConfig with only the specified fields changed.
-  ///
-  /// `RequestConfig` is a C++-backed Nitro struct whose fields are get-only, so
-  /// "mutation" means rebuilding via the initializer. Uses double-optional
-  /// (`T??`) so callers can distinguish omitted (keep), `.some(nil)` (clear),
-  /// and `.some(value)` (set).
+  /// Returns a copy with only the given fields changed: an omitted argument keeps the field,
+  /// `.some(nil)` clears it. The Nitro struct's fields are get-only, hence the rebuild.
   func copying(
     method: HttpMethod?? = nil,
     path: String?? = nil,

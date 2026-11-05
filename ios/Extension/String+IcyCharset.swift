@@ -1,11 +1,11 @@
 import Foundation
 
 extension String {
-  /// Re-decodes an ICY `StreamTitle` that AVFoundation decoded as Latin-1 with the
-  /// charset the track declares. AVFoundation keeps no raw bytes, so the tell is the
-  /// shape: every scalar at or below U+00FF with at least one at or above U+0080. A
-  /// title already decoded to another script contains higher scalars and is returned
-  /// as is, as is pure ASCII, an unknown charset, or bytes the charset cannot decode.
+  /// Re-decodes an ICY title that AVFoundation decoded as Latin-1, using the IANA `charset`
+  /// the track declares. AVFoundation keeps no raw bytes, so a Latin-1 decode is recognised
+  /// by its shape: every scalar at or below U+00FF and at least one at or above U+0080.
+  /// Returns `self` for pure ASCII, a title with higher scalars (already decoded), an unknown
+  /// charset, or bytes the charset cannot decode.
   func redecodingIcyTitle(charset: String) -> String {
     var high = false
     for scalar in unicodeScalars {

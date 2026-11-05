@@ -5,17 +5,14 @@ import AVFoundation
 #endif
 
 extension ChapterMetadata {
-  /// Creates an array of ChapterMetadata from AVTimedMetadataGroup array.
   static func from(groups: [AVTimedMetadataGroup]) -> [ChapterMetadata] {
     groups.map { group in
       let startTime = CMTimeGetSeconds(group.timeRange.start)
       let endTime = CMTimeGetSeconds(group.timeRange.start) + CMTimeGetSeconds(group.timeRange.duration)
 
-      // Extract metadata from chapter items
-      // TODO: Artwork extraction missing. Requires converting binary data
-      // to a URL (base64 data URL or temp file).
-      // See also: Android implementation in MetadataAdapter.kt
       var title: String?
+      // TODO: chapter artwork is not extracted; it needs its binary data turned into a URL (a
+      // base64 data URL or a temp file). Android has the same gap: MetadataAdapter.kt
       let url: String? = nil
 
       for item in group.items {

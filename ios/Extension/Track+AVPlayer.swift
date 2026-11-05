@@ -2,9 +2,8 @@ import AVFoundation
 import Foundation
 import NitroModules
 
-/// Extension to make Nitro Track work with AVPlayer
 extension Track {
-  /// Builds an `ImageSource` from the track's artwork fields, skipping SF Symbol strings.
+  /// `artworkSource` if set, else `artwork.url`; nil when that names an SF Symbol rather than an image.
   var artworkImageSource: ImageSource? {
     if let source = artworkSource {
       source
