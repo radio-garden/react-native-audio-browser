@@ -3,7 +3,7 @@ import Foundation
   import NitroModules
 #endif
 
-/// A request config's fields, as every config kind (request, browse, media, artwork) has them.
+/// The fields every request config kind (request, browse, media, artwork) has.
 protocol RequestFieldValues<Method> {
   associatedtype Method
   var method: Method? { get }
@@ -36,7 +36,6 @@ extension RequestFields {
     Self(method: nil, path: path, baseUrl: nil, headers: nil, query: nil, body: nil, contentType: nil, userAgent: nil)
   }
 
-  /// `fields`' values, copied.
   init(fieldsOf fields: some RequestFieldValues<Method>) {
     self.init(
       method: fields.method, path: fields.path, baseUrl: fields.baseUrl, headers: fields.headers,
@@ -45,8 +44,8 @@ extension RequestFields {
   }
 }
 
-/// How Request-Config Layers compose, least specific first, each over the one before. The one
-/// implementation of these rules; Android and the web stub follow the same ones.
+/// How Request-Config Layers compose (GLOSSARY.md). Android and the web stub follow the same
+/// rules.
 enum RequestLayer {
   /// `override` over `base`, field by field; headers and query merge by key.
   static func merge<C: RequestFields>(_ base: C, _ override: C) -> C {
@@ -62,8 +61,8 @@ enum RequestLayer {
     )
   }
 
-  /// A layer's static fields over `base`, keeping the base's path: only a transform may change
-  /// the path.
+  /// `layer`'s fields over `base`, except the path, which stays `base`'s: only a transform
+  /// changes the path.
   static func applyStatic<C: RequestFields>(_ layer: C, to base: C) -> C {
     let merged = merge(base, layer)
     return C(
@@ -72,8 +71,8 @@ enum RequestLayer {
     )
   }
 
-  /// Applies one layer: its transforms, when it has any, win completely, each handed the result
-  /// of the one before; otherwise its static fields apply over `base`.
+  /// Applies one layer. With transforms, they replace its static fields entirely, each handed
+  /// the one before's result; without, its static fields apply over `base`.
   nonisolated(nonsending) static func apply<C: RequestFields>(
     _ layer: C,
     transforms: [nonisolated(nonsending)(C) async throws -> C],
@@ -87,22 +86,20 @@ enum RequestLayer {
     return result
   }
 
-  /// The configs a `resolve` (async) and `resolveSync` produced, the sync one winning; nil when
-  /// neither produced one.
+  /// The sync config over the async one; nil only when both are nil.
   static func mergeResolved<C: RequestFields>(async asyncResolved: C?, sync syncResolved: C?) -> C? {
     guard let asyncResolved else { return syncResolved }
     guard let syncResolved else { return asyncResolved }
     return merge(asyncResolved, syncResolved)
   }
 
-  /// The URL a config addresses: base URL, then path (or `defaultPath`), then query.
+  /// Base URL, then path (or `defaultPath` when it has none), then query.
   static func buildUrl(_ config: some RequestFields, defaultPath: String = "") -> String {
     let url = BrowserPathHelper.buildUrl(baseUrl: config.baseUrl, path: config.path ?? defaultPath)
     guard let query = config.query, !query.isEmpty else { return url }
     return BrowserPathHelper.appendQuery(query, to: url)
   }
 
-  /// `override`'s keys over `base`'s; nil only when both are nil.
   static func mergeDicts(_ base: [String: String]?, _ override: [String: String]?) -> [String: String]? {
     guard let base else { return override }
     guard let override else { return base }
@@ -111,10 +108,9 @@ enum RequestLayer {
 
   // MARK: - Artwork
 
-  /// An artwork request, in order: `artwork`'s static fields over `base`, path included; the
-  /// per-track config `resolve` produces; `sizeQuery`; the transforms, each handed the result of
-  /// the one before; then the track's `id` for `{id}`. Nil when `resolve` produces nothing for a
-  /// track without artwork, or when no path remains.
+  /// An artwork request, built in order: `artwork` over `base`, path included; what `resolve`
+  /// produces; `sizeQuery`; the transforms in turn; then `id` for `{id}`. Nil when `resolve`
+  /// produces nothing for a track without artwork, or when no path remains.
   nonisolated(nonsending) static func artwork<C: RequestFields>(
     _ artwork: C,
     over base: C,
@@ -154,7 +150,7 @@ enum RequestLayer {
     return request.path == nil ? nil : request
   }
 
-  /// The image-size query `params` names for `context`'s width and height, in whole pixels.
+  /// The query keys `params` names for `context`'s width and height, in whole pixels.
   static func sizeQuery(_ params: ImageQueryParams?, _ context: ImageContext?) -> [String: String] {
     guard let params, let context else { return [:] }
     var query: [String: String] = [:]
@@ -163,15 +159,15 @@ enum RequestLayer {
     return query
   }
 
-  /// Whether `request` still carries an `{id}` token: the track had no id to fill it.
+  /// Whether `request` still carries an `{id}` token, which means the track had no id.
   static func hasUnfilledIdToken(_ request: some RequestFieldValues) -> Bool {
     TrackIdTemplate.containsToken(request.path)
       || TrackIdTemplate.containsToken(request.query)
       || TrackIdTemplate.containsToken(request.headers)
   }
 
-  /// The headers an image load sends: `request.headers`, plus `userAgent` as `User-Agent` and
-  /// `contentType` as `Content-Type` unless a header sets them. Nil when there are none.
+  /// `request.headers` plus `userAgent` and `contentType` as headers, unless a header already
+  /// sets them. Nil when there are none.
   static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
     var headers = request.headers ?? [:]
     if let userAgent = request.userAgent, headers["User-Agent"] == nil {

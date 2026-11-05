@@ -4,10 +4,12 @@ import NitroModules
 import os.log
 import UIKit
 
-/// Single entry point for loading artwork images from URLs via Kingfisher.
+/// Loads artwork through Kingfisher, refetching an HTTP image once its cached copy is stale.
 enum ArtworkImageFetcher {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "ArtworkImageFetcher")
 
+  /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
+  /// falls back to the cached copy. `svgScale` wins over `downsampleTo`.
   /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
   ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
@@ -34,13 +36,9 @@ enum ArtworkImageFetcher {
     if let svgScale {
       processor = SVGProcessor(size: nil, scale: svgScale)
     } else if let downsampleTo {
-      // Downsample rasters at decode time. Any size hint passed upstream (the
-      // resolver's ImageContext) is advisory — a CDN can ignore it and return
-      // the original — so this is the only sizing that is guaranteed to
-      // happen. The processed image is cached under a size-qualified key;
-      // cacheOriginalImage keeps the untouched original in the disk cache so
-      // the same URL at another target size re-processes instead of
-      // re-downloading.
+      // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
+      // return the original. cacheOriginalImage keeps the original on disk so another target
+      // size re-processes it instead of downloading it again.
       processor = DownsamplingImageProcessor(size: downsampleTo.size)
       options.append(.scaleFactor(downsampleTo.scale))
       options.append(.cacheOriginalImage)
@@ -53,7 +51,7 @@ enum ArtworkImageFetcher {
     // Each processed variant is fresh on its own: a variant cached before the image changed
     // would otherwise outlive the refetch of another.
     let key = url.absoluteString + (processor?.identifier ?? "")
-    // Only an HTTP fetch records a lifetime: a file: or data: image would be refetched on every show.
+    // Only HTTP fetches record a lifetime, so any other scheme would otherwise refetch on every call.
     let isFresh = if ["http", "https"].contains(url.scheme?.lowercased()) { await freshness.isFresh(key) } else { true }
     let result: Result<UIImage, any Error> = if isFresh {
       await retrieve(url, options: options + retry, freshnessKey: key)
@@ -71,8 +69,9 @@ enum ArtworkImageFetcher {
 
   private static let freshness = FreshnessStore()
 
-  /// Fetches a stale or never-fetched image again. When that fails, the cached copy, if any, is
-  /// shown; with `retry`, a fetch that failed for want of a connection waits for one first.
+  /// Fetches past the cache. On failure returns the cached copy if there is one; otherwise, with
+  /// `retry`, a connectivity failure waits for a connection and fetches again. The first fetch
+  /// skips `retry` so a cached copy is shown without waiting for the network.
   @MainActor
   private static func refetch(
     _ url: URL,
@@ -89,7 +88,7 @@ enum ArtworkImageFetcher {
     return await retrieve(url, options: options + [.forceRefresh] + retry, freshnessKey: freshnessKey)
   }
 
-  /// Fetches through Kingfisher, and records how long an image from the network stays fresh.
+  /// Fetches through Kingfisher and records the freshness lifetime of an image that was downloaded.
   @MainActor
   private static func retrieve(
     _ url: URL,
@@ -98,7 +97,7 @@ enum ArtworkImageFetcher {
   ) async -> Result<UIImage, any Error> {
     do {
       let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
-      // Metrics mark a download: an image re-made from the cached original is `.none` too.
+      // `.none` also covers an image re-processed from the cached original; only metrics mark a download.
       if result.cacheType == .none, let metrics = result.metrics {
         let responses = metrics.rawMetrics.transactionMetrics.compactMap { $0.response as? HTTPURLResponse }
         await freshness.record(freshnessKey, lifetime: ArtworkFreshness.lifetime(of: responses))
@@ -110,7 +109,7 @@ enum ArtworkImageFetcher {
   }
 }
 
-/// The cache keys whose image is still fresh, each kept on disk until its lifetime ends.
+/// Cache keys whose image is still fresh, each stored on disk with its lifetime as expiry.
 private actor FreshnessStore {
   private let storage = try? DiskStorage.Backend<Data>(
     config: DiskStorage.Config(name: "com.audiobrowser.artwork-freshness", sizeLimit: 0),
@@ -143,8 +142,8 @@ private extension KingfisherError {
   }
 }
 
-/// Repeats a fetch that failed for want of a connection once one is back, a few times at most; any
-/// other failure, a 404 included, stops at once.
+/// Retries a connectivity failure once a connection is back, up to `maxRetries` times; any other
+/// failure, a 404 included, stops immediately.
 private struct ConnectivityRetry: RetryStrategy {
   private static let maxRetries = 3
 
@@ -156,9 +155,9 @@ private struct ConnectivityRetry: RetryStrategy {
     Self.whenConnected { retryHandler(.retry(userInfo: nil)) }
   }
 
-  /// Calls `body` once the device has a usable path, at once when it has one already: a monitor
-  /// reports the current path when it starts, so a reconnect cannot slip past it. The handler
-  /// holds the monitor until it fires.
+  /// Calls `body` once there is a usable path, immediately if there is one already: a monitor
+  /// reports the current path when it starts, so a reconnect cannot be missed. The handler keeps
+  /// the monitor alive until it fires.
   private static func whenConnected(_ body: @escaping @Sendable () -> Void) {
     let monitor = NWPathMonitor()
     monitor.pathUpdateHandler = { path in
@@ -170,6 +169,6 @@ private struct ConnectivityRetry: RetryStrategy {
     monitor.start(queue: queue)
   }
 
-  /// Serial, so a monitor's handler never runs twice at once.
+  // Serial, so a monitor's handler never runs concurrently with itself.
   private static let queue = DispatchQueue(label: "com.audiobrowser.artwork-connectivity", qos: .utility)
 }

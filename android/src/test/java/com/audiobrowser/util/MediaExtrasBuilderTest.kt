@@ -12,12 +12,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/**
- * The extras are where a section survives the flat MediaBrowser protocol (ADR 0010): the owning
- * section stamps the Android Auto group-title header hint and the per-item display hint. Per-item
- * hints derive from the section resolution; a track's own `display` is positional — the page
- * promise a browsable track emits as the parent-level hint, never its own tile shape (ADR 0011).
- */
 @RunWith(RobolectricTestRunner::class)
 class MediaExtrasBuilderTest {
   private val track = TestFixtures.track()
@@ -120,9 +114,8 @@ class MediaExtrasBuilderTest {
 
   @Test
   fun `the view-all navigation track carries the section's declared display as its promise`() {
-    // A "view all" page has no consumer-authored handle — the synthetic
-    // navigation track projects the section's declared block, the only
-    // declared promise that page can ever have.
+    // A "view all" page has no consumer-authored handle: the navigation track carries the
+    // section's declared style, the only promise that page can have.
     val section =
       TestFixtures.section(
         arrayOf(track),
@@ -143,9 +136,8 @@ class MediaExtrasBuilderTest {
 
   @Test
   fun `an unstyled section under a grid page stamps the grid hint end to end`() {
-    // The wire that makes ResolvedTrack.style real: page block ->
-    // styleResolvedSections fold -> per-item hint. Without the fold, every
-    // narrower unit test stays green while the page tier goes dark.
+    // Covers the page style -> styleResolvedSections fold -> per-item hint wiring, which no
+    // narrower test here exercises.
     val page =
       TestFixtures.resolvedTrack(
         style = sectionStyle(display = StyleDisplay.GRID, artworkRendering = null, gridWrap = null),

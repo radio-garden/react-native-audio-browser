@@ -1,5 +1,4 @@
-/// Decouples Player from AVFoundation enum types.
-/// AVPlayerEngine maps from AVPlayer.TimeControlStatus → PlayerTimeControlStatus at the call boundary.
+/// AVPlayer's time-control status, mirrored so the Player and its tests stay free of AVFoundation.
 enum PlayerTimeControlStatus {
   case paused, waitingToPlayAtSpecifiedRate, playing
 }

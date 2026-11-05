@@ -18,12 +18,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
-/**
- * Media3 turns a button in the back or forward slot into a custom action and drops the matching
- * standard skip action from the platform PlaybackState; with the slot empty, the standard action
- * stays. Robolectric's MediaController cannot read that state, so these check the buttons and the
- * player commands behind the standard actions.
- */
+// Media3 turns a button in the back or forward slot into a custom action and drops the matching
+// standard skip action from the platform PlaybackState; with the slot empty, the standard action
+// stays. Robolectric's MediaController cannot read that state, so these check the buttons and the
+// player commands behind the standard actions.
 @RunWith(RobolectricTestRunner::class)
 class StandardSkipTest {
 

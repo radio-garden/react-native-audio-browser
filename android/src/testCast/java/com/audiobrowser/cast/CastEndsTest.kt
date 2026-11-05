@@ -20,7 +20,7 @@ class CastEndsTest {
     assertNull(idle(load(1), MediaStatus.IDLE_REASON_FINISHED))
   }
 
-  // The Default Media Receiver, after a load it can't fetch: IDLE with the load's media, then
+  // As the Default Media Receiver reports a load it can't fetch: IDLE with the load's media, then
   // IDLE/ERROR without media.
   @Test
   fun `two loads that fail in a row are each reported`() {

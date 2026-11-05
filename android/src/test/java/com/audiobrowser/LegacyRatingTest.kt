@@ -19,9 +19,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
 /**
- * Media3 hands a legacy controller's `setRating` to the callback that names a media id, with the
- * current item's id. Robolectric cannot route a MediaControllerCompat to the session, so these call
- * that callback as Media3 does.
+ * Media3 hands a legacy controller's `setRating` to the media-id callback with the current item's
+ * id. Robolectric cannot route a MediaControllerCompat to the session, so these call that callback
+ * directly.
  */
 @RunWith(RobolectricTestRunner::class)
 class LegacyRatingTest {

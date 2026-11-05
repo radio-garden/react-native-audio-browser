@@ -2,7 +2,6 @@
 import Foundation
 import Testing
 
-/// Helper to build a player with mocks for testing.
 @MainActor
 private func makeCoordinator() -> (
   player: Player,
@@ -18,7 +17,6 @@ private func makeCoordinator() -> (
   return (player, engine, callbacks, clock)
 }
 
-/// Helper to load a track into the player's queue so it has a currentTrack.
 @MainActor
 private func loadTrack(
   _ player: Player,
@@ -39,7 +37,7 @@ struct TransitionTests {
     let (c, eh, _, _) = makeCoordinator()
     try loadTrack(c)
     c.setPlayWhenReady(true)
-    eh.startPlaybackCallCount = 0 // reset from playWhenReady setter
+    eh.startPlaybackCallCount = 0
 
     c.transition(.bufferingSufficient)
 
@@ -98,7 +96,6 @@ struct TransitionTests {
 
     c.transition(.errorOccurred(.notConnectedToInternet))
 
-    // State stays .error but error is updated
     #expect(c.state == .error)
     #expect(c.errorStatus.error == .notConnectedToInternet)
     #expect(cb.playbackChanges.count == 1)
@@ -108,10 +105,6 @@ struct TransitionTests {
 
 // MARK: - Retrying Errors
 
-/// Advisory errors from the retry loop: attached to the current non-terminal
-/// state via `playerDidChangePlayback`, never a state transition and never a
-/// `playerDidError`.
-/// Builds a player whose retries reload at once, so the advisory path is what shows.
 @MainActor
 private func makeRetrying() -> (
   Player, RetryLoop, MockPlayerCallbacks,
@@ -125,6 +118,8 @@ private func makeRetrying() -> (
   return (player, retryHandler, callbacks, engine)
 }
 
+/// Retry-loop errors are advisory: they ride on the current state's playbackChanges,
+/// never transition it and never reach playerDidError.
 @Suite("Player - retrying errors")
 struct RetryingErrorTests {
   @Test @MainActor
@@ -140,13 +135,11 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.count == 1)
     #expect(cb.playbackChanges.last?.state == .loading)
     #expect(cb.playbackChanges.last?.error?.retrying == true)
-    // Advisory, not terminal: the error event is reserved for .error.
     #expect(cb.errorEvents.isEmpty)
     await c.retry.pendingTask?.value
   }
 
-  /// Every failed attempt re-reports through `handleError`; identical repeats
-  /// must not re-emit (they'd re-render now-playing every backoff tick).
+  /// Each emission re-renders now-playing, so a repeat every backoff tick must not re-emit.
   @Test @MainActor
   func repeatedIdenticalFailure_emitsOnce() async {
     let (c, _, cb, _) = makeRetrying()
@@ -161,8 +154,7 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.count == 1)
   }
 
-  /// While .playing, buffered audio is still audibly fine — the advisory must
-  /// not replace the song line over working sound (matches Android's guard).
+  /// Buffered audio still plays, so the advisory must not replace the song line (as on Android).
   @Test @MainActor
   func retryingErrorWhilePlaying_isSuppressed() async {
     let (c, _, cb, _) = makeRetrying()
@@ -176,8 +168,6 @@ struct RetryingErrorTests {
     await c.retry.pendingTask?.value
   }
 
-  /// Reaching .ready proves the retry recovered: the advisory error must not
-  /// survive into the clean state's emission.
   @Test @MainActor
   func recovery_clearsTheRetryingError() async {
     let (c, _, cb, _) = makeRetrying()
@@ -192,8 +182,6 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.last?.error == nil)
   }
 
-  /// Giving up hardens the advisory into a terminal error: same kind, state
-  /// .error, `retrying` gone.
   @Test @MainActor
   func exhaustion_hardensIntoTerminalError() async {
     let (c, retryHandler, cb, _) = makeRetrying()
@@ -244,7 +232,7 @@ struct EmitStateChangeTests {
     c.transition(.trackLoading)
 
     #expect(cb.errorEvents.count == 1)
-    #expect(cb.errorEvents.first?.error == nil) // error cleared
+    #expect(cb.errorEvents.first?.error == nil)
   }
 
   @Test @MainActor
@@ -272,12 +260,12 @@ struct ObserverGuardTests {
     c.transition(.avPlayerPlaying)
     cb.playbackChanges.removeAll()
     eh.hasLoadedAsset = true
+    // Within the last 0.5 s, where Player ignores a pause.
     eh.currentTime = 99.8
     eh.duration = 100
 
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
-    // State should remain .playing — the pause near track end is ignored
     #expect(c.state == .playing)
   }
 
@@ -319,7 +307,6 @@ struct ObserverGuardTests {
 
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
 
-    // playWhenReady is true — pause is ignored (likely buffering/seeking)
     #expect(c.state == .playing)
   }
 
@@ -343,7 +330,7 @@ struct ObserverGuardTests {
 
     eh.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
 
-    #expect(c.state == .playing) // unchanged
+    #expect(c.state == .playing)
   }
 
   @Test @MainActor
@@ -410,6 +397,7 @@ struct PlayWhenReadyTests {
   func true_fromError_triggersReload() throws {
     let (c, eh, _, _) = makeCoordinator()
     try loadTrack(c)
+    // The engine's position counts only once an item is prepared.
     eh.emit(.itemPrepared(likelyToKeepUp: false))
     c.transition(.errorOccurred(.playbackFailed))
     eh.resumePosition = 42
@@ -417,7 +405,7 @@ struct PlayWhenReadyTests {
 
     c.setPlayWhenReady(true)
 
-    // A restart from .error is a new Load on a new AVPlayer, resuming where it failed.
+    // .error recreates the AVPlayer and resumes where it failed.
     #expect(eh.recreateCount == 1)
     #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
     #expect(c.state == .loading)
@@ -442,7 +430,7 @@ struct PlayWhenReadyTests {
   @Test @MainActor
   func true_notLoading_startsPlayback() {
     let (c, eh, _, _) = makeCoordinator()
-    c.transition(.bufferingSufficient) // .ready state
+    c.transition(.bufferingSufficient)
 
     c.setPlayWhenReady(true)
 
@@ -470,7 +458,6 @@ struct PlayWhenReadyTests {
 
     c.setPlayWhenReady(true)
 
-    // During loading, should NOT call start/pause
     #expect(eh.startPlaybackCallCount == 0)
     #expect(eh.pausePlaybackCallCount == 0)
   }
@@ -529,12 +516,12 @@ struct SkipAvailabilityCoordinatorTests {
   func repeatAll_repushesAvailability_atEnd() throws {
     let (c, eh, _, _) = makeCoordinator()
     try c.setQueue(Self.multiTrack())
-    try? c.skipTo(1) // last track
+    try? c.skipTo(1)
     eh.updateSkipAvailabilityCalls.removeAll()
 
+    // Repeat-all wraps, so Next is available again at the last track.
     c.repeatMode = .queue
 
-    // repeat-all wraps, so Next becomes available again at the last track.
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
   }
@@ -553,7 +540,6 @@ struct HandleCurrentTrackChangedTests {
 
     try loadTrack(c)
 
-    // After loading a track, the error should be cleared
     #expect(c.errorStatus.error == nil)
   }
 
@@ -588,7 +574,7 @@ struct HandleCurrentTrackChangedTests {
 
     #expect(cb.activeTrackChanges.count == 1)
     let event = cb.activeTrackChanges.first!
-    #expect(event.lastIndex == nil) // first track, no previous
+    #expect(event.lastIndex == nil)
     #expect(event.index == 0)
     #expect(event.track?.id == "t1")
   }
@@ -611,11 +597,9 @@ struct HandleTrackDidPlayToEndTimeTests {
     #expect(eh.startPlaybackCallCount == 1)
   }
 
-  /// The end-of-track sleep timer pauses (clears intent) just before this
-  /// handler runs — an unguarded replay would resume seconds after the sleep
-  /// timer paused. Without intent the track settles in .ended, where play()
-  /// reloads (a bare .paused would park at the end, where play() no-ops).
-  /// A repeating queue never conceptually ends, so no queue-ended reaches JS.
+  /// The end-of-track sleep timer clears the intent just before this handler runs, so replaying
+  /// would resume right after it paused. Without intent the track settles in .ended, where play()
+  /// reloads. A repeating queue never ends, so no queue-ended event.
   @Test @MainActor
   func repeatTrack_withoutIntent_settlesEnded() throws {
     let (c, eh, cb, _) = makeCoordinator()
@@ -662,10 +646,9 @@ struct HandleTrackDidPlayToEndTimeTests {
 
 // MARK: - Natural end drops play intent
 
-/// A natural queue end exhausts the play intent: nothing is left to play, so
-/// `playWhenReady` must not stay true. Keeping it inverted the play/pause
-/// toggle, held the audio session forever, armed interruption auto-resume into
-/// silence, and made play-from-ended a silent no-op.
+/// A natural queue end leaves nothing to play, so `playWhenReady` drops. Held, it would invert
+/// the play/pause toggle, hold the audio session, arm interruption resume into silence, and
+/// leave play() from .ended a no-op.
 @Suite("Player - natural end drops play intent")
 struct NaturalEndPlayIntentTests {
   @Test @MainActor
@@ -690,8 +673,7 @@ struct NaturalEndPlayIntentTests {
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 
-  /// play() from .ended must reload from the start — startPlayback() alone is a
-  /// silent no-op on a player parked at the end of its item.
+  /// startPlayback() alone is a silent no-op on a player parked at the end of its item.
   @Test @MainActor
   func playAfterNaturalEnd_reloadsFromStart() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -706,9 +688,8 @@ struct NaturalEndPlayIntentTests {
     #expect(c.deferredSeek.target == nil)
   }
 
-  /// The cleared intent opens the call-site `!playWhenReady` gate, so a stray
-  /// timeControlStatus pause after the end reaches the state machine — the
-  /// table's .ended guard must hold the state.
+  /// The cleared intent opens the call site's `!playWhenReady` gate, so this pause reaches the
+  /// state machine; the table's .ended guard must hold the state.
   @Test @MainActor
   func strayPauseAfterNaturalEnd_staysEnded() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -731,20 +712,18 @@ struct NaturalEndPlayIntentTests {
     c.handleInterruptionBegan()
     c.handleInterruptionEnded(shouldResume: true)
 
-    #expect(c.playWhenReady == false) // nothing was playing — never resume
+    #expect(c.playWhenReady == false)
     #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
   }
 }
 
 // MARK: - Healthy playback refills the retry budget
 
-/// Sustained audible playback proves the stream recovered, so the retry
-/// window/attempt counters must refill (mirrors Android's healthy-playback
-/// refill) — otherwise a long-lived stream permanently loses retry after its
-/// first recovered blip.
+/// Sustained playback proves the stream recovered, so the retry budget refills (as on
+/// Android); otherwise a long-lived stream loses retry after its first recovered blip.
 @Suite("Player - healthy playback resets retry budget")
 struct HealthyPlaybackRetryResetTests {
-  /// A player whose retry loop has already executed one retry, so a reset shows.
+  /// A nonzero delay skips the retry, leaving the caller to start one that stays pending.
   @MainActor
   private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (Player, RetryLoop, MockPlayerEngine) {
     let retry = makeRetryLoop(delay: delay)
@@ -769,8 +748,7 @@ struct HealthyPlaybackRetryResetTests {
     #expect(retry.attempts == 0)
   }
 
-  /// reset() cancels a pending retry — firing the refill mid-episode
-  /// would kill an in-flight reconnect silently (stuck .playing forever).
+  /// reset() cancels a pending retry: a refill now would silently kill an in-flight reconnect.
   @Test @MainActor
   func refill_skipsWhileRetryIsPending() async {
     let (player, retry, _) = await makeAfterOneRetry(delay: 1)
@@ -792,10 +770,10 @@ struct HealthyPlaybackRetryResetTests {
 
     player.transition(.avPlayerPlaying)
     let refill = retry.healthyPlaybackTask
-    player.transition(.avPlayerWaiting) // stalls before the threshold
+    player.transition(.avPlayerWaiting)
 
-    // Leaving .playing cancels the refill; awaiting the cancelled task is the
-    // deterministic way to reach the point where it would have fired.
+    // Leaving .playing cancels the refill; awaiting the cancelled task reaches, deterministically,
+    // the point where it would have fired.
     await refill?.value
 
     #expect(retry.attempts == 1)
@@ -856,7 +834,7 @@ struct SleepTimerFadeTests {
     clock.advance(to: 20)
 
     #expect(c.playWhenReady == false)
-    #expect(eh.volume == 0.8) // untouched — no fade ran
+    #expect(eh.volume == 0.8)
   }
 
   @Test @MainActor
@@ -900,7 +878,6 @@ struct SleepTimerFadeTests {
 
 // MARK: - Audio Session Interruptions
 
-/// Helper to drive the player into an actively-playing state.
 @MainActor
 private func startPlaying(_ c: Player, _ eh: MockPlayerEngine) throws {
   try loadTrack(c)
@@ -924,16 +901,15 @@ struct InterruptionTests {
     #expect(c.playWhenReady == false)
   }
 
-  /// The bug: iOS pauses the AVPlayer first; that `timeControlStatus → paused`
-  /// is swallowed because `playWhenReady` is still true, so the state stays
-  /// `.playing`. The interruption handler must force the pause regardless.
+  /// iOS pauses the AVPlayer before the interruption arrives; with `playWhenReady` still true
+  /// that pause is swallowed, so the handler must force the pause itself.
   @Test @MainActor
   func began_afterSwallowedTimeControlPause_stillPauses() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
 
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
-    #expect(c.state == .playing) // swallowed — the symptom this fix targets
+    #expect(c.state == .playing)
 
     c.handleInterruptionBegan()
 
@@ -966,9 +942,8 @@ struct InterruptionTests {
     #expect(c.playWhenReady == false)
   }
 
-  /// The host gates audio-session reactivation at interruption-end on this:
-  /// paused-when-interrupted must not grab a non-mixable session for a resume
-  /// that never happens.
+  /// The host gates audio-session reactivation at interruption end on this, so a player paused
+  /// when interrupted does not take a non-mixable session for a resume that never comes.
   @Test @MainActor
   func willResumeAfterInterruption_reflectsCapturedIntent() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -980,13 +955,13 @@ struct InterruptionTests {
     c.handleInterruptionEnded(shouldResume: false)
     #expect(c.willResumeAfterInterruption == false)
 
-    // Paused before the interruption: no resume will happen.
+    // Paused by the first interruption, so nothing to resume.
     c.handleInterruptionBegan()
     #expect(c.willResumeAfterInterruption == false)
   }
 
-  /// iOS can deliver nested interruptions (Siri, then a phone call) — a second
-  /// .began must not re-capture the now-false intent and wipe the resume flag.
+  /// iOS nests interruptions (Siri, then a call): a second began must not re-capture the
+  /// now-false intent.
   @Test @MainActor
   func doubleBegan_preservesResumeIntent() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -999,8 +974,8 @@ struct InterruptionTests {
     #expect(c.playWhenReady == true)
   }
 
-  /// Unplugging headphones during a call is a deliberate output loss — the
-  /// call ending must not blast playback from the built-in speaker.
+  /// Unplugging headphones during a call is a deliberate output loss: the call's end must not
+  /// resume on the built-in speaker.
   @Test @MainActor
   func routeDisconnectDuringInterruption_cancelsResume() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -1013,8 +988,6 @@ struct InterruptionTests {
     #expect(c.playWhenReady == false)
   }
 
-  /// An explicit stop during the interruption is a terminal command — the
-  /// interruption-end must not restart playback over it.
   @Test @MainActor
   func stopDuringInterruption_isNotOverriddenByResume() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -1030,8 +1003,6 @@ struct InterruptionTests {
     #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
   }
 
-  /// A user who plays then pauses during the interruption has taken ownership
-  /// of the intent — interruption-end must not override their pause.
   @Test @MainActor
   func userPauseDuringInterruption_overridesResume() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -1049,7 +1020,6 @@ struct InterruptionTests {
   func ended_doesNotResume_whenNotPlayingBeforeInterruption() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    // Pause before the interruption (e.g. user already paused).
     c.setPlayWhenReady(false)
     eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
     #expect(c.state == .paused)
@@ -1057,14 +1027,14 @@ struct InterruptionTests {
     c.handleInterruptionBegan()
     c.handleInterruptionEnded(shouldResume: true)
 
-    #expect(c.playWhenReady == false) // never resumes — we weren't playing
+    #expect(c.playWhenReady == false)
   }
 }
 
 // MARK: - Skip availability freshness
 
-/// A mutation pushes next/previous availability once, after currentIndex and the
-/// shuffle order have settled; an earlier push leaves the lock-screen buttons wrong.
+/// A mutation pushes next/previous availability once, after currentIndex and the shuffle order
+/// settle; an earlier push leaves the lock-screen buttons wrong.
 @Suite("Player - skip availability after mutations")
 struct MutationSkipAvailabilityTests {
   @Test @MainActor
@@ -1078,7 +1048,7 @@ struct MutationSkipAvailabilityTests {
 
     try c.move(fromIndex: 0, toIndex: 1)
 
-    // Current track is now last: nothing to skip to.
+    // Current is now last.
     #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
   }
@@ -1097,7 +1067,7 @@ struct MutationSkipAvailabilityTests {
 
     try c.remove(0)
 
-    // Current settled at index 1 of 2: previous available, next not.
+    // Current settled at index 1 of 2.
     #expect(eh.updateSkipAvailabilityCalls.count == 1)
     #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
     #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
@@ -1108,8 +1078,8 @@ struct MutationSkipAvailabilityTests {
 
 @Suite("Player - publishing")
 struct PublishingTests {
-  /// The order JS has always seen: the intent, then the playing state, then the playback. A
-  /// natural end clears the intent on the way in; each change still goes out once.
+  /// The order JS depends on: the intent, the playing state, the playback. A natural end clears
+  /// the intent on the way in; each change still goes out once.
   @Test @MainActor
   func endingPublishesTheIntentThenThePlayingStateThenThePlayback() {
     let (c, _, cb, _) = makeCoordinator()
@@ -1166,8 +1136,7 @@ struct LoadTests {
     #expect(c.load?.hasPlayed == false)
   }
 
-  /// The healthy-playback refill resets the retry budgets mid-play; the load, and with it the
-  /// recovery budget, must survive it.
+  /// The healthy-playback refill resets the retry budget mid-play; the load must survive it.
   @Test @MainActor
   func aRetryResetKeepsTheLoad() throws {
     let (c, eh, _, _) = makeCoordinator()
@@ -1242,9 +1211,6 @@ struct QueuePublicationTests {
 
 @Suite("Player - stop cancels pending retry")
 struct StopCancelsRetryTests {
-  /// A retry surviving stop() gives up later (intent dropped) and surfaced
-  /// .errorOccurred over the deliberate stop — the UI showed an error seconds
-  /// after the user stopped.
   @Test @MainActor
   func stop_cancelsPendingRetry_andStaysSilent() async {
     let errorHandler = makeRetryLoop(delay: 0.05)
@@ -1288,8 +1254,7 @@ struct SessionReleaseTests {
 
   @Test @MainActor
   func interruptionBegan_doesNotRequestRelease() throws {
-    // A phone call pauses (playWhenReady → false) but is meant to resume, so the session must be
-    // held — the exact race the intent-gating design exists to avoid.
+    // A call pauses but is meant to resume, so the session is held.
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     eh.scheduleAudioSessionReleaseCount = 0
@@ -1320,8 +1285,8 @@ struct SessionReleaseTests {
 
 // MARK: - Media-stack effects of a publish
 
-/// The audio-session and now-playing effects the Player drives through its engine, in their
-/// order relative to the callbacks JS hears.
+/// The audio-session and now-playing effects the Player drives through its engine, in order
+/// with the callbacks JS hears.
 @Suite("Player - media-stack effects")
 struct MediaStackEffectTests {
   @MainActor

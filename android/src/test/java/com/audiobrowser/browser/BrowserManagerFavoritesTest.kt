@@ -10,14 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/**
- * Favorite hydration keyed by track identity (id when non-blank, else src — see Track.identity /
- * ADR 0008). Hydration is exercised through [BrowserManager.resolve], the path every browse page
- * takes.
- *
- * Routes serve `browseStatic` (no JNI/HTTP); Robolectric is required for `android.util.LruCache`
- * and `android.net.Uri`.
- */
+// Robolectric provides the android.util.LruCache and android.net.Uri that BrowserManager uses.
 @RunWith(RobolectricTestRunner::class)
 class BrowserManagerFavoritesTest {
 
@@ -77,8 +70,6 @@ class BrowserManagerFavoritesTest {
 
   @Test
   fun `a favorite stored under src does not match an id-bearing track`() = runBlocking {
-    // The identity is the id when present — a src-keyed entry must not light up
-    // a track whose identity is its id (one rule, no partial matching).
     servePage("/home", track(title = "A", id = "stable-a", src = "https://s/a.mp3"))
     browserManager.setFavoriteEnabled(true)
     browserManager.setFavorites(listOf("https://s/a.mp3"))
@@ -99,14 +90,13 @@ class BrowserManagerFavoritesTest {
 
     val resolved = browserManager.resolve("/home")
 
-    // API-provided value is never overwritten, even when the identity is favorited.
     assertEquals(mapOf("A" to false), favoritedByTitle(resolved.flattenedChildren?.toTypedArray()))
   }
 
   @Test
   fun `disabled favoriting leaves tracks untouched`() = runBlocking {
     servePage("/home", track(title = "A", id = "stable-a", src = "https://s/a.mp3"))
-    // favoriteEnabled defaults to false
+    // favoriteEnabled defaults to false.
     browserManager.setFavorites(listOf("stable-a"))
 
     val resolved = browserManager.resolve("/home")

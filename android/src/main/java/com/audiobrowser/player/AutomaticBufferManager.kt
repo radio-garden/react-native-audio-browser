@@ -6,20 +6,10 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import timber.log.Timber
 
 /**
- * Manages automatic buffer sizing based on network conditions and rebuffer events.
- *
- * This manager monitors playback state to automatically adjust buffer thresholds when rebuffering
- * occurs. The goal is to maintain smooth playback by increasing buffer sizes based on measured
- * drain rate.
- *
- * Algorithm:
- * 1. Track when playback becomes ready (buffer filled)
- * 2. Track how long until rebuffer occurs
- * 3. Calculate drain rate: initialBuffer / timeUntilRebuffer
- * 4. Calculate needed buffer to sustain 60s: drainRate × 60
- * 5. Reset to defaults when loading new media (station change)
- *
- * Target: Sustain 60 seconds of playback without rebuffering.
+ * Raises [DynamicLoadControl]'s `bufferForPlaybackAfterRebufferMs` after each rebuffer, to what the
+ * measured drain rate says would last [targetPlaybackDurationMs]. The threshold only rises, up to
+ * [maxRebufferBufferMs], until a playlist change or a seek to another item resets it to
+ * [defaultConfig].
  */
 class AutomaticBufferManager(
   private val loadControl: DynamicLoadControl,
@@ -28,20 +18,17 @@ class AutomaticBufferManager(
 
   private var exoPlayer: ExoPlayer? = null
 
-  // State tracking for rebuffer detection
   private var wasReady = false
   private var rebufferCount = 0
 
-  // Timing tracking for drain rate calculation
   private var playbackStartTimeMs: Long = 0
   private var bufferAtPlaybackStartMs: Long = 0
   private var bufferingStartTimeMs: Long = 0
 
-  // Limits - keep these reasonable for good UX
-  private val maxRebufferBufferMs = 8_000 // 8 seconds max after rebuffer
-  private val targetPlaybackDurationMs = 60_000L // Target: sustain 60s of playback
+  private val maxRebufferBufferMs = 8_000
+  // How long playback should run without stalling once the raised threshold is met.
+  private val targetPlaybackDurationMs = 60_000L
 
-  /** Attaches this manager to an ExoPlayer instance. Call this after creating the player. */
   fun attach(player: ExoPlayer) {
     exoPlayer = player
     player.addAnalyticsListener(this)
@@ -49,7 +36,7 @@ class AutomaticBufferManager(
     Timber.d("AutomaticBufferManager attached to player")
   }
 
-  /** Detaches this manager from the player. Call this before releasing the player. */
+  /** Call before releasing the player. */
   fun detach() {
     stopBufferMonitoring()
     bufferMonitorHandler = null
@@ -60,13 +47,10 @@ class AutomaticBufferManager(
   }
 
   /**
-   * Resets buffer configuration to defaults and clears tracking state. Call this when loading new
-   * media (station change).
+   * Restores [defaultConfig] — the setup's buffer tuning, not Media3's defaults, which would wipe a
+   * fast-start configuration — and clears the rebuffer tracking.
    */
   fun reset() {
-    // The setup-provided defaults, not the media3 library defaults —
-    // resetToDefaults() silently wiped an app's fast-start buffer tuning on
-    // every queue set, station change, and seek.
     loadControl.updateBufferConfig(defaultConfig)
     wasReady = false
     rebufferCount = 0
@@ -77,18 +61,15 @@ class AutomaticBufferManager(
 
   // region Player.Listener
 
-  // For periodic buffer logging during playback
   private var lastBufferLogTimeMs: Long = 0
-  private val bufferLogIntervalMs = 2_000L // Log every 2 seconds
+  private val bufferLogIntervalMs = 2_000L
 
   override fun onPlaybackStateChanged(playbackState: Int) {
     when (playbackState) {
       Player.STATE_BUFFERING -> {
         if (wasReady) {
-          // This is a rebuffer - buffer ran out during playback
           onRebuffer()
         }
-        // Track when buffering started
         if (bufferingStartTimeMs == 0L) {
           bufferingStartTimeMs = System.currentTimeMillis()
           Timber.d("STATE_BUFFERING entered - starting buffer timer")
@@ -96,7 +77,6 @@ class AutomaticBufferManager(
       }
       Player.STATE_READY -> {
         if (!wasReady) {
-          // Playback just became ready - record timing for drain rate calculation
           playbackStartTimeMs = System.currentTimeMillis()
           bufferAtPlaybackStartMs = exoPlayer?.totalBufferedDuration ?: 0
           lastBufferLogTimeMs = playbackStartTimeMs
@@ -124,7 +104,6 @@ class AutomaticBufferManager(
     }
   }
 
-  // Called frequently during playback - use for buffer monitoring
   override fun onIsPlayingChanged(
     eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
     isPlaying: Boolean,
@@ -168,7 +147,6 @@ class AutomaticBufferManager(
   }
 
   override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-    // Reset on station change (new media loaded)
     if (
       reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED ||
         reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
@@ -193,7 +171,6 @@ class AutomaticBufferManager(
       bufferAtPlaybackStartMs,
     )
 
-    // Only adjust if we have valid timing data
     if (playbackDurationMs > 0 && bufferAtPlaybackStartMs > 0) {
       val newRebufferBuffer =
         calculateOptimalRebufferBuffer(playbackDurationMs, bufferAtPlaybackStartMs)
@@ -212,23 +189,19 @@ class AutomaticBufferManager(
       Timber.d("Skipping adjustment - insufficient timing data")
     }
 
-    // Reset timing and mark not ready (wait for STATE_READY before counting next rebuffer)
+    // The next rebuffer counts only after STATE_READY records a fresh start.
     wasReady = false
     playbackStartTimeMs = 0
     bufferAtPlaybackStartMs = 0
   }
 
   /**
-   * Calculates optimal rebuffer threshold based on drain rate.
-   *
-   * Drain rate = initialBuffer / timeUntilRebuffer Needed buffer = drainRate × targetDuration (60s)
-   *
-   * Example: 1000ms buffer lasted 30s → drain rate = 33ms/s → need 2000ms for 60s
+   * Assumes the buffer held at ready drained to empty over [playbackDurationMs], and returns the
+   * threshold that would last [targetPlaybackDurationMs]: 1000ms lasting 30s needs 2000ms.
    */
   private fun calculateOptimalRebufferBuffer(playbackDurationMs: Long, initialBufferMs: Long): Int {
     val currentConfig = loadControl.getBufferConfig()
 
-    // If we don't have good timing data, fall back to 1.5x increase
     if (playbackDurationMs <= 0 || initialBufferMs <= 0) {
       Timber.d("Insufficient timing data, using 1.5x fallback")
       return (currentConfig.bufferForPlaybackAfterRebufferMs * 1.5)
@@ -236,11 +209,8 @@ class AutomaticBufferManager(
         .coerceIn(defaultConfig.bufferForPlaybackAfterRebufferMs, maxRebufferBufferMs)
     }
 
-    // Calculate drain rate: how much buffer we lose per second of playback
-    // drainRate = initialBuffer / playbackDuration (ms per second)
     val drainRateMsPerSec = (initialBufferMs.toFloat() / (playbackDurationMs / 1000f))
 
-    // Calculate buffer needed to sustain 60 seconds
     val neededBufferMs = (drainRateMsPerSec * (targetPlaybackDurationMs / 1000)).toLong()
 
     Timber.d(
@@ -249,7 +219,7 @@ class AutomaticBufferManager(
       neededBufferMs,
     )
 
-    // Only increase threshold, never decrease (coerceIn ensures this)
+    // The current threshold as the floor: it never drops within an item.
     return neededBufferMs
       .toInt()
       .coerceIn(currentConfig.bufferForPlaybackAfterRebufferMs, maxRebufferBufferMs)

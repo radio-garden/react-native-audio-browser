@@ -3,6 +3,7 @@ import Testing
 
 @testable import AudioBrowserTestable
 
+// Serialized: every test clears and writes the same UserDefaults suite.
 @Suite("PlaybackPersistence", .serialized)
 @MainActor
 struct PlaybackPersistenceTests {

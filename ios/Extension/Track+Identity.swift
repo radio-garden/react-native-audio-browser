@@ -2,15 +2,10 @@
   import NitroModules
 #endif
 
-/// A track's identity: the opaque `id` when present (non-blank), else the
-/// playable `src`. Two tracks refer to the same item iff their identities are
-/// equal. Browsable-only tracks (neither `id` nor `src`) have no identity —
-/// they are addressed by `path` instead.
-///
-/// This is THE comparison rule for favorites matching, section scoping,
-/// skip-in-place, the car now-playing row indicator, and the contextual
-/// `__trackId` — see ADR 0008. Mirrors `trackIdentity` on the TS side.
 extension Track {
+  /// `id` when non-empty, else `src`; nil for a browsable-only track, which is addressed by `path`.
+  /// Two tracks are the same item iff their identities are equal. Must match the TS and Android
+  /// rule: docs/adr/0008-track-identity-is-id-falling-back-to-src.md.
   var identity: String? {
     if let id, !id.isEmpty { return id }
     return src
@@ -18,7 +13,7 @@ extension Track {
 }
 
 extension Track {
-  /// Playable and not Disabled: a track the library may queue and play.
+  /// Has a `src` and isn't disabled: a track the library may queue and play.
   var isPlayable: Bool {
     src != nil && disabled != true
   }

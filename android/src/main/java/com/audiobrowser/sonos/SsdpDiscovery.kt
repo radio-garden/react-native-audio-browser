@@ -14,11 +14,16 @@ internal interface MulticastLockHandle {
 }
 
 /**
- * Sends the SSDP `M-SEARCH` datagram to the UPnP multicast group and collects the unicast replies
- * for a bounded window, holding the multicast lock meanwhile. Blocking: run it off the main thread.
+ * Sends the SSDP `M-SEARCH` to the UPnP multicast group and collects the replies for a bounded
+ * window, holding the multicast lock meanwhile. Blocking: run it off the main thread.
  */
 internal class SsdpDiscovery(private val multicastLock: MulticastLockHandle? = null) : SsdpScanner {
 
+  /**
+   * Sends `repeats` probes (at least one), then listens for `timeoutMs`. A failed probe is ignored;
+   * any other socket failure is logged, not thrown, and the replies so far are returned, one per
+   * USN, the first one kept.
+   */
   override fun search(timeoutMs: Int, repeats: Int): List<SsdpResponse> {
     multicastLock?.acquire()
     val responsesByUsn = LinkedHashMap<String, SsdpResponse>()
@@ -26,7 +31,7 @@ internal class SsdpDiscovery(private val multicastLock: MulticastLockHandle? = n
       DatagramSocket().use { socket ->
         val group = InetAddress.getByName(SsdpMessages.MULTICAST_HOST)
         val datagram = SsdpMessages.buildMSearch()
-        // Send a few times — UDP is lossy and a single probe is easily missed on busy Wi-Fi.
+        // UDP is lossy: one probe is easily missed on busy Wi-Fi.
         repeat(repeats.coerceAtLeast(1)) {
           runCatching {
             socket.send(DatagramPacket(datagram, datagram.size, group, SsdpMessages.MULTICAST_PORT))

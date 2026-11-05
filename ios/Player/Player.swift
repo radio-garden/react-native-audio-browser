@@ -5,10 +5,9 @@ import os.log
   import NitroModules
 #endif
 
-/// The player: the playback state machine, the queue, retries, the sleep timer, persistence,
-/// and every decision about loading, seeking and recovering. The media stack under it is a
-/// `PlayerEngine` (AVPlayerEngine in production, a mock in tests), which carries the decisions out
-/// and reports what it observes.
+/// The playback state machine, the queue, retries, the sleep timer and persistence: every
+/// decision about loading, seeking and recovering. A `PlayerEngine` (AVPlayerEngine, a mock in
+/// tests) carries the decisions out and reports what it observes.
 @MainActor
 final class Player {
   let logger = Logger(subsystem: "com.audiobrowser", category: "Player")
@@ -57,7 +56,6 @@ final class Player {
     /// One of this load's items is in the engine; until then it reports the previous one's position.
     var itemPrepared = false
 
-    /// True the first time it is asked, so the silent primer runs once per load.
     mutating func claimNowPlayingPrime() -> Bool {
       guard !primedNowPlaying else { return false }
       primedNowPlaying = true
@@ -80,8 +78,8 @@ final class Player {
   /// The play intent captured when the current interruption began; its end resumes only then.
   private var shouldResumeAfterInterruption = false
 
-  /// Playback rate (1.0 = normal speed). A non-positive rate, which could never play, is refused.
-  /// Speed and play intent are independent, as on Android and web.
+  /// A non-positive rate, which could never play, is refused and the old value kept. Setting it
+  /// never starts or stops playback: speed and play intent are independent, as on Android and web.
   var rate: Float = 1.0 {
     didSet {
       guard rate > 0 else {
@@ -113,7 +111,6 @@ final class Player {
     state != .loading && load?.itemPrepared == true
   }
 
-  /// Where a reload resumes this Load.
   private var resumePosition: TimeInterval? {
     enginePositionIsCurrent ? engine.resumePosition : deferredSeek.target
   }
@@ -164,7 +161,6 @@ final class Player {
 
   // MARK: - playWhenReady
 
-  /// The intent to play, applied through `setPlayWhenReady`.
   private(set) var playWhenReady = false
 
   func setPlayWhenReady(_ newValue: Bool) {
@@ -189,7 +185,6 @@ final class Player {
     evaluateSessionRelease()
   }
 
-  /// Playing with intent, in a state that can play; buffering while loading or rebuffering.
   static func playingState(playWhenReady: Bool, state: PlaybackState) -> PlayingState {
     PlayingState(
       playing: playWhenReady && ![.error, .ended, .none, .stopped].contains(state),
@@ -422,7 +417,7 @@ final class Player {
     Playback(state: state, error: errorStatus.nitroError)
   }
 
-  /// Drops the intent before `action` or raises it after, as `playWhenReady` asks.
+  /// Applies `false` before `action` and `true` after it; nil leaves the intent alone.
   private func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     if playWhenReady == false { setPlayWhenReady(false) }
     try action()
@@ -431,7 +426,6 @@ final class Player {
 
   // MARK: - Queue Methods
 
-  /// Refuses a track with neither `src` nor `path`, before the queue changes.
   private func throwIfInvalid(_ tracks: [Track]) throws {
     if let track = tracks.first(where: { $0.src == nil && $0.path == nil }) {
       throw TrackPlayerError.QueueError.invalidTrack(title: track.title)
@@ -444,7 +438,6 @@ final class Player {
       if queue.currentIndex == -1 {
         afterQueueMutation(queue.add([track], initialIndex: 0))
       } else {
-        // In bounds, as -1 took the branch above.
         do {
           try queue.replace(queue.currentIndex, track)
           afterQueueMutation(.tracksAndCurrent)

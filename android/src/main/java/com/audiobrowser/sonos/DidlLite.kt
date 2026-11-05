@@ -1,8 +1,8 @@
 package com.audiobrowser.sonos
 
 /**
- * Builds the DIDL-Lite metadata Sonos takes as `SetAVTransportURI`'s `CurrentURIMetaData`. Blank
- * fields are left out.
+ * Builds the DIDL-Lite metadata Sonos takes as `SetAVTransportURI`'s `CurrentURIMetaData`. Optional
+ * fields that are null or blank are left out.
  */
 internal object DidlLite {
   private const val HEADER =

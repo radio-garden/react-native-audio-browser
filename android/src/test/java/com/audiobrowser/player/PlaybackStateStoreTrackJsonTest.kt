@@ -10,12 +10,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/**
- * The bespoke org.json persistence of the resumption track. ADR 0011: the style block and
- * `disabled` survive process death (a restored queue keeps its visible fidelity), and a snapshot
- * written before the block model — `style` as an enum-name string — restores without a declaration
- * rather than failing.
- */
 @RunWith(RobolectricTestRunner::class)
 class PlaybackStateStoreTrackJsonTest {
 
@@ -47,6 +41,7 @@ class PlaybackStateStoreTrackJsonTest {
 
   @Test
   fun `a pre-block snapshot with a string style restores without a declaration`() {
+    // Snapshots written before the block model (ADR 0011) store `style` as an enum-name string.
     val restored = PlaybackStateStore.trackFromJson("""{"title":"X","src":"s","style":"LIST"}""")
 
     assertEquals("X", restored?.title)

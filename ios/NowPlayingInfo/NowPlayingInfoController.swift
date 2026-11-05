@@ -3,31 +3,24 @@ import Foundation
 @preconcurrency import MediaPlayer
 import os.log
 
-/// Controller for managing Now Playing info.
-///
-/// A `MPNowPlayingSession` bound to the linked AVPlayer publishes now-playing info
-/// automatically: the system derives elapsed time, playback rate, and duration from
-/// the player, so the per-second clock stays out of our code (it extrapolates the
-/// scrubber). We supply what automatic publishing does not: metadata (title/artist/
-/// artwork), attached to `AVPlayerItem.nowPlayingInfo` (the supported channel under
-/// automatic publishing). An explicit `playbackState` would be dropped: iOS ignores it
-/// without a private entitlement (ADR 0005).
+/// Publishes now-playing metadata through an auto-publishing `MPNowPlayingSession` bound to the
+/// linked AVPlayer. The session derives elapsed time, rate and duration from the player; this
+/// supplies the rest (title, artist, artwork) on `AVPlayerItem.nowPlayingInfo`. There is no
+/// `playbackState`: iOS drops it without a private entitlement (docs/adr/0005).
 @MainActor
 class NowPlayingInfoController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
 
   private var _info: [String: Any] = [:]
 
-  /// The session bound to the linked AVPlayer; held so it stays alive while publishing.
   private var nowPlayingSession: MPNowPlayingSession?
 
-  /// The linked AVPlayer — metadata is attached to its current item.
   private weak var linkedPlayer: AVPlayer?
 
   required init() {}
 
-  /// Binds an AVPlayer to a new auto-publishing `MPNowPlayingSession`, and returns the session's
-  /// own remote command center, which remote commands must now be enabled on.
+  /// Binds the player to a new auto-publishing session and returns that session's own remote
+  /// command center, which remote commands must now be enabled on.
   func linkPlayer(_ player: AVPlayer) -> MPRemoteCommandCenter {
     logger.notice("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
 
@@ -44,14 +37,9 @@ class NowPlayingInfoController {
     return session.remoteCommandCenter
   }
 
-  /// Re-requests now-playing activation for the linked session.
-  ///
-  /// `linkPlayer` runs at player setup, before the audio session is active, and the
-  /// system can decline the election at that point. Without a later re-request the
-  /// session stays unfeatured until actual audio output elects the app through the
-  /// system's own path — which never happens when the first-ever load fails (a cold
-  /// start onto a dead stream showed no now-playing surface at all). Call whenever
-  /// the audio session (re)activates; no-op while already active.
+  /// Re-requests activation of the linked session; no-op while it is active. Call whenever the
+  /// audio session (re)activates: `linkPlayer` runs before it is active, the system can decline
+  /// then, and if the first load fails no audio output ever elects the app instead.
   func reactivateSessionIfNeeded() {
     guard let session = nowPlayingSession, !session.isActive else { return }
     logger.notice("MPNowPlayingSession inactive (canBecomeActive: \(session.canBecomeActive)) — re-requesting activation")
@@ -60,8 +48,8 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Unlinks the AVPlayer and tears down the session with its command center. Remote commands
-  /// never fall back to the shared center, whose targets belong to the host app.
+  /// Drops the session along with its command center. Remote commands never fall back to the
+  /// shared center, whose targets belong to the host app.
   func unlinkPlayer() {
     logger.info("Unlinking AVPlayer from MPNowPlayingSession")
 
@@ -70,18 +58,14 @@ class NowPlayingInfoController {
     nowPlayingSession = nil
   }
 
-  /// Keys the session derives from the player itself — we never set these manually,
-  /// the system owns elapsed/duration/rate.
+  // The session derives these from the player; setting them too would fight it.
   private static let autoPublishedKeys: Set<String> = [
     MPNowPlayingInfoPropertyElapsedPlaybackTime,
     MPMediaItemPropertyPlaybackDuration,
     MPNowPlayingInfoPropertyPlaybackRate,
   ]
 
-  /// Whether a new value matches what's already in `_info` — used to avoid
-  /// re-publishing unchanged metadata. Compares the comparable scalar types we
-  /// store (title/artist/album strings, isLiveStream); non-comparable values
-  /// (e.g. artwork) are treated as changed.
+  // Values of any other type (artwork) always count as changed.
   private func valueUnchanged(_ key: String, _ newValue: Any?) -> Bool {
     switch (_info[key], newValue) {
     case (nil, nil): true
@@ -92,9 +76,9 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Sets now-playing fields, keyed by their `MPMediaItemProperty*` / `MPNowPlayingInfoProperty*`
-  /// names (nil removes one), and publishes when any changed. Elapsed time, duration and rate
-  /// are the session's to publish and are ignored. Returns whether anything changed.
+  /// Sets now-playing fields by their `MPMediaItemProperty*` / `MPNowPlayingInfoProperty*` keys
+  /// (nil removes one) and publishes if any changed. Elapsed time, duration and rate are ignored:
+  /// the session publishes those. Returns whether anything changed.
   @discardableResult
   func set(_ fields: [String: Any?]) -> Bool {
     var changed = false
@@ -106,10 +90,9 @@ class NowPlayingInfoController {
     return changed
   }
 
-  /// Attaches metadata to the current item — the supported channel under automatic publishing.
-  /// While no item exists (the media URL resolve is still in flight), publishes to the
-  /// session's center directly so the Now Playing surface isn't blank between load
-  /// intent and item creation; the item channel takes over via `prepareItem`.
+  // The item is the supported channel under automatic publishing. Before one exists (its URL
+  // still resolving) the info goes to the session's center, so the surface isn't blank
+  // meanwhile; `prepareItem` hands it to the item channel.
   private func performUpdate() {
     if let item = linkedPlayer?.currentItem {
       item.nowPlayingInfo = _info
@@ -118,14 +101,12 @@ class NowPlayingInfoController {
     }
   }
 
-  /// Prepares an AVPlayerItem with stored metadata before it becomes current, so the
-  /// session has metadata from the moment the item starts playing.
-  /// Call this before `replaceCurrentItem(with:)`.
+  /// Copies the current info onto an item. Call before `replaceCurrentItem(with:)`, so the
+  /// session has it from the item's first moment.
   func prepareItem(_ item: AVPlayerItem) {
     item.nowPlayingInfo = _info
   }
 
-  /// Clears all Now Playing info.
   func clear() {
     _info = [:]
     linkedPlayer?.currentItem?.nowPlayingInfo = nil

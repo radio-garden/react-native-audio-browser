@@ -24,26 +24,15 @@ import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Persists playback state for resumption after app restart. Stores the current track (including its
- * path), position, and player settings to enable playback resumption via MediaButtonReceiver
- * (Bluetooth play button, etc.).
- *
- * Settings (repeatMode, shuffleEnabled, playbackSpeed) are auto-persisted when set via properties.
- * Position/track are persisted via save() on pause or track change.
+ * Persists the current track, position and player settings so a media button (a Bluetooth play
+ * press) can resume playback after process death. The settings properties write through on set;
+ * track and position persist only through the save calls.
  */
 class PlaybackStateStore(private val player: Player) {
   private val prefs: SharedPreferences =
     player.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-  /**
-   * Persisted playback state for resumption.
-   *
-   * @param track The track being played (includes path for queue expansion)
-   * @param positionMs The playback position in milliseconds (C.TIME_UNSET for default/live edge)
-   * @param repeatMode The repeat mode setting
-   * @param shuffleEnabled Whether shuffle mode was enabled
-   * @param playbackSpeed The playback speed (1.0 = normal)
-   */
+  /** [positionMs] is [C.TIME_UNSET] for a live track: Media3 starts it at the live edge. */
   data class PersistedState(
     val track: Track,
     val positionMs: Long,
@@ -52,7 +41,6 @@ class PlaybackStateStore(private val player: Player) {
     val playbackSpeed: Float,
   )
 
-  /** Repeat mode setting - auto-persisted when set. */
   var repeatMode: RepeatMode
     get() =
       prefs.getString(KEY_REPEAT_MODE, null)?.let { name ->
@@ -62,14 +50,12 @@ class PlaybackStateStore(private val player: Player) {
       prefs.edit { putString(KEY_REPEAT_MODE, value.name) }
     }
 
-  /** Shuffle mode setting - auto-persisted when set. */
   var shuffleEnabled: Boolean
     get() = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
     set(value) {
       prefs.edit { putBoolean(KEY_SHUFFLE_ENABLED, value) }
     }
 
-  /** Playback speed setting - auto-persisted when set. */
   var playbackSpeed: Float
     get() = prefs.getFloat(KEY_PLAYBACK_SPEED, 1.0f)
     set(value) {
@@ -79,13 +65,16 @@ class PlaybackStateStore(private val player: Player) {
   private val scope = MainScope()
   private var periodicSaveJob: Job? = null
 
-  /** Starts periodic position saving every 5 seconds. Call when playback starts. */
+  /**
+   * Saves the position every [PERIODIC_SAVE_INTERVAL_MS] while playing, skipping live tracks. A
+   * no-op when already running or when the player is not set to play.
+   */
   fun startPeriodicSave() {
     if (periodicSaveJob != null) return
     launchPeriodicSave()
   }
 
-  /** Resets the periodic save timer on track change to avoid redundant saves shortly after. */
+  /** Restarts the interval, so a [save] on track change is not followed by an immediate repeat. */
   fun resetPeriodicSave() {
     periodicSaveJob?.cancel()
     periodicSaveJob = null
@@ -105,30 +94,26 @@ class PlaybackStateStore(private val player: Player) {
       }
   }
 
-  /** Cancels the periodic save without a final save. Call on engine teardown. */
+  /**
+   * Stops the periodic save without a final save, for engine teardown: a save against the released
+   * player would persist position 0 over the real one.
+   */
   fun cancelPeriodicSave() {
     periodicSaveJob?.cancel()
     periodicSaveJob = null
   }
 
-  /** Stops periodic position saving and saves final position. Call when playback stops. */
+  /** Stops the periodic save and saves the position once more. */
   fun stopPeriodicSave() {
     cancelPeriodicSave()
-    // Skip the final save after a natural end: setPlaybackState(ENDED) wrote
-    // position 0 for resumption, and the intent-drop's listener echo runs this
-    // strictly afterwards — a save here would overwrite that 0 with the
-    // end-of-track position, making cold-start resume restart at the very end.
+    // After a natural end, setPlaybackState(ENDED) has saved position 0 and the dropped intent
+    // calls this afterwards; saving here would make resumption start at the end of the track.
     if (!player.isCurrentItemLive && player.playbackState != PlaybackState.ENDED) {
       savePosition()
     }
   }
 
-  /**
-   * Saves the current playback state for later resumption. Call on track change.
-   *
-   * For live streams, position is stored as C.TIME_UNSET to signal "use default position", which
-   * Media3 interprets as the live edge.
-   */
+  /** Saves the current track and its position; does nothing without a current track. */
   fun save() {
     val track = player.currentTrack ?: return
     val positionMs = if (player.isCurrentItemLive) C.TIME_UNSET else player.position
@@ -140,7 +125,6 @@ class PlaybackStateStore(private val player: Player) {
     Timber.d("Saved playback state: title=${track.title}, positionMs=$positionMs")
   }
 
-  /** Saves just the current position. Call on pause. */
   fun savePosition() {
     val positionMs = if (player.isCurrentItemLive) C.TIME_UNSET else player.position
 
@@ -148,29 +132,21 @@ class PlaybackStateStore(private val player: Player) {
     Timber.d("Saved position: positionMs=$positionMs")
   }
 
-  /** Resets saved position to 0. Call when queue ends to start from beginning on resumption. */
   fun savePositionZero() {
     prefs.edit { putLong(KEY_POSITION_MS, 0) }
     Timber.d("Saved position: positionMs=0 (queue ended)")
   }
 
   /**
-   * Restores player settings from persisted state and returns the state for queue setup.
-   *
-   * Applies repeatMode, shuffleMode, and playbackSpeed to the player. The caller is responsible for
-   * using the returned path and positionMs to set up the playback queue.
-   *
-   * @return PersistedState if available, null otherwise
+   * [get], then applies its repeat mode, shuffle and speed to the player, which emits option-change
+   * events. Main thread only. The caller sets up the queue from the returned track and position.
    */
   fun restore(): PersistedState? =
     get()?.also { state ->
-      // Apply player settings from persisted state
       player.repeatMode = state.repeatMode
       player.shuffleMode = state.shuffleEnabled
-      // Guarded because this input is untrusted: ExoPlayer's setPlaybackSpeed rejects a
-      // non-positive speed with IllegalArgumentException, and a snapshot holding one (a
-      // corrupted prefs file — the normal write path can't produce it) would then throw on
-      // every resume, permanently, since the bad value stays persisted.
+      // ExoPlayer throws on a non-positive speed; a corrupted prefs file holding one would fail
+      // every resume for good, since the value stays persisted.
       if (state.playbackSpeed > 0f) player.playbackSpeed = state.playbackSpeed
 
       Timber.d(
@@ -178,11 +154,7 @@ class PlaybackStateStore(private val player: Player) {
       )
     }
 
-  /**
-   * Retrieves the persisted playback state.
-   *
-   * @return PersistedState if available, null otherwise
-   */
+  /** The persisted state, read without touching the player; null if none or it won't parse. */
   fun get(): PersistedState? {
     val trackJson = prefs.getString(KEY_TRACK, null) ?: return null
     val track = trackFromJson(trackJson) ?: return null
@@ -191,14 +163,12 @@ class PlaybackStateStore(private val player: Player) {
     return PersistedState(track, positionMs, repeatMode, shuffleEnabled, playbackSpeed)
   }
 
-  /** Clears the persisted playback state. */
   fun clear() {
     prefs.edit { clear() }
     Timber.d("Cleared playback state")
   }
 
   companion object {
-    // Internal (not private) so the round-trip is testable without a Player.
     internal fun trackToJson(track: Track): String =
       JSONObject()
         .apply {
@@ -214,9 +184,7 @@ class PlaybackStateStore(private val player: Player) {
           put("description", track.description)
           put("genre", track.genre)
           put("duration", track.duration)
-          // The style block persists as its wire shape (nested object, wire
-          // strings) and `disabled` beside it: a restored queue keeps its
-          // visible fidelity across process death (ADR 0011).
+          // Persisted in its wire shape so a restored queue keeps its styling (ADR 0011).
           put(
             "style",
             track.style?.let { style ->
@@ -250,15 +218,14 @@ class PlaybackStateStore(private val player: Player) {
             albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
             album = obj.optString("album").takeIf { it.isNotEmpty() },
             artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
-            artworkSource = null, // Not persisted - will be re-transformed on browse
+            artworkSource = null, // Not persisted: re-derived on the next browse
             description = obj.optString("description").takeIf { it.isNotEmpty() },
             genre = obj.optString("genre").takeIf { it.isNotEmpty() },
             duration =
               if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration")
               else null,
-            // Tolerant (ADR 0011): a snapshot written before the block model —
-            // `style` as an enum-name string — is not an object, so optJSONObject
-            // yields null and the track restores without a declaration.
+            // optJSONObject, not getJSONObject: a snapshot from before the block model holds
+            // `style` as a string, and its track restores without a style (ADR 0011).
             style =
               obj
                 .optJSONObject("style")
@@ -272,8 +239,7 @@ class PlaybackStateStore(private val player: Player) {
                     cardImage = style.optString("cardImage").toCardImage(),
                   )
                 }
-                // An empty block collapses to "no declaration" — one shape on
-                // every platform, matching the browse decoders.
+                // An empty block means no style, as in the browse decoders on every platform.
                 ?.takeIf { it != EMPTY_TRACK_STYLE },
             disabled =
               if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled")
@@ -283,9 +249,7 @@ class PlaybackStateStore(private val player: Player) {
               else null,
             live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
             icyCharset = obj.optString("icyCharset").takeIf { it.isNotEmpty() },
-            // Not persisted: on resumption the contextual path is re-browsed
-            // (expandQueueFromContextualPath), which re-parses each track's request
-            // from the API's current response and re-caches it.
+            // Not persisted: resumption re-browses the contextual path, which supplies requests.
             request = null,
           )
         }

@@ -8,10 +8,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * OkHttp drops `Authorization` across a cross-origin redirect by itself; these cover the rest,
- * which it forwards and [CrossOriginHeaderStripper.stripCallerHeaders] removes.
- */
 class CrossOriginHeaderStripperTest {
 
   private val api = "https://api.example.com/stream/7".toHttpUrl()
@@ -72,7 +68,6 @@ class CrossOriginHeaderStripperTest {
 
     val stripped = CrossOriginHeaderStripper.stripCallerHeaders(request)
 
-    // a dropped Range would restart the read from zero on every seek past a redirect
     assertEquals("bytes=1024-", stripped.header("Range"))
     assertEquals("identity", stripped.header("Accept-Encoding"))
     assertEquals("react-native-audio-browser", stripped.header("User-Agent"))
@@ -81,8 +76,6 @@ class CrossOriginHeaderStripperTest {
 
   @Test
   fun `keeps media3's ICY metadata request across a hop`() {
-    // ProgressiveMediaPeriod asks for Shoutcast metadata on the DataSpec, the same channel the
-    // config's headers arrive on. Dropping it costs icy-metaint, so onMetadata never fires again.
     val request =
       Request.Builder().url(api).header("Icy-MetaData", "1").header("X-Api-Key", "k").build()
 

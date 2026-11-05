@@ -8,15 +8,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ShuffleOrder
 
 /**
- * What an engine is playing, and how: what [Player.setup] carries from the engine it releases to
- * the one it builds, so new setup options don't stop playback.
+ * An engine's queue, position and playback settings, which [Player.setup] carries from the engine
+ * it releases to the one it builds so that new setup options don't interrupt playback.
  */
 internal data class EnginePlayback(
   val mediaItems: List<MediaItem>,
   val index: Int,
   /**
-   * [C.TIME_UNSET] for a live item, which resumes at the live edge, and for 0, which is also how a
-   * live item reads before it has loaded.
+   * [C.TIME_UNSET] for a live item, so it resumes at the live edge, and for 0, which is also what a
+   * live item reports before it has loaded.
    */
   val positionMs: Long,
   val prepared: Boolean,

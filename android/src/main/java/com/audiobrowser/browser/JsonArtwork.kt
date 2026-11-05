@@ -16,14 +16,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A track's `artwork` on the wire: a URL string, or `{ light, dark }`.
+ * A track's `artwork` in a browse response: a URL string, or `{ light, dark }` URLs.
  *
- * These models are the browse-response format, so this is what decides whether a payload parses at
- * all — a plain `String?` here rejects the whole page, however tolerant the layers above it are.
- *
- * Android Auto is dark-only and never renders the light variant, but it is still parsed rather than
- * discarded: the same payload feeds the JS side, and dropping half of it here would make the
- * platforms disagree about what the server actually sent.
+ * Android Auto renders only the dark variant, but both are kept: the JS side reads the same
+ * payload.
  */
 @Serializable(with = JsonArtworkSerializer::class)
 sealed class JsonArtwork {
@@ -31,7 +27,6 @@ sealed class JsonArtwork {
 
   data class Variants(val light: String, val dark: String) : JsonArtwork()
 
-  /** The Nitro union this maps onto, one case per case. */
   fun toNitro(): Variant_String_ArtworkVariants =
     when (this) {
       is Single -> Variant_String_ArtworkVariants.First(url)
@@ -40,8 +35,9 @@ sealed class JsonArtwork {
 }
 
 /**
- * Discriminates on the JSON shape rather than a type tag, because the wire format has none — the
- * server sends either a bare string or an object, and which one is the whole signal.
+ * Decodes by JSON shape, as the wire has no type tag: a primitive is a URL, an object must hold
+ * both `light` and `dark`. Anything else throws, which fails the whole response, not just the
+ * artwork.
  */
 object JsonArtworkSerializer : KSerializer<JsonArtwork> {
   override val descriptor: SerialDescriptor = buildClassSerialDescriptor("JsonArtwork")

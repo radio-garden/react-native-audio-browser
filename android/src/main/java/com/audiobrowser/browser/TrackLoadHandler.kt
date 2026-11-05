@@ -6,23 +6,13 @@ import com.margelo.nitro.core.Promise
 import timber.log.Timber
 
 /**
- * Handles track load interception using the double-Promise pattern required by Nitro.
- *
- * If the handler is present, awaits it and returns [intercepted]. Otherwise runs [default].
- *
- * Nitro wraps value-returning JS callbacks in Promise<T> for thread safety, so a JS callback
- * returning Promise<void> becomes Promise<Promise<Unit>> on the native side. Both layers must be
- * awaited to properly wait for the JS work to complete.
- *
- * @param handler The handleTrackLoad callback from NativeBrowserConfiguration, or null
- * @param track The track being loaded
- * @param queue The resolved queue of tracks
- * @param startIndex The index of the track in the queue
- * @param intercepted Value to return when the handler is present and invoked
- * @param defaultBehavior Value to return when no handler is configured
- * @return Result of [intercepted] if handler was invoked, result of [defaultBehavior] otherwise
+ * Runs [defaultBehavior] when no [handler] is configured. Otherwise awaits the handler and runs
+ * [intercepted], even when the handler throws or rejects (the failure is logged, not rethrown).
  */
 suspend fun <T> handleTrackLoad(
+  // Nitro wraps a value-returning JS callback in a Promise, so a JS callback returning
+  // Promise<void> arrives as Promise<Promise<Unit>>; both layers must be awaited for the JS work
+  // to finish.
   handler: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?,
   track: Track,
   queue: Array<Track>,

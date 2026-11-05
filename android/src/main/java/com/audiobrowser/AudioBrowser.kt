@@ -112,17 +112,14 @@ import timber.log.Timber
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   /**
-   * Nitro calls this only when JS calls `dispose()` explicitly — never on runtime teardown, which
-   * is what [AudioBrowserLifecycleModule] is for. Both routes land here.
+   * Runs on an explicit JS `dispose()` and, through [disposeCurrent], on runtime teardown, which
+   * Nitro itself never reports.
    *
-   * The Service outlives this object, so everything registered in `init` or on connect has to be
-   * undone. Left alone, the running [Player] goes on invoking callbacks into a dead JSI runtime,
-   * and every reload strands another ServiceConnection and lifecycle observer, each retaining a
-   * BrowserManager.
-   *
-   * Runs the teardown on main: the state below is written from main-thread coroutines
-   * ([onServiceConnected], [onServiceDisconnected]), while dispose itself arrives on the JS thread
-   * or the teardown callback's thread.
+   * The Service outlives this object, so everything registered in `init` or on connect is undone
+   * here; left alone, the running [Player] calls into a dead JSI runtime and each reload strands a
+   * ServiceConnection and lifecycle observer. The teardown is posted to main, where
+   * [onServiceConnected] and [onServiceDisconnected] write the same state; dispose itself arrives
+   * on the JS thread or the teardown callback's thread.
    */
   override fun dispose() {
     current.compareAndSet(this, null)
@@ -131,10 +128,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Only when still ours: on a reload the replacement may already own the slot.
     carConnectionTarget.compareAndSet(onCarConnectedChanged, null)
 
-    // The runtime behind the config's JS functions is going away, but anything still holding
-    // this instance (an in-flight browse coroutine, the running player) can invoke them after
-    // it's gone — each invoke then throws instead of answering, so browse takes its error path
-    // rather than its fallback.
     dropStaleJSCallbacks()
 
     handler.post {
@@ -145,9 +138,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         if (service.player.browser === this) {
           service.player.browser = null
           service.player.forgetBrowserRegistration()
-          // The formatter wraps a JS callback from this instance's runtime (installed by our
-          // setup(); browser still being ours means no replacement has run setup yet). Without
-          // this, every track change until the next setup() throws into the updater's fallback.
+          // It wraps a JS callback from this runtime: left set, every track change throws into the
+          // now-playing updater's fallback until the next setup().
           service.player.nowPlaying.formatter = null
         }
         if (service.onBatteryWarningPendingChanged === onBatteryWarningPending) {
@@ -156,7 +148,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
       connectedService = null
 
-      // Dropping the reference disconnects nothing — the controller stays in the session's
+      // Dropping the reference disconnects nothing: the controller stays in the session's
       // connected list, holding a binder and a listener.
       mediaBrowserFuture?.let { MediaBrowser.releaseFuture(it) }
       mediaBrowserFuture = null
@@ -165,7 +157,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       serviceBinding.unbind(this)
 
       ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver)
-      // After the observer removal, so this post is not the one dropped.
+      // Inside this post: run from dispose() after the post, it would drop the teardown itself.
       handler.removeCallbacksAndMessages(null)
       mainScope.cancel()
     }
@@ -173,11 +165,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   /**
-   * Demotes the config to data-only (deep strip of every JS function field) and reverts the JS
-   * callbacks stored outside the config tree ([resolveGate]; the now-playing formatter is cleared
-   * in [dispose]'s service block, identity-guarded). Stale paths then degrade the same way as a
-   * config that never had callbacks — static request/browse layers, default error copy, fail-closed
-   * gate — instead of throwing into the error path. Mirrors iOS `dropStaleJSCallbacks`, where the
+   * Strips every JS function from the config, at every depth, and reverts [resolveGate]: anything
+   * still holding this instance (an in-flight browse, the running player) can invoke them after the
+   * runtime is gone. Those paths then degrade like a config that never had callbacks (static
+   * layers, default error copy, fail-closed gate) instead of throwing into the error path. The
+   * now-playing formatter is cleared in [dispose]. Mirrors iOS `dropStaleJSCallbacks`, where the
    * same invoke is fatal rather than a throw.
    */
   private fun dropStaleJSCallbacks() {
@@ -229,26 +221,24 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
-  // Written only on the main thread (ServiceConnection callbacks, dispose); read from main or,
-  // in a few places, straight from the JS thread. @Volatile gives those reads visibility — they
-  // must still tolerate staleness in both directions (a just-detached service, or null while
-  // onServiceConnected is pending). Keep writes on main; no read-modify-write.
+  // Written only on main (ServiceConnection callbacks, dispose); read on main and, in places,
+  // straight from the JS thread, where it may be stale either way: a just-detached service, or
+  // null while onServiceConnected is pending. Keep writes on main; no read-modify-write.
   @Volatile private var connectedService: Service? = null
 
   private val serviceBinding = ServiceBinding(context)
 
-  /** Held rather than inlined so [dispose] can tell its own wiring from a replacement's. */
+  // Held rather than inlined so [dispose] can tell its own wiring from a replacement's.
   private val onBatteryWarningPending: (Boolean) -> Unit = { pending ->
     post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(pending)) }
   }
   private var setupPromise: ((Unit) -> Unit)? = null
 
-  // Initial player state staged before the player exists — from setup options or the imperative
-  // setters called pre-bind. Strict last-write-wins; consumed when the player comes up.
+  // Staged by setup options or by setters called before the player exists; last write wins, and
+  // [applyPendingPlayerState] consumes them.
   private var pendingPlayWhenReady: Boolean? = null
   private var pendingRepeatMode: RepeatMode? = null
 
-  /** Post callback to main handler for consistent async delivery to JS - avoids deadlocks */
   private fun post(block: () -> Unit) = handler.post(block)
 
   // MARK: Browser callbacks
@@ -259,12 +249,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onFormattedNavigationError: (FormattedNavigationError?) -> Unit = {}
 
   // MARK: Gate callbacks (native→JS; set from JS, native CALLS them)
-  // Default resolver: only reachable while hasResolver=true but no live runtime has the real
-  // `resolveGate` bound — the init window before JS assigns it, or after [dispose] reverts a dead
-  // runtime's resolver. It DENIES by default
-  // (gated=true) so an active gate never serves content during that window — same fail-closed
-  // direction as the resolver-error path in [gateDecision]. The static-gate fast path skips it
-  // entirely once a resolver-less gate is set.
+  // Denies by default: it is reached only while a resolver is declared but none from a live
+  // runtime is bound (before JS assigns one, or after [dispose] reverts it), and an active gate
+  // must not serve content in that window.
   override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> =
     defaultResolveGate
   override var onGate: (event: GateEvent) -> Unit = {}
@@ -321,7 +308,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var handleRemoteSkip: (() -> Unit)? = null
   override var handleRemoteStop: (() -> Unit)? = null
 
-  /** Lifecycle observer to check battery status when app comes to foreground */
   private val lifecycleObserver =
     object : DefaultLifecycleObserver {
       override fun onStart(owner: LifecycleOwner) {
@@ -332,7 +318,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   init {
     current.set(this)
 
-    // Auto-bind to service if it's already running
     launchInScope {
       try {
         Timber.d("Attempting to auto-bind to existing AudioBrowserService from AudioBrowser")
@@ -348,18 +333,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
     }
 
-    // Observe app lifecycle to check battery status on foreground
-    // Must run on main thread as required by LifecycleRegistry.addObserver
+    // LifecycleRegistry.addObserver asserts the main thread.
     handler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver) }
 
-    // Observe system volume changes
     systemVolumeMonitor.setOnVolumeChanged { volume -> post { onSystemVolumeChanged(volume) } }
 
-    // Observe current audio output changes (active media route via AudioManager)
     outputMonitor.setOnOutputChanged { output -> post { onOutputChanged(output) } }
     outputMonitor.start()
 
-    // Observe the car connection (Android Auto / Android Automotive)
     startCarConnectionObserver(context, handler)
   }
 
@@ -384,10 +365,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   /**
-   * Media URL transformation for [com.audiobrowser.player.TransformingDataSource]. Resolution lives
-   * in [resolveMediaUrl] (browser/BrowserUrlResolution.kt); this shell owns only the blocking
-   * bridge: it runs on ExoPlayer's IO thread (TransformingDataSource.open), so blocking here is
-   * safe and intentional.
+   * The request config for [originalUrl], or null when resolution fails. Blocks: it is called from
+   * [com.audiobrowser.player.TransformingDataSource.open] on ExoPlayer's loading thread, never main
+   * or JS.
    */
   fun getMediaRequestConfig(originalUrl: String, track: Track): MediaRequestConfig? {
     return try {
@@ -399,15 +379,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   private fun hasValidConfiguration(): Boolean {
-    // Need at least one browsable route (not just search)
     return _configuration.routes?.any { it.path != BrowserManager.SEARCH_ROUTE_PATH } == true
   }
 
-  // Suspending on purpose: queryTabs() resolves tabs by invoking JS callbacks,
-  // which can only run on the JS thread. Callers MUST invoke this from a
-  // coroutine (off the JS thread) — never via runBlocking on a synchronous Nitro
-  // setter, which runs on the JS thread and would deadlock (the JS thread blocks
-  // waiting for callbacks that need that same thread to run).
+  // Suspends because queryTabs() invokes JS callbacks, which run on the JS thread. Never call it
+  // through runBlocking from a Nitro setter: that runs on the JS thread and deadlocks waiting for
+  // callbacks that need it.
   private suspend fun getDefaultPath(): String? {
     return try {
       browserManager.config = buildConfig()
@@ -420,7 +397,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         "/"
       }
     } catch (e: CancellationException) {
-      throw e // Rethrow so cooperative cancellation isn't swallowed
+      throw e
     } catch (e: Exception) {
       Timber.e(e, "Failed to get default path, falling back to /")
       "/"
@@ -438,19 +415,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         browserManager.config = buildConfig()
         clearNavigationError()
 
-        // Cancel previous navigation to avoid race conditions
         navigationJob?.cancel()
 
-        // Resolve the default path inside the coroutine (getDefaultPath queries
-        // tabs via JS callbacks) so it never blocks the JS thread this setter
-        // runs on.
         navigationJob =
           mainScope.launch {
             val path = value ?: getDefaultPath() ?: return@launch
             try {
               browserManager.navigate(path)
             } catch (e: CancellationException) {
-              throw e // Rethrow to properly cancel
+              throw e
             } catch (e: Exception) {
               handleBrowserException(e, path, "setting path: $path")
             }
@@ -468,33 +441,22 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       _configuration = value
       browserManager.config = buildConfig()
 
-      // Notify player that browser configuration is ready (routes/tabs available)
-      // This allows Android Auto to start browsing content.
-      // This reaches MediaSession.getConnectedControllers, which asserts the
-      // main thread, and this setter runs on the JS thread. Hop without
-      // blocking -- runBlockingOnMain would deadlock here for the same reason
-      // described for the navigation below (JS callbacks can't run while the
-      // JS thread waits). Ordering with navigationJob is preserved: both are
-      // queued on mainScope.
+      // Reaches MediaSession, which asserts the main thread, from this JS-thread setter. Launched,
+      // not blocked: what it triggers can wait on JS callbacks, which cannot run while the JS
+      // thread waits. Queued on mainScope ahead of navigationJob, so the two stay ordered.
       launchInScope { connectedService?.player?.notifyBrowserConfigurationReady() }
 
       clearNavigationError()
 
-      // Cancel previous navigation to avoid race conditions
       navigationJob?.cancel()
 
-      // Navigate to the initial path, or default to the first tab. The default
-      // path is resolved inside the coroutine (getDefaultPath queries tabs via
-      // JS callbacks) so it never blocks the JS thread this setter runs on —
-      // doing it synchronously here via runBlocking deadlocked: the JS callbacks
-      // can't run because the JS thread is blocked waiting for them.
       navigationJob =
         mainScope.launch {
           val path = value.path ?: getDefaultPath() ?: return@launch
           try {
             browserManager.navigate(path)
           } catch (e: CancellationException) {
-            throw e // Rethrow to properly cancel
+            throw e
           } catch (e: Exception) {
             handleBrowserException(e, path, "setting configuration path: $path")
           }
@@ -509,9 +471,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun getFormattedNavigationError(): FormattedNavigationError? = formattedNavigationError
 
   /**
-   * Resolves a navigation error to its display form: the app's `formatNavigationError` for the
-   * given [path] when one is configured, else the built-in default. Shared by [setNavigationError]
-   * and the Android Auto empty tile so in-app and in-car copy cannot drift (ADR 0001).
+   * The display form of [error] at [path]: the app's `formatNavigationError` when configured, else
+   * the built-in default. Shared with the Android Auto empty tile so in-app and in-car copy cannot
+   * drift (ADR 0001).
    */
   internal suspend fun resolveFormattedError(
     error: NavigationError,
@@ -536,9 +498,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     navigationError = navError
     onNavigationError(NavigationErrorEvent(navigationError))
 
-    // No formatter means no hop, and the field and event land in this turn: a same-turn
-    // getFormattedNavigationError, or a clearNavigationError right after, must not race a
-    // launch that has yet to run.
+    // Without a formatter the field and event land in this turn, so a same-turn
+    // getFormattedNavigationError or clearNavigationError cannot race a launch yet to run.
     if (_configuration.formatNavigationError == null) {
       val default = defaultFormattedError(navError)
       formattedNavigationError = default
@@ -553,7 +514,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 
-  /** Raises the navigation error [e] maps to, for a failed navigation to [path]. */
   private fun handleBrowserException(e: Exception, path: String, logContext: String) {
     val navError = navigationErrorFor(e)
     Timber.e(e, "${navError.code} $logContext")
@@ -576,7 +536,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun navigatePath(path: String) {
     clearNavigationError()
 
-    // Cancel previous navigation to avoid race conditions
     navigationJob?.cancel()
 
     navigationJob =
@@ -585,7 +544,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           Timber.d("Navigating to path: $path")
           browserManager.navigate(path)
         } catch (e: CancellationException) {
-          throw e // Rethrow to properly cancel
+          throw e
         } catch (e: Exception) {
           handleBrowserException(e, path, "navigating to path: $path")
         }
@@ -593,11 +552,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun navigateTrack(track: Track) {
-    // A disabled track is unavailable — it never plays, whichever surface or
-    // stale resume path delivered the selection (Track.disabled; mirrors iOS
-    // TrackSelector.select). Refused before any state changes: an inert tap
-    // must not clear an unrelated navigation error or cancel an in-flight
-    // navigation.
+    // A disabled track never plays, whichever surface delivered it (mirrors iOS
+    // TrackSelector.select). Refused before any state changes: an inert tap must not clear an
+    // unrelated navigation error or cancel an in-flight navigation.
     if (track.disabled == true) {
       Timber.d("Ignoring selection of disabled track: ${track.title}")
       return
@@ -605,7 +562,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     clearNavigationError()
 
-    // Cancel previous navigation to avoid race conditions
     navigationJob?.cancel()
 
     val path = track.path
@@ -613,16 +569,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       mainScope.launch {
         try {
           when {
-            // Check if this is a contextual path (playable-only track with queue context)
             path != null && BrowserPathHelper.isContextual(path) -> {
               Timber.d("Navigating to contextual track path: $path")
 
               val parentPath = BrowserPathHelper.stripTrackId(path)
               val trackId = BrowserPathHelper.extractTrackId(path)
 
-              // Check if queue already came from this parent path - just skip
-              // to the tapped surface (exact path first, identity for
-              // index-less paths — see indexOfTappedTrack)
               if (trackId != null && parentPath == player.queueSourcePath) {
                 val index = player.tracks.indexOfTappedTrack(path, trackId)
                 if (index >= 0) {
@@ -642,7 +594,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 }
               }
 
-              // Expand the queue from the contextual path
               val expanded = browserManager.expandQueueFromContextualPath(path)
 
               if (expanded != null) {
@@ -657,15 +608,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   startIndex.toDouble(),
                   intercepted = {},
                   defaultBehavior = {
-                    // Replace queue and seek to selected track
-                    // Use internal player methods directly to avoid blocking on main thread
+                    // The Player itself: this class's overrides block on main, where this runs.
                     player.setQueue(tracks, startIndex, sourcePath = parentPath)
                     player.play()
                   },
                 )
                 return@launch
               } else {
-                // Fallback: just load the single track
                 Timber.w("Queue expansion failed, loading single track")
                 handleTrackLoad(
                   _configuration.handleTrackLoad,
@@ -677,12 +626,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 )
               }
             }
-            // Navigate to browsable track to show browsing UI
             path != null -> {
               Timber.d("Navigating to browsable track: $path")
               browserManager.navigate(path)
             }
-            // If track is playable (has src), load it into player
             track.src != null -> {
               Timber.d("Loading playable track into player: ${track.title}")
               handleTrackLoad(
@@ -699,7 +646,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             }
           }
         } catch (e: CancellationException) {
-          throw e // Rethrow to properly cancel
+          throw e
         } catch (e: Exception) {
           handleBrowserException(e, path ?: track.src ?: "", "navigating to track: ${track.title}")
         }
@@ -709,9 +656,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun search(query: String): Promise<Array<Track>> {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
-      // Rejects with the error the browse surface would raise, but leaves the navigation error
-      // itself unset: a search is not a navigation, and its failure must not replace the
-      // displayed page's state (mirrors HybridAudioBrowser.search).
+      // Rejects with the error a browse would raise but leaves the navigation error unset: a failed
+      // search must not replace the displayed page's state (mirrors iOS HybridAudioBrowser.search).
       val searchResults =
         try {
           browserManager.search(query)
@@ -721,9 +667,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           Timber.e(e, "Search failed for query: $query")
           throw NavigationErrorException(navigationErrorFor(e))
         }
-      // Flattened, not `children`: a resolved page carries its rows in
-      // `sections` (ADR 0010) and search builds exactly one untitled section,
-      // so `children` is always null here and this returned nothing at all.
+      // Not `children`: search builds one untitled section (ADR 0010), so `children` is null.
       searchResults.flattenedChildren?.toTypedArray() ?: emptyArray()
     }
   }
@@ -735,14 +679,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun notifyContentChanged(path: String) {
     Timber.d("Notifying content changed for path: $path")
 
-    // Invalidate cached content so future navigations fetch fresh data
     browserManager.invalidateContentCache(path)
 
-    // Notify external media controllers (Android Auto). Reaches MediaSession,
-    // which asserts the main thread; this override runs on the JS thread.
+    // MediaSession asserts the main thread; this override runs on the JS thread.
     launchInScope { connectedService?.player?.notifyContentChanged(path) }
 
-    // If we're currently viewing this path, refresh the content
     if (browserManager.getPath() == path) {
       mainScope.launch { browserManager.refresh() }
     }
@@ -751,15 +692,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun invalidateAllContent() {
     Timber.d("Invalidating all content")
 
-    // Clear all cached content so every path re-fetches fresh data
     browserManager.clearContentCache()
 
-    // Notify external media controllers (Android Auto) to refresh subscribed paths.
-    // Reaches MediaSession, which asserts the main thread; this override runs on
-    // the JS thread.
+    // MediaSession asserts the main thread; this override runs on the JS thread.
     launchInScope { connectedService?.player?.invalidateAllContent() }
 
-    // Refresh whatever the browser is currently viewing
     mainScope.launch { browserManager.refresh() }
   }
 
@@ -769,74 +706,47 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   // MARK: Gate
 
-  /** A gate decision for one request: whether to gate, and which chrome to render. */
+  /** [chrome] is non-null whenever [gated] is true: the serve sites force-unwrap it. */
   data class GateOutcome(val gated: Boolean, val chrome: Gate?)
 
-  // The minimal chrome rendered when a gate is active but no override or stored
-  // default chrome exists (the resolver-only setGate overload).
   private val builtInGate = Gate("Unavailable", null)
 
-  /**
-   * The three gate fields as one immutable triple so [gateDecision] reads them as a unit. Written
-   * from the JS thread, read from the Media3 application thread (the enforcement sites in
-   * MediaSessionCallback consult it) — hence the single field is @Volatile.
-   *
-   * Folding the three former @Volatile fields into one reference is what makes the read atomic:
-   *
-   * @Volatile gives per-field visibility but NO atomicity across a compound read, so reading three
-   *   separate volatiles in [gateDecision] could interleave with a concurrent [clearGate] and yield
-   *   a torn `(active=true, chrome=null)` state that crashed the force-unwrap at the serve sites.
-   *   One volatile reference read once cannot tear.
-   */
+  // One volatile reference, so [gateDecision] reads all three fields at once: separate volatiles
+  // could tear against [clearGate] into an active gate with no chrome. Written on the JS thread,
+  // read on the Media3 application thread.
   private data class GateState(val active: Boolean, val chrome: Gate?, val hasResolver: Boolean)
 
   @Volatile private var gateState = GateState(active = false, chrome = null, hasResolver = false)
 
   override fun setGate(gate: Gate?, hasResolver: Boolean) {
-    // Single atomic assignment — readers never see a half-updated triple.
     gateState = GateState(active = true, chrome = gate, hasResolver = hasResolver)
-    // Re-query every subscribed parent so a connected controller (Android
-    // Auto) swaps its lists for the gate tile without reconnecting. Notify
-    // only — the content cache stays warm for when the gate clears.
+    // Re-queries every subscribed parent so a connected controller swaps its lists for the gate
+    // tile without reconnecting; the content cache stays warm for when the gate clears.
     // MediaSession asserts the main thread; this override runs on the JS thread.
     launchInScope { connectedService?.player?.invalidateAllContent() }
   }
 
   override fun clearGate() {
     if (!gateState.active) return
-    // Single atomic assignment — readers never see a half-cleared triple.
     gateState = GateState(active = false, chrome = null, hasResolver = false)
     // MediaSession asserts the main thread; this override runs on the JS thread.
     launchInScope { connectedService?.player?.invalidateAllContent() }
   }
 
   /**
-   * The single gate choke point. Each enforcement site (browse / search) calls this for the current
-   * request and serves the gate chrome when [GateOutcome.gated] is true. Structurally similar to
-   * the iOS `gateDecision(for:)` helper, but note the concurrency model differs: iOS confines gate
-   * state to `@MainActor`; here the consistent read comes from snapshotting the single [gateState]
-   * reference once (see [GateState]).
-   * - No active gate → allow.
-   * - Active gate, no resolver → static fast path: gate with the stored default chrome (or built-in
-   *   if none), no JS hop.
-   * - Active gate with a resolver → ask JS per request. A resolver that throws / rejects / times
-   *   out FAILS CLOSED by design: while a gate is active the consumer has declared content blocked,
-   *   so the only safe fallback when we cannot compute the per-request decision is the gate's own
-   *   chrome — never the content. A *successful* `gated:false` still allows. Chrome order on a
-   *   gated decision: override → stored default → built-in.
-   *
-   * Every gated return guards chrome against null (`?: builtInGate`) so a gated outcome always
-   * carries a renderable chrome — the serve sites force-unwrap it.
+   * Whether [request] is gated, and with which chrome. No active gate allows; a gate without a
+   * resolver gates with its stored chrome and never asks JS. A resolver that throws, rejects or
+   * times out fails closed, gating rather than serving content; only a successful `gated: false`
+   * allows. Chrome falls back from the resolver's to the stored one to [builtInGate].
    */
   suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
-    // Read the whole gate triple once; a single volatile reference can't tear (see [GateState]).
     val s = gateState
     if (!s.active) return GateOutcome(false, null)
-    if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate) // static fast path
+    if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate)
     val decision =
       runCatching { resolveGate(request).await().await() }.getOrNull()
-        ?: return GateOutcome(true, s.chrome ?: builtInGate) // fail CLOSED on resolver error
-    if (!decision.gated) return GateOutcome(false, null) // explicit allow
+        ?: return GateOutcome(true, s.chrome ?: builtInGate)
+    if (!decision.gated) return GateOutcome(false, null)
     return GateOutcome(true, decision.gate ?: s.chrome ?: builtInGate)
   }
 
@@ -848,8 +758,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     set(value) {
       field = value
       carConnectionTarget.set(value)
-      // Immediately notify current state (the car may have connected before
-      // this JS runtime subscribed) — mirrors the iOS behavior.
+      // The car may have connected before this runtime subscribed (mirrors iOS).
       value(carConnected)
     }
 
@@ -860,9 +769,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
     return Promise.async(mainScope) {
       setupOptions.update(options)
-      // The bundled runtime options and initial state are part of the atomic launch
-      // description: stage them here, apply them together with the engine below (or at
-      // service connect). Last-write-wins with their imperative counterparts.
+      // Staged to apply together with the engine below, or at service connect. Last write wins
+      // against the imperative setters.
       options.options?.let { updateOptions.updateFromBridge(it) }
       options.repeatMode?.let { pendingRepeatMode = it }
       options.playWhenReady?.let { pendingPlayWhenReady = it }
@@ -874,7 +782,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         return@async
       }
 
-      // Service not connected yet, bind to service
       suspendCoroutine<Unit> { continuation ->
         Timber.d("Binding to AudioBrowserService")
         val bound = serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)
@@ -884,7 +791,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             RuntimeException("Failed to bind to AudioBrowserService")
           )
         } else {
-          // Service will resolve the promise in onServiceConnected
           setupPromise = { continuation.resume(Unit) }
         }
       }
@@ -893,22 +799,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun updateOptions(options: NativeUpdateOptions) {
     updateOptions.updateFromBridge(options)
-    // Only update the options if the service is around.
-    // applyOptions touches the Media3 player, which asserts it is only ever
-    // driven from the main thread ("Player callback method is called from a
-    // wrong thread"). Nitro invokes this from the JS thread, so hop.
-    //
-    // The hop blocks rather than launching because `updateOptions` is a single
-    // mutable holder: updateFromBridge mutates it in place on the JS thread and
-    // applyOptions reads it on main. Blocking is what keeps the two ordered.
+    // Blocks rather than launches: updateFromBridge mutates the holder in place on the JS thread
+    // and applyOptions reads it on main (Media3 asserts main), so blocking keeps the two ordered.
     connectedService?.let { service ->
       runBlockingOnMain { service.player.applyOptions(updateOptions) }
     }
   }
 
   override fun getOptions(): Options {
-    // The holder is the source of truth whether or not the player exists yet — updateOptions
-    // merges into it and setup/connect applies it to the player.
     return updateOptions.toNitro()
   }
 
@@ -926,8 +824,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     commandPlayer("reset") { player ->
       player.stop()
       player.clear()
-      // clear() while IDLE emits no engine event, so the state machine never
-      // leaves STOPPED — a reset queue is "nothing loaded".
+      // clear() while idle emits no engine event, so the state would otherwise stay STOPPED.
       player.setPlaybackState(PlaybackState.NONE)
     }
 
@@ -940,7 +837,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun stop() = commandPlayer("stop") { it.stop() }
 
   override fun setPlayWhenReady(playWhenReady: Boolean) = runBlockingOnMain {
-    // Pre-setup this stages the intent for the player to come up with — never throws.
     connectedService?.player?.let { it.playWhenReady = playWhenReady }
       ?: run { pendingPlayWhenReady = playWhenReady }
   }
@@ -990,7 +886,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain {
-    // Pre-setup this stages the mode for the player to come up with — never throws.
     connectedService?.player?.let { it.repeatMode = mode } ?: run { pendingRepeatMode = mode }
   }
 
@@ -1064,7 +959,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun setActiveTrackFavorited(favorited: Boolean): Unit =
     commandPlayer("setActiveTrackFavorited") { player ->
-      // Applied-result is for MediaSession honesty; the JS API stays fire-and-forget.
+      // The applied result serves MediaSession; the JS API is fire-and-forget.
       player.setActiveTrackFavorited(favorited)
     }
 
@@ -1165,14 +1060,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Battery Optimization (Android only)
   // ============================================================================
 
-  /** Track last known status for change detection */
   private var lastKnownBatteryStatus: BatteryOptimizationHelper.Status? = null
 
   override fun getBatteryWarningPending(): Boolean {
     val rawPending = BatteryWarningStore.isWarningPending(context)
     val status = BatteryOptimizationHelper.getStatus(context)
 
-    // Auto-clear if status is now unrestricted
     return if (rawPending && status == BatteryOptimizationHelper.Status.UNRESTRICTED) {
       BatteryWarningStore.clearWarning(context)
       post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(false)) }
@@ -1195,10 +1088,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     BatteryOptimizationHelper.openSettings(context)
   }
 
-  /**
-   * Check if battery status changed since last check and fire events if so. Called automatically
-   * when app comes to foreground via ProcessLifecycleOwner.
-   */
   private fun checkBatteryStatusChange() {
     val currentStatus = BatteryOptimizationHelper.getStatus(context)
     if (lastKnownBatteryStatus != null && lastKnownBatteryStatus != currentStatus) {
@@ -1208,7 +1097,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         )
       }
 
-      // Auto-clear warning if now unrestricted
       if (
         currentStatus == BatteryOptimizationHelper.Status.UNRESTRICTED &&
           BatteryWarningStore.isWarningPending(context)
@@ -1240,19 +1128,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.applyOptions(updateOptions)
           player.setup(setupOptions)
           applyPendingPlayerState(player)
-          // Start observing network connectivity changes
           player.observeNetworkConnectivity(mainScope)
-          // Set browser reference for media URL transformation
           player.browser = this@AudioBrowser
 
-          // If configuration was already set before service connected,
-          // notify player now so Android Auto can start browsing
+          // The configuration setter's notify finds no service when it runs before connect.
           if (_configuration.routes?.isNotEmpty() == true) {
             player.notifyBrowserConfigurationReady()
           }
         }
 
-      // Wire up battery warning callback from service
       connectedService?.onBatteryWarningPendingChanged = onBatteryWarningPending
 
       val sessionToken = SessionToken(context, ComponentName(context, Service::class.java))
@@ -1263,10 +1147,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 
-  /**
-   * Applies initial player state staged before the player existed. Consumed on apply so a later
-   * re-setup doesn't replay stale state.
-   */
+  // Consumes what it applies, so a later re-setup does not replay stale state.
   private fun applyPendingPlayerState(player: Player) {
     pendingRepeatMode?.let {
       player.repeatMode = it
@@ -1293,6 +1174,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     mainScope.launch { block() }
   }
 
+  // For calls arriving on the JS thread: called on main it waits on itself and deadlocks.
   private fun <T> runBlockingOnMain(block: suspend () -> T): T {
     return runBlocking(mainScope.coroutineContext) { block() }
   }
@@ -1300,10 +1182,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private val service: Service
     get() = connectedService ?: throw Exception("Player not initialized")
 
-  /**
-   * The player while its service is connected: not before setupPlayer, nor while the service
-   * restarts.
-   */
   private val connectedPlayer: Player?
     get() = connectedService?.player
 
@@ -1400,7 +1278,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after play operation completes
         post { this@AudioBrowser.onRemotePlay() }
 
         return handled
@@ -1413,7 +1290,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after pause operation completes
         post { this@AudioBrowser.onRemotePause() }
 
         return handled
@@ -1426,7 +1302,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after stop operation completes
         post { this@AudioBrowser.onRemoteStop() }
 
         return handled
@@ -1439,7 +1314,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after next operation completes
         post { this@AudioBrowser.onRemoteNext() }
 
         return handled
@@ -1452,7 +1326,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after previous operation completes
         post { this@AudioBrowser.onRemotePrevious() }
 
         return handled
@@ -1465,7 +1338,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after jump forward operation completes
         post { this@AudioBrowser.onRemoteJumpForward(event) }
 
         return handled
@@ -1478,7 +1350,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after jump backward operation completes
         post { this@AudioBrowser.onRemoteJumpBackward(event) }
 
         return handled
@@ -1491,7 +1362,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             true
           } ?: false
 
-        // Defer notification until after seek operation completes
         post { this@AudioBrowser.onRemoteSeek(event) }
 
         return handled
@@ -1523,23 +1393,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
   companion object {
-    // Process-wide car-connection state, from the androidx.car.app
-    // CarConnection provider — the documented Android Auto / Automotive
-    // connection signal, served by the car system app. Observed ONCE per
-    // process: AudioBrowser instances are re-created on a JS reload, and a
-    // per-instance observeForever would leak each one. The latest instance's
-    // callback registers as the single notification target (mirrors the iOS
-    // static + shared-instance pattern).
+    // Process-wide, from androidx.car.app CarConnection, observed once per process: instances are
+    // re-created on each JS reload, and a per-instance observeForever would leak each one. The
+    // latest instance's callback is the single target (mirrors iOS).
     @Volatile private var carConnected = false
     // Compare-and-set, not @Volatile: a disposing instance clears the slot only if it still owns
     // it, and a replacement may be claiming it at the same moment.
     private val carConnectionTarget = AtomicReference<((Boolean) -> Unit)?>(null)
     private var carConnectionObserverStarted = false
 
-    /**
-     * The instance the current JS runtime is using. Nitro hands out no registry, and the teardown
-     * callback has nothing to dispose without one.
-     */
+    // The instance the current JS runtime uses: Nitro keeps no registry for teardown to find it in.
     private val current = AtomicReference<AudioBrowser?>(null)
 
     /** Called by [AudioBrowserLifecycleModule] when the React instance is torn down. */
@@ -1547,14 +1410,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       current.getAndSet(null)?.dispose()
     }
 
-    /** Shared by the [resolveGate] initializer and [dispose], which reverts to it. */
     private val defaultResolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = {
       Promise.resolved(Promise.resolved(GateDecision(gated = true, gate = null)))
     }
 
     private fun startCarConnectionObserver(context: Context, handler: Handler) {
-      // Posted to main: LiveData observation is main-thread only, and the
-      // single-start guard is then only ever touched from one thread.
+      // LiveData observation is main-thread only, which also keeps the start guard on one thread.
       handler.post {
         if (carConnectionObserverStarted) return@post
         carConnectionObserverStarted = true
@@ -1570,7 +1431,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 }
 
 // MARK: Deep JS-callback stripping (used by dispose)
-// Functions live at every level of the config, not just the top; each type's strip nils its own.
+// A JS function field added at any level of the config must be nulled by its type's strip.
 
 private fun NativeBrowserConfiguration.strippingJSCallbacks() =
   copy(
@@ -1607,16 +1468,13 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
     artwork = artwork?.strippingJSCallbacks(),
   )
 
-/**
- * Ceiling on the app's `formatNavigationError` hop. Same budget [Player.awaitBrowser] gives the JS
- * side, the only other JS wait a browse serve already blocks on.
- */
+// The budget [Player.awaitBrowser] gives JS, the other JS wait a browse serve blocks on.
 private val FORMATTER_TIMEOUT = 10.seconds
 
 /**
- * The navigation error an exception raises. Shared by [AudioBrowser]'s failed navigations, the
- * rejection [AudioBrowser.search] hands JS, and the Android Auto browse-error tile, so one failure
- * is named one way wherever it surfaces.
+ * The navigation error [e] raises, shared by failed navigations, the rejection
+ * [AudioBrowser.search] hands JS and the Android Auto browse-error tile, so one failure is named
+ * one way wherever it surfaces.
  */
 internal fun navigationErrorFor(e: Exception): NavigationError =
   when (e) {
@@ -1660,37 +1518,33 @@ internal fun navigationErrorFor(e: Exception): NavigationError =
 /** Carries a [NavigationError] across a rejected Promise, whose JS error keeps its message. */
 class NavigationErrorException(val error: NavigationError) : Exception(error.message)
 
-/**
- * The built-in display copy for a navigation error, and the fallback when the app's is unusable.
- */
+/** The built-in display copy for [error], and the fallback when the app's formatter fails. */
 internal fun defaultFormattedError(error: NavigationError): FormattedNavigationError {
   val title =
     when (error.code) {
       NavigationErrorType.CONTENT_NOT_FOUND -> "Content Not Found"
       NavigationErrorType.NETWORK_ERROR -> "Network Error"
       NavigationErrorType.HTTP_ERROR -> {
-        // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
         error.statusCode?.let { httpStatusText(it.toInt()) } ?: "Server Error"
       }
       NavigationErrorType.CALLBACK_ERROR -> "Error"
       NavigationErrorType.UNKNOWN_ERROR -> "Error"
-      // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
+      // Not a failure: a container that resolved with no children (ADR 0001).
       NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
       NavigationErrorType.TIMEOUT -> "Couldn't load"
     }
-  // Omit an empty message so it renders as title-only (e.g. the empty-content case).
+  // An empty message is omitted so it renders title-only.
   return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
 }
 
 /**
- * The formatter hop's fallback rule: the app's answer when it produces one, [default] when it
- * answers null, throws, or outruns [FORMATTER_TIMEOUT]. Kept off the JS edge so the rule is
- * exercisable without a Nitro Promise.
+ * The app's formatted error from [format], or [default] when it returns null, throws, or outruns
+ * [FORMATTER_TIMEOUT].
  *
- * The hop runs in [scope] and is awaited through its [kotlinx.coroutines.Deferred], because Nitro's
- * `Promise.await` parks in a plain `suspendCoroutine`: cancelling it does not unpark it. Awaiting
- * the Deferred is cancellable, so the timeout leaves the orphan to finish unobserved instead of
- * holding the caller open until JS answers — which for a browse serve would be forever.
+ * [format] runs in [scope] and is awaited through the Deferred because Nitro's `Promise.await`
+ * parks in a plain `suspendCoroutine` that cancellation does not unpark; awaiting the Deferred is
+ * cancellable, so the timeout releases the caller instead of holding it until JS answers, which for
+ * a browse serve may be never.
  */
 internal suspend fun formattedOrDefault(
   scope: CoroutineScope,
@@ -1701,7 +1555,6 @@ internal suspend fun formattedOrDefault(
   return withTimeoutOrNull(FORMATTER_TIMEOUT) { hop.await() } ?: default
 }
 
-/** Returns localized HTTP status text for the given status code */
 private fun httpStatusText(statusCode: Int): String {
   return when (statusCode) {
     400 -> "Bad Request"

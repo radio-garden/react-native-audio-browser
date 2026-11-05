@@ -2,9 +2,9 @@ import CarPlay
 import Foundation
 import os.log
 
-/// The CarPlay scene's controller, exposed to Objective-C for `RNABCarPlaySceneDelegate`. It
-/// shows a loading root until the player and a configured browser exist, then runs a
-/// `CarPlaySession`; `stop()` ends it.
+/// The CarPlay scene's controller, called from Objective-C by `RNABCarPlaySceneDelegate`.
+/// Shows a loading root until the player and a configured browser exist, then runs a
+/// `CarPlaySession`.
 @MainActor
 @objc(RNABCarPlayController)
 public final class RNABCarPlayController: NSObject {
@@ -44,7 +44,7 @@ public final class RNABCarPlayController: NSObject {
       self?.restart()
     }
 
-    // Before the config loads, the app's loading title isn't known: the spinner only.
+    // Before the config loads the title is unknown: the spinner alone.
     let browserManager = HybridAudioBrowser.shared?.browserManager
     let loadingTitle = browserManager?.isConfigured == true ? browserManager?.config.carPlayLoadingTitle : nil
     interfaceController.safeSetRoot(

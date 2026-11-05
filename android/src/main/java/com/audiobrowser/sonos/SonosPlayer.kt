@@ -34,7 +34,7 @@ internal data class SonosPosition(
   val durationMs: Long?,
 )
 
-/** The UPnP control of one Sonos room, as [SonosPlayer] drives it. Every call blocks. */
+/** The UPnP control of one Sonos room. Every call blocks; a refused one throws [SoapException]. */
 internal interface SonosControl {
   fun setUri(
     streamUrl: String,
@@ -57,10 +57,7 @@ internal interface SonosControl {
 
   fun getPosition(): SonosPosition?
 
-  /**
-   * The URI the room was last told to play, as it was sent; the track it plays may be another, the
-   * one a redirect led to.
-   */
+  /** The URI the room was last told to play, as sent: not the one a redirect led it to. */
   fun getMediaUri(): String?
 
   fun getVolume(): Int?
@@ -69,22 +66,19 @@ internal interface SonosControl {
 }
 
 /**
- * Plays one item at a time on a Sonos room: Media3 commands in, UPnP out, and the room's transport
- * state, position, stream title and volume polled back in. As a
- * [com.audiobrowser.remote.RemotePlayback]'s player, setting its item loads it on the speaker from
- * the start position given, without [prepare]. Each poll that reads it playing calls [onPlaying]. A
- * track that plays to its end calls [onEnded]; one stopped there early reads as paused. Once
- * another app or the Sonos app plays something else there, it reads as paused and leaves the room
- * alone until played again. A title the speaker reads from the stream arrives as an [IcyInfo] in
- * the timed metadata, where the local player reports its own. The room's volume is read when the
- * player starts and with each poll, and goes to [onVolume].
+ * Plays one item at a time on a Sonos room: Media3 commands go out as UPnP calls, and the room's
+ * transport state, position, stream title and volume are polled back. Setting the item loads it on
+ * the speaker from the given position, without [prepare]. Each poll that reads it playing calls
+ * [onPlaying]; a track that plays to its end calls [onEnded], one stopped early reads as paused.
+ * Once another app plays on the room, the player reads as paused and leaves the room alone. A title
+ * the speaker reads from the stream arrives as an [IcyInfo] in the timed metadata. The volume is
+ * read at start and with each poll, and goes to [onVolume].
  *
- * Commands run in the order they are made, one at a time, off the main thread, and run to the end
- * even once the player is released, so its last stop reaches the speaker. A failed command that no
- * later one replaced goes to [onError] and leaves the player idle; so does a speaker that stops
- * answering [unreachableAfterPolls] polls in a row. An item the speaker never starts is the
- * switch's to time out. A room that played on after a failure still hears pause and stop. A failed
- * seek or volume change is only logged.
+ * Commands run one at a time, in order, off the main thread, and run to the end even after release,
+ * so a last stop reaches the speaker. A failed command that no later one replaced goes to [onError]
+ * and leaves the player idle; so does a speaker that misses [unreachableAfterPolls] polls in a row.
+ * An item the speaker never starts is [com.audiobrowser.remote.RemoteSwitchingPlayer]'s to time
+ * out. A failed seek or volume change is only logged.
  */
 internal class SonosPlayer(
   looper: Looper,
@@ -108,21 +102,19 @@ internal class SonosPlayer(
   private var volume: Int? = null
   private var timedMetadata: Metadata? = null
 
-  // The track's duration and position as last read; while it reads as playing, the time of that
-  // reading, from which its position runs on.
   private var durationMs = C.TIME_UNSET
   private var position: PositionSupplier = PositionSupplier.getConstant(0)
   private var readPositionMs = 0L
   private var playingSinceReadAtMs: Long? = null
 
-  // The URL the speaker holds for us, until stopped or taken over by another app; whether it holds
-  // it ready to play without loading again; when it was asked to play; whether it has since.
+  // The URL the speaker holds for us, until stopped or taken over; `ready`: held so that play
+  // resumes it without loading again; `seenPlaying`: it has read as playing since it was loaded.
   private var loadedUrl: String? = null
   private var ready = false
   private var seenPlaying = false
 
-  // A poll that overlapped a command is dropped: its reading may predate it. A failed command is an
-  // error only while no later one has been made.
+  // A failed fatal command is an error only while no later one has been made. A poll that
+  // overlapped a command is dropped: its reading may predate the command.
   private var generation = 0
   private var pendingCommands = 0
   private val commands = Mutex()
@@ -257,9 +249,6 @@ internal class SonosPlayer(
   private val isPrepared
     get() = playbackState != Player.STATE_IDLE
 
-  /**
-   * Loads the item on the speaker from [startPositionMs], playing it if asked, and polls the room.
-   */
   private fun load(startPositionMs: Long) {
     val current = item ?: return
     val url = current.localConfiguration?.uri?.toString() ?: return
@@ -307,8 +296,8 @@ internal class SonosPlayer(
   }
 
   /**
-   * Runs [block] off the main thread after the commands before it. A [fatal] command's failure is
-   * the player's while no later fatal command has been made.
+   * Runs [block] off the main thread after the commands before it, even once [scope] is cancelled.
+   * A [fatal] command's failure is the player's while no later fatal command has been made.
    */
   private fun command(fatal: Boolean = true, block: () -> Unit) {
     val issued = if (fatal) ++generation else generation
@@ -331,7 +320,7 @@ internal class SonosPlayer(
     }
   }
 
-  /** Idle, with the room still held: what played on there still hears pause and stop. */
+  /** Idle, with the room still held, so what plays on there still hears pause and stop. */
   private fun fail(e: PlaybackException) {
     playbackState = Player.STATE_IDLE
     ready = false
@@ -484,7 +473,6 @@ internal class SonosPlayer(
     setPlayWhenReadyFromSpeaker(false)
   }
 
-  /** Whether the track played to its end, as its last position read says. */
   private fun trackEnded(): Boolean {
     if (item?.isRemoteLive != false || durationMs == C.TIME_UNSET) return false
     val reachedMs = readPositionMs + (playingSinceReadAtMs?.let { nowMs() - it } ?: 0)

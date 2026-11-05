@@ -31,7 +31,6 @@ class ArtworkContentProviderTest {
     registry = BrowseArtworkRegistry()
     val context = RuntimeEnvironment.getApplication()
 
-    // Delete on-disk cache so tests don't bleed into each other via cached files.
     File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR).deleteRecursively()
 
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
@@ -44,7 +43,6 @@ class ArtworkContentProviderTest {
   @After
   fun tearDown() {
     CoilArtworkLoaderHolder.get()?.let { CoilArtworkLoaderHolder.clearIf(it) }
-    // Clean up any files written during the test.
     val context = RuntimeEnvironment.getApplication()
     File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR).deleteRecursively()
   }
@@ -64,10 +62,9 @@ class ArtworkContentProviderTest {
     val pfd = provider.openFile(uri(token), "r")
     assertNotNull(pfd)
     val bytes = java.io.FileInputStream(pfd!!.fileDescriptor).readBytes()
-    assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size)) // valid image
+    assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
   }
 
-  // Prove E-mitigation: file FD has a real stat size (non-negative); a pipe FD would return -1.
   @Test
   fun `openFile returns a file-backed seekable FD (statSize non-negative)`() {
     val token = ArtworkUris.tokenFor("https://cdn/seekable.png")
@@ -100,8 +97,6 @@ class ArtworkContentProviderTest {
     assertNull(provider.openFile(uri(token), "r"))
   }
 
-  // Fix 2: artwork dir must not grow beyond MAX_CACHE_FILES after producing many distinct tokens.
-  // We override the cap to 5 so the test stays fast (rather than producing 512+ real files).
   @Test
   fun `openFile prunes cache to MAX_CACHE_FILES after producing excess entries`() {
     val testCap = 5
@@ -109,7 +104,7 @@ class ArtworkContentProviderTest {
     try {
       val context = RuntimeEnvironment.getApplication()
       val artworkDir = File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR)
-      val produce = testCap + 3 // 8 entries total; should be pruned back to 5
+      val produce = testCap + 3
       repeat(produce) { i ->
         val url = "https://cdn/prune-$i.png"
         val token = ArtworkUris.tokenFor(url)
@@ -126,8 +121,6 @@ class ArtworkContentProviderTest {
     }
   }
 
-  // Prove D-fix: two openFile calls for the same token → loadCount == 1.
-  // The second call is served from the on-disk file without re-decoding.
   @Test
   fun `openFile serves second request from disk cache without re-decoding`() {
     var loadCount = 0
@@ -142,13 +135,11 @@ class ArtworkContentProviderTest {
     val token = ArtworkUris.tokenFor("https://cdn/b.png")
     registry.register(token, ResolvedArtwork("https://cdn/b.png", null, isSvg = false))
 
-    // First call — decode + write to disk.
     val pfd1 = provider.openFile(uri(token), "r")
     assertNotNull(pfd1)
     val bytes1 = java.io.FileInputStream(pfd1!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes1, 0, bytes1.size))
 
-    // Second call — must come from disk, no second decode.
     val pfd2 = provider.openFile(uri(token), "r")
     assertNotNull(pfd2)
     val bytes2 = java.io.FileInputStream(pfd2!!.fileDescriptor).readBytes()

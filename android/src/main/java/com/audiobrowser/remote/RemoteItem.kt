@@ -9,9 +9,10 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Util
 
 /**
- * [item] as a receiver loads it, which fetches its URL and artwork itself, without request headers:
- * [url], its MIME type, artwork only over http(s), and a [live] item as a live stream (its live
- * configuration set, a radio station in its metadata) that loads at its live edge.
+ * [item] rewritten for a receiver, which fetches [url] and the artwork itself, without the app's
+ * request headers. Artwork is [artworkUrl], else the item's own, and is dropped unless http(s). A
+ * [live] item gets a live configuration (see [isRemoteLive]) and the radio-station media type, and
+ * loads at its live edge.
  */
 internal fun remoteItemOf(
   item: MediaItem,
@@ -39,9 +40,9 @@ internal fun remoteItemOf(
 }
 
 /**
- * The MIME type a receiver is told for [url]: [declared] when the item has one, else inferred from
- * the URL. A stream without a recognised extension is `audio/mpeg`: a Cast receiver skips an item
- * with no type and sniffs the codec of one it plays.
+ * [declared] when non-null, else HLS or DASH inferred from [url], else the audio type of its
+ * extension, else `audio/mpeg`: a Cast receiver skips an item with no type, and sniffs the codec of
+ * one it plays.
  */
 internal fun remoteMimeType(url: String, declared: String?): String {
   if (declared != null) return declared
@@ -55,10 +56,10 @@ internal fun remoteMimeType(url: String, declared: String?): String {
   } ?: MimeTypes.AUDIO_MPEG
 }
 
-/** Whether a receiver loads [item] as a live stream. */
+/** Whether [remoteItemOf] built this item as live, so a receiver loads it at its live edge. */
 internal val MediaItem.isRemoteLive: Boolean
   get() = liveConfiguration != MediaItem.LiveConfiguration.UNSET
 
-// No speed adjustment at the live edge.
+// Speed fixed at 1: no catching up or falling back at the live edge.
 private val LIVE: MediaItem.LiveConfiguration =
   MediaItem.LiveConfiguration.Builder().setMinPlaybackSpeed(1f).setMaxPlaybackSpeed(1f).build()

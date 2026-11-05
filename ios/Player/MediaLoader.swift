@@ -12,28 +12,26 @@ struct MediaResolvedUrl {
 final class MediaLoader {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaLoader")
 
-  /// Resolves a playback src into a concrete URL + headers/user-agent.
-  /// The `Track` is threaded through so the resolver can invoke the
-  /// consumer-supplied `media.resolve(track)` as the final media layer.
+  /// Resolves a src into a URL and headers; gets the `Track` so it can apply the consumer's
+  /// `media.resolve(track)`.
   private let resolveUrl: (String, Track?) async -> MediaResolvedUrl
 
   init(resolveUrl: @escaping (String, Track?) async -> MediaResolvedUrl) {
     self.resolveUrl = resolveUrl
   }
 
-  /// Internal access so AVPlayerEngine can read it.
   private(set) var asset: AVURLAsset?
 
-  /// Milliseconds; applied to AVPlayerItem's preferredForwardBufferDuration.
+  /// Milliseconds, applied as the item's `preferredForwardBufferDuration`.
   var bufferDuration: Double = 0
 
   enum Event {
     case prepared(AVPlayerItem)
-    /// Loading failed; the retry loop decides whether another attempt could help.
+    /// The retry loop decides whether another attempt could help.
     case failed(Error)
     /// The asset loaded but cannot play.
     case unplayable
-    /// The source is not a URL, so no asset exists.
+    /// The resolved src is not a URL, so no asset exists.
     case invalidSource(String)
     case commonMetadata([AVMetadataItem])
     case chapterMetadata([AVTimedMetadataGroup])
@@ -42,14 +40,17 @@ final class MediaLoader {
 
   var onEvent: (@MainActor (Event) -> Void)?
 
-  /// The in-flight resolve. Readable so tests can await the resolve-then-load
-  /// chain instead of sleeping past it; only this type starts and cancels it.
+  /// Readable so tests can await the resolve-then-load chain; only this type starts and
+  /// cancels it.
   private(set) var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
 
   // MARK: - Public API
 
+  /// Resolves `src` and loads the result, reporting through `onEvent`. Cancels a resolve in
+  /// flight; the previous asset's loads stay current, and can still report, until the new
+  /// resolve loads an asset (an invalid source leaves them current).
   func resolveAndLoad(src: String, track: Track? = nil) {
     mediaResolverTask?.cancel()
     // `self` stays weak across the await: a consumer resolver that never settles must not pin
@@ -67,7 +68,7 @@ final class MediaLoader {
     let pendingAsset = AVURLAsset(url: url, options: options)
     asset = pendingAsset
 
-    // Separate from playable loading to allow playback to start faster
+    // Apart from the playable load, so playback need not wait for metadata.
     metadataLoadTask = Task { [weak self] in
       guard let self else { return }
 
@@ -95,6 +96,7 @@ final class MediaLoader {
           }
         }
       } else {
+        // Without chapters, each format's metadata is one group spanning the whole asset.
         let duration = await (try? pendingAsset.load(.duration)) ?? .zero
         for format in metadataFormats {
           guard isCurrent(pendingAsset) else { return }
@@ -131,15 +133,10 @@ final class MediaLoader {
     }
   }
 
-  /// Whether `candidate` is still the load this loader cares about — checked
-  /// after EVERY await, not just once before a loop.
-  ///
-  /// Cancellation alone is not enough: it only sets a flag, and can't abort a
-  /// load already in flight inside AVFoundation (only `cancelLoading()` does,
-  /// and the track-change path deliberately doesn't call it — the old asset
-  /// still backs the playing item at that point). So a load that lands after
-  /// the track changed would otherwise attribute the old asset's metadata to
-  /// the newly loaded track.
+  /// Whether `candidate` is still the asset this loader loads; check it after every await.
+  /// Cancelling the task cannot abort a load inside AVFoundation (only `cancelLoading()` does,
+  /// and a track change does not call it while the old asset backs the playing item), so a late
+  /// result would otherwise land on the next track.
   private func isCurrent(_ candidate: AVURLAsset) -> Bool {
     !Task.isCancelled && candidate == asset
   }
@@ -156,7 +153,7 @@ final class MediaLoader {
   func clearAsset() {
     guard let currentAsset = asset else { return }
 
-    // Don't call currentAsset.cancelLoading() on main thread - it blocks for 500ms+
+    // `cancelLoading()` blocks for 500 ms or more: keep it off the main thread.
     DispatchQueue.global(qos: .utility).async {
       currentAsset.cancelLoading()
     }
@@ -164,10 +161,9 @@ final class MediaLoader {
     asset = nil
   }
 
-  /// Builds AVURLAsset options, merging any explicit headers with a resolved
-  /// User-Agent. An explicit `User-Agent` in `headers` wins (mirrors the artwork
-  /// path in RequestPipeline). A nil/empty userAgent contributes
-  /// nothing, so "no UA configured" still falls through to AVPlayer's default.
+  /// AVURLAsset options carrying `headers`, plus `userAgent` as `User-Agent` unless `headers`
+  /// sets one (as the artwork path in RequestPipeline does). Nil when there is nothing to send,
+  /// so AVPlayer keeps its default User-Agent.
   nonisolated static func buildAssetOptions(
     headers: [String: String]?,
     userAgent: String?,

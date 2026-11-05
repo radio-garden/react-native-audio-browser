@@ -3,7 +3,6 @@ package com.audiobrowser.sonos
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Deterministic DIDL-Lite metadata for `SetAVTransportURI`. */
 class DidlLiteTest {
 
   private val header =

@@ -24,7 +24,6 @@ struct PlaybackFailureReportedErrorTests {
     #expect(reported(URLError(.notConnectedToInternet)) == .notConnectedToInternet)
   }
 
-  /// Both fallbacks pin that `fallback` is plumbed, not hardcoded.
   @Test func anUnclassifiableErrorIsTheFallback() {
     #expect(reported(URLError(.badURL)) == .playbackFailed)
     #expect(reported(URLError(.badURL), fallback: .failedToLoadKeyValue) == .failedToLoadKeyValue)
@@ -36,7 +35,7 @@ struct PlaybackFailureReportedErrorTests {
     #expect(reported(URLError(code)) == .hostUnreachable)
   }
 
-  /// AVFoundation hands back plain NSErrors in NSURLErrorDomain rather than bridged URLErrors.
+  /// AVFoundation hands back plain NSErrors in NSURLErrorDomain, not bridged URLErrors.
   @Test func anUnbridgedURLDomainErrorIsClassified() {
     #expect(reported(NSError(domain: NSURLErrorDomain, code: URLError.Code.cannotFindHost.rawValue)) == .hostUnreachable)
   }
@@ -50,7 +49,7 @@ struct PlaybackFailureReportedErrorTests {
     #expect(reported(nil) == .playbackFailed)
   }
 
-  /// No response arrived, so a status left in the error log must not outrank the transport error.
+  /// No response arrived, so a status left in the error log belongs to an earlier attempt.
   @Test func aTransportErrorOutranksAStatus() {
     #expect(reported(URLError(.notConnectedToInternet), status: 500) == .notConnectedToInternet)
   }
@@ -59,7 +58,7 @@ struct PlaybackFailureReportedErrorTests {
     #expect(reported(URLError(.badURL), status: 500) == .httpStatus(500))
   }
 
-  /// The server's answer beats "the decoder choked", a symptom of being handed an error page.
+  /// An undecodable body is the symptom of being handed an error page; the status is the cause.
   @Test func aStatusOutranksUnplayableMedia() {
     #expect(reported(avError(.fileFormatNotRecognized), status: 404) == .httpStatus(404))
   }
@@ -72,7 +71,6 @@ struct PlaybackFailureReportedErrorTests {
     #expect(reported(avError(code)) == .trackWasUnplayable)
   }
 
-  /// In-domain is not enough: `AVError.unknown` tells us nothing.
   @Test func anUnrelatedAVErrorIsTheFallback() {
     #expect(reported(avError(.unknown)) == .playbackFailed)
   }
@@ -80,13 +78,13 @@ struct PlaybackFailureReportedErrorTests {
 
 @Suite("PlaybackFailure: retrying")
 struct PlaybackFailureRetryTests {
-  /// The status, read off the error log, outranks the opaque error.
+  /// The status, read off the error log, decides over the opaque CoreMedia error.
   @Test(arguments: [408, 429, 500, 502, 503, 504])
   func aRetryableStatusRetries(status: Int) {
     #expect(retryable(NSError(domain: "CoreMediaErrorDomain", code: -12660), status: status))
   }
 
-  /// A retry cannot conjure content that isn't there, whatever the error says.
+  /// The status decides over a timeout that would retry on its own.
   @Test(arguments: [400, 401, 403, 404, 410, 451])
   func aPermanentStatusDoesNotRetry(status: Int) {
     #expect(!retryable(URLError(.timedOut), status: status))
@@ -100,13 +98,11 @@ struct PlaybackFailureRetryTests {
     #expect(!retryable(URLError(.badURL)))
   }
 
-  /// An opaque CoreMedia failure without a status used to be terminal, so a station that dropped
-  /// mid-song never came back on iOS while Android reconnected.
   @Test func anOpaqueCoreMediaErrorRetries() {
     #expect(retryable(NSError(domain: "CoreMediaErrorDomain", code: -12939)))
   }
 
-  /// `AVError.unknown` wraps transport failures, so it stays retryable.
+  /// `AVError.unknown` is what AVFoundation wraps transport failures in.
   @Test func avErrorUnknownRetries() {
     #expect(retryable(avError(.unknown)))
   }
@@ -119,8 +115,6 @@ struct PlaybackFailureRetryTests {
     #expect(!retryable(avError(code)))
   }
 
-  /// A failure reported as unplayable is never also retried, except a decoder that is only
-  /// temporarily unavailable.
   @Test(arguments: [
     AVError.Code.fileFormatNotRecognized, .failedToParse, .decoderNotFound, .formatUnsupported,
     .contentIsUnavailable,
@@ -134,7 +128,7 @@ struct PlaybackFailureRetryTests {
     #expect(retryable(avError(.decoderTemporarilyUnavailable)))
   }
 
-  /// AVFoundation wraps the real cause, so the chain of underlying errors is walked.
+  /// AVFoundation wraps the real cause in `NSUnderlyingErrorKey`.
   @Test func anUnderlyingURLErrorDecides() {
     let wrappingFatal = NSError(
       domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue,
@@ -148,8 +142,6 @@ struct PlaybackFailureRetryTests {
     #expect(retryable(wrappingTransient))
   }
 
-  /// The report reads the same chain as the retry decision, so a wrapped cause that stops
-  /// retrying is also what is reported.
   @Test func aWrappedCauseIsWhatIsReported() {
     let wrappedUnplayable = NSError(
       domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue,
@@ -171,13 +163,13 @@ struct PlaybackFailureRetryTests {
 
 @Suite("PlaybackFailure.httpStatusCode(fromErrorStatusCodes:)")
 struct ErrorLogStatusTests {
-  /// `errorStatusCode` carries negative OSStatus values in the same field.
+  /// `errorStatusCode` also carries negative OSStatus values.
   @Test func skipsNonHttpStatusCodes() {
     #expect(PlaybackFailure.httpStatusCode(fromErrorStatusCodes: [-12939, -1008]) == nil)
     #expect(PlaybackFailure.httpStatusCode(fromErrorStatusCodes: [-12939, 404]) == 404)
   }
 
-  /// A live stream reconnects; older entries describe earlier attempts.
+  /// The log is oldest first, and a live stream's reconnects leave earlier attempts' statuses in it.
   @Test func prefersTheNewestInRangeStatus() {
     #expect(PlaybackFailure.httpStatusCode(fromErrorStatusCodes: [500, 404]) == 404)
     #expect(PlaybackFailure.httpStatusCode(fromErrorStatusCodes: [404, 500, -12939]) == 500)

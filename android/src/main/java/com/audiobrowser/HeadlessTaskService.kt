@@ -8,12 +8,9 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.jstasks.HeadlessJsTaskConfig
 import timber.log.Timber
 
+/** Runs the JS headless task while [Service] holds its binding; binding starts the task. */
 class HeadlessTaskService : HeadlessJsTaskService() {
 
-  /**
-   * Local binder for service binding. This allows the main AudioBrowserService to bind to this
-   * headless service and control its lifecycle.
-   */
   inner class LocalBinder : Binder() {
     fun getService() = this@HeadlessTaskService
   }
@@ -26,13 +23,12 @@ class HeadlessTaskService : HeadlessJsTaskService() {
       "AudioBrowser",
       Arguments.createMap(),
       0, // No timeout
-      true, // Allow running in foreground
+      true, // Allowed while the app is in the foreground
     )
   }
 
   override fun onBind(intent: Intent): IBinder {
     Timber.d("starting headless task")
-    // Start the headless task when bound
     startTask(getTaskConfig(intent))
     return binder
   }
@@ -49,7 +45,7 @@ class HeadlessTaskService : HeadlessJsTaskService() {
 
   override fun onHeadlessJsTaskFinish(taskId: Int) {
     Timber.d("task finished: $taskId")
-    // Empty implementation prevents service termination
+    // Skips super, which stops the service once no task runs; it lives while Service binds it.
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

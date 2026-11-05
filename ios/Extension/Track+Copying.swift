@@ -3,14 +3,8 @@
 #endif
 
 extension Track {
-  /// Returns a copy of this Track with only the specified fields changed.
-  ///
-  /// Uses double-optional (`T??`) so callers can distinguish between:
-  /// - Omitted argument → keep existing value
-  /// - `.some(nil)` → set field to nil
-  /// - `.some(value)` → set field to value
-  ///
-  /// `title` uses single-optional (`String?`) since it is non-optional on Track.
+  /// Returns a copy with only the given fields changed. For a `T??` argument, omitting it keeps
+  /// the field and `.some(nil)` clears it; `title` is non-optional on Track, so it can't be cleared.
   func copying(
     id: String?? = nil,
     path: String?? = nil,

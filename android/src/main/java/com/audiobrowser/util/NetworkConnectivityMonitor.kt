@@ -12,10 +12,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
-/**
- * Whether the device is online: whether its default network has INTERNET and VALIDATED. Monitoring
- * starts on construction.
- */
+/** Whether the default network has INTERNET and VALIDATED. Monitoring starts on construction. */
 class NetworkConnectivityMonitor(private val context: Context) {
   private val connectivityManager =
     context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -29,10 +26,7 @@ class NetworkConnectivityMonitor(private val context: Context) {
 
   fun getOnline(): Boolean = _isOnline.value
 
-  /**
-   * Observes network state changes and invokes the callback when state changes. The callback is
-   * invoked on the scope's dispatcher.
-   */
+  /** Calls [onStateChanged] with the current state and on each change, on [scope]'s dispatcher. */
   fun observeOnline(scope: CoroutineScope, onStateChanged: (Boolean) -> Unit) {
     isOnline.onEach { isOnline -> onStateChanged(isOnline) }.launchIn(scope)
   }
@@ -40,6 +34,8 @@ class NetworkConnectivityMonitor(private val context: Context) {
   private fun capabilitiesOf(network: Network): NetworkCapabilities? =
     connectivityManager.getNetworkCapabilities(network)
 
+  // INTERNET alone is also true behind a captive portal; VALIDATED means the system reached the
+  // internet through it.
   private fun isOnline(capabilities: NetworkCapabilities?): Boolean =
     capabilities != null &&
       capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
@@ -79,7 +75,7 @@ class NetworkConnectivityMonitor(private val context: Context) {
     }
   }
 
-  /** Stops monitoring and cleans up resources. */
+  /** Stops monitoring. A failed unregister leaves it running, so a later call retries. */
   fun destroy() {
     if (destroyed) {
       return

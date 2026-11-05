@@ -5,18 +5,14 @@ import android.os.Looper
 import android.os.SystemClock
 
 /**
- * Ramps the player volume down over a duration (sleep-timer fade). The gain follows a squared
- * curve: loudness perception is logarithmic, so a linear gain ramp sounds like a late cutoff rather
- * than a fade.
+ * Ramps the player volume to silence over a duration (the sleep timer's fade), on the main looper.
+ * The gain follows a squared curve: a linear gain ramp sounds like a late cutoff, not a fade.
  */
 class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Float) -> Unit) {
   private val handler = Handler(Looper.getMainLooper())
   private var stepRunnable: Runnable? = null
 
-  /**
-   * Volume captured when the fade started; restored after the fade resolves. Non-null from fade
-   * start until cancel/completion, even once the ramp has reached silence.
-   */
+  /** The pre-fade volume; non-null from [start] until [cancel] or [resolve], even at silence. */
   var originalVolume: Float? = null
     private set
 
@@ -24,8 +20,7 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
     get() = originalVolume != null
 
   fun start(durationSeconds: Double) {
-    // If a fade is already running, keep its captured volume as the baseline — the current
-    // (partially faded) volume is not the value to restore.
+    // Restarting mid-fade keeps the first fade's baseline, not the partly faded current volume.
     val baseVolume = originalVolume ?: getVolume()
     cancel(restoreVolume = false)
     originalVolume = baseVolume
@@ -51,9 +46,8 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
   }
 
   /**
-   * Stops the ramp. With [restoreVolume] the pre-fade volume is put back immediately
-   * (cancellation); without it the caller restores after pausing (completion path — restoring first
-   * would let full-volume audio slip out).
+   * Stops the ramp. With [restoreVolume] the pre-fade volume comes back at once; without it the
+   * volume stays where the ramp left it and the pre-fade volume is forgotten.
    */
   fun cancel(restoreVolume: Boolean) {
     stepRunnable?.let { handler.removeCallbacks(it) }
@@ -64,9 +58,8 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
   }
 
   /**
-   * Resolves the fade around a halting action: stops the ramp, runs [halt], then restores the
-   * pre-fade volume — in that order, because restoring before halting would let full-volume audio
-   * slip out. The restore is skipped when no fade was running.
+   * Stops the ramp, runs [halt], then restores the pre-fade volume, in that order so no audio plays
+   * at full volume before the halt. Restores nothing when no fade was running.
    */
   fun resolve(halt: () -> Unit) {
     val preFadeVolume = originalVolume

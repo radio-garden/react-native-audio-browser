@@ -18,8 +18,8 @@ public final class IntentHandlers: NSObject {
 }
 
 /// "Add this to my favorites" and "I like / don't like this": sets the favorite state of the
-/// playing track, through the same path as the CarPlay favorite button. A named item that is
-/// not playing is out of scope.
+/// playing track, as the CarPlay favorite button does. A named item that is not playing is
+/// out of scope.
 final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateMediaAffinityIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "FavoriteIntentHandler")
 
@@ -59,7 +59,7 @@ final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateM
     completion([.success(with: Self.spokenItem(intent.mediaSearch))])
   }
 
-  /// One flat favorites collection: always the user's library.
+  // Favorites are one flat collection: always the user's library.
   @objc(resolveMediaDestinationForAddMedia:withCompletion:)
   func resolveMediaDestination(
     for _: INAddMediaIntent,
@@ -81,8 +81,6 @@ final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateM
     return INMediaItem(identifier: name, title: name, type: .unknown, artwork: nil)
   }
 
-  /// False when nothing is playing, the playing track has no identity to favorite, or the
-  /// change throws.
   @MainActor
   private static func favoriteCurrentTrack(_ favorited: Bool) -> Bool {
     guard let browser = HybridAudioBrowser.shared else { return false }

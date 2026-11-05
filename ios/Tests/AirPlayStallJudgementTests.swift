@@ -4,9 +4,9 @@ import Testing
 
 @Suite("AirPlayStallJudgement")
 struct AirPlayStallJudgementTests {
-  /// The exact transition Pocket Casts recovers from: over AirPlay, AVPlayer
-  /// drops .waitingToPlayAtSpecifiedRate(.noItemToPlay) → .paused while still
-  /// meant to play. That, and only that, should nudge.
+  /// The defaults are the one transition that nudges: over AirPlay, AVPlayer drops
+  /// from .waitingToPlayAtSpecifiedRate(.noItemToPlay) to .paused while still meant
+  /// to play. Each test below breaks one condition of it.
   private func judge(
     previous: PlayerTimeControlStatus? = .waitingToPlayAtSpecifiedRate,
     current: PlayerTimeControlStatus = .paused,
@@ -46,7 +46,7 @@ struct AirPlayStallJudgementTests {
   }
 
   @Test func reasonNotNoItemToPlay_doesNotNudge() {
-    // A normal stall (.toMinimizeStalls etc.) landing in paused isn't the bug.
+    // An ordinary stall (.toMinimizeStalls etc.) that ends in .paused is not the AirPlay drop.
     #expect(!judge(reasonWasNoItemToPlay: false).shouldNudge)
   }
 }

@@ -1,26 +1,18 @@
 import UIKit
 
 extension UIApplication {
-  /// The scene showing the app's own UI: the foreground-active one, else any
-  /// connected window scene. Nil when the app has no UI scene at all (running
-  /// headless for CarPlay), which callers must handle rather than assume.
-  ///
-  /// Replaces the deprecated `UIScreen.main` / `keyWindow` idioms — and exists
-  /// once because the walk was previously written out at each use, so the two
-  /// copies had already drifted apart.
+  /// The foreground-active window scene, else any connected window scene. Nil when the app has
+  /// no UI scene at all (running headless for CarPlay).
   var activeWindowScene: UIWindowScene? {
     let scenes = connectedScenes.compactMap { $0 as? UIWindowScene }
     return scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
   }
 }
 
-/// The scale to rasterise at for the app's own screen.
-///
-/// `UITraitCollection.current` rather than the deprecated `UIScreen.main.scale`
-/// (also unavailable on visionOS, which the podspec targets): on the main actor
-/// it already reflects the environment being rendered for. CarPlay surfaces do
-/// NOT use this — they rasterise at `carTraitCollection.displayScale`, the car
-/// screen's own scale.
+/// The scale to rasterise at for the app's own screen. CarPlay surfaces use
+/// `carTraitCollection.displayScale` instead.
+// `UITraitCollection.current` reflects the environment being rendered for only on the main actor.
+// Not `UIScreen.main.scale`: deprecated, and unavailable on visionOS, which the podspec targets.
 @MainActor
 var appDisplayScale: CGFloat {
   UITraitCollection.current.displayScale

@@ -14,11 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Tests browser/BrowserUrlResolution.kt — media/artwork URL resolution owned by BrowserManager (the
- * Kotlin analog of iOS RequestPipeline.swift). Static configs only (Nitro Promises are JNI-backed;
- * see file-top note in BrowserManagerLayerResolutionTest).
- */
+// Static configs only: a Nitro Promise is JNI-backed and cannot be built in a unit test.
 class BrowserUrlResolutionTest {
 
   private lateinit var bm: BrowserManager
@@ -69,8 +65,8 @@ class BrowserUrlResolutionTest {
       BrowserConfig(
         media =
           mediaConfig(
-            // Records the track and stops there: a Nitro Promise cannot be built off-device.
             resolveSync = { track ->
+              // Records the track and stops: a Nitro Promise cannot be returned off-device.
               resolvedFor.add(track)
               throw IllegalStateException("recorded")
             }
@@ -125,8 +121,6 @@ class BrowserUrlResolutionTest {
         request = transformableConfig(baseUrl = "https://api.example.com"),
         artwork = artworkConfig(path = "/artwork/{id}"),
       )
-    // The config still runs (no blanket skip); the token stays literal so the resulting request
-    // 404s with a self-describing URL.
     val source = bm.resolveArtworkUrl(track(artwork = null, id = null))
     assertEquals("https://api.example.com/artwork/{id}", source?.uri)
   }
@@ -181,7 +175,7 @@ class BrowserUrlResolutionTest {
         artwork = artworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
       )
     val t = track(artwork = "/art/1.png")
-    val browseTime = bm.resolveArtworkUrl(t) // no size at browse time
+    val browseTime = bm.resolveArtworkUrl(t)
     bm.artworkResolutions.register(browseTime!!.uri, t, null)
 
     val displayTime = bm.displayArtworkSource(browseTime.uri, ImageContext(512.0, 512.0))
@@ -198,10 +192,6 @@ class BrowserUrlResolutionTest {
   @Test
   fun `displayArtworkSource entries without a per-route config use the current global config`() =
     runTest {
-      // Register under config A (entry stores perRouteConfig = null for the global
-      // fallback) and replace the global config: display-time must resolve through
-      // the NEW config, not a pinned old one. Note the config setter clears the
-      // registry, so re-register after the swap as a browse under config B would.
       bm.config =
         BrowserConfig(
           request = transformableConfig(baseUrl = "https://api.example.com"),
@@ -215,6 +205,7 @@ class BrowserUrlResolutionTest {
           request = transformableConfig(baseUrl = "https://api.example.com"),
           artwork = artworkConfig(query = mapOf("sig" to "new")),
         )
+      // Setting the config clears the registry, so register after the swap, as a browse would.
       bm.artworkResolutions.register(browseTime.uri, t, null)
 
       val displayTime = bm.displayArtworkSource(browseTime.uri, null)

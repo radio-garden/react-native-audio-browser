@@ -2,7 +2,7 @@ import Foundation
 import Network
 import os.log
 
-/// The device's connectivity, from NWPathMonitor; `changed` emits each change on the main thread.
+/// The device's connectivity from NWPathMonitor; `changed` emits each change on the main thread.
 final class NetworkMonitor: @unchecked Sendable {
   // MARK: - Properties
 
@@ -10,7 +10,7 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  /// Guards `_isOnline` only; never held across an emit.
+  // Guards `_isOnline` only; never held across an emit.
   private let lock = NSLock()
   private var _isOnline = false
 
@@ -42,9 +42,8 @@ final class NetworkMonitor: @unchecked Sendable {
   init() {
     monitor = NWPathMonitor()
 
-    // Seeded before `start`: a write after it races the handler's, and would clobber a real
-    // update with a `currentPath` the monitor hasn't finished evaluating. The handler, which
-    // fires shortly after `start`, is the last writer.
+    // Seeded before `start`: written after it, a `currentPath` the monitor hasn't finished
+    // evaluating could clobber the handler's real update. The handler stays the last writer.
     let initialStatus = monitor.currentPath.status == .satisfied
     logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
     _isOnline = initialStatus
@@ -56,7 +55,6 @@ final class NetworkMonitor: @unchecked Sendable {
     monitor.start(queue: queue)
   }
 
-  /// Stops monitoring and cleans up resources.
   func destroy() {
     monitor.cancel()
   }

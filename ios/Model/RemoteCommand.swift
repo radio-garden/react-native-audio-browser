@@ -1,7 +1,7 @@
 import Foundation
 
-/// A system remote command (lock screen, Control Center, CarPlay, headset). The skip intervals
-/// and the playback rates the commands offer go to `RemoteCommandController.enable` beside them.
+/// A system remote command (lock screen, Control Center, CarPlay, headset). Skip intervals and
+/// playback rates are passed to `RemoteCommandController.enable` beside the commands.
 enum RemoteCommand: CaseIterable, Hashable {
   case play
   case pause

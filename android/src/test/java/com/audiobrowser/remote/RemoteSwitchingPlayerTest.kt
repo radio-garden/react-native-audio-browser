@@ -30,7 +30,6 @@ class RemoteSwitchingPlayerTest {
   private val live = mutableSetOf<String>()
   private val unresolvable = mutableSetOf<String>()
 
-  /** Holds a resolution until completed, for the steps that must wait on one. */
   private var gate: CompletableDeferred<Unit>? = null
 
   private val player =

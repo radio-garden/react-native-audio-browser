@@ -8,9 +8,8 @@ public enum TrackPlayerError: Error {
     case failedToLoadKeyValue
     case invalidSourceUrl(String)
     case notConnectedToInternet
-    /// DNS, connect, timeout or a dropped connection — we never reached the host.
+    /// A transport failure: DNS, connect, TLS, timeout, or a dropped connection, which can come mid-stream after audio has played.
     case hostUnreachable
-    /// The server answered with a non-2xx status.
     case httpStatus(Int)
     case playbackFailed
     case trackWasUnplayable
@@ -21,7 +20,6 @@ public enum TrackPlayerError: Error {
     case noCurrentItem
     case invalidIndex(index: Int, message: String)
     case empty
-    /// A track with neither `src` nor `path`, which no queue can hold.
     case invalidTrack(title: String)
   }
 }
@@ -67,8 +65,7 @@ extension TrackPlayerError.QueueError: LocalizedError {
 // MARK: - Cross-platform Classification
 
 public extension TrackPlayerError.PlaybackError {
-  /// The platform-specific identifier, for diagnostics only. Consumers branch
-  /// on `kind`; this is what they log.
+  /// For diagnostics and telemetry only; consumers branch on `kind`.
   var code: String {
     switch self {
     case .failedToLoadKeyValue: "failed-to-load"
@@ -82,23 +79,19 @@ public extension TrackPlayerError.PlaybackError {
     }
   }
 
-  /// The normalized classification handed to JS. Android derives the same set
-  /// from its ExoPlayer codes, so app-side copy can switch on this alone.
+  /// Android maps its ExoPlayer errors onto the same kinds; keep the two in step.
   var kind: PlaybackErrorKind {
     switch self {
     case .notConnectedToInternet: .offline
     case .hostUnreachable: .unreachable
     case let .httpStatus(status): TrackPlayerError.PlaybackError.kind(forHttpStatus: status)
-    // A missing or malformed source URL is a broken stream from the listener's
-    // side — same outcome as an undecodable one.
+    // To the listener a missing or malformed URL is as broken as an undecodable stream.
     case .invalidSourceUrl, .trackWasUnplayable: .unplayable
     case .playbackStalled: .stalled
-    // Context fallbacks: the underlying error carried nothing we could classify.
     case .failedToLoadKeyValue, .playbackFailed: .unknown
     }
   }
 
-  /// The HTTP status behind this error, when it came from a server response.
   var statusCode: Int? {
     if case let .httpStatus(status) = self { return status }
     return nil
@@ -108,8 +101,7 @@ public extension TrackPlayerError.PlaybackError {
     switch status {
     case 404, 410: .notFound
     case 500 ... 599: .serverError
-    // Every other 4xx is the server refusing us — auth, geo-blocking, a
-    // rate limit. All of them mean "you can't have this stream", not "retry".
+    // Auth, geo-blocking, rate limits: the stream is refused, not worth retrying.
     case 400 ... 499: .rejected
     default: .unknown
     }
@@ -118,17 +110,12 @@ public extension TrackPlayerError.PlaybackError {
 
 // MARK: - Nitro PlaybackError Conversion
 
-// Internal, not public: the stub `PlaybackError` struct is internal, and every
-// caller of this lives in the module.
 extension TrackPlayerError.PlaybackError {
-  /// Converts to Nitro PlaybackError for JS callbacks.
+  /// `retrying` marks an error the retry loop is still working on; a terminal
+  /// error carries nil, not false.
   ///
-  /// Deliberately not behind `#if canImport(NitroModules)`: the stub struct in
-  /// `NitroTypeStubs` mirrors the generated one field for field, so this single
-  /// definition compiles in both worlds and the tests exercise the shipped
-  /// converter rather than a copy of it.
-  /// `retrying` marks an advisory error the retry loop is still working on
-  /// (surfaced with a non-terminal playback state); terminal errors leave it nil.
+  /// Not behind `#if canImport(NitroModules)`: the stub in `NitroTypeStubs` mirrors
+  /// the generated struct, so the tests exercise this converter.
   func toNitroError(retrying: Bool = false) -> PlaybackError {
     PlaybackError(
       kind: kind,

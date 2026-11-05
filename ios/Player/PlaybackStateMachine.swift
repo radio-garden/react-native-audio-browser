@@ -1,8 +1,7 @@
-/// Determines the next playback state for a given event, or `nil` to suppress the transition.
+/// The state an event leads to, or nil to leave the state as it is.
 ///
-/// Guards here are **state-related** (e.g., "only from .loading"). Context-related
-/// guards (e.g., `asset != nil`, `nearTrackEnd`, `!playWhenReady`) live at the call
-/// site and decide whether to fire the event at all.
+/// Guards here depend only on the current state. Guards on context (`asset != nil`,
+/// `nearTrackEnd`, `!playWhenReady`) live at the call site, which decides whether to send the event.
 func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> PlaybackState? {
   switch event {
   case .stopped: return .stopped
@@ -19,16 +18,14 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case let .avPlayerPaused(hasAsset):
     guard current != .stopped else { return nil }
     if !hasAsset { return PlaybackState.none }
-    // .error and .ended own their state against stray pause observations —
-    // reachable from .ended since the natural-end intent clear opens the
-    // call site's `!playWhenReady` gate.
+    // .error and .ended hold against stray pause observations; .ended sees them because the
+    // natural-end intent clear opens the call site's `!playWhenReady` gate.
     guard current != .error, current != .ended else { return nil }
     return .paused
   case .bufferingSufficient:
-    // Terminal states must not drift back to .ready on a buffer refill: .ended
-    // would restart the completed track (playWhenReady is still true), and
-    // .stopped/.error would skip the reload-on-play path, which only triggers
-    // from those states. Leaving them requires an explicit load or reload.
+    // A buffer refill must not move a terminal state back to .ready: .ended would restart the
+    // finished track (playWhenReady is still true), and .stopped/.error would skip reload-on-play,
+    // which starts only from those states. Leaving them takes an explicit load or reload.
     guard current != .playing, current != .ended, current != .stopped, current != .error
     else { return nil }
     return .ready

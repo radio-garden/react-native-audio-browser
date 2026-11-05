@@ -1,8 +1,7 @@
 import Foundation
 
-/// Keeps the player's resumable state in UserDefaults so a cold-start resume can restore the
-/// last session without the JS runtime. Saves on demand and, while the play intent is active,
-/// every `saveInterval`. Swift counterpart of Android's `PlaybackStateStore.kt`.
+/// Keeps the resumable state in UserDefaults so a cold-start resume can restore the last session
+/// without the JS runtime. Swift counterpart of Android's `PlaybackStateStore.kt`.
 @MainActor
 final class PlaybackPersistence {
   static let standardDefaults = UserDefaults(suiteName: "com.audiobrowser.playback") ?? .standard
@@ -34,7 +33,7 @@ final class PlaybackPersistence {
     return try? JSONDecoder().decode(PersistedPlaybackState.self, from: data)
   }
 
-  /// Saves periodically while `active`, and once when it turns false.
+  /// Saves every `saveInterval` while `active`, and once when it turns false.
   func playIntentDidChange(active: Bool) {
     periodicSave?.cancel()
     periodicSave = nil
@@ -51,8 +50,8 @@ final class PlaybackPersistence {
     }
   }
 
-  /// The state a resume restores. A live stream keeps no position, and an ended track resumes
-  /// from 0: at .ended the position is the duration, which would re-end at once (Android twin:
+  /// The state a resume restores. A live stream keeps no position, and an ended track saves 0:
+  /// at .ended the position is the duration, which would end again at once (Android:
   /// savePositionZero).
   static func snapshot(
     of track: Track,

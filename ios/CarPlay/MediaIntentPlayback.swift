@@ -5,19 +5,20 @@ import os.log
 private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaIntentPlayback")
 
 /// Plays a Siri play-media intent through the single voice play funnel (ADR 0002): resume, or
-/// search → queue → play, then surface Now Playing.
+/// search, queue and play, then ask for Now Playing.
 enum MediaIntentPlayback {
-  /// Callable before the bridge exists: it waits, within the assistant's budget, for the player
-  /// and a configured browser, which come up once React Native boots. Each await may outlive the
-  /// bridge or its player (a JS reload or a second setup replaces them), so the player is looked
-  /// up again after one, and the intent fails once the bridge is gone.
+  /// Callable before React Native has booted: waits, within the assistant's time budget, for the
+  /// player and a configured browser. A JS reload or a second setup can replace the bridge during
+  /// any await, so the player is looked up again after one and the intent fails once the bridge is
+  /// gone. Returns whether playback was requested; true does not mean audio has started, and a
+  /// failed cold resume still returns true.
   @MainActor
   static func play(criteria: MediaIntentCriteria) async -> Bool {
     guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
       logger.error("browser/player not ready within budget")
       return false
     }
-    // Resume is not gated: the gate blocks finding content, never hearing the active or
+    // Resume is not gated: the gate blocks finding content, never hearing the current or
     // persisted track.
     if criteria.isResume {
       if player.currentTrack != nil {
@@ -36,8 +37,8 @@ enum MediaIntentPlayback {
       return true
     }
 
-    // The API still text-searches `q`; the structured fields are forward-compatible, as on
-    // Android.
+    // The search API still text-searches `q` only; the structured fields are forward-compatible,
+    // as on Android.
     let params = SearchParams(
       mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
       query: criteria.query,

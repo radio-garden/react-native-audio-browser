@@ -17,10 +17,8 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class TransformingDataSourceTest {
 
-  // Records the URL each upstream DataSource is actually opened with.
   private val openedUrls = mutableListOf<String>()
 
-  // When set, the next upstream open() records its URL and then throws (simulating a failed load).
   private var failNextOpen = false
 
   private inner class RecordingDataSource(
@@ -82,21 +80,15 @@ class TransformingDataSourceTest {
 
   @Test
   fun `a failed media-url load re-resolves the url on the retry (fresh token)`() {
-    // A consumer whose transform mints a short-lived token: each resolve yields a new token. If the
-    // media-URL load fails (e.g. the token expired during a network outage), ExoPlayer's retry must
-    // re-resolve to a fresh token rather than replay the stale cached URL.
     var resolves = 0
     val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
     val spec = DataSpec("/listen/abc/channel.mp3".toUri())
 
-    // First open records token=1, then fails (simulating an expired URL).
     failNextOpen = true
     try {
       factory.createDataSource().open(spec)
     } catch (_: IOException) {}
-    // The retry re-opens the same media URL — it must re-resolve to a fresh token.
     factory.createDataSource().open(spec)
-    // A further re-open without a failure reuses token=2 (the flag is single-shot).
     factory.createDataSource().open(spec)
 
     assertEquals(3, openedUrls.size)
@@ -113,18 +105,15 @@ class TransformingDataSourceTest {
 
   @Test
   fun `a failed segment load does not trigger a media re-resolve`() {
-    // A segment/key failure (a different, already-absolute URL) must not refresh the media URL: the
-    // media URL is fine, only a segment hiccuped.
     var resolves = 0
     val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
 
     val mediaUrl = "/listen/abc/playlist.m3u8".toUri()
-    factory.createDataSource().open(DataSpec(mediaUrl)) // media -> token=1
+    factory.createDataSource().open(DataSpec(mediaUrl))
     failNextOpen = true
     try {
       factory.createDataSource().open(DataSpec("https://cdn.example.com/seg-1.ts".toUri()))
     } catch (_: IOException) {}
-    // Re-open the media URL: it must still reuse token=1 (the segment failure left it valid).
     factory.createDataSource().open(DataSpec(mediaUrl))
 
     assertTrue(
@@ -135,8 +124,6 @@ class TransformingDataSourceTest {
 
   @Test
   fun `re-open of the media url reuses the resolved url, not the relative original`() {
-    // radio.garden's MediaItem URI is a relative path; the transform resolves it to an absolute
-    // URL.
     val relative = "/listen/abc/channel.mp3"
     val factory =
       TransformingDataSource.Factory(upstreamFactory) {
@@ -144,13 +131,11 @@ class TransformingDataSourceTest {
       }
     val spec = DataSpec(relative.toUri())
 
-    // First open resolves + caches; a re-open (e.g. a retry after a network drop) opens again.
     factory.createDataSource().open(spec)
     factory.createDataSource().open(spec)
 
     assertEquals(2, openedUrls.size)
-    // The regression: the re-open must NOT fall back to the schemeless relative path (which would
-    // route to FileDataSource -> FileNotFoundException). Both opens hit the resolved absolute URL.
+    // A schemeless URL would reach the file data source and fail.
     assertTrue(
       "expected absolute urls, got $openedUrls",
       openedUrls.all { it.startsWith("https://") },
@@ -160,10 +145,6 @@ class TransformingDataSourceTest {
 
   @Test
   fun `response headers are forwarded from the upstream source`() {
-    // ICY (Shoutcast) song metadata only works if ExoPlayer's ProgressiveMediaPeriod can read the
-    // `icy-metaint` response header back through the data-source chain. A transparent wrapper that
-    // swallows getResponseHeaders() (returning the DataSource default empty map) silently disables
-    // ICY metadata — playback still works, but onMetadata never fires.
     val icyHeaders = mapOf("icy-metaint" to listOf("16000"), "icy-name" to listOf("Example FM"))
     val factory =
       TransformingDataSource.Factory({ RecordingDataSource(icyHeaders) }) {
@@ -182,9 +163,7 @@ class TransformingDataSourceTest {
         config("https://cdn.example.com", "/playlist.m3u8")
       }
 
-    // Resolve the (relative) media/playlist URL first…
     factory.createDataSource().open(DataSpec("/listen/abc/playlist.m3u8".toUri()))
-    // …then an already-absolute segment URL must pass through untouched (only headers are reused).
     val segment = "https://cdn.example.com/segment-1.ts"
     factory.createDataSource().open(DataSpec(segment.toUri()))
 

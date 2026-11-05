@@ -24,8 +24,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-// Robolectric: startForeground/stopForeground/stopSelf only exist under the framework, and
-// ShadowService records each.
+// Robolectric: ShadowService records startForeground, stopForeground and stopSelf.
 @OptIn(UnstableApi::class)
 @RunWith(RobolectricTestRunner::class)
 class ForegroundStartTest {

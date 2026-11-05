@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Parsing UPnP SOAP responses: transport state, volume, and faults. */
 class SoapResponseParserTest {
 
   private fun transportInfo(state: String): String =

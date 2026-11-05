@@ -22,10 +22,10 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * Runs [play] for a start sent with `startForegroundService`, holding the service in the foreground
- * meanwhile ([holdForeground]). When [play] returns false the placeholder is released, and the
- * service stops unless [hasMedia] says the player still has something to keep it for. [play]
- * reports failure by returning false, not by throwing.
+ * Runs [play] for a start sent with `startForegroundService`, with the service held in the
+ * foreground meanwhile ([holdForeground]). [play] reports failure by returning false, not by
+ * throwing; then the placeholder is released, and the service stops unless [hasMedia] says the
+ * player still has something to keep it for.
  */
 internal fun <S> S.playInForeground(
   scope: CoroutineScope,
@@ -42,14 +42,13 @@ internal fun <S> S.playInForeground(
 }
 
 /**
- * Satisfies a `startForegroundService` start, which Android kills the app for unless the service
- * calls `startForeground()` within seconds, by going foreground at once under Media3's notification
- * id and channel (valid while the library sets no notification provider of its own): with the media
- * notification already showing there, else with a placeholder. Media3's next notification update
- * replaces or removes either; [releasePlaceholder] removes the placeholder when no update will
- * come. Holds nothing below API 26, when the service is already foreground (below API 29, where
- * that can't be read, it holds Media3's notification again), or when Android refuses the start,
- * which is reported to [MediaSessionService.Listener.onForegroundServiceStartNotAllowedException].
+ * Calls `startForeground()` at once, which Android requires within seconds of a
+ * `startForegroundService` start or it kills the app. Uses Media3's notification id and channel
+ * (valid while the library sets no notification provider of its own): the media notification if it
+ * already shows, else a placeholder, which Media3's next update replaces or removes. Holds nothing
+ * below API 26 or when already foreground; below API 29, where that can't be read, it holds
+ * Media3's notification again. A start Android refuses goes to
+ * [MediaSessionService.Listener.onForegroundServiceStartNotAllowedException].
  */
 internal fun <S> S.holdForeground()
   where S : MediaSessionService, S : MediaSessionService.Listener {
@@ -66,8 +65,7 @@ internal fun <S> S.holdForeground()
 /**
  * Removes the placeholder [holdForeground] posted, if it is still up, and has Media3 post the
  * notification the player warrants. For a start whose play request changed nothing in the player:
- * Media3 tracks the session only once a controller has connected, so its update alone may never
- * come.
+ * Media3 tracks the session only once a controller has connected, so its own update may never come.
  */
 @OptIn(UnstableApi::class)
 internal fun MediaSessionService.releasePlaceholder() {
@@ -77,10 +75,7 @@ internal fun MediaSessionService.releasePlaceholder() {
   triggerNotificationUpdate()
 }
 
-/**
- * Whether [this] is a press `MediaButtonReceiver.onReceive` starts the service in the foreground
- * for.
- */
+/** Whether this is a press `MediaButtonReceiver` starts the service in the foreground for. */
 internal fun Intent.isForegroundStartKey(): Boolean =
   action == Intent.ACTION_MEDIA_BUTTON &&
     IntentCompat.getParcelableExtra(this, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)?.keyCode in

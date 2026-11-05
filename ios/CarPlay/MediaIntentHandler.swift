@@ -28,9 +28,9 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     }
   }
 
-  /// Collapse `INMediaItemType` to a `SearchMode` string (the container
-  /// vertical), or nil for filter-only / unclassified types. `genre`/`artist`/
-  /// `album` are filters, not verticals — they yield no mode.
+  /// The `SearchMode` name of a container vertical; a name `SearchMode(fromString:)` does not
+  /// know silently drops the mode. Nil for unclassified types and for album, artist and genre,
+  /// which are filters, not verticals.
   private static func mediaTypeMode(_ type: INMediaItemType) -> String? {
     switch type {
     case .station, .radioStation, .algorithmicRadioStation, .musicStation: "station"
@@ -44,12 +44,10 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     case .movie: "movie"
     case .tvShow: "tv-show"
     case .tvShowEpisode: "tv-show-episode"
-    default: nil // album/artist/genre/unknown
+    default: nil
     }
   }
 
-  /// Map the SiriKit reference to the pure criteria enum. `.currentlyPlaying`
-  /// routes to native resume; `.my` to the consumer; everything else is unknown.
   private static func reference(_ ref: INMediaReference) -> MediaIntentCriteria.Reference {
     switch ref {
     case .currentlyPlaying: .currentlyPlaying
@@ -58,7 +56,6 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     }
   }
 
-  /// Host app's display name, used to recognise "Play «app»" as a resume.
   private static func hostAppName() -> String? {
     let info = Bundle.main.infoDictionary
     return (info?["CFBundleDisplayName"] as? String) ?? (info?["CFBundleName"] as? String)

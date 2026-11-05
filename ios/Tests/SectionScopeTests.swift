@@ -14,9 +14,6 @@ struct SectionScopeTests {
     scoped.map { $0.section.children.map(\.src) }
   }
 
-  // Two sections sharing an identity — the duplicate-heavy shape the flat
-  // model had to disambiguate by precedence; sections + the stamped flat
-  // index make it exact.
   private var sections: [Section] {
     [
       section("First", [track("dup"), track("x")]),
@@ -31,7 +28,7 @@ struct SectionScopeTests {
   }
 
   @Test func flatIndexPinsTheTappedSection() {
-    // Flat index 3 = second section, offset 1.
+    // Flat index 3 is the second section's offset 1.
     let scoped = SectionScope.scoped(in: sections, containing: "dup", tappedIndex: 3)
     #expect(srcs(scoped) == ["y", "dup", "z"])
     #expect(scoped?.tappedOffset == 1)
@@ -44,8 +41,7 @@ struct SectionScopeTests {
   }
 
   @Test func staleIndexFallsBackToTheFirstIdentityMatch() {
-    // The child at the stamped index no longer carries the tapped identity
-    // (the list shifted) — resolution ignores the index and pins nothing.
+    // Flat index 1 holds "x", not "dup".
     let scoped = SectionScope.scoped(in: sections, containing: "dup", tappedIndex: 1)
     #expect(srcs(scoped) == ["dup", "x"])
     #expect(scoped?.tappedOffset == nil)
@@ -123,6 +119,7 @@ struct SectionScopeTests {
       section("First", [track("a"), Track(id: "off", src: "off", disabled: true), Track(path: "/browse"), track("b")]),
       section("Second", [track("c")]),
     ]
+    // The flat index counts the unplayable children too.
     let result = queue(page, "/p?__trackId=b&__index=3")
     #expect(result?.0 == ["a", "b"])
     #expect(result?.1 == 1)

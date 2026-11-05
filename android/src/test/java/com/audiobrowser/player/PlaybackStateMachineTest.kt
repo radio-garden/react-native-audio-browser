@@ -5,11 +5,6 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Truth table for the playback state transitions — the Android analog of iOS's
- * `nextPlaybackState(from:on:)`, previously inline branching in PlayerListener.onEvents. Guards
- * here are state-related; context guards arrive as event fields captured at the call site.
- */
 class PlaybackStateMachineTest {
 
   private fun on(
@@ -35,8 +30,6 @@ class PlaybackStateMachineTest {
 
   @Test
   fun `ready is emitted only while paused, suppressed while playing`() {
-    // Paused (shouldPlayWhenReady=false): READY is the settled signal consumers need to
-    // clear a spinner from a buffer that finished while paused (mono#3325).
     assertEquals(
       listOf(PlaybackState.READY),
       on(
@@ -48,8 +41,6 @@ class PlaybackStateMachineTest {
         from = PlaybackState.BUFFERING,
       ),
     )
-    // Playing (shouldPlayWhenReady=true): READY is a transient before PLAYING — suppressed
-    // so consumers don't flash a settled/non-loading state mid-startup.
     assertEquals(
       emptyList<PlaybackState>(),
       on(
@@ -72,8 +63,6 @@ class PlaybackStateMachineTest {
         shouldPlayWhenReady = false,
       )
     assertEquals(listOf(PlaybackState.NONE), on(idle, from = PlaybackState.PLAYING))
-    // A terminal error idles ExoPlayer; transitioning to NONE would clear the ERROR state the
-    // session is rendering. Same for an explicit stop.
     assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.ERROR))
     assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.STOPPED))
   }
@@ -90,7 +79,6 @@ class PlaybackStateMachineTest {
         )
       ),
     )
-    // An emptied queue also reports STATE_ENDED; that is "nothing loaded", not "played to end".
     assertEquals(
       listOf(PlaybackState.NONE),
       on(
@@ -105,9 +93,6 @@ class PlaybackStateMachineTest {
 
   @Test
   fun `recovery out of error is allowed`() {
-    // The asymmetry that makes the session-error mask work: IDLE is suppressed from ERROR (the
-    // error keeps rendering), but a real recovery (re-prepare reaching BUFFERING/READY) must
-    // transition out of ERROR.
     assertEquals(
       listOf(PlaybackState.BUFFERING),
       on(
@@ -119,7 +104,6 @@ class PlaybackStateMachineTest {
         from = PlaybackState.ERROR,
       ),
     )
-    // A paused recovery reaching READY (shouldPlayWhenReady=false) also leaves ERROR.
     assertEquals(
       listOf(PlaybackState.READY),
       on(
@@ -155,8 +139,6 @@ class PlaybackStateMachineTest {
       listOf(PlaybackState.LOADING),
       on(PlaybackEvent.MediaItemTransition(hasTrack = true, isPlaying = false)),
     )
-    // Already audibly playing (gapless auto-advance): run the full burst so consumers see the
-    // canonical sequence rather than staying stuck on LOADING.
     assertEquals(
       listOf(PlaybackState.LOADING, PlaybackState.READY, PlaybackState.PLAYING),
       on(PlaybackEvent.MediaItemTransition(hasTrack = true, isPlaying = true)),
@@ -182,8 +164,6 @@ class PlaybackStateMachineTest {
       )
     assertEquals(listOf(PlaybackState.PAUSED), on(paused, from = PlaybackState.PLAYING))
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.STOPPED))
-    // ENDED is terminal the same way: dropping the intent after a natural end (the
-    // clear at ENDED, or a dead toggle press) must not re-report the state as PAUSED.
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.ENDED))
     assertEquals(
       emptyList<PlaybackState>(),

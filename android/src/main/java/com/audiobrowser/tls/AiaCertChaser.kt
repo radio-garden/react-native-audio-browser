@@ -4,64 +4,52 @@ import java.security.cert.X509Certificate
 import javax.security.auth.x500.X500Principal
 
 /**
- * Fills in missing intermediate CA certificates by following the Authority Information Access (AIA)
- * "CA Issuers" pointer in a certificate, the way Apple's Secure Transport does automatically but
- * Android's default trust manager does not.
- *
- * Many servers (a common misconfiguration) present only their leaf certificate and omit the
- * intermediate(s) needed to chain up to a trusted root. Browsers and iOS fetch the missing
- * intermediate from the URL in the leaf's AIA extension; Android's `X509TrustManager` validates
- * only what the server sent, so such streams fail with "Trust anchor for certification path not
- * found".
+ * Fills in intermediate certificates a server failed to send, by following each certificate's
+ * Authority Information Access (AIA) "CA Issuers" URL, as browsers and iOS do and Android's default
+ * trust manager does not.
  */
 object AiaCertChaser {
-  /** How many distinct CA-Issuers URLs from one certificate are worth trying. */
+  /**
+   * A certificate's AIA extension is written by the server that failed validation and may list
+   * hundreds of URLs, each a blocking connect on the handshake thread. Real CAs publish one.
+   */
   const val MAX_URLS_PER_CERT = 3
 
   /**
-   * Wall-clock ceiling on one chain-completion attempt, across all of its fetches. The deadline it
-   * implies is handed to every fetch, whose connects, handshakes, reads and redirects are all
-   * clipped to the time remaining — so the whole walk ends at the deadline. The one thing it cannot
-   * cut short is a DNS lookup already in flight (Java exposes no timeout for resolution), so the
-   * true bound is this budget plus at most one lookup's duration.
+   * Ceiling on one whole chain completion, across all its fetches. A DNS lookup already in flight
+   * cannot be cut short (Java has no resolver timeout), so the real bound is this plus one lookup.
    */
   const val MAX_CHASE_MILLIS = 20_000L
 
-  /** Authority Information Access extension. */
   private const val AIA_OID = "1.3.6.1.5.5.7.1.1"
 
-  /** DER-encoded OID value of id-ad-caIssuers (1.3.6.1.5.5.7.48.2). */
+  /** DER encoding of id-ad-caIssuers, 1.3.6.1.5.5.7.48.2. */
   private val CA_ISSUERS_OID = byteArrayOf(0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
 
   private const val TAG_SEQUENCE = 0x30
   private const val TAG_OID = 0x06
   private const val TAG_OCTET_STRING = 0x04
 
-  /**
-   * GeneralName.uniformResourceIdentifier = [6] IMPLICIT IA5String (context-specific, primitive).
-   */
+  /** GeneralName's uniformResourceIdentifier: context-specific primitive [6]. */
   private const val TAG_URI = 0x86
 
   /**
-   * Returns the "CA Issuers" URLs from the certificate's AIA extension (the locations from which
-   * the issuing CA certificate can be fetched), or an empty list if the extension is absent or
-   * unparseable.
+   * The certificate's AIA "CA Issuers" URLs; empty when the extension is absent or malformed. Never
+   * throws.
    */
   fun extractCaIssuerUrls(cert: X509Certificate): List<String> {
     val raw = cert.getExtensionValue(AIA_OID) ?: return emptyList()
     return try {
-      // getExtensionValue() returns the extension value wrapped in an OCTET STRING.
+      // getExtensionValue() returns the value still wrapped in an OCTET STRING.
       val wrapper = DerReader(raw).read()
       if (wrapper.tag != TAG_OCTET_STRING) return emptyList()
 
-      // AuthorityInfoAccessSyntax ::= SEQUENCE OF AccessDescription
       val aiaSeq = DerReader(wrapper.content()).read()
       if (aiaSeq.tag != TAG_SEQUENCE) return emptyList()
 
       val urls = mutableListOf<String>()
       val descriptions = DerReader(aiaSeq.content())
       while (descriptions.hasNext()) {
-        // AccessDescription ::= SEQUENCE { accessMethod OID, accessLocation GeneralName }
         val desc = descriptions.read()
         if (desc.tag != TAG_SEQUENCE) continue
         val fields = DerReader(desc.content())
@@ -75,42 +63,23 @@ object AiaCertChaser {
       }
       urls
     } catch (e: Exception) {
-      // Malformed DER: treat as "no AIA" rather than crashing the handshake.
       emptyList()
     }
   }
 
   /**
-   * Walks up from the presented chain, fetching each missing issuer via its predecessor's AIA "CA
-   * Issuers" pointer, until it reaches a certificate issued by one of [anchorSubjects], a
-   * self-signed certificate, an issuer that cannot be fetched, or [maxIntermediates] additions.
-   * Returns the (possibly extended) chain.
+   * Appends to [presented] each missing issuer, fetched through its predecessor's CA-Issuers URLs,
+   * until the top is self-signed or issued by one of [anchorSubjects], an issuer cannot be found or
+   * repeats, or [maxIntermediates] have been added. Returns the chain, unchanged if nothing was
+   * found. Only adds certificates and validates nothing: the caller must still check the result.
    *
-   * Only ever *adds* certificates — the caller is still responsible for validating the completed
-   * chain against the system trust anchors, so this can never cause an untrusted chain to be
-   * accepted. From each URL's candidates the genuine issuer of the preceding certificate is
-   * selected (defends against an AIA pointer to an unrelated certificate, and picks the right one
-   * out of a multi-certificate PKCS#7 bundle).
-   *
-   * @param anchorSubjects the subjects of the caller's trust anchors. A chain whose top is already
-   *   issued by one of them is not missing anything, so nothing is fetched — chasing could not help
-   *   and the fetch would be a blocking round trip to a host named by a certificate that just
-   *   failed validation. This is what keeps an expired-but-complete chain, a hostname mismatch or
-   *   any other non-path failure from triggering a chase, and it stops the genuine
-   *   missing-intermediate case one hop early, where the chain reaches a root the caller already
-   *   trusts. Empty means "unknown", and the walk runs to one of the other stopping conditions.
-   * @param maxUrlsPerCert how many of a certificate's distinct CA-Issuers URLs are tried before
-   *   giving up on it. The extension is authored by the same server that failed validation and
-   *   nothing limits how many URLs it may list — a leaf can carry hundreds — while each one costs a
-   *   blocking connect on the handshake thread. Real CAs publish one. Duplicates are collapsed
-   *   before the cap, so the cap buys distinct hosts, not repeat visits to one dead one.
-   * @param budgetMs wall-clock ceiling on the whole walk. It is checked before each fetch, and the
-   *   deadline it implies is passed to [fetch], which is expected to clip its own connects,
-   *   handshakes, reads and redirects to the time remaining — so the budget bounds the fetches
-   *   themselves, not just how many of them start.
-   * @param fetch resolves a CA-Issuers URL to its candidate certificates (e.g. every certificate in
-   *   a PKCS#7 bundle), giving up no later than `deadlineNanos` (absolute, [nowNanos] origin);
-   *   empty if nothing could be retrieved.
+   * @param anchorSubjects subjects of the caller's trust anchors. A chain already reaching one is
+   *   left alone, so a failure that is not a missing intermediate fetches nothing. Empty means
+   *   unknown.
+   * @param maxUrlsPerCert distinct URLs tried per certificate; duplicates do not count.
+   * @param budgetMs ceiling on the whole walk, checked before each fetch.
+   * @param fetch the candidate certificates at a URL, empty if none; must give up by
+   *   `deadlineNanos` (absolute, on [nowNanos]'s clock). A throw counts as empty.
    */
   fun completeChain(
     presented: List<X509Certificate>,
@@ -128,18 +97,19 @@ object AiaCertChaser {
     var added = 0
     while (added < maxIntermediates) {
       val last = chain.last()
-      if (last.subjectX500Principal == last.issuerX500Principal) break // self-signed root
-      if (last.issuerX500Principal in anchorSubjects) break // already reaches a trust anchor
+      if (last.subjectX500Principal == last.issuerX500Principal) break
+      if (last.issuerX500Principal in anchorSubjects) break
+      // Lazy, so no URL is fetched after one yields the issuer.
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()
           .distinct()
           .take(maxUrlsPerCert)
-          // Subtraction, not `>`: overflow-safe across nanoTime's arbitrary origin.
+          // Subtraction, not `<`: nanoTime's origin is arbitrary, so its values may overflow.
           .takeWhile { nowNanos() - deadline < 0 }
           .flatMap { url -> runCatching { fetch(url, deadline) }.getOrElse { emptyList() } }
           .firstOrNull { it.subjectX500Principal == last.issuerX500Principal } ?: break
-      if (!seen.add(issuer)) break // cycle guard
+      if (!seen.add(issuer)) break
       chain.add(issuer)
       added++
     }
@@ -147,13 +117,9 @@ object AiaCertChaser {
   }
 
   /**
-   * Minimal DER TLV reader over a byte buffer. Malformed input throws [IllegalArgumentException],
-   * which the callers above expect and turn into "no AIA".
-   *
-   * Every read is bounds-checked, and a declared length is rejected unless it is non-negative and
-   * within the buffer. Both matter: the extension bytes come from a server-presented certificate,
-   * so a length that shifts into a negative Int would rewind `pos` and spin [extractCaIssuerUrls]'s
-   * loop forever on the handshake thread rather than failing.
+   * Minimal DER TLV reader. Malformed input throws [IllegalArgumentException]. The bytes come from
+   * a server's certificate: a length that went negative would rewind `pos` and loop forever on the
+   * handshake thread, so every length is checked against the buffer.
    */
   private class DerReader(private val buf: ByteArray) {
     private var pos = 0
@@ -164,9 +130,7 @@ object AiaCertChaser {
       val tag = readByte()
       var len = readByte()
       if (len and 0x80 != 0) {
-        // Long form: the low bits give the number of length bytes. Four already covers any
-        // buffer that fits in memory; more would overflow the Int we shift them into. The
-        // indefinite form (0x80, i.e. zero length bytes) is not valid DER.
+        // More than four length bytes overflows the Int; zero is BER's indefinite form, not DER.
         val numBytes = len and 0x7F
         require(numBytes in 1..4) { "unsupported DER length form: $numBytes length bytes" }
         len = 0
@@ -185,7 +149,6 @@ object AiaCertChaser {
     }
   }
 
-  /** A parsed tag-length-value: the tag and a view of its content bytes. */
   private class Tlv(
     private val buf: ByteArray,
     val tag: Int,

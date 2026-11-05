@@ -16,22 +16,14 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * A [BitmapLoader] implementation that uses Coil for image loading.
+ * Media3 [BitmapLoader] that fetches artwork through Coil, with request headers, SVG and
+ * downsampling to the media browser's size hint.
  *
- * Benefits over default Media3 BitmapLoader:
- * - Custom HTTP headers support (for authenticated CDNs)
- * - SVG support (via coil-svg)
- * - Better memory management (automatic downsampling)
- * - Shared OkHttp client for efficient connection pooling
- * - Size-aware image loading using Android Auto's artwork size hints
- *
- * @param context Android context
- * @param imageLoader Coil ImageLoader instance (should be shared app-wide)
- * @param resolveDisplayArtwork Track-first display-time artwork resolution (see
- *   Player.resolveDisplayArtwork). Returns the fetchable ImageSource for a URI Media3 hands us, or
- *   null when the URI is not ours to transform (it is then fetched as-is).
- * @param getArtworkSizeHint Callback to get the recommended artwork size in pixels from the media
- *   browser (e.g., Android Auto)
+ * @param resolveDisplayArtwork maps a URI Media3 hands over to the source to fetch (see
+ *   Player.resolveDisplayArtwork); null means the URI is not the library's to rewrite and is
+ *   fetched as-is. If it throws, the URI is also fetched as-is.
+ * @param getArtworkSizeHint the size in pixels the connected media browser (e.g. Android Auto) asks
+ *   for, or null for none.
  */
 @UnstableApi
 class CoilBitmapLoader(
@@ -43,10 +35,7 @@ class CoilBitmapLoader(
 
   private val scope = CoroutineScope(Dispatchers.IO)
 
-  /**
-   * Default artwork size in pixels when no hint is provided by the media browser. Lock screen media
-   * controls are ~128dp, at 4x density (xxxhdpi) = 512px.
-   */
+  // Lock screen controls are ~128dp; at 4x density (xxxhdpi) that is 512px.
   private val defaultArtworkSizePixels = 512
 
   private val core = CoilArtworkLoader(context, imageLoader, defaultArtworkSizePixels)
@@ -78,12 +67,8 @@ class CoilBitmapLoader(
     scope.launch {
       try {
         val originalUrl = uri.toString()
-        // Use hint from media browser (Android Auto), or fall back to screen-based size
         val sizeHint = getArtworkSizeHint() ?: defaultArtworkSizePixels
 
-        // Track-first resolution (registry / queue lookup). Null → the URI was not
-        // produced by us (or predates the registry): fetch it as-is, never
-        // re-transform a URL we cannot attribute.
         val source =
           try {
             resolveDisplayArtwork(originalUrl, sizeHint)
@@ -94,7 +79,6 @@ class CoilBitmapLoader(
         val finalUrl = source?.uri ?: originalUrl
         val headers = source?.headers?.toMap() ?: emptyMap()
 
-        // Check if this is an SVG that needs special decoding
         val isSvg = SvgArtworkRenderer.isSvgUrl(finalUrl)
 
         Timber.d("Loading artwork: $finalUrl (headers: ${headers.keys}, svg: $isSvg)")

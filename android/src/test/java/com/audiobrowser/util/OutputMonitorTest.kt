@@ -19,7 +19,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-// API 32: OutputMonitor reads connected devices there, which Robolectric shadows; it does not
+// API 32: OutputMonitor reads the connected devices there, which Robolectric shadows; it does not
 // shadow API 33's getAudioDevicesForAttributes.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [32])

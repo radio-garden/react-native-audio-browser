@@ -10,16 +10,6 @@ import androidx.media3.exoplayer.upstream.Allocator
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import timber.log.Timber
 
-/**
- * Buffer configuration for DynamicLoadControl.
- *
- * @property minBufferMs Minimum duration of media that the player will attempt to buffer.
- * @property maxBufferMs Maximum duration of media that the player will attempt to buffer.
- * @property bufferForPlaybackMs Duration of media that must be buffered for playback to start.
- * @property bufferForPlaybackAfterRebufferMs Duration of media that must be buffered for playback
- *   to resume after a rebuffer.
- * @property backBufferMs Duration of media to keep in the buffer behind the current position.
- */
 data class BufferConfig(
   val minBufferMs: Int = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
   val maxBufferMs: Int = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
@@ -30,34 +20,28 @@ data class BufferConfig(
 )
 
 /**
- * A LoadControl implementation that allows runtime buffer configuration changes.
+ * A LoadControl whose buffer thresholds change during playback through [updateBufferConfig], which
+ * DefaultLoadControl fixes at construction.
  *
- * Unlike wrapping DefaultLoadControl, this implementation has its own mutable buffer thresholds
- * that can be changed at any time during playback. This allows adaptive buffer management (via
- * AutomaticBufferManager) to take effect immediately.
- *
- * Thread safety: LoadControl methods are called from ExoPlayer's internal playback thread, while
- * [updateBufferConfig] is typically called from the main thread. The @Volatile annotation ensures
- * visibility across threads.
+ * ExoPlayer calls the LoadControl methods on its playback thread; the other methods may run on any
+ * thread, so shared state is @Volatile.
  */
 class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadControl {
 
   private val allocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
-  // Track startup timing
   @Volatile private var prepareStartTimeMs: Long = 0
   @Volatile private var playbackStarted: Boolean = false
 
-  // ExoPlayer's own rebuffering signal (buffer depletion mid-playback, as opposed to an initial
-  // connect, a seek, or a track transition). Mirrored from LoadControl.Parameters so consumers
-  // (e.g. the now-playing "Buffering…" subtitle) can tell a rebuffer apart from an initial connect.
   @Volatile private var rebuffering: Boolean = false
 
-  /** Whether playback is currently rebuffering due to buffer depletion (not initial start/seek). */
+  /**
+   * Whether ExoPlayer reports a stall after playback had started, as opposed to an initial connect,
+   * a seek or a track change.
+   */
   val isRebuffering: Boolean
     get() = rebuffering
 
-  // Mutable buffer thresholds - can be updated at runtime
   @Volatile private var minBufferUs: Long = initialConfig.minBufferMs * 1000L
 
   @Volatile private var maxBufferUs: Long = initialConfig.maxBufferMs * 1000L
@@ -72,14 +56,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
 
   @Volatile private var currentConfig: BufferConfig = initialConfig
 
-  /**
-   * Updates the buffer configuration at runtime.
-   *
-   * The new configuration takes effect immediately for future buffering decisions. Already-buffered
-   * data is not affected.
-   *
-   * @param config The new buffer configuration to apply.
-   */
+  /** Applies from the next buffering decision; media already buffered stays. */
   fun updateBufferConfig(config: BufferConfig) {
     if (config == currentConfig) return
 
@@ -99,16 +76,14 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     backBufferUs = config.backBufferMs * 1000L
   }
 
-  /** Gets the current buffer configuration. */
   fun getBufferConfig(): BufferConfig = currentConfig
 
-  /** Resets the buffer configuration to defaults. */
+  /** Resets to media3's DefaultLoadControl defaults, not to the config this was built with. */
   fun resetToDefaults() {
     updateBufferConfig(BufferConfig())
   }
 
-  // media3 1.10 added a PlayerId parameter for multi-player allocator sharing. This LoadControl is
-  // only ever attached to a single ExoPlayer, so we return the same allocator regardless of player.
+  // Each instance serves a single ExoPlayer, so the one allocator is returned for any playerId.
   override fun getAllocator(playerId: PlayerId): Allocator = allocator
 
   override fun getBackBufferDurationUs(): Long = backBufferUs
@@ -116,8 +91,8 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
   override fun retainBackBufferFromKeyframe(): Boolean = false
 
   override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
-    // Refreshed on every load-control poll (all playback states) so the flag clears once a
-    // rebuffer recovers, not just while buffering.
+    // ExoPlayer polls this in every playback state, unlike shouldStartPlayback, so this is where
+    // the flag clears once a rebuffer recovers.
     rebuffering = parameters.rebuffering
     return parameters.bufferedDurationUs < maxBufferUs
   }
@@ -165,15 +140,12 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     trackGroups: TrackGroupArray,
     trackSelections: Array<out ExoTrackSelection?>,
   ) {
-    // Required by LoadControl interface - buffer config is managed via updateBufferConfig()
+    // No byte target from the selected tracks: loading is bounded by maxBufferUs alone.
   }
 
-  override fun onStopped() {
-    // Required by LoadControl interface
-  }
+  override fun onStopped() {}
 
   override fun onReleased() {
-    // Reset allocator when released
     allocator.reset()
   }
 }

@@ -1,30 +1,26 @@
 import Foundation
 
-/// An artwork URL and the headers to fetch it with.
 struct ArtworkResolvedImage: Equatable, Sendable {
   let uri: String
   let headers: [String: String]?
 }
 
-/// How `CarPlayImageLoader` loads one artwork.
 enum ArtworkLoadAction: Equatable, Sendable {
-  /// Render the `sf:` artwork at this canvas size.
+  /// `width` and `height` are the canvas size in points.
   case sfSymbol(artwork: String, width: Double, height: Double)
   case fetch(uri: String, headers: [String: String]?, shouldTint: Bool, isSvg: Bool)
   case none
 }
 
-/// Decides how CarPlay loads a track's artwork, given what the Browser layer's
-/// `resolveArtworkUrl` returned for it.
 enum CarPlayArtworkResolver {
-  /// Whether to ask the Browser layer at all: CarPlay renders an SF Symbol itself.
+  /// False for an `sf:` symbol, which CarPlay renders itself.
   static func needsResolve(artwork: String?) -> Bool {
     !isSFSymbol(artwork)
   }
 
-  /// An SF Symbol renders; otherwise the resolved URL is fetched, falling back to the track's
-  /// `artwork`, then its `artworkSource` with that source's headers. `stencil` tints the image
-  /// to the surface's appearance.
+  /// An `sf:` symbol renders locally. Otherwise the resolved URL is fetched; if it is missing or does not
+  /// parse, `artwork` is used, or `artworkSource` with its headers when `artwork` is nil. A direct URI
+  /// that does not parse yields `.none`. `stencil` tints the fetched image to the appearance.
   static func action(
     artwork: String?,
     artworkSource: ArtworkResolvedImage?,

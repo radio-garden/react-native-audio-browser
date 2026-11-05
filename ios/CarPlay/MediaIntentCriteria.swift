@@ -1,13 +1,9 @@
 import Foundation
 
-/// Normalized "what did the user ask to play", derived from a media intent.
-/// Deliberately free of `Intents` types so the core (`HybridAudioBrowser`)
-/// never imports the Intents framework — the mapping lives in the
-/// `Intents`-aware `MediaIntentHandler`.
+/// What the user asked Siri to play, normalized from a media intent. Free of `Intents` types so
+/// it builds in the SwiftPM target; `MediaIntentHandler` does the mapping.
 public struct MediaIntentCriteria: Sendable {
-  /// Media-reference axis (mirrors `INMediaReference`). `currentlyPlaying`
-  /// routes to native resume and never reaches the consumer; `my` routes to
-  /// the search source; `unknown` is the default.
+  /// Mirrors `INMediaReference`: `currentlyPlaying` resumes natively, `my` searches.
   public enum Reference: Sendable { case my, currentlyPlaying, unknown }
 
   let query: String
@@ -18,10 +14,10 @@ public struct MediaIntentCriteria: Sendable {
   /// not a search.
   let matchesAppName: Bool
 
-  // Structured search payload, mirroring `SearchParams` in plain strings so this type stays in
-  // the SwiftPM target; the funnel builds the Nitro `SearchParams`.
-  /// The container-vertical `SearchMode` name, or nil. Comes only from the intent's media type,
-  /// never from which filter field is set.
+  // Structured search payload in plain strings, mirroring `SearchParams`, so this type stays in
+  // the SwiftPM target; `MediaIntentPlayback` builds the Nitro `SearchParams`.
+  /// The `SearchMode` name for the intent's media type, or nil. Never inferred from which
+  /// filter field is set.
   let searchMode: String?
   let genre: String?
   let artist: String?
@@ -29,10 +25,8 @@ public struct MediaIntentCriteria: Sendable {
   let title: String?
   let playlist: String?
 
-  /// Builds criteria from the raw fields of a media-search intent.
-  ///
-  /// `mediaTypeMode` is the `SearchMode` string for the intent's container vertical ("station",
-  /// "podcast", "song", …), or nil for a filter-only or unclassified type.
+  /// `mediaTypeMode` is a `SearchMode` name ("station", "podcast", "song", …), or nil for a
+  /// filter-only or unclassified media type.
   init(
     mediaName: String?,
     genreNames: [String],
@@ -52,7 +46,6 @@ public struct MediaIntentCriteria: Sendable {
     genre = genreNames.isEmpty ? nil : genreNames.joined(separator: " ")
     artist = trimmedNonEmpty(artistName)
     album = trimmedNonEmpty(albumName)
-    // song/playlist carry their spoken name into a dedicated field.
     title = mediaTypeMode == "song" ? (name.isEmpty ? nil : name) : nil
     playlist = mediaTypeMode == "playlist" ? (name.isEmpty ? nil : name) : nil
 
@@ -65,30 +58,23 @@ public struct MediaIntentCriteria: Sendable {
     searchMode = mediaTypeMode
   }
 
-  /// Resume vs search, by reference:
-  /// - `currentlyPlaying` → always resume ("play this" plays the active track)
-  /// - `my` → always search ("play my favorites" goes to the consumer)
-  /// - `unknown` → the no-criteria / app-name heuristic
+  /// Resume rather than search. `currentlyPlaying` always resumes and `my` always searches;
+  /// otherwise a bare "play" resumes unless a genre or media type is given, and "play «app name»"
+  /// resumes unless a genre is given (Siri sends it with a media type).
   var isResume: Bool {
     switch reference {
     case .currentlyPlaying: return true
     case .my: return false
     case .unknown:
       let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-      // "Play «app»": no search term and no other filter → resume.
       if q.isEmpty { return genre == nil && !hasMediaType }
-      // "Play «app-name»": resume — unless a real filter signals a search.
       return matchesAppName && genre == nil
     }
   }
 
-  /// Whether `query` is effectively the host app's own name. Case- and
-  /// diacritic-insensitive.
-  ///
-  /// Whole-word subset match in either direction. Siri may deliver only part of
-  /// the name ("Name" for «App Name»), so a partial match must count — but a
-  /// substring match swallowed any query appearing inside the app name, making
-  /// one-word stations unreachable by voice.
+  /// Whole-word subset match in either direction, case- and diacritic-insensitive. Siri may
+  /// deliver only part of the name, so a partial match counts; a substring match would swallow
+  /// any query inside the app name and make one-word stations unreachable by voice.
   private static func queryMatchesAppName(_ query: String, appName: String?) -> Bool {
     guard let appName else { return false }
     let tokens: (String) -> Set<String> = {

@@ -2,22 +2,19 @@
   import NitroModules
 #endif
 
-/// The rendered form of a section — the single place where (resolved style,
-/// platform capability) maps to what CarPlay draws. Degradation drops
-/// decorations before layout (ADR 0011): a *wrapping* grid can only reach the
-/// tile path where the platform has a wrapping tile container (CarPlay:
-/// iOS 26+'s element API); without one it becomes a list, where every item
-/// stays reachable instead of truncating at an unknowable width. A
-/// single-line grid (`gridWrap: false`) renders everywhere — the legacy image
-/// row IS the single-line presentation.
+/// How CarPlay draws a section, from its resolved style and what the platform supports
+/// (ADR 0011: decorations drop before layout). A wrapping grid needs a wrapping tile container
+/// (iOS 26+'s element API) and becomes a list without one, so every item stays reachable
+/// instead of truncating at an unknown width; a single-line grid is the legacy image row and
+/// renders everywhere. These rules live here, not in the CarPlay factory, so they are testable
+/// off-device.
 enum SectionPresentation: Equatable {
   case list
   case singleLineRow
   case wrappingGrid
 
-  /// - Parameter supportsWrappingGrid: whether the platform has a wrapping
-  ///   tile container. Injected (rather than read via `#available` here) so
-  ///   the mapping is testable off-device.
+  /// - Parameter supportsWrappingGrid: whether the platform has a wrapping tile container; passed
+  ///   in rather than read with `#available` so the mapping is testable off-device.
   init(for style: SectionStyle?, supportsWrappingGrid: Bool) {
     guard style?.display == .grid else {
       self = .list
@@ -32,33 +29,23 @@ enum SectionPresentation: Equatable {
     }
   }
 
-  /// The accessory symbol a resolved block actually draws: nil when
-  /// undeclared, and nil for the `'none'` sentinel — the inheritance escape
-  /// that restores the derived accessory (a browsable row's chevron). Here,
-  /// not in the CarPlay factory, so the sentinel rule is testable off-device.
+  /// The accessory symbol a block draws: nil when undeclared, and nil for the `"none"` sentinel,
+  /// which restores the derived accessory (a browsable row's chevron).
   static func effectiveAccessorySymbol(_ style: TrackStyle?) -> String? {
     guard let symbol = style?.accessorySymbol, symbol != "none" else { return nil }
     return symbol
   }
 
-  /// The title a tile shelf draws as the list section's header; nil when
-  /// the image row's own text carries it — here, not in the CarPlay factory,
-  /// so the rule is testable off-device. CarPlay draws a chevron beside an
-  /// image row's text whether or not the row has a handler, so only a shelf
-  /// with a "view all" `path` keeps its title there.
+  /// The title a tile shelf draws as the list section's header; nil when the image row's own text
+  /// carries it. CarPlay draws a chevron beside an image row's text whether or not the row has a
+  /// handler, so only a shelf with a "view all" `path` keeps its title there.
   ///
-  /// - Parameter supportsElements: whether the platform has the iOS 26
-  ///   element API; the legacy image row's text is not optional.
+  /// - Parameter supportsElements: whether the platform has the iOS 26 element API; without it the
+  ///   legacy image row's text always carries the title.
   static func tileSectionHeader(_ section: Section, supportsElements: Bool) -> String? {
     supportsElements && section.path == nil ? section.title : nil
   }
 
-  /// The element family a tile presentation renders on iOS 26+ — here, not
-  /// in the CarPlay factory, so the style→family mapping is testable
-  /// off-device. `gridTile` picks the family (plain by default), in either
-  /// wrap mode: a plain tile is a row element (title + subtitle), an image
-  /// tile an image-grid element (title, shape, accessory). Pre-26 has no element API at all: the treatment drops
-  /// with the legacy image row (decorations drop before layout).
   enum TileElementFamily: Equatable {
     case rowElements
     case imageGridElements
@@ -66,6 +53,9 @@ enum SectionPresentation: Equatable {
     case condensedElements
   }
 
+  /// The iOS 26+ element family for a tile presentation, picked by `gridTile` (plain by default)
+  /// in either wrap mode. Before iOS 26 there are no elements and the legacy image row drops the
+  /// treatment.
   static func tileFamily(for style: SectionStyle?) -> TileElementFamily {
     switch style?.gridTile {
     case .image: .imageGridElements

@@ -4,11 +4,6 @@ import androidx.media3.common.Player as MediaPlayer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Truth table for the session-error masking that keeps the platform session alive through a
- * terminal load error (Android Auto reads STATE_NONE as "nothing playing" and tears down the
- * now-playing screen): idle+error masks to paused-but-ready, everything else passes through.
- */
 class SessionErrorMaskTest {
 
   @Test

@@ -14,34 +14,24 @@ import kotlin.math.pow
 import timber.log.Timber
 
 /**
- * Custom LoadErrorHandlingPolicy that retries on recoverable IO errors with exponential backoff.
+ * Retries recoverable load errors with exponential backoff, until one of two duration budgets runs
+ * out.
  *
- * When a network monitor is provided and the device is offline during a network error, the policy
- * will use a shorter retry delay and the network restoration callback can trigger an immediate
- * retry when connectivity is restored.
+ * A load that has never produced audio ([hasPlayed]) is usually a dead stream, so it gets the short
+ * first-connect budget, counted in online time only, so a station tapped while offline still gets
+ * its seconds once connectivity returns. Every load is also bounded by the full recovery budget,
+ * offline time included. Budgets are kept here, never through
+ * [LoadErrorHandlingPolicy.LoadErrorInfo.errorCount]: that counts per loadable (an HLS stream has a
+ * playlist and segment loadables, each counted apart), so it cannot bound a load.
  *
- * Two duration budgets apply, chosen by whether the current load has ever produced audio
- * ([hasPlayed]): a short first-connect budget — a stream that fails before ever playing is usually
- * dead, and the listener is actively waiting for a verdict — and the full recovery budget for a
- * stream that played and then dropped (tunnels, handovers, encoder restarts). The short budget
- * counts only online time, so a station tapped in a tunnel still gets its online seconds once
- * connectivity returns. Both budgets are enforced here at the policy level, never via ExoPlayer's
- * [LoadErrorHandlingPolicy.LoadErrorInfo.errorCount] — that counts per *loadable* (an HLS stream
- * has playlist and segment loadables, each with its own count), so it cannot express a per-load
- * promise.
- *
- * @param maxRetries Maximum number of retries, or null for infinite retries
- * @param maxRetryDurationMs Maximum duration to keep retrying before giving up, or null for default
- *   (2 minutes)
- * @param firstConnectMaxRetryDurationMs Maximum duration to keep retrying a load that has never
- *   produced audio, while online, or null for default (12 seconds)
- * @param shouldRetry Optional callback to check if retry should proceed (e.g., check playWhenReady)
- * @param isOnline Optional callback to check current network state
- * @param hasPlayed Optional callback: whether the current load has produced audio. Must be safe to
- *   call from ExoPlayer's loader thread (e.g. backed by a volatile cache).
- * @param onRetryPending Optional callback invoked when a retry is pending, with the load error
- *   being retried (for surfacing it while the retry runs, and for network restoration
- *   acceleration). Invoked on ExoPlayer's loader thread.
+ * @param maxRetries the most retries per loadable; null for no limit
+ * @param maxRetryDurationMs the full recovery budget; null for 2 minutes
+ * @param firstConnectMaxRetryDurationMs the online budget of a load that has never produced audio;
+ *   null for 12 seconds
+ * @param shouldRetry false gives up at once (e.g. the player is paused)
+ * @param hasPlayed whether the current load has produced audio; called on ExoPlayer's loader thread
+ * @param onRetryPending called on ExoPlayer's loader thread each time a retry is scheduled, with
+ *   the error being retried
  */
 class RetryLoadErrorHandlingPolicy(
   private val maxRetries: Int? = null,
@@ -54,57 +44,38 @@ class RetryLoadErrorHandlingPolicy(
 ) : DefaultLoadErrorHandlingPolicy() {
 
   companion object {
-    private const val INITIAL_RETRY_DELAY_MS = 1000L // 1 second
-    private const val MAX_RETRY_DELAY_MS = 5000L // 5 seconds cap
+    private const val INITIAL_RETRY_DELAY_MS = 1000L
+    private const val MAX_RETRY_DELAY_MS = 5000L
     private const val BACKOFF_MULTIPLIER = 1.5
-    // When offline, use a short fixed delay instead of exponential backoff.
-    // ExoPlayer's retry timer can't be interrupted, so we use a short delay to:
-    // 1. Allow our network restoration callback to trigger immediate retry
-    // 2. Keep polling in case the callback doesn't fire
+    // Fixed while offline: ExoPlayer's retry timer can't be interrupted, so a short delay lets the
+    // retry fired on network restoration land soon, and keeps polling if that never fires.
     private const val OFFLINE_RETRY_DELAY_MS = 1000L
-    // Default maximum duration to keep retrying before giving up (in milliseconds).
-    private const val DEFAULT_MAX_RETRY_DURATION_MS = 120_000L // 2 minutes
-    // Default maximum duration for a load that has never produced audio, while online.
+    private const val DEFAULT_MAX_RETRY_DURATION_MS = 120_000L
     private const val DEFAULT_FIRST_CONNECT_MAX_RETRY_DURATION_MS = 12_000L
 
-    // HTTP status codes that are worth retrying
-    private val RETRYABLE_HTTP_STATUS_CODES =
-      setOf(
-        408, // Request Timeout
-        429, // Too Many Requests
-        500, // Internal Server Error
-        502, // Bad Gateway
-        503, // Service Unavailable
-        504, // Gateway Timeout
-      )
+    private val RETRYABLE_HTTP_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
   }
 
-  // Maximum duration to keep retrying before giving up.
-  // This prevents surprising playback resumption after long periods offline.
+  // Stops playback resuming by surprise after a long time offline.
   private val maxRetryDurationMs: Long = maxRetryDurationMs ?: DEFAULT_MAX_RETRY_DURATION_MS
 
   private val firstConnectMaxRetryDurationMs: Long =
     firstConnectMaxRetryDurationMs ?: DEFAULT_FIRST_CONNECT_MAX_RETRY_DURATION_MS
 
-  // Track when we started retrying to enforce max duration
+  // Written on ExoPlayer's loader thread, reset from the main thread.
   @Volatile private var firstErrorTime: Long? = null
 
-  // First error observed while online — the first-connect budget's clock. Never set while
-  // offline, and wiped by any offline observation, so an offline stretch cannot burn the short
-  // budget: the clock restarts at the next error observed online.
+  // The first-connect budget's clock: set at the first error seen online and wiped by any seen
+  // offline, so an offline stretch never burns it.
   @Volatile private var firstOnlineErrorTime: Long? = null
 
-  /** Resets the retry timer. Call when track changes. */
+  /** Restarts both budgets: call when a new load begins, or once playback has proven healthy. */
   fun reset() {
     firstErrorTime = null
     firstOnlineErrorTime = null
   }
 
-  /**
-   * The name of the exhausted budget, or null while budget remains. The recovery duration bounds
-   * everything (including offline waits); the first-connect duration additionally bounds
-   * never-played loads, online only.
-   */
+  /** The name of the exhausted budget, or null while both have time left. */
   private fun exhaustedBudget(currentTime: Long): String? {
     firstErrorTime?.let { start ->
       if (currentTime - start >= maxRetryDurationMs)
@@ -120,9 +91,8 @@ class RetryLoadErrorHandlingPolicy(
     return null
   }
 
-  /** Calculates exponential backoff delay: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped) */
+  /** 1s, 1.5s, 2.25s, ... capped at [MAX_RETRY_DELAY_MS]; [errorCount] is 1-based. */
   private fun calculateBackoffDelay(errorCount: Int): Long {
-    // errorCount is 1-based (first error = 1)
     val exponentialDelay =
       INITIAL_RETRY_DELAY_MS * BACKOFF_MULTIPLIER.pow((errorCount - 1).toDouble())
     return min(exponentialDelay.toLong(), MAX_RETRY_DELAY_MS)
@@ -133,49 +103,38 @@ class RetryLoadErrorHandlingPolicy(
     val errorCount = loadErrorInfo.errorCount
     val currentTime = System.currentTimeMillis()
 
-    // Don't retry if player is paused/stopped (e.g., another app took audio focus)
     if (!shouldRetry()) {
       Timber.d("Retry skipped: shouldRetry() returned false (player likely paused)")
       return C.TIME_UNSET
     }
 
-    // Check if we've exceeded max retries
     if (maxRetries != null && errorCount > maxRetries) {
       Timber.d("Max retries ($maxRetries) exceeded, not retrying")
       return C.TIME_UNSET
     }
 
-    // Track when we started retrying
     if (firstErrorTime == null) {
       firstErrorTime = currentTime
     }
     if (isOnline()) {
       if (firstOnlineErrorTime == null) firstOnlineErrorTime = currentTime
     } else {
-      // Seeing the device offline restarts the first-connect clock: a station that lost
-      // connectivity mid-budget gets its full online seconds again after restoration,
-      // instead of the offline gap counting against it.
       firstOnlineErrorTime = null
     }
 
-    // Check if we've been retrying too long (prevents surprising resumption after long
-    // offline periods, and grants dead-on-arrival streams a fast verdict)
     exhaustedBudget(currentTime)?.let { budget ->
       Timber.d("$budget exceeded, giving up")
       return C.TIME_UNSET
     }
 
-    // Classify the error
     val errorClassification = classifyError(exception)
 
     return if (errorClassification.isRecoverable) {
-      // Check if we're offline during a network error
       val currentlyOffline = !isOnline()
       val isNetworkError = errorClassification.isNetworkError
 
       val delay =
         if (currentlyOffline && isNetworkError) {
-          // Use shorter delay when offline - we'll retry immediately when network comes back
           Timber.d(
             "Device is offline, using short retry delay (will accelerate when network returns)"
           )
@@ -188,32 +147,23 @@ class RetryLoadErrorHandlingPolicy(
         "Retrying after IO error (attempt $errorCount, delay ${delay}ms, offline=$currentlyOffline): ${exception.message}"
       )
 
-      // Notify that a retry is pending (for network restoration acceleration)
       onRetryPending?.invoke(exception, isNetworkError)
 
       delay
     } else {
-      // Non-recoverable error: stop now. We can't delegate to super here —
-      // DefaultLoadErrorHandlingPolicy still schedules a backoff retry for some errors it doesn't
-      // consider fatal (e.g. a 404 InvalidResponseCodeException), which combined with our infinite
-      // getMinimumLoadableRetryCount would retry a dead URL until the max-retry-duration timeout.
+      // Not super's verdict: it still backs off on some errors it doesn't treat as fatal (a 404),
+      // which with the unbounded getMinimumLoadableRetryCount would retry a dead URL for the whole
+      // budget.
       C.TIME_UNSET
     }
   }
 
-  /** Classification result for an error */
   private data class ErrorClassification(val isRecoverable: Boolean, val isNetworkError: Boolean)
 
   /**
-   * Classifies whether an error is recoverable and whether it's network-related.
-   *
-   * Load errors are delivered as a raw [IOException] (e.g.
-   * [HttpDataSource.HttpDataSourceException], `UnknownHostException`, `SocketTimeoutException`) —
-   * never as a `PlaybackException`, which is only surfaced at the player level *after* retries are
-   * exhausted. So we classify by walking the IOException cause chain. This is essential: a plain
-   * Wi-Fi drop surfaces as a socket/DNS IOException, and unless we flag it as a network error the
-   * connectivity-restoration path can't fire an immediate retry, leaving playback stuck buffering
-   * until it returns.
+   * Walks the cause chain: load errors arrive as raw IOExceptions (a Wi-Fi drop is a socket or DNS
+   * error), never as a PlaybackException. Anything not known to be fatal counts as a network error,
+   * so connectivity restoration can retry it at once.
    */
   private fun classifyError(exception: IOException): ErrorClassification {
     val nonRecoverable = ErrorClassification(isRecoverable = false, isNetworkError = false)
@@ -221,14 +171,11 @@ class RetryLoadErrorHandlingPolicy(
     var current: Throwable? = exception
     while (current != null) {
       when (current) {
-        // HTTP responses: only retry server errors (5xx) and specific client errors (408, 429).
-        // Other status codes (e.g. 403/404) will never succeed on retry.
         is HttpDataSource.InvalidResponseCodeException -> {
           val retryable = current.responseCode in RETRYABLE_HTTP_STATUS_CODES
           return ErrorClassification(isRecoverable = retryable, isNetworkError = retryable)
         }
-        // Errors that retrying cannot fix — mirror DefaultLoadErrorHandlingPolicy's
-        // non-retryable set so we don't spin until the max-retry-duration timeout.
+        // Mirrors DefaultLoadErrorHandlingPolicy's fatal set.
         is HttpDataSource.CleartextNotPermittedException,
         is ParserException,
         is FileNotFoundException,
@@ -237,20 +184,17 @@ class RetryLoadErrorHandlingPolicy(
       current = current.cause
     }
 
-    // A read at a position the source can no longer provide (e.g. behind a live window) won't
-    // recover via an in-place loader retry.
+    // A position the source can no longer serve (e.g. behind a live window) won't come back on an
+    // in-place retry.
     if (DataSourceException.isCausedByPositionOutOfRange(exception)) {
       return nonRecoverable
     }
 
-    // Any other IOException is a transient network/transport failure (connection reset, DNS
-    // failure, socket timeout, network interface lost, ...): recoverable, and flagged as a network
-    // error so connectivity restoration can trigger an immediate retry.
     return ErrorClassification(isRecoverable = true, isNetworkError = true)
   }
 
   override fun getMinimumLoadableRetryCount(dataType: Int): Int {
-    // Return the max retries, or MAX_VALUE for infinite
+    // Unbounded by default: the duration budgets decide when to stop.
     return maxRetries ?: Int.MAX_VALUE
   }
 }

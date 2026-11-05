@@ -41,7 +41,6 @@ class DynamicLoadControlTest {
   fun `clears once the rebuffer recovers`() {
     val loadControl = DynamicLoadControl()
     loadControl.shouldStartPlayback(params(rebuffering = true))
-    // A later poll while playing normally reports rebuffering = false.
     loadControl.shouldContinueLoading(params(rebuffering = false))
     assertFalse(loadControl.isRebuffering)
   }

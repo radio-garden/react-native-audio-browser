@@ -2,21 +2,18 @@ import Kingfisher
 import SwiftDraw
 import UIKit
 
-/// Kingfisher processor that renders SVG data to UIImage using SwiftDraw.
+/// Kingfisher processor that rasterizes SVG data with SwiftDraw.
 struct SVGProcessor: ImageProcessor {
-  /// Kingfisher keys its cache on `identifier` alone (`ImageCache.computedKey`),
-  /// and `.scaleFactor` never enters that key — so the render parameters have to,
-  /// or two different rasterizations of the same URL would collide. Today only
-  /// CarPlay rasterizes SVGs (one screen, one scale), so this is insurance
-  /// against a second call site rather than a live fix.
+  // Kingfisher keys its cache on the URL and this identifier only (`.scaleFactor` is
+  // not in the key), so every render parameter must be here or different
+  // rasterizations of one URL collide.
   var identifier: String {
     "com.audiobrowser.svgprocessor(\(size?.width ?? -1)x\(size?.height ?? -1)@\(scale))"
   }
 
-  /// Target size for rendering (in points). If nil, uses SVG's intrinsic size.
+  /// Points; nil renders at the SVG's intrinsic size.
   let size: CGSize?
 
-  /// Scale factor for rendering. Resolved at init time to avoid MainActor issues.
   let scale: CGFloat
 
   @MainActor
@@ -30,7 +27,6 @@ struct SVGProcessor: ImageProcessor {
     case let .data(data):
       return renderSVG(from: data)
     case let .image(image):
-      // Already an image, return as-is
       return image
     @unknown default:
       return nil

@@ -37,8 +37,7 @@ struct JsonTrackArtworkTests {
   }
 
   @Test func decodesAPairNestedInChildren() throws {
-    // The shape that shipped broken: a container decodes its children eagerly,
-    // so one unparseable row rejected the whole page rather than losing an image.
+    // A container decodes its children eagerly, so a child the decoder rejects fails the whole page.
     let json = """
     { "path": "/favorites", "title": "Favorites", "children": [
       { "title": "Playlist", "artwork": { "light": "https://e.example/l.png", "dark": "https://e.example/d.png" } }
@@ -85,8 +84,7 @@ struct JsonStyleTests {
   }
 
   @Test func staleStringStyleDecodesAsNoDeclaration() throws {
-    // The retired string vocabulary must never kill the page (tolerant
-    // decoding, ADR 0011) — it decodes as an empty block.
+    // The retired string vocabulary (ADR 0011) decodes as no block rather than failing the page.
     let json = Data(
       """
       {"path":"/home","title":"Home","style":"rail","children":[
@@ -104,8 +102,8 @@ struct JsonStyleTests {
       {"title":"X","style":{"display":"carousel","artworkRendering":"embossed","gridWrap":"yes"}}
       """.utf8)
     let track = try JSONDecoder().decode(JsonTrack.self, from: json).toNitro()
-    // All-unknown declarations collapse to "no block" — one shape for "no
-    // declaration" on every platform.
+    // All-unknown declarations collapse to no block, the one shape for "no declaration" on every
+    // platform.
     #expect(track.style == nil)
   }
 
@@ -128,8 +126,7 @@ struct JsonStyleTests {
   }
 
   @Test func accessorySymbolNoneIsAValueNotEmptiness() throws {
-    // The inheritance-escape sentinel must survive the wire — collapsing it
-    // to "no declaration" would let the section value flow back in.
+    // "none" escapes inheritance; read as no declaration, it would let the section's symbol back in.
     let json = Data(
       """
       {"title":"X","style":{"accessorySymbol":"none"}}
@@ -188,7 +185,6 @@ struct JsonStyleTests {
   }
 
   @Test func styleAndDisabledSurviveThePersistenceRoundTrip() throws {
-    // Restored queues keep their visible fidelity across process death.
     let original = JsonTrack(
       title: "X", src: "s",
       style: JsonStyle(
@@ -204,8 +200,6 @@ struct JsonStyleTests {
   }
 
   @Test func liveBlockSnapshotsAllItemProperties() throws {
-    // The persistence snapshot (JsonStyle from a live TrackStyle) must not
-    // drop the newer item properties.
     let snapshot = JsonStyle(
       TrackStyle(
         display: nil, artworkRendering: .stencil,
@@ -222,7 +216,6 @@ struct JsonStyleTests {
 
 @Suite("JsonTrack persistence")
 struct JsonTrackPersistenceTests {
-  /// The snapshot a resume restores keeps every field a track persists.
   @Test func aTrackSurvivesTheRoundTripThroughItsSnapshot() throws {
     let track = Track(
       id: "t1", path: "/station/1", src: "https://example.com/a.mp3",

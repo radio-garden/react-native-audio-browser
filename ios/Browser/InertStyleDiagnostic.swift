@@ -4,35 +4,12 @@ import os.log
   import NitroModules
 #endif
 
-/// Dev diagnostic (ADR 0011): the declarations on a resolved page that can
-/// never render.
-///
-/// The block model deliberately gave up compile-time invalid-combination
-/// errors — combinations are not invalid, they are *inert*, the way
-/// `grid-template` on a non-grid element is inert in CSS. This is the
-/// recovery: at page resolution every declaration its own block makes
-/// unreadable is reported once, with the effective context and the fix.
-///
-/// The line it draws, and never crosses: only **structural** inertness — a
-/// declaration the resolved block itself renders unreadable, on every surface
-/// (`gridWrap` outside a grid, `cardTint` with no card treatment in scope).
-/// *Surface* inertness is never reported, because declarations are
-/// aspirational: `imageShape` on Android Auto, or a card treatment on a
-/// pre-26 CarPlay, is intended usage — the renderer drops what it can't draw.
-///
-/// Runs where every page passes regardless of its source (static config,
-/// route callback, or fetched browse JSON), and only on a cache miss, so a
-/// mistake is reported once per resolution rather than once per serve.
-///
-/// Debug builds only: `warn` is the whole seam, so a release build never even
-/// walks the page (the trade is that a page served only to a Release build —
-/// TestFlight, production browse JSON — reports nothing; reproduce it against
-/// a debug build).
+/// Debug-build warnings for style declarations a resolved page can never render (ADR 0011).
+/// Only structural inertness is reported: a declaration its own resolved block makes
+/// unreadable on every surface. A declaration one surface can't draw (`imageShape` on
+/// Android Auto, a card on older CarPlay) is intended usage and never reported.
 enum InertStyleDiagnostic {
-  /// Reports every inert declaration on a resolved page. The one gate — the
-  /// `#if` is here rather than at the call sites so callers read
-  /// unconditionally and the rule set stays free of build-configuration
-  /// knowledge.
+  /// Logs `findings` in debug builds; a release build does nothing, not even walk the page.
   static func warn(path: String, pageStyle: SectionStyle?, sections: [Section]) {
     #if DEBUG
       let logger = Logger(subsystem: "com.audiobrowser", category: "InertStyleDiagnostic")
@@ -42,10 +19,9 @@ enum InertStyleDiagnostic {
     #endif
   }
 
-  /// The declarations that carry a structural inertness condition.
-  ///
-  /// Two keys of the block are deliberately absent — `display` and
-  /// `artworkRendering`, dispositioned below instead.
+  // Each style key of the spec is a case here or listed in `alwaysRenderable` / `positional`:
+  // src/style-resolution.test.ts parses these declarations, one `case` per line, and fails
+  // on a key missing from all three.
   private enum Property: String, CaseIterable {
     case gridWrap
     case gridTile
@@ -54,9 +30,7 @@ enum InertStyleDiagnostic {
     case cardTint
     case cardImage
 
-    /// Item properties inherit (`track ?? section ?? page`) and so may also
-    /// be declared per track; container properties resolve by scope override
-    /// (`section ?? page`) and never reach an item.
+    /// Item properties may also be declared per track; container properties never reach one.
     var isItemProperty: Bool {
       switch self {
       case .gridWrap, .gridTile: false
@@ -64,8 +38,6 @@ enum InertStyleDiagnostic {
       }
     }
 
-    /// Whether a value of this property, resolved into `context`, has any
-    /// rendering to affect. Each case is the spec's own "inert unless" clause.
     func isInert(in context: Context) -> Bool {
       switch self {
       case .gridWrap, .gridTile: !context.isGrid
@@ -75,7 +47,6 @@ enum InertStyleDiagnostic {
       }
     }
 
-    /// The rule the declaration falls foul of, stated positively.
     var rule: String {
       switch self {
       case .gridWrap, .gridTile: "`\(rawValue)` renders only in a grid"
@@ -99,38 +70,25 @@ enum InertStyleDiagnostic {
     }
   }
 
-  /// Iterated per section; `allCases` is computed, so read it once.
+  // `allCases` is computed; read it once rather than per section.
   private static let allProperties = Property.allCases
 
-  /// The rest of the block's keys, dispositioned rather than ruled on:
-  /// `artworkRendering` has no structural inertness condition (artwork renders
-  /// in every layout), and `display` is positional — inert only in the one
-  /// position that opens no page (see `playableDisplayFinding`). Declared here
-  /// so the spec-level completeness test can hold this file to the whole
-  /// vocabulary: every key of the block is a rule, always renderable, or
-  /// positional, and a newly added property is a decision rather than an
-  /// omission.
+  // Keys with no structural inertness rule, read only by src/style-resolution.test.ts.
+  // `display` is inert only on a playable track, which `playableDisplayFinding` checks.
   static let alwaysRenderable = ["artworkRendering"]
   static let positional = ["display"]
 
-  /// A section's effective container context: the two container values every
-  /// inertness condition is stated against.
   private struct Context {
     let isGrid: Bool
     let tile: GridTile
 
-    /// Folded through `StyleResolver` rather than re-deriving the scope
-    /// override: the diagnostic predicts what a renderer will do with these
-    /// declarations, so it has to resolve them the way the renderers do.
+    /// Folds through `StyleResolver` so the prediction matches what the renderers draw.
     init(section: SectionStyle?, page: SectionStyle?) {
       let folded = StyleResolver.sectionStyle(section: section, page: page)
       isGrid = folded.display == .grid
       tile = folded.gridTile ?? .plain
     }
 
-    /// Whether the card treatment is what this container renders — the
-    /// condition the `card*` family is named after. Exhaustive, like
-    /// `isShaped`: a new tile kind has to be ruled on here.
     var isCard: Bool {
       guard isGrid else { return false }
       return switch tile {
@@ -139,8 +97,6 @@ enum InertStyleDiagnostic {
       }
     }
 
-    /// Whether this container renders a tile family with a shape and an
-    /// accessory slot.
     var isShaped: Bool {
       guard isGrid else { return false }
       return switch tile {
@@ -149,28 +105,16 @@ enum InertStyleDiagnostic {
       }
     }
 
-    /// The effective style, for the message — in the wire spelling the author
-    /// types (`stringValue` is the generated enum's own mapping). `gridTile`
-    /// is quoted only where a grid gives it meaning: naming it on a list would
-    /// be advice to fix the wrong property.
     var described: String {
       isGrid ? "display 'grid', gridTile '\(tile.stringValue)'" : "display 'list'"
     }
   }
 
-  /// Every inert declaration on a resolved page, as ready-to-log messages —
-  /// pure, so the whole rule set is testable off-device; the caller logs.
-  ///
-  /// - Parameters:
-  ///   - path: the resolved path, named in every message.
-  ///   - pageStyle: the page's own block (`ResolvedTrack.style`).
-  ///   - sections: the page's normalized sections, blocks *unfolded* — the
-  ///     diagnostic attributes each finding to the level that declared it, so
-  ///     it must see the levels before `StyleResolver` merges them.
+  /// Every inert declaration on a resolved page, as ready-to-log messages.
+  /// `sections` carry their own blocks unfolded: each finding names the level that declared it.
   static func findings(path: String, pageStyle: SectionStyle?, sections: [Section]) -> [String] {
     var findings: [String] = []
-    // A page-level declaration is judged across the whole page: it is live if
-    // it renders in any section it reaches, however many others ignore it.
+    // A page-level declaration is reported only if no section it reaches renders it.
     var pageReached: Set<Property> = []
     var pageRendered: Set<Property> = []
 
@@ -190,7 +134,6 @@ enum InertStyleDiagnostic {
               ))
           }
         } else if declared(property, in: pageStyle) {
-          // The section takes the page's value (nothing closer overrode it).
           pageReached.insert(property)
           if !inert { pageRendered.insert(property) }
         }
@@ -224,9 +167,6 @@ enum InertStyleDiagnostic {
     return findings
   }
 
-  /// `display` is positional, so it is never inert *in* a container — but on
-  /// a track that renders playable (`src` wins the rendering) it promises the
-  /// layout of a page that never opens.
   private static func playableDisplayFinding(
     _ section: Section, path: String, label: String,
   ) -> String? {
@@ -249,8 +189,6 @@ enum InertStyleDiagnostic {
     )
   }
 
-  /// The one message skeleton — every finding names the page, the declaration,
-  /// who declared it, why it can't render, and what to do about it.
   private static func message(
     path: String, owner: String, key: String, reason: String, hint: String,
   ) -> String {
@@ -267,9 +205,7 @@ enum InertStyleDiagnostic {
     "\(count) track\(count == 1 ? "" : "s")"
   }
 
-  // Nitro flattens the spec's `extends`, so the two blocks share no type —
-  // hence two lookups over the same key set rather than one protocol.
-
+  // Nitro flattens the spec's `extends`, so `SectionStyle` and `TrackStyle` share no type.
   private static func declared(_ property: Property, in style: SectionStyle?) -> Bool {
     guard let style else { return false }
     switch property {
@@ -285,7 +221,6 @@ enum InertStyleDiagnostic {
   private static func declared(_ property: Property, in style: TrackStyle?) -> Bool {
     guard let style else { return false }
     switch property {
-    // Container properties have no Track slot to be declared in.
     case .gridWrap, .gridTile: return false
     case .imageShape: return style.imageShape != nil
     case .accessorySymbol: return style.accessorySymbol != nil

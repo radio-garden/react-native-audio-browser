@@ -3,14 +3,15 @@ package com.audiobrowser.util
 import android.net.Uri
 import java.security.MessageDigest
 
-/** Builds and parses the opaque `content://<pkg>.audiobrowser.artwork/art/<token>` URIs. */
+/** Builds and parses the `content://<pkg>.audiobrowser.artwork/art/<token>` artwork URIs. */
 object ArtworkUris {
+  // Must match the provider's `android:authorities` in AndroidManifest.xml.
   const val AUTHORITY_SUFFIX = "audiobrowser.artwork"
   private const val PATH = "art"
 
   fun authorityFor(packageName: String): String = "$packageName.$AUTHORITY_SUFFIX"
 
-  /** Stable, opaque token for a resolved artwork URL (SHA-256 hex). */
+  /** A stable token for [url] that does not reveal it to whoever sees the URI (SHA-256 hex). */
   fun tokenFor(url: String): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
     return digest.joinToString("") { "%02x".format(it) }
@@ -18,7 +19,7 @@ object ArtworkUris {
 
   fun contentUri(authority: String, token: String): String = "content://$authority/$PATH/$token"
 
-  /** The `<token>` for a `…/art/<token>` content URI, or null if the shape is wrong. */
+  /** The `<token>` of a `content://…/art/<token>` URI, whatever its authority; else null. */
   fun parseToken(uri: Uri): String? {
     if (uri.scheme != "content") return null
     val segments = uri.pathSegments

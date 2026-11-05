@@ -2,7 +2,7 @@ package com.audiobrowser.sonos
 
 import org.w3c.dom.Element
 
-/** A group of Sonos rooms playing together, controlled through its [coordinator]. */
+/** Sonos rooms playing together, controlled through their [coordinator]. */
 internal data class SonosGroup(
   /** The coordinator's `RINCON_…` UUID. */
   val coordinator: String,
@@ -11,21 +11,19 @@ internal data class SonosGroup(
   val name: String,
 )
 
-/** A [SonosGroup] whose coordinator's control URLs are known: what a route stands for. */
+/** A [SonosGroup], with its coordinator's control URLs: what a route stands for. */
 internal data class SonosRoom(val id: String, val name: String, val device: SonosDevice)
 
 /**
- * Parses a `ZoneGroupTopology.GetZoneGroupState` response into the groups a user can play to. A
- * group is listed once, at its coordinator, the only member that accepts transport commands: the
- * hidden half of a stereo pair answers SSDP too but refuses them, and can be reported as the
- * coordinator of a group of its own, which is skipped. A home theatre's satellites are not members.
- * A group of several rooms is named after its coordinator plus the count of the others, as the
- * Sonos app does.
+ * Reads a `ZoneGroupTopology.GetZoneGroupState` response into the groups a user can play to, each
+ * listed once at its coordinator: the only member that accepts transport commands. The hidden half
+ * of a stereo pair answers SSDP but refuses them. A group of several rooms is named as the Sonos
+ * app names it: `Kitchen + 2`.
  */
 internal object ZoneGroupState {
   /**
-   * Whether the speaker [uuid] is reported hidden: the hidden half of a stereo pair, whose own
-   * topology can leave out the group of its pair.
+   * Whether [uuid] is reported hidden (the hidden half of a stereo pair), whose own topology can
+   * leave out its pair's group. False when [xml] cannot be read.
    */
   fun isHidden(xml: String, uuid: String): Boolean {
     val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return false
@@ -35,7 +33,10 @@ internal object ZoneGroupState {
       .any { it.getAttribute("UUID") == uuid && it.getAttribute("Invisible") == "1" }
   }
 
-  /** The groups, or null when [xml] holds no readable `ZoneGroupState`. */
+  /**
+   * The groups, or null when [xml] holds no readable `ZoneGroupState`. Skips a group whose
+   * coordinator is missing or hidden.
+   */
   fun parse(xml: String): List<SonosGroup>? {
     val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return null
     val groups = doc.getElementsByTagName("ZoneGroup")
@@ -43,6 +44,7 @@ internal object ZoneGroupState {
   }
 
   private fun groupOf(group: Element): SonosGroup? {
+    // Direct children only: a home theatre's satellites nest inside a member and are not rooms.
     val members =
       (0 until group.childNodes.length)
         .map { group.childNodes.item(it) }

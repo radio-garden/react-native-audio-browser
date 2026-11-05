@@ -7,7 +7,7 @@ final class PlaybackTimerTests: XCTestCase {
   func testNoTicksUntilIntervalSetAndActive() async throws {
     var ticks = 0
     let timer = PlaybackTimer(isActive: { $0 == .playing }) { ticks += 1 }
-    timer.onPlaybackStateChanged(.playing) // no interval yet
+    timer.onPlaybackStateChanged(.playing)
     try await Task.sleep(nanoseconds: 1_200_000_000)
     XCTAssertEqual(ticks, 0)
   }
@@ -37,14 +37,13 @@ final class PlaybackTimerTests: XCTestCase {
     let timer = PlaybackTimer(isActive: { $0 == .playing }) { ticks += 1 }
     timer.setInterval(1)
     timer.onPlaybackStateChanged(.playing)
-    timer.setInterval(nil) // off-switch
+    timer.setInterval(nil)
     let after = ticks
     try await Task.sleep(nanoseconds: 1_200_000_000)
     XCTAssertEqual(ticks, after)
   }
 
   func testIsActivePredicateGatesState() async throws {
-    // A "playing-only" predicate must not tick while buffering.
     var ticks = 0
     let timer = PlaybackTimer(isActive: { $0 == .playing }) { ticks += 1 }
     timer.setInterval(1)

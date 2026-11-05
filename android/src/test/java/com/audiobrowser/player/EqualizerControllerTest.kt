@@ -10,15 +10,8 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The controller's contract across the stretches where no equalizer effect exists — before the
- * first audio session and across a session change. Settings asked for in a gap have to survive it,
- * and every effect that appears has to announce itself, because the JS side reads the settings once
- * at startup and otherwise never learns the equalizer arrived.
- */
 class EqualizerControllerTest {
 
-  /** Records what the controller does to an effect, and reports whatever it is told to report. */
   private class FakeEffect(override val audioSessionId: Int) : EqualizerEffect {
     var reported: EqualizerSettings? = equalizerSettings(preset = null, enabled = false)
     var callback: ((EqualizerSettings) -> Unit)? = null
@@ -119,8 +112,6 @@ class EqualizerControllerTest {
 
     fixture.controller.onAudioSessionChanged(42)
 
-    // The effect only gets the callback once the restore is done, so the intermediate states of a
-    // multi-step restore never reach the caller.
     assertEquals("emitted", 1, fixture.emitted.size)
     assertTrue("callback wired", fixture.created.single().callback != null)
   }

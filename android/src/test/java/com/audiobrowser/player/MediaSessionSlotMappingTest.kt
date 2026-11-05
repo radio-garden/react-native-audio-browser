@@ -5,15 +5,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Guards the slot preference lists handed to Media3.
- *
- * The invariant that matters is the OVERFLOW fallback: every flattening keeps a button only if it
- * won SLOT_BACK, won SLOT_FORWARD, or names SLOT_OVERFLOW. A slot that stops naming OVERFLOW
- * silently deletes its button from the notification and the car the moment its primary position is
- * unavailable, so the loop below asserts the property for every slot rather than only today's
- * three.
- */
 class MediaSessionSlotMappingTest {
 
   @Test

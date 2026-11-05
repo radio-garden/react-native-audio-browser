@@ -34,16 +34,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Tests the tiles an Android Auto browse level serves in place of a list: the empty tile of a page
- * that resolved with zero children, and the offline and failure tiles, all worded by the app's
- * `formatNavigationError` (ADR 0001). MediaSessionCallback itself needs a live MediaLibrarySession,
- * so the pieces under test are the ones carved out of it: [browseLevelItems] (the empty-branch
- * decision), the tile builders, [BrowserPathHelper.isDeadEndPath] (the drill-in guard),
- * [announcedSearchCount] (what onSearch tells the controller to ask for), [FailedSearchSlot] (a
- * failed search, which must not read as an empty one), [OfflineSearchRegistry] (the searches
- * connectivity returning re-runs), [navigationErrorFor] (the one exception mapping browse, search
- * and the JS-facing `search` rejection share) and [formattedOrDefault] (the formatter hop's
- * fallback rule, which sits off the JNI-backed Promise edge for exactly this reason).
+ * Tests the tiles a browse level serves in place of a list, worded by the app's
+ * `formatNavigationError` (ADR 0001). MediaSessionCallback needs a live MediaLibrarySession, so
+ * these test the pieces carved out of it.
  */
 @RunWith(RobolectricTestRunner::class)
 class BrowseTilesTest {
@@ -66,11 +59,7 @@ class BrowseTilesTest {
       .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
       .build()
 
-  /**
-   * Stands in for an app's `formatNavigationError`: different copy per error and per path, the
-   * point of ADR 0001. The search branches match the prefix the library builds car search paths
-   * from.
-   */
+  /** Stands in for an app's `formatNavigationError`: different copy per error and per path. */
   private fun appCopy(error: NavigationError, path: String): FormattedNavigationError {
     val isSearch = path.startsWith(BrowserPathHelper.SEARCH_PATH_PREFIX)
     return when {
@@ -282,8 +271,7 @@ class BrowseTilesTest {
         )
       )
 
-    // Nothing servable, so the announced count is the tile's — a controller told zero would never
-    // come back for it.
+    // The tile's count: a controller told zero never asks for the tile.
     assertEquals(1, announcedSearchCount(disabledOnly))
   }
 
@@ -318,8 +306,7 @@ class BrowseTilesTest {
     assertFalse(tile.mediaMetadata.isBrowsable!!)
     assertFalse(tile.mediaMetadata.isPlayable!!)
     assertTrue(BrowserPathHelper.isDeadEndPath(BrowserPathHelper.OFFLINE_PATH))
-    // Offline is not a search that failed: connectivity returning is what serves results again,
-    // so the slot stays empty and a later re-query of the query is not a failure.
+    // Offline is not a failed search: connectivity returning re-runs it, so the slot stays empty.
     assertNull(slot.errorFor("jazz"))
   }
 
@@ -344,11 +331,10 @@ class BrowseTilesTest {
     assertEquals("We couldn't load that", appTile.mediaMetadata.title)
     assertEquals("Try again in a moment.", appTile.mediaMetadata.subtitle)
 
-    // Without a formatter, the status text the in-app error already shows.
     val defaultTile = createBrowseErrorMediaItem(defaultFormattedError(failure))
     assertEquals("Service Unavailable", defaultTile.mediaMetadata.title)
 
-    // A re-read of the tile has no exception left to map, so it stands on the generic failure.
+    // A re-read of the tile has no exception left to map, so it gets the generic failure.
     assertEquals("Error", defaultFormattedError(browseFailureError()).title)
   }
 
@@ -368,8 +354,8 @@ class BrowseTilesTest {
 
   @Test
   fun `a failed search rejects with the navigation error a failed browse would raise`() {
-    // Nitro's Promise is JNI-backed (its constructor calls initHybrid), so the JS-facing
-    // AudioBrowser.search cannot be built here; what it rejects with is this.
+    // Nitro's Promise is JNI-backed, so AudioBrowser.search cannot be built here; this is what it
+    // rejects with.
     val rejection =
       NavigationErrorException(navigationErrorFor(HttpStatusException(503, "Service Unavailable")))
     assertEquals(NavigationErrorType.HTTP_ERROR, rejection.error.code)
@@ -401,7 +387,6 @@ class BrowseTilesTest {
     assertEquals(2, pending.size)
     assertEquals("jazz fm", pending.single { it.browser == auto }.query)
     assertEquals("blues", pending.single { it.browser == assistant }.query)
-    // Drained, so a second connectivity change does not re-run the same searches again.
     assertTrue(registry.drain().isEmpty())
   }
 
@@ -415,10 +400,8 @@ class BrowseTilesTest {
         )
       )
 
-    // The re-run goes through the same count as the first, online search, so what a controller is
-    // told to fetch is what onGetSearchResult then serves from the cache that search filled.
+    // The re-run counts like the first search, so the controller asks for what the cache serves.
     assertEquals(2, announcedSearchCount(hits))
-    // While offline there is nothing to count: the one tile is announced instead.
     assertEquals(1, announcedSearchCount(null))
   }
 
@@ -461,8 +444,8 @@ class BrowseTilesTest {
     var parked: Continuation<FormattedNavigationError?>? = null
 
     try {
-      // Nitro's Promise.await parks exactly like this — suspendCoroutine, so cancelling the
-      // coroutine never unparks it. The hop must be abandoned, not waited on.
+      // Nitro's Promise.await parks like this, in suspendCoroutine, which cancellation never
+      // unparks; the hop must be abandoned, not waited on.
       val formatted =
         formattedOrDefault(backgroundScope, default) {
           suspendCoroutine { continuation -> parked = continuation }

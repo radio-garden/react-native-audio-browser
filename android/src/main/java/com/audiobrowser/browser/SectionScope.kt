@@ -6,28 +6,20 @@ import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
 
 /**
- * Queue scope is the tapped section, not the whole page (ADR 0006): the playback context a listener
- * expects is the list they tapped in — a page aggregating several sections must not leak
- * next/previous across them. Sections are structural (ADR 0010), so scoping is a lookup, not a
- * groupTitle-run derivation.
+ * The queue is the tapped section, not the whole page, so next/previous never crosses sections
+ * (docs/adr/0006-queue-scope-is-the-tapped-section.md).
  */
 object SectionScope {
-  /**
-   * The section containing the tapped identity, plus the tapped child's offset within it — non-null
-   * only when the stamped flat index pinned the exact copy.
-   */
+  /** [tappedOffset] is the tapped child's index in [section], null when no index pinned it. */
   data class Scoped(val section: Section, val tappedOffset: Int?)
 
   /**
-   * The section of [sections] containing the playable [trackId] (a track identity — id when
-   * non-blank, else src), or null when not found.
+   * The section of [sections] holding [trackId] (a track identity), or null when none does.
    *
-   * [tappedIndex] — the flat page position stamped into the contextual URL (children concatenated
-   * in section order) — is a tie-breaker, never an identifier: when the child at that position
-   * still carries the tapped identity, it pins which section (and which copy) was tapped; when it
-   * doesn't (the list shifted), resolution falls back to the first section containing the identity.
-   * A stale index can therefore never select a different track — at worst a different copy of the
-   * same one.
+   * [tappedIndex] is the flat position stamped into the contextual path (children concatenated in
+   * section order). It only breaks ties: when the child there still has [trackId], it pins that
+   * section and copy; otherwise (the list shifted, or the index is out of range) the first section
+   * holding [trackId] is returned, unpinned. A stale index never selects a different track.
    */
   fun scoped(sections: List<Section>, trackId: String, tappedIndex: Int? = null): Scoped? {
     if (tappedIndex != null && tappedIndex >= 0) {
@@ -54,31 +46,21 @@ object SectionScope {
 
 // Page shape helpers (ADR 0010)
 
-/**
- * One untitled section — the canonical wrap of a flat track list (`children` authoring sugar,
- * search results — ADR 0010).
- */
+/** One untitled section: how a flat track list (`children` sugar, search results) is wrapped. */
 fun untitledSection(children: Array<Track>): Section =
   Section(title = null, style = null, path = null, children = children)
 
-/**
- * The canonical sectioned shape: `sections` wins when present; plain `children` is authoring sugar
- * for one untitled section.
- */
+/** The page as sections: `sections` when present, else `children` as one untitled section. */
 val ResolvedTrack.normalizedSections: List<Section>?
   get() = sections?.toList() ?: children?.let { listOf(untitledSection(it)) }
 
 /**
- * [normalizedSections] with the page block folded in: each section's style resolves `section ??
- * page` per property ([StyleResolver], ADR 0011), so everything downstream sees only effective
- * section blocks — a page is a Track that is also the container of its sections.
+ * [normalizedSections] with the page's style folded into each section's, property by property (ADR
+ * 0011), so callers see only effective section styles.
  */
 fun ResolvedTrack.styleResolvedSections(): List<Section>? =
   normalizedSections?.map { it.copy(style = StyleResolver.sectionStyle(it.style, style)) }
 
-/**
- * The page's children concatenated in section order — the flattening that defines contextual
- * `__index` positions and the flat views (tabs, search) of a sectioned page.
- */
+/** The page's children in section order: the positions a contextual `__index` counts in. */
 val ResolvedTrack.flattenedChildren: List<Track>?
   get() = normalizedSections?.flatMap { it.children.asList() }

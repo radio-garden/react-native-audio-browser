@@ -16,13 +16,8 @@ import org.mockito.Mockito.`when`
 
 class AiaCertChaserTest {
 
-  /**
-   * A certificate whose AIA extension value is exactly [extensionValue].
-   *
-   * Subject and issuer are stubbed to distinct principals on purpose: an unstubbed mock answers
-   * null to both, which `completeChain` would read as a self-signed root and stop on before
-   * fetching anything.
-   */
+  // Subject and issuer differ on purpose: an unstubbed mock answers null to both, which
+  // completeChain reads as a self-signed root and stops on before fetching.
   private fun certWithAia(extensionValue: ByteArray): X509Certificate =
     mock(X509Certificate::class.java).also {
       `when`(it.getExtensionValue("1.3.6.1.5.5.7.1.1")).thenReturn(extensionValue)
@@ -30,7 +25,6 @@ class AiaCertChaserTest {
       `when`(it.issuerX500Principal).thenReturn(X500Principal("CN=issuer"))
     }
 
-  /** A DER tag-length-value, with the length in whichever form fits. */
   private fun der(tag: Int, content: ByteArray): ByteArray {
     val length =
       when (val n = content.size) {
@@ -42,7 +36,6 @@ class AiaCertChaserTest {
     return byteArrayOf(tag.toByte()) + length + content
   }
 
-  /** A well-formed AIA extension value listing [urls] as caIssuers locations. */
   private fun aiaExtension(urls: List<String>): ByteArray {
     val caIssuersOid = byteArrayOf(0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
     val descriptions =
@@ -54,8 +47,7 @@ class AiaCertChaserTest {
 
   @Test
   fun `the AIA fixture builder round-trips through the parser`() {
-    // Guards the two tests below: if this builder were malformed they would pass by parsing
-    // nothing at all, rather than by the cap doing its job.
+    // Without this, a malformed builder would let the URL-cap tests pass by parsing nothing.
     val urls = listOf("http://ca1.example/i.crt", "http://ca2.example/i.crt")
 
     assertEquals(urls, AiaCertChaser.extractCaIssuerUrls(certWithAia(aiaExtension(urls))))
@@ -63,10 +55,8 @@ class AiaCertChaserTest {
 
   @Test(timeout = 5_000)
   fun `a negative long-form length does not hang the parser`() {
-    // OCTET STRING { SEQUENCE { tag 0x00, long-form length 0xFFFFFFFA = -6 } }.
-    // The length's four bytes shift into a negative Int, so `pos += len` rewinds the
-    // reader by exactly the six bytes it just consumed: the tag is not a SEQUENCE, the
-    // loop `continue`s, and the reader is back where it started with more input to read.
+    // OCTET STRING { SEQUENCE { tag 0x00, length 0xFFFFFFFA = -6 } }: as an Int the length
+    // rewinds the reader by the six bytes it just read, back to the start.
     val aia =
       byteArrayOf(
         0x04,
@@ -86,7 +76,7 @@ class AiaCertChaserTest {
 
   @Test(timeout = 5_000)
   fun `a length running past the buffer is treated as no AIA`() {
-    // SEQUENCE claiming 0x7F content bytes inside a 2-byte buffer.
+    // A SEQUENCE claiming 0x7F content bytes inside a 2-byte buffer.
     val aia = byteArrayOf(0x04, 0x04, 0x30, 0x02, 0x30, 0x7F)
 
     assertEquals(emptyList<String>(), AiaCertChaser.extractCaIssuerUrls(certWithAia(aia)))
@@ -112,7 +102,6 @@ class AiaCertChaserTest {
   fun `completeChain appends fetched intermediate when server sends leaf only`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
-    // Fetcher knows only the R13 URL (the leaf's AIA pointer); empty for the root URL.
     val fetch = { url: String, _: Long ->
       if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
     }
@@ -126,9 +115,8 @@ class AiaCertChaserTest {
   fun `completeChain selects the real issuer from a multi-certificate response`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
-    val unrelated = CertFixtures.cert("isrg-root-x1.pem") // not the leaf's issuer
+    val unrelated = CertFixtures.cert("isrg-root-x1.pem")
 
-    // A PKCS#7-style bundle where the genuine issuer is not first must still be selected.
     val completed =
       AiaCertChaser.completeChain(listOf(leaf)) { url, _ ->
         if (url == "http://r13.i.lencr.org/") listOf(unrelated, r13) else emptyList()
@@ -159,8 +147,7 @@ class AiaCertChaserTest {
     val root = CertFixtures.cert("isrg-root-x1.pem")
     val fetched = mutableListOf<String>()
 
-    // R13's own AIA points at the ISRG root, so without knowing the anchors this walks one hop
-    // too far and pays for a second blocking fetch on the ordinary rescue path.
+    // R13's AIA points at the root, so without the anchors this fetches a second time.
     val completed =
       AiaCertChaser.completeChain(
         listOf(leaf),
@@ -181,8 +168,7 @@ class AiaCertChaserTest {
     val root = CertFixtures.cert("isrg-root-x1.pem")
     var fetches = 0
 
-    // The shape of every non-path failure — expiry, hostname mismatch, CT — where the server
-    // sent a complete chain and validation failed for some other reason.
+    // A complete chain, as with any failure that is not a missing intermediate.
     val completed =
       AiaCertChaser.completeChain(
         listOf(leaf, r13),
@@ -198,9 +184,6 @@ class AiaCertChaserTest {
 
   @Test
   fun `completeChain tries only a few of a certificate's CA-Issuers URLs`() {
-    // The extension is authored by the server that just failed validation, and nothing limits
-    // how many URLs it lists. Each one costs a blocking connect on the handshake thread, so
-    // hundreds of them are a denial of service whatever each individual fetch costs.
     val manyUrls = (1..500).map { "http://ca$it.example/issuer.crt" }
     val cert = certWithAia(aiaExtension(manyUrls))
     val fetched = mutableListOf<String>()
@@ -215,8 +198,6 @@ class AiaCertChaserTest {
 
   @Test
   fun `duplicate CA-Issuers URLs do not consume the URL cap`() {
-    // 500 copies of one dead URL followed by a distinct one: the cap must buy distinct hosts,
-    // not three visits to the same dead one.
     val urls = List(500) { "http://ca.example/issuer.crt" } + "http://ca-b.example/issuer.crt"
     val cert = certWithAia(aiaExtension(urls))
     val fetched = mutableListOf<String>()
@@ -236,8 +217,7 @@ class AiaCertChaserTest {
     var nanos = 0L
     val deadlines = mutableListOf<Long>()
 
-    // Each fetch "takes" 8s against a 20s budget, so the walk must stop after a handful even
-    // though the URL cap alone would have allowed more.
+    // Each fetch takes 8s of a 20s budget, so the budget, not the URL cap, stops it at three.
     AiaCertChaser.completeChain(
       listOf(cert),
       maxUrlsPerCert = 500,
@@ -251,8 +231,6 @@ class AiaCertChaserTest {
     }
 
     assertEquals(3, fetches)
-    // Every fetch is handed the same walk-wide deadline, so it can clip its own I/O to it —
-    // the budget bounds the fetches themselves, not just how many of them start.
     assertEquals(listOf(20_000_000_000L, 20_000_000_000L, 20_000_000_000L), deadlines)
   }
 
@@ -270,21 +248,19 @@ class AiaCertChaserTest {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val root = CertFixtures.cert("isrg-root-x1.pem")
-    // Validate as of just after issuance so the fixtures never rot when the leaf expires.
+    // As of just after issuance, so the test still passes once the leaf expires.
     val date = Date(leaf.notBefore.time + 86_400_000L)
 
-    // Reproduces the Android bug: the server-sent leaf alone has no path to the trusted root.
     assertThrows(CertPathValidatorException::class.java) { validatePath(listOf(leaf), root, date) }
 
-    // After AIA chasing splices in R13, the chain validates to the trusted root.
     val completed =
       AiaCertChaser.completeChain(listOf(leaf)) { url, _ ->
         if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
-    validatePath(completed, root, date) // must not throw
+    validatePath(completed, root, date)
   }
 
-  /** Validates [chain] (leaf-first, excluding the anchor) against [anchor] as of [date]. */
+  /** Validates [chain] (leaf first, anchor excluded) against [anchor] as of [date]. */
   private fun validatePath(chain: List<X509Certificate>, anchor: X509Certificate, date: Date) {
     val path = CertificateFactory.getInstance("X.509").generateCertPath(chain)
     val params =

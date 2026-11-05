@@ -6,8 +6,8 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.Util
 
 /**
- * The queue [RemoteSwitchingPlayer] keeps while remote: its items, each with a uid of its own, and
- * the current one. It plays in list order.
+ * The queue [RemoteSwitchingPlayer] keeps while remote, played in list order. Each item has a uid
+ * of its own that follows it through moves, so equal media items stay distinct playlist entries.
  */
 internal class RemoteQueue {
   private val itemList = mutableListOf<MediaItem>()
@@ -36,6 +36,7 @@ internal class RemoteQueue {
     index = if (newItems.isEmpty()) C.INDEX_UNSET else newIndex.coerceIn(0, newItems.size - 1)
   }
 
+  /** Inserts [newItems] at [at], clamped; in an empty queue, the first of them becomes current. */
   fun add(at: Int, newItems: List<MediaItem>) {
     val to = at.coerceIn(0, itemList.size)
     itemList.addAll(to, newItems)
@@ -46,7 +47,10 @@ internal class RemoteQueue {
     }
   }
 
-  /** Removes the items from [fromIndex] to [toIndex]; true when the current one went with them. */
+  /**
+   * Removes the items from [fromIndex] to [toIndex]; true when the current one went with them, and
+   * then the item after them, or else the last, is current.
+   */
   fun remove(fromIndex: Int, toIndex: Int): Boolean {
     val to = toIndex.coerceAtMost(itemList.size)
     val removesCurrent = index in fromIndex until to
@@ -64,7 +68,8 @@ internal class RemoteQueue {
 
   /**
    * Puts [newItems] in place of the items from [fromIndex] to [toIndex]. True when the current item
-   * is now another media; a restamp of its metadata alone is not.
+   * is now another media: for a same-length replacement, by media id or uri, so a restamp of its
+   * metadata alone is not; otherwise whenever the range held the current item.
    */
   fun replace(fromIndex: Int, toIndex: Int, newItems: List<MediaItem>): Boolean {
     val to = toIndex.coerceAtMost(itemList.size)
@@ -91,13 +96,15 @@ internal class RemoteQueue {
     index = uidList.indexOf(current)
   }
 
+  /** Throws when no item is at [newIndex]. */
   fun moveTo(newIndex: Int) {
     require(newIndex in itemList.indices) { "No item at $newIndex" }
     index = newIndex
   }
 
   /**
-   * The item that follows the current one at its end, or [C.INDEX_UNSET] at the end of the queue.
+   * The item that plays when the current one ends under [repeatMode], or [C.INDEX_UNSET] when
+   * playback stops.
    */
   fun nextAtEnd(repeatMode: Int): Int =
     when {

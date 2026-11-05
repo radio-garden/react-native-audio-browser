@@ -10,32 +10,14 @@ import com.margelo.nitro.audiobrowser.TrackStyle
 import timber.log.Timber
 
 /**
- * Dev diagnostic (ADR 0011): the declarations on a resolved page that can never render.
- *
- * The block model deliberately gave up compile-time invalid-combination errors — combinations are
- * not invalid, they are *inert*, the way `grid-template` on a non-grid element is inert in CSS.
- * This is the recovery: at page resolution every declaration its own block makes unreadable is
- * reported once, with the effective context and the fix.
- *
- * The line it draws, and never crosses: only **structural** inertness — a declaration the resolved
- * block itself renders unreadable, on every surface (`gridWrap` outside a grid, `cardTint` with no
- * card treatment in scope). *Surface* inertness is never reported, because declarations are
- * aspirational: `imageShape` on Android Auto, or a card treatment on a pre-26 CarPlay, is intended
- * usage — the renderer drops what it can't draw.
- *
- * Runs where every page passes regardless of its source (static config, route callback, or fetched
- * browse JSON), and only on a cache miss, so a mistake is reported once per resolution rather than
- * once per serve. Mirrors `ios/Browser/InertStyleDiagnostic.swift`.
- *
- * Debug builds only: [warn] is the whole seam, so a release build never even walks the page (the
- * trade is that a page served only to a release build — an internal track, production browse JSON —
- * reports nothing; reproduce it against a debug build).
+ * Reports the style declarations on a resolved page that can never render on any surface (ADR
+ * 0011). Only structural inertness: a surface dropping a property it can't draw is intended usage,
+ * not a finding. Mirrors `ios/Browser/InertStyleDiagnostic.swift`.
  */
 object InertStyleDiagnostic {
   /**
-   * Reports every inert declaration on a resolved page. The one gate — the [BuildConfig] check is
-   * here rather than at the call sites so callers read unconditionally and the rule set stays free
-   * of build-configuration knowledge.
+   * Logs every finding; a no-op in release builds, so a page only a release build serves reports
+   * nothing until reproduced against a debug build.
    */
   fun warn(path: String, pageStyle: SectionStyle?, sections: List<Section>) {
     if (!BuildConfig.DEBUG) return
@@ -43,14 +25,12 @@ object InertStyleDiagnostic {
   }
 
   /**
-   * The declarations that carry a structural inertness condition.
-   *
-   * Two keys of the block are deliberately absent — `display` and `artworkRendering`, dispositioned
-   * below instead.
+   * The keys with an inertness rule. `src/style-resolution.test.ts` reads the entry keys: every key
+   * of the spec's style block is here, in [ALWAYS_RENDERABLE] or in [POSITIONAL].
    */
   private enum class Property(val key: String, val isItemProperty: Boolean) {
-    // Container properties resolve by scope override (`section ?? page`) and never reach an item;
-    // item properties inherit (`track ?? section ?? page`), so they may also be declared per track.
+    // Item properties inherit `track ?? section ?? page`, so tracks may declare them too; container
+    // properties resolve `section ?? page` and never reach an item.
     GRID_WRAP("gridWrap", isItemProperty = false),
     GRID_TILE("gridTile", isItemProperty = false),
     IMAGE_SHAPE("imageShape", isItemProperty = true),
@@ -58,10 +38,6 @@ object InertStyleDiagnostic {
     CARD_TINT("cardTint", isItemProperty = true),
     CARD_IMAGE("cardImage", isItemProperty = true);
 
-    /**
-     * Whether a value of this property, resolved into [context], has any rendering to affect. Each
-     * branch is the spec's own "inert unless" clause.
-     */
     fun isInert(context: Context): Boolean =
       when (this) {
         GRID_WRAP,
@@ -72,7 +48,6 @@ object InertStyleDiagnostic {
         CARD_IMAGE -> !context.isCard
       }
 
-    /** The rule the declaration falls foul of, stated positively. */
     val rule: String
       get() =
         when (this) {
@@ -107,11 +82,9 @@ object InertStyleDiagnostic {
         CARD_IMAGE -> style?.cardImage != null
       }
 
-    // Nitro flattens the spec's `extends`, so the two blocks share no type — hence two lookups over
-    // the same key set rather than one interface.
+    // Nitro flattens the spec's `extends`, so SectionStyle and TrackStyle share no type to look up.
     fun declaredIn(style: TrackStyle?): Boolean =
       when (this) {
-        // Container properties have no Track slot to be declared in.
         GRID_WRAP,
         GRID_TILE -> false
         IMAGE_SHAPE -> style?.imageShape != null
@@ -121,35 +94,20 @@ object InertStyleDiagnostic {
       }
   }
 
-  /**
-   * The rest of the block's keys, dispositioned rather than ruled on: `artworkRendering` has no
-   * structural inertness condition (artwork renders in every layout), and `display` is positional —
-   * inert only in the one position that opens no page (see [playableDisplayFinding]). Declared here
-   * so the spec-level completeness test can hold this file to the whole vocabulary: every key of
-   * the block is a rule, always renderable, or positional, and a newly added property is a decision
-   * rather than an omission.
-   */
+  // Unused in code: `src/style-resolution.test.ts` reads these lists to check that every key of
+  // the block is dispositioned. `artworkRendering` renders in every layout; `display` is inert only
+  // on a playable track (see [playableDisplayFinding]).
   val ALWAYS_RENDERABLE = listOf("artworkRendering")
 
   val POSITIONAL = listOf("display")
 
-  /**
-   * A section's effective container context: the two container values every inertness condition is
-   * stated against.
-   *
-   * Folded through [StyleResolver] rather than re-deriving the scope override: the diagnostic
-   * predicts what a renderer will do with these declarations, so it has to resolve them the way the
-   * renderers do.
-   */
+  // Folds through StyleResolver so it predicts what the renderers resolve.
   private class Context(section: SectionStyle?, page: SectionStyle?) {
     private val folded = StyleResolver.sectionStyle(section, page)
     val isGrid = folded.display == StyleDisplay.GRID
     val tile = folded.gridTile ?: GridTile.PLAIN
 
-    /**
-     * Whether the card treatment is what this container renders — the `card*` family's condition.
-     * Exhaustive, like [isShaped]: a new tile kind has to be ruled on here.
-     */
+    // Exhaustive, like isShaped, so a new tile kind has to be ruled on here.
     val isCard: Boolean
       get() =
         isGrid &&
@@ -160,7 +118,6 @@ object InertStyleDiagnostic {
             GridTile.CONDENSED -> false
           }
 
-    /** Whether this container renders a tile family with a shape and an accessory slot. */
     val isShaped: Boolean
       get() =
         isGrid &&
@@ -171,29 +128,21 @@ object InertStyleDiagnostic {
             GridTile.CARD -> false
           }
 
-    /**
-     * The effective style, for the message — in the wire spelling the author types ([toWireString]
-     * is the decoder's own mapping). `gridTile` is quoted only where a grid gives it meaning:
-     * naming it on a list would be advice to fix the wrong property.
-     */
+    // gridTile is named only in a grid: on a list it would point at the wrong property to fix.
     val described: String
       get() = if (!isGrid) "display 'list'" else "display 'grid', gridTile '${tile.toWireString()}'"
   }
 
   /**
-   * Every inert declaration on a resolved page, as ready-to-log messages — pure, so the whole rule
-   * set is testable off-device; the caller logs.
+   * Every inert declaration on a resolved page, as log-ready messages.
    *
-   * @param path the resolved path, named in every message.
    * @param pageStyle the page's own block (`ResolvedTrack.style`).
-   * @param sections the page's normalized sections, blocks *unfolded* — the diagnostic attributes
-   *   each finding to the level that declared it, so it must see the levels before [StyleResolver]
-   *   merges them.
+   * @param sections the page's sections with their blocks unfolded: each finding names the level
+   *   that declared it.
    */
   fun findings(path: String, pageStyle: SectionStyle?, sections: List<Section>): List<String> {
     val findings = mutableListOf<String>()
-    // A page-level declaration is judged across the whole page: it is live if it renders in any
-    // section it reaches, however many others ignore it.
+    // A page declaration is live if it renders in any section that inherits it.
     val pageReached = mutableSetOf<Property>()
     val pageRendered = mutableSetOf<Property>()
 
@@ -210,7 +159,6 @@ object InertStyleDiagnostic {
               message(property, path, sectionLabel, "its effective style is ${context.described}")
           }
         } else if (property.declaredIn(pageStyle)) {
-          // The section takes the page's value (nothing closer overrode it).
           pageReached += property
           if (!inert) pageRendered += property
         }
@@ -241,10 +189,6 @@ object InertStyleDiagnostic {
     return findings
   }
 
-  /**
-   * `display` is positional, so it is never inert *in* a container — but on a track that renders
-   * playable (`src` wins the rendering) it promises the layout of a page that never opens.
-   */
   private fun playableDisplayFinding(section: Section, path: String, label: String): String? {
     val tracks = section.children.count { it.src != null && it.style?.display != null }
     if (tracks == 0) return null
@@ -268,10 +212,6 @@ object InertStyleDiagnostic {
       hint = property.hint,
     )
 
-  /**
-   * The one message skeleton — every finding names the page, the declaration, who declared it, why
-   * it can't render, and what to do about it.
-   */
   private fun message(
     path: String,
     owner: String,

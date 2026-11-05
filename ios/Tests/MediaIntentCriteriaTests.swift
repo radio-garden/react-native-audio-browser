@@ -10,6 +10,7 @@ private func criteria(
   mediaTypeMode: String? = nil,
   reference: MediaIntentCriteria.Reference = .unknown,
   hasMediaType: Bool = false,
+  // A query names the app on a whole-word subset match either way, so "Acme" matches.
   appName: String? = "Acme Radio",
 ) -> MediaIntentCriteria {
   MediaIntentCriteria(
@@ -31,14 +32,12 @@ struct MediaIntentCriteriaTests {
     #expect(c.isResume)
   }
 
-  // currentlyPlaying always resumes — "play this" makes the active track play.
   @Test func currentlyPlaying_isResume() {
     #expect(criteria(reference: .currentlyPlaying).isResume)
-    // even with a stray query/filter, "play this" is a resume
+    // A query and filters that would otherwise search do not override it.
     #expect(criteria(mediaName: "jazz", genreNames: ["jazz"], reference: .currentlyPlaying, hasMediaType: true).isResume)
   }
 
-  // .my always searches — "play my favorites" goes to the consumer, never resume.
   @Test func my_isNotResume() {
     #expect(!criteria(reference: .my).isResume)
     let namesApp = criteria(mediaName: "Acme", reference: .my)
@@ -68,7 +67,6 @@ struct MediaIntentCriteriaTests {
     #expect(!criteria(mediaName: "jazz").isResume)
   }
 
-  // An empty genre name is still a genre filter: the fact is that genres were given.
   @Test func emptyGenreName_isStillAGenreFilter() {
     let c = criteria(genreNames: [""])
     #expect(c.genre == "")
@@ -109,7 +107,6 @@ struct MediaIntentCriteriaFromTests {
 
   // MARK: mode comes ONLY from mediaTypeMode (no field-derivation)
 
-  // "Play jazz" → genre is a FILTER, not a mode. mode stays nil; genre set.
   @Test func genre_isFilterNotMode() {
     let c = criteria(genreNames: ["jazz"], hasMediaType: true)
     #expect(c.query == "jazz")
@@ -141,7 +138,6 @@ struct MediaIntentCriteriaFromTests {
     #expect(!c.query.isEmpty)
   }
 
-  // A vertical mediaType DOES set the mode, and travels with its filters.
   @Test func song_viaMediaTypeMode_setsTitle() {
     let c = criteria(mediaName: "Billie Jean", mediaTypeMode: "song")
     #expect(c.query == "Billie Jean")
@@ -158,7 +154,6 @@ struct MediaIntentCriteriaFromTests {
     #expect(c.title == nil)
   }
 
-  // "Play jazz station" → vertical wins as mode; genre rides as a filter.
   @Test func station_withGenreFilter() {
     let c = criteria(genreNames: ["jazz"], mediaTypeMode: "station", hasMediaType: true)
     #expect(c.searchMode == "station")

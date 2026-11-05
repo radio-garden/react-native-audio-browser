@@ -18,7 +18,6 @@ import org.mockito.Mockito.mockingDetails
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
-// Robolectric: Player builds a real ExoPlayer, which needs the framework and a main looper.
 @RunWith(RobolectricTestRunner::class)
 class PlayerSetupTest {
 
@@ -26,13 +25,14 @@ class PlayerSetupTest {
 
   @After fun release() = player.exoPlayer.release()
 
-  /** Service.onCreate and AudioBrowser.onServiceConnected set up with the same options. */
   @Test
   fun setupWithTheSameOptionsKeepsTheEngine() {
     player.setup(PlayerSetupOptions())
     val engine = player.exoPlayer
 
+    // The service and the module each set up with the same options.
     player.setup(PlayerSetupOptions())
+    // An option the engine is not built from.
     player.setup(PlayerSetupOptions(autoUpdateNowPlayingMetadata = false))
 
     assertSame(engine, player.exoPlayer)
@@ -65,6 +65,7 @@ class PlayerSetupTest {
     assertTrue(rebuilt.playbackState != MediaPlayer.STATE_IDLE)
     assertTrue(rebuilt.playWhenReady)
     assertTrue(player.playWhenReadyCache)
+    // The new engine buffers again from the kept position.
     assertEquals(PlaybackState.BUFFERING, player.playbackState)
     assertEquals(
       emptyList<String>(),

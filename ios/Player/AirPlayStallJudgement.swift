@@ -1,16 +1,14 @@
-/// Pure decision for the AirPlay "silently stuck" recovery, kept free of
-/// AVFoundation so it can be unit-tested off-device.
+/// Whether to re-issue `play()` for an AirPlay stall. Kept free of AVFoundation so it is
+/// unit-testable off-device.
 ///
-/// Over AirPlay, AVPlayer can drop `.waitingToPlayAtSpecifiedRate` (reason
-/// `.noItemToPlay`) → `.paused` while the app still intends to play, leaving
-/// playback stuck/silent with no error. Re-issuing `play()` on exactly that
-/// transition recovers it. Scoped narrowly to AirPlay so it never nudges a
-/// legitimate pause on the local route.
+/// Over AirPlay, AVPlayer can go from `.waitingToPlayAtSpecifiedRate` (reason `.noItemToPlay`)
+/// to `.paused` while the app still means to play, leaving playback silent with no error;
+/// `play()` on exactly that transition recovers it. Limited to AirPlay so a real pause on the
+/// local route is never nudged.
 struct AirPlayStallJudgement {
   let previous: PlayerTimeControlStatus?
   let current: PlayerTimeControlStatus
-  /// Whether the previous waiting state's reason was specifically
-  /// `.noItemToPlay` (the AirPlay-stall signature, not a normal rebuffer).
+  /// The previous waiting reason was `.noItemToPlay`: the stall's signature, not a rebuffer.
   let previousWaitingReasonWasNoItemToPlay: Bool
   let isAirPlay: Bool
   let playWhenReady: Bool

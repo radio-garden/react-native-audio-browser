@@ -16,12 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The dev diagnostic for declarations that can never render (ADR 0011): the recovery for the
- * compile-time invalid-combination errors the block model deliberately gave up. Structural
- * inertness only — a surface that can't draw a property it understands is intended usage, never a
- * finding. Mirrors `ios/Tests/InertStyleDiagnosticTests.swift`.
- */
+/** Mirrors `ios/Tests/InertStyleDiagnosticTests.swift`. */
 class InertStyleDiagnosticTest {
 
   private fun findings(
@@ -50,8 +45,6 @@ class InertStyleDiagnosticTest {
 
   @Test
   fun `a section inherits the page's grid display`() {
-    // `display` resolves by scope override, so the page's grid makes the section's `gridWrap` live
-    // without the section restating it.
     val found =
       findings(
         listOf(section(style = sectionStyle(gridWrap = false))),
@@ -204,7 +197,6 @@ class InertStyleDiagnosticTest {
 
   @Test
   fun `a page declaration live in one section is not reported`() {
-    // Card tint reaches both sections; one renders cards. Live is live.
     val found =
       findings(
         listOf(
@@ -233,8 +225,7 @@ class InertStyleDiagnosticTest {
 
   @Test
   fun `a section override shadows the page value`() {
-    // Every section declares its own tint, so the page's is never resolved — shadowed, not inert;
-    // the diagnostic reports what can't render, not what isn't reached.
+    // The page's tint is never reached, not inert: only what can't render is reported.
     val found =
       findings(
         listOf(

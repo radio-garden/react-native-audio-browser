@@ -2,8 +2,8 @@ import CarPlay
 import NitroModules
 
 extension CarPlaySession {
-  /// A row or tile was tapped. CarPlay is released at once, so the list never locks: a browse
-  /// pushes its destination and fills it in, and playback owns its loading state on Now Playing.
+  /// A row or tile was tapped. Calls `completion` at once so the list never locks: a browse
+  /// pushes its destination and fills it in; playback shows its loading state on Now Playing.
   func select(_ track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
     // A tap queued before `end()`: the next run owns the screen.
@@ -19,8 +19,8 @@ extension CarPlaySession {
       return
     }
 
-    // A playable track always lands on Now Playing, so it is pushed now with the tapped
-    // track's fields: the queue expansion and media resolve may both hit the network.
+    // A playable track always lands on Now Playing, so it shows now with the tapped track's
+    // fields: the queue expansion and media resolve may both hit the network.
     if track.src != nil {
       player?.previewNowPlaying(track)
       nowPlaying.prepare(for: track)
@@ -50,10 +50,10 @@ extension CarPlaySession {
   }
 
   /// Pushes `path`'s page as an empty, spinning template that fills in once it appears; or the
-  /// Browse Gate's page when the gate gates it; or selects the tab that is that path.
+  /// Browse Gate's page when the gate holds the path; or selects the tab that is that path.
   func navigate(to path: String, title: String) async {
-    // A push lands asynchronously, so a double tap is caught by `navigatingPaths` until the
-    // pushed template appears.
+    // A push lands asynchronously: `navigatingPaths` catches a double tap until the pushed
+    // template appears and clears it.
     guard interfaceController.topTemplate?.carPlayInfo?.path != path, !navigatingPaths.contains(path) else { return }
     navigatingPaths.insert(path)
     var pushing = false
@@ -73,15 +73,15 @@ extension CarPlaySession {
     pushing = true
     interfaceController.safePush(template, animated: true) { [weak self] pushed, error in
       guard !pushed else { return }
-      // It will never appear to clear the guard (e.g. at the depth limit).
+      // The template never appears to clear the guard (e.g. at the depth limit).
       self?.navigatingPaths.remove(path)
       if let error { self?.logger.error("pushTemplate failed for \(path): \(error.localizedDescription)") }
     }
   }
 
   /// Switches to the tab whose path this is, popping any pushed stack first, instead of pushing
-  /// a second copy of the tab into another tab's stack. False when no tab has the path, when
-  /// the root is not a tab bar, or before iOS 17, which cannot select a tab.
+  /// a second copy of the tab. False when no tab has the path, when the root is not a tab bar,
+  /// or before iOS 17, which cannot select a tab.
   private func selectTab(owning path: String) -> Bool {
     guard #available(iOS 17.0, *),
           let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,

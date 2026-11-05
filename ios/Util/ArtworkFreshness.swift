@@ -1,12 +1,12 @@
 import Foundation
 
 enum ArtworkFreshness {
-  /// The lifetime when no response states one: Kingfisher's own disk expiry.
+  /// Used when no response states a lifetime; matches Kingfisher's default disk expiry.
   static let defaultLifetime: TimeInterval = 7 * 24 * 60 * 60
 
-  /// The shortest lifetime any of `responses` (a fetch's redirects and its final response) states:
-  /// its `max-age` less its `Age`, or zero for `no-cache` or `no-store`. A response that states
-  /// none is skipped; `defaultLifetime` when none does.
+  /// The shortest lifetime stated across `responses` (every redirect and the final response):
+  /// `max-age` minus `Age`, or 0 for `no-cache` or `no-store`. Responses that state none are
+  /// ignored; `defaultLifetime` when none states one.
   static func lifetime(of responses: [HTTPURLResponse]) -> TimeInterval {
     responses.compactMap(lifetime(of:)).min() ?? defaultLifetime
   }
@@ -19,7 +19,7 @@ enum ArtworkFreshness {
       let name = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
       let value = parts.count == 2 ? parts[1].trimmingCharacters(in: .whitespaces).trimmingCharacters(in: ["\""]) : nil
       switch name {
-      // `no-cache="field"` forbids reusing only that field, not the response.
+      // `no-cache="field"` restricts reuse of that field only, not of the response.
       case "no-cache" where value == nil, "no-store":
         return 0
       case "max-age":
@@ -33,7 +33,7 @@ enum ArtworkFreshness {
     return max(0, maxAge - age)
   }
 
-  /// RFC 9111's delta-seconds: digits only, so `inf` or `1e999` state nothing, and capped at 2^31.
+  /// RFC 9111 delta-seconds: digits only (so `inf` or `1e999` are rejected), capped at 2^31.
   private static func deltaSeconds(_ value: String) -> TimeInterval? {
     guard !value.isEmpty, value.allSatisfy({ ("0" ... "9").contains($0) }), let seconds = TimeInterval(value)
     else { return nil }

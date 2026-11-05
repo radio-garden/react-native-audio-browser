@@ -59,6 +59,7 @@ class SendingMediaItemConverterTest {
     val sent = converter.toMediaQueueItem(station)
 
     assertEquals(MediaInfo.STREAM_TYPE_LIVE, sent.media!!.streamType)
+    // The URL has no extension, so the type falls back to audio/mpeg.
     assertEquals("audio/mpeg", sent.media!!.contentType)
     assertTrue(converter.toMediaItem(sent).isRemoteLive)
   }

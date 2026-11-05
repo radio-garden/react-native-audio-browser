@@ -3,7 +3,7 @@ package com.audiobrowser.util
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import kotlinx.coroutines.CoroutineScope
 
-/** Dependencies the exported [ArtworkContentProvider] needs, published by the media Service. */
+/** What [ArtworkContentProvider] needs to serve artwork; the media Service builds it. */
 data class ArtworkProviderDeps(
   val loader: CoilArtworkLoader,
   val registry: BrowseArtworkRegistry,
@@ -12,9 +12,9 @@ data class ArtworkProviderDeps(
 )
 
 /**
- * Process-wide handoff between the media Service (which builds the deps) and the ContentProvider
- * (which the OS may instantiate before the Service exists). `@Volatile` publishes the reference
- * safely across the binder/main threads.
+ * Hands the Service's [ArtworkProviderDeps] to [ArtworkContentProvider], which the OS instantiates
+ * itself and may create before the Service exists: [get] is null until then. Read on binder
+ * threads, written on the main thread.
  */
 object CoilArtworkLoaderHolder {
   @Volatile private var deps: ArtworkProviderDeps? = null
@@ -25,10 +25,7 @@ object CoilArtworkLoaderHolder {
 
   fun get(): ArtworkProviderDeps? = deps
 
-  /**
-   * Clears only if [deps] is still the current one — prevents a stale Service from blanking a
-   * newer.
-   */
+  /** Clears only if [deps] is still current, so a destroyed Service never clears a newer one's. */
   @Synchronized
   fun clearIf(deps: ArtworkProviderDeps) {
     if (this.deps === deps) this.deps = null

@@ -1,16 +1,13 @@
 #if !canImport(NitroModules)
-  /// Lightweight stand-ins for NitroModules types used by the testable target.
-  /// Only compiled when NitroModules is unavailable (SPM test builds).
-  ///
-  /// These stubs declare `Equatable` for test ergonomics — the generated
-  /// Nitro types do NOT. Shared `ios/` sources must not rely on conformances
-  /// that exist only here: `swift test` compiles, the app build breaks.
-  ///
-  /// Property names and types ARE checked against `nitrogen/generated/ios/swift`
-  /// by `src/nitro-stub-drift.test.ts`, which runs in the JS CI job — neither
-  /// native job can see both files at once. Declaring fewer properties than the
-  /// real type is fine and deliberate; spelling one differently is what that
-  /// test catches. Conformances and default values are still on you.
+  // Stand-ins for the NitroModules types, compiled only in SwiftPM test builds.
+  //
+  // They declare `Equatable` for tests; the generated types do not. Shared `ios/` sources
+  // must not rely on a conformance that exists only here: `swift test` passes and the app
+  // build breaks.
+  //
+  // src/nitro-stub-drift.test.ts (JS CI) checks property names and types against
+  // nitrogen/generated/ios/swift. Declaring fewer properties than the real type is fine;
+  // conformances and default values are not checked.
 
   struct ArtworkVariants: Equatable {
     var light: String
@@ -28,8 +25,8 @@
     var query: [String: String]?
   }
 
-  /// Every property of the generated type, in its init's order, so the shared conversions in
-  /// JsonModels compile against both.
+  // Every property of the generated type, in its init's order, so the shared conversions in
+  // JsonModels compile against both.
   struct Track: Equatable {
     var id: String?
     var path: String?
@@ -252,8 +249,6 @@
       }
     }
 
-    // Mirrors the generated extension (nitrogen emits `stringValue` beside
-    // `init?(fromString:)` for every string-backed enum).
     var stringValue: String {
       switch self {
       case .plain: "plain"
@@ -286,10 +281,9 @@
     var cardImage: CardImage?
   }
 
-  // Member order matches the generated init (own properties before inherited
-  // ones — Nitro flattens `extends` own-props-first): the memberwise init this
-  // produces must accept the same argument order as the real type, or
-  // `swift test` passes while the app build breaks on argument order.
+  // Member order matches the generated init, own properties before inherited ones (Nitro
+  // flattens `extends` own-props-first): a different order still passes `swift test` but
+  // breaks the app build.
   struct SectionStyle: Equatable {
     var gridWrap: Bool?
     var gridTile: GridTile?
@@ -425,8 +419,7 @@
 
   // MARK: - Playback Event Types (used by Player)
 
-  /// Public to match the generated Nitro enum, which `TrackPlayerError`
-  /// exposes from a public property.
+  // Public like the generated enum, which `TrackPlayerError` exposes from a public property.
   public enum PlaybackErrorKind {
     case offline
     case unreachable

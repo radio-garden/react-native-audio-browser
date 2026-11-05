@@ -2,7 +2,6 @@
   import NitroModules
 #endif
 
-/// The title, artist and album lines the now-playing surface shows.
 struct NowPlayingLines: Equatable {
   let title: String
   let artist: String?
@@ -25,7 +24,6 @@ struct NowPlayingLines: Equatable {
   }
 }
 
-/// The lines last stamped on the now-playing surface, and the track they were stamped for.
 struct PublishedNowPlayingLines {
   let trackId: String?
   let lines: NowPlayingLines
@@ -35,13 +33,12 @@ struct PublishedNowPlayingLines {
     self.lines = lines
   }
 
-  /// `lines` when they were stamped for `track`, else nil.
+  /// `lines` when they were published for `track`, else nil.
   func lines(for track: Track) -> NowPlayingLines? {
     trackId == (track.identity ?? track.path) ? lines : nil
   }
 }
 
-/// What the now-playing surface renders from: the player's track and state.
 @MainActor
 protocol NowPlayingSource: AnyObject {
   var currentTrack: Track? { get }

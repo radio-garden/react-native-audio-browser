@@ -6,21 +6,15 @@ import javax.net.ssl.X509TrustManager
 import javax.security.auth.x500.X500Principal
 
 /**
- * An [X509TrustManager] that retries validation after filling in missing intermediate certificates
- * via the leaf's Authority Information Access (AIA) "CA Issuers" pointer.
+ * An [X509TrustManager] that, when [delegate] rejects a server chain, fills in missing
+ * intermediates from the certificates' AIA "CA Issuers" URLs and lets [delegate] check again. It
+ * never accepts a chain [delegate] refuses.
  *
- * Wraps a [delegate] (typically the platform default trust manager). On the happy path the delegate
- * accepts the server-presented chain on the first try and this adds nothing. Only when the delegate
- * rejects the chain *and* the top of the chain is not already issued by one of the delegate's
- * anchors does it attempt AIA chasing. That gate is an issuer-name test, not a diagnosis: it rules
- * out the common non-path failures (an expired leaf, a hostname mismatch on a complete chain), but
- * a chain topping at a root the device does not carry is still chased whatever its real problem
- * was. Either way the *completed* chain is still validated by the same delegate against the system
- * trust anchors, so trust can never be weakened: an untrusted root still fails. See
- * [AiaCertChaser].
+ * The API 23 variant only: on 24+ use [AiaChasingExtendedTrustManager], whose documentation says
+ * why a plain [X509TrustManager] wrapper breaks HTTPS there.
  *
- * This is the API 23 variant. On 24+ [AiaChasingExtendedTrustManager] is used instead, and must be:
- * see its documentation for why a plain [X509TrustManager] is not a safe wrapper there.
+ * @param fetch resolves a CA-Issuers URL to its candidate certificates, giving up no later than
+ *   `deadlineNanos`.
  */
 class AiaChasingTrustManager(
   private val delegate: X509TrustManager,
@@ -38,24 +32,22 @@ class AiaChasingTrustManager(
   override fun getAcceptedIssuers(): Array<X509Certificate> = delegate.acceptedIssuers
 }
 
-/** The subjects of a trust manager's accepted issuers; empty if it will not say. */
+/** The subjects of this trust manager's accepted issuers; empty if it throws instead. */
 internal fun X509TrustManager.anchorSubjects(): Set<X500Principal> =
   runCatching { acceptedIssuers.mapTo(HashSet()) { it.subjectX500Principal } }
     .getOrElse { emptySet() }
 
 /**
- * Runs [check], and on rejection retries it once against the AIA-completed chain.
+ * Runs [check] on [chain]; if it throws a [CertificateException], completes the chain via AIA and
+ * runs [check] once more on the result.
  *
- * Nothing is fetched when the presented chain already reaches one of the caller's anchors — see
- * [AiaCertChaser.completeChain]'s `anchorSubjects`. Without that test *every* failed handshake in
- * the process, whatever the cause, would make a blocking outbound request to a host named by the
- * certificate that just failed: an expired certificate, a hostname mismatch and a
- * certificate-transparency refusal all arrive here as a [CertificateException] from a delegate that
- * is perfectly happy with the path. (The test is on issuer names, so a chain topping at an unknown
- * root is still chased even when its real failure was something else.)
+ * Nothing is fetched when the chain already tops out at an issuer in [anchorSubjects], so an
+ * expired leaf or a hostname mismatch does not make the handshake call out to a host the failed
+ * certificate names. The test is on issuer names only: a chain ending at a root the device lacks is
+ * chased whatever its real failure.
  *
- * The completed chain goes through the same [check], so trust is never weakened: whatever the
- * delegate would have refused, it still refuses.
+ * Throws the original failure when nothing could be added; otherwise the retry's failure, with the
+ * original attached as suppressed.
  */
 internal inline fun withAiaRetry(
   chain: Array<X509Certificate>,
@@ -67,13 +59,12 @@ internal inline fun withAiaRetry(
     check(chain)
   } catch (original: CertificateException) {
     val completed = AiaCertChaser.completeChain(chain.toList(), anchorSubjects, fetch = fetch)
-    // Nothing could be added — the original failure stands (don't re-check an unchanged chain).
     if (completed.size == chain.size) throw original
     try {
       check(completed.toTypedArray())
     } catch (retried: CertificateException) {
-      // The chase can change which failure the caller sees (a missing intermediate can turn out
-      // to hide an expiry). Keep the first one attached rather than losing it.
+      // The retry can surface a different failure (an expiry behind the missing intermediate);
+      // keep the first one too.
       retried.addSuppressed(original)
       throw retried
     }

@@ -1,19 +1,9 @@
 import Foundation
 
-/// Reading the `artwork` union, which is either one URL or a URL per appearance.
-///
-/// Nitro surfaces it as `.first(String)` / `.second(ArtworkVariants)`. Call
-/// sites want one of two things — the URL to display, or both URLs so a
-/// `UIImageAsset` can adapt without re-fetching — so those are the only
-/// accessors here, and nothing below the boundary repeats the unwrap.
-///
-/// Deliberately Foundation-only: this is part of the SPM testable target, which
-/// also builds for macOS, so it cannot reach for `UIUserInterfaceStyle` to name
-/// an appearance. Picking between the two URLs is CarPlay's job anyway — it
-/// registers both and lets UIKit choose.
+// Foundation only: this file is in the SPM test target, which also builds for macOS, so it
+// cannot use UIKit to pick an appearance. CarPlay registers both URLs and lets UIKit choose.
 extension Variant_String_ArtworkVariants {
-  /// Both URLs, when the track ships a pair; `nil` for a single URL, which
-  /// needs no per-appearance handling.
+  /// Both URLs when the artwork is a light/dark pair; `nil` for a single URL.
   var variants: ArtworkVariants? {
     switch self {
     case .first: nil
@@ -21,13 +11,9 @@ extension Variant_String_ArtworkVariants {
     }
   }
 
-  /// The URL to use where appearance is unknown or does not apply — now-playing
-  /// metadata, JS-facing values, the artwork transform pipeline.
-  ///
-  /// Resolves a pair to its dark URL. CarPlay dark is the common case, Android
-  /// Auto is dark-only, and it is what a single-URL track would have shipped
-  /// anyway — so a caller that cannot express appearance gets the same image it
-  /// got before pairs existed.
+  /// The URL for where appearance is unknown or does not apply (now-playing metadata, values
+  /// sent to JS, the artwork transform). A pair resolves to its dark URL: CarPlay is usually
+  /// dark, Android Auto is dark-only, and it is the image a single-URL track ships.
   var url: String {
     switch self {
     case let .first(url): url
@@ -36,9 +22,9 @@ extension Variant_String_ArtworkVariants {
   }
 }
 
+// The Nitro-generated enum declares no Equatable conformance; `TabBarEntries.same` and the
+// test stubs' synthesised `Track: Equatable` need it.
 extension Variant_String_ArtworkVariants: Equatable {
-  /// Needed by `TabBarEntries.same`, and by the synthesised `Track: Equatable`
-  /// in the test stubs; the generated enum declares no conformance itself.
   public static func == (lhs: Self, rhs: Self) -> Bool {
     switch (lhs, rhs) {
     case let (.first(l), .first(r)): l == r

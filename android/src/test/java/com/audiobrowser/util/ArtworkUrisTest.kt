@@ -13,7 +13,6 @@ class ArtworkUrisTest {
   fun `tokenFor is deterministic and opaque`() {
     val url = "https://cdn.example.com/a.png?sig=abc&x=1"
     assertEquals(ArtworkUris.tokenFor(url), ArtworkUris.tokenFor(url))
-    // token does not leak the url
     assert(!ArtworkUris.tokenFor(url).contains("cdn.example.com"))
   }
 

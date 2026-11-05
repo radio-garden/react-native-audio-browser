@@ -19,8 +19,8 @@ extension CarPlaySession {
     }
   }
 
-  /// Re-resolves every displayed template at once, bypassing the cache: all content was
-  /// invalidated (e.g. a locale change).
+  /// Re-resolves every displayed template concurrently, bypassing the cache, for when all
+  /// content was invalidated (e.g. a locale change).
   func refreshAllDisplayedTemplates() async {
     let browserManager = audioBrowser.browserManager
     let targets = displayedListTemplates().compactMap { template in template.contentPath.map { (template, $0) } }

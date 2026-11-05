@@ -1,14 +1,12 @@
 package com.audiobrowser.browser
 
 /**
- * Token → resolved browse artwork, the [com.audiobrowser.util.ArtworkContentProvider]'s only data
- * source. Stores plain resolved data (no Track / Nitro handles), so unlike
- * [ArtworkResolutionRegistry] it pins no JS closures and can be sized generously. Cleared when the
- * browser config is replaced or content is invalidated, except for the [pin]ned entries: browse
- * items are rebuilt after a clear, but the media items already in the queue keep their URIs.
- * Thread-safe: written from browse coroutines, read from the provider's IO scope.
+ * Token → resolved artwork, the only data the [com.audiobrowser.util.ArtworkContentProvider]
+ * serves. Thread-safe: written from browse coroutines, read from the provider's IO scope.
  */
 class BrowseArtworkRegistry(
+  // Entries hold plain data, no JS closures (unlike [ArtworkResolutionRegistry]), so they are cheap
+  // to keep many of.
   private val maxEntries: Int = 2048,
   private val maxPinnedEntries: Int = 2048,
 ) {
@@ -21,7 +19,10 @@ class BrowseArtworkRegistry(
     entries[token] = artwork
   }
 
-  /** Registers artwork that a [clear] keeps. */
+  /**
+   * Registers artwork that [clear] keeps: browse items are rebuilt after a clear, but media items
+   * already in the queue keep their URIs.
+   */
   @Synchronized
   fun pin(token: String, artwork: ResolvedArtwork) {
     pinned[token] = artwork
@@ -29,9 +30,11 @@ class BrowseArtworkRegistry(
 
   @Synchronized fun lookup(token: String): ResolvedArtwork? = entries[token] ?: pinned[token]
 
+  /** Drops the [register]ed entries; [pin]ned ones stay. */
   @Synchronized fun clear() = entries.clear()
 
   private fun lruMap(maxEntries: Int) =
+    // Access order, so a lookup keeps an entry from eviction.
     object : LinkedHashMap<String, ResolvedArtwork>(16, 0.75f, true) {
       override fun removeEldestEntry(
         eldest: MutableMap.MutableEntry<String, ResolvedArtwork>
@@ -39,7 +42,7 @@ class BrowseArtworkRegistry(
     }
 }
 
-/** Everything the provider needs to fetch one artwork, resolved at browse-build time. */
+/** Everything the provider needs to fetch one artwork. */
 data class ResolvedArtwork(
   val finalUrl: String,
   val headers: Map<String, String>?,

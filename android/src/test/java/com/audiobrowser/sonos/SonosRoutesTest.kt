@@ -75,6 +75,7 @@ class SonosRoutesTest {
     val routes =
       sonosRouteDescriptors(listOf(dining, living), null) { mapOf("RINCON_C" to 12)[it] }.routes
 
+    // A room whose volume is not yet known reports 0.
     assertEquals(listOf(0, 12), routes.map { it.volume })
     assertEquals(MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE, routes[0].volumeHandling)
     assertEquals(100, routes[0].volumeMax)
@@ -112,6 +113,7 @@ class SonosRoutesTest {
     }
 
     assertNull(SonosOutputs.selected)
+    // Once for the select, once for the unselect.
     assertEquals(2, calls)
   }
 

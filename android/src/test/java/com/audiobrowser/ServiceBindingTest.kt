@@ -13,8 +13,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
-// Robolectric: bindService/unbindService only exist under the framework, and ShadowApplication
-// records both sides — which is precisely the leak being guarded against.
 @RunWith(RobolectricTestRunner::class)
 class ServiceBindingTest {
 
@@ -29,7 +27,6 @@ class ServiceBindingTest {
       override fun onServiceDisconnected(name: ComponentName?) = Unit
     }
 
-  /** Both the auto-bind at construction and setup's bind reach the same object. */
   @Test
   fun bindingTwiceTakesOnlyOneBinding() {
     val binding = ServiceBinding(app)
@@ -45,7 +42,6 @@ class ServiceBindingTest {
     assertEquals(1, shadowOf(app).unboundServiceConnections.size)
   }
 
-  /** dispose() must not throw, and Android throws when unbinding a connection it never had. */
   @Test
   fun unbindWithoutBindIsANoOp() {
     val binding = ServiceBinding(app)
@@ -56,11 +52,6 @@ class ServiceBindingTest {
     assertTrue(shadowOf(app).unboundServiceConnections.isEmpty())
   }
 
-  /**
-   * Android registers the connection before it asks the ActivityManager, so a false return still
-   * leaves a binding to release. Treating false as "nothing bound" strands it permanently — the
-   * leak this class exists to prevent.
-   */
   @Test
   fun failedBindStillHoldsAConnectionToRelease() {
     val binding = ServiceBinding(app)
@@ -75,10 +66,6 @@ class ServiceBindingTest {
     assertEquals(1, shadowOf(app).unboundServiceConnections.size)
   }
 
-  /**
-   * setupPlayer binds after the auto-bind at construction already has. If that first bind failed,
-   * the service never connects, so setup must hear false and reject rather than wait for it.
-   */
   @Test
   fun bindingAgainAfterAFailedBindReportsTheFailure() {
     val binding = ServiceBinding(app)

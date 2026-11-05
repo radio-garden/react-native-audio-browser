@@ -1,12 +1,13 @@
 @preconcurrency import AVFoundation
 
-// Delivered on the main queue through AVPlayerItemMetadataOutputPushDelegate.
+// Read only on the main actor: the metadata delegate is set to the main queue, and AVAsset's
+// async loads hand their groups back to the @MainActor MediaLoader.
 extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 
-/// Observes one AVPlayerItem from creation to `invalidate()`: its status and buffer, the
-/// end-of-item and stall notifications, and its timed metadata. KVO and notifications arrive off
-/// the main thread; anything that lands after `invalidate()` is dropped, so an old item's late
-/// failure never reaches the next item's handlers.
+/// Observes one AVPlayerItem until `invalidate()`: status, buffering, end-of-item and stall
+/// notifications, and timed metadata. KVO and notifications arrive off the main thread; whatever
+/// lands after `invalidate()` is dropped, so an old item's late failure never reaches the next
+/// item's handlers.
 @MainActor
 final class ItemObserver: NSObject {
   enum Event {
@@ -85,6 +86,7 @@ extension ItemObserver: AVPlayerItemMetadataOutputPushDelegate {
     didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
     from _: AVPlayerItemTrack?,
   ) {
+    // Safe: init sets the delegate queue to .main.
     MainActor.assumeIsolated { emit(.timedMetadata(groups)) }
   }
 }

@@ -23,8 +23,8 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Serves the Sonos rooms as media routes, so the system Output Switcher lists them. Bound by the
- * system, not the app: [SonosOutputs.setEnabled] turns the component on.
+ * Serves the Sonos rooms as media routes for the system Output Switcher. The system binds it, not
+ * the app: [SonosOutputs.setEnabled] turns the component on.
  */
 class SonosRouteProviderService : MediaRouteProviderService() {
   private var provider: SonosRouteProvider? = null
@@ -52,8 +52,8 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
 
   init {
     SonosOutputs.addVolumeListener(onVolumeChanged)
-    // A new provider, after the system rebound the service, lists the room still selected, which
-    // MediaRouter2 looks up in the descriptor before it creates the room's session.
+    // After the system rebinds the service, MediaRouter2 looks up the room still selected in this
+    // descriptor before it creates the room's session.
     publish()
   }
 
@@ -63,14 +63,14 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     if (request == null || !request.selector.hasControlCategory(RemoteOutputs.CATEGORY)) return
     scanJob =
       scope.launch {
-        // Passive discovery keeps what a recent scan found; the open switcher asks for active.
+        // Passive requests reuse a recent scan; the open switcher asks for an active one.
         if (!request.isActiveScan && System.currentTimeMillis() - lastScanMs < PASSIVE_RESCAN_MS) {
           return@launch
         }
         while (isActive) {
           val found = withContext(Dispatchers.IO) { discoverer.discover() }
           lastScanMs = System.currentTimeMillis()
-          // A room selected now stays listed when one scan misses it: SSDP is lossy.
+          // SSDP is lossy: the selected room stays listed when one scan misses it.
           val selected = SonosOutputs.selected
           rooms =
             if (selected != null && found.none { it.id == selected.id }) found + selected else found
@@ -96,7 +96,7 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     Timber.d("Sonos: %d room(s)", rooms.size)
   }
 
-  /** Reads [room]'s volume itself, for a room no session plays on, which would read it instead. */
+  /** Reads [room]'s volume from the speaker, for a room no session plays on: a session reads it. */
   private suspend fun readVolume(room: SonosRoom): Int? {
     val volume =
       withContext(Dispatchers.IO) {
@@ -131,8 +131,8 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
 
     override fun onUpdateVolume(delta: Int) {
       scope.launch {
-        // From the speaker's own volume: the Sonos app or the speaker's buttons may have moved it.
-        // A session reads it as it plays.
+        // Read from the speaker unless a session tracks it: the Sonos app or the speaker's buttons
+        // may have moved it.
         val current =
           (if (SonosOutputs.hasSession(room.id)) null else readVolume(room))
             ?: SonosOutputs.volumeOf(room.id)
@@ -152,7 +152,6 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
 
 private const val MAX_VOLUME = 100
 
-/** The routes for [rooms]: the selected one connected, each in both output categories. */
 @VisibleForTesting
 internal fun sonosRouteDescriptors(
   rooms: List<SonosRoom>,

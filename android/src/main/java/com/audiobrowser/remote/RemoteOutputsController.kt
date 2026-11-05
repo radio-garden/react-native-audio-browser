@@ -16,15 +16,13 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 
-/**
- * The URLs a receiver fetches for a track: its media through the media transform, and its artwork.
- */
+/** What a receiver fetches for a track: its media URL, after the media transform, and artwork. */
 internal data class RemoteUrls(val url: String, val artworkUrl: String?)
 
 /**
- * The remote outputs as the app sets them up: the Output Switcher's routes and the Sonos route
- * provider, the remote of each output turned on, and the [RemoteSwitchingPlayer] that plays on
- * them, with the items it sends resolved through [resolveUrls].
+ * Sets up the Output Switcher's routes and the Sonos route provider as [RemoteOutputsOptions] says,
+ * and owns the remote of each output turned on and the [RemoteSwitchingPlayer] that plays on them,
+ * resolving the items it sends through [resolveUrls].
  */
 internal class RemoteOutputsController(
   private val context: Context,
@@ -37,13 +35,14 @@ internal class RemoteOutputsController(
   private var cast: RemotePlayback? = null
   private var sonos: RemotePlayback? = null
 
-  /** What plays while any output is on, or null. */
+  /** Plays while any output is on; null when none is. */
   var player: RemoteSwitchingPlayer? = null
     private set
 
   /**
    * Turns the outputs in [options] on and the rest off; null turns remote outputs off. An output
-   * that stays on keeps its session and what it plays. Returns whether [player] changed.
+   * that stays on keeps its remote, session and what it plays, even if the receiver ID changes.
+   * [local] is used only when the switch is built. Returns whether [player] changed.
    */
   @MainThread
   fun apply(options: RemoteOutputsOptions?, local: MediaPlayer): Boolean {
@@ -58,6 +57,7 @@ internal class RemoteOutputsController(
     SonosOutputs.setEnabled(context, wantSonos)
     val had = this.options
     this.options = options
+    // A remote turned off is only dropped here; the switch releases it below.
     if (wantCast != (had?.cast == true))
       cast = if (wantCast) castRemote(context, receiver) else null
     if (wantSonos != (had?.sonos == true))
@@ -77,7 +77,10 @@ internal class RemoteOutputsController(
     player?.setLocal(local)
   }
 
-  /** Brings playback back here and lets go of the outputs. Remote outputs stay as set up. */
+  /**
+   * Brings playback back to the local player and lets go of the remotes; the controller is unusable
+   * after. The Output Switcher routes and Sonos route provider stay as [apply] left them.
+   */
   fun release() {
     player?.release()
     player = null
@@ -87,7 +90,7 @@ internal class RemoteOutputsController(
     scope.cancel()
   }
 
-  /** [item] as a receiver loads it, its URLs resolved off the main thread. */
+  /** [item] as a receiver loads it; an item without a [Track] tag plays its own URI. */
   private suspend fun resolve(item: MediaItem): MediaItem {
     val track = item.localConfiguration?.tag as? Track
     val urls =

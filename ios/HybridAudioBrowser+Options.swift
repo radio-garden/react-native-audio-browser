@@ -12,11 +12,10 @@ public extension HybridAudioBrowser {
     Promise.async {
       await MainActor.run { [weak self] in
         guard let self else { return }
-        // Set the category now, but activate only when playback produces output.
+        // Sets the category only; the session activates when playback produces output.
         self.audioSession.configure(options.ios)
 
-        // A re-setup REPLACES the player, so the outgoing one has to be torn down
-        // and un-published first. No-op on first setup.
+        // A re-setup replaces the player, so the outgoing one is torn down first. No-op on first setup.
         destroyPlayer()
 
         let newEngine = AVPlayerEngine(
@@ -38,9 +37,8 @@ public extension HybridAudioBrowser {
         // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
         // info, and next/previous follow the queue, not the state.
 
-        // The bundled runtime options and initial state are part of the atomic launch
-        // description. Stage the state first so setup options and earlier pre-setup setter
-        // calls resolve by strict last-write-wins, then apply everything to the live player.
+        // Stage the state before applying it, so setup options and pre-setup setter calls
+        // resolve by strict last-write-wins.
         if let bundled = options.options { updateOptions(options: bundled) }
         if let mode = options.repeatMode { pendingRepeatMode = mode }
         if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
@@ -52,9 +50,8 @@ public extension HybridAudioBrowser {
     }
   }
 
-  /// Applies initial player state staged before the player existed — from setup options or the
-  /// imperative setters called pre-setup. Consumed on apply so a later re-setup doesn't replay
-  /// stale state.
+  /// Applies state staged before the player existed, by setup options or pre-setup setters.
+  /// Consumed on apply so a later re-setup doesn't replay it.
   @MainActor
   private func applyPendingPlayerState() {
     guard let player else { return }

@@ -4,12 +4,8 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-/// Exercises the controller against the real `MPRemoteCommandCenter`.
-///
-/// `MPRemoteCommandCenter`'s `init()` is unavailable, so `shared()` — a
-/// process-wide singleton — is the only center available. The suite is
-/// `.serialized` because of that shared state, and every test resets the
-/// commands it touches through `reset()`.
+/// Runs against the real `MPRemoteCommandCenter`: its `init()` is unavailable, so the process-wide
+/// `shared()` singleton is the only center, hence `.serialized`.
 @Suite("RemoteCommandController", .serialized)
 @MainActor
 struct RemoteCommandControllerTests {
@@ -28,9 +24,8 @@ struct RemoteCommandControllerTests {
     func remoteChangePlaybackRate(rate: Float) { events.append("rate:\(rate)") }
   }
 
-  /// Clears every command on the shared center so a test starts from a known
-  /// state regardless of what ran before it.
   private func makeController() -> (RemoteCommandController, SpyCallbacks) {
+    // Clears whatever an earlier test left enabled on the shared center.
     let center = MPRemoteCommandCenter.shared()
     let reset = RemoteCommandController(remoteCommandCenter: center)
     reset.enable(commands: Set(RemoteCommand.allCases))
@@ -128,7 +123,6 @@ struct RemoteCommandControllerTests {
     #expect(!center.skipForwardCommand.isEnabled)
   }
 
-  /// Next/previous follow `skipAvailability` when refreshed and whenever they are enabled.
   @Test func skipAvailabilityAppliesOnRefreshAndEnable() {
     let (controller, _) = makeController()
     let center = MPRemoteCommandCenter.shared()
@@ -149,8 +143,7 @@ struct RemoteCommandControllerTests {
     #expect(center.previousTrackCommand.isEnabled)
   }
 
-  /// The command targets must not capture the controller strongly, or every player
-  /// instance leaks one across JS reloads.
+  /// Handlers capturing the controller strongly would leak one per player instance across JS reloads.
   @Test func doesNotRetainItselfThroughHandlers() {
     weak var weakController: RemoteCommandController?
     autoreleasepool {
@@ -170,8 +163,7 @@ struct RemoteCommandControllerTests {
     controller.updateShuffleMode(true)
     controller.updateRepeatMode(.queue)
 
-    // Same center — switchCommandCenter no-ops, but the restore path is the
-    // interesting part: state is re-applied from the stored values.
+    // The same center makes this a no-op; the expectations hold from the calls above.
     controller.switchCommandCenter(center)
 
     #expect(center.changeShuffleModeCommand.currentShuffleType == .items)

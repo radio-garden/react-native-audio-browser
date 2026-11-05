@@ -1,6 +1,6 @@
 import NitroModules
 
-/// The Browse Gate: an app-imposed block on browsing and searching from external surfaces,
+/// The Browse Gate: the app's block on browsing and searching from external surfaces,
 /// decided per request. It never blocks the Player, the Queue or Now Playing.
 @MainActor
 final class BrowseGate {
@@ -8,19 +8,19 @@ final class BrowseGate {
     case off
     /// Every request is gated, with this chrome or the built-in one.
     case fixed(Gate?)
-    /// JS decides each request; `default` is the chrome when its decision carries none.
+    /// JS decides each request; `default` is the chrome when its decision names none.
     case resolved(default: Gate?)
   }
 
-  /// Served when a request is gated with no chrome from JS or `setGate`.
   static let builtInChrome = Gate(title: "Unavailable", message: nil)
 
   private(set) var mode: Mode = .off
 
-  /// Fires `isActive` on every set and clear; chrome is per request, so surfaces re-render.
+  /// Fires `isActive` on every `set`, even an unchanged one: chrome is per request, so
+  /// surfaces re-render.
   let changed = Emitter<Bool>()
 
-  /// Asks JS for a decision; set by the bridge, whose JS resolver it calls.
+  /// Set by the bridge to call the JS resolver. The default throws, which gates every request.
   var resolve: @MainActor (NativeGateRequest) async throws -> GateDecision = { _ in throw CancellationError() }
 
   nonisolated init() {}
@@ -40,9 +40,8 @@ final class BrowseGate {
     changed.emit(false)
   }
 
-  /// The chrome to show if `request` is gated; nil when it is allowed. A resolver that fails
-  /// cannot prove the request allowed, so it is gated: a gate exists to withhold content, and
-  /// serving on an error would leak it.
+  /// The chrome to show if `request` is gated; nil when it is allowed. A resolver that throws
+  /// gates the request: serving on an error would leak what the gate withholds.
   func decide(_ request: NativeGateRequest) async -> Gate? {
     switch mode {
     case .off:

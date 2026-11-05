@@ -130,7 +130,6 @@ class SonosPlayerTest {
       live = false,
     )
 
-  /** Runs the commands and one poll. */
   private fun settle() {
     scope.runCurrent()
     shadowOf(Looper.getMainLooper()).idle()

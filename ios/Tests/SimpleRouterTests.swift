@@ -122,16 +122,12 @@ private func match(_ path: String, _ patterns: [String]) -> (route: TestRoute, m
 }
 
 @Test func computesCorrectSpecificityForTailWildcardPatterns() {
-  // Regression test for issue #27: specificity must account for
-  // segment types before the ** wildcard.
   let result = match("/api/v1/users", ["/api/v1/**"])
-  // constant "api" (1000) + constant "v1" (1000) + tail(1) + 3 segments = 2004
+  // 1000 per constant × 2 + 1 per segment before the tail × 2 + 2 for the tail wildcard
   #expect(result!.match.specificity == 2004)
 }
 
 @Test func prefersConstantPrefixOverParameterPrefixInTailWildcards() {
-  // Second part of issue #27: with correct specificity, the constant
-  // prefix should beat the parameter prefix.
   let result = match("/api/v1/users", ["/api/{version}/**", "/api/v1/**"])
   #expect(result!.route.path == "/api/v1/**")
 }

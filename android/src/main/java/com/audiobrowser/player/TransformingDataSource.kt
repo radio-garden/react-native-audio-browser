@@ -11,22 +11,20 @@ import java.io.IOException
 import timber.log.Timber
 
 /**
- * A DataSource wrapper that defers media URL transformation to ExoPlayer's IO thread.
+ * Wraps an upstream [DataSource] and resolves each track's media URL through its request config
+ * (which may call into JS) in [open], on ExoPlayer's IO thread. Resolving on the main thread, in
+ * `createMediaSource`, deadlocks while a synchronous Nitro call such as `seekTo` holds the JS
+ * thread.
  *
- * ExoPlayer calls [MediaSource.Factory.createMediaSource] on the main thread during
- * `addMediaItem()`, but calls [DataSource.open] on a background IO thread when it needs to fetch
- * data. By deferring URL transformation (which may invoke a JS callback via `runBlocking`) to
- * [open], we avoid blocking the main thread and prevent deadlocks when the JS thread is occupied by
- * synchronous Nitro calls (e.g., `seekTo`).
- *
- * The transform is resolved once per track on the first [open] call (the manifest/media URL). The
- * resulting headers and user-agent are cached on the [Factory] and reused for subsequent requests
- * (segments, encryption keys) without calling the JS transform again.
+ * The first open resolves the media URL and caches the result on the [Factory]; later opens of
+ * other URLs (HLS segments, keys) keep their own URL and reuse the cached headers and user agent.
  */
 class TransformingDataSource(private val upstream: DataSource, private val factory: Factory) :
   DataSource {
 
   companion object {
+    // Matches the default request property MediaFactory sets upstream; a config with this user
+    // agent adds no User-Agent header of its own.
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
   }
 
@@ -35,17 +33,13 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   override fun open(dataSpec: DataSpec): Long {
     val originalUrl = dataSpec.uri.toString()
 
-    // The first open() resolves the transform and caches it on the Factory; subsequent opens
-    // (segments, keys, replays) reuse the cached headers/user-agent but keep their own URLs.
     val cached = factory.cachedTransform
     val (finalUrl, headers, userAgent) =
       when {
         cached == null -> resolveAndCache(originalUrl)
-        // Re-open of the same media URL (e.g. a retry after a network drop). By default reuse the
-        // resolved URL: re-emitting the schemeless original ("/listen/<id>/x.mp3") would hit the
-        // file data source -> FileNotFoundException. But if the previous media-URL load failed,
-        // re-resolve once (see the catch below): the URL/token may be stale. The fresh URL is still
-        // absolute, so that hazard stays avoided.
+        // Re-open of the media URL (a retry) reuses the resolved URL: the original may be
+        // schemeless ("/listen/<id>/x.mp3"), which DefaultDataSource routes to a file and fails.
+        // After a failed load it re-resolves once instead, since the URL or token may have expired.
         originalUrl == factory.cachedOriginalUrl ->
           if (factory.reresolveOnNextMediaOpen) {
             factory.reresolveOnNextMediaOpen = false
@@ -53,12 +47,10 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
           } else {
             cached
           }
-        // A different URL (already-absolute HLS segment or key): reuse the cached headers but keep
-        // its own URL.
+        // An already-absolute segment or key URL: keep it, reuse the headers.
         else -> Triple(originalUrl, cached.second, cached.third)
       }
 
-    // Build merged headers including user-agent override
     val mergedHeaders = buildMap {
       putAll(dataSpec.httpRequestHeaders)
       putAll(headers)
@@ -67,7 +59,6 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       }
     }
 
-    // Build a new DataSpec with the (possibly transformed) URL and merged headers
     val transformedSpec =
       dataSpec.buildUpon().setUri(finalUrl.toUri()).setHttpRequestHeaders(mergedHeaders).build()
 
@@ -75,10 +66,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     return try {
       upstream.open(transformedSpec)
     } catch (e: IOException) {
-      // The media-URL load failed: if ExoPlayer retries, re-resolve so a stale URL/token is
-      // refreshed instead of replayed. Scoped to the media URL (segment/key failures keep their own
-      // URL). The flag lives on this item's Factory, so it stays correct when several tracks'
-      // factories are alive at once (a queue).
+      // Only a media-URL failure refreshes the URL; a failed segment or key leaves it alone.
       if (originalUrl == factory.cachedOriginalUrl) {
         factory.reresolveOnNextMediaOpen = true
       }
@@ -86,7 +74,6 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     }
   }
 
-  /** Resolves the transform for [originalUrl] and caches the result on the [Factory]. */
   private fun resolveAndCache(originalUrl: String): Triple<String, Map<String, String>, String> {
     val resolved = resolveRequestConfig(originalUrl)
     factory.cachedTransform = resolved
@@ -108,13 +95,10 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   }
 
   /**
-   * Forward the upstream response headers. ExoPlayer's `ProgressiveMediaPeriod` reads these back
-   * through the data-source chain to parse `IcyHeaders` (the `icy-metaint` interval) and only then
-   * installs the `IcyDataSource` that emits in-stream ICY/Shoutcast song metadata via
-   * `Player.Listener.onMetadata`. The `DataSource` default returns an empty map, so without this
-   * override this transparent wrapper would swallow the ICY headers — playback keeps working but
-   * `onMetadata` never fires (live "now playing" song goes missing). Swallowing them also leaves
-   * the interleaved metadata bytes in the audio stream, where they decode as audible chirping.
+   * Upstream's response headers. Media3's `ProgressiveMediaPeriod` reads `icy-metaint` from them to
+   * install `IcyDataSource`; the `DataSource` default of an empty map would lose ICY song metadata
+   * (`onMetadata` never fires) and leave the metadata bytes in the stream, decoded as audible
+   * chirps.
    */
   override fun getResponseHeaders(): Map<String, List<String>> {
     return upstream.responseHeaders
@@ -126,10 +110,9 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   }
 
   /**
-   * Resolves the media request configuration for the given URL. This calls the JS transform
-   * callback if configured. Safe to call from a background thread.
-   *
-   * @return Triple of (finalUrl, headers, userAgent)
+   * Runs the request config callback for [originalUrl], blocking on JS if needed; call only off the
+   * main thread. Returns (finalUrl, headers, userAgent); without a config, or when the callback
+   * throws, the original URL with no headers and the default user agent.
    */
   private fun resolveRequestConfig(
     originalUrl: String
@@ -151,32 +134,17 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     }
   }
 
-  /** Factory that creates [TransformingDataSource] instances wrapping an upstream factory. */
   class Factory(
     private val upstreamFactory: DataSource.Factory,
     internal val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
   ) : DataSource.Factory {
 
-    /**
-     * Cached transform result (url, headers, userAgent) from the first open() call. Shared across
-     * all DataSource instances created by this factory. A new Factory is created per
-     * [MediaFactory.createMediaSource] call (per track), so the cache naturally resets on track
-     * transitions.
-     */
+    // One Factory per track (MediaFactory.createMediaSource), so the cache resets on track change.
     @Volatile internal var cachedTransform: Triple<String, Map<String, String>, String>? = null
 
-    /**
-     * The original (pre-transform) URL that [cachedTransform] was resolved from. Used to recognise
-     * a re-open of the same media URL (e.g. a retry) so it reuses the resolved URL instead of the
-     * raw original.
-     */
     @Volatile internal var cachedOriginalUrl: String? = null
 
-    /**
-     * Set when a media-URL load fails so the next media-URL open re-runs the transform instead of
-     * replaying [cachedTransform] — recovers an expired short-lived URL/token across a retry.
-     * Self-clearing: consumed by the first re-resolve.
-     */
+    // Set by a failed media-URL open; the next media-URL open re-resolves and clears it.
     @Volatile internal var reresolveOnNextMediaOpen: Boolean = false
 
     override fun createDataSource(): DataSource {

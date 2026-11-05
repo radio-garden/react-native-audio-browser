@@ -10,9 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Real HTTP round-trip for [SoapClient] using a local MockWebServer in place of a Sonos speaker.
- */
 class SoapClientTest {
 
   private lateinit var server: MockWebServer

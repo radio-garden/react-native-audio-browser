@@ -11,7 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-// Robolectric: building the DataSpec that InvalidResponseCodeException requires goes through
+// Robolectric: the DataSpec that InvalidResponseCodeException requires goes through
 // android.net.Uri, which is unimplemented on a bare JVM.
 @RunWith(RobolectricTestRunner::class)
 class PlaybackErrorClassifierTest {
@@ -30,11 +30,6 @@ class PlaybackErrorClassifierTest {
 
   // MARK: - Offline
 
-  /**
-   * ExoPlayer reports a dead radio and a dead wifi connection with the same codes, so an offline
-   * device must win over whatever the code says — this is the one classification the error itself
-   * can never carry.
-   */
   @Test
   fun `offline device outranks the error code`() {
     val error = exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, httpException(404))
@@ -53,7 +48,6 @@ class PlaybackErrorClassifierTest {
     )
   }
 
-  /** media3 nests the response exception under wrapper exceptions rather than as a direct cause. */
   @Test
   fun `http status is recovered when nested deeper in the chain`() {
     val nested = IOException("loading failed", httpException(404))
@@ -88,10 +82,6 @@ class PlaybackErrorClassifierTest {
     }
   }
 
-  /**
-   * A recovered status must win over the code-based mapping: `ERROR_CODE_IO_BAD_HTTP_STATUS` alone
-   * says only "non-2xx", which would land in UNKNOWN and lose the dead-station signal.
-   */
   @Test
   fun `recovered status outranks the error code mapping`() {
     val error = exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, httpException(404))
@@ -130,11 +120,6 @@ class PlaybackErrorClassifierTest {
 
   // MARK: - Retrying load errors
 
-  /**
-   * Load errors are raw IOExceptions from the transport layer; the policy only retries network
-   * ones, so the advisory classification is UNREACHABLE unless the device is offline or the server
-   * actually answered.
-   */
   @Test
   fun `retrying transport failure is unreachable`() {
     val error =
@@ -142,8 +127,6 @@ class PlaybackErrorClassifierTest {
     assertEquals(PlaybackErrorKind.UNREACHABLE, error.kind)
     assertEquals(true, error.retrying)
     assertNull(error.statusCode)
-    // Stable across attempts — the raw exception message varies between retries of the
-    // same outage, which would defeat the report dedupe.
     assertEquals("Could not reach the stream host", error.message)
   }
 
@@ -155,7 +138,6 @@ class PlaybackErrorClassifierTest {
     assertEquals(true, error.retrying)
   }
 
-  /** The HTTP status is dug out of the cause chain and mapped through the shared status table. */
   @Test
   fun `retrying HTTP failure carries the status`() {
     val error = PlaybackErrorClassifier.retryingLoadError(httpException(503), online = true)
@@ -165,11 +147,6 @@ class PlaybackErrorClassifierTest {
     assertEquals("Server responded with HTTP 503", error.message)
   }
 
-  /**
-   * Codes that name no cause must stay UNKNOWN. Guessing them into a friendlier bucket would put a
-   * wrong line on the listener's screen and poison the telemetry aggregates that motivated the
-   * classification in the first place.
-   */
   @Test
   fun `codes without evidence stay unknown`() {
     val unevidenced =

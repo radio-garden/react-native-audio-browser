@@ -11,11 +11,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * Resolution semantics (ADR 0011): container properties and `display` resolve by scope override
- * (`section ?? page`), inherited item properties resolve `track ?? section ?? page` — and `display`
- * never inherits onto an item.
- */
 class StyleResolverTest {
 
   @Test
@@ -31,7 +26,6 @@ class StyleResolverTest {
             gridWrap = false,
           ),
       )
-    // Declared on the section: wins. Undeclared: the page's scope-wide value.
     assertEquals(StyleDisplay.LIST, resolved.display)
     assertEquals(ArtworkRendering.STENCIL, resolved.artworkRendering)
     assertEquals(false, resolved.gridWrap)
@@ -76,9 +70,8 @@ class StyleResolverTest {
 
   @Test
   fun `display never inherits onto an item`() {
-    // The track's own display is the page promise for the page IT opens; the
-    // section's describes its children's layout. Neither may surface as the
-    // item's resolved display.
+    // Both scopes declare a display: the track's is for the page it opens, the section's for its
+    // children.
     val resolved =
       StyleResolver.trackStyle(
         track = trackStyle(display = StyleDisplay.GRID, artworkRendering = null),
@@ -90,7 +83,6 @@ class StyleResolverTest {
 
   @Test
   fun `imageShape inherits and overrides per item`() {
-    // Section-wide circular (an artists shelf); one album overrides.
     val inherited =
       StyleResolver.trackStyle(
         track = null,
@@ -110,8 +102,6 @@ class StyleResolverTest {
     val inherited =
       StyleResolver.trackStyle(track = null, section = sectionStyle(accessorySymbol = "lock.fill"))
     assertEquals("lock.fill", inherited.accessorySymbol)
-    // 'none' is the inheritance escape — it must survive resolution intact
-    // (the renderer, not the resolver, maps it to "no accessory").
     val escaped =
       StyleResolver.trackStyle(
         track = trackStyle(accessorySymbol = "none"),
@@ -122,7 +112,6 @@ class StyleResolverTest {
 
   @Test
   fun `gridTile resolves by scope override`() {
-    // A page-wide card treatment; one section opts back to plain tiles.
     val inherited =
       StyleResolver.sectionStyle(section = null, page = sectionStyle(gridTile = GridTile.CARD))
     assertEquals(GridTile.CARD, inherited.gridTile)

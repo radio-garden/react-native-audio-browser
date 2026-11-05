@@ -28,11 +28,7 @@ object BatteryOptimizationHelper {
     RESTRICTED,
   }
 
-  /**
-   * Get the current battery optimization status.
-   *
-   * Priority: Background restriction > Battery optimization whitelist
-   */
+  /** A background restriction outranks a Doze exemption: the result is then [Status.RESTRICTED]. */
   fun getStatus(context: Context): Status {
     val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     val isIgnoring = pm.isIgnoringBatteryOptimizations(context.packageName)
@@ -55,10 +51,8 @@ object BatteryOptimizationHelper {
   }
 
   /**
-   * Open settings to let user change battery restrictions.
-   *
-   * For OPTIMIZED status: Shows a quick dialog to disable battery optimization (one tap). For
-   * RESTRICTED status: Opens app settings where user must manually change battery setting.
+   * When [Status.OPTIMIZED], shows the system's one-tap exemption dialog; otherwise opens the app's
+   * settings page, since the dialog cannot lift a background restriction.
    */
   fun openSettings(context: Context) {
     when (getStatus(context)) {

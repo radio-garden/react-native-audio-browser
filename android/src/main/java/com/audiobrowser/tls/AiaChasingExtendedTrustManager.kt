@@ -13,27 +13,18 @@ import javax.net.ssl.X509TrustManager
 import javax.security.auth.x500.X500Principal
 
 /**
- * The [AiaChasingTrustManager] behaviour, as an [X509ExtendedTrustManager].
+ * [AiaChasingTrustManager] as an [X509ExtendedTrustManager], for API 24+ (see
+ * [AiaTls.trustManager]). Per-domain network security configs are API 24+ too, so the plain variant
+ * below that loses nothing.
  *
- * The socket- and engine-aware overloads are the ones the platform actually calls, and they are not
- * optional. Android's default trust manager is a `RootTrustManager`, which extends
- * [X509ExtendedTrustManager] and whose two-argument `checkServerTrusted` throws unconditionally
- * once the app declares any `<domain-config>` in its network security config:
+ * A plain [X509TrustManager] wrapper is not safe here. The platform default, `RootTrustManager`,
+ * throws from its two-argument `checkServerTrusted` once the app declares any `<domain-config>`:
  * > Domain specific configurations require that hostname aware
  * > checkServerTrusted(X509Certificate[], String, String) is used
  *
- * Wrapping it in a plain [X509TrustManager] hides those overloads, so conscrypt falls through to
- * the two-argument form and *every* HTTPS connection in the process fails. The socket overload is
- * also where endpoint identification happens for a raw `SSLSocket` configured with
- * `endpointIdentificationAlgorithm = "HTTPS"`; skipping it skips hostname verification.
- *
- * [X509ExtendedTrustManager] is API 24+, hence the split from [AiaChasingTrustManager] — see
- * [AiaTls.trustManager], which picks by SDK level. Per-domain network security configs are
- * themselves API 24+, so the plain variant on 23 loses nothing.
- *
- * @param delegate the wrapped trust manager, normally the platform default.
- * @param fetch resolves a CA-Issuers URL to its candidate certificates, giving up no later than
- *   `deadlineNanos`.
+ * Hiding the socket and engine overloads sends conscrypt to that form and fails every HTTPS
+ * connection in the process. The socket overload is also where a raw `SSLSocket` with
+ * `endpointIdentificationAlgorithm = "HTTPS"` verifies the hostname.
  */
 @RequiresApi(Build.VERSION_CODES.N)
 class AiaChasingExtendedTrustManager(
@@ -41,18 +32,13 @@ class AiaChasingExtendedTrustManager(
   private val fetch: (url: String, deadlineNanos: Long) -> List<X509Certificate>,
 ) : X509ExtendedTrustManager() {
 
-  /** The delegate's own extended overloads, when it has them. */
   private val extended = delegate as? X509ExtendedTrustManager
 
   private val anchorSubjects: Set<X500Principal> by lazy { delegate.anchorSubjects() }
 
   /**
-   * The delegate's Android-specific hostname-aware check, if it has one.
-   *
-   * `android.net.http.X509TrustManagerExtensions` — how an HTTP client reaches per-host certificate
-   * pinning — locates this method reflectively and refuses a trust manager that lacks it. It is not
-   * part of [X509ExtendedTrustManager], and `RootTrustManager` is not a public type, so it is
-   * forwarded reflectively rather than overridden.
+   * The delegate's Android-only `checkServerTrusted(chain, authType, host)`. It is in no public
+   * type, so it is found and forwarded by reflection.
    */
   private val hostAwareCheck: Method? by lazy {
     runCatching {
@@ -75,8 +61,7 @@ class AiaChasingExtendedTrustManager(
     socket: Socket?,
   ) =
     withAiaRetry(chain, anchorSubjects, fetch) {
-      // A delegate without the extended overloads cannot be hostname-aware in the first place,
-      // so falling back to its two-argument form loses nothing it could have offered.
+      // A delegate without the extended overloads is not hostname-aware, so this loses nothing.
       extended?.checkServerTrusted(it, authType, socket)
         ?: delegate.checkServerTrusted(it, authType)
     }
@@ -92,9 +77,10 @@ class AiaChasingExtendedTrustManager(
     }
 
   /**
-   * The signature `X509TrustManagerExtensions` looks for: validates against [host] and returns the
-   * chain it accepted. Kept in step with the other overloads, AIA retry included, so installing
-   * this wrapper does not cost a consumer its certificate pinning.
+   * Validates for [host] and returns the chain accepted, which after an AIA retry includes the
+   * fetched intermediates. `android.net.http.X509TrustManagerExtensions`, through which HTTP
+   * clients pin certificates, looks this signature up by reflection and refuses a trust manager
+   * without it.
    */
   @Suppress("unused") // called reflectively
   fun checkServerTrusted(
@@ -104,17 +90,14 @@ class AiaChasingExtendedTrustManager(
   ): List<X509Certificate> {
     var accepted: List<X509Certificate> = emptyList()
     val method = hostAwareCheck
+    // Report the chain that passed, not the one presented: a pinning consumer needs the
+    // intermediate that made it validate. `ifEmpty` covers a delegate that returns nothing.
     withAiaRetry(chain, anchorSubjects, fetch) { checked ->
-      // Whichever chain passed is the one to report — reporting the originally presented chain
-      // would hand a pinning consumer a chain missing the intermediate that made it validate.
-      // `ifEmpty` guards a delegate that reports nothing on success; the checked chain is what
-      // it accepted, so that is the answer.
       accepted =
         if (method != null)
           invokeHostAware(method, checked, authType, host).ifEmpty { checked.toList() }
         else {
-          // Same routing as the other overloads: an extended delegate may refuse its
-          // two-argument form outright (the domain-config case), so prefer its socket overload.
+          // An extended delegate may refuse its two-argument form (the `<domain-config>` case).
           extended?.checkServerTrusted(checked, authType, null as Socket?)
             ?: delegate.checkServerTrusted(checked, authType)
           checked.toList()
@@ -133,7 +116,7 @@ class AiaChasingExtendedTrustManager(
     try {
       method.invoke(delegate, chain, authType, host) as List<X509Certificate>
     } catch (e: InvocationTargetException) {
-      // Unwrap, so a rejection still reaches withAiaRetry as the CertificateException it is.
+      // Unwrapped, so withAiaRetry sees a rejection as the CertificateException it is.
       when (val cause = e.targetException) {
         is CertificateException -> throw cause
         is RuntimeException -> throw cause
@@ -141,7 +124,7 @@ class AiaChasingExtendedTrustManager(
       }
     }
 
-  // Client certificates are the app's own; there is nothing to chase.
+  // Client certificates are the app's own: nothing to chase.
 
   override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) =
     delegate.checkClientTrusted(chain, authType)

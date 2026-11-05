@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-/// URLSession-based HTTP client for API requests.
+/// Counterpart of the Kotlin `HttpClient`; change request building and error messages in both.
 final class HttpClient: @unchecked Sendable {
   static let defaultUserAgent = "react-native-audio-browser"
   static let defaultContentType = "application/json"
@@ -10,7 +10,6 @@ final class HttpClient: @unchecked Sendable {
   private let session: URLSession
   private let logger = Logger(subsystem: "com.audiobrowser", category: "HttpClient")
 
-  /// HTTP request configuration (matches Kotlin HttpClient.HttpRequest).
   struct HttpRequest {
     let url: String
     let method: HttpMethod
@@ -20,7 +19,7 @@ final class HttpClient: @unchecked Sendable {
     let userAgent: String
   }
 
-  /// A non-2xx response (matches Kotlin HttpClient.HttpException).
+  /// A non-2xx response.
   struct HttpException: LocalizedError {
     let code: Int
     let responseBody: String
@@ -100,6 +99,7 @@ final class HttpClient: @unchecked Sendable {
   }
 
   /// Sends `httpRequest` and decodes a 2xx body as `T`; any other status throws `HttpException`.
+  /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
     let (code, data) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {

@@ -1,27 +1,19 @@
 import Foundation
 
-/// Result of a successful route match.
 struct RouteMatch {
-  /// Extracted parameters from the path (e.g., {id} → "123")
-  /// For tail wildcards, the remaining path is stored in params["tail"]
+  /// `{name}` segments by name; a tail wildcard's remaining path under `tail`, absent when nothing remains.
   let params: [String: String]
 
-  /// Specificity score (higher = more specific match)
   let specificity: Int
 }
 
-/// Protocol for route entries that can be matched.
 protocol RouteEntry {
   var path: String { get }
 }
 
-/// Route pattern matching with parameter extraction.
-///
-/// Supports patterns like:
-/// - /artists - exact match
-/// - /artists/{id} - parameter extraction
-/// - /artists/* - wildcard match (matches any single segment)
-/// - /files/** - tail wildcard (matches remaining path segments, captured as `tail`)
+/// Route pattern matching: `/artists` exact, `/artists/{id}` a parameter, `/artists/*` any one
+/// segment, `/files/**` the remaining segments (zero or more), captured as `tail` when there is
+/// at least one.
 ///
 /// The most specific route wins, the first on a tie: constant segments over parameters over
 /// wildcards over the tail wildcard, then more segments.
@@ -31,8 +23,8 @@ enum SimpleRouter {
   static let tabsRoutePath = "__tabs__"
   static let searchRoutePath = "__search__"
 
-  /// The route that browses `path`: the best match among the routes that are not tabs, search or
-  /// the default, else the default route with `path` as its `path` param.
+  /// The best match among the routes that are not tabs, search or the default, else the default
+  /// route with `path` as its `path` param.
   static func browseRoute<T: RouteEntry>(for path: String, in routes: [T]) -> (route: T, match: RouteMatch)? {
     let browseRoutes = routes.filter {
       $0.path != tabsRoutePath && $0.path != searchRoutePath && $0.path != defaultRoutePath
@@ -44,7 +36,7 @@ enum SimpleRouter {
     return (defaultRoute, RouteMatch(params: ["path": path], specificity: 0))
   }
 
-  /// The most specific of `routes` matching `path`, or nil when none does.
+  /// The most specific of `routes` matching `path`, the first on a tie; nil when none matches.
   static func findBestMatch<T: RouteEntry>(path: String, routes: [T]) -> (route: T, match: RouteMatch)? {
     var best: (route: T, match: RouteMatch)?
     for route in routes {
@@ -71,6 +63,7 @@ enum SimpleRouter {
       }
     }
 
+    // 10x apart, so one stronger segment outweighs up to nine weaker ones.
     var specificity: Int {
       switch self {
       case .constant: 1000

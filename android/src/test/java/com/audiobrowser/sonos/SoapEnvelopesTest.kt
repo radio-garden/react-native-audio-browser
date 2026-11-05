@@ -3,7 +3,6 @@ package com.audiobrowser.sonos
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Byte-exact SOAP request bodies + SOAPAction headers for the UPnP actions we issue. */
 class SoapEnvelopesTest {
 
   private val avt = "urn:schemas-upnp-org:service:AVTransport:1"

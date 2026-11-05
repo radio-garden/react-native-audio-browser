@@ -33,7 +33,7 @@ class BrowseArtworkRegistryTest {
     reg.register("a", ResolvedArtwork("https://x/a", null, false))
     reg.register("b", ResolvedArtwork("https://x/b", null, false))
     reg.register("c", ResolvedArtwork("https://x/c", null, false))
-    assertNull(reg.lookup("a")) // evicted
+    assertNull(reg.lookup("a"))
     assertEquals("https://x/c", reg.lookup("c")?.finalUrl)
   }
 }

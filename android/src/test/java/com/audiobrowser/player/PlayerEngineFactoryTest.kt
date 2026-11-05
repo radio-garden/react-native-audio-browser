@@ -4,7 +4,6 @@ import com.audiobrowser.model.PlayerSetupOptions
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Pins the buffer-config mapping — the one decision inside engine construction. */
 class PlayerEngineFactoryTest {
 
   @Test
@@ -28,8 +27,6 @@ class PlayerEngineFactoryTest {
 
   @Test
   fun `automatic rebuffer falls back to playBuffer`() {
-    // rebufferBuffer unset = automatic: start post-rebuffer playback at playBuffer and let
-    // AutomaticBufferManager adjust from there.
     val config = bufferConfig(PlayerSetupOptions(playBuffer = 1500.0, rebufferBuffer = null))
     assertEquals(1500, config.bufferForPlaybackAfterRebufferMs)
   }

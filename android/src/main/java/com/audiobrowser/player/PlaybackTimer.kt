@@ -7,9 +7,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * A playback-gated repeating timer. Runs [onTick] every [interval] seconds while the current
- * playback state satisfies [isActive]. A null interval (or <= 0) means stopped — the single
- * off-switch.
+ * Runs [onTick] on the main thread every interval seconds while the latest playback state passed to
+ * [onPlaybackStateChanged] satisfies [isActive]. Starts inactive until the first state arrives.
  */
 class PlaybackTimer(
   private val isActive: (PlaybackState) -> Boolean,
@@ -17,14 +16,19 @@ class PlaybackTimer(
 ) {
   private val scope = MainScope()
   private var job: Job? = null
+  // Seconds.
   private var interval: Double? = null
   private var active = false
 
+  /**
+   * Sets the tick interval in seconds; null or <= 0 stops the timer. A new value restarts the
+   * timer, so the next tick comes a full new interval later.
+   */
   fun setInterval(value: Double?) {
     val normalized = if (value != null && value > 0) value else null
     if (normalized == interval) return
     interval = normalized
-    stop() // restart with the new interval on reconcile
+    stop() // start() is a no-op while a job runs
     reconcile()
   }
 

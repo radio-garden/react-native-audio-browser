@@ -2,11 +2,9 @@ import Foundation
 import NitroModules
 import os.log
 
-/// The browser's state (path, content, tabs, config), its content and search caches, favorites
-/// and events. Pages come from `PageResolver`; requests go through `RequestPipeline`.
 @MainActor
 final class BrowserManager {
-  // Allow creation from nonisolated contexts (e.g. HybridAudioBrowser property default)
+  // Nonisolated so HybridAudioBrowser can create it as a property default.
   nonisolated init() {
     pages = PageResolver(requests: requests)
   }
@@ -18,16 +16,16 @@ final class BrowserManager {
   let requests = RequestPipeline()
   private let pages: PageResolver
 
-  // LRU cache for resolved content - keyed by path
+  // Entries are unhydrated; `resolve` hydrates favorites on the way out.
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
-  // Most recent search, keyed by `SearchParams.cacheKey`.
+  // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
+  // already set, so a hydrated slot would keep the favorites of the first search.
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
   private var favorites = FavoriteSet()
 
-  // Navigation tracking to prevent race conditions
   private var currentNavigationId: Int = 0
 
   // MARK: - Public State
@@ -42,17 +40,15 @@ final class BrowserManager {
 
   private(set) var content: ResolvedTrack? {
     didSet {
-      // Note: Can't compare ResolvedTrack directly, always fire callback
+      // ResolvedTrack is not comparable, so every set emits.
       contentChanged.emit(content)
     }
   }
 
   private(set) var tabs: [Track]? {
     didSet {
-      // Emit only on a real change: invalidateAllContent() re-queries the tabs
-      // source on every invalidation (a callback source can re-resolve, e.g.
-      // titles in a new locale), and an unchanged result must not churn the
-      // CarPlay tab bar or reset its selection.
+      // An unchanged result must not churn the CarPlay tab bar or reset its selection;
+      // `invalidateAll` re-queries the tabs every time.
       if let tabs, !TabBarEntries.same(oldValue, tabs) {
         tabsChanged.emit(tabs)
       }
@@ -61,11 +57,8 @@ final class BrowserManager {
 
   // MARK: - Configuration
 
-  /// Whether configureBrowser() has been called
   private(set) var isConfigured = false
 
-  /// Browser configuration containing routes, search, tabs, and request settings. Kept on
-  /// `requests`, which every request reads.
   var config: BrowserConfig {
     get { requests.config }
     set {
@@ -81,13 +74,12 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
-  /// The favorite id set changed, however it changed (e.g. from the app or a webview), so
-  /// surfaces like the CarPlay now-playing heart can re-render.
+  /// Emitted on any change to the favorites, however it came about.
   let favoritesChanged = Emitter<Void>()
 
-  /// Runs the app's `handleTrackLoad` for `event` and waits for it, both promise layers: a JS
-  /// callback returning `Promise<void>` arrives as `Promise<Promise<Void>>`. False when the app
-  /// set none.
+  /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
+  /// `Promise<void>` arrives as `Promise<Promise<Void>>`); a failure is logged, not thrown. False
+  /// when the app set no handler.
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     guard let handler = config.handleTrackLoad else { return false }
     do {
@@ -100,41 +92,35 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  /// Sets the favorited track identities, emitting `favoritesChanged` when they change.
   func setFavorites(_ favorites: [String]) {
     if self.favorites.replace(with: favorites) {
       favoritesChanged.emit(())
     }
   }
 
-  /// Enables/disables favoriting (propagated from the `favorite` capability).
   func setFavoriteEnabled(_ enabled: Bool) {
     favorites.enabled = enabled
   }
 
-  /// Optimistically reflects a local favorite toggle (`FavoriteSet.set`), so the now-playing
-  /// heart stays responsive.
   func setFavorited(identity: String, favorited: Bool) {
     favorites.set(identity, favorited: favorited)
   }
 
-  /// `track` with its `favorited` hydrated (`FavoriteSet.hydrate`).
   func hydrateFavorite(_ track: Track) -> Track {
     favorites.hydrate(track)
   }
 
   // MARK: - Navigation
 
-  /// Loads `path` as the current page. `bypassCache` reloads it from the network and keeps the
-  /// content on screen meanwhile, for refreshing the current path. A newer load supersedes this one, and its
-  /// result or failure is dropped: every caller reports a throw, so a slow /a failing after a
-  /// fast /b succeeded would otherwise show /a's error over /b's content.
+  /// Loads `path` as the current page. `bypassCache` refetches it and keeps the current content
+  /// on screen meanwhile. A newer load supersedes this one: its result or error is dropped, so a
+  /// slow failing /a cannot show its error over a fast /b's content.
   func load(_ path: String, bypassCache: Bool = false) async throws {
     currentNavigationId += 1
     let navigationId = currentNavigationId
     self.path = path
     if bypassCache {
-      // A failed reload must not leave the stale page to be served from the cache.
+      // So a failed reload doesn't leave the stale page in the cache.
       contentCache.remove(path)
     } else {
       content = nil
@@ -149,31 +135,22 @@ final class BrowserManager {
     }
   }
 
-  /// Resolves content for a path with optional caching.
+  /// Contextual paths resolve their parent page. Favorites are hydrated on every call.
   func resolve(_ path: String, useCache: Bool = true) async throws -> ResolvedTrack {
-    // Strip __trackId from contextual URLs
     let normalizedPath = BrowserPathHelper.stripTrackId(path)
 
-    // Check content cache first
     if useCache, let cached = contentCache.get(normalizedPath) {
       return favorites.hydrate(cached)
     }
 
     let resolvedTrack = try await pages.resolve(normalizedPath)
 
-    // Cache the resolved content for future navigation
     contentCache.set(normalizedPath, value: resolvedTrack)
 
     return favorites.hydrate(resolvedTrack)
   }
 
-  /// Invalidates the content cache for a specific path.
-  ///
-  /// Expects a *container* path. A contextual path (`…?__trackId=…`) addresses
-  /// a child, not a cache entry — entries are keyed by the stripped parent — so
-  /// passing one used to remove nothing at all, silently. Android `require`s the
-  /// same precondition; this throws so the misuse surfaces identically on both
-  /// platforms instead of no-opping on one.
+  /// Throws on a contextual path, which never names a cache entry (Android requires the same).
   func invalidateContentCache(_ path: String) throws {
     guard !BrowserPathHelper.isContextual(path) else {
       throw BrowserError.invalidConfiguration(
@@ -183,10 +160,9 @@ final class BrowserManager {
     contentCache.remove(path)
   }
 
-  /// Clears the content cache, the search cache and the resolved request layers (e.g. on a
-  /// locale change), then re-queries the tabs and reloads the current path from the network.
-  /// The two are independent: a failed reload goes to `reloadFailed` with its path and neither
-  /// waits for nor cancels the tabs, and a failed tabs re-query keeps the current tabs.
+  /// Clears every cache and the resolved request layers, then re-queries the tabs and reloads
+  /// the current path, independently: a failed reload goes to `reloadFailed` with its path, and
+  /// a failed tabs query keeps the current tabs.
   func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
     contentCache.clear()
     requests.invalidateLayers()
@@ -202,8 +178,7 @@ final class BrowserManager {
     }
   }
 
-  /// `error` as the app's `formatNavigationError` displays it, or its default display when
-  /// there is no formatter or it fails.
+  /// The app's `formatNavigationError` result, or the default when it has none or it fails.
   func formatted(_ error: NavigationError, path: String) async -> FormattedNavigationError {
     let fallback = error.defaultFormatted()
     guard let formatter = config.formatNavigationError else { return fallback }
@@ -215,51 +190,34 @@ final class BrowserManager {
 
   // MARK: - Search
 
-  /// Execute a search query.
-  /// Plain free-text search — wraps the structured overload with no mode/filters.
   func search(_ query: String) async throws -> ResolvedTrack {
     try await search(
       SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil, reference: .unknown),
     )
   }
 
-  /// Structured search, cached by the full parameter set.
-  ///
-  /// Voice intents reuse `query` across different structures —
-  /// `MediaIntentCriteria` falls back to the structured value when there is no
-  /// spoken name, so "play jazz" (genre) and a text search for "jazz" arrive
-  /// with an identical `query` — hence `cacheKey` rather than `query`.
+  /// Cached by `cacheKey`, not `query`: voice intents fill `query` from a genre or artist when
+  /// nothing was spoken, so "play jazz" and a text search for "jazz" share a `query`.
   func search(_ params: SearchParams) async throws -> ResolvedTrack {
     let query = params.query
     let cacheKey = params.cacheKey
 
-    // Check cache - hydrate favorites on the way out, since they may have
-    // changed since the search ran (the slot holds the raw results for exactly
-    // this reason — see below).
     if cacheKey == lastSearchKey, let results = lastSearchResults {
       return makeSearchResult(query: query, results: results)
     }
 
     let results = try await pages.search(params)
 
-    // Cache the RAW results, never the hydrated ones: hydration is one-shot
-    // (`FavoriteSet.hydrate` skips a track whose `favorited` is already set), so a
-    // hydrated slot would serve the favorites as they were at first search
-    // forever. The content cache keys on the same rule — it stores the
-    // unhydrated resolve and hydrates in `resolve()`.
     lastSearchKey = cacheKey
     lastSearchResults = results
 
     return makeSearchResult(query: query, results: results)
   }
 
-  /// Search and return playable tracks for "play «X»" voice intents, drilling
-  /// into a browsable-only first result (place/genre page) so we play its first
-  /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
-  /// `searchPlayable`.
+  /// Playable tracks for a "play X" voice intent, drilling into a browsable-only first result
+  /// (`SearchDrillIn.playable`). Mirrors Android's `searchPlayable`.
   func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
-    // Voice search never matches a disabled track (Track.disabled) — filtered
-    // before drill-in so an unavailable first result can't capture the play.
+    // Disabled tracks go before drill-in, so an unavailable first result can't take the play.
     let children = try await ((search(params).flattenedChildren) ?? [])
       .filter { $0.disabled != true }
     return try await SearchDrillIn.playable(from: children) { [self] path in
@@ -268,12 +226,8 @@ final class BrowserManager {
     }
   }
 
-  /// Wraps raw search results as a resolved page, hydrating favorites on the
-  /// way out — the single exit for `search`, so an unhydrated search page can't
-  /// be emitted (the same funnel `resolve()` has).
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
-    // Search results are a flat list; as a resolved page they are one
-    // untitled section (ADR 0010).
+    // Search results become one untitled section (ADR 0010).
     ResolvedTrack(
       path: BrowserPathHelper.createSearchPath(query),
       style: nil,
@@ -301,7 +255,6 @@ final class BrowserManager {
 
   // MARK: - Tabs
 
-  /// Query navigation tabs.
   func queryTabs() async throws -> [Track] {
     guard let tabs = try await pages.tabs() else { return [] }
     self.tabs = tabs
@@ -310,7 +263,8 @@ final class BrowserManager {
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
 
-  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`), from its page.
+  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`); nil when `path` is
+  /// not contextual.
   func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
     let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)

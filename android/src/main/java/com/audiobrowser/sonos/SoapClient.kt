@@ -7,8 +7,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * The HTTP client for the speakers, which answer on the local network within moments: a speaker
- * that doesn't is gone, and waiting OkHttp's default 10 s per call would hold up every command.
+ * The HTTP client for the speakers. Its timeouts are short: a speaker on the local network that
+ * doesn't answer within seconds is gone, and OkHttp's default 10 s would hold up every command.
  */
 internal val sonosHttpClient: OkHttpClient by lazy {
   OkHttpClient.Builder()
@@ -18,13 +18,13 @@ internal val sonosHttpClient: OkHttpClient by lazy {
     .build()
 }
 
-/** Thrown when a SOAP control call fails (non-2xx HTTP or a SOAP fault). */
+/** Thrown when a SOAP control call gets a non-2xx response, with the SOAP fault if it held one. */
 internal class SoapException(message: String, val httpCode: Int?, val fault: SoapFault?) :
   Exception(message)
 
 /**
- * Posts UPnP SOAP actions to a control URL, blocking. Returns the response body, or throws
- * [SoapException] with any SOAP fault on a non-2xx response.
+ * Posts UPnP SOAP actions to a control URL, blocking the calling thread. Returns the response body,
+ * or throws [SoapException] on a non-2xx response.
  */
 internal class SoapClient(private val httpClient: OkHttpClient) {
   fun execute(controlUrl: String, action: SoapAction): String {
@@ -32,7 +32,7 @@ internal class SoapClient(private val httpClient: OkHttpClient) {
     val request =
       Request.Builder()
         .url(controlUrl)
-        // UPnP requires the SOAPACTION value be wrapped in double quotes.
+        // UPnP requires the SOAPACTION value in double quotes.
         .header("SOAPACTION", "\"${action.soapAction}\"")
         .post(body)
         .build()

@@ -10,34 +10,28 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 
 /**
- * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
- * displayed artwork is the transformed `artworkSource.uri` falling back to the raw `artwork` field,
- * and the mediaId is the stable `id` for playable tracks, falling back to `path` then `src` (a
- * Track must have one of the latter two — see the `src` vs `path` note in GLOSSARY.md). The list
- * line renders from `subtitle` (the now-playing line is re-stamped from `artist` by the now-playing
- * pipeline; see the Now Playing Metadata guide).
+ * The one Track → Media3 [MediaItem] conversion. A Track needs `path` or `src`; see the `src` vs
+ * `path` note in GLOSSARY.md.
  */
 object TrackFactory {
-  /** Set once by the Player. */
   @Volatile var artworkRoutes: ArtworkRoutes? = null
 
   /**
-   * The artwork URI the session publishes for [url]. On Android Automotive OS, whose car media app
-   * loads artwork only from `content://`, `android.resource://` and `file://` URIs, http(s) artwork
-   * is served through the provider, as browse artwork always is.
+   * The artwork URI the session publishes for [url]: [url] itself, except on Android Automotive OS,
+   * whose car media app loads artwork only from `content://`, `android.resource://` and `file://`
+   * URIs, where http(s) artwork is served through the provider.
    */
   fun sessionArtworkUri(url: String, headers: Map<String, String>?, isSvg: Boolean): String {
     val provider = artworkRoutes?.takeIf { Automotive.device } ?: return url
     return provider.route(url, headers, isSvg, pinned = true)
   }
 
-  /** Whether favoriting is on: the `favorite` capability, set by the Player. */
   @Volatile var favoriteEnabled = false
 
   /**
-   * Sets the heart `userRating`, which a controller's rating sets: [favorited], or unrated when it
-   * is unknown on a [playable] item, so Android Automotive OS's car media app, which draws it as
-   * its own favorite control, always has one to draw. None while favoriting is off.
+   * Sets the heart user rating: [favorited], or unrated when that is unknown on a [playable] item,
+   * so Android Automotive OS, which draws its own favorite control from it, always has one to draw.
+   * None while [favoriteEnabled] is off.
    */
   fun MediaMetadata.Builder.setFavorite(
     favorited: Boolean?,
@@ -52,19 +46,16 @@ object TrackFactory {
       }
     )
 
+  /** Throws unless [mediaItem] was built here, which tags it with its Track. */
   fun fromMedia3(mediaItem: MediaItem): Track {
     return mediaItem.localConfiguration!!.tag as Track
   }
 
   /**
-   * A synthetic browsable Track for a section's "view more" row — the section has a path but no
-   * Track to hang it on (ADR 0010). It carries the section's declared item block as its own,
-   * `display` included: the section's declaration about this content's layout is the only declared
-   * promise the "view all" page can ever have (there is no consumer-authored handle to declare one
-   * on), and without it Android Auto would always render that page as a list.
-   *
-   * [title] is the consumer's `viewMoreTitle`, one string for every section — not the section's own
-   * title, which the group header above the row already shows.
+   * A browsable Track for a section's "view more" row (ADR 0010). It carries the section's style,
+   * `display` included: nothing else can declare the layout of the page it opens, and without it
+   * Android Auto renders that page as a list. [title] is the consumer's `viewMoreTitle`, not the
+   * section's title.
    */
   fun navigationTrack(section: Section, title: String): Track =
     Track(
@@ -111,10 +102,9 @@ object TrackFactory {
   }
 
   /**
-   * Browse-surface conversion. Routes http(s) artwork through the content:// provider (so headers +
-   * SVG apply in our process, and no bytes cross the Binder), registering it in [registry].
-   * Non-http artwork (android.resource:// tab icons, file://) passes through to setArtworkUri
-   * unchanged so vector/category icons survive.
+   * Routes http(s) artwork through the `content://` provider, registered in [registry], so headers
+   * and SVG rendering apply in this process and no bytes cross the Binder. Other artwork
+   * (`android.resource://` icons, `file://`) passes through unchanged, so vector icons survive.
    */
   fun toBrowseMediaItem(
     track: Track,
@@ -135,16 +125,12 @@ object TrackFactory {
     SvgArtworkRenderer.isSvgUrl(artworkUri(track)) ||
       SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
 
-  /** The transformed artworkSource wins over the raw artwork field. */
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
 
-  /**
-   * All metadata except artwork. The owning [section] (browse surfaces only) supplies the
-   * group-title header hint and the per-item style default (ADR 0010).
-   */
   private fun metadataBuilder(track: Track, section: Section? = null): MediaMetadata.Builder =
     MediaMetadata.Builder()
       .setTitle(track.title)
+      // The list line shows `subtitle`; the now-playing pipeline re-stamps it from `artist`.
       .setArtist(track.subtitle)
       .setAlbumTitle(track.album)
       .setDescription(track.description)
@@ -155,18 +141,11 @@ object TrackFactory {
       .setFavorite(track.favorited, playable = track.src != null)
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
-    // A playable track's mediaId is the consumer's stable `id` when it has one —
-    // the identity rule (id when non-blank, else src; see Track.identity /
-    // ADR 0008), except that an id-less playable track prefers its contextual
-    // `path` over `src` here, so this is deliberately NOT expressed via
-    // Track.identity. Android Auto marks the "now playing" browse row by exact
-    // mediaId equality between the row and the player's current item (media3
-    // announces `currentMediaItem.mediaId` in the legacy playback state), and a
-    // consumer-loaded track's `src` can differ textually from the browse row's
-    // for the same item (absolute vs relative, extra query params) — the id is
-    // the one string both sides share. It is also context-free, so the same
-    // station gets the same mediaId in every tab. Browsable-only tracks keep
-    // `path` so navigation parentIds stay resolvable paths.
+    // Android Auto marks the now-playing browse row by exact mediaId equality with the player's
+    // current item, and a loaded track's `src` can differ textually from the row's, so a playable
+    // track uses its `id`, then `path`, deliberately not Track.identity (ADR 0008). The id is also
+    // context-free: the same item gets the same mediaId in every tab. Browsable tracks keep `path`
+    // so navigation parentIds stay resolvable.
     val stableId = if (track.src != null) track.id?.takeUnless { it.isBlank() } else null
     val mediaId =
       stableId
@@ -178,10 +157,9 @@ object TrackFactory {
     return MediaItem.Builder()
       .setMediaId(mediaId)
       .setUri(track.src)
-      // The playable uri also rides in requestMetadata: a controller replaying
-      // this item after process death (track cache empty) round-trips only
-      // mediaId + requestMetadata, and a stable-id mediaId is not playable by
-      // itself — resolveMediaItemToTrack rebuilds a minimal track from this.
+      // A controller replaying this item after process death sends back only mediaId and
+      // requestMetadata, and an id mediaId cannot be played on its own: resolveMediaItemToTrack
+      // rebuilds the track from this.
       .setRequestMetadata(
         MediaItem.RequestMetadata.Builder().setMediaUri(track.src?.toUri()).build()
       )

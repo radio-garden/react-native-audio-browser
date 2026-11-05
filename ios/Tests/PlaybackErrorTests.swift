@@ -8,13 +8,12 @@ import Testing
 @MainActor
 struct PlaybackErrorKindTests {
   @Test func httpStatus_mapsToKind() {
-    // Not parameterized: the generated Nitro enum is not Sendable, so it
-    // cannot cross a `@Test(arguments:)` isolation boundary.
+    // Not parameterized: the generated Nitro enum is not Sendable, so it cannot cross a
+    // `@Test(arguments:)` isolation boundary.
     let expectations: [(Int, PlaybackErrorKind)] = [
-      // Ordering: these must not be swallowed by the 400...499 arm.
+      // Must not be swallowed by the 400...499 arm.
       (404, .notFound),
       (410, .notFound),
-      // Range edges.
       (400, .rejected),
       (499, .rejected),
       (500, .serverError),
@@ -46,8 +45,8 @@ struct PlaybackErrorNitroCodeTests {
     #expect(TrackPlayerError.PlaybackError.playbackStalled.toNitroError().statusCode == nil)
   }
 
-  /// `retrying` is nil — not false — on a terminal payload, so JS consumers
-  /// see the field only while it means something.
+  /// `retrying` is nil, not false, on a terminal payload, so JS sees the field only while it means
+  /// something.
   @Test func retryingFlag_isNilUnlessSet() {
     #expect(TrackPlayerError.PlaybackError.hostUnreachable.toNitroError().retrying == nil)
     #expect(
@@ -55,9 +54,8 @@ struct PlaybackErrorNitroCodeTests {
     )
   }
 
-  /// `code` is an untyped wire contract: nothing on either side of the bridge
-  /// catches a typo, and telemetry groups issues by it. Worth an exhaustive
-  /// table even though `kind` is what the UI branches on.
+  /// `code` is an untyped wire contract that telemetry groups issues by; nothing on either side of
+  /// the bridge catches a typo.
   @Test func codes_areStable() {
     let expectations: [(TrackPlayerError.PlaybackError, String)] = [
       (.failedToLoadKeyValue, "failed-to-load"),

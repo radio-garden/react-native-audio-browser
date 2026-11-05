@@ -11,9 +11,7 @@ import org.junit.Test
 
 class SectionScopeTest {
 
-  // Two sections sharing an identity — the duplicate-heavy shape the flat model
-  // had to disambiguate by precedence; sections + the stamped flat index make
-  // it exact.
+  // "dup" sits at flat indices 0 and 3, "x" at 1.
   private val sections =
     listOf(
       section(title = "First", children = arrayOf(track(src = "dup"), track(src = "x"))),
@@ -32,7 +30,6 @@ class SectionScopeTest {
 
   @Test
   fun `flat index pins the tapped section`() {
-    // Flat index 3 = second section, offset 1.
     val scoped = SectionScope.scoped(sections, "dup", tappedIndex = 3)!!
     assertEquals(listOf("y", "dup", "z"), scoped.section.children.map { it.src })
     assertEquals(1, scoped.tappedOffset)
@@ -52,8 +49,6 @@ class SectionScopeTest {
 
   @Test
   fun `stale index falls back to the first identity match`() {
-    // The child at the stamped index no longer carries the tapped identity
-    // (the list shifted) — resolution ignores the index and pins nothing.
     val scoped = SectionScope.scoped(sections, "dup", tappedIndex = 1)!!
     assertEquals(listOf("dup", "x"), scoped.section.children.map { it.src })
     assertNull(scoped.tappedOffset)
@@ -73,8 +68,6 @@ class SectionScopeTest {
 
   @Test
   fun `locates a track by its id when it has one`() {
-    // Identity rule (ADR 0008): the id wins over the src, so a __trackId stamped
-    // from an id-bearing track must resolve — and its src must not.
     val children =
       arrayOf(
         track(id = "stable-a", src = "https://s/a.mp3"),
@@ -83,7 +76,7 @@ class SectionScopeTest {
     val scoped = SectionScope.scoped(listOf(section(children = children)), "stable-b")!!
     assertEquals(listOf("stable-a", "stable-b"), scoped.section.children.map { it.id })
 
-    // The src is shadowed by the id — it is not the track's identity.
+    // An id-bearing track's src is not its identity.
     assertNull(SectionScope.scoped(listOf(section(children = children)), "https://s/b.mp3"))
   }
 
@@ -132,9 +125,6 @@ class SectionScopeTest {
 
   @Test
   fun `an unstyled section reaches the surface with the page's block folded in`() {
-    // The end-to-end wire for ResolvedTrack.style: without this fold, the
-    // page tier is a dead field — every existing unit test would stay green
-    // while a whole tier of ADR 0011 went dark in production.
     val page =
       resolvedTrack(
         style =
@@ -145,8 +135,6 @@ class SectionScopeTest {
     val folded = page.styleResolvedSections()!!.single()
     assertEquals(StyleDisplay.GRID, folded.style?.display)
     assertEquals(false, folded.style?.gridWrap)
-    // The extras leg of this wire — folded section → per-item grid hint — is
-    // asserted in MediaExtrasBuilderTest (it needs Robolectric for Bundle).
   }
 
   @Test

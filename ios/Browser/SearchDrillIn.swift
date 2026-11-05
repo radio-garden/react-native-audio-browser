@@ -1,23 +1,18 @@
 import Foundation
 
-/// A search result that may or may not be directly playable. `src` is the
-/// playable stream; `path` is a browsable container path. Abstracting these two
-/// fields keeps the drill-in decision free of the Nitro `Track` type so it can
-/// be unit-tested.
+/// A search result: `src` plays it, `path` browses it. Keeps the drill-in free of the Nitro
+/// `Track` so it can be unit-tested.
 protocol PlayableSearchItem {
   var src: String? { get }
   var path: String? { get }
 }
 
 enum SearchDrillIn {
-  /// Picks the playable items for a "play «X»" voice search.
+  /// The items a "play «X»" voice search plays, or nil when none is playable.
   ///
-  /// If the first result is browsable-only (a `path` container with no `src` — a
-  /// place/genre page), drills into it via `resolveChildren` and uses its
-  /// playable children, so we play the first station *inside* the page rather
-  /// than skipping the page for a later inline station. Falls back to the flat
-  /// playable results when the first result is already playable or the drill-in
-  /// yields nothing. Returns nil when nothing is playable.
+  /// Only the first result is drilled into: when it is browsable but not playable, its playable
+  /// children win over later playable results, so the first station inside a place or genre page
+  /// plays. Falls back to the playable results when the drill-in yields none.
   static func playable<Item: PlayableSearchItem>(
     from children: [Item],
     resolveChildren: sending (String) async throws -> [Item],
@@ -37,8 +32,7 @@ enum SearchDrillIn {
   }
 }
 
-// The real Nitro `Track` already carries `src`/`path`; conform it for the app
-// build. (The testable target builds without NitroModules and uses a stub item.)
+// The test target builds without NitroModules and uses its own item.
 #if canImport(NitroModules)
   extension Track: PlayableSearchItem {}
 #endif

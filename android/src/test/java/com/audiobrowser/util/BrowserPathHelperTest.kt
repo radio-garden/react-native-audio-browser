@@ -12,10 +12,6 @@ class BrowserPathHelperTest {
 
   @Test
   fun `build round-trips a src carrying its own query params`() {
-    // A src carrying its own query string (signed CDN URL) must survive the
-    // build → extract/strip round-trip: an unescaped `&` would split the src
-    // into stray query params, truncating the trackId and polluting the
-    // parent path.
     val src = "https://cdn.example.com/stream.mp3?token=abc&exp=1699999999"
     val url = BrowserPathHelper.build("/library", src)
     assertEquals(src, BrowserPathHelper.extractTrackId(url))

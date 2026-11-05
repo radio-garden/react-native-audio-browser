@@ -23,7 +23,7 @@ class IcyTitleTest {
 
   @Test
   fun `re-decodes a title the station utf-8 encoded from legacy bytes`() {
-    // media3 decodes the valid UTF-8 to the same Latin-1-shaped string the fallback would give.
+    // media3 decodes this valid UTF-8 to the same Latin-1-shaped string its fallback gives.
     val doubleEncoded = latin1Shaped("Artist - เพลง", "windows-874").toByteArray(Charsets.UTF_8)
     assertEquals(
       "Artist - เพลง",

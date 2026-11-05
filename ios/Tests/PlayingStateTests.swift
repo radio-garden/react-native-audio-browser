@@ -23,7 +23,6 @@ struct PlayingStateTests {
     #expect(!state(false, .playing).playing)
   }
 
-  /// .stopped was once missing here, masked only by stop() clearing the intent right after.
   @Test func notPlayingInTerminalStatesEvenWithIntent() {
     for terminal in [PlaybackState.none, .stopped, .ended, .error] {
       #expect(!state(true, terminal).playing, "Expected not playing in \(terminal) despite intent")

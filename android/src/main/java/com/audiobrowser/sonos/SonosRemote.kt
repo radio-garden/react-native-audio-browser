@@ -8,9 +8,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
- * The Sonos room selected in the Output Switcher ([SonosOutputs.selected]) as a remote output: a
- * session while one is selected, with a [SonosPlayer] of its own. Selecting another room starts its
- * session in place of the last, so playback moves from room to room.
+ * Plays on the room selected in the Output Switcher ([SonosOutputs.selected]): a session with its
+ * own [SonosPlayer] while one is selected. Selecting another room replaces it, so playback moves.
  */
 internal class SonosRemote(
   private val context: Context,
@@ -81,9 +80,8 @@ internal class SonosRemote(
 
   private companion object {
     /**
-     * The system's routing session for the selected room, which ties the media session to it:
-     * without it, the notification's output chip can't open the Output Switcher to move playback
-     * back.
+     * The system's routing session for the selected room. The media session must carry it, or the
+     * notification's output chip can't open the Output Switcher to move playback back.
      */
     fun systemRoutingControllerId(context: Context): () -> String? {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return { null }

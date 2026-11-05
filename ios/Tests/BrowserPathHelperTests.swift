@@ -30,9 +30,7 @@ import Testing
 }
 
 @Test func buildUrlEmptyPathReturnsBaseWithoutTrailingSlash() {
-  // An endpoint whose baseUrl already includes the full path (e.g. search,
-  // `https://host/api/search`) passes an empty path — the base IS the URL, and
-  // must not gain a dangling trailing slash.
+  // An endpoint whose baseUrl is already the whole URL (e.g. search) passes an empty path.
   let result = BrowserPathHelper.buildUrl(baseUrl: "http://example.com/api/search", path: "")
   #expect(result == "http://example.com/api/search")
 }
@@ -87,9 +85,7 @@ import Testing
 }
 
 @Test func buildRoundTripsSrcWithQueryParams() {
-  // A src carrying its own query string (signed CDN URL) must survive the
-  // build → extract/strip round-trip: an unescaped `&` splits the src into
-  // stray query params, truncating the trackId and polluting the parent path.
+  // An unescaped `&` in the src would split it into stray query params of the parent path.
   let src = "https://cdn.example.com/stream.mp3?token=abc&exp=1699999999"
   let url = BrowserPathHelper.build(parentPath: "/library", trackId: src)
   #expect(BrowserPathHelper.extractTrackId(url) == src)
@@ -181,6 +177,7 @@ import Testing
 // MARK: - stampingContextualPaths
 
 @Test func stampsPlayableOnlyTracksWithTheirFlatPagePosition() throws {
+  // The index counts every track, the one with a path too; the trackId is the id, else the src.
   let sections = [
     Section(children: [Track(path: "/a", title: "A"), Track(src: "one.mp3", title: "One")]),
     Section(children: [Track(id: "two", src: "two.mp3", title: "Two")]),

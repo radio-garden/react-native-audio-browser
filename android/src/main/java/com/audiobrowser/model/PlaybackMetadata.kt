@@ -14,17 +14,15 @@ data class PlaybackMetadata(
 ) {
   companion object {
     /**
-     * Creates PlaybackMetadata from raw Metadata entries. Handles ICY streams specially, uses
-     * Media3's unified approach for everything else. [icyCharset] is the track's declared charset
-     * for ICY titles media3 decoded as Latin-1; it never touches other metadata.
+     * The ICY title when [metadata] holds one, otherwise what media3 maps from the other entries
+     * (ID3, Vorbis, QuickTime…); null when neither yields a field. [icyCharset] re-decodes ICY
+     * titles media3 decoded as Latin-1 ([IcyTitle.redecode]); it never touches other metadata.
      */
     fun from(metadata: Metadata, icyCharset: String? = null): PlaybackMetadata? {
-      // Try ICY first (streaming-specific)
       fromIcy(metadata, icyCharset)?.let {
         return it
       }
 
-      // Use Media3's unified approach for ID3, Vorbis, QuickTime, etc.
       val builder = MediaMetadata.Builder()
       for (i in 0 until metadata.length()) {
         metadata[i].populateMediaMetadata(builder)
@@ -32,7 +30,7 @@ data class PlaybackMetadata(
       return fromMediaMetadata(builder.build())
     }
 
-    /** Shoutcast / Icecast metadata (ICY protocol) https://cast.readme.io/docs/icy */
+    // ICY (Shoutcast / Icecast): https://cast.readme.io/docs/icy
     private fun fromIcy(metadata: Metadata, icyCharset: String?): PlaybackMetadata? {
       for (i in 0 until metadata.length()) {
         when (val entry = metadata[i]) {
@@ -49,17 +47,14 @@ data class PlaybackMetadata(
       return null
     }
 
-    /** Converts Media3's unified MediaMetadata to PlaybackMetadata. */
     private fun fromMediaMetadata(mediaMetadata: MediaMetadata): PlaybackMetadata? {
       val title = mediaMetadata.title?.toString()
       val artist = mediaMetadata.artist?.toString()
       val album = mediaMetadata.albumTitle?.toString()
       val genre = mediaMetadata.genre?.toString()
 
-      // Use recordingYear first (more specific), fall back to releaseYear
       val date = (mediaMetadata.recordingYear ?: mediaMetadata.releaseYear)?.toString()
 
-      // Return null if no meaningful data
       if (title == null && artist == null && album == null && genre == null && date == null) {
         return null
       }

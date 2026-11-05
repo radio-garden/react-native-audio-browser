@@ -3,13 +3,12 @@ import Foundation
   import NitroModules
 #endif
 
-/// A playback-gated repeating timer. Runs `onTick` every `interval` seconds while
-/// the current playback state satisfies `isActive`. `interval == nil` (or <= 0)
-/// means stopped — that is the single off-switch.
+/// A repeating timer gated on playback state: runs `onTick` every `interval` seconds while
+/// `isActive` holds for the current state. A nil or non-positive interval turns it off.
 @MainActor
 final class PlaybackTimer {
-  // nonisolated(unsafe) for deinit cleanup — Timer must be invalidated to break
-  // the RunLoop retain, and deinit is always nonisolated in Swift 6.
+  // nonisolated(unsafe) so the nonisolated deinit (Swift 6) can invalidate it; the run loop
+  // retains a timer until it is invalidated.
   private nonisolated(unsafe) var timer: Timer?
   private var interval: TimeInterval?
   private var active = false
@@ -29,7 +28,7 @@ final class PlaybackTimer {
     let normalized = (interval ?? 0) > 0 ? interval : nil
     if normalized == self.interval { return }
     self.interval = normalized
-    stop() // restart with the new interval on the next reconcile
+    stop() // start() keeps a running timer, so drop it for the new interval
     reconcile()
   }
 
@@ -48,11 +47,9 @@ final class PlaybackTimer {
 
   private func start(_ interval: TimeInterval) {
     guard timer == nil else { return }
-    // `.common`, not the `.default` mode `Timer.scheduledTimer` installs: UIKit
-    // runs the main run loop in tracking mode while a list is being dragged, and
-    // a default-mode timer does not fire there. Missed repeats are dropped rather
-    // than replayed, so progress events would freeze and interval ticks would be
-    // lost for as long as the user scrolls. (VolumeFader already does this.)
+    // `.common`, not the `.default` mode `Timer.scheduledTimer` uses: while a list is dragged the
+    // main run loop is in tracking mode, where a default-mode timer does not fire and its missed
+    // repeats are dropped, freezing progress events and losing interval ticks.
     let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated { self?.onTick() }
     }
