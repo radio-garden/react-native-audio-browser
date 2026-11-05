@@ -2,7 +2,14 @@
 
 **Status:** accepted
 
-When a browse path resolves successfully but yields zero children (an empty Favorites tab, a search with no results, an emptied playlist), we surface it as a `NavigationError` with code `empty` — not as a separate empty-state concept. This lets empty and failure share the one path-aware `formatNavigationError` formatter, so a consumer can word an empty Favorites tab differently from an empty search without a second mechanism. On External surfaces both render through whatever carries a message there: CarPlay's centered empty view (`CPListTemplate.emptyViewTitleVariants`), and on Android Auto — whose browse list has no empty view — a single non-browsable, non-playable tile carrying the same formatted title and message, alongside the offline, browse-error and gate tiles.
+When a browse path resolves successfully but yields zero children, we surface it as a `NavigationError` with code `empty-content`, not as a separate empty-state concept. Examples are an empty Favorites tab, a search with no results and an emptied playlist.
+
+Empty and failure then share the one path-aware `formatNavigationError` formatter. A consumer can word an empty Favorites tab differently from an empty search without a second mechanism.
+
+On External surfaces both render through whatever carries a message there:
+
+- **CarPlay:** the centered empty view (`CPListTemplate.emptyViewTitleVariants`).
+- **Android Auto:** its browse list has no empty view, so a single non-browsable, non-playable tile carries the same formatted title and message. It sits alongside the offline, browse-error and gate tiles.
 
 ## Considered options
 
@@ -15,5 +22,5 @@ Unification won because the display is identical to an error and the existing fo
 ## Consequences
 
 - **"Error" is a misnomer for the empty case** — an empty result is a _successful_ resolve, not a failure (cf. the "Track" naming). The name is kept because renaming `NavigationError` / `formatNavigationError` / `FormattedNavigationError` is a breaking public-API change not worth the precision.
-- **The `empty` code's default must be neutral** — `title: "Nothing here"`, no retry CTA — so a consumer who never implements `formatNavigationError` gets a clean empty state, not a "Couldn't load / try again" failure treatment on a healthy empty list.
-- **`empty` is distinct from `content-not-found`**: the latter is a 404-style failure (the path didn't resolve), the former is "resolved fine, zero children".
+- **The `empty-content` code's default must be neutral** — `title: "Nothing here"`, no retry CTA — so a consumer who never implements `formatNavigationError` gets a clean empty state, not a "Couldn't load / try again" failure treatment on a healthy empty list.
+- **`empty-content` is distinct from `content-not-found`**: the latter is a failure (no route matched the path, or its resolution returned no content), the former is "resolved fine, zero children".

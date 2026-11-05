@@ -488,10 +488,8 @@ export class NativeAudioBrowser
     }
 
     await this.handleLoad(track, result.tracks, result.startIndex, () => {
-      // setQueue keeps the current play/pause state, so start playback
-      // explicitly — selecting a track is an intent to play (matches the
-      // skip-to-existing-queue-track path). Without this the first track of a
-      // freshly expanded queue loads but stays paused.
+      // setQueue stops playback, so start it explicitly: selecting a track
+      // is an intent to play (matches the skip-to-existing-queue-track path).
       this.setQueue(result.tracks, result.startIndex)
       this.play()
     })

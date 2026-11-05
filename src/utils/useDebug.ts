@@ -126,10 +126,23 @@ function useDebugState(): DebugState {
 // MARK: - Main Hook
 
 /**
- * Debug hook that provides state inspection and change logging.
+ * Debug hook that snapshots the player's state and logs each change.
  *
- * @param options - Configuration options
- * @returns Debug object with state, logs, and clear function
+ * Every entry is also written to the console. The log is shared by every
+ * mounted `useDebug`: two mounted instances each log the same change, and
+ * `clear` empties it for all of them. Position changes under 2 seconds are
+ * not logged. `enabled: false` stops only the logging; the hook still
+ * subscribes to the state hooks, `useProgress` among them, and re-renders on
+ * every change, so remove it from production code rather than disabling it.
+ *
+ * @param options - Logging options
+ * @param options.enabled - Log state changes. Default `__DEV__`.
+ * @param options.metadata - Also log `onTrackMetadata`, `onTimedMetadata` and
+ *   `onChapterMetadata` events. Default `false`.
+ * @returns `state`, a summary snapshot (the queue as comma-joined `src`s, the
+ *   content as its title, errors as their messages); `logs`, the last 100
+ *   `{ timestamp, elapsed, type, message }` entries; and `clear`, which
+ *   empties the log.
  *
  * @example
  * ```tsx

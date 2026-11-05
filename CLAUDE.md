@@ -22,7 +22,7 @@ yarn android:types
 
 ## Testing
 
-Everything below is gated in CI by `.github/workflows/test.yml`.
+The local equivalents of what `.github/workflows/test.yml` runs:
 
 ```bash
 yarn test                          # vitest
@@ -31,20 +31,25 @@ yarn ci:lint                       # oxlint, type-aware
 yarn ci:format                     # oxfmt --check
 yarn ios:test                      # Swift tests
 yarn android:test                  # Kotlin unit tests
+yarn vocab-check                   # glossary format
 ```
 
 `yarn ios:test` passes `--disable-sandbox`: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
 
 ### Testing hooks
 
-Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and deliberately not `@testing-library/react-native`. The library exports no components: all 29 hooks use only `useState`/`useEffect`/`useRef`/`useSyncExternalStore`, so react-dom is a valid host and costs three devDependencies instead of a second test runner plus `@react-native/jest-preset`. Revisit this the day the package exports something that renders RN primitives — react-dom cannot host those, and RNTL means Jest.
+Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and not `@testing-library/react-native`. The library exports no components, so react-dom is a valid host and costs a few devDependencies instead of a second test runner plus `@react-native/jest-preset`.
+
+Revisit this the day the package exports something that renders RN primitives — react-dom cannot host those, and RNTL means Jest.
 
 Two things to know before writing one:
 
 - Start the file with `/** @vitest-environment happy-dom */`, detached by a blank line so the import sort cannot pull it off line 1. Without it the file runs in node and every render fails on `document is not defined`.
 - `'react-native'` is aliased to `src/test-utils/reactNativeStub.ts` in `vitest.config.ts`, because `react-native/index.js` is Flow-typed and Rollup cannot parse it. Extend the stub when a test needs more of the RN surface.
 
-Emitters are module-level singletons created at import, so `lastValue` and any log store outlive an individual test. Reset them in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both. The tests that pin the render-vs-effect re-sync (`utils/useNativeUpdatedValue.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the `lastValue` re-read is removed.
+Emitters are module-level singletons created at import, so `lastValue` and any log store outlive an individual test. Reset them in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both.
+
+The tests that pin the render-vs-effect re-sync (`utils/useNativeUpdatedValue.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the `lastValue` re-read is removed.
 
 ## Breaking Changes Policy
 
@@ -52,23 +57,14 @@ This is an **alpha product** - we do not care about breaking changes. Feel free 
 
 ## Architecture
 
-- Uses **Nitro Modules** most functionality can be sync / blocking in nature
+- Built on **Nitro Modules**, so most native calls can be synchronous.
 - For user facing callbacks always work with a param object
 
 ## Nitro
 
-### Important Callback Behaviors
-
-**Callbacks work seamlessly across JS/native boundary:**
-
-- Functions can be passed directly as parameters (no registration needed)
-- Reference counting system holds strong references safely
-- Can be called multiple times and stored in memory
-- **Value-returning callbacks** become Promise<T> for thread safety
-- **Void callbacks** (`() => void`) stay synchronous on native side
-- **Sync<T> callbacks** are synchronous but dangerous (must call from JS thread only)
-
 ### Documentation
+
+`.claude/nitro/` is a copy of Nitro's docs taken at Nitro 0.30.0. `package.json` pins the Nitro version the library builds against, and [nitro.margelo.com](https://nitro.margelo.com) documents that version; where the copy and the site differ, the site is right. How callbacks cross the boundary (reference counting, which ones become `Promise<T>`, `Sync<T>`) is in [callbacks.md](.claude/nitro/types/callbacks.md).
 
 - [what-is-nitro.md](.claude/nitro/what-is-nitro.md) - Introduction and core concepts
 - [hybrid-objects.md](.claude/nitro/hybrid-objects.md) - Core HybridObject interface patterns and constraints

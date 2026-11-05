@@ -4,12 +4,14 @@
 
 A resolved browse page is a flat `children: Track[]`; grouping is encoded by
 adjacency (contiguous `groupTitle` runs), and an image row is a pseudo-track
-carrying an `imageRow: ImageRowItem[]` payload. Every layer then re-derives
-or destroys structure: CarPlay scans runs to build `CPListSection`s,
-`SectionScope` scans the same runs to scope the queue (ADR 0006), Android
-Auto re-encodes the run as a per-item extras hint, and consumers whose
-upstream page models are already sectioned must flatten to adjacency only
-for the library to guess the sections back
+carrying an `imageRow: ImageRowItem[]` payload.
+
+Every layer then re-derives or destroys structure. CarPlay scans runs to
+build `CPListSection`s, `SectionScope` scans the same runs to scope the queue
+(ADR 0006), and Android Auto re-encodes the run as a per-item extras hint.
+
+Consumers whose upstream page models are already sectioned must flatten to
+adjacency only for the library to guess the sections back
 ([#93](https://github.com/radio-garden/react-native-audio-browser/issues/93)).
 
 Sections become a real type instead:
@@ -20,15 +22,18 @@ interface Section {
   title?: string
   /** Secondary line for the section's navigation surface ("view all"). */
   subtitle?: string
-  /** How children render: list rows (default), wrapping tiles, or one line of tiles. */
+  /**
+   * How children render: list rows (default), wrapping tiles, or one line
+   * of tiles.
+   */
   style?: 'list' | 'grid' | 'rail'
   /** Navigation target for the section header / "view all" surface. */
   path?: string
   children: Track[]
 }
 
-// ResolvedTrack.sections?: Section[]   — canonical resolved shape
-// ResolvedTrack.children?: Track[]     — authoring sugar: one untitled section
+// ResolvedTrack.sections?: Section[] — canonical resolved shape
+// ResolvedTrack.children?: Track[] — authoring sugar: one untitled section
 ```
 
 Decisions, each with its reason:
@@ -37,30 +42,41 @@ Decisions, each with its reason:
   sugar.** A browse source may still declare a plain `children: Track[]` —
   accepted at both decode boundaries (the TS configuration and the JSON
   wire) and normalized to a single untitled section, so flat pages
-  (favorites, search-like lists) stay flat to author. Resolved output
-  always carries `sections`; `children` is never populated on output, so
-  there is exactly one structure to hydrate, transform, and scope against.
+  (favorites, search-like lists) stay flat to author.
+
+  Resolved output always carries `sections`; `children` is never populated
+  on output, so there is exactly one structure to hydrate, transform, and
+  scope against.
+
 - **`groupTitle`, `imageRow`, and `ImageRowItem` are deleted, not shimmed.**
   No consumer has shipped to production, so the compatibility phase the
   original issue planned for is unnecessary. `ImageRowItem` was already a
-  strict subset of `Track`. Legacy fields in JSON payloads decode as
-  ignored dead weight — silently; the consumer migration is lockstep, so
-  there is no one left to warn.
+  strict subset of `Track`.
+
+  Legacy fields in JSON payloads decode as ignored dead weight — silently;
+  the consumer migration is lockstep, so there is no one left to warn.
+
 - **The tile styles are named for layout, not for a platform class.**
   `'grid'` wraps to as many lines as needed; `'rail'` is exactly one
-  line of tiles (what the flat model called an image row — a name that was
-  `CPListImageRowItem` leaking into the domain, the same mistake this ADR
-  retires `groupTitle` for). Style names declare the _requested_ layout; a
-  platform renders its nearest supported form. Android Auto has no
-  single-line tile container, so `rail` renders there as `grid` —
-  showing more, never less. If styles could only name what every surface
-  guarantees, the vocabulary would be exactly `'list'`.
+  line of tiles (what the flat model called an image row: the name of
+  `CPListImageRowItem` leaking into the domain, the mistake this ADR
+  retires `groupTitle` for).
+
+  Style names declare the _requested_ layout; a platform renders its nearest
+  supported form. Android Auto has no single-line tile container, so `rail`
+  renders there as `grid` — showing more, never less. If styles could only
+  name what every surface guarantees, the vocabulary would be exactly
+  `'list'`.
+
 - **A `style` value must earn entry** by rendering sanely on all three
   surfaces (app UI, CarPlay, Android Auto). Platform-exclusive
   presentations (CarPlay cards, condensed rows, grid-template pages) are
   not styles — if ever needed they arrive as explicitly platform-scoped
-  hints, never as core vocabulary. This is the guardrail against the
-  unified model chasing per-platform divergence.
+  hints, never as core vocabulary.
+
+  This is the guardrail against the unified model chasing per-platform
+  divergence.
+
 - **Queue scope is declared, never rendered.** A section's queue is its
   `children`, identical on every platform, screen width, and resumption
   path. Rendering may truncate what is _visible_ (CarPlay fits a
@@ -69,38 +85,47 @@ Decisions, each with its reason:
 - **The per-section queue policy stays deferred.** It is additive — an
   optional field lands compatibly at any time, even post-ship — so it does
   not spend this migration's breaking-change window. ADR 0006's discipline
-  holds: the knob arrives when a surface actually varies. The sketch
-  (including linked-page queueing, where a preview section queues its
-  `path` target's content) is parked in FUTURE.md.
+  holds: the knob arrives when a surface actually varies.
+
+  The sketch (including linked-page queueing, where a preview section queues
+  its `path` target's content) is parked in FUTURE.md.
+
 - **The contextual `__index` stays a flat position** over the page's
   flattened sections (children concatenated in section order). The URL
   format, `BrowserPathHelper`, skip-in-place, and persisted paths from
   ADR 0009 are untouched; resolution maps the flat index to its owning
-  section instead of deriving a run. Grid-row items gain their own flat
-  positions (today they share their row's), which also removes the
-  within-row duplicate residual noted in ADR 0009.
+  section instead of deriving a run.
+
+  Grid-row items gain their own flat positions (today they share their
+  row's), which also removes the within-row duplicate residual noted in
+  ADR 0009.
+
 - **Flat surfaces stay flat.** Tabs, search results, and the queue remain
   `Track[]` — they are lists, not pages. A search page is internally a
   single untitled section.
 - **Android Auto flattens at the Media3 boundary, nowhere else.** The
   MediaBrowser protocol has no section node — grouping is an advisory
   per-item extras hint that requires contiguity, which is exactly what
-  adjacency encoded. `MediaSessionCallback.toMediaItems` becomes
-  `[Section] → [MediaItem]`: it stamps each child with its owning section's
-  title/style and appends a "view all" link from `section.path`/`subtitle`.
-  The wire behavior car clients see is unchanged.
+  adjacency encoded.
+
+  `MediaSessionCallback.toMediaItems` becomes `[Section] → [MediaItem]`: it
+  stamps each child with its owning section's title/style and appends a
+  "view all" link from `section.path`/`subtitle`. The wire behavior car
+  clients see is unchanged.
+
 - **CarPlay maps sections 1:1 to `CPListSection`.** The run-accumulation
   scan is deleted; the section/item budget-truncation logic survives as-is.
-  A `rail` section renders as a _headerless_ `CPListSection` holding
-  one image-row item whose text is `section.title` (today's exact look). A
-  `grid` section renders as a wrapping, titled tile grid on iOS 26+
-  (`imageGridElements` + `allowsMultipleLines` — never the title-less
-  `gridElements`, so artwork-less tracks keep their name on screen) and
-  degrades to a list section before iOS 26, where the only tile container
-  truncates at an unknowable width. Tile styles presume artwork:
-  artwork-less children render a placeholder tile plus title, and the
-  artwork `resolve` hook is the consumer's place to supply fallback art —
-  the library does not invent content.
+  - A `rail` section renders as a _headerless_ `CPListSection` holding
+    one image-row item whose text is `section.title` (today's exact look).
+  - A `grid` section renders as a wrapping, titled tile grid on iOS 26+
+    (`imageGridElements` + `allowsMultipleLines` — never the title-less
+    `gridElements`, so artwork-less tracks keep their name on screen).
+    Before iOS 26 it degrades to a list section, because the only tile
+    container there truncates at an unknowable width.
+  - Tile styles presume artwork: artwork-less children render a
+    placeholder tile plus title, and the artwork `resolve` hook is the
+    consumer's place to supply fallback art — the library does not invent
+    content.
 - **`section.style` wins over `childrenStyle` where set.** The browsable
   row's `childrenStyle` remains the drilled-into page's default; a
   section's style is pushed down as per-item hints, which the platform
@@ -127,9 +152,11 @@ Decisions, each with its reason:
   layouts separately instead of one model) — rejected. The content comes
   from one server that cannot reasonably emit per-platform trees; the
   mapping tables don't disappear, they move into every consumer, untested.
+
   `Section` models the editorial 90% both platforms natively share (titled
   groups of tappable tracks); the style-admission rule fences off the
   divergent 10%.
+
 - **`(section, item)` pair in the contextual URL** — rejected; a flat index
   carries the same information once section order defines the flattening,
   and keeps ADR 0009's format and fallbacks byte-compatible.
@@ -144,7 +171,7 @@ Decisions, each with its reason:
 - Persisted playback state is track-level and unaffected.
 - ADR 0006's queue scoping becomes declared rather than derived; ADR 0009's
   index tie-breaker survives unchanged and loses its rail residual.
-- Reordering a page can no longer split or merge groups, and section
+- Reordering a page cannot split or merge groups, and section
   identity is structural rather than a localized display string.
 - A `rail` that can be swiped sideways exists on no car surface —
   CarPlay templates have no horizontal scrolling and Android Auto wraps;
@@ -163,10 +190,24 @@ flat wire are unchanged. See
 
 **Amendment (September 2026):** a plain wrapping grid renders
 `CPListImageRowItemRowElement`s with `allowsMultipleLines: true`, the same
-element as the single-line shelf, rather than `imageGridElements`. The row
-element is titled, so artwork-less tracks still keep their name on screen,
-and it adds the subtitle line and a larger image; it has no shape and no
-accessory slot, so `imageShape` and `accessorySymbol` no longer render on
-plain tiles. They render on `gridTile: 'image'` — the `imageGridElements`
-family as a declared value, in either wrap mode — and on `'condensed'`
-(see [ADR 0011](0011-style-is-a-declaration-block.md)).
+element as the single-line shelf, rather than `imageGridElements`.
+
+The row element is titled, so artwork-less tracks still keep their name on
+screen, and it adds the subtitle line and a larger image.
+
+It has no shape and no accessory slot, so `imageShape` and
+`accessorySymbol` do not render on plain tiles. They render on
+`gridTile: 'image'` — the `imageGridElements` family as a declared value,
+in either wrap mode — and on `'condensed'` (see
+[ADR 0011](0011-style-is-a-declaration-block.md)).
+
+**Since then (November 2026):** `Section.subtitle` was not adopted. A
+`Section` carries `title`, `style`, `path` and `children`, and a `path`
+never adds words to the section.
+
+On Android Auto, the browsable row appended to a section with a `path` takes
+its title from the global `viewMoreTitle` browser option ("View more" by
+default), not from anything on the section. See the `Section.path` docs in
+[`src/types/browser-nodes.ts`](../../src/types/browser-nodes.ts) and the
+Sections entry in the
+[Android Auto guide](../../website/guide/android-auto.md).

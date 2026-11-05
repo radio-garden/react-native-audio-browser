@@ -4,13 +4,15 @@ description: 'The reference for configureBrowser: every source shape (static, ca
 
 # Browser
 
-The **Browser** is the subsystem that turns one declarative description of your content into a navigable tree — the same tree that powers your in-app browse UI, CarPlay, and Android Auto. You describe it once with **`configureBrowser`**; the library resolves paths, fetches children, transforms requests, and renders the native surfaces for you.
+The **Browser** is the subsystem that turns one declarative description of your content into a navigable tree — the same tree that powers your in-app browse UI, CarPlay, and Android Auto.
+
+You describe it once with **`configureBrowser`**; the library resolves paths, fetches children, transforms requests, and renders the native surfaces for you.
 
 [Basic Usage](/guide/basic-usage) introduces the browse tree. This guide is the reference for _configuring_ it: every source shape, every routing pattern, and every option on [`BrowserConfiguration`](/api/types/browser/#browserconfiguration).
 
 ## A complete example
 
-Here is a full, runnable configuration — call `setupPlayer` once, then `configureBrowser` once. It has two tabs, one **static** route, and one **callback** route. Paste it, swap in your own content, and you have a working browse tree on phone, CarPlay, and Android Auto.
+Here is a full, runnable configuration — call `setupPlayer` once, then `configureBrowser` once. It has two tabs, two **static** routes, and one **callback** route. Paste it, swap in your own content, and you have a working browse tree on phone, CarPlay, and Android Auto.
 
 ```ts
 import { setupPlayer, configureBrowser } from 'react-native-audio-browser'
@@ -38,6 +40,13 @@ configureBrowser({
     '/browse/jazz': async () => {
       const stations = await fetchJazzStations() // your code
       return { path: '/browse/jazz', title: 'Jazz', children: stations }
+    },
+    '/favorites': {
+      path: '/favorites',
+      title: 'Favorites',
+      children: [
+        { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
+      ]
     }
   }
 })
@@ -70,13 +79,22 @@ A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it r
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: { display: 'grid', gridWrap: false }, path: '/popular', children: [...] },
+    {
+      title: 'Popular',
+      style: { display: 'grid', gridWrap: false },
+      path: '/popular',
+      children: [...]
+    },
     { title: 'All stations', children: [...] }
   ]
 }
 ```
 
-A Section is `{ title?, style?, path?, children }`: `title` renders as a header above its tracks, `style` is a declaration block whose `display` picks the children's layout (`'list'` rows — the default — or `'grid'` artwork tiles; `gridWrap: false` keeps the grid to a single line), and `path` is the navigation target for the section's "view all" affordance. See [Presentation](#presentation) for how each surface renders the declarations.
+A Section is `{ title?, style?, path?, children }`. `title` renders as a header above its tracks. `style` is a declaration block whose `display` picks the children's layout: `'list'` rows (the default) or `'grid'` artwork tiles, with `gridWrap: false` keeping the grid to a single line.
+
+`path` is the navigation target for the section's "view all" affordance.
+
+See [Presentation](#presentation) for how each surface renders the declarations.
 
 A flat page doesn't have to spell that out: authoring a plain `children: Track[]` — as most examples in this guide do — is sugar for one untitled section. Resolved output always carries `sections`; `children` is never populated on a resolved page.
 
@@ -84,7 +102,7 @@ So configuring the Browser is really three decisions, covered in turn below: **w
 
 ## Source shapes
 
-Wherever the Browser needs content — a route, the `tabs`, `search` — you supply a **source**, and a source is always one of three shapes. Learn these once; they apply everywhere.
+Wherever the Browser needs content — a route, the `tabs`, `search` — you supply a **source**. A route's source is one of three shapes: static data, a callback, or an HTTP endpoint.
 
 ### 1. Static data
 
@@ -115,7 +133,7 @@ A function `({ path, routeParams }) => ResolvedTrack` (sync or async). Resolve c
 configureBrowser({
   routes: {
     '/albums/{id}': async ({ routeParams }) => {
-      const album = await fetchAlbum(routeParams.id) // your code
+      const album = await fetchAlbum(routeParams?.id) // your code
       return {
         path: `/albums/${album.id}`,
         title: album.name,
@@ -146,8 +164,8 @@ configureBrowser({
 On an HTTP route, the _navigated_ path is used as the request path — a static `path` field is ignored for this. To remap (e.g. send `/favorites` to `/favorites/v2`), use a [transform](#transforms-per-request), which also receives `routeParams`.
 :::
 
-::: tip Same three shapes, everywhere
-`tabs` and `search` accept these same shapes. Once you know static vs. callback vs. HTTP, you know how to configure every part of the Browser. For example, `search` as a callback is just another source returning tracks:
+::: tip Tabs and search
+`tabs` accepts the same three shapes, but its static form and its callback give a `Track[]`, not a page. `search` accepts a callback or an HTTP endpoint, with no static form. Its callback receives the search params and returns a `Track[]`:
 
 ```ts
 configureBrowser({
@@ -172,12 +190,14 @@ configureBrowser({
 })
 ```
 
-::: warning Maximum 4 tabs
-CarPlay and Android Auto cap the tab bar, so `tabs` is limited to **4**. More than four triggers a runtime warning and the extras are dropped.
+::: warning Car surfaces show only the first few tabs
+Android Auto shows the first **4** tabs. CarPlay shows as many as `CPTabBarTemplate.maximumTabCount` allows. Only those surfaces hide the extra tabs: `getTabs` and `useTabs` return every tab. A debug build warns when a static `tabs` array has more tabs than Android Auto shows.
 :::
 
 ::: tip A tab's path stays a tab
-Link freely to a tab's own path — a "view all" section header on one tab pointing at another tab's route, say. On CarPlay (iOS 17+) that **switches to the tab** instead of pushing a second copy of it onto the current tab's stack, so the user lands where the tab bar already shows that content, with no Back button to a page they never came from. Elsewhere — earlier iOS, Android Auto, your app UI — it navigates as usual.
+Link freely to a tab's own path — a "view all" section header on one tab pointing at another tab's route, say. On CarPlay (iOS 17+) that **switches to the tab** instead of pushing a second copy of it onto the current tab's stack.
+
+The user lands where the tab bar already shows that content, with no Back button to a page they never came from. Elsewhere — earlier iOS, Android Auto, your app UI — it navigates as usual.
 :::
 
 Like any source, `tabs` can also be a **callback** — useful when the tabs themselves depend on runtime state, such as a debug build or the current user:
@@ -198,7 +218,8 @@ configureBrowser({
 
 ```ts
 configureBrowser({
-  path: '/home', // where browse opens; defaults to the first tab's path (or '/')
+  // where browse opens; defaults to the first tab's path (or '/')
+  path: '/home',
   tabs: [
     /* … */
   ]
@@ -218,7 +239,9 @@ Patterns match on **exact segment count** first — `/artists` does _not_ match 
 | `/favorites`   | exactly `/favorites`                                      | —                  |
 | `/albums/{id}` | `/albums/floret`, `/albums/42`                            | `routeParams.id`   |
 | `/artists/*`   | any single segment at that position (`/artists/anything`) | —                  |
-| `/files/**`    | `/files/...` at any depth below                           | `routeParams.tail` |
+| `/files/**`    | `/files` itself, and `/files/...` at any depth below      | `routeParams.tail` |
+
+On `/files` itself, `routeParams.tail` is `undefined`.
 
 When several patterns match, **most specific wins**: constant > `{param}` > `*` > `**`. So `/albums/new` and `/albums/{id}` can coexist — `/albums/new` takes the literal route.
 
@@ -228,15 +251,17 @@ configureBrowser({
     // literal — checked first
     '/albums/new': newReleasesPage,
     // {id} otherwise
-    '/albums/{id}': ({ routeParams }) => fetchAlbum(routeParams.id),
+    '/albums/{id}': ({ routeParams }) => fetchAlbum(routeParams?.id),
     // deep file paths
-    '/files/**': ({ routeParams }) => listFiles(routeParams.tail)
+    '/files/**': ({ routeParams }) => listFiles(routeParams?.tail)
   }
 })
 ```
 
 ::: warning The bare `'*'` key is the _default_, not a wildcard segment
-A single-segment wildcard only works as a `*` **segment inside a longer pattern** (e.g. `/artists/*`). The bare top-level key `'*'` is different: it's the **custom default** — the source used for any path no other route matches (and only needed if you want to override the built-in HTTP default).
+A single-segment wildcard only works as a `*` **segment inside a longer pattern** (e.g. `/artists/*`).
+
+The bare top-level key `'*'` is different: it's the **custom default** — the source used for any path no other route matches (and only needed if you want to override the built-in HTTP default).
 
 ```ts
 routes: {
@@ -256,20 +281,19 @@ A callback (or transform) receives the captured params in `routeParams`:
 ```ts
 '/stations/{country}/{city}': async ({ routeParams }) => {
   // /stations/nl/amsterdam → { country: 'nl', city: 'amsterdam' }
-  return fetchStations(routeParams.country, routeParams.city)
+  return fetchStations(routeParams?.country, routeParams?.city)
 }
 ```
 
 ### Per-route overrides
 
-A route value can be a bare source (the common case) **or** a [`RouteConfig`](/api/types/browser/#routeconfig) object that overrides request behavior for just that subtree — its `browse` source, plus its own `media` and `artwork` config:
+A route value can be a bare source (the common case) **or** a [`RouteConfig`](/api/types/browser/#routeconfig) object that overrides request behavior for just that subtree — its `browse` source, plus its own `artwork` config. The web ignores a route's `artwork` and uses the top-level `artwork` config.
 
 ```ts
 configureBrowser({
   routes: {
     '/premium/**': {
-      browse: { baseUrl: 'https://api.example.com/premium' },
-      media: { baseUrl: 'https://premium-audio.cdn.example.com' },
+      browse: { baseUrl: 'https://premium-api.example.com' },
       artwork: { baseUrl: 'https://premium-images.cdn.example.com' }
     }
   }
@@ -294,26 +318,29 @@ configureBrowser({
   request: { baseUrl: 'https://api.example.com', headers: { 'x-app': 'demo' } },
   browse: { query: { client: 'audio-browser', hl: 'en' } },
   routes: {
-    // inherits baseUrl + header + query; navigated path is the request path
-    '/browse/jazz': {}
+    // adds genre=jazz on top of the request and browse layers;
+    // the navigated path is the request path
+    '/browse/jazz': { query: { genre: 'jazz' } }
   }
 })
 ```
 
+A path that needs nothing extra needs no route at all: an unmatched path is fetched through `request` and `browse`. An empty route object (`{}`) is not a request config: it is read as a static page with no `path` or `title`. On iOS and Android `configureBrowser` throws on it, on web it renders a blank page, and a debug build warns about it.
+
 ### RequestConfig fields
 
-Every request layer is a [`RequestConfig`](/api/types/browser/#requestconfig) — set only the fields you need; they merge (query params merge additively, scalars override):
+Every request layer is a [`RequestConfig`](/api/types/browser/#requestconfig) — set only the fields you need. Headers and query params merge key by key; other fields override:
 
-| Field                  | Purpose                                                                             |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| `baseUrl` / `path`     | Where to send the request (note: `path` doesn't override the navigated browse path) |
-| `method`               | `GET` (default), `POST`, …                                                          |
-| `headers`              | HTTP headers                                                                        |
-| `query`                | Query parameters (merged additively)                                                |
-| `body` / `contentType` | Request body, e.g. for `POST`                                                       |
-| `userAgent`            | `User-Agent` override                                                               |
+| Field                  | Purpose                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `baseUrl` / `path`     | Where to send the request (note: `path` doesn't override the navigated browse path)  |
+| `method`               | `GET` (default), `POST`, …                                                           |
+| `headers`              | HTTP headers (merged key by key)                                                     |
+| `query`                | Query parameters (merged key by key)                                                 |
+| `body` / `contentType` | Request body, sent for `POST`, `PUT` and `PATCH` (and `DELETE` when set); not on web |
+| `userAgent`            | `User-Agent` override (a `User-Agent` in `headers` wins on iOS); ignored on web      |
 
-### Transforms — per request
+### Transforms: per request
 
 When a layer needs to change _per request_ (read the captured `routeParams`, switch a `GET` to a `POST`, remap the path), add a `transform` (async) or `transformSync`. It receives the merged request and returns the final one:
 
@@ -339,9 +366,11 @@ configureBrowser({
 })
 ```
 
-### Resolvers — values that change rarely
+### Resolvers: values that change rarely
 
-When the _whole_ config depends on runtime state — a domain that varies by environment, a locale, an auth host — make the layer a **resolver**: a thunk returning the config. It runs **once per content generation** and is cached until you call [`invalidateAllContent`](#updating-the-configuration), so it's the cheap place to read values that change rarely:
+When the _whole_ config depends on runtime state — a domain that varies by environment, a locale, an auth host — make the layer a **resolver**: a thunk returning the config.
+
+It runs **once per content generation** and is cached until you call [`invalidateAllContent`](#updating-the-configuration), so it's the cheap place to read values that change rarely:
 
 ```ts
 configureBrowser({
@@ -381,12 +410,15 @@ configureBrowser({
 
 With `imageQueryParams`, CarPlay and Android Auto's requested size is injected automatically (`?w=200&h=200`) so each surface gets right-sized art. For full control, an `artwork.transform` receives that size as an [`ImageContext`](/api/types/browser/#imagecontext).
 
-**Now-playing art** can differ from browse-row art — set `nowPlayingArtwork` for the lock screen / car now-playing surface only. It uniquely supports an `{id}` template filled from the active track's `id`:
+**Now-playing art** can differ from browse-row art — set `nowPlayingArtwork` for the lock screen / car now-playing surface only. Like `artwork`, it can use an `{id}` template filled from the active track's `id`:
 
 ```ts
+// {id} templating (in any artwork config) is native-only:
+// the web implementation does not apply it
 configureBrowser({
-  nowPlayingArtwork: { path: '/artwork/{id}' } // {id} → the active track's id
-}) // {id} templating is native-only — not applied by the web implementation
+  // {id} → the active track's id
+  nowPlayingArtwork: { path: '/artwork/{id}' }
+})
 ```
 
 See [Now Playing](/guide/now-playing) for the metadata side of the now-playing surface.
@@ -395,11 +427,19 @@ See [Now Playing](/guide/now-playing) for the metadata side of the now-playing s
 
 Two options control what happens when a playable Track is tapped.
 
-**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in. The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay single-line grid fits only so many tiles — but never what _plays_. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in.
 
-Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page. So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
+The scope is the page's declared structure: the tapped [Section](#how-a-path-resolves)'s `children`, identical on every surface (a page authored with plain `children` is one untitled section). Rendering may truncate what a section _shows_ — a CarPlay single-line grid fits only so many tiles — but never what _plays_.
 
-The position is only a tie-breaker. If the page has changed by the time the queue is expanded (a stale resume, say), the first row matching the identity wins instead — a stale position can pick a different copy of the tapped track, never a different track. And tapping a row that's already in the current queue from the same page skips in place rather than requeueing the section.
+A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its section (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+
+Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page.
+
+So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
+
+The position is only a tie-breaker. If the page has changed by the time the queue is expanded (a stale resume, say), the first row matching the identity wins instead — a stale position can pick a different copy of the tapped track, never a different track.
+
+Tapping a row that's already in the current queue from the same page skips in place rather than requeueing the section.
 
 **`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls _your_ handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
 
@@ -420,7 +460,9 @@ configureBrowser({
 })
 ```
 
-In the video branch, returning without calling the player tells the library "handled — leave audio alone." In the audio branch you take over, so you must explicitly `setQueue` + `play` — both are fire-and-forget calls returning `void`, so there's nothing to await _on them_. The handler itself is a different story: native **awaits the promise your handler returns**, so anything you `await` inside — an auth check, a fetch — delays the tap being treated as handled. Keep slow work out of the handler, or kick it off without awaiting it. (`setQueue`/`play` are covered in [Basic Usage](/guide/basic-usage).)
+In the video branch, returning without calling the player tells the library the tap is handled and audio stays as it is. In the audio branch, call [`setQueue` and `play`](/guide/basic-usage) yourself. Both return `void`, so there is nothing to await on them.
+
+Native **awaits the promise your handler returns**. Anything you `await` inside, such as an auth check or a fetch, delays the tap being treated as handled. Keep slow work out of the handler, or start it without awaiting it.
 
 ## Reading and driving browse state
 
@@ -473,7 +515,9 @@ The tree isn't static — content changes, languages switch, environments move. 
 | Everything is stale (locale, domain, auth changed) | `invalidateAllContent()`             |
 | The config _shape_ itself changed                  | `configureBrowser(newConfig)`        |
 
-`notifyContentChanged(path)` refreshes a single path in place — external controllers re-fetch just that page. `invalidateAllContent()` clears every cache and re-resolves all visible surfaces (and re-runs your [resolvers](#resolvers-values-that-change-rarely)) — this is what you call after a language or domain switch. `configureBrowser` replaces everything wholesale.
+`notifyContentChanged(path)` refreshes a single path in place — external controllers re-fetch just that page. `invalidateAllContent()` clears every cache and re-resolves all visible surfaces (and re-runs your [resolvers](#resolvers-values-that-change-rarely)) — this is what you call after a language or domain switch.
+
+`configureBrowser` replaces everything wholesale and re-runs initial navigation: the in-app browser opens `path` (or the first tab) again. On web it opens the first tab only when `tabs` is an array, and `/` otherwise. CarPlay and Android Auto keep their place; if the tabs changed, CarPlay rebuilds its tab bar once the user is back at the root.
 
 ```ts
 // language changed → resolvers read the new locale on the next resolve
@@ -506,37 +550,56 @@ configureBrowser({
 })
 ```
 
-The `code` values: `content-not-found`, `network-error`, `http-error`, `callback-error`, `empty-content`, `timeout`, `unknown-error`. Your formatter drives both the car dialogs and the [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) hook in your app.
+For the `code` values, see [Navigation errors](/guide/errors#navigation-errors). Your formatter drives both the car dialogs and the [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) hook in your app.
 
 ## Presentation
 
 Presentation lives in `style` blocks, separate from content, plus a few Track fields and config options. Each surface applies the style properties it supports and ignores the rest — an unsupported property is a no-op, never an error.
 
-| Field                                            | On                       | Effect                                                                            | Platform            |
-| ------------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------- | ------------------- |
-| `title`                                          | a section                | header above its tracks                                                           | all                 |
-| `style: { display: 'grid' }`                     | a section                | wrapping artwork-tile grid                                                        | all\*               |
-| `style: { display: 'grid', gridWrap: false }`    | a section                | a single line of artwork tiles                                                    | all\*               |
-| `path`                                           | a section                | "view all" target — a tappable header on CarPlay, an appended row on Android Auto | all                 |
-| `style` (same block)                             | a page                   | declaration for the whole page — a section overrides it for its own children      | all                 |
-| `style: { display: 'grid' }`                     | a browsable track        | the layout of the page it opens — Android Auto reads it from the parent item      | Android Auto / AAOS |
-| `style: { artworkRendering: 'stencil' }`         | a track / section / page | tint monochrome artwork to the surface appearance                                 | CarPlay             |
-| `style: { imageShape: 'circular' }`              | a track / section / page | crop `'image'` and `'condensed'` tile artwork circular (people)                   | CarPlay (iOS 26+)   |
-| `style: { accessorySymbol: 'lock.fill' }`        | a track / section / page | SF Symbol accessory on rows and on `'image'` / `'condensed'` tiles                | CarPlay             |
-| `style: { gridTile: 'card' }`                    | a section / page         | the grid's tile kind: `'plain'` (default), `'image'`, `'card'`, or `'condensed'`  | CarPlay (iOS 26+)   |
-| `style: { cardTint: '#1e3a8a' }` (+ `cardImage`) | a track / section / page | card color and image mode (`'background'` fills the card full-height)             | CarPlay (iOS 26+)   |
-| `disabled: true`                                 | a track                  | unavailable: never plays; grayed where drawable, hidden elsewhere                 | all                 |
-| `artwork: 'sf:heart.fill'`                       | any item                 | SF Symbol icon (supports `?bg=…&fg=…`)                                            | iOS                 |
-| `live: true`                                     | a track                  | live indicator                                                                    | iOS                 |
-| `carPlaySiriListButton: 'top' \| 'bottom'`       | a page                   | place the Siri cell on the page                                                   | iOS                 |
-| `albumPath` + `resolveAlbumPath`                 | track + config           | make the now-playing album line tappable                                          | CarPlay             |
+| Field                                            | On                       | Effect                                                                                                                                                                             | Platform            |
+| ------------------------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `title`                                          | a section                | header above its tracks                                                                                                                                                            | all                 |
+| `style: { display: 'grid' }`                     | a section                | wrapping artwork-tile grid                                                                                                                                                         | all\*               |
+| `style: { display: 'grid', gridWrap: false }`    | a section                | a single line of artwork tiles                                                                                                                                                     | all\*               |
+| `path`                                           | a section                | "view all" target: a tappable row on a CarPlay grid (none on a list); an appended `viewMoreTitle` row on Android Auto                                                              | all                 |
+| `style` (same block)                             | a page                   | declaration for the whole page — a section overrides it for its own children                                                                                                       | all                 |
+| `style: { display: 'grid' }`                     | a browsable track        | the layout of the page it opens — Android Auto reads it from the parent item                                                                                                       | Android Auto / AAOS |
+| `style: { artworkRendering: 'stencil' }`         | a track / section / page | tint monochrome artwork to the surface appearance                                                                                                                                  | CarPlay             |
+| `style: { imageShape: 'circular' }`              | a track / section / page | crop `'image'` and `'condensed'` tile artwork circular (people)                                                                                                                    | CarPlay (iOS 26+)   |
+| `style: { accessorySymbol: 'lock.fill' }`        | a track / section / page | SF Symbol accessory on rows and on `'image'` / `'condensed'` tiles                                                                                                                 | CarPlay             |
+| `style: { gridTile: 'card' }`                    | a section / page         | the grid's tile kind: `'plain'` (default), `'image'`, `'card'`, or `'condensed'`                                                                                                   | CarPlay (iOS 26+)   |
+| `style: { cardTint: '#1e3a8a' }` (+ `cardImage`) | a track / section / page | card color and image mode (`'background'` fills the card full-height)                                                                                                              | CarPlay (iOS 26+)   |
+| `disabled: true`                                 | a track                  | unavailable: taps, voice selection, queue expansion and resume refuse it, but a `setQueue` list is not filtered and plays it when reached; grayed where drawable, hidden elsewhere | all                 |
+| `artwork: 'sf:heart.fill'`                       | any item                 | SF Symbol icon (supports `?bg=…&fg=…`)                                                                                                                                             | iOS                 |
+| `live: true`                                     | a track                  | live indicator                                                                                                                                                                     | iOS                 |
+| `carPlaySiriListButton: 'top' \| 'bottom'`       | a page                   | place the Siri cell on the page                                                                                                                                                    | iOS                 |
+| `albumPath` or `resolveAlbumPath`                | track or config          | make the now-playing album line tappable                                                                                                                                           | CarPlay             |
 
 ::: info Caveats from the table
-**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **\*Layouts render each platform's nearest supported form** — a single-line grid (`gridWrap: false`) on CarPlay shows the tiles that fit on one line (seven on a wide screen, or two condensed cells) and truncates the rest; a wrapping grid takes as many lines as it needs on iOS 26+ and renders as a list before that. Android Auto's grid always wraps, so it shows more, never less. No car surface scrolls horizontally; an app UI typically renders `gridWrap: false` as a horizontal scroller. Truncation is visual only: tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)). Item properties like `artworkRendering`, `imageShape`, and `accessorySymbol` are inherited — `track ?? section ?? page`, per property — so a section-wide value can be overridden per item; `accessorySymbol: 'none'` is the per-item escape from an inherited symbol, and where the accessory draws is the platform's choice per surface (trailing on list rows and condensed tiles, leading the title on image tiles). On an iOS 26 grid, which tile draws what is `gridTile`'s choice: `'plain'` has a subtitle but no shape and no accessory, `'image'` has a shape and an accessory but no subtitle, `'condensed'` has all three beside a small image, and `'card'` has a subtitle, a tint and an image mode. `display` is never inherited: it always describes the children of whatever it's set on. On a page or section it lays out that page or section; on a browsable track it declares the layout of the page that track opens — Android Auto needs it there, or that page renders as a list. `gridWrap` is inert unless `display` is `'grid'`. One AAOS caveat: AOSP-based Automotive units honor only the parent item's `display`, so a page mixing grid and list sections renders uniformly there — see [Android Auto → Browse display](/guide/android-auto#browse-display).
+
+- **The album line needs `album`.** CarPlay draws the tappable line from the album metadata, so a track with no `album` has no line to tap.
+- **\*Layouts render each platform's nearest supported form.** On CarPlay, a single-line grid (`gridWrap: false`) shows the tiles that fit on one line (about seven on a wide screen, or two condensed cells). A wrapping grid takes as many lines as it needs on iOS 26+, and is a list before that.
+- **Android Auto's grid always wraps**, so it shows more, never less. No car surface scrolls horizontally. An app UI typically renders `gridWrap: false` as a horizontal scroller.
+- **Truncation is visual only.** Tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)).
+- **Item properties are inherited.** `artworkRendering`, `imageShape` and `accessorySymbol` resolve as `track ?? section ?? page`, per property, so an item can override a section-wide value. `accessorySymbol: 'none'` removes an inherited symbol from one item.
+- **The platform places the accessory.** It is trailing on list rows and condensed tiles, and leads the title on image tiles.
+- **On an iOS 26 grid, `gridTile` decides what each tile draws.** `'plain'` has a subtitle but no shape and no accessory. `'image'` has a shape and an accessory but no subtitle. `'condensed'` has all three beside a small image. `'card'` has a subtitle, a tint and an image mode.
+- **`display` is never inherited.** It describes the children of whatever it is set on. On a browsable track it declares the layout of the page the track opens: Android Auto needs it there, or that page renders as a list.
+- **`gridWrap` is inert unless `display` is `'grid'`.**
+- **AAOS honors only the parent item's `display`.** AOSP-based Automotive units render a page that mixes grid and list sections in one layout. See [Android Auto → Browse display](/guide/android-auto#browse-display).
+
 :::
 
 ::: tip Inert declarations are logged in debug builds
-A combination that can never render — `gridWrap` or `gridTile` outside a grid, `cardTint` with no card treatment in scope, `imageShape` anywhere but an image or condensed grid, `accessorySymbol` on a plain or card grid, `display` on a track that renders playable — is inert, not an error, so nothing breaks. In a **debug build**, each one is logged once per page resolution (`Timber` on Android, `os.log` on iOS) naming the section, the effective style, and the fix:
+Some combinations can never render. They are inert, not errors, so nothing breaks:
+
+- `gridWrap` or `gridTile` outside a grid
+- `cardTint` with no card treatment in scope
+- `imageShape` anywhere but an image or condensed grid
+- `accessorySymbol` on a plain or card grid
+- `display` on a track that renders playable
+
+In a **debug build**, each one is logged once per page resolution (`Timber` on Android, `os.log` on iOS) naming the section, the effective style, and the fix:
 
 ```
 Inert style declaration on page '/home': `style.gridWrap` on section 'Featured'
@@ -551,14 +614,28 @@ A property a _surface_ can't draw is never reported — that's the aspirational 
 ```ts
 // A grid page. Android Auto also needs display: 'grid' on the item
 // that opens this page — see the Android Auto guide:
-{ path: '/genres', title: 'Genres', style: { display: 'grid' }, children: [...] }
+{
+  path: '/genres',
+  title: 'Genres',
+  style: { display: 'grid' },
+  children: [...]
+}
 {
   path: '/home',
   title: 'Home',
   sections: [
-    { title: 'Popular', style: { display: 'grid', gridWrap: false }, path: '/popular', children: [...] },
+    {
+      title: 'Popular',
+      style: { display: 'grid', gridWrap: false },
+      path: '/popular',
+      children: [...]
+    },
     // Round tiles for people: the image tile is the one with a shape.
-    { title: 'Artists', style: { display: 'grid', gridTile: 'image', imageShape: 'circular' }, children: [...] },
+    {
+      title: 'Artists',
+      style: { display: 'grid', gridTile: 'image', imageShape: 'circular' },
+      children: [...]
+    },
     { title: 'All stations', children: [...] }
   ]
 }
@@ -570,10 +647,20 @@ A property a _surface_ can't draw is never reported — that's the aspirational 
 ```
 
 ::: tip See every style rendered
-The example app's **Style Lab** tab draws each `style` declaration on CarPlay: one page per `gridTile` value, plus pages for section headers and for inheritance from page to section to track. Every shelf is titled with the block it renders, so what you see on screen names what to copy. The pages are plain route data in [`style-lab.ts`](https://github.com/radio-garden/react-native-audio-browser/blob/main/apps/example-native/src/utils/style-lab.ts), with a comment on each example saying what it shows.
+The example app's **Style Lab** tab draws each `style` declaration on CarPlay: one page per `gridTile` value, plus pages for section headers and for inheritance from page to section to track.
+
+Every shelf is titled with the block it renders, so what you see on screen names what to copy.
+
+The pages are plain route data in [`style-lab.ts`](https://github.com/radio-garden/react-native-audio-browser/blob/next/apps/example-native/src/utils/style-lab.ts), with a comment on each example saying what it shows.
 :::
 
-Two config-level platform options round it out: `carPlayLoadingTitle` (localized "Loading…" on older CarPlay) and `androidControllerOfflineError`. The album-line tap needs both `albumPath` on the track and a `resolveAlbumPath` callback in the config that maps it to a browse path — see [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
+Three config-level platform options round it out:
+
+- `carPlayLoadingTitle`: a localized "Loading…" on older CarPlay.
+- `androidControllerOfflineError`: shows an offline error in Android Auto and other external controllers when the network is lost. It defaults to `true`.
+- [`viewMoreTitle`](/api/types/browser/#viewmoretitle): titles the "view more" row Android Auto appends to a section with a `path`. It is read again on `invalidateAllContent()`.
+
+The CarPlay now-playing album line is tappable when the active track has an `albumPath`. For tracks without one, a `resolveAlbumPath` callback maps the track to a browse path. In both cases the track needs an `album`. See [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 
 ## Where to go next
 

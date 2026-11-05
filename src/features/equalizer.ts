@@ -9,7 +9,8 @@ export type { EqualizerSettings }
 
 /**
  * Gets the current equalizer settings (Android only).
- * @returns Equalizer settings, or undefined if not available
+ * @returns Equalizer settings; undefined on iOS and web, and on Android before
+ *   `setupPlayer` and until the player's audio session arrives
  */
 export function getEqualizerSettings(): EqualizerSettings | undefined {
   return nativeBrowser.getEqualizerSettings()
@@ -27,7 +28,8 @@ export function setEqualizerEnabled(enabled: boolean): void {
 
 /**
  * Sets the equalizer to a preset (Android only).
- * @param preset - The name of the preset to apply
+ * @param preset - A name from `settings.presets`; matched case-insensitively,
+ *   an unknown name is ignored
  */
 export function setEqualizerPreset(preset: string): void {
   nativeBrowser.setEqualizerPreset(preset)
@@ -35,7 +37,9 @@ export function setEqualizerPreset(preset: string): void {
 
 /**
  * Sets custom equalizer band levels (Android only).
- * @param levels - Array of level values for each band (in millibels)
+ * @param levels - One level per band, in millibels, within
+ *   `lowerBandLevelLimit`…`upperBandLevelLimit`. The length must equal
+ *   `bandCount`, or the call is ignored
  */
 export function setEqualizerLevels(levels: number[]): void {
   nativeBrowser.setEqualizerLevels(levels)
@@ -45,7 +49,6 @@ export function setEqualizerLevels(levels: number[]): void {
 
 /**
  * Subscribes to equalizer settings changes (Android only).
- * @param callback - Called when equalizer settings change
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onEqualizerChanged =
@@ -57,7 +60,8 @@ export const onEqualizerChanged =
 
 /**
  * Hook that returns the current equalizer settings and updates when they change (Android only).
- * @returns Current equalizer settings, or undefined if not available
+ * @returns Current equalizer settings; undefined on iOS and web, and on
+ *   Android before `setupPlayer` and until the player's audio session arrives
  */
 export function useEqualizerSettings(): EqualizerSettings | undefined {
   return useNativeUpdatedValue(getEqualizerSettings, onEqualizerChanged)

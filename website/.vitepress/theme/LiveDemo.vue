@@ -11,8 +11,8 @@ import { ref } from 'vue'
 const activated = ref(false)
 
 // Dev: the hot-reloading demo server. Prod: the demo built into the site at
-// <base>demo/ — BASE_URL carries the deploy base (e.g. a share.radio.garden subpath).
-// Point at index.html explicitly: some static hosts (share.radio.garden) don't
+// <base>demo/ — BASE_URL carries the deploy base (e.g. a hosting subpath).
+// Point at index.html explicitly: some static hosts don't
 // resolve a directory URL to its index, so a bare ".../demo/" would 404.
 const demoSrc = import.meta.env.DEV
   ? 'http://localhost:5180/demo/'

@@ -32,6 +32,7 @@ export function setRepeatMode(repeatMode: RepeatMode) {
 
 // MARK: - Event Callbacks
 
+/** Event data for when the repeat mode changes. */
 export interface RepeatModeChangedEvent {
   /** The new repeat mode */
   repeatMode: RepeatMode
@@ -39,7 +40,6 @@ export interface RepeatModeChangedEvent {
 
 /**
  * Subscribes to repeat mode changes.
- * @param callback - Called when repeat mode changes
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRepeatModeChanged =

@@ -5,12 +5,12 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 // MARK: - Setters
 
 /**
- * Sets the favorited state of the currently playing track.
- * Updates the heart icon in media controllers (notification, Android Auto).
+ * Sets the favorited state of the Active Track.
+ * Updates the heart icon in media controllers (notification, Android Auto, CarPlay).
  *
- * Use this for programmatic favorite changes (e.g., from a favorite button in your app).
- * For heart button taps from media controllers, use `onFavoriteChanged` instead -
- * the native side handles those automatically.
+ * Use this for favorite changes from your app, such as a favorite button.
+ * It emits `onFavoriteChanged`, so persist the change there, not again in your
+ * button handler.
  *
  * @param favorited - Whether the track is favorited
  *
@@ -24,7 +24,7 @@ export function setActiveTrackFavorited(favorited: boolean): void {
 }
 
 /**
- * Toggles the favorited state of the currently playing track.
+ * Toggles the favorited state of the Active Track. Emits `onFavoriteChanged`.
  *
  * @example
  * ```ts
@@ -69,8 +69,10 @@ export function setFavorites(favorites: string[]): void {
 // MARK: - Event Callbacks
 
 /**
- * Event data for when the favorite state of the active track changes.
- * Emitted when the user taps the heart button in a media controller (notification, Android Auto, CarPlay).
+ * Event data for when the favorite state of the Active Track changes.
+ * Emitted on every change: a heart tap in a media controller (notification,
+ * Android Auto, CarPlay), a Siri request (iOS), `setActiveTrackFavorited` or
+ * `toggleActiveTrackFavorited`.
  */
 export interface FavoriteChangedEvent {
   /** The track whose favorite state changed. */
@@ -80,11 +82,11 @@ export interface FavoriteChangedEvent {
 }
 
 /**
- * Subscribes to favorite state change events.
- * Called when the user taps the heart button in a media controller.
- * The native side has already updated the track's favorite state and UI.
- *
- * @param callback - Called with the track and its new favorite state
+ * Subscribes to favorite changes of the Active Track, with the track and its
+ * new favorite state. Fires on every change: a heart tap in a media controller,
+ * a Siri request (iOS), `setActiveTrackFavorited` or
+ * `toggleActiveTrackFavorited`. Persist favorites here, in one place. The
+ * native side has already updated the track's favorite state and UI.
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  *
  * @example

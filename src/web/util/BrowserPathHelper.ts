@@ -108,10 +108,8 @@ export const BrowserPathHelper = {
    * Builds a contextual URL by appending a track identifier — and optionally
    * the tapped child's page position — to a parent path.
    *
-   * @param parentPath The parent container path
-   * @param trackId The track identity (`id` when non-blank, else `src`)
+   * @param trackId The track identity (`id` when non-empty, else `src`)
    * @param index The child's position on the page at stamp time (tie-breaker)
-   * @returns A contextual URL combining parent path, track ID, and index
    *
    * Example: build("/library", "song.mp3", 2) → "/library?__trackId=song.mp3&__index=2"
    */

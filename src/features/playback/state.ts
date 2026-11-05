@@ -36,6 +36,11 @@ export type PlaybackState =
 
 export type Playback = {
   state: PlaybackState
+  /**
+   * What made playback fail, in the `'error'` state. On iOS and Android, also
+   * a failure still being retried (`retrying: true`) while loading, buffering
+   * or paused.
+   */
   error?: PlaybackError
 }
 
@@ -52,9 +57,9 @@ export function getPlayback(): Playback {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to playback state changes.
- * @param callback - Called when the playback state changes
- * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
+ * Emits the {@link Playback} each time the playback state or error changes.
+ * Subscribe with `onPlaybackChanged.addListener(cb)`, which returns an
+ * unsubscribe function.
  */
 export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
   (cb) => (nativeBrowser.onPlaybackChanged = cb)

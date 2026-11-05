@@ -6,7 +6,9 @@ Presentation had been accreting as flat fields in two competing shapes: core
 style strings (`Section.style: 'list' | 'grid' | 'rail'`,
 `Track.style`/`childrenStyle`) and platform-prefixed hints
 (`artworkCarPlayTinted`, with `carPlayImageShape`, `carPlayCardTint`,
-`carPlayIsEnabled` and more designed on the same pattern). Every new knob
+`carPlayIsEnabled` and more designed on the same pattern).
+
+Every new knob
 re-litigated the same questions — core or hint, section or track, which
 prefix — and the answers were accumulating as per-field conventions rather
 than a system.
@@ -15,30 +17,39 @@ Presentation becomes one CSS-adjacent **declaration block** instead:
 
 ```ts
 interface TrackStyle {
-  display?: 'list' | 'grid'          // positional: MY children (never inherited)
-  accessorySymbol?: string           // ┐ inherited item properties:
-  artworkRendering?: 'original' | 'stencil'  // │ track ?? section ?? page ?? default
-  imageShape?: 'circular' | 'rounded-rectangle' // │
-  cardTint?: string                  // │
-  cardImage?: 'normal' | 'background' // ┘
+  // positional: MY children (never inherited)
+  display?: 'list' | 'grid'
+  // inherited item properties: track ?? section ?? page ?? default
+  accessorySymbol?: string
+  artworkRendering?: 'original' | 'stencil'
+  imageShape?: 'circular' | 'rounded-rectangle'
+  cardTint?: string
+  cardImage?: 'normal' | 'background'
 }
 interface SectionStyle extends TrackStyle {
-  gridWrap?: boolean                 // ┐ container properties (scope override):
-  gridTile?: 'plain' | 'image' | 'card' | 'condensed' // ┘ section ?? page ?? default
+  // container properties (scope override): section ?? page ?? default
+  gridWrap?: boolean
+  gridTile?: 'plain' | 'image' | 'card' | 'condensed'
 }
 
 Section.style?: SectionStyle
 Track.style?: TrackStyle
-ResolvedTrack.style?: SectionStyle   // a page is a Track that is also the container
+// a page is a Track that is also the container
+ResolvedTrack.style?: SectionStyle
 ```
 
 Of these, `display`, `gridWrap`, and `artworkRendering` ship with the
-flip; the rest landed with their features (`imageShape` #131,
-`accessorySymbol` #125, and the `gridTile`/`cardTint`/`cardImage`
-card-and-condensed family) — the no-dead-fields rule held throughout.
-`gridTile: 'image'` followed (#153): `CPListImageRowItemImageGridElement`,
-named by Apple's class word minus the `grid` the property already says, as
-`'card'` and `'condensed'` are.
+flip; the rest landed with their features (`imageShape`
+[#131](https://github.com/radio-garden/react-native-audio-browser/issues/131),
+`accessorySymbol`
+[#125](https://github.com/radio-garden/react-native-audio-browser/issues/125),
+and the `gridTile`/`cardTint`/`cardImage` card-and-condensed family) — the
+no-dead-fields rule held throughout.
+
+`gridTile: 'image'` followed
+([#153](https://github.com/radio-garden/react-native-audio-browser/issues/153)):
+`CPListImageRowItemImageGridElement`, named by Apple's class word minus the
+`grid` the property already says, as `'card'` and `'condensed'` are.
 
 The rules, once:
 
@@ -52,15 +63,21 @@ The rules, once:
   each holder declares its own children's layout. The page declares for
   its whole scope and a section overrides it for its own children — a
   scope override between two declarations about the same decision, never
-  inheritance or fallback. A browsable handle's `display` is the
+  inheritance or fallback.
+
+  A browsable handle's `display` is the
   page-layout _promise_ that feeds Android Auto's parent-level hint, the
   only below-root hint AOSP-derived AAOS media UIs honor. Declared or it
   doesn't exist; the resolved page is the truth.
+
 - **The inheritance boundary**: a handle's block styles the handle; a
   page's block is inherited by its descendants; nothing inherits across
-  resolution. Admission test for any future property: _"if set on a
+  resolution.
+
+  Admission test for any future property: _"if set on a
   browsable parent, do I want its resolved descendants to inherit it
   unless overridden?"_ — within a page yes, across resolution never.
+
 - **Style is presentation-only.** No style property affects queue scope,
   playback, or navigation. Content facts with behavioral weight
   (`disabled`, `favorited`, `live`) live on `Track`; `disabled` in
@@ -82,18 +99,30 @@ Consequences:
   (`carPlaySiriListButton`, the now-playing actions).
 - Nitro flattens `extends`, so the inheritance-completeness guarantee is
   a spec-level test (every inherited key read by every resolver;
-  positional keys provably excluded), not a type. The same test holds the
+  positional keys provably excluded), not a type.
+
+  The same test holds the
   dev diagnostic: every key of the block must be named by each platform's
   `InertStyleDiagnostic` — by a rule, or by its explicit "no inertness
   condition" list.
+
 - Amends ADR 0010: its `Section.style` string vocabulary is superseded by
   the block; sections themselves, queue scoping, and the flat-wire model
   are unchanged.
 
-Alternatives — twelve shapes were tried and rejected (styles-only
+Alternatives: twelve shapes were tried and rejected (styles-only
 vocabulary, prefixed hints with a promotion policy, flat unprefixed
-fields, tagged unions in the wire, string/object mixes, boolean sprawl):
-the full decision log with each shape's killing reason lives in
+fields, tagged unions in the wire, string/object mixes, boolean sprawl).
+The full decision log with each shape's killing reason lives in
 [`docs/section-styling-design.html`](../section-styling-design.html) §6,
 which is also the complete specification. Evidence base:
 [`docs/carplay-sdk-audit.html`](../carplay-sdk-audit.html).
+
+**Since then (November 2026):** "never plays anywhere" holds for everything
+the library builds or refuses on the app's behalf. Taps and voice selection
+are refused, and queue expansion, search-built queues and resumption leave a
+disabled track out.
+
+A queue the app builds itself with `setQueue` is the app's own list, and the
+library does not filter it. See **Disabled** in
+[GLOSSARY.md](../../GLOSSARY.md).

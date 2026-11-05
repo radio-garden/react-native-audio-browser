@@ -23,18 +23,18 @@ features:
     linkText: Browser guide
   - title: Car cold start
     details: Launch directly from CarPlay or Android Auto with the phone app closed. The browse tree and playback come up on the head unit without opening the app first.
-    link: /guide/automotive
-    linkText: Automotive guide
+    link: /guide/carplay#react-native-host-uiscene-headless
+    linkText: CarPlay guide → headless host
   - title: Production playback
-    details: Queue, background audio, playback rate, interruptions, and audio focus — plus lock-screen, notification, and headset controls.
-    link: /guide/playback
+    details: Background audio, interruptions, and audio focus handled natively — plus transport, seeking, progress, rate, and volume for your own player UI.
+    link: /guide/playback#background-audio-interruptions-and-audio-focus
     linkText: Playback guide
   - title: Real native-to-JS callbacks
     details: Route resolvers, request transforms, gates, search, and track-load interception call into your JS and use what you return — not fire-and-forget bridge events.
-    link: /guide/configuration
-    linkText: Configuration guide
+    link: /guide/browser#shaping-requests
+    linkText: Browser guide → Shaping requests
   - title: Voice & favorites
-    details: Siri and Google Assistant route into one structured search source; favorite the current track by voice and ask to “play my favorites”.
+    details: Siri and Google Assistant route into one structured search source; on iOS, Siri can also favorite the current track and “play my favorites”.
     link: /guide/search
     linkText: Search guide
   - title: Built on Nitro 🔥
@@ -53,24 +53,24 @@ features:
     details: Reactive playback, queue, browse, progress, sleep-timer, and car-connection state for your own app screens.
     link: /guide/hooks
     linkText: Hooks guide
-  - title: Access gates
-    details: Put browse and search behind a paywall, login, or region wall with per-request resolvers — playback keeps running.
+  - title: Browse gates
+    details: Put browse on CarPlay, Android Auto, and Android Automotive, and voice search anywhere, behind a paywall, login, or region wall, decided per request by a resolver. Playback keeps running.
     link: /guide/gate
     linkText: Gate guide
   - title: Request & artwork control
     details: Rewrite outbound requests, add auth headers, shape URLs, and customize artwork loading per request.
-    link: /guide/artwork
-    linkText: Artwork guide
+    link: /guide/browser#shaping-requests
+    linkText: Browser guide → Shaping requests
   - title: Platform extras
-    details: AirPlay and output routing, sleep timer, Android equalizer, and battery-resume handling.
+    details: Output routing (AirPlay on iOS; the system Output Switcher, Google Cast and Sonos on Android), sleep timer, Android equalizer, and battery-resume handling.
     link: /guide/audio-output
     linkText: Audio Output guide
   - title: Playback resumption
     details: Persist the last session and resume after the app is killed — including the Android system play button and “play «App»” via Siri.
-    link: /guide/remote-controls
-    linkText: Remote Controls guide
+    link: /guide/remote-controls#resuming-after-the-app-is-killed
+    linkText: Remote Controls → Resuming
   - title: Web support
     details: The same AudioBrowser API works with react-native-web for playback, browse, search, and sleep timer.
-    link: /guide/getting-started
-    linkText: Get Started
+    link: /guide/getting-started#web
+    linkText: Getting Started → Web
 ---

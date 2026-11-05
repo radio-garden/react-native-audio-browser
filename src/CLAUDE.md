@@ -1,7 +1,8 @@
 # TypeScript API
 
-The rules here are about the shape of the package's public surface. Both are
-enforced by tests, but the tests only tell you _after_ you've written it.
+The rules here are about the shape of the package's public surface. The first
+is enforced by `public-surface.test.ts`, which only tells you _after_ you've
+written it; the second is a convention no test checks.
 
 ## Everything you export is public
 
@@ -46,6 +47,10 @@ Two emitter classes, picked by what the event _is_:
 
 Both are created via `emitterize(cb => (nativeBrowser.onThing = cb))` and both
 return the instance. Neither class is exported from the package.
+
+No test checks this rule: `features/hook-wiring.test.ts` only records which
+native slot each emitter claims, so a bare `export function onThing(cb)` would
+pass the suite. Review is what catches it.
 
 `on*` observes; `handle*` overrides. `handleRemoteNext(cb)` is a plain setter
 that replaces the default behaviour and takes `undefined` to clear it, while

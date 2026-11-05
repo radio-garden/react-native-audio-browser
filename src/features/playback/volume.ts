@@ -12,7 +12,7 @@ export function getVolume(): number {
 }
 
 /**
- * Gets the current system volume as a number between 0 and 1.
+ * Gets the current system volume as a number between 0 and 1. On web, always 1.
  */
 export function getSystemVolume(): number {
   return nativeBrowser.getSystemVolume()
@@ -31,7 +31,7 @@ export function setVolume(level: number): void {
 /**
  * Sets the system volume.
  * @param level - The volume as a number between 0 and 1.
- * @remarks On iOS this is a no-op as Apple doesn't provide a public API to set system volume.
+ * @remarks A no-op on iOS, which has no public API for it, and on web.
  */
 export function setSystemVolume(level: number): void {
   nativeBrowser.setSystemVolume(level)
@@ -40,9 +40,9 @@ export function setSystemVolume(level: number): void {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to system volume changes.
- * @param callback - Called when the system volume changes
- * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
+ * Emits the system volume (0 to 1) each time it changes. Never fires on web.
+ * Subscribe with `onSystemVolumeChanged.addListener(cb)`, which returns an
+ * unsubscribe function.
  */
 export const onSystemVolumeChanged = NativeUpdatedValue.emitterize<number>(
   (cb) => (nativeBrowser.onSystemVolumeChanged = cb)
@@ -52,6 +52,7 @@ export const onSystemVolumeChanged = NativeUpdatedValue.emitterize<number>(
 
 /**
  * Hook that returns the current system volume and updates when it changes.
+ * On web, always 1.
  * @returns The current system volume (0 to 1)
  */
 export function useSystemVolume(): number {

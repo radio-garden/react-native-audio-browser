@@ -5,15 +5,15 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 // MARK: - Types
 
 /**
- * Time-based sleep timer that stops playback after a specific time.
+ * Time-based sleep timer that pauses playback after a specific time.
  */
 export type SleepTimerTime = {
-  /** Time when playback should stop (milliseconds since epoch) */
+  /** Time when playback should pause (milliseconds since epoch) */
   time: number
 }
 
 /**
- * End-of-track sleep timer that stops playback when current track finishes.
+ * End-of-track sleep timer that pauses playback when current track finishes.
  */
 export type SleepTimerEndOfTrack = {
   /** Whether to sleep when current track finishes playing */
@@ -22,12 +22,16 @@ export type SleepTimerEndOfTrack = {
 
 /**
  * Sleep timer configuration:
- * - `SleepTimerTime`: Stop playback after a specific time
- * - `SleepTimerEndOfTrack`: Stop playback after current track finishes
+ * - `SleepTimerTime`: Pause playback after a specific time
+ * - `SleepTimerEndOfTrack`: Pause playback after current track finishes
  * - `null`: No sleep timer active
  */
 export type SleepTimer = SleepTimerTime | SleepTimerEndOfTrack | null
 
+/**
+ * Payload of `onSleepTimerChanged`: the new timer, or `null` once it is
+ * cleared or has fired.
+ */
 export type SleepTimerChangedEvent = SleepTimer
 
 // MARK: - Getters and Setters
@@ -67,7 +71,12 @@ export function setSleepTimer(
 }
 
 /**
- * Sets a sleep timer to stop playback when the current track finishes playing.
+ * Sets a sleep timer to pause playback when the current track finishes playing.
+ * A live stream never ends, so on one this timer never fires; use
+ * `setSleepTimer` instead. On iOS a change of current track before it ends
+ * (skip, new queue) cancels the timer. On Android and web it stays set until a
+ * track plays to its end. On Android it never fires while the repeat mode is
+ * `track`.
  */
 export function setSleepTimerToEndOfTrack(): void {
   nativeBrowser.setSleepTimerToEndOfTrack()
@@ -85,7 +94,6 @@ export function clearSleepTimer(): boolean {
 
 /**
  * Subscribes to sleep timer changes.
- * @param callback - Called when the sleep timer state changes
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(

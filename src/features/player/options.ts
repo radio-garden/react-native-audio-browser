@@ -71,8 +71,10 @@ export interface PlayerCapabilities {
   /**
    * Enable track favoriting.
    *
-   * Turns on the favorite/like heart across all surfaces:
-   * - iOS: Control Center + CarPlay now-playing.
+   * - iOS: turns on matching tracks against `setFavorites`. It shows no heart
+   *   of its own: the CarPlay now-playing heart appears when
+   *   `ios.carPlayNowPlayingButtons` includes `'favorite'`. Control Center
+   *   and the lock screen show none.
    * - Android: a place in the {@link RemoteButtonLayout} — the notification,
    *   Android Auto and the Android 13+ system media controls — and an
    *   (empty or filled) heart on playable browse rows.
@@ -195,14 +197,13 @@ export type RemoteButtonLayout = {
  * AppKilledPlaybackBehavior options:
  * - `'continue-playback'`: This option will continue playing audio in the
  *   background when the app is removed from recents. The notification remains.
- *   This is the default.
  * - `'pause-playback'`: This option will pause playing audio in the background
  *   when the app is removed from recents. The notification remains and can be
  *   used to resume playback.
  * - `'stop-playback-and-remove-notification'`: This option will stop playing
  *   audio in the background when the app is removed from recents. The
  *   notification is removed and can't be used to resume playback. Users would
- *   need to open the app again to start playing audio.
+ *   need to open the app again to start playing audio. This is the default.
  */
 export type AppKilledPlaybackBehavior =
   | 'continue-playback'
@@ -210,15 +211,17 @@ export type AppKilledPlaybackBehavior =
   | 'stop-playback-and-remove-notification'
 
 /**
- * Current player options with resolved defaults.
- * This is what you receive from getOptions() - all properties are present with their current values.
+ * Current player options, as {@link getOptions} reports them. The intervals and the platform
+ * block come with their defaults filled in; `capabilities` holds the values set, plus,
+ * on Android and iOS, `jumpForward` and `jumpBackward`, which are `false` until set.
  * Platform-specific properties (android/ios) are only available on their respective platforms.
  *
  * @example
  * ```typescript
  * const options = getOptions();
  * console.log(options.forwardJumpInterval); // 15
- * console.log(options.capabilities); // { shuffleMode: false } - only disabled caps shown
+ * console.log(options.capabilities);
+ * // { jumpForward: false, jumpBackward: false, shuffleMode: false }
  * console.log(options.android?.skipSilence); // true (Android only)
  * ```
  */
@@ -229,9 +232,13 @@ export interface Options {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * On Android, Media3 has icons for intervals of exactly 5, 10, 15 or 30
+   * seconds, which show that number; any other interval gets an icon without
+   * one. Other values are valid. On iOS a jump with no `handleRemoteJump*`
+   * override seeks by the interval. On Android it seeks by Media3's default
+   * seek increment (15 seconds forward, 5 seconds back), and the interval sets
+   * only the icon and the event's `interval`; to jump by the interval,
+   * override the control and call `seekBy`.
    *
    * @default 15
    */
@@ -240,9 +247,7 @@ export interface Options {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * Platform differences as for {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */
@@ -256,8 +261,10 @@ export interface Options {
   progressUpdateEventInterval: number | null
 
   /**
-   * The capabilities that the player has.
-   * Most capabilities are enabled by default - this shows which ones are disabled.
+   * The capabilities as set, plus, on Android and iOS, `jumpForward` and
+   * `jumpBackward`, which are `false` until set. An absent field means its
+   * default: off for `jumpForward`, `jumpBackward` and `favorite`, on for the
+   * rest.
    */
   capabilities: PlayerCapabilities
 
@@ -284,7 +291,7 @@ export interface IOSOptions {
   carPlayUpNextButton: boolean
 
   /**
-   * Buttons shown on the CarPlay Now Playing screen (left-to-right, up to 5).
+   * Buttons shown on the CarPlay Now Playing screen (left to right, at most one of each kind).
    * @default []
    */
   carPlayNowPlayingButtons: CarPlayNowPlayingButton[]
@@ -297,11 +304,16 @@ export interface IOSOptions {
   carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation
 }
 
+/**
+ * Android runtime options as {@link getOptions} reports them.
+ * @platform android
+ */
 export interface AndroidOptions {
   /**
-   * Whether the audio playback notification is also removed when the playback
-   * stops. **If `stoppingAppPausesPlayback` is set to false, this will be
-   * ignored.**
+   * What happens to playback and the notification when the user removes the
+   * app from recents.
+   *
+   * @default 'stop-playback-and-remove-notification'
    */
   appKilledPlaybackBehavior: AppKilledPlaybackBehavior
 
@@ -324,11 +336,16 @@ export interface AndroidOptions {
   remoteButtonLayout: RemoteButtonLayout | null
 }
 
+/**
+ * Android options {@link updateOptions} can change at runtime.
+ * @platform android
+ */
 export interface AndroidUpdateOptions {
   /**
-   * Whether the audio playback notification is also removed when the playback
-   * stops. **If `stoppingAppPausesPlayback` is set to false, this will be
-   * ignored.**
+   * What happens to playback and the notification when the user removes the
+   * app from recents.
+   *
+   * @default 'stop-playback-and-remove-notification'
    */
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
 
@@ -381,8 +398,9 @@ export interface IOSUpdateOptions {
   carPlayUpNextButton?: boolean
 
   /**
-   * Configure up to 5 buttons on the CarPlay Now Playing screen, arranged in
-   * array order (left to right).
+   * Configure buttons, at most one of each {@link CarPlayNowPlayingButton}
+   * kind, on the CarPlay Now Playing screen, arranged in array order (left to
+   * right).
    *
    * @example
    * ```typescript
@@ -444,9 +462,7 @@ export interface UpdateOptions {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * See {@link Options.forwardJumpInterval} for how iOS and Android treat it.
    *
    * @default 15
    */
@@ -455,9 +471,7 @@ export interface UpdateOptions {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * See {@link Options.forwardJumpInterval} for how iOS and Android treat it.
    *
    * @default 15
    */
@@ -471,8 +485,10 @@ export interface UpdateOptions {
   progressUpdateEventInterval?: number | null
 
   /**
-   * Player capabilities to enable or disable.
-   * All capabilities are enabled by default - only specify ones you want to disable.
+   * Player capabilities to enable or disable. Most default to on;
+   * `jumpForward`, `jumpBackward` and `favorite` default to off. On Android
+   * and iOS, fields you omit keep their current value; on web, the object
+   * passed replaces the previous one.
    *
    * @example
    * ```typescript
@@ -502,9 +518,7 @@ export interface NativeUpdateOptions {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * See {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */
@@ -513,9 +527,7 @@ export interface NativeUpdateOptions {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are perfectly valid — the interval also sets the seek distance.
+   * See {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */
@@ -556,10 +568,10 @@ export function updateOptions(options: UpdateOptions): void {
 // MARK: - Getters
 
 /**
- * Gets the current player options with resolved defaults.
- * Returns all current option values - use this to read the current state.
+ * Gets the current player options. `capabilities` holds the values set, plus, on Android
+ * and iOS, `jumpForward` and `jumpBackward` (`false` until set); a missing capability
+ * means its default.
  *
- * @returns The current player options with all properties resolved to their current values
  * @example
  * ```typescript
  * const options = getOptions();
@@ -575,8 +587,7 @@ export function getOptions(): Options {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to player options changes.
- * @param callback - Called when the player options change
+ * Emits each time the player options change.
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOptionsChanged = NativeUpdatedValue.emitterize<Options>(

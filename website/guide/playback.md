@@ -1,5 +1,5 @@
 ---
-description: 'Control the active track — play, pause, stop, seek, playback state, progress, rate, and volume — the toolkit for building your own player UI.'
+description: 'Control the active track — play, pause, stop, seek, playback state, progress, rate, and volume — and how playback handles the background, interruptions, and audio focus.'
 ---
 
 # Playback
@@ -7,14 +7,25 @@ description: 'Control the active track — play, pause, stop, seek, playback sta
 This guide covers **controlling the active track** — transport (play / pause /
 stop), seeking, playback state, progress, rate, and volume. It's the toolkit for
 building your own player UI.
+[A later section](#background-audio-interruptions-and-audio-focus) covers what
+the library handles for you: background audio, interruptions, and audio focus.
 
 Playback acts on whatever the **active track** is. _Which_ track that is — and
-moving between tracks with next/previous — belongs to the [queue](/guide/basic-usage#the-queue);
+moving between tracks with next/previous — belongs to the
+[queue](/guide/queue#moving-between-tracks);
 this page is about playing the one that's already active. The system surfaces
 (lock screen, notification, car) are covered in [Now Playing](/guide/now-playing).
 
-> All functions here are synchronous and safe to call before a track is loaded —
-> they're no-ops or update intent rather than throwing.
+> All functions here are synchronous. Called with no track loaded, they don't
+> throw: `pause`, `stop` and the seek calls do nothing, and `setPlayWhenReady`,
+> `setRate` and `setVolume` keep their value for the next track. `play()` and
+> `togglePlayback()` raise the play intent as `setPlayWhenReady(true)` does, so
+> the next track loaded starts playing (on web, Chrome keeps that intent and
+> Firefox drops it). On iOS and Android, play, pause, stop, seek, rate and
+> volume calls made before `setupPlayer` has resolved are dropped; on web they
+> throw `SetupNotCalledError`. On every platform `setPlayWhenReady` is kept and
+> applied at setup. Two have argument rules: `setRate` and
+> `trackPlaybackTime`, both covered below.
 
 The UI snippets below import `useState` from `react`, `Text` / `Button` /
 `Switch` from `react-native`, and `Slider` from
@@ -29,12 +40,15 @@ import { play, pause, togglePlayback, stop } from 'react-native-audio-browser'
 play() // play or resume the active track
 pause() // pause, keeping position
 togglePlayback() // flip between play and pause
-stop() // stop and reset position to the start
+stop() // stop; the track stays loaded
 ```
 
-`stop` keeps the track loaded — `play()` afterwards starts it again from the
-beginning. (For live streams there's no position to reset, so it just stops.)
-That's different from `reset`, which stops playback **and clears the queue**:
+`stop` keeps the track loaded, and what `play()` does afterwards depends on the
+platform. On iOS, `stop` rewinds a non-live track to the start, so `play()`
+plays it from the beginning. On Android and web the position is kept, so
+`play()` resumes where it stopped.
+
+`stop` is not the same as `reset`, which stops playback **and clears the queue**:
 
 ```ts
 import { reset } from 'react-native-audio-browser'
@@ -42,11 +56,11 @@ import { reset } from 'react-native-audio-browser'
 reset() // tear down: stop + empty the queue
 ```
 
-|           | Position       | Track stays loaded | Queue   |
-| --------- | -------------- | ------------------ | ------- |
-| `pause()` | kept           | yes                | kept    |
-| `stop()`  | reset to start | yes                | kept    |
-| `reset()` | —              | no                 | cleared |
+|           | Position                                       | Track stays loaded | Queue   |
+| --------- | ---------------------------------------------- | ------------------ | ------- |
+| `pause()` | kept                                           | yes                | kept    |
+| `stop()`  | reset to start on iOS; kept on Android and web | yes                | kept    |
+| `reset()` | —                                              | no                 | cleared |
 
 ## Seeking
 
@@ -70,7 +84,7 @@ seekToLiveEdge()
 ```
 
 Moving between tracks (next / previous / skip) is part of the
-[queue](/guide/basic-usage#the-queue), not seeking.
+[queue](/guide/queue#moving-between-tracks), not seeking.
 
 ## Playback state
 
@@ -101,8 +115,13 @@ function PlayerStatus() {
 }
 ```
 
-`retry()` only does something while the state is `'error'`; it re-attempts the
-current item. See [Errors](/guide/errors) for the error shape and handling.
+`retry()` is meant for the `'error'` state, where it re-attempts the current
+item. It isn't gated on that state.
+
+On iOS it reloads the current item in any state, even while playing. On Android
+and web it reloads whenever the player is stopped or failed, without raising the
+play intent, so after `stop()` it loads the track but doesn't play it. See [Errors](/guide/errors#manual-retry) for the
+error shape and handling.
 
 ### Just playing or buffering?
 
@@ -128,13 +147,18 @@ function PlayPauseButton() {
 ### Play-when-ready
 
 `playWhenReady` is the **intent** to play, separate from whether audio is
-actually coming out yet (it may still be loading or buffering). Setting it is
-equivalent to calling `play()` / `pause()`:
+actually coming out yet (it may still be loading or buffering). Setting it does
+what `play()` / `pause()` do, with two exceptions. Before `setupPlayer`
+resolves, `setPlayWhenReady` is kept and applied at setup, while `play()` is
+dropped on iOS and Android and throws on web.
+
+On Android, `setPlayWhenReady(true)` doesn't restart a stopped or failed player;
+`play()` or `retry()` does:
 
 ```tsx
 import { setPlayWhenReady, usePlayWhenReady } from 'react-native-audio-browser'
 
-setPlayWhenReady(true) // same as play()
+setPlayWhenReady(true) // raise the intent to play
 
 function PlayToggle() {
   const wantsToPlay = usePlayWhenReady()
@@ -147,9 +171,13 @@ function PlayToggle() {
 }
 ```
 
-Use `usePlayWhenReady` when your control should reflect the user's _intent_
-immediately (the toggle flips the instant they tap, even while buffering); use
-`usePlayingState` when it should reflect whether sound is actually playing.
+`usePlayWhenReady` is the raw intent: it stays `true` after an error.
+`usePlayingState().playing` is that intent only while a
+track can play, so it goes `false` in the `'error'`, `'ended'`, `'none'` and
+`'stopped'` states.
+
+Both flip the instant the user taps. Neither says whether
+sound is coming out yet; `buffering` does.
 
 ## Progress
 
@@ -212,7 +240,9 @@ getRate() // → current rate
 ```
 
 Rate is a speed multiplier, not a transport control: it's independent of
-play/pause, and setting it while paused doesn't start playback. Pass a value
+play/pause, and setting it while paused doesn't start playback.
+
+Pass a value
 greater than zero — the platforms disagree on what a non-positive rate does
 (iOS ignores it, Android throws, web stalls the audio element), so treat it as
 unsupported rather than as a way to pause.
@@ -277,7 +307,8 @@ function SystemVolumeLabel() {
 
 `setSystemVolume` is a **no-op on iOS** — Apple provides no public API to set
 the system volume (use the player volume there instead). Reading it and
-`useSystemVolume` work on both platforms.
+`useSystemVolume` work on iOS and Android. On web, `setSystemVolume` does
+nothing, and `getSystemVolume` and `useSystemVolume` always return `1`.
 
 ## Measuring listening time
 
@@ -300,29 +331,75 @@ const cancel = trackPlaybackTime(({ total, sinceLast, track }) => {
 cancel()
 ```
 
-`period` must be `>= 1` (it throws otherwise). The clock is cumulative across
-the whole session and
-counts _all_ play time, not per-track — `total` keeps climbing through track
-changes. To measure per track, cancel and re-subscribe whenever the
-[active track changes](/guide/now-playing). It's a coarse, ~1-second-resolution
-signal, not a precise timer.
+`period` must be `>= 1` (it throws otherwise). On Android, subscribe after
+`setupPlayer` has resolved. A subscription made earlier never fires, even once
+the player is up, and neither does one that was active while the playback
+service restarted. To get ticks again, cancel every subscription and subscribe
+once more.
+
+`total` counts from when you subscribed, across every track that plays: it
+keeps climbing through track changes. To measure per track, cancel and
+re-subscribe whenever the [active track changes](/guide/queue#the-active-track). It's a coarse,
+~1-second-resolution signal, not a precise timer.
+
+`track` is the active track as of the latest track change since the first
+`trackPlaybackTime` subscription. If the first subscription starts while a track
+is already playing, it is `undefined` until the next track change.
+
+## Background audio, interruptions and audio focus
+
+Playback carries on with your app in the background and the screen locked:
+
+- **iOS** needs the `audio` background mode in your app's `Info.plist` (see
+  [Getting Started](/guide/getting-started#installation)). The audio session
+  category defaults to `'playback'`; `ios.category`, `categoryMode`,
+  `categoryOptions` and `categoryPolicy` change it at setup
+  ([iOS options](/guide/configuration#ios-options-ios)).
+- **Android** plays from the library's foreground media service, which its
+  merged manifest declares. What happens when the app is swiped away is set by
+  `android.appKilledPlaybackBehavior`
+  ([Android options](/guide/configuration#android-options-android)).
+
+On iOS, the library activates the audio session when playback starts (on
+`play()`, not at setup), so launching your app doesn't stop other apps' audio. It releases the
+session about 3 seconds after playback stops, so their audio can come back.
+
+**Interruptions** (a phone call, an alarm, another app starting audio) are
+handled natively, with nothing to wire up:
+
+- On **iOS**, an interruption pauses playback. When it ends, playback resumes
+  if iOS says it should and the player was playing when it began; otherwise it
+  stays paused.
+- On **Android**, the player holds audio focus. It pauses while another app
+  holds focus briefly and resumes when focus returns. It pauses when another
+  app takes focus for good. It lowers its volume under a short sound such as a
+  notification, or pauses instead with `android.audioContentType: 'speech'`.
+
+When the output disappears (headphones unplugged, a Bluetooth speaker switched
+off), playback pauses; see
+[Audio Output](/guide/audio-output#you-may-not-need-this-for-unplug-handling).
+On Android, `android.handleAudioBecomingNoisy: false` turns that off.
 
 ## API summary
 
 | API                                             | Purpose                                                                 |
 | ----------------------------------------------- | ----------------------------------------------------------------------- |
 | `play()` / `pause()` / `togglePlayback()`       | Start, pause, or flip playback.                                         |
-| `stop()`                                        | Stop and reset position; track stays loaded.                            |
+| `stop()`                                        | Stop; track stays loaded (position resets to the start on iOS only).    |
 | `reset()`                                       | Stop **and** clear the queue.                                           |
 | `seekTo(seconds)` / `seekBy(offset)`            | Seek to an absolute / relative position.                                |
 | `seekToLiveEdge()`                              | Jump to the live edge (no-op if not live).                              |
 | `usePlayback()` / `getPlayback()`               | Full `{ state, error }`; subscribe via `onPlaybackChanged`.             |
-| `retry()`                                       | Re-attempt the current item while in the `'error'` state.               |
-| `usePlayingState()`                             | `{ playing, buffering }` booleans for a play/pause button.              |
+| `retry()`                                       | Re-attempt the current item; meant for the `'error'` state.             |
+| `usePlayingState()` / `getPlayingState()`       | `{ playing, buffering }` booleans for a play/pause button.              |
+| `onPlayingState`                                | Subscribe to `{ playing, buffering }` changes.                          |
 | `setPlayWhenReady(bool)` / `usePlayWhenReady()` | Play/pause _intent_, independent of buffering.                          |
+| `getPlayWhenReady()` / `onPlayWhenReadyChanged` | Read or subscribe to the play/pause intent.                             |
 | `usePolledProgress(intervalMs?)`                | `{ position, duration, buffered }` via polling (ms) — works by default. |
-| `useProgress()` / `getProgress()`               | Progress via events (enable `progressUpdateEventInterval` first).       |
+| `useProgress()` / `onProgressUpdated`           | Progress via events (enable `progressUpdateEventInterval` first).       |
+| `getProgress()`                                 | One-off progress snapshot; always works.                                |
 | `getRate()` / `setRate(rate)`                   | Playback speed multiplier (`1` = normal).                               |
 | `getVolume()` / `setVolume(0..1)`               | This player's volume.                                                   |
-| `getSystemVolume()` / `useSystemVolume()`       | Device media volume (`setSystemVolume` is iOS no-op).                   |
+| `getSystemVolume()` / `useSystemVolume()`       | Device media volume (`setSystemVolume` does nothing on iOS or web).     |
+| `onSystemVolumeChanged`                         | Subscribe to device media volume changes.                               |
 | `trackPlaybackTime(cb, period)`                 | Heartbeat every `period` seconds of real playback.                      |

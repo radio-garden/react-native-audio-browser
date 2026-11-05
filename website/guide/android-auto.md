@@ -11,7 +11,9 @@ Android Auto shows your [browse tree](/guide/basic-usage) on the car screen and 
 1. **Browse tree** — Android Auto reads your content from a `MediaBrowserService`, which mirrors your browser routes. The library ships this service.
 2. **Voice search** — "Hey Google, play…" arrives as a `MEDIA_PLAY_FROM_SEARCH` intent, which the library routes to your `search` source.
 
-Unlike CarPlay — which needs entitlements and scene delegates — Android Auto needs almost no app-side code. The library's own `AndroidManifest.xml` declares the media-browser service, the media session, the voice-search intent filter, and the foreground-service permissions, and those **merge into your app automatically**. You only have to declare your app as an automotive media app.
+Unlike CarPlay — which needs entitlements and scene delegates — Android Auto needs almost no app-side code.
+
+The library's own `AndroidManifest.xml` declares the media library service Android Auto binds to, the voice-search intent filter, the content provider that serves browse artwork to the car, and the foreground-service permissions, and those **merge into your app automatically**. You only have to declare your app as an automotive media app.
 
 ## Setup
 
@@ -35,13 +37,15 @@ Create `android/app/src/main/res/xml/automotive_app_desc.xml`:
 </automotiveApp>
 ```
 
-That's the whole setup. The `MediaBrowserService`, media session, `MEDIA_PLAY_FROM_SEARCH` intent filter, headless service for background playback, and `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permissions all come from the library's merged manifest — you don't declare them yourself.
+That's the whole setup.
+
+The rest comes from the [library's manifest](https://github.com/radio-garden/react-native-audio-browser/blob/next/android/src/main/AndroidManifest.xml), which merges into your app, so you don't declare it yourself.
 
 ## Voice search
 
 Google Assistant requests ("play some jazz", "play the radishes") arrive as a `MEDIA_PLAY_FROM_SEARCH` intent. The library normalizes it into the same structured `SearchParams` your in-app and Siri searches use and calls your `search` source — no extra manifest setup, since the library declares the intent filter.
 
-Android sends a subset of what iOS does: the query plus music focuses (genre / artist / album), always with `reference: 'unknown'`. See [Search](/guide/search) for how to resolve these requests and the cross-platform differences.
+Android sends a subset of what iOS does: the query, the `any` / `song` / `playlist` modes, and the genre, artist, album, title and playlist filters, always with `reference: 'unknown'`. See [Search](/guide/search) for how to resolve these requests and the cross-platform differences.
 
 ## Browse display
 
@@ -53,7 +57,8 @@ Android Auto reads a page's layout from the **parent item** that opens it — be
 {
   title: 'Stations',
   path: '/browse/stations',
-  style: { display: 'grid' }, // layout of the page this opens ('list' is the default)
+  // layout of the page this opens ('list' is the default)
+  style: { display: 'grid' },
 }
 
 // The page it opens — the ResolvedTrack served for '/browse/stations':
@@ -65,11 +70,22 @@ Android Auto reads a page's layout from the **parent item** that opens it — be
 }
 ```
 
-- **`style.display` on the parent item** — `'list'` (rows) or `'grid'` (tiles). Below the root this is the only layout signal Android Auto honors, and it is only sent when you declare it — leave it off and the page renders as a list. In dev mode the library warns when an all-grid page is opened from a parent item with no declared `display`. (A section's "view all" page needs no declaration of its own: it reuses the section's `style`.)
-- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section that carries a `path` also gets a browsable "view more" row appended after its children, navigating there. No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option, defaulting to `"View more"` — one wording for every section. For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like; this page's content is Android-only anyway, so CarPlay never sees it.
+- **`style.display` on the parent item** — `'list'` (rows) or `'grid'` (tiles). Android Auto decides the page's layout from this before the page resolves, and it is only sent when you declare it. Leave it off and AAOS renders the whole page as a list (see the warning below); projected Android Auto still follows the page's and its sections' `display` item by item.
+
+  The library logs a warning to Logcat, in debug and release builds, when Android Auto opens an all-grid page whose parent item declares no `display`. (A section's "view all" page needs no declaration of its own: it reuses the section's `style`.)
+
+- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section that carries a `path` also gets a browsable "view more" row appended after its children, navigating there.
+
+  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option — one wording for every section.
+
+  For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like. `children` is shared by every surface, so CarPlay and in-app UIs show that row too; see [`Section`](/api/types/browser-nodes/#section) for how CarPlay draws a section with and without a `path`.
 
 ::: warning AAOS lays out the whole page from the parent item's `display`
-On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent item's `display` is the **only** below-root layout signal honored: the whole page renders as list or grid, uniformly. Per-section `display` differences (a single-line grid above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the single declared layout. There is no way to describe a mixed page there — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
+On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent item's `display` is the **only** below-root layout signal honored. The whole page renders as list or grid, uniformly.
+
+Per-section `display` differences (a single-line grid above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the single declared layout.
+
+There is no way to describe a mixed page there — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
 :::
 
 ```ts
@@ -103,12 +119,8 @@ the car, though:
 
 Test in a real car, or in Google's **Desktop Head Unit (DHU)** emulator:
 
-1. Install the **Android Auto Desktop Head Unit emulator** from the SDK Manager (_SDK Tools → Android Auto Desktop Head Unit emulator_).
-2. In the phone's **Android Auto** settings, enable Developer Mode (tap the version 10×), then **"Start head unit server"**.
-3. Connect the phone over USB and run the DHU.
-
-See Google's [Test Android Auto apps with DHU](https://developer.android.com/training/cars/testing/dhu) for the full walkthrough. Your app appears under the media apps — browse the tree, exercise voice search, and verify artwork, grid/list styles, and section headers.
+Install the DHU from the SDK Manager, turn on developer mode and the head unit server in the phone's Android Auto app, then connect: Google's [Test Android Auto apps with DHU](https://developer.android.com/training/cars/testing/dhu) has the steps. Your app appears under the media apps — browse the tree, exercise voice search, and verify artwork, grid/list styles, and section headers.
 
 ## Reference
 
-See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native/android) for a complete working manifest and descriptor.
+See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/next/apps/example-native/android) for a complete working manifest and descriptor.

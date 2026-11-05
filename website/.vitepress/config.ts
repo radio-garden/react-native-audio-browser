@@ -6,7 +6,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 import typedocSidebar from '../api/typedoc-sidebar.json'
 
 // Deploy base path. Defaults to '/' (root domain like audiobrowser.dev). When
-// hosting under a subpath — e.g. share.radio.garden/<deploy-id>/ — set DOCS_BASE
+// hosting under a subpath — e.g. example.com/<deploy-id>/ — set DOCS_BASE
 // to that subpath at build time so asset URLs resolve. Must start and end with
 // '/'. Example:
 //   DOCS_BASE=/2026-06-26-abc123/ corepack yarn build
@@ -114,7 +114,8 @@ export default withMermaid(
 
     head,
 
-    ignoreDeadLinks: true,
+    // README's license badge links to the repo's LICENSE, which is no page here.
+    ignoreDeadLinks: [/(^|\/)LICENSE$/],
 
     // Repo-internal files that live in the site root but are not site content.
     srcExclude: ['CLAUDE.md', 'TODO.md'],

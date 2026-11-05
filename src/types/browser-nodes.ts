@@ -32,10 +32,6 @@ export type ArtworkRendering = 'original' | 'stencil'
  * - `'circular'` — the standard presentation for *people* (artists, hosts,
  *   DJs). Shape encodes the kind of item, so mixed grids legitimately
  *   render circular artists next to rounded albums.
- *
- * Named after Apple's `imageShape` parameter (a platform passthrough), and
- * deliberately without a grid prefix: every tile presentation that takes a
- * shape reads the same property.
  */
 export type ImageShape = 'circular' | 'rounded-rectangle'
 
@@ -56,7 +52,7 @@ export type ImageShape = 'circular' | 'rounded-rectangle'
  *   {@link TrackStyle.accessorySymbol}.
  *
  * Element families are mutually exclusive within a container, so this is
- * a container property — hence the enum, and the `grid` prefix.
+ * a container property.
  */
 export type GridTile = 'plain' | 'image' | 'card' | 'condensed'
 
@@ -68,9 +64,6 @@ export type GridTile = 'plain' | 'image' | 'card' | 'condensed'
  * - `'background'` — the image fills the card full-height with the labels
  *   overlaid; `cardTint` fades in behind them. Selects the larger artwork
  *   target size.
- *
- * An enum rather than a boolean: it names the card's image mode and
- * leaves room for future modes.
  */
 export type CardImage = 'normal' | 'background'
 
@@ -155,9 +148,7 @@ export interface TrackStyle {
    * surface); plain and card tiles have no slot for one. A resolved
    * symbol replaces the derived accessory (the disclosure chevron a
    * browsable row gets); `'none'` clears an inherited value, restoring
-   * the derived behavior — inheritance has no other escape, and no SF
-   * Symbol is named `none`, so the sentinel is collision-free. Inert off
-   * CarPlay.
+   * the derived accessory. Inert off CarPlay.
    *
    * @platform carplay
    */
@@ -254,12 +245,12 @@ export interface ImageSource {
 }
 
 /**
- * Per-track override applied as the most-specific layer of THIS track's media
- * request (after the shared `request` and `media` layers). Deliberately narrow:
- * a track may customize HOW its request is made (identity, auth, signed-URL
- * params), not WHERE it goes — `baseUrl`/`path`/`method`/`body` are intentionally
- * absent so a (often server-sourced) track can't repoint its own host or verb.
- * Carried verbatim on the Track and round-tripped like any other field.
+ * Per-track request fields, carried verbatim on the Track and round-tripped like
+ * any other field. Not applied: no platform merges them into the track's
+ * media request, so they set no header, user agent or query. For per-track
+ * headers or query, return them from `media.resolve` / `resolveSync(track)`.
+ * `baseUrl`/`path`/`method`/`body` are absent so a (often server-sourced)
+ * track can't repoint its own host or verb.
  */
 export interface TrackRequest {
   userAgent?: string
@@ -271,15 +262,16 @@ export interface TrackRequest {
  * Artwork URLs for a track that ships a different image per appearance.
  *
  * Both are required: a pair with one side missing has no sensible fallback at
- * render time, and making that unrepresentable is the reason this is a pair
- * rather than two optional fields.
+ * render time.
  *
- * Android Auto is dark-only and takes `dark`.
+ * The pair adapts to appearance only on CarPlay browse rows and tabs. Every
+ * other surface takes `dark` whatever the appearance: now-playing and the lock
+ * screen on every platform, Android Auto, and {@link Track.artworkSource}.
  */
 export interface ArtworkVariants {
-  /** Shown in light mode. */
+  /** Shown on CarPlay in light mode. */
   light: string
-  /** Shown in dark mode, and on Android Auto. */
+  /** Shown on CarPlay in dark mode, and on every other surface. */
   dark: string
 }
 
@@ -302,10 +294,8 @@ export interface Section {
   title?: string
   /**
    * Presentation, separated from content. Each surface renders the
-   * declared layout's nearest supported form; on CarPlay
-   * a wrapping grid requires iOS 26+ and renders a list before that,
-   * since CarPlay's only earlier tile container truncates at a width the
-   * system doesn't report. Use the artwork `resolve` hook to supply
+   * declared layout's nearest supported form (CarPlay's grid limits:
+   * {@link StyleDisplay}). Use the artwork `resolve` hook to supply
    * fallback art for tile layouts.
    */
   style?: SectionStyle
@@ -314,7 +304,7 @@ export interface Section {
    * fuller page this section is a teaser for. Absent = a self-contained
    * section: the header is a plain label, not a link.
    *
-   * The surface picks the form (ADR 0010), and each carries the copy
+   * The surface picks the form, and each carries the copy
    * itself — a `path` never adds words to the section:
    *
    * - **CarPlay** — a tile section's row draws a disclosure chevron and
@@ -323,7 +313,7 @@ export interface Section {
    *   spend an item from the template's cap.
    * - **Android Auto** — no header is tappable at any display, so the
    *   section gets an appended browsable row, titled by the global
-   *   `viewMoreTitle` browser option ("View more" by default).
+   *   `viewMoreTitle` browser option.
    */
   path?: string
   /** The section's tracks. */
@@ -343,8 +333,9 @@ export interface Track {
   /**
    * Opaque, stable identifier for this track.
    *
-   * A track's **identity** is `id` when set (non-blank), falling back to
-   * `src`. That single rule drives every comparison the library makes:
+   * A track's **identity** is `id` when set (non-empty), falling back to
+   * `src`; Android also treats a whitespace-only `id` as unset, so never
+   * send one. That single rule drives every comparison the library makes:
    * favorites matching (`setFavorites`), the CarPlay / Android Auto
    * "now playing" row indicator, section scoping and skip-in-place, and the
    * contextual queue re-expansion. Two tracks refer to the same item iff
@@ -405,8 +396,9 @@ export interface Track {
    * with the `sf:` prefix and optional color params:
    * `sf:heart.fill?bg=#FF0090&fg=#fff`. `bg` sets the background color
    * (transparent if omitted), `fg` sets the symbol color (black if omitted).
-   * On CarPlay, SF Symbols without explicit colors automatically adapt to
-   * light/dark mode.
+   * CarPlay rows key off `fg` instead: without it, the symbol is drawn black
+   * or white to match light/dark mode over a grey tile, and `bg` is ignored;
+   * with it, an omitted `bg` is a grey tile. CarPlay tabs ignore both.
    */
   artwork?: TrackArtwork
 
@@ -421,12 +413,13 @@ export interface Track {
    *
    * @example
    * ```tsx
-   * <Image source={audioBrowser.activeTrack?.artworkSource} />
+   * const track = useActiveTrack()
+   * <Image source={track?.artworkSource} />
    * ```
    */
   readonly artworkSource?: ImageSource
 
-  /** Per-track media-request override; merged last (request → media → track.request). */
+  /** Per-track request fields, round-tripped verbatim; see {@link TrackRequest} for whether they reach the media request. */
   request?: TrackRequest
 
   // type?: TrackType
@@ -505,26 +498,27 @@ export interface Track {
   style?: TrackStyle
 
   /**
-   * Unavailable — a content-state fact beside `favorited` and `live`,
-   * with full behavioral weight (content facts may carry behavior; style
-   * never does): a disabled track never plays — tap refused, queue
-   * expansion excludes it, voice search won't match it.
+   * Marks the track unavailable: the library never plays it — taps and
+   * voice selection are refused, queue expansion and resume exclude it. A
+   * queue you pass to `setQueue` is not filtered, and your own UI must
+   * honor the flag itself.
    *
-   * Rendering ladder, never a trap: **grayed + inert** where the surface
-   * can draw it (CarPlay) → **hidden** where it can't (Android Auto) —
-   * never a normal-looking dead control. Hiding is behavior-safe because
-   * the track is inert everywhere regardless; the cost is losing the
-   * "Available at 9 PM" tease on surfaces that hide, so put the reason
-   * in the title for the ones that gray. Applied at page (re-)serve,
-   * like style.
+   * Drawn **grayed + inert** where the surface can (CarPlay list rows and
+   * iOS 26+ tiles), **hidden** where it can't (CarPlay tile rows before
+   * iOS 26, CarPlay tabs, Android Auto). Surfaces that hide lose any
+   * "Available at 9 PM" tease, so put the reason in the title for the ones
+   * that gray. Applied when the page is (re-)served, like style.
    *
    * @default false
    */
   disabled?: boolean
 
   /**
-   * Whether this track is favorited. When the `favorite` capability is enabled,
-   * displays a filled/empty heart icon in media controllers (notification, Android Auto).
+   * Whether this track is favorited. It fills or empties the heart on
+   * CarPlay now-playing when `ios.carPlayNowPlayingButtons` includes
+   * `'favorite'`. When the `favorite` capability is enabled, it does the
+   * same on Android in the notification, Android Auto, the system media
+   * controls and playable browse rows. iOS Control Center shows no heart.
    */
   favorited?: boolean
 
@@ -541,14 +535,17 @@ export interface Track {
    *   track declared live — without the declaration it is a no-op.
    * - **Persistence** (iOS): no position is stored, so a cold-start resume
    *   rejoins the current broadcast instead of seeking a stale timestamp.
-   * - **Now-playing** (iOS): the live indicator and live-style
-   *   (non-scrubbing) progress UI.
+   * - **Now-playing** (iOS and Android): non-scrubbing controls; on iOS
+   *   also the live indicator. On Android the seek command is removed from
+   *   media controllers, so the notification and Android Auto draw no
+   *   scrubber.
+   * - **Casting** (Android): a cast receiver loads the item as a live
+   *   stream, at the live edge.
    *
-   * The iOS-heavy list is deliberate, not a gap: on Android, ExoPlayer's
-   * own classification already covers these — a dropped live connection
-   * surfaces as a load error (never end-of-stream), and persistence keys
-   * off its detected liveness — so the declaration's only Android reader
-   * is the `seekToLiveEdge()` gate. Android Auto has no live badge.
+   * On Android, ExoPlayer's own liveness detection covers end of stream
+   * and persistence: a dropped live connection surfaces as a load error
+   * (never end-of-stream), and persistence keys off the detected liveness.
+   * Android Auto has no live badge.
    *
    * Omitting it never breaks playback — it silently breaks these judgment
    * calls. Declare it on every live track.
@@ -599,8 +596,8 @@ export interface ResolvedTrack extends Track {
    * block widens to {@link SectionStyle}: the declaration for the whole
    * page. Item properties set here are inherited by every item on the
    * page unless a section or track declares its own; the container
-   * property (`gridWrap`) and the positional `display` are the page-wide
-   * values a section overrides for its own children.
+   * properties (`gridWrap`, `gridTile`) and the positional `display` are
+   * the page-wide values a section overrides for its own children.
    */
   style?: SectionStyle
 

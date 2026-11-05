@@ -3,6 +3,7 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
 
+/** The track fields {@link NowPlayingMetadata} carries. */
 export interface TrackMetadataBase {
   /** The track title */
   title?: string
@@ -16,20 +17,29 @@ export interface TrackMetadataBase {
   artwork?: string
   /** track description */
   description?: string
-  /** track mediaId */
+  /**
+   * The track's `src`, or its `path` when it has none, on iOS and Android.
+   * On web, the track's Identity (`id` when set, else `src`), or its `path`:
+   * a track with an `id` reports different values on web and native.
+   */
   mediaId?: string
   /** The track genre */
   genre?: string
 }
 
 export interface NowPlayingMetadata extends TrackMetadataBase {
+  /**
+   * Playback position in seconds when this metadata was emitted or read, not
+   * a live value. iOS only; absent on Android and web. For a live position use
+   * `useProgress`.
+   */
   elapsedTime?: number
 }
 
 /**
  * Metadata update for the now playing notification.
- * Pass to `updateNowPlaying()` to override what's shown in the notification/lock screen.
- * Pass `null` to clear overrides and revert to track metadata.
+ * Pass to `updateNowPlaying()` to override what's shown in the
+ * notification/lock screen; pass it `null` to clear the override.
  */
 export type NowPlayingUpdate = {
   /** Title shown in notification */
@@ -45,8 +55,8 @@ export type NowPlayingUpdate = {
 }
 
 /**
- * Timed metadata received during playback.
- * Contains metadata from ICY streams (radio) or ID3 frames.
+ * Timed metadata received during playback: ICY (radio) or ID3 frames.
+ * On iOS, also a file's own tags, once on load, when the file has no chapters.
  */
 export interface TimedMetadata {
   title?: string
@@ -57,8 +67,9 @@ export interface TimedMetadata {
 }
 
 /**
- * Static track metadata from the media file.
- * Contains standardized metadata fields.
+ * Static track metadata. On iOS, the media file's own tags. On Android,
+ * Media3's merged metadata, where the Track's fields and the now-playing lines win over
+ * the file's tags. `compilation` and `url` are never set.
  */
 export interface TrackMetadata {
   title?: string
@@ -66,14 +77,24 @@ export interface TrackMetadata {
   albumTitle?: string
   subtitle?: string
   description?: string
+  /**
+   * Android only: the artwork URL published for the Track, not embedded
+   * cover art.
+   */
   artworkUri?: string
   trackNumber?: string
   composer?: string
   conductor?: string
   genre?: string
   compilation?: string
+  /** Android only: the station name from a Shoutcast / Icecast stream. */
   station?: string
+  /** Android only: a Media3 `MEDIA_TYPE_*` constant, as a number string. */
   mediaType?: string
+  /**
+   * iOS: the tag's date string. Android: day and month only, as `DDMM` (or
+   * `DD` or `MM`), no year.
+   */
   creationDate?: string
   creationYear?: string
   url?: string
@@ -88,9 +109,9 @@ export interface ChapterMetadata {
   startTime: number
   /** Chapter end time in seconds */
   endTime: number
-  /** Chapter title */
+  /** Chapter title. Android falls back to the chapter's element ID. */
   title?: string
-  /** URL associated with the chapter */
+  /** URL associated with the chapter. Android only. */
   url?: string
 }
 
@@ -103,7 +124,6 @@ export interface ChapterMetadata {
  * Never fires on web — the web player does not read chapter markers. See
  * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
  *
- * @param callback - Called when chapter metadata is received
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onChapterMetadata = NativeUpdatedValue.emitterize<
@@ -111,13 +131,14 @@ export const onChapterMetadata = NativeUpdatedValue.emitterize<
 >((cb) => (nativeBrowser.onChapterMetadata = cb))
 
 /**
- * Subscribes to track metadata events.
+ * Subscribes to track metadata events. On iOS it fires once on load, when the
+ * file has tags. On Android it fires whenever the player's merged metadata
+ * changes.
  *
  * @platform ios android
  * Never fires on web — the web player does not read embedded file tags. See
  * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
  *
- * @param callback - Called when static track metadata is received
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
@@ -125,15 +146,14 @@ export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
 )
 
 /**
- * Subscribes to timed metadata events (ICY/ID3 from live streams).
+ * Subscribes to timed metadata events (ICY/ID3 from live streams). On iOS it
+ * also fires on load with a file's own tags when the file has no chapters.
  *
  * @platform ios android
- * Never fires on web. ICY metadata is stripped by the browser before the player
- * can see it, and no browser API exposes it; in-band ID3 from HLS is reachable
- * but not yet wired. See
+ * Never fires on web: the browser strips ICY metadata before the player sees
+ * it, and the web player does not read in-band ID3 from HLS. See
  * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
  *
- * @param callback - Called when stream metadata is received (title, artist from ICY/ID3 tags)
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onTimedMetadata = NativeUpdatedValue.emitterize<TimedMetadata>(

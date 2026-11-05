@@ -1,16 +1,18 @@
 type Callback<T> = (arg: T) => void
 
 /**
- * The subscription object behind the library's **state** events — every
- * `on<Thing>Changed`-style export (`onPlaybackChanged`, `onQueueChanged`, …)
- * is one of these. Subscribe with {@link addListener}; the returned function
- * unsubscribes. The emitter is not callable itself.
+ * The subscription object behind most `on*` exports (`onPlaybackChanged`,
+ * `onQueueChanged`, `onTrackMetadata`, …). Subscribe with {@link addListener};
+ * the returned function unsubscribes. The emitter is not callable itself.
  *
- * It tracks a value that always has a *current* reading (playback state,
- * progress, options): {@link lastValue} caches the most recent one so hooks —
- * and you — can read it synchronously without a getter round-trip. Discrete
- * events with no current value (remote-control presses) use
- * `LazyNativeEmitter` instead.
+ * It listens to native from module load and keeps the latest payload in
+ * {@link lastValue}. The remote-control exports and `onGate` use
+ * `LazyNativeEmitter`, which listens only once a listener is added.
+ *
+ * `lastValue` is the last payload native sent, not a fresh reading: it is
+ * `undefined` before the first event, and for the queue and active track it
+ * can be stale after an in-place change (a favorite toggle). Use the getter
+ * (`getQueue`, `getActiveTrack`, …) when you need the current value.
  *
  * @example
  * ```typescript
@@ -27,9 +29,8 @@ export class NativeUpdatedValue<T> {
   private listeners = new Set<Callback<T>>()
 
   /**
-   * The most recent value delivered by native, or `undefined` before the
-   * first update. Subscription starts at module load, so this is safe to
-   * read synchronously at any time.
+   * The last payload native sent, or `undefined` before the first. Not a fresh
+   * reading: use the matching getter (`getQueue`, …) for the current value.
    */
   lastValue: T | undefined = undefined
 

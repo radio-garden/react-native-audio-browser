@@ -2,7 +2,8 @@ import type { NavigationError } from '../features/errors'
 import type { ResolvedTrack, Track } from './browser-nodes.ts'
 
 /**
- * Event fired when a track is about to be loaded via navigateTrack.
+ * Event fired when a playable track is about to load: a browse-row tap or a
+ * `navigate(track)` call.
  */
 export interface TrackLoadEvent {
   /** The track that will be loaded */
@@ -22,6 +23,7 @@ export interface TrackLoadEvent {
  */
 export type HandleTrackLoadCallback = (event: TrackLoadEvent) => Promise<void>
 
+/** What a browse callback receives: the path, and the params its route matched. */
 export type BrowserSourceCallbackParam = {
   path: string
   routeParams?: Record<string, string>
@@ -29,7 +31,9 @@ export type BrowserSourceCallbackParam = {
 
 /**
  * Return BrowseError from a browse callback to display an error to the user.
- * The error message will be shown in an error dialog in CarPlay and Android Auto.
+ * CarPlay and Android Auto show the error in place of the list: as the CarPlay
+ * list's message, and as an error row in Android Auto. The title comes from
+ * `formatNavigationError` (default "Error"), and your string is the message.
  *
  * On the app side, the error is surfaced as a `NavigationError` with
  * `code: 'callback-error'`. Use `useNavigationError()` to get the error details,
@@ -37,11 +41,13 @@ export type BrowserSourceCallbackParam = {
  *
  * @example
  * ```ts
- * browse: async ({ path }) => {
- *   if (!user.subscribed) {
- *     return { error: 'Please subscribe to access this content' }
+ * routes: {
+ *   '/premium': async ({ path }) => {
+ *     if (!user.subscribed) {
+ *       return { error: 'Please subscribe to access this content' }
+ *     }
+ *     return fetchContent(path)
  *   }
- *   return fetchContent(path)
  * }
  * ```
  */
@@ -55,6 +61,7 @@ export type BrowseError = {
  */
 export type BrowseResult = ResolvedTrack | BrowseError
 
+/** Browse callback: returns the page for a path, or a {@link BrowseError}. */
 export type BrowserSourceCallback = (
   param: BrowserSourceCallbackParam
 ) => BrowseResult | Promise<BrowseResult>
@@ -159,22 +166,30 @@ export interface SearchParams {
   reference: MediaReference
 }
 
+/** Search callback: returns the result tracks for a search. */
 export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
+
 // Sync and async transforms are SEPARATE fields (`transform` / `transformSync`),
 // never a `T | Promise<T>` union. A union lowers to a Nitro `variant<Struct,
 // Promise<Struct>>`, and an all-optional struct's `canConvert` also accepts a
 // Promise — so the async case is silently misread as an empty config. Two
 // single-typed fields keep both paths unambiguous, and the sync field allocates
 // no Promise. When both are set they run as a pipeline: async first, then sync.
+/**
+ * Async `transform`: receives the merged request and the route's params, and
+ * returns the request to send.
+ */
 export type RequestConfigTransformer = (
   request: RequestConfig,
   routeParams?: Record<string, string>
 ) => Promise<RequestConfig>
+/** Sync `transformSync`: the {@link RequestConfigTransformer} without a Promise. */
 export type RequestConfigTransformerSync = (
   request: RequestConfig,
   routeParams?: Record<string, string>
 ) => RequestConfig
 
+/** HTTP method of a request. */
 export type HttpMethod =
   | 'GET'
   | 'POST'
@@ -184,26 +199,50 @@ export type HttpMethod =
   | 'HEAD'
   | 'OPTIONS'
 
+/**
+ * One HTTP request's fields. When configs layer, `headers` and `query` merge
+ * by key, and every other set field overrides the one below it, unless the
+ * layer has a transform, which replaces the config outright.
+ */
 export interface RequestConfig {
+  /** HTTP method. Defaults to `'GET'`. */
   method?: HttpMethod
   /**
    * The request path.
    * - For browser requests, this is the track's `path`
    * - For media requests, this is the track's `src` value
    * - For artwork requests, this is the track's `artwork` URL
+   *
+   * A static value is ignored on `request`, `browse`, `media` and route
+   * layers; change it in a `transform`.
    */
   path?: string
+  /** URL that a relative `path` is appended to. */
   baseUrl?: string
+  /** Request headers, merged by key with the layers below. */
   headers?: Record<string, string>
+  /** Query parameters, merged by key with the layers below. */
   query?: Record<string, string>
+  /**
+   * Request body, sent for POST, PUT and PATCH (and DELETE when set) on iOS
+   * and Android; not sent on web.
+   */
   body?: string
+  /**
+   * Content type of the body on iOS and Android. Defaults to
+   * `'application/json'`; not sent on web.
+   */
   contentType?: string
+  /**
+   * Sent as `User-Agent` on iOS and Android (a `User-Agent` in `headers` wins
+   * on iOS); ignored on web.
+   */
   userAgent?: string
 }
 
 /**
  * Context for image loading requests.
- * Provides pixel dimensions and appearance info from Android Auto/CarPlay.
+ * Provides pixel dimensions from Android Auto/CarPlay.
  *
  * @example
  * ```typescript
@@ -273,10 +312,11 @@ export interface MediaTransformParams {
  * }
  * ```
  */
-// Split sync/async — see RequestConfigTransformer. Set `transform` and/or `transformSync`.
+/** Async artwork `transform`: receives `{ request, context }`. */
 export type MediaRequestConfigTransformer = (
   params: MediaTransformParams
 ) => Promise<RequestConfig>
+/** Sync artwork `transformSync`: the {@link MediaRequestConfigTransformer} without a Promise. */
 export type MediaRequestConfigTransformerSync = (
   params: MediaTransformParams
 ) => RequestConfig
@@ -350,66 +390,6 @@ export type RequestConfigResolver = () =>
   | Promise<TransformableRequestConfig>
 
 /**
- * Configuration for artwork image requests
- *
- * ### Configuration Hierarchy
- *
- * When a request is made, configs are merged in this order (later overrides earlier):
- * 1. `request` (base config) - shared settings like user agent, common headers
- * 2. `artwork` config - resource-specific settings
- * 3. `resolve(track)` result - per-track overrides (if provided)
- * 4. `imageQueryParams` - automatic size query param injection (if configured)
- * 5. `transform(request, context)` result - final modifications (if provided)
- *
- * ### Usage Patterns
- *
- * **Simple CDN configuration:**
- * ```typescript
- * media: {
- *   baseUrl: 'https://audio.cdn.example.com',
- *   headers: { 'X-API-Key': 'your-api-key' }
- * }
- * ```
- *
- * **Per-track URL resolution:**
- * ```typescript
- * media: {
- *   resolve: async (track) => ({
- *     baseUrl: 'https://audio.cdn.example.com',
- *     path: `/streams/${track.src}`,
- *     query: { token: await getSignedToken(track.src) }
- *   })
- * }
- * ```
- *
- * **Size-aware transformation (for artwork):**
- * ```typescript
- * artwork: {
- *   baseUrl: 'https://images.cdn.example.com',
- *   transform: async ({ request, context }) => ({
- *     ...request,
- *     query: {
- *       ...request.query,
- *       w: context?.width ? String(context.width) : '600',
- *       sig: await signUrl(request.path)
- *     }
- *   })
- * }
- * ```
- *
- * **Simple size params (declarative alternative):**
- * ```typescript
- * artwork: {
- *   baseUrl: 'https://images.cdn.example.com',
- *   imageQueryParams: { width: 'w', height: 'h' }
- * }
- * ```
- *
- * @see BrowserConfiguration.media - Audio stream configuration
- * @see BrowserConfiguration.artwork - Image/artwork configuration
- */
-
-/**
  * Query parameter names for automatic context injection from CarPlay/Android Auto.
  * Maps ImageContext fields to query parameter names for your CDN.
  */
@@ -421,11 +401,9 @@ export interface ImageQueryParams {
 }
 
 /**
- * Configuration for media resource requests (audio streams, artwork images).
+ * Configuration for audio stream requests: `media` in BrowserConfiguration.
  * Extends TransformableRequestConfig with per-track resolution capabilities.
- *
- * Used for both `media` (audio streaming) and `artwork` (image loading) configuration
- * in BrowserConfiguration.
+ * For `artwork`, see {@link ArtworkRequestConfig}.
  *
  * ### Configuration Hierarchy
  *
@@ -438,10 +416,8 @@ export interface ImageQueryParams {
  *      per-track resolver is the most specific layer and wins over the
  *      transform, on every platform
  *
- * The `media` order is deliberate: a resolver minting a per-track signed URL
- * must not be overwritten by the static layer that shaped the unsigned one. It
- * means a `media.transform` cannot sign what `resolve` produced — do that work
- * inside `resolve`, or move the signing to `transform` and drop `resolve`.
+ * So a `media.transform` cannot sign what `resolve` produced: sign inside
+ * `resolve`, or sign in `transform` and drop `resolve`.
  *
  * ### Usage Patterns
  *
@@ -466,10 +442,10 @@ export interface ImageQueryParams {
  *
  * **Dynamic request signing:**
  * ```typescript
- * artwork: {
- *   baseUrl: 'https://images.cdn.example.com',
+ * media: {
  *   transform: async (request) => ({
  *     ...request,
+ *     baseUrl: 'https://audio.cdn.example.com',
  *     query: { ...request.query, sig: await signUrl(request.path) }
  *   })
  * }
@@ -480,18 +456,18 @@ export interface ImageQueryParams {
  */
 export interface MediaRequestConfig extends TransformableRequestConfig {
   /**
-   * Per-track request resolution callback.
+   * Async per-track request resolution.
    *
    * Called for each track to generate the final request configuration.
    * Receives the full Track object, allowing URL generation based on
    * track metadata (id, artist, album, src, etc.).
    *
    * Runs **last** for media — after `transform`, and winning over it on every
-   * field including `path`. See the hierarchy note on this interface; artwork
-   * runs them the other way round.
+   * field including `path`; artwork runs them the other way round (see
+   * {@link MediaRequestConfig}). When `resolveSync` is also set, both run and
+   * the `resolveSync` result merges over this one.
    *
    * @param track - The track being requested
-   * @returns Request configuration for this specific track (sync or async)
    *
    * @example
    * ```typescript
@@ -501,21 +477,62 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    * })
    * ```
    */
-  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
   resolve?: (track: Track) => Promise<RequestConfig>
   /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
   resolveSync?: (track: Track) => RequestConfig
 }
 
+/**
+ * Configuration for artwork image requests: `artwork` and `nowPlayingArtwork`
+ * in BrowserConfiguration.
+ *
+ * ### Configuration Hierarchy
+ *
+ * Configs merge in this order (later overrides earlier):
+ * 1. `request` (base config) - shared settings like user agent, common headers
+ * 2. `artwork` (or `nowPlayingArtwork`) config - resource-specific settings
+ * 3. `resolve(track)` result - per-track overrides (if provided)
+ * 4. `imageQueryParams` - automatic size query params (if configured)
+ * 5. `transform({ request, context })` result - final changes (if provided)
+ *
+ * ### Usage Patterns
+ *
+ * **Size-aware transformation:**
+ * ```typescript
+ * artwork: {
+ *   baseUrl: 'https://images.cdn.example.com',
+ *   transform: async ({ request, context }) => ({
+ *     ...request,
+ *     query: {
+ *       ...request.query,
+ *       w: context?.width ? String(context.width) : '600',
+ *       sig: await signUrl(request.path)
+ *     }
+ *   })
+ * }
+ * ```
+ *
+ * **Simple size params (declarative alternative):**
+ * ```typescript
+ * artwork: {
+ *   baseUrl: 'https://images.cdn.example.com',
+ *   imageQueryParams: { width: 'w', height: 'h' }
+ * }
+ * ```
+ *
+ * @see BrowserConfiguration.artwork - Image/artwork configuration
+ * @see BrowserConfiguration.nowPlayingArtwork - Now-playing artwork
+ */
 export interface ArtworkRequestConfig extends RequestConfig {
   /**
-   * Per-track request resolution callback.
+   * Async per-track request resolution.
    *
    * Called for each track to generate the request configuration based on
    * track metadata (id, artist, album, src, etc.).
    *
    * The returned config is merged with base configs, then passed to
-   * `transform` if provided.
+   * `transform` if provided. When `resolveSync` is also set, both run and the
+   * `resolveSync` result merges over this one.
    *
    * @param track - The track being requested
    * @returns Request configuration for this specific track
@@ -530,24 +547,24 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
-  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
   resolve?: (track: Track) => Promise<RequestConfig>
   /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
   resolveSync?: (track: Track) => RequestConfig
 
   /**
-   * Final transformation callback for media/artwork requests.
+   * Async final transform for artwork requests.
    *
    * Called after `resolve` (if provided) with the merged request config.
    * Receives optional ImageContext with size hints from Android Auto/CarPlay.
+   * When `transformSync` is also set, it runs after this one on its result.
    *
    * Use this for:
    * - Adding size query params dynamically
    * - URL signing
    * - Adding authentication tokens
    *
-   * @param request - The merged request configuration
-   * @param context - Optional image context with size hints
+   * @param params - `{ request, context }`: the merged request configuration
+   *   and the optional image context with size hints
    * @returns Modified request configuration
    *
    * @example
@@ -564,7 +581,6 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
-  /** Async final transform. When both are set, runs BEFORE `transformSync`. */
   transform?: MediaRequestConfigTransformer
   /** Sync final transform (no Promise allocation). When both are set, runs AFTER `transform`. */
   transformSync?: MediaRequestConfigTransformerSync
@@ -572,8 +588,9 @@ export interface ArtworkRequestConfig extends RequestConfig {
   /**
    * Query parameter names for automatic context injection from CarPlay/Android Auto.
    *
-   * When configured, the image context (size, color scheme) from CarPlay/Android Auto
-   * is automatically added as query parameters to artwork URLs.
+   * When configured, the image width and height from CarPlay/Android Auto are
+   * added as query parameters to artwork URLs, in whole pixels, when the
+   * display size is known.
    *
    * This is a simpler alternative to using `transform` for context-aware URLs.
    *
@@ -605,25 +622,29 @@ export interface ArtworkRequestConfig extends RequestConfig {
  * sub-container (`path`). A callback / static `ResolvedTrack` returns the same
  * page object directly.
  *
- * {@link SearchSource} and {@link TabsSource} HTTP endpoints return this same
- * page shape; only the meaning of `children` differs (results / tabs).
+ * A {@link TabsSource} HTTP endpoint returns this same page shape, with the
+ * tabs as its `children`. A {@link SearchSource} HTTP endpoint differs: it
+ * returns a bare `Track[]`.
  */
 export type BrowserSource =
   | ResolvedTrack
   | BrowserSourceCallback
   | TransformableRequestConfig
 
+/**
+ * A callback or an HTTP request config. A route's `browse` takes the wider
+ * {@link BrowserSource}, which also accepts a static {@link ResolvedTrack}.
+ */
 export type RouteSource = BrowserSourceCallback | TransformableRequestConfig
 
 /**
- * Route configuration with per-route media and artwork overrides.
+ * Route configuration with per-route browse and artwork overrides.
  *
  * @example
  * ```typescript
  * routes: {
  *   '/premium': {
  *     browse: async () => fetchPremiumContent(),
- *     media: { baseUrl: 'https://premium-audio.cdn.com' },
  *     artwork: { baseUrl: 'https://premium-images.cdn.com' }
  *   }
  * }
@@ -632,18 +653,25 @@ export type RouteSource = BrowserSourceCallback | TransformableRequestConfig
 export type RouteConfig = {
   /** Override browse config for this route. */
   browse?: BrowserSource
-  /** Override media config for this route. */
+  /**
+   * Not applied on any platform: media always resolves from the top-level
+   * `media` config.
+   */
   media?: MediaRequestConfig
   /** Override artwork config for this route. */
   artwork?: ArtworkRequestConfig
 }
 
+/** Tabs callback: returns the tab tracks. */
 export type TabsSourceCallback = () => Track[] | Promise<Track[]>
+
 /**
  * Tab source configuration for navigation tabs.
  *
- * When using API configuration (TransformableRequestConfig), the request path
- * defaults to '/' and the endpoint must return a page object
+ * When using API configuration (TransformableRequestConfig), the web requests
+ * path '/', but iOS and Android request an internal placeholder path instead.
+ * A static `path` is ignored, so set the path in a `transform` for the same
+ * request on every platform. The endpoint must return a page object
  * `{ title?, children: Track[] }` whose `children` are the tabs — the same
  * shape a browse endpoint returns. Callback/static sources provide `Track[]`
  * directly.
@@ -657,15 +685,19 @@ export type TabsSource =
  * Search source configuration for handling search requests.
  *
  * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
- * return a page object — `{ title?, children: Track[] }` — whose `children`
- * are the result rows, the same shape a browse endpoint returns. (The web
- * implementation additionally accepts a bare `Track[]` for back-compat;
- * iOS/Android do not.) Callback sources return `Track[]` directly.
+ * return a bare `Track[]` of result rows, not the page object a browse
+ * endpoint returns. (The web implementation also accepts a page object
+ * `{ children: Track[] }`; iOS and Android do not.) Callback sources return
+ * `Track[]` directly.
  *
  * @see BrowserConfiguration.search
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
+/**
+ * The browser's configuration: requests, routes, tabs, search and the car
+ * surfaces. Pass it to `configureBrowser`.
+ */
 export type BrowserConfiguration = {
   /**
    * Initial navigation path. Setting this triggers initial navigation to the
@@ -766,9 +798,9 @@ export type BrowserConfiguration = {
    * the result flows through the shared `request` layer (so a relative path gets `baseUrl`
    * prepended). For logic that can't be expressed as a template, use `resolve(track)`.
    *
-   * The `{id}` templating is specific to `nowPlayingArtwork` — static values
-   * in other configs are not templated. Not implemented by the web
-   * implementation.
+   * The same `{id}` templating applies to every artwork config (`artwork`,
+   * a route's `artwork`, `nowPlayingArtwork`) on iOS and Android. Neither
+   * `{id}` nor `nowPlayingArtwork` is implemented by the web implementation.
    *
    * @example
    * // 302-redirect endpoint keyed by the track id:
@@ -811,8 +843,8 @@ export type BrowserConfiguration = {
    * expects different names, rename them in `transform` — it receives the params
    * already on `request.query`, e.g. `query: { search: request.query?.q }`.
    *
-   * Response shape: the endpoint must return a page object
-   * `{ children: Track[] }` — see {@link SearchSource}.
+   * Response shape: the endpoint must return a bare `Track[]` — see
+   * {@link SearchSource}.
    *
    * @example
    * ```typescript
@@ -822,11 +854,15 @@ export type BrowserConfiguration = {
    *   if (params.reference === 'my') return await getFavorites();
    *   // Filters are read directly from their props (not derived from `mode`)
    *   if (params.album && params.artist) {
-   *     return await db.query('SELECT * FROM tracks WHERE album = ? AND artist = ?',
-   *       [params.album, params.artist]);
+   *     return await db.query(
+   *       'SELECT * FROM tracks WHERE album = ? AND artist = ?',
+   *       [params.album, params.artist]
+   *     );
    *   }
    *   if (params.artist) {
-   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [params.artist]);
+   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [
+   *       params.artist,
+   *     ]);
    *   }
    *   // `mode` is the container vertical — narrow by it when present
    *   if (params.mode === 'podcast') return await searchPodcasts(params.query);
@@ -837,8 +873,8 @@ export type BrowserConfiguration = {
    * // API configuration - parameters automatically added to query string
    * search: {
    *   baseUrl: 'https://api.example.com/search',
-   *   // GET /search?q=greens&mode=album&album=greens&artist=the+radishes&limit=20
-   *   transform(request) {
+   *   // GET /search?q=greens&album=greens&artist=the+radishes&limit=20
+   *   transformSync(request) {
    *     return {
    *       ...request,
    *       query: { ...request.query, limit: '20' }
@@ -854,7 +890,11 @@ export type BrowserConfiguration = {
    * The first tab's path is automatically loaded when the browser starts.
    *
    * Optional - if not provided, no tab navigation will be available.
-   * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
+   * Car surfaces show only the first tabs: Android Auto shows 4, CarPlay
+   * shows up to `CPTabBarTemplate.maximumTabCount`. `getTabs` and `useTabs`
+   * still return every tab, and `configureBrowser` warns in development when
+   * a static array has more than Android Auto shows. See
+   * [Tabs and the initial path](/guide/browser#tabs-and-the-initial-path).
    *
    * Can provide static array of Track objects with paths as tabs, API configuration, or custom callback.
    */
@@ -889,13 +929,14 @@ export type BrowserConfiguration = {
    * which receives `routeParams` as its second argument.
    *
    * Values can be a `BrowserSource` (callback, request config, or static page
-   * object) or a `RouteConfig` with per-route `media`/`artwork` overrides.
+   * object) or a `RouteConfig` with per-route `browse`/`artwork` overrides.
    *
    * @example
    * ```typescript
    * routes: {
    *   '/favorites': async () => getFavoritesPage(),
-   *   '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
+   *   '/albums/{id}': async ({ routeParams }) =>
+   *     fetchAlbumPage(routeParams?.id),
    *   '/premium': {
    *     browse: { baseUrl: 'https://premium-api.example.com' },
    *     artwork: { baseUrl: 'https://premium-images.example.com' }
@@ -919,7 +960,9 @@ export type BrowserConfiguration = {
 
   /**
    * Custom handler for track load events.
-   * When set, navigateTrack() will call this handler instead of auto-loading/playing the track.
+   * When set, loading a playable track (a browse-row tap or a
+   * `navigate(track)` call) invokes this handler instead of auto-loading and
+   * playing the track.
    * Pass undefined to restore default behavior.
    *
    * @param event - The track load event containing the track, queue, and startIndex
@@ -941,28 +984,16 @@ export type BrowserConfiguration = {
   androidControllerOfflineError?: boolean
 
   /**
-   * Titles the "view more" row appended to a `Section` that carries a
-   * `Section.path` on surfaces whose section header cannot be tapped —
-   * Android Auto, today the only one.
+   * Titles the "view more" row Android Auto appends to a `Section` that
+   * carries a `Section.path`, one string for every section.
    *
-   * Leave it unset and the row is titled "View more" — the library's in-code
-   * default, the same arrangement `formatNavigationError` has. Set this to
-   * localize it: it is re-resolved once per content generation, so
+   * It is re-resolved once per content generation, so
    * `invalidateAllContent()` after an in-app language switch picks up the new
-   * copy without reconfiguring the browser. That is why it is a callback rather
-   * than a plain string — an app whose locale is its own, not the system's,
-   * cannot express that with a value frozen at configure time.
+   * copy without reconfiguring the browser.
    *
-   * One string for every section by design — the row is a fallback for a
-   * surface that cannot draw a link in its header, so per-section wording would
-   * be ceremony most consumers never see rendered.
-   *
-   * For wording that varies by section — "View all 42 albums", "See every
-   * episode" — author the link yourself instead: append an ordinary browsable
-   * {@link Track} to the section's `children`, titled however you like, and
-   * leave `Section.path` unset so this row doesn't also appear. Since the
-   * row is Android-only, that branch is an ordinary platform check on the
-   * content you emit; CarPlay never sees the extra row.
+   * For wording that varies by section, leave `Section.path` unset and append
+   * your own browsable {@link Track} to `children`; that Track shows on every
+   * surface. See [Android Auto](https://audiobrowser.dev/guide/android-auto).
    *
    * @default 'View more'
    *
@@ -994,13 +1025,13 @@ export type BrowserConfiguration = {
   carPlayLoadingTitle?: string
 
   /**
-   * Called when the album line on the CarPlay Now Playing screen is tapped
-   * and the active track has no {@link Track.albumPath}. Return a browse path
-   * to navigate the CarPlay browse stack there, or `undefined` if the tap was
-   * handled (or should do nothing).
+   * Called when the active track changes and it has no {@link Track.albumPath}.
+   * Return a browse path to make the album line on the CarPlay Now Playing
+   * screen tappable: a tap navigates the CarPlay browse stack there. Return
+   * `undefined` to leave the album line untappable for this track.
    *
-   * The album line is tappable whenever the active track has an `albumPath`
-   * or this callback is configured.
+   * The library calls it ahead of any tap, so the album line is tappable only
+   * when there is somewhere to go.
    *
    * @example
    * ```typescript
@@ -1014,7 +1045,8 @@ export type BrowserConfiguration = {
 
   /**
    * Callback to customize error messages for navigation errors.
-   * Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
+   * Used by CarPlay and Android Auto, and available via
+   * `useFormattedNavigationError()` for app UI.
    *
    * If not provided or returns undefined, default English messages are used.
    *
@@ -1079,8 +1111,13 @@ export type FormattedNavigationError = {
    * Default values:
    * - `'content-not-found'`: "Content Not Found" (English)
    * - `'network-error'`: "Network Error" (English)
-   * - `'http-error'`: System-localized status text (e.g., "Not Found", "Service Unavailable")
+   * - `'http-error'`: the status text, system-localized on iOS (e.g. "Not
+   *   Found", "Service Unavailable"); on Android an English name for common
+   *   codes. "Server Error" when there is no status code, for codes Android
+   *   does not name, and always on web
    * - `'callback-error'`: "Error" (English)
+   * - `'empty-content'`: "Nothing here" (English)
+   * - `'timeout'`: "Couldn't load" (English)
    * - `'unknown-error'`: "Error" (English)
    */
   title: string
@@ -1141,8 +1178,8 @@ export type FormatNavigationErrorCallback = (
 ) => FormattedNavigationError | undefined
 
 /**
- * Maps the tapped active track to a browse path for the CarPlay album line,
- * or `undefined` to do nothing. See `resolveAlbumPath`.
+ * Maps the active track to a browse path for the CarPlay album line, or
+ * `undefined` to leave the line untappable. See {@link BrowserConfiguration.resolveAlbumPath | resolveAlbumPath}.
  */
 export type ResolveAlbumPathCallback = (track: Track) => string | undefined
 
