@@ -114,7 +114,8 @@ export default withMermaid(
 
     head,
 
-    ignoreDeadLinks: true,
+    // README's license badge links to the repo's LICENSE, which is no page here.
+    ignoreDeadLinks: [/(^|\/)LICENSE$/],
 
     // Repo-internal files that live in the site root but are not site content.
     srcExclude: ['CLAUDE.md', 'TODO.md'],
