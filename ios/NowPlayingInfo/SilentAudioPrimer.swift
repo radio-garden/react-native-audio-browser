@@ -2,26 +2,21 @@ import AVFoundation
 import Foundation
 import os.log
 
-/// Renders a fraction of a second of generated silence through the app's audio session.
+/// Plays a fraction of a second of silence (zero samples) through the app's audio session.
 ///
-/// iOS elects an app onto the system now-playing surfaces (lock screen, Control
-/// Center, the CarPlay now-playing template) only once its audio session actually
-/// renders output. Published metadata alone never surfaces — and the explicit
-/// `MPNowPlayingInfoCenter.playbackState` write is dropped on iOS without a private
-/// entitlement (`com.apple.mediaremote.set-playback-state`), so there is no
-/// declarative way in. When the very first load of a session fails, no audio ever
-/// renders and the failure line + transport controls have nowhere to appear.
-/// Rendering one burst of silence satisfies the election rule; the session's
-/// already-published info (station + failure line) then displays.
-///
-/// The samples are zeros: inaudible by construction, no volume tricks involved.
+/// iOS puts an app on the now-playing surfaces (lock screen, Control Center, CarPlay) only once
+/// its audio session renders output; published metadata alone never surfaces it, and
+/// `MPNowPlayingInfoCenter.playbackState` is dropped without a private entitlement
+/// (`com.apple.mediaremote.set-playback-state`). When the first load fails, nothing renders, so
+/// the already-published info and transport controls never show. This burst wins the election
+/// (docs/adr/0005).
 @MainActor
 final class SilentAudioPrimer {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "SilentAudioPrimer")
 
   private static let duration: TimeInterval = 0.3
 
-  /// Held while playing so the player isn't deallocated mid-render.
+  // Held until playback ends; a released AVAudioPlayer stops rendering.
   private var player: AVAudioPlayer?
 
   func prime() {
@@ -40,8 +35,7 @@ final class SilentAudioPrimer {
     }
   }
 
-  /// A minimal mono 16-bit PCM WAV of silence. 8 kHz keeps it a few KB — the
-  /// content is zeros, so fidelity is irrelevant.
+  // Mono 16-bit PCM WAV; 8 kHz keeps it a few KB, and zeros need no fidelity.
   private static let silentWav: Data? = makeSilentWav()
 
   private static func makeSilentWav() -> Data? {
@@ -58,7 +52,7 @@ final class SilentAudioPrimer {
     append32(36 + dataSize)
     append("WAVE")
     append("fmt ")
-    append32(16) // PCM fmt chunk size
+    append32(16) // fmt chunk size
     append16(1) // linear PCM
     append16(1) // mono
     append32(sampleRate)

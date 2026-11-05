@@ -1,22 +1,17 @@
 import Foundation
 import NitroModules
 
-/**
- * Update options for the player that can be changed at runtime.
- * These options control player behavior and capabilities that can be modified during playback.
- */
 class PlayerUpdateOptions {
   // MARK: - Core Properties
 
-  /// Jump intervals
   var forwardJumpInterval: Double = 15.0
   var backwardJumpInterval: Double = 15.0
   var progressUpdateEventInterval: Double?
-  /// Set by `setPlaybackIntervalEnabled`, not by `update(from:)`; not reported in `toOptions()`.
+  // Set through `setPlaybackIntervalEnabled`; neither `update(from:)` nor `toOptions()` touches it.
   var playbackIntervalEnabled = false
 
-  /// Player capabilities - most enabled by default, only false values disable
-  /// Exceptions: jumpForward, jumpBackward default to false
+  // An unset capability counts as enabled (`remoteCommands`), except favorite, so the jump
+  // commands start explicitly disabled.
   var capabilities: PlayerCapabilities = .init(
     play: nil, pause: nil, stop: nil, seekTo: nil,
     skipToNext: nil, skipToPrevious: nil,
@@ -25,16 +20,12 @@ class PlayerUpdateOptions {
     shuffleMode: nil, repeatMode: nil, playbackRate: nil,
   )
 
-  /// Supported playback rates for the playback-rate capability
   var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
 
-  /// Enable the "Up Next" button on the CarPlay Now Playing screen
   var carPlayUpNextButton: Bool = true
 
-  /// Custom buttons for the CarPlay Now Playing screen
   var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
 
-  /// Where the now-playing indicator draws on CarPlay list rows
   var carPlayPlayingIndicatorLocation: CarPlayPlayingIndicatorLocation = .leading
 
   // MARK: - Initialization
@@ -43,32 +34,28 @@ class PlayerUpdateOptions {
 
   // MARK: - Update from Nitro Options
 
-  /// Update options from NativeUpdateOptions
+  /// Applies only the fields `options` sets. Capabilities merge field by field, so an unset
+  /// capability keeps its value; a null progress interval turns progress events off.
   func update(from options: NativeUpdateOptions) {
-    // Update jump intervals
     if let interval = options.forwardJumpInterval {
       forwardJumpInterval = interval
     }
     if let interval = options.backwardJumpInterval {
       backwardJumpInterval = interval
     }
-    // progressUpdateEventInterval is a Variant_NullType_Double - extract the Double
     if let interval = options.progressUpdateEventInterval {
       switch interval {
       case .first:
-        // null - disable progress updates
         progressUpdateEventInterval = nil
       case let .second(value):
         progressUpdateEventInterval = value
       }
     }
 
-    // Update capabilities - merge incoming with existing, only explicitly set values override
     if let caps = options.capabilities {
       capabilities = mergeCapabilities(existing: capabilities, incoming: caps)
     }
 
-    // Update iOS player-UI options (nested under `ios` on the wire)
     if let ios = options.ios {
       if let rates = ios.playbackRates {
         playbackRates = rates
@@ -85,9 +72,8 @@ class PlayerUpdateOptions {
     }
   }
 
-  /// The resolved options in their wire shape (what getOptions/onOptionsChanged report).
+  /// The options in their wire shape, as `getOptions` and `onOptionsChanged` report them.
   func toOptions() -> Options {
-    // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
 
     return Options(
@@ -105,7 +91,6 @@ class PlayerUpdateOptions {
     )
   }
 
-  /// Merge incoming capabilities with existing - only explicitly set values override
   private func mergeCapabilities(existing: PlayerCapabilities, incoming: PlayerCapabilities) -> PlayerCapabilities {
     PlayerCapabilities(
       play: incoming.play ?? existing.play,

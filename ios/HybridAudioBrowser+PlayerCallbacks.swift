@@ -13,9 +13,8 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    // Hydrate the active track's `favorited` from the authoritative set so JS
-    // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the
-    // Player emits the raw queue track, whose flag isn't kept in sync.
+    // The queue track's `favorited` is not kept in sync; hydrate it so useActiveTrack matches
+    // getActiveTrack().
     let hydrated = PlaybackActiveTrackChangedEvent(
       lastIndex: event.lastIndex,
       lastTrack: event.lastTrack,
@@ -126,8 +125,8 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     }
   }
 
-  /// Runs JS's override for a remote command when it set one, else `fallback`, then reports
-  /// the command to JS.
+  /// Runs JS's handler for a remote command if it set one, else `fallback`; reports the command
+  /// to JS either way.
   private func dispatchRemote(handler: (() -> Void)?, report: () -> Void, fallback: () -> Void) {
     if let handler { handler() } else { fallback() }
     report()

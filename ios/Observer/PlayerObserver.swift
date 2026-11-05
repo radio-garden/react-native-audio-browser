@@ -1,8 +1,8 @@
 import AVFoundation
 
-/// Observes one AVPlayer from creation to `invalidate()`: its status, its time-control status,
-/// and the moment audio starts. A recreated player gets a new observer, so nothing a released
-/// player reports reaches its successor.
+/// Observes one AVPlayer until `invalidate()`: status, time-control status, and the moment audio
+/// starts. A recreated player gets a new observer, so nothing a released player reports reaches
+/// its successor.
 @MainActor
 final class PlayerObserver {
   enum Event {
@@ -41,8 +41,8 @@ final class PlayerObserver {
     }
   }
 
-  /// Stops all delivery, including events already hopping to the main actor. An AVPlayer
-  /// retains its time observers, so one left registered outlives the observer (#96).
+  /// Stops all delivery, including events already hopping to the main actor. AVPlayer retains its
+  /// time observers, so one left registered outlives this observer (#96).
   func invalidate() {
     isActive = false
     observations.removeAll()

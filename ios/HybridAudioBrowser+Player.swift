@@ -39,7 +39,6 @@ public extension HybridAudioBrowser {
 
   func setPlayWhenReady(playWhenReady: Bool) throws {
     onMainActor {
-      // Pre-setup this stages the intent for the player to come up with — never a no-op.
       if let player { player.setPlayWhenReady(playWhenReady) }
       else { pendingPlayWhenReady = playWhenReady }
     }
@@ -103,7 +102,6 @@ public extension HybridAudioBrowser {
 
   func setRepeatMode(mode: RepeatMode) throws {
     onMainActor {
-      // Pre-setup this stages the mode for the player to come up with — never a no-op.
       if let player { player.repeatMode = mode }
       else { pendingRepeatMode = mode }
     }
@@ -122,8 +120,8 @@ public extension HybridAudioBrowser {
   }
 
   func retry() throws {
-    // Re-resolve rather than replay the cached URL: short-lived URLs/tokens
-    // may have expired since the failure (matches the internal retry path).
+    // Re-resolves rather than replaying the cached URL: short-lived URLs or tokens may have
+    // expired since the failure.
     onMainActor { player?.reloadResolving(startFromCurrentTime: true) }
   }
 
@@ -175,7 +173,7 @@ public extension HybridAudioBrowser {
   func remove(indexes: [Double]) throws {
     try onMainActor {
       guard let player else { return }
-      // Remove in reverse order to maintain index validity
+      // Highest index first, so earlier removals don't shift the ones still to go.
       for index in indexes.sorted().reversed() {
         try player.remove(Int(index))
       }
@@ -225,7 +223,7 @@ public extension HybridAudioBrowser {
     try onMainActor {
       guard let player, let track = player.currentTrack, let identity = track.identity else { return false }
       browserManager.setFavorited(identity: identity, favorited: favorited)
-      // Back in the queue carrying the flag, since hydration never overrides a track's own value.
+      // Hydration never overrides a track's own flag, so the queued copy must carry it.
       let updated = track.copying(favorited: favorited)
       try player.replace(player.queue.currentIndex, updated)
       // The only emit: a favorite toggle mutates the active track in place, so
@@ -237,8 +235,6 @@ public extension HybridAudioBrowser {
     }
   }
 
-  /// Whether the active (now-playing) track is favorited, per the authoritative
-  /// favorite set (via `getActiveTrack`'s hydration).
   internal func isActiveTrackFavorited() -> Bool {
     (try? getActiveTrack())?.favorited ?? false
   }
@@ -279,10 +275,8 @@ public extension HybridAudioBrowser {
   }
 
   func getActiveTrack() throws -> Track? {
-    // Hydrate `favorited` from the authoritative favorite set — the now-playing
-    // track is loaded outside the browse cache, so its own flag isn't otherwise
-    // kept in sync as favorites change. This is the single source of truth for
-    // "is the active track favorited" (now-playing heart, toggle direction, JS).
+    // The now-playing track is loaded outside the browse cache: a missing `favorited` is filled
+    // from the favorite set, but a track's own value wins, so writers must update the queued copy too.
     onMainActor { player?.currentTrack.map(browserManager.hydrateFavorite) }
   }
 
@@ -307,8 +301,8 @@ public extension HybridAudioBrowser {
   // MARK: - Network
 
   func getOnline() throws -> Bool {
-    // No `onMainActor` hop: `isOnline` is lock-protected, so this stays a
-    // cheap read on the JS thread instead of blocking on the main queue.
+    // No `onMainActor` hop: `isOnline` is lock-protected, so this stays a cheap read on the
+    // JS thread instead of blocking on the main queue.
     networkMonitor.isOnline
   }
 
@@ -319,8 +313,6 @@ public extension HybridAudioBrowser {
   }
 
   func setSystemVolume(volume _: Double) throws {
-    // iOS doesn't provide a public API to set system volume programmatically.
-    // Users must adjust volume via hardware buttons or Control Center.
     logger.debug("setSystemVolume is not supported on iOS - volume must be adjusted via hardware buttons or Control Center")
   }
 

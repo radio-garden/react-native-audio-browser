@@ -13,13 +13,8 @@ import os.log
   var queueSourcePath: String? { get }
 }
 
-/// Encapsulates the shared track selection decision tree used by both
-/// HybridAudioBrowser and CarPlaySession.
-///
-/// Resolves a track selection to a concrete `SelectionResult` describing
-/// what the caller should do. Each caller then executes the action in its
-/// own way (CarPlay: showNowPlaying + completion; HybridAudioBrowser:
-/// direct player calls).
+/// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession;
+/// each caller carries out the returned `SelectionResult` its own way.
 @MainActor
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
@@ -32,35 +27,31 @@ class TrackSelector {
   // MARK: - Result Types
 
   enum SelectionResult {
-    /// Playback action determined and not intercepted by JS handler.
     case play(PlaybackIntent)
-    /// JS handleTrackLoad handler intercepted — caller should not play.
+    /// The app's `handleTrackLoad` took the selection; the caller plays nothing.
     case intercepted
-    /// Track is browsable — caller should navigate to this path.
+    /// The track has no `src`; the caller navigates to `path`.
     case browse(path: String)
-    /// Nothing to do (no src, no path).
     case none
   }
 
   enum PlaybackIntent {
-    /// Skip to an index in the existing queue.
     case skipTo(index: Int)
-    /// Replace queue with new tracks.
     case setQueue(tracks: [Track], startIndex: Int, sourcePath: String?)
-    /// Load a single track.
     case loadTrack(Track)
   }
 
   // MARK: - Selection
 
-  /// Resolves a track selection to a concrete action.
-  /// Handles contextual path expansion, queue reuse, and handler interception.
+  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within
+  /// the current queue when it came from the same parent, else the parent expanded into a queue
+  /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
+  /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
   func select(
     track: Track,
     player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
-    // A disabled track is unavailable — it never plays, whichever surface or
-    // stale resume path delivered the selection (Track.disabled).
+    // Checked here, not only in the UI: a stale resume path can still deliver a disabled track.
     if track.disabled == true {
       return .none
     }
@@ -104,13 +95,10 @@ class TrackSelector {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
-    // Check if queue already came from this parent path — just skip to the
-    // track. Exact-surface match first: a contextual path carries the tapped
-    // page position (`__index`), so path equality pins the exact copy when
-    // the page holds the same identity more than once. The identity match
-    // remains for index-less paths (e.g. pre-stamp persisted state); an
-    // index-stamped path with no exact match falls through to expansion,
-    // which re-scopes the queue to the tapped section.
+    // Exact path first: its `__index` pins the tapped copy when the page holds the same identity
+    // more than once. Identity matching is only for index-less paths (e.g. from persisted state
+    // without one); an indexed path with no exact match expands instead, re-scoping
+    // the queue to the tapped section.
     if parentPath == player.queueSourcePath {
       var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
       if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {

@@ -3,7 +3,6 @@ import MediaPlayer
 import os.log
 
 extension RepeatMode {
-  /// Convert to MPRepeatType for MPRemoteCommandCenter sync
   var mpRepeatType: MPRepeatType {
     switch self {
     case .off: .off
@@ -12,7 +11,6 @@ extension RepeatMode {
     }
   }
 
-  /// Create from MPRepeatType
   init(from mpRepeatType: MPRepeatType) {
     switch mpRepeatType {
     case .off: self = .off
@@ -24,7 +22,6 @@ extension RepeatMode {
 }
 
 extension Bool {
-  /// Convert to MPShuffleType for MPRemoteCommandCenter sync
   var mpShuffleType: MPShuffleType {
     self ? .items : .off
   }
@@ -44,11 +41,11 @@ final class RemoteCommandController {
   private var backwardJumpInterval: Double = 15
   private var playbackRates: [Double] = []
 
-  /// Whether the queue has a next / previous track; read whenever those commands are enabled.
+  /// Whether the queue has a next / previous track; read whenever those commands are enabled
+  /// and by `refreshSkipAvailability`.
   var skipAvailability: @MainActor () -> (canNext: Bool, canPrevious: Bool) = { (true, true) }
 
-  /// The shuffle/repeat display state, kept so it survives a switch to a new command center,
-  /// which starts with both off.
+  // Kept to restore on a new command center, which starts with shuffle and repeat off.
   private var shuffleEnabled = false
   private var repeatMode: RepeatMode = .off
 
@@ -60,7 +57,7 @@ final class RemoteCommandController {
     self.callbacks = callbacks
   }
 
-  /// Moves the enabled commands and their state to `newCenter`: the linked
+  /// Moves the enabled commands and shuffle/repeat state to `newCenter`. A linked
   /// `MPNowPlayingSession` has its own command center, which replaces the shared one.
   func switchCommandCenter(_ newCenter: MPRemoteCommandCenter) {
     guard newCenter !== center else { return }
@@ -73,8 +70,8 @@ final class RemoteCommandController {
     logger.info("Switched command center, re-enabled \(commands.count) commands")
   }
 
-  /// Enables exactly `commands`, disabling any enabled command they no longer include. The skip
-  /// commands offer their interval, the rate command `playbackRates`.
+  /// Enables exactly `commands`, disabling any enabled command not among them. Intervals are
+  /// in seconds.
   func enable(
     commands: Set<RemoteCommand>,
     forwardJumpInterval: Double = 15,
@@ -104,7 +101,7 @@ final class RemoteCommandController {
     center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
   }
 
-  /// Greys out next/previous when `skipAvailability` says the queue has nowhere to skip.
+  /// Re-reads `skipAvailability`; call it when the queue changes.
   func refreshSkipAvailability() {
     let (canNext, canPrevious) = skipAvailability()
     if enabledCommands.contains(.next) { center.nextTrackCommand.isEnabled = canNext }
@@ -138,6 +135,7 @@ final class RemoteCommandController {
     default: break
     }
     let mpCommand = mpCommand(for: command)
+    // `nil` removes every target, so re-enabling an enabled command does not stack handlers.
     mpCommand.removeTarget(nil)
     mpCommand.addTarget { [weak self] event in
       self?.handle(event, for: command) ?? .commandFailed

@@ -4,9 +4,7 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-/// The `PlayerEngine` over AVFoundation: the AVPlayer and its observers, media loading, the
-/// now-playing session and the remote commands. Carries out what the `Player` decides; holds
-/// no playback policy.
+/// Carries out what the `Player` decides; holds no playback policy.
 @MainActor
 final class AVPlayerEngine: PlayerEngine {
   let logger = Logger(subsystem: "com.audiobrowser", category: "AVPlayerEngine")
@@ -26,12 +24,10 @@ final class AVPlayerEngine: PlayerEngine {
   private var itemObserver: ItemObserver?
   private var rate: Float = 1
   private var skipAvailability = (canNext: false, canPrevious: false)
-  /// The charset of the track last loaded, for its ICY titles.
   private var icyCharset: String?
   private let bufferDuration: Double
 
   /// - Parameters:
-  ///   - resolver: Resolves media URLs and now-playing artwork.
   ///   - bufferDuration: 0 lets AVPlayer choose, minimising stalls.
   ///   - nowPlayingEnabled: When false the now-playing surface ignores the override and formatter.
   init(
@@ -71,8 +67,7 @@ final class AVPlayerEngine: PlayerEngine {
     setUpAVPlayer()
   }
 
-  /// Releases the player for good: the now-playing session, the observers and the remote
-  /// commands go with it.
+  /// Releases the player for good, with its now-playing session, observers and remote commands.
   func destroy() {
     remoteCommandController.disableAll()
     nowPlayingInfoController.unlinkPlayer()
@@ -96,9 +91,10 @@ final class AVPlayerEngine: PlayerEngine {
     return seconds.isNaN ? 0 : seconds
   }
 
-  /// The current item's duration, or 0 when it has none (a live stream). Not
-  /// `item.asset.duration`: deprecated since iOS 16, and it blocks the main actor fetching a
-  /// remote asset's duration.
+  /// The item's duration; for a live stream, the length of its seekable window (an HLS playlist or
+  /// DVR window), or 0 when it has none (e.g. Icecast) or there is no item.
+  // Not `item.asset.duration`: deprecated since iOS 16, and it blocks the main actor fetching a
+  // remote asset's duration.
   var duration: Double {
     guard let item = avPlayer.currentItem else { return 0 }
     if !item.duration.seconds.isNaN {
@@ -292,14 +288,12 @@ final class AVPlayerEngine: PlayerEngine {
     }
   }
 
-  /// The item's own error stands in when the report carried none.
   private func reportFailure(_ error: Error?) {
     onEvent?(.failed(error ?? avPlayer.currentItem?.error, httpStatusCode: currentItemHttpStatusCode))
   }
 
-  /// The HTTP status the server last answered the current item with. `AVPlayerItem.error` never
-  /// carries it (a 404 arrives as an opaque CoreMedia error), so the per-item error log is the
-  /// only place it surfaces.
+  // `AVPlayerItem.error` never carries the HTTP status (a 404 arrives as an opaque CoreMedia
+  // error); the item's error log is the only place it surfaces.
   private var currentItemHttpStatusCode: Int? {
     guard let events = avPlayer.currentItem?.errorLog()?.events else { return nil }
     return PlaybackFailure.httpStatusCode(fromErrorStatusCodes: events.map(\.errorStatusCode))
@@ -339,12 +333,11 @@ final class AVPlayerEngine: PlayerEngine {
     }
   }
 
-  /// `MPNowPlayingSession` publishes only through the linked player's current item, so a load
-  /// that fails before item creation (a dead host on a cold start) leaves nothing to surface on
-  /// the lock screen or CarPlay. The failed asset's item is attached purely as a publishing
-  /// carrier, unobserved, so its `.failed` status cannot re-report the loader's error. A
-  /// successful load replaces it; a retry's reload leaves it in place, so the surface doesn't
-  /// flicker.
+  // `MPNowPlayingSession` publishes only through the linked player's current item, so a load that
+  // fails before an item exists (a dead host on a cold start) shows nothing on the lock screen or
+  // CarPlay. The failed asset's item carries the publishing, unobserved so its `.failed` status
+  // cannot re-report the loader's error. A successful load replaces it; a retry leaves it in
+  // place, so the surface doesn't flicker.
   private func attachPublishingCarrierItemIfNeeded() {
     guard avPlayer.currentItem == nil, let asset = mediaLoader.asset else { return }
     logger.notice("Attaching publishing-carrier item for failed load")
@@ -354,7 +347,6 @@ final class AVPlayerEngine: PlayerEngine {
   }
 }
 
-/// Resolves the URLs the player fetches.
 @MainActor
 protocol MediaResolving: AnyObject {
   func resolveMediaUrl(_ src: String, track: Track?) async -> MediaResolvedUrl

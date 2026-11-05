@@ -6,14 +6,13 @@ import NitroModules
 import os.log
 
 public extension HybridAudioBrowser {
-  /// Navigates the in-app browser, reporting a failure as the navigation error. A clear is
-  /// synchronous: JS hears it before the navigation that may set the error again.
+  /// Navigates the in-app browser, reporting a failure as the navigation error. The clear is
+  /// synchronous, so JS hears it before the navigation that may set the error again.
   internal func navigate(_ path: String, clearError: Bool) {
     if clearError { onMainActor { navigationError.clear() } }
     Task { @MainActor in await loadPath(path) }
   }
 
-  /// Loads `path` into the browser, reporting a failure as the navigation error.
   @MainActor
   private func loadPath(_ path: String) async {
     do {
@@ -37,7 +36,6 @@ public extension HybridAudioBrowser {
   }
 
   func navigateTrack(track: Track) throws {
-    // @MainActor: `player` is main-confined.
     Task { @MainActor in
       guard let player else { return }
       let result = await trackSelector.select(track: track, player: player)
@@ -74,15 +72,13 @@ public extension HybridAudioBrowser {
     onMainActor { navigationError.formatted }
   }
 
-  /// Internal signal sent on `externalContentChangedEmitter` to tell CarPlay to
-  /// refresh every displayed template. Not a real path (paths are always
-  /// `/…`), so it can't collide with one; kept internal — the public API is
-  /// `invalidateAllContent()`.
+  /// Sent on `externalContentChangedEmitter` to make CarPlay refresh every displayed template.
+  /// Paths always start with `/`, so it can't collide with one.
   internal static let invalidateAllSentinel = "__rnab_invalidate_all__"
 
   func notifyContentChanged(path: String) throws {
-    // Throws on a contextual path (matching Android's `require`) — the caller
-    // must pass the container path, or the invalidation silently hits nothing.
+    // Throws on a contextual path, as Android's `require` does: the caller must pass the
+    // container path, or the invalidation silently hits nothing.
     let isCurrentPath = try onMainActor {
       try browserManager.invalidateContentCache(path)
       return browserManager.path == path
@@ -97,7 +93,6 @@ public extension HybridAudioBrowser {
         await self.reportNavigationError(error, path: path)
       }
     }
-    // Tell external controllers (CarPlay) to refresh every displayed template.
     externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
   }
 
@@ -117,13 +112,12 @@ public extension HybridAudioBrowser {
 
   // MARK: - Car Connection (CarPlay)
 
-  /// Static because the CarPlay scene can connect before the JS runtime
-  /// creates the shared instance (cold start in the car).
+  /// Static because the CarPlay scene can connect before JS creates the shared instance
+  /// (cold start in the car).
   internal nonisolated(unsafe) static var carPlayConnected = false
 
-  /// Called by the CarPlay scene delegate (via `RNABCarPlayController`) on
-  /// scene connect/disconnect — not from controller start/stop, which also
-  /// cycle on a JS reload and would emit spurious connection changes.
+  /// Called by the CarPlay scene delegate on scene connect/disconnect only, not on controller
+  /// start/stop, which also cycle on a JS reload and would emit spurious changes.
   internal static func setCarPlayConnected(_ connected: Bool) {
     guard carPlayConnected != connected else { return }
     carPlayConnected = connected
