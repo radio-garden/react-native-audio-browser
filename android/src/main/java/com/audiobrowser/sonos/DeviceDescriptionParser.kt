@@ -3,7 +3,7 @@ package com.audiobrowser.sonos
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 
-/** A discovered Sonos speaker: its identity, its name, and the absolute control URLs. */
+/** A discovered Sonos speaker; its control URLs are absolute. */
 internal data class SonosDevice(
   val udn: String,
   val name: String,
@@ -13,22 +13,22 @@ internal data class SonosDevice(
   val zoneGroupTopologyControlUrl: String?,
 )
 
-/**
- * Parses a UPnP `device_description.xml` (fetched from an SSDP `LOCATION`) into a [SonosDevice].
- * Sonos nests its services under embedded devices, so the whole device tree is searched. Returns
- * null for a non-Sonos device, malformed XML, or a description without `AVTransport` and
- * `GroupRenderingControl`; `ZoneGroupTopology` is optional.
- */
 internal object DeviceDescriptionParser {
   private const val SONOS_MANUFACTURER = "Sonos, Inc."
   private const val AV_TRANSPORT = "urn:schemas-upnp-org:service:AVTransport:1"
   private const val GROUP_RENDERING_CONTROL = "urn:schemas-upnp-org:service:GroupRenderingControl:1"
   private const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
+  /**
+   * Parses a UPnP device description fetched from an SSDP `LOCATION` header, which is [location].
+   * Returns null for malformed XML, a non-Sonos device, or one without a UDN, `AVTransport` or
+   * `GroupRenderingControl`; `ZoneGroupTopology` is optional. The name is `roomName`, falling back
+   * to `friendlyName`.
+   */
   fun parse(xml: String, location: String): SonosDevice? {
     val doc = parseSpeakerXml(xml) ?: return null
 
-    // From the root <device>, the direct child of <root>, not the first <device> in the document.
+    // The root <device> is the direct child of <root>, not the first <device> in the document.
     val docElement = doc.documentElement ?: return null
     val root = directChildElement(docElement, "device") ?: return null
     if (!childText(root, "manufacturer").equals(SONOS_MANUFACTURER, ignoreCase = true)) return null
@@ -38,8 +38,7 @@ internal object DeviceDescriptionParser {
       }
     val name = childText(root, "roomName").ifBlank { childText(root, "friendlyName") }
 
-    // UPnP allows an explicit <URLBase>; when present it overrides the retrieval location for
-    // resolving relative control URLs.
+    // A <URLBase>, when present, overrides [location] for resolving relative control URLs.
     val baseUrl =
       childText(docElement, "URLBase").ifBlank { "" }.trimEnd('/').ifBlank { baseUrlOf(location) }
         ?: return null
@@ -56,15 +55,12 @@ internal object DeviceDescriptionParser {
     )
   }
 
-  /**
-   * Finds the first `<service>` anywhere in the tree with [serviceType] and returns its absolute
-   * control URL, or null if absent.
-   */
   private fun findControlUrl(
     doc: org.w3c.dom.Document,
     serviceType: String,
     baseUrl: String,
   ): String? {
+    // Sonos nests its services under embedded devices, so search the whole tree.
     val services = doc.getElementsByTagName("service")
     for (i in 0 until services.length) {
       val service = services.item(i) as? Element ?: continue
@@ -79,7 +75,6 @@ internal object DeviceDescriptionParser {
     return null
   }
 
-  /** The scheme://host:port prefix of a URL, or null if it has none. */
   private fun baseUrlOf(url: String): String? {
     val schemeEnd = url.indexOf("://")
     if (schemeEnd < 0) return null
@@ -95,13 +90,10 @@ internal object DeviceDescriptionParser {
       else -> "$baseUrl/$control"
     }
 
-  /**
-   * Direct-child element text by tag name (first match), or "" — avoids matching nested devices.
-   */
   private fun childText(parent: Element, tag: String): String =
     directChildElement(parent, tag)?.textContent?.trim() ?: ""
 
-  /** The first direct-child [Element] with the given tag name, or null. */
+  // Direct children only: embedded devices carry their own manufacturer, UDN and names.
   private fun directChildElement(parent: Element, tag: String): Element? {
     var node: Node? = parent.firstChild
     while (node != null) {

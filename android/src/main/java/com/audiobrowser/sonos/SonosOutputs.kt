@@ -10,10 +10,10 @@ import java.util.concurrent.CopyOnWriteArraySet
 import timber.log.Timber
 
 /**
- * Sonos rooms as remote outputs, over UPnP: whether the system may bind
- * [SonosRouteProviderService], the room selected in the Output Switcher, and its volume. While a
- * session plays on the room, its volume goes through that session, which reads it back; the route
- * provider shows it.
+ * Sonos rooms as remote outputs, shared by [SonosRouteProviderService], which the system binds, and
+ * the player's [SonosRemote]: whether the service may be bound, the room selected in the Output
+ * Switcher, and room volumes. While a session plays on a room, its volume goes through that
+ * session, which reads it back.
  */
 internal object SonosOutputs {
   /**
@@ -31,14 +31,13 @@ internal object SonosOutputs {
   private val volumeListeners = CopyOnWriteArraySet<() -> Unit>()
   private val volumes = ConcurrentHashMap<String, Int>()
 
-  /** The session playing on room [roomId], and how it sets the room's volume. */
   private class Session(val roomId: String, val setVolume: (Int) -> Unit)
 
   private var session: Session? = null
 
   /**
-   * Enables or disables the provider service. The component state persists, so the system can bind
-   * the service before the app has set up its player. Disabling forgets the selected room.
+   * Enables or disables [SonosRouteProviderService]. The component state persists, so the system
+   * can bind the service before the app has set up its player. Disabling forgets the selected room.
    */
   @MainThread
   fun setEnabled(context: Context, enabled: Boolean) {
@@ -72,7 +71,6 @@ internal object SonosOutputs {
   /** [roomId]'s volume as last read or set, from 0 to 100, or null before either. */
   fun volumeOf(roomId: String): Int? = volumes[roomId]
 
-  /** Records [roomId]'s volume as read or set, and tells the volume listeners. */
   @MainThread
   fun reportVolume(roomId: String, volume: Int) {
     if (volumes.put(roomId, volume) == volume) return
@@ -88,14 +86,16 @@ internal object SonosOutputs {
     volumeListeners.remove(listener)
   }
 
-  /** While a session plays on [roomId], [setVolume] sets its volume; null when it ends. */
+  /**
+   * While a session plays on [roomId], [setVolume] sets its volume; null when it ends, which leaves
+   * another room's session in place.
+   */
   @MainThread
   fun setSession(roomId: String, setVolume: ((Int) -> Unit)?) {
     if (setVolume != null) session = Session(roomId, setVolume)
     else if (session?.roomId == roomId) session = null
   }
 
-  /** Whether a session plays on [roomId]. */
   fun hasSession(roomId: String): Boolean = session?.roomId == roomId
 
   /** Sets [roomId]'s volume through the session playing there: false when none does. */

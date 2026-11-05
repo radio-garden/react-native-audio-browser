@@ -94,6 +94,7 @@ class SonosDiscovererTest {
   fun `asks one speaker for the topology, however many answered the search`() {
     topologyResponse = topology("RINCON_A" to "Dining Room")
 
+    // Three locations of the one mock speaker, which the discoverer takes for three speakers.
     SonosDiscoverer(OkHttpClient(), scannerReturning(location, "$location?b", "$location?c"))
       .discover()
 
@@ -123,6 +124,7 @@ class SonosDiscovererTest {
         override fun dispatch(request: RecordedRequest): MockResponse =
           when (request.requestUrl?.encodedPath) {
             "/xml/device_description.xml" ->
+              // The fixture's speaker as RINCON_H, the member its topology marks hidden.
               MockResponse().setBody(sonosXml.replace("RINCON_949F3EC213E001400", "RINCON_H"))
             "/ZoneGroupTopology/Control" -> envelope(hiddenTopology)
             else -> MockResponse().setResponseCode(404)

@@ -2,27 +2,26 @@ package com.audiobrowser.sonos
 
 import org.w3c.dom.Document
 
-/** A parsed UPnP SOAP fault (the `<UPnPError>` detail). */
 internal data class SoapFault(val errorCode: Int?, val errorDescription: String?)
 
-/** Parses the UPnP SOAP responses the speakers send. Each returns null when its field is absent. */
+/**
+ * Reads the UPnP SOAP responses the speakers send. Apart from [fault], each reader returns null for
+ * a fault and for XML [parseSpeakerXml] refuses; for a field that is absent or empty, [position]
+ * nulls that field and the others return null.
+ */
 internal object SoapResponseParser {
-  /** Parses a SOAP fault envelope into its UPnP error, or null when the response is not a fault. */
+  /** The UPnP error in a fault response, or null when the response is not a fault. */
   fun fault(xml: String): SoapFault? {
     val doc = parse(xml) ?: return null
     return faultOf(doc)
   }
 
-  /**
-   * The `<CurrentTransportState>` text from a `GetTransportInfo` response, or null (incl. faults).
-   */
   fun transportState(xml: String): String? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
     return firstText(doc, "CurrentTransportState")
   }
 
-  /** The `<CurrentVolume>` integer from a `GetGroupVolume` response, or null (incl. faults). */
   fun volume(xml: String): Int? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
@@ -31,7 +30,7 @@ internal object SoapResponseParser {
 
   /**
    * The title the speaker reads from the stream (ICY `StreamTitle`, or an HLS stream's ID3), as
-   * `r:streamContent` in a `GetPositionInfo` response's `TrackMetaData`; null when there is none.
+   * `r:streamContent` in a `GetPositionInfo` response's `TrackMetaData`.
    */
   fun streamContent(xml: String): String? {
     val metadata = embeddedDocument(xml, "TrackMetaData") ?: return null
@@ -39,9 +38,8 @@ internal object SoapResponseParser {
   }
 
   /**
-   * The position, duration and stream title from a `GetPositionInfo` response, or null (incl.
-   * faults). A time the speaker doesn't report (`NOT_IMPLEMENTED`, or a live stream's empty
-   * duration) is null.
+   * Reads a `GetPositionInfo` response. A time the speaker doesn't report (`NOT_IMPLEMENTED`, or a
+   * live stream's `0:00:00` duration) is null.
    */
   fun position(xml: String): SonosPosition? {
     val doc = parse(xml) ?: return null
@@ -53,14 +51,12 @@ internal object SoapResponseParser {
     )
   }
 
-  /** The `<CurrentURI>` from a `GetMediaInfo` response, or null (incl. faults). */
   fun currentUri(xml: String): String? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
     return firstText(doc, "CurrentURI")
   }
 
-  /** `H+:MM:SS` (with optional fractions) in milliseconds, or null for anything else. */
   private fun upnpTimeMs(time: String): Long? {
     val parts = time.split(':')
     if (parts.size != 3) return null
@@ -70,22 +66,19 @@ internal object SoapResponseParser {
     return (hours * 3600 + minutes * 60) * 1000 + (seconds * 1000).toLong()
   }
 
-  /** The text of a SOAP response's [tag], itself an XML document escaped inside it. */
+  /** Parses the text of [tag], an XML document escaped inside the SOAP response. */
   internal fun embeddedDocument(xml: String, tag: String): Document? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
     return parse(firstText(doc, tag) ?: return null)
   }
 
-  /** Reads a UPnP fault off an already-parsed document, or null when it is not a fault. */
   private fun faultOf(doc: Document): SoapFault? {
     if (!hasElement(doc, "Fault")) return null
     return SoapFault(firstText(doc, "errorCode")?.toIntOrNull(), firstText(doc, "errorDescription"))
   }
 
-  /**
-   * True if any element has the given local name, regardless of namespace prefix (`s:Fault`, …).
-   */
+  // The parser is not namespace-aware, so a name keeps its prefix (`s:Fault`).
   private fun hasElement(doc: Document, localName: String): Boolean {
     val all = doc.getElementsByTagName("*")
     for (i in 0 until all.length) {

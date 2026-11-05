@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Parsing a Sonos `device_description.xml` into a [SonosDevice] with absolute control URLs. */
 class DeviceDescriptionParserTest {
 
   private fun fixture(name: String): String = javaClass.getResource("/sonos/$name")!!.readText()
@@ -15,7 +14,7 @@ class DeviceDescriptionParserTest {
   fun `parses udn, name and resolves nested control URLs against the base`() {
     val device = DeviceDescriptionParser.parse(fixture("device_description.xml"), location)!!
     assertEquals("uuid:RINCON_949F3EC213E001400", device.udn)
-    // AVTransport + GroupRenderingControl live on the embedded MediaRenderer, not the root device.
+    // Both services live on the embedded MediaRenderer, not the root device.
     assertEquals(
       "http://192.168.1.50:1400/MediaRenderer/AVTransport/Control",
       device.avTransportControlUrl,
@@ -117,7 +116,6 @@ class DeviceDescriptionParserTest {
       </root>
       """
         .trimIndent()
-    // Description was retrieved from .50 but URLBase points control at .99.
     val device = DeviceDescriptionParser.parse(xml, location)!!
     assertEquals("http://10.0.0.99:1400/AVT/Control", device.avTransportControlUrl)
     assertEquals("http://10.0.0.99:1400/RC/Control", device.groupRenderingControlUrl)

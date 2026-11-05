@@ -9,10 +9,6 @@ import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Command -> SOAP mapping for [SonosTransport], verified against a local MockWebServer standing in
- * for a Sonos speaker's control endpoints.
- */
 class SonosTransportTest {
 
   private lateinit var server: MockWebServer
@@ -63,12 +59,12 @@ class SonosTransportTest {
       setUri.getHeader("SOAPACTION"),
     )
     val setUriBody = setUri.body.readUtf8()
-    // Stream URL rewritten to the Sonos radio scheme, escaped inside CurrentURI.
+    // A live stream goes out under Sonos's radio scheme.
     assertEquals(
       true,
       setUriBody.contains("<CurrentURI>x-rincon-mp3radio://http://ice.example/stream</CurrentURI>"),
     )
-    // DIDL is present (double-escaped) with the title.
+    // The DIDL travels escaped, as text inside the envelope.
     assertEquals(true, setUriBody.contains("&lt;dc:title&gt;Jazz FM&lt;/dc:title&gt;"))
   }
 

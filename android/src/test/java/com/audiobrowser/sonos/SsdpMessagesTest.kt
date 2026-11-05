@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Byte-level build + parse of SSDP messages used for Sonos (ZonePlayer) discovery. */
 class SsdpMessagesTest {
 
   @Test
@@ -27,7 +26,6 @@ class SsdpMessagesTest {
     val text = String(SsdpMessages.buildMSearch(searchTarget = "ssdp:all", mx = 3), Charsets.UTF_8)
     assertTrue(text.contains("ST: ssdp:all\r\n"))
     assertTrue(text.contains("MX: 3\r\n"))
-    // Always terminated by a blank line.
     assertTrue(text.endsWith("\r\n\r\n"))
   }
 

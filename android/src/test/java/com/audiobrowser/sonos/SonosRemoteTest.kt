@@ -110,7 +110,7 @@ class SonosRemoteTest {
     assertEquals(emptyList<Boolean>(), sessions)
   }
 
-  /** Commands run on a background thread. */
+  /** Polls, since commands run on a background thread that idling the main looper doesn't reach. */
   private fun idleUntil(what: String, condition: () -> Boolean) {
     repeat(200) {
       shadowOf(Looper.getMainLooper()).idle()
