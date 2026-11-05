@@ -36,7 +36,7 @@ class TrackFactoryBrowseTest {
     val entry = reg.lookup(token!!)!!
     assertEquals("https://cdn/a.svg", entry.finalUrl)
     assertEquals("Bearer t", entry.headers!!["Authorization"])
-    assertEquals(true, entry.isSvg) // detected from the .svg url
+    assertEquals(true, entry.isSvg)
   }
 
   @Test

@@ -45,7 +45,7 @@ class CoilArtworkLoaderHolderTest {
     val second = deps()
     CoilArtworkLoaderHolder.set(first)
     CoilArtworkLoaderHolder.set(second)
-    CoilArtworkLoaderHolder.clearIf(first) // stale instance — must NOT clear
+    CoilArtworkLoaderHolder.clearIf(first)
     assertSame(second, CoilArtworkLoaderHolder.get())
     CoilArtworkLoaderHolder.clearIf(second)
     assertNull(CoilArtworkLoaderHolder.get())

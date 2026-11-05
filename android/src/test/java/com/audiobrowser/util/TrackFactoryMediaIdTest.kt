@@ -7,10 +7,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The mediaId is the item's identity on car surfaces: Android Auto marks the "now playing" browse
- * row by exact mediaId equality between rows and the player's current item, so a playable track
- * with a stable `id` must use it on both — a consumer-loaded track's `src` can differ textually
- * from the browse row's for the same item.
+ * Android Auto marks the "now playing" browse row by exact mediaId equality with the player's
+ * current item, so a playable track with a stable `id` uses it on both: a consumer-loaded track's
+ * `src` can differ textually from the browse row's.
  */
 @RunWith(RobolectricTestRunner::class)
 class TrackFactoryMediaIdTest {
@@ -40,8 +39,7 @@ class TrackFactoryMediaIdTest {
 
   @Test
   fun `browsable-only track keeps path as mediaId even with an id`() {
-    // Navigation parentIds must stay resolvable paths, so a container's id is
-    // never its mediaId.
+    // Navigation parentIds must stay resolvable paths.
     val track = TestFixtures.browseTrack(path = "/stations").copy(id = "abc123")
     assertEquals("/stations", TrackFactory.toMedia3(track).mediaId)
   }

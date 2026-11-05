@@ -20,7 +20,6 @@ class CoilArtworkLoaderTest {
     val context = RuntimeEnvironment.getApplication()
     var captured: ImageRequest? = null
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
-    // FakeImageLoader records the request and returns a known bitmap.
     val imageLoader = FakeImageLoader(context, fakeBitmap) { captured = it }
 
     val loader = CoilArtworkLoader(context, imageLoader, defaultSizePixels = 512)
@@ -34,11 +33,8 @@ class CoilArtworkLoaderTest {
 
     assertEquals(fakeBitmap, bmp)
     assertNotNull(captured)
-    // data is the finalUrl
     assertEquals("https://cdn.example.com/a.png", captured!!.data)
-    // OOM-prevention downsample: .size(256) must have been applied
     assertEquals(Size(Dimension.Pixels(256), Dimension.Pixels(256)), captured!!.sizeResolver.size())
-    // Custom headers must reach the request via httpHeaders extras
     assertEquals("Bearer t", captured!!.httpHeaders["Authorization"])
   }
 
@@ -52,7 +48,6 @@ class CoilArtworkLoaderTest {
     val bmp = loader.load("https://cdn.example.com/a.png", null, null, false)
     assertEquals(fakeBitmap, bmp)
     assertNotNull(captured)
-    // When sizeHintPixels is null, defaultSizePixels (512) must be used
     assertEquals(Size(Dimension.Pixels(512), Dimension.Pixels(512)), captured!!.sizeResolver.size())
   }
 }

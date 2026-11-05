@@ -10,17 +10,17 @@ import coil3.request.allowHardware
 import coil3.svg.SvgDecoder
 import coil3.toBitmap
 
-/**
- * Shared "resolved source → Bitmap" core. Used by both [CoilBitmapLoader] (now-playing) and
- * [ArtworkContentProvider] (browse). Adds `.size()` so raster decodes are downsampled to the hint
- * (the prior loadBitmap path decoded at full resolution). SVG is forced via [isSvg], carried from
- * build time rather than re-derived from a possibly-suffixless transformed URL.
- */
 class CoilArtworkLoader(
   private val context: Context,
   private val imageLoader: ImageLoader,
   private val defaultSizePixels: Int = 512,
 ) {
+  /**
+   * Fetches and decodes [finalUrl], downsampled to [sizeHintPixels] (or the default). [isSvg]
+   * forces the SVG decoder, because a transformed URL may have lost its `.svg` suffix.
+   *
+   * @throws IllegalStateException when the response yields no image.
+   */
   suspend fun load(
     finalUrl: String,
     headers: Map<String, String>?,
@@ -31,7 +31,7 @@ class CoilArtworkLoader(
       ImageRequest.Builder(context)
         .data(finalUrl)
         .size(sizeHintPixels ?: defaultSizePixels)
-        .allowHardware(false) // required for Media3 notification compatibility
+        .allowHardware(false) // Media3's notification cannot use hardware bitmaps
 
     if (!headers.isNullOrEmpty()) {
       val net = NetworkHeaders.Builder()

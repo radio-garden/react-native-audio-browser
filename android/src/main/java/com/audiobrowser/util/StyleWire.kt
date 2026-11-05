@@ -9,9 +9,9 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.TrackStyle
 
 /**
- * The all-nil blocks a decode collapses to "no declaration". Every field is listed exactly once
- * here — the decoders and the persistence restore compare against these instead of re-enumerating
- * the fields in each guard (a constructor gaining a field breaks this file, not silently a guard).
+ * The all-null blocks a decode collapses to "no declaration". Compare against these rather than
+ * listing fields in a guard, so a field added to the constructor breaks this file instead of
+ * slipping past a guard.
  */
 internal val EMPTY_TRACK_STYLE =
   TrackStyle(
@@ -37,8 +37,8 @@ internal val EMPTY_SECTION_STYLE =
 
 /**
  * The style block's wire strings (ADR 0011) ↔ Nitro enums, shared by the browse decoder and the
- * playback-state store. Inbound mapping is lenient: an unknown or empty value is "no declaration",
- * never an error.
+ * playback-state store. Inbound is lenient: an unknown or empty value is "no declaration", never an
+ * error.
  */
 internal fun StyleDisplay.toWireString(): String =
   when (this) {

@@ -17,39 +17,15 @@ import com.margelo.nitro.audiobrowser.OutputType
 import timber.log.Timber
 
 /**
- * Monitors the current system audio output — the device audio is **actually being rendered to right
- * now** — and notifies listeners when it changes.
+ * Reports the audio output media plays to: a selected [RemoteOutputs] route first, else the local
+ * device.
  *
- * On API 33+ the source of truth is [AudioManager.getAudioDevicesForAttributes] for `USAGE_MEDIA`,
- * which reports the device media audio is *actively routed to*. Crucially this reflects a **manual
- * reroute** — e.g. moving audio to the phone speaker via the system output switcher while Bluetooth
- * headphones stay connected — which neither `isBluetoothA2dpOn` nor MediaRouter's selected route
- * track (both report the merely *connected* device).
+ * On API 33+ the local device is [AudioManager.getAudioDevicesForAttributes] for `USAGE_MEDIA`,
+ * which follows a manual reroute through the system output switcher while headphones stay
+ * connected; `isBluetoothA2dpOn` and MediaRouter's selected route report only the connected device.
+ * Below 33 a heuristic over the connected devices stands in, and misses such a reroute.
  *
- * Change detection:
- * - [AudioDeviceCallback] fires immediately on device connect/disconnect/plug, and stays registered
- *   the whole time (works in the background too).
- * - A poll catches a **manual reroute** (the active stream moved to another already-connected
- *   device via the system output switcher). This is the only way to detect that case, verified the
- *   hard way: it emits no public event — [AudioDeviceCallback] is device add/remove only,
- *   `AudioPlaybackCallback` fires on start/stop only, `MediaRouter`'s selected route stays stuck on
- *   the connected device, and [getAudioDevicesForAttributes] has no public listener. The player's
- *   `AudioTrack` routing listener would catch it, but only while a track is playing — polling is
- *   the only mechanism that also works when nothing is playing. The poll runs **only while the app
- *   is in the foreground** (gated on [ProcessLifecycleOwner]) and fires once immediately on
- *   foreground entry, so a reroute made while backgrounded is reflected the moment the user
- *   returns. Each tick is a cheap binder query (no wakelock).
- *
- * On API < 33 [getAudioDevicesForAttributes] is unavailable, so we fall back to a coarse heuristic
- * over the connected output devices; that fallback cannot detect a manual reroute while a device
- * stays connected (the long-standing limitation).
- *
- * A selected [RemoteOutputs] route takes precedence over the local device. Unlike a local device's,
- * a remote route's selection is reliable: the router owns it.
- *
- * Threading: [AudioManager] queries are thread-safe, so [current] recomputes live on read (safe
- * from the JS thread's `getOutput()`); emitted change events come from the main-thread
- * callbacks/poll.
+ * Change events arrive on the main thread; [current] can be read from any thread.
  */
 class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
 
@@ -62,12 +38,12 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
       .build()
 
-  // Last emitted value; the change dedupe baseline. Read from any thread.
+  // Last emitted output, the baseline for change detection; [current] reads it from any thread.
   @Volatile private var cached: Output? = null
 
   private var onOutputChanged: ((Output) -> Unit)? = null
 
-  /** The current audio output, recomputed live, or null when undeterminable. */
+  /** Read live; the last emitted output when there is no reading, null before any. */
   val current: Output?
     get() = computeOutput() ?: cached
 
@@ -86,8 +62,9 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
 
   private val remoteOutputListener = { recompute("remote-output") }
 
-  // Backstop for manual reroutes, which emit no public event (see class doc).
-  // Only scheduled while in the foreground.
+  // A manual reroute to an already-connected device emits no public event: AudioDeviceCallback is
+  // add/remove only, AudioPlaybackCallback start/stop only, and getAudioDevicesForAttributes has no
+  // listener. Polling catches it even when nothing plays. Scheduled only in the foreground.
   private val poll =
     object : Runnable {
       override fun run() {
@@ -96,32 +73,29 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       }
     }
 
-  /** Begins monitoring. Safe to call from any thread (defers to the main thread). */
+  /** Safe from any thread: registers on the main thread. */
   fun start() {
     mainHandler.post {
       audioManager.registerAudioDeviceCallback(deviceCallback, mainHandler)
       RemoteOutputs.addListener(remoteOutputListener)
-      // Delivers onStart synchronously if already foreground, kicking off the poll.
+      // Delivers onStart at once when already in the foreground, which starts the poll.
       ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
   }
 
-  /** App entered the foreground: read once now, then poll while foregrounded. */
+  // Reads at once, so a reroute made in the background shows on return.
   override fun onStart(owner: LifecycleOwner) {
     recompute("foreground")
     mainHandler.removeCallbacks(poll)
     mainHandler.postDelayed(poll, POLL_INTERVAL_MS)
   }
 
-  /** App left the foreground: stop polling (AudioDeviceCallback stays registered). */
+  // The device callback stays registered in the background; only the poll stops.
   override fun onStop(owner: LifecycleOwner) {
     mainHandler.removeCallbacks(poll)
   }
 
-  /**
-   * Stops monitoring. Must be called from the owner's teardown (AudioBrowser.dispose) so the
-   * callbacks don't leak across JS runtime reloads.
-   */
+  /** Must be called on the owner's dispose, or the callbacks leak across JS runtime reloads. */
   fun destroy() {
     mainHandler.post {
       mainHandler.removeCallbacks(poll)
@@ -132,8 +106,8 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
   }
 
   private fun recompute(reason: String) {
-    // A left remote output is no fallback for a local reading that came back empty: the phone
-    // speaker stands in, so listeners hear that the remote output is gone.
+    // With no local reading, a remote output that is gone falls back to the phone speaker, so
+    // listeners hear that it is gone.
     val output =
       computeOutput()
         ?: if (cached?.type in REMOTE_TYPES)
@@ -163,10 +137,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     return computeOutputLegacy()
   }
 
-  /**
-   * API < 33 fallback: pick from the connected output devices. Cannot tell which is *actively*
-   * rendering, so it mirrors the old `isBluetoothA2dpOn` heuristic.
-   */
+  // API < 33: cannot tell which connected device renders, so it guesses from isBluetoothA2dpOn.
   @Suppress("DEPRECATION")
   private fun computeOutputLegacy(): Output? {
     val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).filterNotNull()
@@ -202,7 +173,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     private const val POLL_INTERVAL_MS = 1000L
     private val REMOTE_TYPES = setOf(OutputType.REMOTE, OutputType.CAST, OutputType.SONOS)
 
-    /** Maps an [AudioDeviceInfo] type to a cross-platform [OutputType]. */
+    /** Maps an [AudioDeviceInfo] `TYPE_*` to an [OutputType]; [OutputType.OTHER] if unknown. */
     fun outputTypeOf(deviceType: Int): OutputType =
       when (deviceType) {
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,

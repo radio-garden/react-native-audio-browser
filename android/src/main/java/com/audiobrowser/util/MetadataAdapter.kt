@@ -11,8 +11,8 @@ import com.margelo.nitro.audiobrowser.TrackMetadata
 sealed class MetadataAdapter {
   companion object {
     /**
-     * Extracts chapter metadata from ID3 ChapterFrames. Returns a list of ChapterMetadata, one per
-     * chapter.
+     * Reads the ID3 CHAP frames in [metadata], times in seconds. A chapter without a TIT2/TT2
+     * sub-frame is titled "CHAP", the frame ID.
      */
     fun extractChapters(metadata: Metadata): List<ChapterMetadata> {
       val chapters = mutableListOf<ChapterMetadata>()
@@ -20,13 +20,11 @@ sealed class MetadataAdapter {
       for (i in 0 until metadata.length()) {
         val entry = metadata[i]
         if (entry is ChapterFrame) {
-          // TODO: Artwork extraction missing. Requires converting ApicFrame binary
-          // image data to a URL (base64 data URL or temp file).
-          // See also: iOS implementation in ChapterMetadata+AVFoundation.swift
+          // TODO: chapter artwork (APIC sub-frames) is not extracted; it needs the image bytes
+          // turned into a URL. iOS: ChapterMetadata+AVFoundation.swift
           var title: String? = null
           var url: String? = null
 
-          // Parse sub-frames for chapter metadata
           for (j in 0 until entry.subFrameCount) {
             when (val subFrame = entry.getSubFrame(j)) {
               is TextInformationFrame -> {
@@ -41,7 +39,6 @@ sealed class MetadataAdapter {
             }
           }
 
-          // Convert milliseconds to seconds
           val startTime = entry.startTimeMs / 1_000.0
           val endTime = entry.endTimeMs / 1_000.0
 
@@ -60,10 +57,9 @@ sealed class MetadataAdapter {
     }
 
     fun trackMetadataFromMediaMetadata(metadata: MediaMetadata): TrackMetadata {
-      // Handle creation date from recording day and month
+      // DDMM, the order of ID3v2.3's TDAT frame
       val creationDate =
         (metadata.recordingDay to metadata.recordingMonth).let { (day, month) ->
-          // if both are not null, combine them into a single string
           if (day != null && month != null) {
             "${String.format("%02d", day)}${String.format("%02d", month)}"
           } else if (day != null) {

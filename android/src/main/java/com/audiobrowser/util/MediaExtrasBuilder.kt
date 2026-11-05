@@ -6,13 +6,12 @@ import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 
-/** Builds MediaMetadata extras bundle for Android Auto/AAOS content styling. */
+/** Content-style extras for media items on Android Auto and AAOS. */
 object MediaExtrasBuilder {
 
   /**
-   * Maps a display mode to the MediaConstants content style value. When artwork is an
-   * android.resource:// URI, uses CATEGORY_* variants which add margins around icons (better for
-   * small vector icons).
+   * The CATEGORY_* variants pad the artwork, which suits the small vector icons an
+   * android.resource:// URI points at.
    *
    * @see <a href="https://developer.android.com/training/cars/media#default-content-style">Default
    *   content style</a>
@@ -36,16 +35,13 @@ object MediaExtrasBuilder {
   }
 
   /**
-   * Extras for a track rendered on a browse surface. The owning [section] supplies the Android Auto
-   * group-title header hint (grouping is a per-item advisory in the flat MediaBrowser protocol —
-   * the section dies here, ADR 0010) and, from its page-folded style block, the per-item display
-   * hint: per-item hints derive from the section resolution, never from the track's own `display`,
-   * which is positional (ADR 0011).
-   *
-   * The track's own declared `display` is the page-layout *promise* for the page a browsable track
-   * opens — emitted as the parent-level BROWSABLE/PLAYABLE hint, the only below-root hint
-   * AOSP-derived AAOS media UIs honor. Declared or it doesn't exist: the library never derives a
-   * promise from pages it hasn't resolved, and never back-fills from ones it has.
+   * Extras for [track] on a browse surface. The owning [section] supplies the group-title hint and,
+   * from its page-folded style, the item's display hint: these extras are all of a section the flat
+   * MediaBrowser protocol carries (ADR 0010). The track's own `display` never sets its item hint,
+   * since display is positional (ADR 0011). For a browsable track (no `src`), its declared
+   * `display` is the promise for the page it opens, sent as the parent-level BROWSABLE/PLAYABLE
+   * hint, the only below-root hint AOSP-derived AAOS media UIs honor. A promise is only ever
+   * declared, never derived from resolved pages.
    */
   fun build(track: Track, section: Section? = null): Bundle =
     build(

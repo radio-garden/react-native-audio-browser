@@ -14,8 +14,8 @@ import coil3.request.SuccessResult
 import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Minimal [ImageLoader] test double. Records each executed [ImageRequest] via [onRequest] and
- * returns a [SuccessResult] wrapping [fakeBitmap].
+ * An [ImageLoader] whose every request succeeds with [fakeBitmap]. Only [execute] reports the
+ * request to [onRequest].
  */
 class FakeImageLoader(
   private val context: Context,

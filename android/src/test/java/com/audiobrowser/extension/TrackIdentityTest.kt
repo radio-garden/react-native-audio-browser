@@ -5,11 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * THE identity rule (ADR 0008): a track's identity is its `id` when non-blank, else its `src`.
- * Everything that compares tracks — favorites, section scoping, skip-in-place, `__trackId` — goes
- * through this extension.
- */
 class TrackIdentityTest {
 
   @Test

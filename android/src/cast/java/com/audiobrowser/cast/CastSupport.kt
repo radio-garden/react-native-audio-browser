@@ -20,11 +20,10 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import timber.log.Timber
 
-/** [receiverApplicationId], or the Default Media Receiver's when null. */
 private fun receiverOrDefault(receiverApplicationId: String?) =
   receiverApplicationId ?: CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
 
-// Cast takes its receiver once per process.
+// Cast takes its receiver once per process; a later one waits for a restart.
 private var initializedReceiver: String? = null
 
 /**
@@ -37,8 +36,8 @@ internal fun castRouteCategory(receiverApplicationId: String?): String? =
   )
 
 /**
- * Starts Cast with the receiver application (the Default Media Receiver when null) and builds its
- * remote player, or returns null on a device without Google Play services.
+ * Starts Cast with the receiver (the Default Media Receiver when null) and builds its remote player,
+ * or returns null without Google Play services. Only the first receiver of the process takes effect.
  */
 internal fun createCastRemote(context: Context, receiverApplicationId: String?): RemotePlayback? {
   val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
@@ -179,9 +178,9 @@ internal class CastEnds {
 }
 
 /**
- * Sends each item as it is, with a content id of its own: Media3's timeline tracker keys what it was
- * sent by content id, and forgets an id when an item with it leaves the receiver's queue, so a
- * station sent again would be forgotten with the last and show as an empty item.
+ * Sends each item with a content id of its own: Media3's timeline tracker keys what it sent by
+ * content id and forgets an id when an item with it leaves the receiver's queue, so an item sent
+ * again would be forgotten with the last and show as an empty item.
  */
 internal class SendingMediaItemConverter : MediaItemConverter {
   private val default = DefaultMediaItemConverter()
@@ -193,9 +192,8 @@ internal class SendingMediaItemConverter : MediaItemConverter {
     )
 
   /**
-   * The receiver's item as a media item, or [MediaItem.EMPTY] for one it reports without its media
-   * (an item it hasn't loaded), which the default converter throws on. The timeline tracker keeps
-   * an empty item's earlier data.
+   * [MediaItem.EMPTY] for an item the receiver reports without media (not yet loaded), which the
+   * default converter throws on; the timeline tracker keeps an empty item's earlier data.
    */
   override fun toMediaItem(mediaQueueItem: MediaQueueItem): MediaItem {
     if (mediaQueueItem.media == null) return MediaItem.EMPTY

@@ -7,11 +7,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/**
- * The skip-in-place queue match (ADR 0009): exact contextual-path equality pins the tapped copy;
- * the identity match remains for index-less paths; an index-stamped path with no exact match
- * misses, so the caller re-expands. Robolectric for `android.net.Uri` (contextual-path parsing).
- */
+// Robolectric for `android.net.Uri`, which parses contextual paths.
 @RunWith(RobolectricTestRunner::class)
 class TappedTrackTest {
 
@@ -36,8 +32,6 @@ class TappedTrackTest {
 
   @Test
   fun `index-stamped path with no exact match misses instead of identity-skipping`() {
-    // A tap in another section whose identity also sits in this queue: the
-    // caller must re-expand (re-scoping to the tapped section), not skip.
     assertEquals(-1, queue.indexOfTappedTrack(stamped("a", 7), "a"))
   }
 }

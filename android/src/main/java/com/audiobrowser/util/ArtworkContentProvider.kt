@@ -16,27 +16,16 @@ import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 /**
- * Exported, token-gated provider serving browse artwork to Android Auto / AAOS (which run in a
- * different uid and cannot read a non-exported provider; Media3 issues no URI grant — verified). It
- * NEVER fetches a caller-supplied URL: the content URI carries an opaque token, looked up in
- * [com.audiobrowser.browser.BrowseArtworkRegistry]; an unknown token returns null. So it cannot be
- * used as a fetch proxy / SSRF vector. http(s)-only on the registered finalUrl is defense-in-depth.
+ * Serves browse artwork to Android Auto and AAOS as PNG files. It is exported because both run in
+ * another uid and Media3 issues no URI grant. So it never fetches a URL the caller supplies: the
+ * URI carries an opaque token, and only a token in [com.audiobrowser.browser.BrowseArtworkRegistry]
+ * whose URL is http(s) resolves; anything else returns null.
  *
- * Serve design: a real on-disk file via [ParcelFileDescriptor.open] — seekable, no pipe, no writer
- * coroutine. The file is keyed by SHA-256 token so identical URLs always reuse the same file.
- *
- * Bug fixes over the previous pipe/coroutine design: B (FD leak): eliminated — no coroutine
- * launched from deps.scope; no writer that could fail to close the write-end of a pipe when the
- * scope is already cancelled. C (wedge DoS): eliminated — the Semaphore permit is released in a
- * try/finally BEFORE the file is opened for the caller; no blocking write to a pipe while holding
- * the permit. D (per-request re-encode): eliminated — on-disk file IS the cache; re-requests are a
- * cheap file open (fast path, zero decode, zero network). E (non-seekable pipe): eliminated —
- * ParcelFileDescriptor.open returns a regular file FD; statSize is valid; the car's image loader
- * can seek.
+ * The response is an on-disk file in [ARTWORK_SUBDIR], not a pipe: the car's image loader seeks and
+ * reads statSize, which a pipe reports as -1. The file doubles as the cache, keyed by token.
  */
 class ArtworkContentProvider : ContentProvider() {
 
-  // java.util.concurrent.Semaphore — works on binder threads without a coroutine scope.
   private val gate = Semaphore(MAX_CONCURRENT)
 
   override fun onCreate(): Boolean = true
@@ -53,7 +42,6 @@ class ArtworkContentProvider : ContentProvider() {
     val artworkDir = File(context!!.cacheDir, ARTWORK_SUBDIR)
     val file = File(artworkDir, "$token.png")
 
-    // Fast path: file already cached on disk — no permit, no decode, no network.
     if (file.exists() && file.length() > 0) {
       return try {
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -63,13 +51,13 @@ class ArtworkContentProvider : ContentProvider() {
       }
     }
 
-    // Produce path (cache miss): bound concurrency, block on binder thread (UAMP pattern).
+    // openFile runs on a binder thread, which may block; the gate keeps loads from taking them all.
     if (!gate.tryAcquire(1, GATE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
       Timber.w("Artwork gate timeout for token=$token — returning null")
       return null
     }
     try {
-      // Re-check after acquiring — a concurrent producer may have written the file.
+      // Another request may have produced the file while this one waited; if pruned since, produce.
       if (file.exists() && file.length() > 0) {
         val fd =
           try {
@@ -79,10 +67,10 @@ class ArtworkContentProvider : ContentProvider() {
             null
           }
         if (fd != null) return fd
-        // else: file was pruned/deleted concurrently — fall through to produce
       }
 
       artworkDir.mkdirs()
+      // Written aside and renamed, so the unlocked fast path never opens a half-written file.
       val tmp = File.createTempFile(token, ".png.tmp", artworkDir)
 
       val bitmap: Bitmap =
@@ -145,7 +133,7 @@ class ArtworkContentProvider : ContentProvider() {
     private const val LOAD_TIMEOUT_MS = 8_000L
     internal const val ARTWORK_SUBDIR = "audiobrowser-artwork"
     const val MAX_CACHE_FILES = 512
-    /** Overridable in tests only. Production code must not change this. */
+    /** Tests only. */
     @JvmField internal var maxCacheFilesOverride: Int? = null
   }
 
