@@ -1,3 +1,14 @@
+## [0.2.0-next.55](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.54...v0.2.0-next.55) (2026-11-05)
+
+### Documentation
+
+* correct the ADRs' claims about current code ([cf5f9ab](https://github.com/radio-garden/react-native-audio-browser/commit/cf5f9abfaf788dfb805d4b7afbce3d40100a8a2c))
+* correct the guides against the code ([7b92e36](https://github.com/radio-garden/react-native-audio-browser/commit/7b92e36e65db36b081d002254c5db25bf29560f8))
+* correct the README, glossary and site pages ([632f68b](https://github.com/radio-garden/react-native-audio-browser/commit/632f68b44e9d74664d19f315592e98b88f5e9617))
+* fail the site build on a dead link ([62006ee](https://github.com/radio-garden/react-native-audio-browser/commit/62006eea315fc786cac025e39dafb60a52fb2a66))
+* match the API doc comments to what each platform does ([0bcf101](https://github.com/radio-garden/react-native-audio-browser/commit/0bcf101f75d2b6799822ef32eecf4cb21d5fa66b))
+* state each fact once and drop what goes stale ([ba70917](https://github.com/radio-garden/react-native-audio-browser/commit/ba7091759b35fdb710238cf663ffa9219da0a0a5))
+
 ## [0.2.0-next.54](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.53...v0.2.0-next.54) (2026-11-05)
 
 ### Documentation
