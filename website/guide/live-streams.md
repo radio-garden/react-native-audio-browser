@@ -71,12 +71,12 @@ A connection drop mid-stream surfaces one of two ways, with different owners:
   (`setupPlayer({ retry })`, off by default). Which of
   [two duration budgets](/guide/errors#two-duration-budgets) applies depends
   on whether this load has ever produced audio:
-  - **12 s** for a stream that never played. Only online time counts, so a
-    station tapped in a tunnel still gets its chance when the network
-    returns.
-  - **2 min** once playback proved the stream works. This one is wall-clock
-    time and includes offline time, so playback never resumes by surprise
-    after a long outage.
+  - **First connect**, for a stream that never played. Only online time
+    counts, so a station tapped in a tunnel still gets its chance when the
+    network returns.
+  - **Recovery**, once playback proved the stream works. This one is
+    wall-clock time and includes offline time, so playback never resumes by
+    surprise after a long outage.
 
   Once the budget runs out, the state is `'error'`, and
   [`retry()`](/guide/errors#manual-retry) and your error UI take over.
@@ -101,10 +101,10 @@ the stream request. When a reconnect re-runs it depends on the platform:
   after an attempt to open that URL has failed. A URL that expired
   mid-stream therefore costs one failed attempt.
 
-  With `retry` on, a status that retrying can't fix (a 401 or 403, say; it
-  retries only 408, 429, 500, 502, 503 and 504) puts playback in `'error'`,
-  and the next [`retry()`](/guide/errors#manual-retry) or play command
-  re-resolves. With `retry` off, ExoPlayer's own few retries cover any
+  With `retry` on, a status that retrying can't fix (a 401 or 403, say; see
+  [which failures qualify](/guide/errors#automatic-retry)) puts playback in
+  `'error'`, and the next [`retry()`](/guide/errors#manual-retry) or play
+  command re-resolves. With `retry` off, ExoPlayer's own few retries cover any
   status, and the first of them re-resolves.
 
 - **Web** re-runs it on every reload: play-from-`'error'` or after a stop,
@@ -150,7 +150,7 @@ General seeking is in [Playback](/guide/playback).
 | ------------------------------------------------------------ | ------------------------------------------------------------- |
 | [`Track.live`](/api/types/browser-nodes/#live)               | Declare a live track: iOS live indicator, arms the live edge. |
 | [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) | Jump to the newest audio (no-op for non-live tracks).         |
-| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)    | Automatic retry: 12 s first-connect / 2 min recovery budgets. |
+| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)    | Automatic retry with first-connect and recovery budgets.      |
 | [`retry()`](/guide/errors#manual-retry)                      | Restart from `'error'` with fresh budgets.                    |
 | [`media.resolve`](/guide/browser#media-and-artwork)          | Build the stream request — signed / short-lived URLs.         |
 | [`useOnline()`](/guide/network)                              | Connectivity for your own UI; playback reacts on its own.     |

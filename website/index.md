@@ -62,7 +62,7 @@ features:
     link: /guide/browser#shaping-requests
     linkText: Browser guide → Shaping requests
   - title: Platform extras
-    details: AirPlay, Google Cast and Sonos (Android) output routing, sleep timer, Android equalizer, and battery-resume handling.
+    details: Output routing (AirPlay on iOS; the system Output Switcher, Google Cast and Sonos on Android), sleep timer, Android equalizer, and battery-resume handling.
     link: /guide/audio-output
     linkText: Audio Output guide
   - title: Playback resumption

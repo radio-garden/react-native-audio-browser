@@ -48,7 +48,7 @@ Two fields decide what a Track _does_. A Track must set at least one of them:
 { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
 ```
 
-Set exactly one. On a browse page a track that sets both plays: the library replaces its `path` with one that points back to the page it appears on. Elsewhere, in search results or a Track you pass to [`navigate(track)`](/api/features/browser/#navigate), Android and web open its `path` and iOS plays its `src`.
+Set exactly one. On a browse page a track that sets both plays: the library replaces its `path` with one that points back to the page it appears on.
 
 `src` is usually an absolute audio URL, but it can be any string — a file path or your own identifier — that you turn into a real request in `media.resolve` (see [Browser → Media and artwork](/guide/browser#media-and-artwork)).
 
@@ -117,7 +117,7 @@ Don't set `artworkSource` yourself — the library populates it.
 
 On CarPlay, an SF Symbol with no `fg` adapts to light/dark mode automatically: black on light grey or white on dark grey, and a `bg` alone is ignored.
 
-**Tinting (`style: { artworkRendering: 'stencil' }`).** For monochrome icons, declare this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there.
+**Tinting (`style: { artworkRendering: 'stencil' }`).** For monochrome icons, declare this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; for Android Auto see [Tinting and platform icons](/guide/artwork#tinting-and-platform-icons).
 
 On Android Auto, when a list or grid `display` applies and `artwork` is an `android.resource://` URI, the library asks for the category style, which adds margins around small icons.
 
@@ -127,7 +127,7 @@ On Android Auto, when a list or grid `display` applies and `artwork` is an `andr
 
 [`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track field for _how_ this track's audio request should be made.
 
-**It is not applied yet:** iOS, Android and web carry it on the track but don't merge it into the media request, so the example below sends no `authorization` header. To vary headers or query per track today, return them from [`media.resolve`](/api/types/browser/#mediarequestconfig) (or `resolveSync`), which receives the track.
+[`TrackRequest`](/api/types/browser-nodes/#trackrequest) says which platforms merge it into the media request. Where they don't, return per-track headers or query from [`media.resolve`](/api/types/browser/#mediarequestconfig) (or `resolveSync`), which receives the track.
 
 ```ts
 {
@@ -218,7 +218,7 @@ Tiles are ordinary Tracks, so playable ones carry the now-playing fields any tra
 }
 ```
 
-Each surface renders a declaration as its nearest supported form — CarPlay truncates a single-line grid (`gridWrap: false`) at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
+Each surface renders a declaration as its nearest supported form; see [Browser → Presentation](/guide/browser#presentation).
 
 ## ResolvedTrack: a resolved page
 

@@ -40,23 +40,26 @@ Changing the Nitro spec means re-running `codegen` **and** implementing the chan
 
 ## Checks
 
-Please run these before opening a PR:
+CI runs the checks in [`.github/workflows/test.yml`](.github/workflows/test.yml); these are the ones to run before opening a PR:
 
 ```sh
 corepack yarn types        # TypeScript
 corepack yarn ci:lint      # lint (oxlint)
 corepack yarn test         # unit tests (vitest)
+corepack yarn vocab-check  # GLOSSARY.md format
 corepack yarn ios:test     # Swift tests (macOS)
 corepack yarn android:test # Kotlin unit tests (needs the Android SDK)
 ```
 
-Formatting is handled for you: `corepack yarn codegen` (through the `prepare` script it ends in) points `core.hooksPath` at `.githooks`, whose `pre-commit` formats your staged files (oxfmt for JS/TS/JSON/Markdown, the pinned SwiftFormat for `ios/`, ktfmt for `android/`) and re-stages them.
+Formatting is handled for you: `corepack yarn codegen` (through the `prepare` script it ends in) points `core.hooksPath` at `.githooks`, whose [`pre-commit`](https://github.com/radio-garden/react-native-audio-browser/blob/next/.githooks/pre-commit) formats your staged files with the repo's formatters and re-stages them.
 
 The hook never blocks a commit, and `git commit --no-verify` skips it. Run `yarn hooks:install` if you haven't run `codegen` or `build` since cloning, or cloned before the hook existed, and `yarn format` to format the repo by hand.
 
 ## Commits & releases
 
 Releases are automated with [semantic-release](https://semantic-release.gitbook.io/) from [Conventional Commits](https://www.conventionalcommits.org/). Please format commit messages accordingly — e.g. `feat: …`, `fix: …`, `docs: …`.
+
+Links to the example app in `README.md` and the guides in `website/guide/` (`android-auto.md`, `carplay.md`, `browser.md`) point at the `next` branch. When the prerelease line merges to `main`, switch them all to `/tree/HEAD/` and `/blob/HEAD/` together.
 
 ## Code of Conduct
 

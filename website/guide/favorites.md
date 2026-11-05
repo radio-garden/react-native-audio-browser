@@ -68,7 +68,7 @@ await setupPlayer({
 })
 ```
 
-On iOS, Siri can also favorite or unfavorite the playing track ("add this to my favorites", "I like this") once Siri is wired up: steps 1–4 of [CarPlay → Siri Voice Search](/guide/carplay#siri-voice-search) (the Siri entitlement, the Info.plist keys, the bridging header and the AppDelegate intent handler), with `INAddMediaIntent` and `INUpdateMediaAffinityIntent` listed in `INIntentsSupported`. Favorites need no `search` source.
+On iOS, Siri can also favorite or unfavorite the playing track ("add this to my favorites", "I like this") once Siri is wired up as in [CarPlay → Siri Voice Search](/guide/carplay#siri-voice-search), with `INAddMediaIntent` and `INUpdateMediaAffinityIntent` also listed in `INIntentsSupported`. Favorites need no `search` source.
 
 Every favorite change, from any source, updates the library's cache and the hearts, then emits `onFavoriteChanged`: a system heart tap, a Siri request, and your own calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) alike. Persist the change to your storage or backend here, and only here:
 

@@ -11,10 +11,8 @@ always a server that omits an intermediate certificate.
 
 The library ships `AiaTls`, a toolkit that fetches the missing certificate from
 the URL in the leaf's Authority Information Access (AIA) extension. It does not
-reach playback yet.
-
-The player sends media over its own OkHttp client, which the app cannot
-configure, so installing `AiaTls` does not fix a failing stream.
+reach playback (see [The problem](#the-problem)), so installing `AiaTls` does
+not fix a failing stream.
 
 The reliable fix is for the server to send its full chain. The client-side
 alternative is a Network Security Config that trusts the missing intermediate (see
@@ -144,9 +142,8 @@ install it for you. Installing it changes process-global TLS state, so that is
 the app's decision, not the library's.
 
 ::: warning This does not fix playback
-The player sends media over the library's own OkHttp client, which ignores
-`HttpsURLConnection`'s default. The install below covers your app's own
-`HttpURLConnection` traffic only.
+The install below covers your app's own `HttpURLConnection` traffic only, not
+the player (see [The problem](#the-problem)).
 
 For a stream that fails in the player, fix the server's chain, or trust the intermediate in a Network Security Config (see
 [Fix playback from the app](#fix-playback-from-the-app)).
@@ -223,7 +220,7 @@ public class MainApplication extends Application {
 :::
 
 This reaches every `HttpURLConnection` in the process. It does not reach the
-player, which uses OkHttp (see the warning above).
+player (see [The problem](#the-problem)).
 `AiaTls` ships with the `react-native-audio-browser` Android module you already
 installed — the `com.audiobrowser.tls` import resolves with no extra Gradle
 dependency.
@@ -305,15 +302,15 @@ confirm it explicitly:
    `https://incomplete-chain.badssl.com/` with `HttpsURLConnection` from your
    app. Without the install it fails with
    `SSLHandshakeException: ... Trust anchor for certification path not found`;
-   with it, it succeeds. A stream that fails in the player still fails, because
-   the player does not use the process default.
+   with it, it succeeds. A stream that fails in the player still fails (see
+   [The problem](#the-problem)).
 
 ### Still failing after install?
 
 Work through these in order:
 
-1. **Is the failure in playback?** The player does not use the process default,
-   so the install cannot repair it. Fix the server's chain, or see
+1. **Is the failure in playback?** The install does not reach the player (see
+   [The problem](#the-problem)). Fix the server's chain, or see
    [Fix playback from the app](#fix-playback-from-the-app).
 2. **Is it even a missing-intermediate case?** Re-run the
    [diagnosis](#is-this-actually-your-problem). If the chain is complete, there's
@@ -370,8 +367,8 @@ Untrusted, expired, or self-signed roots still fail exactly as before.
 
 - **Scope.** `setDefaultSSLSocketFactory` is process-wide, so it affects every
   `HttpURLConnection`-based TLS connection in your app. It does not affect OkHttp
-  or a `WebView`, which keep their own TLS stacks. That includes the player,
-  whose media requests go over OkHttp.
+  or a `WebView`, which keep their own TLS stacks, so it does not reach the
+  player (see [The problem](#the-problem)).
 - **Last write wins.** If other code sets its own default afterwards, it
   overrides this one.
 - **First-connection latency on broken servers.** When a server omits its
@@ -419,15 +416,16 @@ It is bounded rather than absent:
   X3 cross-sign.
 - the URL is rejected unless it is free of control characters, so it cannot
   inject request lines of its own;
-- at most 3 distinct `CA Issuers` URLs per certificate are tried, a response is
-  capped at 1 MiB, and at most 5 redirects are followed per fetch;
-- the whole chase runs under one 20-second wall-clock budget. Every connect,
+- the number of `CA Issuers` URLs tried per certificate, the size of a response
+  and the redirects followed per fetch are each capped;
+- the whole chase runs under one 20-second wall-clock budget
+  (`AiaCertChaser.MAX_CHASE_MILLIS`). Every connect,
   TLS handshake, read and redirect hop is clipped to the time remaining, and
   nothing new starts once the budget has expired. So a hostile certificate can
-  hold one failed handshake for about 20 seconds. One DNS lookup already in
+  hold one failed handshake for the length of the budget. One DNS lookup already in
   flight when the budget expires can add its own duration, because Java has no
   timeout for name resolution. No new lookup starts past the budget;
-- the cache holds at most 32 entries, and only successful fetches;
+- the cache is bounded and holds only successful fetches;
 - responses are never trusted on their say-so. A fetched certificate joins the
   chain only if its subject matches the issuer name being chased, and the
   completed chain still has to validate, signatures included.
@@ -479,8 +477,7 @@ OkHttpClient client = new OkHttpClient.Builder()
 :::
 
 This confines AIA chasing to that one client and leaves the process default
-untouched. The library has no option for handing such a client to its player,
-so playback stays on the platform trust manager.
+untouched. It does not reach the player (see [The problem](#the-problem)).
 
 > **Lifecycle.** Each call to `AiaTls.socketFactory()` or `AiaTls.trustManager()`
 > builds a new component with its **own** fetched-intermediate cache. Build one

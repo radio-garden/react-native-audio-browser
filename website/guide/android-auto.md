@@ -39,13 +39,7 @@ Create `android/app/src/main/res/xml/automotive_app_desc.xml`:
 
 That's the whole setup.
 
-The rest comes from the library's merged manifest, so you don't declare it yourself:
-
-- the media library service, bound as `MediaBrowserService` and `MediaSessionService`, with its `MEDIA_PLAY_FROM_SEARCH` intent filter
-- the artwork content provider Android Auto loads browse artwork from
-- the media-button receiver
-- the headless JS task service
-- the `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permissions
+The rest comes from the [library's manifest](https://github.com/radio-garden/react-native-audio-browser/blob/next/android/src/main/AndroidManifest.xml), which merges into your app, so you don't declare it yourself.
 
 ## Voice search
 
@@ -82,9 +76,9 @@ Android Auto reads a page's layout from the **parent item** that opens it — be
 
 - **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section that carries a `path` also gets a browsable "view more" row appended after its children, navigating there.
 
-  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option, defaulting to `"View more"` — one wording for every section.
+  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option — one wording for every section.
 
-  For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like. `children` is shared by every surface, so CarPlay and in-app UIs show that row too, and on CarPlay a tile section without a `path` loses its chevron on iOS 26 and later; before iOS 26 a single-line grid (`gridWrap: false`) still draws one that does nothing when tapped.
+  For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like. `children` is shared by every surface, so CarPlay and in-app UIs show that row too; see [`Section`](/api/types/browser-nodes/#section) for how CarPlay draws a section with and without a `path`.
 
 ::: warning AAOS lays out the whole page from the parent item's `display`
 On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent item's `display` is the **only** below-root layout signal honored. The whole page renders as list or grid, uniformly.
@@ -125,11 +119,7 @@ the car, though:
 
 Test in a real car, or in Google's **Desktop Head Unit (DHU)** emulator:
 
-1. Install the **Android Auto Desktop Head Unit emulator** from the SDK Manager (_SDK Tools → Android Auto Desktop Head Unit emulator_).
-2. In the phone's **Android Auto** settings, enable Developer Mode (tap the version 10×), then **"Start head unit server"**.
-3. Connect the phone over USB, run `adb forward tcp:5277 tcp:5277`, then start `desktop-head-unit` from `$ANDROID_HOME/extras/google/auto/`.
-
-See Google's [Test Android Auto apps with DHU](https://developer.android.com/training/cars/testing/dhu) for the full walkthrough. Your app appears under the media apps — browse the tree, exercise voice search, and verify artwork, grid/list styles, and section headers.
+Install the DHU from the SDK Manager, turn on developer mode and the head unit server in the phone's Android Auto app, then connect: Google's [Test Android Auto apps with DHU](https://developer.android.com/training/cars/testing/dhu) has the steps. Your app appears under the media apps — browse the tree, exercise voice search, and verify artwork, grid/list styles, and section headers.
 
 ## Reference
 

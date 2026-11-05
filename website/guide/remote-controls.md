@@ -217,9 +217,10 @@ when it sends none. Without a handler, the distance of the default jump depends
 on the platform:
 
 - **iOS** seeks by the interval.
-- **Android** seeks 15s forward and 5s back, whatever the interval. There the
-  interval sets only the button's icon and the handler's `interval`. To jump by
-  the interval on Android, override the control and call `seekBy(±interval)`.
+- **Android** seeks by Media3's default increments (15s forward, 5s back),
+  whatever the interval. There the interval sets only the button's icon and the
+  handler's `interval`. To jump by the interval on Android, override the control
+  and call `seekBy(±interval)`.
 - **Web** seeks by the offset the browser sends, or 10s when it sends none.
 
 ## Listening to presses
@@ -252,9 +253,10 @@ The library saves the last session natively, with nothing to configure: the
 active track (with the browse path it was tapped from), its position, and the
 repeat mode, shuffle and rate.
 
-It saves on every pause, track change and setting change, and every 5 seconds
-while playing. A live stream keeps no position, so it resumes at the live edge;
-a track that had ended resumes from the start.
+It saves on every pause, track change and setting change, and periodically
+while playing, so a kill loses at most a few seconds of position. A live stream
+keeps no position, so it resumes at the live edge; a track that had ended
+resumes from the start.
 
 That session plays again when a listener asks for playback while your app isn't
 running:
@@ -274,9 +276,11 @@ If the path doesn't expand, the saved track plays alone. A saved track marked
 [`disabled`](/guide/track) is never resumed.
 
 Resuming waits for your JS: call `setupPlayer()` and `configureBrowser()` at the
-top level of `index.js`. Android gives up after about 10 seconds, iOS after
-about 8. On Android 12+, battery restrictions can block the background start;
-see [Battery](/guide/battery).
+top level of `index.js`. Resuming gives up within seconds if they haven't run
+(on iOS, see
+[CarPlay → AppDelegate intent handler](/guide/carplay#_4-appdelegate-intent-handler)).
+On Android 12+, battery restrictions can block the background start; see
+[Battery](/guide/battery).
 
 ## Voice commands ("play X")
 

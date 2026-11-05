@@ -232,12 +232,13 @@ export interface Options {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * On Android, Media3 has icons for intervals of exactly 5, 10, 15 or 30
+   * seconds, which show that number; any other interval gets an icon without
+   * one. Other values are valid. On iOS a jump with no `handleRemoteJump*`
+   * override seeks by the interval. On Android it seeks by Media3's default
+   * seek increment (15 seconds forward, 5 seconds back), and the interval sets
+   * only the icon and the event's `interval`; to jump by the interval,
+   * override the control and call `seekBy`.
    *
    * @default 15
    */
@@ -246,12 +247,7 @@ export interface Options {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * Platform differences as for {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */
@@ -402,8 +398,9 @@ export interface IOSUpdateOptions {
   carPlayUpNextButton?: boolean
 
   /**
-   * Configure up to four buttons, one of each kind, on the CarPlay Now Playing
-   * screen, arranged in array order (left to right).
+   * Configure buttons, at most one of each {@link CarPlayNowPlayingButton}
+   * kind, on the CarPlay Now Playing screen, arranged in array order (left to
+   * right).
    *
    * @example
    * ```typescript
@@ -465,12 +462,7 @@ export interface UpdateOptions {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * See {@link Options.forwardJumpInterval} for how iOS and Android treat it.
    *
    * @default 15
    */
@@ -479,12 +471,7 @@ export interface UpdateOptions {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * See {@link Options.forwardJumpInterval} for how iOS and Android treat it.
    *
    * @default 15
    */
@@ -531,12 +518,7 @@ export interface NativeUpdateOptions {
   /**
    * Jump forward interval in seconds when using jump forward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * See {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */
@@ -545,12 +527,7 @@ export interface NativeUpdateOptions {
   /**
    * Jump backward interval in seconds when using jump backward controls.
    *
-   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
-   * showing that number; any other interval gets an icon without one. Other
-   * values are valid. On iOS a jump with no `handleRemoteJump*` override
-   * seeks by the interval. On Android it seeks a fixed 15 seconds forward or
-   * 5 seconds back, and the interval sets only the icon and the event's
-   * `interval`.
+   * See {@link Options.forwardJumpInterval}.
    *
    * @default 15
    */

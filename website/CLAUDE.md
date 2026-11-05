@@ -32,6 +32,10 @@ It's the line next to the page in [`/llms.txt`](https://audiobrowser.dev/llms.tx
 
 Nothing to maintain per page beyond the `description` above, but do check `.vitepress/dist/llms.txt` after restructuring the sidebar: pages fall into an "Other" section when they don't match a sidebar entry.
 
+## Home page features
+
+The `features:` cards in `index.md` mirror the `## Features` list in `../README.md`, which is the npm and GitHub landing page. When you add, rename or reword a feature, change both lists in the same commit. Keep each claim short and leave version floors and platform limits to the feature's guide, which both lists link to. The home page puts Voice and Favorites on one card; the README lists them separately.
+
 ## Code Examples
 
 Wrap code inside fenced blocks at **80 characters** (the `printWidth` in the repo's `.oxfmtrc.json`). Don't let a trailing comment push a line over: put the comment on its own line above the code instead. Break long object literals, imports, and JSX across lines as Prettier would.
@@ -68,6 +72,6 @@ API-reference links.
 
 Shared logic in `scripts/base-name.ts` controls both sidebar links and page content order.
 
-**Priority:** `(no prefix, lowercase) > use > get > set > update > toggle > clear > handle > on > has > is > (uppercase types)`
+**Priority:** unprefixed lowercase names come first, then the prefixes in the order of `prefixOrder` in `scripts/base-name.ts`, then uppercase types.
 
 Example: `search`, `hasSearch`, `Search` → sidebar links to `search`.

@@ -209,9 +209,7 @@ function EqualizerScreen() {
 }
 ```
 
-Note: `@react-native-community/slider`'s `value` is the _initial_ value only —
-the slider keeps its own state after mounting. That's fine here, but if you want
-the thumbs to jump when a preset is applied, give each `Slider` a
+If the thumbs don't follow a newly applied preset, give each `Slider` a
 `key={eq.activePreset}` so it remounts with the new levels.
 
 ## A note on units

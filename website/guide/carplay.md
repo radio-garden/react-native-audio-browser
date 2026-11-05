@@ -84,11 +84,11 @@ This section is **required for any CarPlay integration**, browse-only or Siri. S
 CarPlay connects through scenes and can launch your app in the background with no phone window. So React Native has to start both on the foreground path (your phone scene) and headless (in a hidden window).
 
 ::: warning Two prerequisites
-**UIScene lifecycle** — CarPlay requires a `UIWindowSceneDelegate` for the phone window. The default `npx react-native init` app isn't scene-based; if yours still sets up its window directly in `AppDelegate`, migrate to scenes first (the sections below build all the pieces).
+**UIScene lifecycle** — CarPlay requires a `UIWindowSceneDelegate` for the phone window. If your app still sets up its window directly in `AppDelegate`, migrate to scenes first (the sections below build all the pieces).
 
 **New Architecture host, Swift** — these snippets assume a Swift `AppDelegate` built on `RCTReactNativeFactory` and `RCTDefaultReactNativeFactoryDelegate`, which React Native ships from **0.78**.
 
-The library itself supports 0.76+. On 0.76 or 0.77 the template's `AppDelegate` subclasses `RCTAppDelegate` instead, so adapt the same pieces (scene routing, the headless helper, the started flag) to that host.
+On React Native versions before 0.78 (see [Getting Started](/guide/getting-started#installation) for the minimum), the template's `AppDelegate` subclasses `RCTAppDelegate` instead, so adapt the same pieces (scene routing, the headless helper, the started flag) to that host.
 
 If yours is still Objective-C (`.mm`), migrating it to Swift first is simpler than translating this wiring by hand. Scaffold a throwaway app (`npx @react-native-community/cli init Tmp`) and use its `AppDelegate.swift` as a reference. ObjC works too (the bridging header is then unnecessary, see [Siri step 3](#_3-bridging-header-swift-appdelegate-only)) but isn't shown here.
 :::
@@ -370,14 +370,14 @@ Merge the CarPlay additions into your file rather than replacing it wholesale: t
 
 Call `configureBrowser` (and `setupPlayer`) as a **top-level side-effect in `index.js`**, next to `AppRegistry.registerComponent`. It then runs when the JS bundle loads, mounted UI or not.
 
-The headless helper mounts your root component in the hidden window, and the phone scene mounts it again later. So a call in a component's `useEffect` runs once per window, and only after the first render. That's late for Siri, whose handler waits only about 8 seconds (see [step 4](#_4-appdelegate-intent-handler)). A top-level call in `index.js` runs once, as soon as the bundle loads.
+The headless helper mounts your root component in the hidden window, and the phone scene mounts it again later. So a call in a component's `useEffect` runs once per window, and only after the first render. That's late for Siri, whose handler waits only briefly for setup (see [step 4](#_4-appdelegate-intent-handler)). A top-level call in `index.js` runs once, as soon as the bundle loads.
 
 `configureBrowser` **replaces** the whole config each time; it doesn't merge. So build one object with everything together: tabs, routes, and (for Siri) search. The snippets further down show one key at a time for brevity.
 
 ```ts
 const browserConfig = {
-  // Tabs along the top of the CarPlay browser (max 4 — capped for
-  // Android Auto + CarPlay compatibility; extra tabs dropped with a warning).
+  // Tabs along the top of the CarPlay browser (see the tab limit in
+  // /guide/browser#tabs-and-the-initial-path).
   tabs: [{ title: 'Home', path: '/' }],
 
   // routes: path → BrowserSource (static page, callback, or HTTP).
@@ -475,7 +475,7 @@ The `carPlaySiriListButton` property accepts `'top'` or `'bottom'` to control wh
 To complete the setup, your app needs the Siri entitlement, a couple of Info.plist keys, a bridging header, and a one-line handler in your AppDelegate. Media intents are handled in-app: Siri delivers the `INPlayMediaIntent` straight to your `AppDelegate`.
 
 ::: info iOS version
-The library's minimum is **iOS 16**. The other version numbers on this page are capability notes within that floor:
+The version numbers on this page are capability notes within the library's [iOS floor](/guide/getting-started#installation):
 
 - The in-app handler API (`application(_:handlerFor:)`) exists from iOS 14, so you never need to gate on it.
 - The automatic CarPlay loading spinner needs iOS 18.4+.
@@ -570,7 +570,7 @@ func application(
 
 The library resolves the spoken query through your configured [`search`](/guide/search) source (the same one your in-app search uses — it is **not** a browse route), queues the results, and starts playback automatically.
 
-::: tip The handler waits about 8 seconds
+::: tip The handler waits only briefly for setup
 On a cold launch, the handler waits up to about **8 seconds** for your JS to run `setupPlayer()` and `configureBrowser()`, then fails the intent. So call both at the top level of `index.js`, before any slow async work (see [Where to call `configureBrowser`](#where-to-call-configurebrowser)).
 
 That limit covers only the wait for setup. Your Gate's resolver and your `search` source run after it with no time limit of their own, so keep them quick: Siri gives up on a slow request.
@@ -593,7 +593,7 @@ If you use a [Gate](/guide/gate), a paywall or region check, it can refuse the s
 
 ## Now Playing Buttons
 
-The Now Playing screen always has CarPlay's transport controls. Up to **four** more buttons, one of each kind, go in the row beneath them: list them in `ios.carPlayNowPlayingButtons`, left to right in the order you want them:
+The Now Playing screen always has CarPlay's transport controls. More buttons, one of each kind in the table below, go in the row beneath them: list them in `ios.carPlayNowPlayingButtons`, left to right in the order you want them:
 
 ```ts
 await setupPlayer({
@@ -613,8 +613,8 @@ You can also change them later with `updateOptions({ ios: { carPlayNowPlayingBut
 | `'favorite'`      | Toggles the playing track's favorite state; the heart is filled while it is a favorite. See [Favorites](/guide/favorites).              |
 | `'playback-rate'` | Steps to the next rate in `ios.playbackRates`, wrapping from the last back to the first. With `playbackRates: []` the tap does nothing. |
 
-- **Each button is drawn once.** A button listed twice keeps its first position, so at most four are drawn.
-- **More than five entries log a warning.** The count includes repeats.
+- **Each button is drawn once.** A button listed twice keeps its first position.
+- **More than five entries log a warning.** Five is CarPlay's limit for the row; the count includes repeats.
 - **A [gate](/guide/gate) hides them.** While a gate is active the row is empty. The transport controls stay.
 
 The **Up Next** button is separate. It opens the queue and shows only when the queue has more than one track. Set `ios.carPlayUpNextButton: false` to never show it.
@@ -682,7 +682,7 @@ Set `album` on any track that should offer album-line navigation. See [Now Playi
 
 ## Template Depth
 
-CarPlay limits an audio app's template stack to **five templates, the tab bar included** (CarPlay App Programming Guide, p. 15), so the stack is full four pushes in. Now Playing and Up Next each take a slot like any list.
+CarPlay limits an audio app's template stack to **five templates, the tab bar included** (see Apple's [CarPlay App Programming Guide](https://developer.apple.com/carplay/)), so the stack is full four pushes in. Now Playing and Up Next each take a slot like any list.
 
 A browse tree with a fixed shape (tabs → show → episodes) never gets there; one that can be drilled without end — a place, a place near it, a place near that — does.
 

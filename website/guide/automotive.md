@@ -17,10 +17,11 @@ already built**:
 - your [`search` source](/guide/search) answers in-car voice commands
   ("play jazz"),
 - your [favorites](/guide/favorites) are one state shared by the app and the
-  car. With `capabilities.favorite` on, Android Auto shows the heart in its
-  overflow by default; CarPlay shows it once you list it in
-  `ios.carPlayNowPlayingButtons`. Only Siri understands "play my favorites";
-  Android Auto searches the phrase as plain text.
+  car. With `capabilities.favorite` on, Android Auto shows the heart; CarPlay
+  shows it once you list it in `ios.carPlayNowPlayingButtons` (see
+  [Favoriting from system controls](/guide/favorites#favoriting-from-system-controls)).
+  Only Siri understands "play my favorites"; Android Auto searches the phrase
+  as plain text.
 
 Build those once and they light up every car surface. The per-platform pages
 handle the platform-specific **setup**: **[Android Auto](/guide/android-auto)**

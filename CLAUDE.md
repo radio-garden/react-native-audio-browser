@@ -22,7 +22,7 @@ yarn android:types
 
 ## Testing
 
-Everything below is gated in CI by `.github/workflows/test.yml`.
+The local equivalents of what `.github/workflows/test.yml` runs:
 
 ```bash
 yarn test                          # vitest
@@ -31,13 +31,14 @@ yarn ci:lint                       # oxlint, type-aware
 yarn ci:format                     # oxfmt --check
 yarn ios:test                      # Swift tests
 yarn android:test                  # Kotlin unit tests
+yarn vocab-check                   # glossary format
 ```
 
 `yarn ios:test` passes `--disable-sandbox`: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
 
 ### Testing hooks
 
-Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and not `@testing-library/react-native`. The library exports no components: every hook uses only `useState`/`useEffect`/`useRef`/`useSyncExternalStore`, so react-dom is a valid host and costs a few devDependencies instead of a second test runner plus `@react-native/jest-preset`.
+Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and not `@testing-library/react-native`. The library exports no components, so react-dom is a valid host and costs a few devDependencies instead of a second test runner plus `@react-native/jest-preset`.
 
 Revisit this the day the package exports something that renders RN primitives — react-dom cannot host those, and RNTL means Jest.
 
@@ -61,18 +62,9 @@ This is an **alpha product** - we do not care about breaking changes. Feel free 
 
 ## Nitro
 
-### Important Callback Behaviors
-
-**Callbacks work seamlessly across JS/native boundary:**
-
-- Functions can be passed directly as parameters (no registration needed)
-- Reference counting system holds strong references safely
-- Can be called multiple times and stored in memory
-- **Value-returning callbacks** become Promise<T> for thread safety
-- **Void callbacks** (`() => void`) are fire-and-forget: native calls them from any thread and returns at once; the JS runs later on the JS thread.
-- **Sync<T> callbacks** are synchronous but dangerous (must call from JS thread only)
-
 ### Documentation
+
+`.claude/nitro/` is a copy of Nitro's docs taken at Nitro 0.30.0. `package.json` pins the Nitro version the library builds against, and [nitro.margelo.com](https://nitro.margelo.com) documents that version; where the copy and the site differ, the site is right. How callbacks cross the boundary (reference counting, which ones become `Promise<T>`, `Sync<T>`) is in [callbacks.md](.claude/nitro/types/callbacks.md).
 
 - [what-is-nitro.md](.claude/nitro/what-is-nitro.md) - Introduction and core concepts
 - [hybrid-objects.md](.claude/nitro/hybrid-objects.md) - Core HybridObject interface patterns and constraints

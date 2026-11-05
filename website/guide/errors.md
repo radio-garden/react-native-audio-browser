@@ -140,7 +140,7 @@ web error is terminal:
 ```ts
 import { setupPlayer } from 'react-native-audio-browser'
 
-// Retry with the default duration budgets (12s / 2 min, see below):
+// Retry with the default duration budgets (see below):
 await setupPlayer({ retry: true })
 
 // Or bound it yourself:
@@ -172,7 +172,7 @@ restarted from a terminal error_ (`retry()`, or any play command while in
 `'error'`), and it survives every automatic retry of that track.
 
 A new load starts fresh budgets. Within a load, the recovery budget refills
-after 20 seconds of uninterrupted playback (see below).
+after a stretch of uninterrupted playback (see below).
 
 How long the player keeps trying depends on one piece of evidence: **has this
 load ever produced audio?**
@@ -209,7 +209,7 @@ each later dropout of a long-lived stream gets a full window.
 The load stays the same, and so does its evidence that it has played: the
 first-connect budget does not come back.
 
-Backoff delays grow `1s → 1.5s → 2.3s → 3.4s → 5s` (capped). Once a budget is
+Backoff delays grow exponentially from 1 s, capped at 5 s. Once a budget is
 exhausted the state lands on `'error'`, where your `PlaybackErrorView` and
 [`retry()`](#manual-retry) take over.
 
@@ -344,7 +344,7 @@ message to render.
 | `usePlaybackError()` / `getPlaybackError()`                       | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`.                                                  |
 | `onPlaybackError`                                                 | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
 | `retry()`                                                         | Re-attempt the current item; meant for the `'error'` state (on iOS it reloads from any state).                                                      |
-| `setupPlayer({ retry })`                                          | Automatic retry with two duration budgets: first-connect (12s) and recovery (2 min). Off by default.                                                |
+| `setupPlayer({ retry })`                                          | Automatic retry with two [duration budgets](#two-duration-budgets): first-connect and recovery. Off by default.                                     |
 | `useNavigationError()` / `getNavigationError()`                   | The raw navigation error (`code`, `statusCode`, …).                                                                                                 |
 | `onNavigationError`                                               | Subscribe to navigation errors outside React.                                                                                                       |
 | `useFormattedNavigationError()` / `getFormattedNavigationError()` | Display-ready `{ title, message? }`, shared with CarPlay / Android Auto.                                                                            |

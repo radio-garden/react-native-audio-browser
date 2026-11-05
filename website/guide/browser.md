@@ -190,8 +190,8 @@ configureBrowser({
 })
 ```
 
-::: warning Car surfaces show at most 4 tabs
-Android Auto shows the first **4** tabs. CarPlay shows as many as `CPTabBarTemplate.maximumTabCount` allows. Only those surfaces hide the extra tabs: `getTabs` and `useTabs` return every tab. A debug build warns when a static `tabs` array has more than four.
+::: warning Car surfaces show only the first few tabs
+Android Auto shows the first **4** tabs. CarPlay shows as many as `CPTabBarTemplate.maximumTabCount` allows. Only those surfaces hide the extra tabs: `getTabs` and `useTabs` return every tab. A debug build warns when a static `tabs` array has more tabs than Android Auto shows.
 :::
 
 ::: tip A tab's path stays a tab
@@ -288,8 +288,6 @@ A callback (or transform) receives the captured params in `routeParams`:
 ### Per-route overrides
 
 A route value can be a bare source (the common case) **or** a [`RouteConfig`](/api/types/browser/#routeconfig) object that overrides request behavior for just that subtree — its `browse` source, plus its own `artwork` config. The web ignores a route's `artwork` and uses the top-level `artwork` config.
-
-(`RouteConfig` also has a `media` field, but no platform applies it yet: media always resolves from the top-level `media` config.)
 
 ```ts
 configureBrowser({
@@ -552,7 +550,7 @@ configureBrowser({
 })
 ```
 
-The `code` values: `content-not-found`, `network-error`, `http-error`, `callback-error`, `empty-content`, `timeout`, `unknown-error`. Your formatter drives both the car dialogs and the [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) hook in your app.
+For the `code` values, see [Navigation errors](/guide/errors#navigation-errors). Your formatter drives both the car dialogs and the [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) hook in your app.
 
 ## Presentation
 
@@ -580,7 +578,7 @@ Presentation lives in `style` blocks, separate from content, plus a few Track fi
 ::: info Caveats from the table
 
 - **The album line needs `album`.** CarPlay draws the tappable line from the album metadata, so a track with no `album` has no line to tap.
-- **\*Layouts render each platform's nearest supported form.** On CarPlay, a single-line grid (`gridWrap: false`) shows the tiles that fit on one line (seven on a wide screen, or two condensed cells). A wrapping grid takes as many lines as it needs on iOS 26+, and is a list before that.
+- **\*Layouts render each platform's nearest supported form.** On CarPlay, a single-line grid (`gridWrap: false`) shows the tiles that fit on one line (about seven on a wide screen, or two condensed cells). A wrapping grid takes as many lines as it needs on iOS 26+, and is a list before that.
 - **Android Auto's grid always wraps**, so it shows more, never less. No car surface scrolls horizontally. An app UI typically renders `gridWrap: false` as a horizontal scroller.
 - **Truncation is visual only.** Tapping a tile queues the whole section (see [Playback behavior](#playback-behavior)).
 - **Item properties are inherited.** `artworkRendering`, `imageShape` and `accessorySymbol` resolve as `track ?? section ?? page`, per property, so an item can override a section-wide value. `accessorySymbol: 'none'` removes an inherited symbol from one item.
@@ -660,7 +658,7 @@ Three config-level platform options round it out:
 
 - `carPlayLoadingTitle`: a localized "Loading…" on older CarPlay.
 - `androidControllerOfflineError`: shows an offline error in Android Auto and other external controllers when the network is lost. It defaults to `true`.
-- [`viewMoreTitle`](/api/types/browser/#viewmoretitle): titles the "View more" row Android Auto appends to a section with a `path`. It defaults to `"View more"` and is read again on `invalidateAllContent()`.
+- [`viewMoreTitle`](/api/types/browser/#viewmoretitle): titles the "view more" row Android Auto appends to a section with a `path`. It is read again on `invalidateAllContent()`.
 
 The CarPlay now-playing album line is tappable when the active track has an `albumPath`. For tracks without one, a `resolveAlbumPath` callback maps the track to a browse path. In both cases the track needs an `album`. See [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 

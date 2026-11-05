@@ -40,7 +40,7 @@ configureBrowser({
 
 **An HTTP endpoint** — a `TransformableRequestConfig`. The library issues the request natively and appends the query parameters for you.
 
-The endpoint must return a **bare `Track[]`**, a JSON array of results, not the page object a browse endpoint returns. iOS and Android decode only the array. On Android a page object gives no results, and on iOS the search rejects. The web accepts either shape.
+The endpoint must return a **bare `Track[]`**, a JSON array of results, not the page object a browse endpoint returns. iOS and Android decode only the array. On Android a page object gives no results, and on iOS the search rejects. The web accepts either shape. See [`SearchSource`](/api/types/browser/#searchsource).
 
 ```ts
 configureBrowser({
@@ -62,7 +62,7 @@ With the HTTP form the library adds to `request.query`: `q` (always, even when e
 
 The same source powers your in-app search box. [`search(query)`](/api/features/browser/#search) runs it and resolves to a `Track[]` — it only _returns_ results, it never queues or plays anything.
 
-[`hasSearch()`](/api/features/browser/#hassearch) tells you (synchronously) whether a search source is configured at all, so you can hide the search UI when it isn't. Check it before calling `search()`: with no source configured, Android and web resolve `[]` but iOS rejects. With a source configured, `[]` means it found nothing:
+[`hasSearch()`](/api/features/browser/#hassearch) tells you (synchronously) whether a search source is configured at all, so you can hide the search UI when it isn't. Check it before calling [`search()`](/api/features/browser/#search): with no source configured, Android and web resolve `[]` but iOS rejects. With a source configured, `[]` means it found nothing:
 
 ```tsx
 import { search, hasSearch, navigate } from 'react-native-audio-browser'
@@ -89,7 +89,7 @@ Four things to know about the in-app call:
 - **Your resolver sees a plain query.** An in-app `search('jazz')` arrives as `{ query: 'jazz', reference: 'unknown' }` — no `mode`, no filter fields. Only the voice assistants extract those. (On the HTTP form, only `q` is appended.) A resolver written against _the fields that are present_ handles both callers.
 - **You get the flat list, untouched.** The [browsable-first-result drill-in](#voice-playback-siri-google-assistant) is voice-only — in-app results are handed to you as returned, and the user picks. A result with neither a `path` nor a `src` can't be rendered, so don't return one.
 - **Route taps through `navigate(track)`** rather than `setQueue` + `play` — that gives a tapped result the library's load path ([`handleTrackLoad`](#mixed-audio-video), [Gate](/guide/gate) checks, favorite hearts) just like a tap on a browse row.
-- **A failed search rejects; catch it** to tell a failure from no results. On web a failed HTTP search's error carries a `code`: `'http-error'` or `'network-error'`; a callback's rejection reaches you unchanged. On Android an HTTP source never rejects: it resolves `[]` on any failure (status, network, decoding), so there a failure looks like no results.
+- **A failed search rejects; catch it** to tell a failure from no results. On web a failed HTTP search's error carries a `code`: `'http-error'` or `'network-error'`; a callback's rejection reaches you unchanged. On Android an HTTP source never rejects: it resolves `[]` on any failure (status, network, decoding), so there a failure looks like no results. See [`search`](/api/features/browser/#search).
 
 ## SearchParams
 

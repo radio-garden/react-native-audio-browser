@@ -246,7 +246,7 @@ export interface ImageSource {
 
 /**
  * Per-track request fields, carried verbatim on the Track and round-tripped like
- * any other field. Not yet applied: no platform merges them into the track's
+ * any other field. Not applied: no platform merges them into the track's
  * media request, so they set no header, user agent or query. For per-track
  * headers or query, return them from `media.resolve` / `resolveSync(track)`.
  * `baseUrl`/`path`/`method`/`body` are absent so a (often server-sourced)
@@ -294,10 +294,8 @@ export interface Section {
   title?: string
   /**
    * Presentation, separated from content. Each surface renders the
-   * declared layout's nearest supported form; on CarPlay
-   * a wrapping grid requires iOS 26+ and renders a list before that,
-   * since CarPlay's only earlier tile container truncates at a width the
-   * system doesn't report. Use the artwork `resolve` hook to supply
+   * declared layout's nearest supported form (CarPlay's grid limits:
+   * {@link StyleDisplay}). Use the artwork `resolve` hook to supply
    * fallback art for tile layouts.
    */
   style?: SectionStyle
@@ -315,7 +313,7 @@ export interface Section {
    *   spend an item from the template's cap.
    * - **Android Auto** — no header is tappable at any display, so the
    *   section gets an appended browsable row, titled by the global
-   *   `viewMoreTitle` browser option ("View more" by default).
+   *   `viewMoreTitle` browser option.
    */
   path?: string
   /** The section's tracks. */
@@ -421,7 +419,7 @@ export interface Track {
    */
   readonly artworkSource?: ImageSource
 
-  /** Per-track request fields, round-tripped but not yet applied to the media request; see {@link TrackRequest}. */
+  /** Per-track request fields, round-tripped verbatim; see {@link TrackRequest} for whether they reach the media request. */
   request?: TrackRequest
 
   // type?: TrackType

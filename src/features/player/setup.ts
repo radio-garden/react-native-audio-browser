@@ -380,7 +380,6 @@ export interface AndroidSetupOptions extends AndroidUpdateOptions {
    * When null (the default), uses automatic mode:
    * - Starts at `playBuffer` value
    * - On rebuffer, measures how fast the buffer drained
-   * - Calculates how much buffer is needed to sustain 60s of playback
    * - Increases threshold accordingly (up to 8000ms max)
    * - Resets when changing tracks
    *
@@ -606,15 +605,15 @@ export type SetupPlayerOptions = Pick<
   /**
    * Retry policy for load errors (network failures, timeouts, etc.)
    * - `true`: Retry indefinitely with exponential backoff, under the default
-   *   duration budgets (12s before first audio, 2 minutes after — see
-   *   {@link RetryConfig})
+   *   duration budgets of {@link RetryConfig}
    * - `false`/`undefined`: no library retry. Android keeps media3's default
    *   handling, which retries a failed load a few times before surfacing the
    *   error; iOS fails at once.
    * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
    * - `RetryConfig`: custom attempt and duration budgets
    *
-   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
+   * Backoff timing and budgets: see the
+   * [Errors guide](https://audiobrowser.dev/guide/errors#two-duration-budgets).
    *
    * @default false
    */
@@ -645,7 +644,7 @@ export type SetupPlayerOptions = Pick<
    * Each `setupPlayer` sets it: left out, remote outputs are off, and playback on one comes back
    * to the phone.
    *
-   * Android 11+ only for now; ignored on iOS, whose route picker already lists AirPlay devices.
+   * Android 11+; ignored on iOS, whose route picker already lists AirPlay devices.
    * @default off
    */
   remoteOutputs?: RemoteOutputsOptions

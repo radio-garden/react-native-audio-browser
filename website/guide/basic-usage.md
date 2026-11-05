@@ -13,7 +13,7 @@ The library models all content as one navigable tree of **Tracks**. A Track is *
 - **Browsable** — has a `path`; navigating into it resolves its children.
 - **Playable** — has a `src`; the player can stream it.
 
-Set exactly one. On a browse page a Track with both plays, because the page rewrites its `path` to point at its place in the queue. A car search result with both plays its `src`. When you pass such a Track to [`navigate(track)`](/api/features/browser/#navigate) yourself, the platforms disagree: Android and web browse the `path`, iOS plays the `src`.
+Set exactly one. [Track → Browsable or playable](/guide/track#browsable-or-playable) covers a Track that sets both.
 
 Three fields at a glance — each answers a different question about a Track:
 

@@ -40,11 +40,11 @@ The library publishes art to several surfaces; each gets its image from a field/
 | Surface                                       | Image from                                    | Size hint | Tinting                                                                        |
 | --------------------------------------------- | --------------------------------------------- | --------- | ------------------------------------------------------------------------------ |
 | **CarPlay browse rows / tabs**                | `artwork` (global config; no per-route)       | yes       | `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair          |
-| **Android Auto browse rows**                  | `artwork` (per-route override allowed)        | no        | — (Android Auto is dark-only)                                                  |
+| **Android Auto browse rows**                  | `artwork` (per-route override allowed)        | no        | — (see [Tinting](#tinting-and-platform-icons))                                 |
 | **In-app `<Image>`**                          | `artworkSource` (output)                      | no        | your UI                                                                        |
 | **iOS lock screen / Control Center**          | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                                              |
 | **CarPlay Now Playing**                       | `nowPlayingArtwork` → `artwork`               | yes       | —                                                                              |
-| **Android notification / Android Auto**       | `nowPlayingArtwork` → `artwork`               | yes       | — (Android Auto is dark-only)                                                  |
+| **Android notification / Android Auto**       | `nowPlayingArtwork` → `artwork`               | yes       | — (see [Tinting](#tinting-and-platform-icons))                                 |
 | **CarPlay tile sections** (`display: 'grid'`) | `artwork` (each tile is a Track)              | yes       | CarPlay: `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair |
 
 **Size hint** = the surface tells the library the pixels it needs, delivered as an [`ImageContext`](/api/types/browser/#imagecontext) to your `transform` / `imageQueryParams`. Browse-time resolution, which produces `artworkSource` and the Android Auto browse URLs, has none.
@@ -202,7 +202,7 @@ Everywhere a single image is required, a pair resolves to its `dark` URL:
 | Surface                                  | Uses                          |
 | ---------------------------------------- | ----------------------------- |
 | **CarPlay browse rows / tabs**           | both, adapting per appearance |
-| **Android Auto**                         | `dark` (dark-only platform)   |
+| **Android Auto**                         | `dark`                        |
 | **Now-playing** (all platforms)          | `dark`                        |
 | **`artworkSource`** (your own `<Image>`) | `dark`                        |
 
@@ -234,7 +234,7 @@ configureBrowser({
 })
 ```
 
-Now-playing surfaces request a **much larger** image than list thumbnails — on iOS, up to the screen width in pixels, capped at 1200px — so with `imageQueryParams` set you fetch a fittingly large variant rather than upscaling a tiny thumbnail.
+Now-playing surfaces request a **much larger** image than list thumbnails — on iOS, up to the screen width in pixels — so with `imageQueryParams` set you fetch a fittingly large variant rather than upscaling a tiny thumbnail.
 
 If you _don't_ set `nowPlayingArtwork` at all, now-playing surfaces fall back to the `artwork` config (and to `track.artwork`).
 
@@ -282,10 +282,6 @@ A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as
 ```
 
 Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art.
-
-On CarPlay a single-line grid (`gridWrap: false`) shows the tiles that fit on one line: seven on a wide screen, or two condensed cells, with the rest truncated.
-
-A wrapping grid takes as many lines as it needs on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both identically.
 
 See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
 

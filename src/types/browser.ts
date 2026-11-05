@@ -890,7 +890,11 @@ export type BrowserConfiguration = {
    * The first tab's path is automatically loaded when the browser starts.
    *
    * Optional - if not provided, no tab navigation will be available.
-   * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
+   * Car surfaces show only the first tabs: Android Auto shows 4, CarPlay
+   * shows up to `CPTabBarTemplate.maximumTabCount`. `getTabs` and `useTabs`
+   * still return every tab, and `configureBrowser` warns in development when
+   * a static array has more than Android Auto shows. See
+   * [Tabs and the initial path](/guide/browser#tabs-and-the-initial-path).
    *
    * Can provide static array of Track objects with paths as tabs, API configuration, or custom callback.
    */

@@ -33,8 +33,8 @@ it hangs until the phone wakes.
 
 ### Why `fetch` hangs while asleep
 
-React Native's `fetch` is the [`whatwg-fetch`](https://github.com/JakeChampion/fetch)
-polyfill, and it resolves its promise with a **zero-delay timer**, not a
+As of React Native 0.88, its `fetch` is the [`whatwg-fetch`](https://github.com/JakeChampion/fetch)
+polyfill, which resolves its promise with a **zero-delay timer**, not a
 microtask:
 
 ```js
@@ -45,7 +45,7 @@ setTimeout(function () {
 ```
 
 While the app is in the background, JS timers don't fire reliably
-([RN #38711](https://github.com/react/react-native/issues/38711)). Native
+([RN #54534](https://github.com/react/react-native/issues/54534)). Native
 networking (`RCTNetworking`) **does** receive the response, but the
 `setTimeout(0)` that hands it to your `await` doesn't run. The promise hangs
 until the screen wakes, and the browse list spins or shows blank.
@@ -54,17 +54,14 @@ On Android, React Native's timer manager stops firing JS timers once the host
 activity pauses, unless a headless JS task is running. An app backgrounded
 behind Android Auto therefore shows the same symptom, and the same fix applies.
 
-This isn't specific to this library — it affects any `fetch` on a sleeping
-device, and upgrading doesn't help: current React Native still ships
-`whatwg-fetch`.
+This isn't specific to this library: it affects any `fetch` on a sleeping
+device.
 
 ## The fix: `react-native-nitro-fetch`
 
 [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch)
-is a drop-in `fetch` replacement that runs the request on a native thread
-(`URLSession` on iOS, Cronet on Android) and resolves through **Nitro's
-microtask queue** — no `setTimeout`, no `whatwg-fetch`, no dependency on JS
-timers.
+is a drop-in `fetch` replacement that runs the request natively and resolves
+its promise without a JS timer: no `setTimeout`, no `whatwg-fetch`.
 
 It therefore completes even when the callback runs while the device is asleep.
 This library is already a Nitro module, so it's a natural fit.
@@ -136,5 +133,5 @@ depend on `fetch`.
 ## Further reading
 
 - [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch)
-- [JS timers don't fire when the app is backgrounded (RN #38711)](https://github.com/react/react-native/issues/38711)
+- [JS timers don't fire when the app is backgrounded (RN #38711, closed in 2023)](https://github.com/react/react-native/issues/38711)
 - [Timers & fetch freeze behind a native activity (RN #54534)](https://github.com/react/react-native/issues/54534)

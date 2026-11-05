@@ -118,7 +118,7 @@ setGate({ title: 'Premium', message: 'Subscribe to unlock.' }, (request) => {
 
 You can also pass **only** a resolver, with no default message. Return a gate object for full control, or `true` to fall back to the generic built-in chrome.
 
-That fallback is a title only (`"Unavailable"`, no body), so on CarPlay its message area is blank. Pass a default gate or return a gate object if you want body copy.
+That fallback is a generic built-in title with no body, so on CarPlay its message area is blank. Pass a default gate or return a gate object if you want body copy.
 
 ```ts
 setGate((request) => request.kind === 'browse')

@@ -64,7 +64,7 @@ updateOptions({ progressUpdateEventInterval: null }) // disable progress events
 updateOptions({ ios: { carPlayNowPlayingButtons: ['repeat'] } })
 ```
 
-`null` means something on exactly two fields:
+`null` means something on two fields:
 `progressUpdateEventInterval: null` disables progress events, and
 `android.remoteButtonLayout: null` goes back to the layout derived from
 capabilities. Elsewhere, omit a field to leave it unchanged.
@@ -129,11 +129,11 @@ updateOptions({
 
 ## Controls & progress
 
-| Option                        | Default | What                                                                                                                                                          |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `forwardJumpInterval`         | `15`    | Seconds for the jump-forward control. With no handler, Android seeks a fixed 15s instead; see [Remote Controls](/guide/remote-controls#overriding-a-control). |
-| `backwardJumpInterval`        | `15`    | Seconds for the jump-backward control. With no handler, Android seeks a fixed 5s instead; see [Remote Controls](/guide/remote-controls#overriding-a-control). |
-| `progressUpdateEventInterval` | `null`  | Seconds between progress events; `null` disables them — see [Playback → Progress](/guide/playback#progress).                                                  |
+| Option                        | Default | What                                                                                                                                                                           |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `forwardJumpInterval`         | `15`    | Seconds for the jump-forward control. With no handler, Android seeks by Media3's fixed increment instead; see [Remote Controls](/guide/remote-controls#overriding-a-control).  |
+| `backwardJumpInterval`        | `15`    | Seconds for the jump-backward control. With no handler, Android seeks by Media3's fixed increment instead; see [Remote Controls](/guide/remote-controls#overriding-a-control). |
+| `progressUpdateEventInterval` | `null`  | Seconds between progress events; `null` disables them — see [Playback → Progress](/guide/playback#progress).                                                                   |
 
 ## Now Playing
 
@@ -157,7 +157,7 @@ It's **setup-only** (a function can't cross `updateOptions`). See
 | `wakeMode`                  | `'none'`                                  | CPU/network wake lock during playback (setup-only).                                                                                                                   |
 | `handleAudioBecomingNoisy`  | `true`                                    | Pause when the audio becomes noisy, such as when headphones are unplugged (setup-only).                                                                               |
 | `maxBuffer`                 | `50000`                                   | Milliseconds of media the player loads ahead (setup-only).                                                                                                            |
-| `minBuffer`                 | `50000`                                   | Accepted but currently has no effect; the player always loads up to `maxBuffer` (setup-only).                                                                         |
+| `minBuffer`                 | `50000`                                   | Accepted but has no effect; the player always loads up to `maxBuffer` (setup-only).                                                                                   |
 | `playBuffer`                | `1000`                                    | Milliseconds that must be buffered to start or resume after a user action such as a seek (setup-only).                                                                |
 | `rebufferBuffer`            | `null`                                    | Milliseconds that must be buffered to resume after a rebuffer; `null` adapts it to how fast the buffer drained (setup-only).                                          |
 | `backBuffer`                | `0`                                       | Milliseconds kept behind the playhead (setup-only).                                                                                                                   |
@@ -170,7 +170,7 @@ It's **setup-only** (a function can't cross `updateOptions`). See
 | --------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `playbackRates`                   | `[0.5, 1.0, 1.5, 2.0]` | Rates offered by the rate control.                                                                                                                                                 |
 | `carPlayUpNextButton`             | `true`                 | Show the "Up Next" button on CarPlay (auto-hidden when the queue has one track).                                                                                                   |
-| `carPlayNowPlayingButtons`        | `[]`                   | Buttons on the CarPlay now-playing screen, left to right, at most one of each of the four kinds: see [CarPlay](/guide/carplay#now-playing-buttons).                                |
+| `carPlayNowPlayingButtons`        | `[]`                   | Buttons on the CarPlay now-playing screen, left to right, at most one of each kind: see [CarPlay](/guide/carplay#now-playing-buttons).                                             |
 | `carPlayPlayingIndicatorLocation` | `'leading'`            | Where the now-playing indicator draws on CarPlay list rows: `'leading'` in the artwork slot, `'trailing'` at the end of the row — see [CarPlay](/guide/carplay#playing-indicator). |
 | `category`                        | `'playback'`           | iOS audio session category (setup-only).                                                                                                                                           |
 | `categoryMode`                    | `'default'`            | Audio session mode (setup-only).                                                                                                                                                   |

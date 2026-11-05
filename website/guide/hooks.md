@@ -164,7 +164,7 @@ const output = useOutput() // { type, name, external } | undefined
 // e.g. output?.type === 'bluetooth', output?.external === true
 ```
 
-`useOutput` updates as routes change (AirPods connect, a Bluetooth speaker is selected, etc.); it's `undefined` when unknown. On Android below 13 (API 33) it is picked from the connected devices (Bluetooth, then wired headphones, then the speaker), so it misses a reroute made while a device stays connected. See [Audio Output](/guide/audio-output).
+`useOutput` updates as routes change (AirPods connect, a Bluetooth speaker is selected, etc.); it's `undefined` when unknown. On Android below 13 (API 33) it can miss a reroute made while a device stays connected; see [The current output](/guide/audio-output#the-current-output).
 
 ## Errors
 
@@ -200,7 +200,7 @@ const { pending, status, dismiss, openSettings } = useBatteryWarning()
 
 ## Debugging
 
-[**`useDebug(options?)`**](/api/utils/useDebug/#usedebug) → `{ state, logs, clear }` — a live snapshot of the core player state (playback, queue, options, browse path, errors) plus a change log (last 100 entries). It's a development aid; `options.enabled` defaults to `__DEV__`.
+[**`useDebug(options?)`**](/api/utils/useDebug/#usedebug) → `{ state, logs, clear }` — a live snapshot of the core player state (playback, queue, options, browse path, errors) plus a bounded log of recent changes. It's a development aid; `options.enabled` defaults to `__DEV__`.
 
 ```tsx
 const { state, logs, clear } = useDebug({ metadata: true })

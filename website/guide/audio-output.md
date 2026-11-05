@@ -108,11 +108,6 @@ logs a warning saying the receiver is missing.
 Each `setupPlayer` sets the remote outputs: a call that leaves `remoteOutputs`
 out turns them off, and playback on one comes back to the phone.
 
-::: tip Migrating from `remoteOutputs: true`
-`remoteOutputs` was a boolean; it is now an object, with a flag for each output
-the library plays on. `remoteOutputs: true` becomes `remoteOutputs: {}`.
-:::
-
 A provider offers its routes by declaring the library's control category,
 `"com.audiobrowser.CATEGORY_REMOTE_OUTPUT"` (`RemoteOutputs.CATEGORY` in
 Kotlin), in its control filters. Only the
@@ -210,23 +205,18 @@ Local network access: the library finds and controls the rooms itself, over
 the local network. An app that targets SDK 36 or lower has that access through
 `INTERNET`, and needs nothing more.
 
-From target SDK 37 (Android 17), Android
-blocks the local network until the app is granted the runtime permission
-`ACCESS_LOCAL_NETWORK`, which the library doesn't request yet. Without it, rooms
-don't appear and can't be controlled.
-
-Android exempts apps that use the Output
-Switcher for Cast, whose discovery the system runs; its docs don't yet say
-whether that covers rooms the library finds itself, so plan for the permission.
-See Android's
+From target SDK 37 (Android 17), Android blocks the local network until the
+app is granted the runtime permission `ACCESS_LOCAL_NETWORK`. The library
+doesn't request it, so request it in your app: without it, rooms don't appear
+and can't be controlled. For what Android exempts, see its
 [local network permission](https://developer.android.com/privacy-and-security/local-network-permission).
 
 ::: warning Sonos support is a bonus, not a promise
 The library controls the speakers over UPnP, on port 1400 of each speaker.
 
 Sonos calls UPnP unsupported and unmaintained, and lets the listener switch it
-off in the Sonos app (Account › Privacy & Security). When it is off, or Sonos
-removes it, the rooms don't appear in the switcher.
+off in the Sonos app. When it is off, or Sonos removes it, the rooms don't
+appear in the switcher.
 
 The library doesn't use Sonos's cloud or local Control APIs, which need
 Sonos's approval.
@@ -271,8 +261,8 @@ Known limits:
 - Rooms are found by SSDP multicast on the local network, so the phone and the
   speakers must share it; guest and isolated Wi-Fi networks hide them.
 - A track that needs request headers won't play.
-- The state is polled every two seconds, so a change made in the Sonos app shows
-  up here after a moment.
+- The state is polled, so a change made in the Sonos app shows up here after a
+  moment.
 - If another app or the Sonos app starts something else on the room, this app
   reads as paused and leaves the room alone; playing again loads its own track.
 - Android only. On iOS, a Sonos speaker with AirPlay 2 appears in the route

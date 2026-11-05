@@ -6,7 +6,7 @@ description: 'Install react-native-audio-browser and its react-native-nitro-modu
 
 ## Installation
 
-The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. `react-native-nitro-modules` is a required peer dependency — install it alongside:
+The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. `react-native-nitro-modules` 0.35 or later is a required peer dependency — install it alongside:
 
 ::: code-group
 
@@ -45,7 +45,7 @@ For playback to continue in the background on iOS, add the `audio` background mo
 
 Android links automatically.
 
-For web (`react-native-web`), also install [`shaka-player`](https://github.com/shaka-project/shaka-player) 4.7.9 or newer. It is an optional peer dependency that the web player loads during `setupPlayer()`. Native builds don't need it.
+For web (`react-native-web`), also install [`shaka-player`](https://github.com/shaka-project/shaka-player) 4 (4.7.9 or later). It is an optional peer dependency that the web player loads during `setupPlayer()`. Native builds don't need it.
 
 ::: code-group
 
@@ -82,7 +82,7 @@ await setupPlayer()
 
 The same API runs in the browser. On web the library plays through an HTML `<audio>` element driven by [Shaka Player](https://github.com/shaka-project/shaka-player), the optional peer dependency from [Installation](#installation).
 
-Your bundler must resolve `.web.ts` / `.web.js` files ahead of plain ones, as react-native-web setups do, and map `react-native` to `react-native-web`; on web the library uses only `AppState` and `Image` from it. On the server (no `window`) `setupPlayer()` creates no player, so call it in the browser.
+Your bundler must resolve `.web.ts` / `.web.js` files ahead of plain ones, as react-native-web setups do, and map `react-native` to `react-native-web`. On the server (no `window`) `setupPlayer()` creates no player, so call it in the browser.
 
 Playback, the queue, browse, search and the sleep timer work as on native. Now Playing metadata goes to the browser's Media Session API, so the system's media controls, media keys and Bluetooth buttons show the track and drive the player through the same [remote controls](/guide/remote-controls) handlers.
 

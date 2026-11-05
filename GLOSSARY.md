@@ -325,7 +325,7 @@ _Avoid_: isRetrying, error flag.
 
 ### First-Connect Budget / Recovery Budget
 
-The two duration bounds on automatic retry, selected per load by whether it has ever rendered audio (`hasPlayed`). A load that never played gets a short budget (default 12s, counting only a contiguous online stretch); once playback has proven the source works, it gets the long one (default 2 min).
+The two duration bounds on automatic retry, selected per load by whether it has ever rendered audio (`hasPlayed`). A load that never played gets a short budget, counting only a contiguous online stretch; once playback has proven the source works, it gets a long one. The defaults are on [`RetryConfig`](https://audiobrowser.dev/api/features/player/#retryconfig).
 
 Durations bound the give-up promise; attempt counts only pace the backoff. See ADR 0004.
 
@@ -415,7 +415,7 @@ _Avoid_: Browse Gate (its former name, still on the internal iOS type `BrowseGat
 
 ## Relationships
 
-- A **Browser** holds zero or more **Route**s, up to four **Tab**s, and optionally one **Search**.
+- A **Browser** holds zero or more **Route**s, any number of **Tab**s, and optionally one **Search**. Car surfaces show only as many Tabs as they allow: see [Tabs and the initial path](https://audiobrowser.dev/guide/browser#tabs-and-the-initial-path).
 - The **Browser** produces **ResolvedTrack**s; the **Player** consumes their Playable **Track**s via the **Queue**.
 - A **Queue** holds zero or more **Track**s and has at most one **Active Track**.
 - A live stream emits **TimedMetadata**; the app may pass fields to **Now Playing** through the formatter or the override.
@@ -443,7 +443,7 @@ _Avoid_: Browse Gate (its former name, still on the internal iOS type `BrowseGat
 
   A Track may carry both, but surfaces currently treat that as playable — `src` wins; see **Playable**. When in doubt: ask "do I navigate into this or stream this?"
 
-- _`id` is the Playable Track's Identity when present._ A Track's **Identity** is its `id` when set (non-empty), falling back to its `src` (Android also treats a whitespace-only `id` as unset) — one rule, applied at every comparison site (favorites, the now-playing row indicator, section scoping, skip-in-place, contextual queue re-expansion).
+- _`id` is the Playable Track's Identity when present._ A Track's **Identity** is its `id` when set (non-empty), falling back to its `src` — one rule, applied at every comparison site (favorites, the now-playing row indicator, section scoping, skip-in-place, contextual queue re-expansion).
 
   The fallback is per-Track, not per-comparison: a Track carrying an `id` compares by that id alone, so a row with an `id` never matches a track that only has a `src` — mixed id-presence never matches. Assign ids consistently, everywhere or nowhere.
 
@@ -461,7 +461,7 @@ _Avoid_: Browse Gate (its former name, still on the internal iOS type `BrowseGat
 
 - _Tabs and Search look like Routes internally._ At the native layer, `tabs:` and `search:` (and a `routes['*']` default) are flattened into the same route table as user-declared routes, using magic paths `__tabs__`, `__search__`, and `__default__`.
 
-  This is an implementation detail — domain-wise a Tab is not a Route; it's a top-bar navigation entry with a 4-entry constraint, and Search is a voice/text query handler. Don't promote the magic paths to the public vocabulary.
+  This is an implementation detail — domain-wise a Tab is not a Route; it's a top-bar navigation entry, and Search is a voice/text query handler. Don't promote the magic paths to the public vocabulary.
 
 - _`'receiver'` as an `OutputType` is the earpiece, not a **Receiver**._ `getOutput()` and `useOutput()` report `type: 'receiver'` when audio plays through the phone's built-in earpiece, on iOS and Android. The name is iOS's for that route (`builtInReceiver`); Android calls it the earpiece.
 

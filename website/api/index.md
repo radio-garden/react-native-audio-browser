@@ -31,14 +31,11 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 - **[Browse gates](https://audiobrowser.dev/guide/gate)** — put browse on CarPlay, Android Auto, and Android Automotive, and voice search anywhere, behind a paywall, login, or region wall, decided per request by a resolver.
 - **Request and [artwork](https://audiobrowser.dev/guide/artwork) control** — rewrite outbound requests, add auth headers, shape URLs, and customize artwork loading.
 - **[Web support](https://audiobrowser.dev/guide/getting-started#web)** — the same `AudioBrowser` API works with `react-native-web` for playback, browse, search, and sleep timer.
-- **Platform extras** — [audio output routing](https://audiobrowser.dev/guide/audio-output) (AirPlay on iOS, the Output Switcher on Android 11+), [Android battery-resume handling](https://audiobrowser.dev/guide/battery), [sleep timer](https://audiobrowser.dev/guide/sleep-timer), and [Android equalizer support](https://audiobrowser.dev/guide/equalizer).
+- **Platform extras** — [audio output routing](https://audiobrowser.dev/guide/audio-output) (AirPlay on iOS; the system Output Switcher, Google Cast and Sonos on Android), [Android battery-resume handling](https://audiobrowser.dev/guide/battery), [sleep timer](https://audiobrowser.dev/guide/sleep-timer), and [Android equalizer support](https://audiobrowser.dev/guide/equalizer).
 
 ## Requirements
 
-- React Native **0.76+** with the **New Architecture** (Fabric + TurboModules)
-- iOS **16+** · Android **API 24+**
-- [`react-native-nitro-modules`](https://nitro.margelo.com) **0.35+** (peer dependency)
-- Web: [`shaka-player`](https://github.com/shaka-project/shaka-player) **4.7.9+** (optional peer dependency, only needed with `react-native-web`)
+React Native with the **New Architecture** (Fabric + TurboModules), [`react-native-nitro-modules`](https://nitro.margelo.com) as a peer dependency, and on web [`shaka-player`](https://github.com/shaka-project/shaka-player) as an optional peer dependency. The minimum React Native, React, iOS, Android, nitro and shaka-player versions are listed in [Getting Started](https://audiobrowser.dev/guide/getting-started#installation).
 
 ## Installation
 
@@ -163,8 +160,8 @@ function PlayerBar() {
 
 Optimizations for live radio and long-running streams (see the [Live Streams guide](https://audiobrowser.dev/guide/live-streams)):
 
-- **Auto-reconnect** — opt in with `setupPlayer({ retry: true })`. On a network error the player backs off from 1 s to 5 s and reconnects when the network returns. It gives up after 12 s before a stream first plays, or 2 minutes once it has played or while offline. Not on web.
-- **Fresh URLs on reconnect** — build signed or token-authenticated URLs in a `media.resolve` callback and a reconnect can re-sign them. iOS re-runs it on every reconnect. Android re-runs it after the old URL fails, and after a 401/403 only on `retry()` or play ([details](https://audiobrowser.dev/guide/live-streams#fresh-urls-on-reconnect)).
+- **Auto-reconnect** — opt in with `setupPlayer({ retry: true })`. On a network error the player backs off and reconnects when the network returns, within a short budget before a stream first plays and a longer one once it has played or while offline ([budgets](https://audiobrowser.dev/guide/errors#two-duration-budgets)). Not on web.
+- **Fresh URLs on reconnect** — build signed or token-authenticated URLs in a `media.resolve` callback and a reconnect can re-sign them ([details](https://audiobrowser.dev/guide/live-streams#fresh-urls-on-reconnect)).
 - **Live edge** — `seekToLiveEdge()` jumps back to live on a track marked `live: true`: the DVR-window end for seekable HLS, a clean reconnect for non-seekable ICY/Icecast.
 - **ICY & chapter metadata** — Shoutcast `StreamTitle` and chapter markers surface via `onTimedMetadata` / `onChapterMetadata`, and your [`nowPlaying` formatter](https://audiobrowser.dev/guide/now-playing#the-formatter-derived-continuous) can put them on the lock screen.
 - **Plays nicely** — pauses cleanly on calls, audio-focus loss, and headphone/Bluetooth disconnect, and resumes when it should.
@@ -188,7 +185,7 @@ Full guides and the complete [API Reference](https://audiobrowser.dev/api/) live
 
 **Troubleshooting** — [Networking in native callbacks](https://audiobrowser.dev/guide/native-callback-fetch) · [Android SSL / trust anchors](https://audiobrowser.dev/guide/android-certificates)
 
-The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/next/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate. Its **Style Lab** tab renders every CarPlay `style` declaration, each shelf titled with the block it draws ([source](https://github.com/radio-garden/react-native-audio-browser/blob/next/apps/example-native/src/utils/style-lab.ts)).
+The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/next/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate. Its **Style Lab** tab renders every CarPlay `style` declaration, each shelf titled with the block it draws ([Presentation](https://audiobrowser.dev/guide/browser#presentation)).
 
 ### For coding agents
 

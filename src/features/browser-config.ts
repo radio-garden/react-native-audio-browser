@@ -219,7 +219,7 @@ function flattenRoutes(
   return entries.length > 0 ? entries : undefined
 }
 
-/** Android Auto / CarPlay display at most this many tabs. */
+/** Android Auto displays at most this many tabs; CarPlay reads CPTabBarTemplate.maximumTabCount. */
 const MAX_TABS = 4
 
 /**

@@ -9,7 +9,9 @@ Most playback and queue calls from
 (RNTP) v4 keep their names and meaning in `react-native-audio-browser`. This
 page lists what changes.
 
-RNTP v5 and later use a commercial license. `react-native-audio-browser` is MIT.
+RNTP v5 moved to a
+[commercial license](https://github.com/doublesymmetry/react-native-track-player).
+`react-native-audio-browser` is MIT.
 
 ## What ports over unchanged
 
@@ -141,7 +143,7 @@ Pass `capabilities` to **either** [`setupPlayer`](/api/features/player/#setuppla
 (initial) or [`updateOptions`](/api/features/player/#updateoptions) (later) — both
 accept it. See
 [Configuration → Capabilities](/guide/configuration#capabilities) for the
-defaults (everything on except `jumpForward`, `jumpBackward`, `favorite`).
+defaults.
 `Capability.Like` / `RatingType` map to the [`favorite`](/guide/favorites)
 capability.
 
@@ -177,10 +179,8 @@ Other field changes:
 
 - `isLiveStream` → [`live`](/api/types/browser-nodes/#live).
 - Per-track `headers` / `userAgent` → return them from `media.resolve(track)`
-  (or `resolveSync`), which receives each track. The track's own
-  [`request`](/api/types/browser-nodes/#trackrequest) field is carried but not
-  yet applied to the audio request. Headers that every track shares go on the
-  browser's `request` / `media` config
+  (or `resolveSync`), which receives each track. Headers that every track
+  shares go on the browser's `request` / `media` config
   ([Shaping requests](/guide/browser#shaping-requests)).
 - `rating` → favorites (see above).
 - `title` is required.
