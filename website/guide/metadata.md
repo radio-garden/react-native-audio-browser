@@ -10,19 +10,22 @@ and chapter markers. These arrive as three independent event streams:
 
 - [`onTimedMetadata`](/api/features/metadata/#ontimedmetadata) — the live song
   from a stream (ICY radio or HLS in-band ID3), changing as the broadcast does.
-- [`onTrackMetadata`](/api/features/metadata/#ontrackmetadata) — the static tags
-  baked into a media file, read when it loads.
+- [`onTrackMetadata`](/api/features/metadata/#ontrackmetadata) — the track's
+  static metadata: on iOS the file's own tags, read when it loads; on Android
+  the player's merged view of the Track and the file.
 - [`onChapterMetadata`](/api/features/metadata/#onchaptermetadata) — chapter
   markers with time ranges, for podcasts and audiobooks.
 
 These are **read-only signals coming _in_** from the media — they don't change
 what's displayed anywhere. It's up to you to do something with them: feed the
 [Now Playing](/guide/now-playing) surfaces, render your own UI, or build a
-chapter list. (Each is subscription-only — there's no getter or hook; you
-subscribe and keep the latest value yourself, as shown below.)
+chapter list.
+
+Each is subscription-only: there's no getter or hook. You subscribe and keep the
+latest value yourself, as shown below.
 
 The UI snippets below import `useEffect` / `useState` from `react`, and `Text` /
-`Button` / `Image` / `FlatList` from `react-native`; those import lines are
+`Button` / `FlatList` from `react-native`; those import lines are
 omitted for brevity. Everything else comes from `react-native-audio-browser`.
 
 ## Subscribing
@@ -45,7 +48,7 @@ Because the cleanup function is exactly what React's `useEffect` wants returned,
 turning any of these into reactive state is a one-liner — see
 [Holding metadata in state](#holding-metadata-in-state).
 
-## Timed metadata — the live song
+## Timed metadata: the live song
 
 [`onTimedMetadata`](/api/features/metadata/#ontimedmetadata) delivers the
 "now playing song" announced by a live stream. Two formats arrive through this
@@ -57,6 +60,18 @@ one event:
 
 It fires each time the stream announces a new song, so the value changes
 throughout a single track.
+
+::: info iOS also fires it for a file's tags
+On iOS, a file without chapter markers fires `onTimedMetadata` too. It fires
+once on load for each metadata format the file carries (ID3, iTunes), with the
+file's own tags: `title`, `artist`, `album` and so on.
+
+The
+[Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous)
+then gets them as `timedMetadata` for an on-demand file too. A formatter that
+reads `timedMetadata.title` shows the file's title. Android fires it only for
+metadata the media sends during playback.
+:::
 
 [`TimedMetadata`](/api/features/metadata/#timedmetadata) — every field optional:
 
@@ -79,37 +94,52 @@ This is the signal behind a live station's "now playing" line. To show it on the
 lock screen / car, you usually don't subscribe here directly — you read it inside
 the Now Playing formatter, which is re-invoked on every timed-metadata update.
 See [Now Playing → the formatter](/guide/now-playing#the-formatter-derived-continuous).
+
 Subscribe to `onTimedMetadata` when you want the live song for _your own_ UI.
 
-## Track metadata — the file's tags
+## Track metadata: the track's static fields
 
-[`onTrackMetadata`](/api/features/metadata/#ontrackmetadata) delivers the static
-metadata baked into a media file — ID3 tags on an MP3, the metadata atoms in an
-MP4/M4A — read when the player loads the asset. Use it for on-demand content
-(podcast episodes, audiobooks, downloaded files) whose tags you didn't set
-yourself.
+[`onTrackMetadata`](/api/features/metadata/#ontrackmetadata) delivers a
+track's static metadata. What it carries depends on the platform:
+
+- **iOS** reads the file's own tags (ID3 on an MP3, the metadata atoms in an
+  MP4/M4A) when the player loads the asset. It fires once, and only if the file
+  has tags.
+- **Android** reports the player's merged metadata. The Track's own fields
+  (`title`, `subtitle` as `artist`, `album`, `description`, `genre`, artwork)
+  win over the file's tags. Once the [Now Playing](/guide/now-playing) line is
+  rendered, its title, artist and album replace them.
+
+  The event fires again whenever that merged view changes: a new now-playing
+  line, new artwork, or stream metadata that fills a field the Track leaves
+  empty.
+
+So on Android, `title` and `artist` are what you or your formatter set, not the
+file's. On iOS, use it for on-demand content (podcast episodes, audiobooks,
+downloaded files) whose tags you didn't set yourself.
 
 [`TrackMetadata`](/api/features/metadata/#trackmetadata) is richer than the
 timed shape. **Every field is an optional `string`:**
 
-| Field          | Meaning                          |
-| -------------- | -------------------------------- |
-| `title`        | Track title.                     |
-| `artist`       | Track artist.                    |
-| `albumTitle`   | Album name.                      |
-| `subtitle`     | Secondary line.                  |
-| `description`  | Long description / show notes.   |
-| `artworkUri`   | Artwork URL.                     |
-| `trackNumber`  | Track number within the album.   |
-| `composer`     | Composer credit.                 |
-| `conductor`    | Conductor credit.                |
-| `genre`        | Genre.                           |
-| `compilation`  | Compilation name.                |
-| `station`      | Station/channel name.            |
-| `mediaType`    | Media type string.               |
-| `creationDate` | Full creation date.              |
-| `creationYear` | Creation year.                   |
-| `url`          | A URL associated with the track. |
+| Field          | Meaning                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | Track title.                                                                                                                                    |
+| `artist`       | Track artist.                                                                                                                                   |
+| `albumTitle`   | Album name.                                                                                                                                     |
+| `subtitle`     | Secondary line. On Android, the now-playing artist line once it is rendered.                                                                    |
+| `description`  | Long description / show notes.                                                                                                                  |
+| `artworkUri`   | Android only: the artwork URL the player publishes for the Track, not the file's embedded cover art.                                            |
+| `trackNumber`  | Track number within the album.                                                                                                                  |
+| `composer`     | Composer credit.                                                                                                                                |
+| `conductor`    | Conductor credit.                                                                                                                               |
+| `genre`        | Genre.                                                                                                                                          |
+| `station`      | Android only: the station name from a Shoutcast / Icecast stream's headers.                                                                     |
+| `mediaType`    | Android only, usually unset: a Media3 `MEDIA_TYPE_*` constant, as a number string.                                                              |
+| `creationDate` | iOS: the tag's date string (ID3 `TDRC`, the iTunes release date). Android: day and month only, as `DDMM` (or `DD` or `MM` alone), with no year. |
+| `creationYear` | Creation year. On iOS, the first four characters of `creationDate` when there is no year tag.                                                   |
+
+`compilation` and `url` are in the type but neither platform sets them. Neither
+platform exposes a file's embedded cover art.
 
 ```tsx
 import { onTrackMetadata, type TrackMetadata } from 'react-native-audio-browser'
@@ -120,7 +150,6 @@ function FileInfo() {
   if (!meta) return null
   return (
     <>
-      {meta.artworkUri && <Image source={{ uri: meta.artworkUri }} />}
       <Text>
         {meta.title} — {meta.artist}
       </Text>
@@ -134,24 +163,29 @@ function FileInfo() {
 Two traps when moving between the streams:
 
 - **title vs title:** `TimedMetadata.title` is the _song_ (changes during a live
-  stream); `TrackMetadata.title` is the _file's_ title (static, read once).
+  stream). `TrackMetadata.title` is the _file's_ title on iOS, and on Android
+  the Track's title or the now-playing title.
 - **album vs albumTitle:** timed metadata uses `album`; track metadata uses
-  `albumTitle`. And `TimedMetadata` has no artwork field — only `TrackMetadata`
-  carries `artworkUri`.
+  `albumTitle`. Neither carries the file's cover art. `TimedMetadata` has no
+  artwork field, and `TrackMetadata.artworkUri` is the Track's artwork as
+  Android publishes it.
   :::
 
-## Chapter metadata — podcast & audiobook chapters
+## Chapter metadata: podcast & audiobook chapters
 
 [`onChapterMetadata`](/api/features/metadata/#onchaptermetadata) delivers the
 full list of chapters for the current track as a
 [`ChapterMetadata[]`](/api/features/metadata/#chaptermetadata):
 
-| Field       | Type      | Meaning                                        |
-| ----------- | --------- | ---------------------------------------------- |
-| `startTime` | `number`  | Chapter start, in **seconds**.                 |
-| `endTime`   | `number`  | Chapter end, in **seconds**.                   |
-| `title`     | `string?` | Chapter title, if present.                     |
-| `url`       | `string?` | A URL associated with the chapter, if present. |
+| Field       | Type      | Meaning                                                                         |
+| ----------- | --------- | ------------------------------------------------------------------------------- |
+| `startTime` | `number`  | Chapter start, in **seconds**.                                                  |
+| `endTime`   | `number`  | Chapter end, in **seconds**.                                                    |
+| `title`     | `string?` | Chapter title. Android falls back to the chapter's element ID (such as `chp0`). |
+| `url`       | `string?` | Android only: the chapter's URL link, if present.                               |
+
+Because Android fills an untitled chapter with its element ID, the
+`item.title ?? 'Chapter'` fallback below applies only on iOS.
 
 Because `startTime` is in seconds, it drops straight into
 [`seekTo`](/guide/playback#seeking) to make a tappable chapter list:
@@ -184,13 +218,13 @@ function ChapterList() {
 
 ## Which metadata is which
 
-|             | `onTimedMetadata`       | `onTrackMetadata`      | `onChapterMetadata`         |
-| ----------- | ----------------------- | ---------------------- | --------------------------- |
-| Source      | Live stream (ICY / ID3) | Tags in the media file | Chapter markers in the file |
-| Changes     | Throughout the track    | Once, on load          | Once, on load               |
-| Shape       | One `TimedMetadata`     | One `TrackMetadata`    | A `ChapterMetadata[]`       |
-| Typical use | Live "now playing" song | Podcast/file info      | Chapter navigation          |
-| Platform    | iOS, Android            | iOS, Android           | iOS, Android                |
+|             | `onTimedMetadata`                                                          | `onTrackMetadata`                                             | `onChapterMetadata`         |
+| ----------- | -------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------- |
+| Source      | Live stream (ICY / ID3); on iOS also a file's tags                         | iOS: the file's tags. Android: the Track merged with the file | Chapter markers in the file |
+| Changes     | Throughout the track; on iOS also once on load for a file without chapters | iOS: once, on load. Android: whenever the merged view changes | Once, on load               |
+| Shape       | One `TimedMetadata`                                                        | One `TrackMetadata`                                           | A `ChapterMetadata[]`       |
+| Typical use | Live "now playing" song                                                    | Podcast/file info                                             | Chapter navigation          |
+| Platform    | iOS, Android                                                               | iOS, Android                                                  | iOS, Android                |
 
 ::: warning Not available on web
 All three are iOS and Android only. On web they are subscribable but never
@@ -230,10 +264,10 @@ event and the state type.
 
 ## API summary
 
-| API                 | Delivers                                                 |
-| ------------------- | -------------------------------------------------------- |
-| `onTimedMetadata`   | Live `TimedMetadata` (the streaming "now playing" song). |
-| `onTrackMetadata`   | Static `TrackMetadata` (the media file's embedded tags). |
-| `onChapterMetadata` | `ChapterMetadata[]` (chapter markers, times in seconds). |
+| API                 | Delivers                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `onTimedMetadata`   | Live `TimedMetadata` (the streaming "now playing" song; on iOS also a file's tags, on load). |
+| `onTrackMetadata`   | `TrackMetadata` (iOS: the file's tags; Android: the Track merged with them).                 |
+| `onChapterMetadata` | `ChapterMetadata[]` (chapter markers, times in seconds).                                     |
 
 All three are subscriptions: `addListener(cb)` returns an unsubscribe function.

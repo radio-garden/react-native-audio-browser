@@ -4,19 +4,27 @@ description: 'Block premium, login-only, or region-locked content on CarPlay and
 
 # Gate
 
-When part of your catalog is premium, login-only, or region-locked, you need a way to block it on the car surfaces — without building a separate UI for them. That's what a **Gate** is: you hand the library a short message, and it shows that in place of the browse content on **CarPlay** and **Android Auto**, and can turn away voice searches.
+A **Gate** replaces the browse content on **CarPlay**, **Android Auto** and **Android Automotive** with a short message that you hand the library. It can also turn away voice searches.
 
-One rule worth keeping in mind: **a Gate blocks _finding_, never _hearing_.** Whatever is already playing keeps going, "resume" and "play this" still work by voice, and the queue and now-playing are left alone.
+Use it when part of your catalog is premium, login-only or region-locked, and you want to block it in the car without building a separate UI there.
+
+One rule worth keeping in mind: **a Gate blocks _finding_, never _hearing_.** Whatever is already playing keeps going, a voice "resume" is never gated, and the queue is left alone.
+
+A voice request to play something new is a search. The Gate refuses it unless your resolver lets search through (see [Gating some requests, not others](#gating-some-requests-not-others)).
 
 Two things it never touches:
 
 - **Your own in-app browse UI.** The Gate only covers content the _library_ serves; the screens you draw in your app are yours to gate with your own paywall.
 - **Playback.** It lives on the find/resolve path, so audio is never interrupted.
 
-It follows that the Gate is **iOS and Android only**. On web `setGate` and `clearGate` are no-ops and `onGate` never fires — there's no CarPlay or Android Auto surface to cover, and in-app browse UI was never the Gate's job on any platform. Calling them from shared code is safe and does nothing.
+It follows that the Gate is **iOS and Android only**. On web `setGate` and `clearGate` are no-ops and `onGate` never fires: there's no car surface to cover.
+
+In-app browse UI is not the Gate's job on any platform. Calling the Gate functions from shared code is safe, and on web does nothing.
 
 ::: warning Voice search isn't only a "car" thing
-A Siri request ("Hey Siri, play jazz on App") can come from the phone or lock screen, not just CarPlay — and it still goes through the Gate. That's why the common setup below **gates browsing but lets search through**: voice-play keeps working everywhere, while the car's browse tabs stay walled off.
+A Siri or Google Assistant request ("Hey Siri, play jazz on App") can come from the phone or lock screen, not just the car. It still goes through the Gate.
+
+That's why the common setup below **gates browsing but lets search through**: voice-play keeps working everywhere, while the car's browse tabs stay walled off.
 :::
 
 ## Setting a gate
@@ -29,19 +37,23 @@ setGate({ title: 'Premium', message: 'Subscribe to browse in the car.' })
 clearGate()
 ```
 
-[`setGate`](/api/features/gate/#setgate) raises the gate (or updates it in place); [`clearGate`](/api/features/gate/#cleargate) drops it and the real content returns. Set it before the car connects and it'll be there the moment it does. A gate is global and singular — calling `setGate` again replaces the current one.
+[`setGate`](/api/features/gate/#setgate) raises the gate (or updates it in place); [`clearGate`](/api/features/gate/#cleargate) drops it and the real content returns (on CarPlay, on the first tab; see the warning below).
+
+Set it before the car connects and it'll be there the moment it does. A gate is global and singular — calling `setGate` again replaces the current one.
 
 A Gate is **independent** of `setupPlayer` and `configureBrowser` — call `setGate` any time after import. The usual lifecycle is: set it once at startup, then `clearGate` (or re-`setGate`) whenever the user's entitlement changes (purchase, login, logout).
 
 A gate is just a title and an optional message. How it renders depends on the surface:
 
-- **CarPlay** — a full-page centered message.
-- **Android Auto** — one non-playable list tile: the **title** as its main line, the **message** as the subtitle (newlines collapse to spaces). It's a tile, not a full page like CarPlay, so keep both short.
+- **CarPlay**: the tab bar stays, and each gated tab, or gated page you navigate to, shows a centered message page in place of its list (newlines in the message collapse to spaces). The Now Playing screen keeps its transport controls but hides the custom buttons from `ios.carPlayNowPlayingButtons`.
+- **Android Auto and Android Automotive**: the tabs stay visible, and each gated tab's content becomes one non-playable list tile. The tile shows the **title** as its main line and the **message** as the subtitle (newlines collapse to spaces). Keep both short: it's a tile, not a full page.
 
 There's no action button: Android Auto can't show one, and a car surface can't run a purchase flow anyway (see [Reacting to gate hits](#reacting-to-gate-hits) for the deferred-upsell pattern).
 
-::: warning Updating a live gate resets CarPlay navigation
-Calling `setGate` while a gate is already up replaces it in place — but on CarPlay it pops any drilled-in navigation back to the tab root. Harmless for a set-once gate; worth knowing if you update the message mid-session.
+::: warning Changing the gate resets CarPlay navigation
+While CarPlay is connected, every `setGate`, and every `clearGate` that drops a gate that was up, pops any drilled-in pages back to the tab root. This includes a first `setGate` on logout and a `clearGate` after a purchase. A `clearGate` with no gate up does nothing.
+
+A `clearGate` also rebuilds the tab bar, so CarPlay returns to the first tab; `setGate` keeps the selected tab. A gate set before the car connects does not affect navigation.
 :::
 
 ## Gating some requests, not others
@@ -104,7 +116,9 @@ setGate({ title: 'Premium', message: 'Subscribe to unlock.' }, (request) => {
 })
 ```
 
-You can also pass **only** a resolver, with no default message — return a gate object for full control, or `true` to fall back to the generic built-in chrome. That fallback is a title only (`"Unavailable"`, no body), so on CarPlay its message area is blank — pass a default gate or return a gate object if you want body copy.
+You can also pass **only** a resolver, with no default message. Return a gate object for full control, or `true` to fall back to the generic built-in chrome.
+
+That fallback is a title only (`"Unavailable"`, no body), so on CarPlay its message area is blank. Pass a default gate or return a gate object if you want body copy.
 
 ```ts
 setGate((request) => request.kind === 'browse')

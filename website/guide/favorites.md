@@ -1,10 +1,12 @@
 ---
-description: 'Let listeners heart the active track from the now-playing screen, notification, CarPlay, and Android Auto, and surface a Favorites tab and voice command.'
+description: 'Let listeners heart the active track from the Android notification, Android Auto, CarPlay, and Siri, and surface a Favorites tab and voice command.'
 ---
 
 # Favorites
 
-**Favorites** let a listener mark the active track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite _state_ (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).
+**Favorites** let a listener mark the active track with a heart: in the Android notification and system media controls, Android Auto, the CarPlay now-playing screen, and through Siri. They also let you surface a "Favorites" tab and a "play my favorites" voice command.
+
+The library tracks favorite _state_ (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).
 
 ## Enabling favorites
 
@@ -18,7 +20,7 @@ await setupPlayer({
 })
 ```
 
-The identifiers you pass to [`setFavorites`](#hydrating-favorite-state) are compared against each track's **identity**: its `id` when set, falling back to its `src`. Store the same stable identifier you put in `Track.id` — or, for tracks without ids, the full `src`:
+The identifiers you pass to [`setFavorites`](#hydrating-favorite-state) are compared against each track's **identity**: its `id` when set, falling back to its `src` ([`getTrackIdentity`](/api/utils/getTrackIdentity/) computes it). Store the same stable identifier you put in `Track.id` — or, for tracks without ids, the full `src`:
 
 ```ts
 import { setFavorites } from 'react-native-audio-browser'
@@ -32,7 +34,9 @@ setFavorites(['https://stream.example.com/jazz.mp3']) // matches by src
 
 ## Hydrating favorite state
 
-The library keeps a native cache of which tracks are favorited, so it paints hearts across browse rows and the Now Playing heart without a round-trip to JS — and **without your content API having to know which tracks are favorites**. Declare your favorites once with `setFavorites`; the library stamps `favorited` on any track whose [identity](#enabling-favorites) matches, wherever that track appears. Your content endpoints stay favorites-agnostic — they return the same tracks for everyone, and favorite state lives entirely in your app/user storage.
+The library keeps a native cache of which tracks are favorited. It paints hearts on Android Auto browse rows and the now-playing heart without a round-trip to JS, and **without your content API having to know which tracks are favorites**.
+
+Declare your favorites once with `setFavorites`; the library stamps `favorited` on any track whose [identity](#enabling-favorites) matches, wherever that track appears. Your content endpoints stay favorites-agnostic — they return the same tracks for everyone, and favorite state lives entirely in your app/user storage.
 
 ```ts
 import { setFavorites } from 'react-native-audio-browser'
@@ -44,29 +48,29 @@ setFavorites(favorites)
 
 You only need `setFavorites` for the initial hydrate. After that, taps on the system heart and calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) update the cache for you.
 
-Your API can also return `favorited: true` on a track directly. A caller-set flag always wins over hydration for display — the library never overwrites it — but it does **not** fill the favorites cache: it only affects the response it arrived in, so other appearances of the same track stay unhearted. Treat `setFavorites` as the source of truth, and server-supplied `favorited` as a per-response display override.
+Your API can also return `favorited: true` on a track directly. A caller-set flag always wins over hydration for display — the library never overwrites it — but it does **not** fill the favorites cache. It only affects the response it arrived in, so other appearances of the same track stay unhearted.
+
+Treat `setFavorites` as the source of truth, and server-supplied `favorited` as a per-response display override.
 
 ## Favoriting from system controls
 
-With the capability enabled, a heart appears on the now-playing surfaces. Add it to the Android notification and the CarPlay now-playing screen explicitly:
+Where the heart shows up depends on the platform:
+
+- **Android:** once the capability is on, the heart sits in the overflow of the notification, Android Auto and the system media controls. You need no layout for it. A [`remoteButtonLayout`](/guide/remote-controls#button-layout-android) places it, and a layout that leaves out `'favorite'` drops it.
+- **iOS:** the only heart is a button on the CarPlay now-playing screen, and you opt into it. Control Center and the lock screen show none.
 
 ```ts
 import { setupPlayer } from 'react-native-audio-browser'
 
 await setupPlayer({
   capabilities: { favorite: true },
-  android: {
-    remoteButtonLayout: {
-      back: 'skip-to-previous',
-      forward: 'skip-to-next',
-      overflow: ['favorite']
-    }
-  },
   ios: { carPlayNowPlayingButtons: ['favorite'] }
 })
 ```
 
-When the listener taps a system heart, the library updates its cache and the UI, then emits `onFavoriteChanged` so **you can persist the change** to your storage or backend:
+On iOS, Siri can also favorite or unfavorite the playing track ("add this to my favorites", "I like this") once Siri is wired up: steps 1–4 of [CarPlay → Siri Voice Search](/guide/carplay#siri-voice-search) (the Siri entitlement, the Info.plist keys, the bridging header and the AppDelegate intent handler), with `INAddMediaIntent` and `INUpdateMediaAffinityIntent` listed in `INIntentsSupported`. Favorites need no `search` source.
+
+Every favorite change, from any source, updates the library's cache and the hearts, then emits `onFavoriteChanged`: a system heart tap, a Siri request, and your own calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) alike. Persist the change to your storage or backend here, and only here:
 
 ```ts
 import { onFavoriteChanged } from 'react-native-audio-browser'
@@ -77,7 +81,7 @@ const unsubscribe = onFavoriteChanged.addListener(({ track, favorited }) => {
 })
 ```
 
-The native side has already updated the now-playing heart by the time this fires, so your handler just persists the change — then refreshes the rest (see [Keep it in sync](#keep-it-in-sync)).
+The native side has already updated the now-playing heart by the time this fires, so your handler persists the change, then refreshes the `/favorites` content (see [Keep it in sync](#keep-it-in-sync)).
 
 ## Favoriting from your own UI
 
@@ -93,7 +97,7 @@ setActiveTrackFavorited(true)
 toggleActiveTrackFavorited()
 ```
 
-These are the programmatic counterpart to a system heart tap — persist the result yourself, the same way you would in `onFavoriteChanged`.
+Both emit `onFavoriteChanged` like a system heart tap does, so the listener above persists the change. Don't persist it again in your button handler.
 
 ## Surfacing favorites
 
@@ -122,18 +126,24 @@ Resolve it however your collection lives — from local storage, or from your AP
 
 ### Keep it in sync
 
-The library caches each browse route, so the `/favorites` route keeps showing its old contents until you tell it to re-fetch. **Whenever the favorites collection changes** — a system heart tap, your own UI, or a sync from another device — do two things:
+The library caches each path's content, so `/favorites` keeps showing its old content until you tell it to re-fetch. **Whenever the favorites collection changes**, re-fetch it.
+
+When the change came from outside the player, such as a sync from another device or an edit on your server, also refresh the hearts:
 
 ```ts
 import { setFavorites, notifyContentChanged } from 'react-native-audio-browser'
 
-// refresh the hearts (favorited flag)
+// only for changes from outside the player: refresh the hearts
 setFavorites(updatedIds)
-// re-fetch the /favorites content
+// always: re-fetch the /favorites content
 notifyContentChanged('/favorites')
 ```
 
-These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when _everything_ should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.
+These hit two different caches. `setFavorites` updates the `favorited` flag wherever a track appears. A heart tap, a Siri request or `setActiveTrackFavorited` already updates it, so for those the call is redundant, though harmless.
+
+[`notifyContentChanged(path)`](/api/features/browser/#notifycontentchanged) re-runs the route handler for that one path and refreshes any surface currently showing it. Use [`invalidateAllContent()`](/api/features/browser/#invalidateallcontent) instead only when _everything_ should re-fetch, such as on a locale switch or sign-out.
+
+You can drive both calls from one place that observes your favorites list, rather than from each source of change.
 
 ## Searching within favorites
 
@@ -141,14 +151,14 @@ Voice intents can target the favorites collection — both "play my favorites" a
 
 ## API summary
 
-| API                                                              | Purpose                                                                                                                                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `capabilities: { favorite: true }`                               | Enable favoriting and the system hearts.                                                                                                                            |
-| `setFavorites(ids)`                                              | Hydrate the favorites cache; ids match each track's identity (`id`, falling back to `src`).                                                                         |
-| `track.favorited`                                                | Per-track display flag; a caller-set value wins over hydration but does not fill the cache.                                                                         |
-| `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI.                                                                                                                         |
-| `onFavoriteChanged`                                              | Subscribe to system heart taps to persist the change.                                                                                                               |
-| `notifyContentChanged('/favorites')`                             | Re-fetch the `/favorites` content after the collection changes.                                                                                                     |
-| `'favorite'` in `android.remoteButtonLayout`                     | Heart in the Android notification, Android Auto, and the system media controls. A layout replaces the defaults wholesale, so list the other buttons you still want. |
-| `ios.carPlayNowPlayingButtons: ['favorite']`                     | Heart on the CarPlay now-playing screen.                                                                                                                            |
-| `search` source with `reference: 'my'`                           | Resolve "play my favorites" / favorites search.                                                                                                                     |
+| API                                                              | Purpose                                                                                                                                                         |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities: { favorite: true }`                               | Enable favoriting and the system hearts.                                                                                                                        |
+| `setFavorites(ids)`                                              | Hydrate the favorites cache; ids match each track's identity (`id`, falling back to `src`).                                                                     |
+| `track.favorited`                                                | Per-track display flag; a caller-set value wins over hydration but does not fill the cache.                                                                     |
+| `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI.                                                                                                                     |
+| `onFavoriteChanged`                                              | Fires on every favorite change (system heart, Siri, your own calls); persist the change here.                                                                   |
+| `notifyContentChanged('/favorites')`                             | Re-fetch the `/favorites` content after the collection changes.                                                                                                 |
+| `'favorite'` in `android.remoteButtonLayout`                     | Places the Android heart. Without a layout it sits in the overflow already. A layout replaces the defaults wholesale, so list the other buttons you still want. |
+| `ios.carPlayNowPlayingButtons: ['favorite']`                     | The heart on the CarPlay now-playing screen, the only one on iOS.                                                                                               |
+| `search` source with `reference: 'my'`                           | Resolve "play my favorites" / favorites search.                                                                                                                 |

@@ -1,23 +1,24 @@
 ---
-description: 'Stop playback after a fixed time or at the end of the current track, counted down natively so it fires with the app backgrounded or the screen off.'
+description: 'Pause playback after a fixed time or at the end of the current track, counted down natively so it fires with the app backgrounded or the screen off.'
 ---
 
 # Sleep Timer
 
-A **sleep timer** stops playback on its own after a set time — the classic
+A **sleep timer** pauses playback on its own after a set time — the classic
 "fall asleep to the radio" feature. The library runs the timer natively, so it
 keeps counting down and fires even when your app is backgrounded or the screen
 is off. There are two kinds:
 
 - **Time-based** — pause after a fixed number of seconds (e.g. "in 30 minutes").
-- **End of track** — pause when the current track finishes playing.
+- **End of track** — pause when the current track finishes playing (see
+  [Behavior and edge cases](#behavior-and-edge-cases) for skips and repeat).
 
 Only one timer is active at a time; setting a new one replaces the old.
 
 ## Setting a timer
 
-Call `setSleepTimer` with a duration in **seconds**. This example stops playback
-after 30 minutes:
+Call `setSleepTimer` with a duration in **seconds**. This example pauses
+playback after 30 minutes:
 
 ```ts
 import { setSleepTimer } from 'react-native-audio-browser'
@@ -29,7 +30,7 @@ Most UIs offer a few presets rather than a free-form duration — multiply the
 minutes you show by 60:
 
 ```ts
-const PRESETS_MINUTES = [15, 30, 45, 60]
+const PRESETS_MINUTES = [15, 30, 45, 60] as const
 
 setSleepTimer(PRESETS_MINUTES[1] * 60) // 30 minutes
 ```
@@ -52,7 +53,7 @@ Pass a `fadeDuration` (in seconds) to ramp the volume down to silence as the
 timer runs out — a gentler finish than an abrupt pause:
 
 ```ts
-// Stop in 30 minutes, fading the last 20 seconds to silence.
+// Pause in 30 minutes, fading the last 20 seconds to silence.
 setSleepTimer(30 * 60, { fadeDuration: 20 })
 ```
 
@@ -63,9 +64,14 @@ starts at normal loudness.
 
 During the fade the timer takes priority: seeking or skipping plays into the
 remaining ramp rather than cancelling it. Only pausing, or clearing/replacing
-the timer, stops the fade. The countdown keeps ticking throughout, so you can
-show a "fading out" hint once `secondsLeft` drops to `fadeDuration` (see the
+the timer, stops the fade.
+
+The countdown keeps ticking throughout, so you can show a "fading out" hint
+once `secondsLeft` drops to `fadeDuration` (see the
 [complete example](#a-complete-screen)).
+
+While casting on Android, the timer pauses the receiver at the deadline without
+fading: see [Google Cast](/guide/audio-output#google-cast-android).
 
 ## Clearing a timer
 
@@ -96,7 +102,7 @@ function SleepTimerLabel() {
 
   if (!timer) return <Text>No sleep timer</Text>
   if ('sleepWhenPlayedToEnd' in timer) {
-    return <Text>Stopping at end of track</Text>
+    return <Text>Pausing at end of track</Text>
   }
 
   const minutes = Math.floor(timer.secondsLeft / 60)
@@ -111,9 +117,11 @@ function SleepTimerLabel() {
 
 The countdown only ticks while the app is in the foreground — `secondsLeft`
 doesn't advance in the background (the native timer still fires on time
-regardless). The only reason to care is to avoid pointless per-second re-renders
-while backgrounded: derive the `inactive` flag from React Native's `AppState`
-and pass it in. You can also tune the refresh rate with `updateInterval`
+regardless).
+
+The only reason to care is to avoid pointless per-second re-renders while
+backgrounded: derive the `inactive` flag from React Native's `AppState` and
+pass it in. You can also tune the refresh rate with `updateInterval`
 (milliseconds, default `1000`):
 
 ```tsx
@@ -201,7 +209,7 @@ function Status(props: {
   const { timer, fadeSeconds } = props
   if (!timer) return <Text>No sleep timer</Text>
   if ('sleepWhenPlayedToEnd' in timer) {
-    return <Text>Stopping at end of track</Text>
+    return <Text>Pausing at end of track</Text>
   }
   if (timer.secondsLeft <= fadeSeconds) return <Text>Fading out…</Text>
 
@@ -254,6 +262,19 @@ unsubscribe()
   matters.
 - **Nothing throws.** Every function here is synchronous; the setters return
   `void` and `clearSleepTimer` returns a boolean. No `try/catch` needed.
+- **Set it after setup.** On iOS and Android, a setter called before
+  `setupPlayer` has resolved is ignored without an error, and `getSleepTimer`
+  stays `null`.
+- **End of track when the track changes early, on iOS.** Any change of current
+  track before it ends (a skip, a new queue) cancels an end-of-track timer, and
+  `onSleepTimerChanged` fires with `null`.
+- **End of track when the track changes early, on Android and web.** The timer
+  stays set through a skip or a new queue, and it pauses at the end of the next
+  track that plays to its end.
+- **End of track with repeat-track on Android.** While the repeat mode is
+  `track`, an end-of-track timer never fires on Android, because the track loops
+  without ending. On iOS and web it pauses at the end of the current
+  play-through.
 
 ## API summary
 

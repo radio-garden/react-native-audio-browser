@@ -9,15 +9,16 @@ react when it changes, and open the system output switcher so the listener can
 move playback to another device. Both layers are **cross-platform**:
 
 - **Reading the current output** — `getOutput()` / `useOutput()` /
-  `onOutputChanged`. iOS reports the active route while a session is active;
-  Android reports the active output route from `AudioManager` (the `type` is
-  coarse — e.g. wired headphones may report as `speaker`).
+  `onOutputChanged`. iOS reports the active route while a session is active.
+  Android reports the device media is routed to; below Android 13 it can miss a
+  reroute made while a device stays connected.
 - **Opening the switcher** — `openOutputPicker()` / `supportsOutputSwitcher()`:
   the system route picker on iOS, the system Output Switcher on Android 11+.
 
 ::: tip Gate the switcher button on `supportsOutputSwitcher()`
 Surface your output button only when `supportsOutputSwitcher()` is `true` — it's
 `true` on iOS and Android 11+ (API 30), `false` on older Android and web.
+
 Reading the current output works more broadly, but `getOutput()` can still be
 `undefined` (before playback, or when unknown) — so guard for it.
 :::
@@ -50,24 +51,46 @@ An [`Output`](/api/features/output/#output) is:
 | `type`     | `OutputType` | The output kind (see below).                                                    |
 | `external` | `boolean`    | `false` only for the built-in speaker/receiver; `true` for everything external. |
 
-`type` is one of `'speaker'`, `'receiver'` (the iOS earpiece), `'headphones'`,
-`'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` and `'sonos'`
-(see below), `'remote'` (a remote speaker or TV, see below), or `'other'`. Both platforms map their native ports/routes into
-this shared set — e.g. iOS's separate Bluetooth ports all collapse to
-`'bluetooth'`.
+`type` is one of `'speaker'`, `'receiver'` (the built-in earpiece),
+`'headphones'`, `'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'`
+and `'sonos'` (see below), `'remote'` (a remote speaker or TV, see below), or
+`'other'`. Both platforms map their native ports/routes into this shared set —
+e.g. iOS's separate Bluetooth ports all collapse to `'bluetooth'`.
 
-::: warning Android reports a coarser type
-On Android the type comes from the system route and is coarser: wired headphones
-often report as `'speaker'` (the built-in route), and really only `'bluetooth'`
-is reliably distinguished from it. The device **name** still comes through.
+::: warning Android below 13 can miss a reroute
+On Android 13+ (API 33), the output is the device media is routed to. Below
+that, the library picks from the connected devices: Bluetooth, then wired
+headphones, then the speaker. It misses a reroute made while a device stays
+connected.
 :::
+
+`'airplay'` and `'car'` come from iOS only. On Android, a car's Bluetooth
+reports `'bluetooth'`.
+
+Outside React, read a snapshot with `getOutput()` or subscribe with
+[`onOutputChanged`](/api/features/output/#onoutputchanged):
+
+```ts
+import { getOutput, onOutputChanged } from 'react-native-audio-browser'
+
+getOutput() // Output | undefined
+
+const unsubscribe = onOutputChanged.addListener((output) => {
+  console.log('now playing on', output.name)
+})
+
+// later:
+unsubscribe()
+```
 
 ### Remote outputs (Android)
 
 With `remoteOutputs: {}` in [`setupPlayer`](/guide/configuration), the system
 Output Switcher (Android 11+) also lists the speakers and TVs of media route
 providers, and the one the listener selects becomes the output, with
-`type: 'remote'`. While one is selected, the switcher offers **Stop casting**
+`type: 'remote'`.
+
+While one is selected, the switcher offers **Stop casting**
 rather than the phone's own outputs; stopping reports the local device again.
 
 The switcher moves the session only for an app that declares AndroidX's
@@ -91,7 +114,8 @@ the library plays on. `remoteOutputs: true` becomes `remoteOutputs: {}`.
 :::
 
 A provider offers its routes by declaring the library's control category,
-`com.audiobrowser.RemoteOutputs.CATEGORY`, in their control filters. Only the
+`"com.audiobrowser.CATEGORY_REMOTE_OUTPUT"` (`RemoteOutputs.CATEGORY` in
+Kotlin), in its control filters. Only the
 selection is reported: the library keeps playing locally, and rendering the
 audio on the speaker is the provider's job.
 
@@ -99,10 +123,10 @@ audio on the speaker is the provider's job.
 
 With `remoteOutputs: { cast: true }`, selecting a Cast device in the switcher
 moves playback there, through Google's Default Media Receiver, or the receiver
-`castReceiverApplicationId` names. The output
-reports `type: 'cast'`, and the queue, the position and the play intent move
-across both ways: **Stop casting** brings playback back to the phone, at the
-same track.
+`castReceiverApplicationId` names. The output reports `type: 'cast'`.
+
+The queue, the position and the play intent move across both ways: **Stop
+casting** brings playback back to the phone, at the same track.
 
 ```ts
 await setupPlayer({ remoteOutputs: { cast: true } })
@@ -134,8 +158,9 @@ phone and the library logs a warning.
 
 The receiver fetches the stream itself:
 
-- It gets the URL your media transform resolves, without its headers, so a
-  stream that needs request headers won't play on it.
+- It gets the URL the `media` request config resolves the track's `src` to
+  (your Transform and Resolve included), without its headers. A stream that
+  needs request headers won't play on it.
 - A track without a file extension is sent as `audio/mpeg`; the receiver works
   out the real codec. A track with `live: true` loads as a live stream.
 - The receiver shows the track's title, artist and artwork. It doesn't read
@@ -174,7 +199,8 @@ the library talks to the speakers itself.
 
 ```xml
 <!-- android/app/src/main/AndroidManifest.xml -->
-<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+<uses-permission
+  android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 ```
 
 Without the permission, the library logs a warning and looks for rooms without
@@ -182,30 +208,40 @@ the lock, so a room can be missed while the phone saves power on Wi-Fi.
 
 Local network access: the library finds and controls the rooms itself, over
 the local network. An app that targets SDK 36 or lower has that access through
-`INTERNET`, and needs nothing more. From target SDK 37 (Android 17), Android
+`INTERNET`, and needs nothing more.
+
+From target SDK 37 (Android 17), Android
 blocks the local network until the app is granted the runtime permission
 `ACCESS_LOCAL_NETWORK`, which the library doesn't request yet. Without it, rooms
-don't appear and can't be controlled. Android exempts apps that use the Output
+don't appear and can't be controlled.
+
+Android exempts apps that use the Output
 Switcher for Cast, whose discovery the system runs; its docs don't yet say
 whether that covers rooms the library finds itself, so plan for the permission.
 See Android's
 [local network permission](https://developer.android.com/privacy-and-security/local-network-permission).
 
 ::: warning Sonos support is a bonus, not a promise
-The library controls the speakers over UPnP, on port 1400 of each speaker. Sonos
-calls UPnP unsupported and no longer maintained, and lets the listener switch it
+The library controls the speakers over UPnP, on port 1400 of each speaker.
+
+Sonos calls UPnP unsupported and unmaintained, and lets the listener switch it
 off in the Sonos app (Account › Privacy & Security). When it is off, or Sonos
-removes it, the rooms don't appear in the switcher. The library doesn't use
-Sonos's cloud or local Control APIs, which need Sonos's approval.
+removes it, the rooms don't appear in the switcher.
+
+The library doesn't use Sonos's cloud or local Control APIs, which need
+Sonos's approval.
 :::
 
 What plays:
 
-- The speaker fetches the stream itself, from the URL your media transform
-  resolves, without its headers. A live stream goes as a radio stream: the
-  speaker follows redirects and works out the codec, so MP3, AAC and HLS
-  streams play, over `https` and plain `http`. A track goes as a file, in a
-  format the speaker plays, so the speaker knows its duration and can seek in it.
+- The speaker fetches the stream itself, from the URL the `media` request
+  config resolves the track's `src` to (your Transform and Resolve
+  included), without its headers.
+- A live stream goes as a radio stream: the speaker follows redirects and works
+  out the codec, so MP3, AAC and HLS streams play, over `https` and plain
+  `http`.
+- A track goes as a file, in a format the speaker plays, so the speaker
+  knows its duration and can seek in it.
 - The speaker is sent the track's title, artist and artwork to show.
 - The speaker reads song titles from the stream (ICY titles, and the ID3 titles
   of HLS streams). The library polls them and reports them through
@@ -226,8 +262,8 @@ Grouping:
 - The library doesn't group or ungroup rooms; the listener does that in the
   Sonos app.
 
-While on Sonos, local-only behaviour steps aside as it does for Cast: the
-volume is the speaker's, the equalizer waits for the phone, and a speaker error
+While on Sonos, local-only behaviour steps aside as it does for Cast. The
+volume is the speaker's, and the equalizer waits for the phone. A speaker error
 reaches the app as a playback error, as does a speaker that stops answering.
 
 Known limits:
@@ -260,29 +296,13 @@ Cast and Sonos play the queue the same way:
 - Moving from one room or Cast device to another goes straight there, without
   the phone in between.
 - A receiver that fails to play reaches the app as a playback error with code
-  `remote-error`, as does an item whose URL can't be resolved for it, and one
+  `remote-error`. So does an item whose URL can't be resolved for it, and one
   the receiver hasn't started within 30 seconds of being sent or played.
   Playing again loads the item there anew.
 
 The library's Sonos route provider service is exported, as the Output Switcher
 needs to bind it: another app on the phone can bind it too, list the rooms,
 select one and set its volume, as through any media route provider.
-
-Outside React, read a snapshot with `getOutput()` or subscribe with
-[`onOutputChanged`](/api/features/output/#onoutputchanged):
-
-```ts
-import { getOutput, onOutputChanged } from 'react-native-audio-browser'
-
-getOutput() // Output | undefined
-
-const unsubscribe = onOutputChanged.addListener((output) => {
-  console.log('now playing on', output.name)
-})
-
-// later:
-unsubscribe()
-```
 
 ## Opening the output picker
 
@@ -313,7 +333,9 @@ from showing a control that would do nothing.
 On Android the switcher is the system one (the picker from the media
 notification); selecting a Bluetooth speaker there routes audio at the OS level.
 The library can't force playback to a _specific_ Bluetooth device itself — route
-selection is the system's job, which is what this hands off to. Sonos appears on
+selection is the system's job, which is what this hands off to.
+
+Sonos appears on
 iOS as an AirPlay target, and on Android with `remoteOutputs: { sonos: true }`.
 
 ## You may not need this for unplug handling
@@ -321,9 +343,14 @@ iOS as an AirPlay target, and on Android with `remoteOutputs: { sonos: true }`.
 When the current output **disappears** — headphones unplugged, a Bluetooth
 speaker powered off — the player **pauses automatically** rather than blaring out
 of the built-in speaker (the convention every media app follows). It's a
-deliberate pause: the listener presses play again when ready. So you don't need
+deliberate pause: the listener presses play again when ready.
+
+So you don't need
 to watch `onOutputChanged` just to handle unplugging — reach for these APIs to
 _display_ the output or to _offer_ a switcher.
+
+On Android, `setupPlayer({ android: { handleAudioBecomingNoisy: false } })`
+turns the pause off. On iOS it always happens.
 
 ## API summary
 
@@ -336,4 +363,5 @@ _display_ the output or to _offer_ a switcher.
 | `onOutputChanged`          | iOS, Android     | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn.      |
 
 The whole API is cross-platform; only the switcher needs Android 11+ (gate on
-`supportsOutputSwitcher()`), and Android reports coarser output `type`s than iOS.
+`supportsOutputSwitcher()`). Below Android 13, the output can miss a reroute
+made while a device stays connected.

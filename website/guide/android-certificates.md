@@ -1,16 +1,25 @@
 ---
-description: 'Fix Android SSLHandshakeException / "Trust anchor for certification path not found" on HTTPS streams whose server omits its intermediate certificate.'
+description: 'Why Android playback fails with SSLHandshakeException / "Trust anchor for certification path not found" on HTTPS streams whose server omits its intermediate certificate, and what the AIA toolkit does and does not reach.'
 ---
 
-# Android: SSL "Trust anchor for certification path not found" (missing intermediate certificates)
+# Android: missing intermediate certificates
 
-**If Android playback of a radio stream (or any HTTPS audio source) fails with an
-`SSLHandshakeException` / `CertPathValidatorException` / "Trust anchor for
-certification path not found" — and the same stream plays fine on iOS and in a
-desktop browser — you are in the right place.** This is almost always a server
-that omits an intermediate certificate; the fix is to let the client chase the
-missing certificate via the leaf's Authority Information Access (AIA) pointer, and
-this guide shows the one-time Android setup that does it.
+Android playback of an HTTPS stream can fail with `SSLHandshakeException`,
+`CertPathValidatorException` or "Trust anchor for certification path not found"
+while the same stream plays on iOS and in a desktop browser. The cause is almost
+always a server that omits an intermediate certificate.
+
+The library ships `AiaTls`, a toolkit that fetches the missing certificate from
+the URL in the leaf's Authority Information Access (AIA) extension. It does not
+reach playback yet.
+
+The player sends media over its own OkHttp client, which the app cannot
+configure, so installing `AiaTls` does not fix a failing stream.
+
+The reliable fix is for the server to send its full chain. The client-side
+alternative is a Network Security Config that trusts the missing intermediate (see
+[Fix playback from the app](#fix-playback-from-the-app)). This guide shows how
+to confirm the diagnosis, and where `AiaTls` does apply.
 
 ## The problem
 
@@ -31,17 +40,23 @@ client to find the gap on its own.
       Trust anchor for certification path not found.
   ```
 
-This affects media playback because the Android player transports audio over
-`HttpURLConnection`, which uses the process-wide default `SSLSocketFactory`.
+The player sends media over its own OkHttp client, which validates with the
+platform default trust manager. OkHttp does not read the process-wide default
+`SSLSocketFactory`, and the library offers no way to give that client another
+one.
+
+Nothing the app sets as a socket factory reaches playback. Only a Network
+Security Config does, because the platform trust manager reads it.
 
 > **iOS needs no setup.** Apple's TLS stack chases AIA intermediates on its own,
 > so there is nothing to configure on iOS — this guide is Android-only.
 
 ## Is this actually your problem?
 
-Before changing process-global TLS state, confirm the failing stream really is a
-missing-intermediate case and not some other TLS failure (an expired cert, an SNI
-mismatch, or a genuinely untrusted root — none of which this fix addresses).
+Before you report the stream to its operator or change TLS state, confirm the
+failing stream really is a missing-intermediate case. Other TLS failures look
+alike: an expired cert, an SNI mismatch, or a genuinely untrusted root.
+`AiaTls` addresses none of them.
 
 Run, against your failing stream's **host** — use just the hostname, not the full
 stream URL. If your stream URL is `https://example.com:8000/live.mp3`, the host is
@@ -53,6 +68,15 @@ openssl s_client -connect example.com:443 \
   -servername example.com -showcerts </dev/null
 ```
 
+This command does not decode the leaf's extensions. To see its AIA pointer,
+decode the leaf:
+
+```sh
+openssl s_client -connect example.com:443 \
+  -servername example.com </dev/null 2>/dev/null |
+  openssl x509 -noout -ext authorityInfoAccess
+```
+
 In the output:
 
 - A **complete** chain lists two or more certificates under
@@ -60,33 +84,77 @@ In the output:
   ends with `Verify return code: 0 (ok)`.
 - A **missing-intermediate** server typically shows **only one** certificate in
   the chain and a verify error such as
-  `Verify return code: 21 (unable to verify the first certificate)` — yet the
-  leaf's AIA block contains a `CA Issuers - URI:` pointer. That combination is the
-  exact case this fix repairs.
+  `Verify return code: 21 (unable to verify the first certificate)`.
+- A `CA Issuers - URI:` line in the second command's output is the pointer
+  `AiaTls` follows. One certificate, a verify error and this pointer together
+  are a missing intermediate. For playback, the server operator has to send
+  the full chain, or the app trusts the intermediate (see
+  [Fix playback from the app](#fix-playback-from-the-app)).
+
+  `AiaTls` can complete it only for connections your app makes itself:
+  `HttpURLConnection` through the process default, or an OkHttp client you
+  build (see [Advanced](#advanced-custom-okhttp-client)).
 
 Prefer a browser? Paste the host into the [SSL Labs server
 test](https://www.ssllabs.com/ssltest/) — it flags **"Chain issues: Incomplete"**
 for this exact problem — or use [whatsmychaincert.com](https://whatsmychaincert.com/).
 
 > **Want to see a broken chain first?** `incomplete-chain.badssl.com` is a public
-> test host that deliberately omits its intermediate — the canonical example of
-> this misconfiguration. Run the command above against
-> `incomplete-chain.badssl.com:443` to see exactly what the "one certificate +
-> verify error + AIA pointer present" signature looks like before you go hunting in
-> your own stream.
+> test host that omits its intermediate on purpose. Run both commands above
+> against `incomplete-chain.badssl.com:443` to see the signature: one
+> certificate, a verify error and a `CA Issuers` pointer.
 
-If the chain is complete, or there is no `CA Issuers` AIA pointer, this fix will
+If the chain is complete, or there is no `CA Issuers` AIA pointer, `AiaTls` will
 **not** help — see [Caveats](#caveats).
+
+## Fix playback from the app
+
+The player's OkHttp client validates with the platform default trust manager.
+On Android 7 (API 24) and later, that trust manager reads the app's Network
+Security Config. So a `<domain-config>` for the stream's host can trust the
+missing intermediate, with no change to the library.
+
+1. Download the intermediate from the leaf's `CA Issuers - URI` and save it as
+   `res/raw/stream_intermediate.crt` (PEM or DER).
+2. Add `res/xml/network_security_config.xml`:
+
+   ```xml
+   <network-security-config>
+     <domain-config>
+       <domain includeSubdomains="false">example.com</domain>
+       <trust-anchors>
+         <certificates src="@raw/stream_intermediate" />
+         <certificates src="system" />
+       </trust-anchors>
+     </domain-config>
+   </network-security-config>
+   ```
+
+3. Point the `<application>` element of `AndroidManifest.xml` at it with
+   `android:networkSecurityConfig="@xml/network_security_config"`.
+
+The cost is upkeep. The app now bundles that certificate. When the CA rotates
+its intermediate or the server changes CA, playback fails again until you ship
+an update. Fixing the server's chain has no such cost.
 
 ## Opt in
 
 The library ships an **additive** AIA-chasing `SSLSocketFactory` but does **not**
-install it for you — installing it sets process-global TLS state, which is a
-decision for the host application to make, not a library. Enable it by setting it
-as the default in your **existing** `MainApplication`'s `onCreate`, before any
-playback begins. `MainApplication.onCreate` runs before React Native loads and
-executes your JS bundle, so it is always early enough — no playback can have
-started yet.
+install it for you. Installing it changes process-global TLS state, so that is
+the app's decision, not the library's.
+
+::: warning This does not fix playback
+The player sends media over the library's own OkHttp client, which ignores
+`HttpsURLConnection`'s default. The install below covers your app's own
+`HttpURLConnection` traffic only.
+
+For a stream that fails in the player, fix the server's chain, or trust the intermediate in a Network Security Config (see
+[Fix playback from the app](#fix-playback-from-the-app)).
+:::
+
+To enable it, set it as the default in the `onCreate` of your **existing**
+`MainApplication`. `MainApplication.onCreate` runs before React Native loads your
+JS bundle, so no connection can have started yet.
 
 > Add the highlighted line to the `MainApplication` you already have (it lives at
 > `android/app/src/main/java/.../MainApplication.kt` or `.java`). **Don't create a
@@ -110,7 +178,7 @@ class MainApplication : Application() {
       HttpsURLConnection.setDefaultSSLSocketFactory(aiaFactory) // [!code ++]
       installedSslFactory = aiaFactory                          // [!code ++]
     } catch (e: Exception) {
-      // Never let TLS setup block startup; playback keeps default behaviour.
+      // Never let TLS setup block startup; connections keep default behaviour.
       Log.w("MainApplication", "Failed to install AIA-chasing TLS", e)
     }
 
@@ -143,7 +211,7 @@ public class MainApplication extends Application {
       HttpsURLConnection.setDefaultSSLSocketFactory(aiaFactory);   // [!code ++]
       installedSslFactory = aiaFactory;                            // [!code ++]
     } catch (Exception e) {
-      // Never let TLS setup block startup; playback keeps default behaviour.
+      // Never let TLS setup block startup; connections keep default behaviour.
       Log.w("MainApplication", "Failed to install AIA-chasing TLS", e);
     }
 
@@ -154,7 +222,8 @@ public class MainApplication extends Application {
 
 :::
 
-That's all. The player's data source picks up the process default automatically.
+This reaches every `HttpURLConnection` in the process. It does not reach the
+player, which uses OkHttp (see the warning above).
 `AiaTls` ships with the `react-native-audio-browser` Android module you already
 installed — the `com.audiobrowser.tls` import resolves with no extra Gradle
 dependency.
@@ -174,53 +243,57 @@ dependency.
 
 ## The cleartext fetch is handled for you
 
-The completed-chain check happens over HTTPS — only the side fetch of the _missing
-intermediate_ uses the leaf's `CA Issuers` URL, which CAs publish over plain
-`http://` (mandated by the CA/Browser Forum Baseline Requirements, to avoid a
-chicken-and-egg TLS dependency when fetching the very certificate needed to
-complete a TLS chain).
+The stream itself stays on HTTPS. Only the fetch of the _missing intermediate_
+uses the leaf's `CA Issuers` URL, and CAs publish that URL over plain `http://`.
+The CA/Browser Forum Baseline Requirements mandate this: a fetch over TLS would
+need the very certificate that is missing.
 
-That's a problem on most modern apps: targeting Android 9+ (API 28) **blocks
-cleartext HTTP by default**, which would silently break the fetch on release
-builds. So the library doesn't use Android's HTTP stack for it — the `http`
-intermediate fetch goes over a **raw socket**, which isn't subject to your app's
-`usesCleartextTraffic` / network-security-config policy. **You don't need to enable
-cleartext or add a network security config.**
+Apps that target Android 9 (API 28) or later **block cleartext HTTP by default**,
+which would break the fetch in release builds. So the library fetches `http`
+intermediates over a **raw socket**, which your app's `usesCleartextTraffic` and
+network security config do not govern.
 
-This stays safe: the fetched certificate is cryptographically verified to be the
-genuine issuer and re-validated against the system trust anchors before use, so a
-tampered response over plain HTTP can only fail the chain, never weaken it.
+**You don't need to enable cleartext or add a network security config.**
+
+A fetched certificate joins the chain when its subject matches
+the issuer name of the certificate below it. The platform trust manager then
+validates the completed chain, signatures included, against the system trust
+anchors. So a forged or wrong certificate can only fail the handshake, never
+weaken trust.
 
 ## Verify it worked
 
 A silent success is hard to tell apart from "my problem was something else," so
 confirm it explicitly:
 
-1. **Confirm the factory is installed.** The `catch` above only logs on _failure_,
-   so **no warning at startup means it installed without throwing** — enough for a
-   simple app. But it is _not_ enough if your app uses other networking libraries:
-   `setDefaultSSLSocketFactory` is last-write-wins (see [Caveats](#caveats)), so
-   another library setting its own default afterward silently deactivates the fix
-   with no warning. The comparison below is the **only reliable check** in that
-   case. `AiaTls.socketFactory()` returns a stock TLS socket factory configured
-   with the AIA-chasing trust manager, so its _class name_ looks identical to the
-   platform default — don't try to recognise it by class. Instead compare the
-   process default against the reference the opt-in snippet stored in
-   `installedSslFactory`. Put this **after** the install `try`/`catch` (so it
-   reflects the real process default, not the value you just set), anywhere that
-   runs after startup:
+1. **Confirm the factory is installed.** The `catch` above logs only on
+   _failure_, so **no warning at startup means the install did not throw**. In a
+   simple app, that is enough.
+
+   `setDefaultSSLSocketFactory` is last-write-wins (see [Caveats](#caveats)). If
+   another networking library sets its own default later, the fix stops working
+   with no warning. To catch that, compare the process default with the
+   `installedSslFactory` reference that the opt-in snippet stored.
+
+   Don't compare class names. `AiaTls.socketFactory()` returns a stock TLS socket
+   factory with the AIA-chasing trust manager, so its class looks the same as the
+   platform default.
+
+   Run the comparison after your other networking libraries have initialised,
+   for example on first playback or in a debug screen. In `onCreate`, next to the
+   install, it is always true and proves nothing.
 
    ::: code-group
 
    ```kotlin [Kotlin]
-   // place OUTSIDE the install try/catch — this tests the live process default
+   // Run after other networking libraries have initialised.
    val active = HttpsURLConnection.getDefaultSSLSocketFactory() ===
      MainApplication.installedSslFactory
    Log.i("MainApplication", "AIA TLS active: $active")
    ```
 
    ```java [Java]
-   // place OUTSIDE the install try/catch — this tests the live process default
+   // Run after other networking libraries have initialised.
    boolean active = HttpsURLConnection.getDefaultSSLSocketFactory()
      == MainApplication.installedSslFactory;
    Log.i("MainApplication", "AIA TLS active: " + active);
@@ -228,23 +301,25 @@ confirm it explicitly:
 
    :::
 
-2. **Confirm playback recovers.** Play the exact stream that previously failed.
-   It should now start, and the
-   `SSLHandshakeException: ... Trust anchor for certification path not found`
-   should no longer appear in `adb logcat`. No real broken stream on hand? Point
-   the player at a known-broken-chain source such as
-   `https://incomplete-chain.badssl.com/` to prove the wiring end-to-end before you
-   rely on it. Keep one of these around as a regression check for future upgrades.
+2. **Confirm an `HttpURLConnection` request recovers.** Open
+   `https://incomplete-chain.badssl.com/` with `HttpsURLConnection` from your
+   app. Without the install it fails with
+   `SSLHandshakeException: ... Trust anchor for certification path not found`;
+   with it, it succeeds. A stream that fails in the player still fails, because
+   the player does not use the process default.
 
 ### Still failing after install?
 
 Work through these in order:
 
-1. **Is it even a missing-intermediate case?** Re-run the
+1. **Is the failure in playback?** The player does not use the process default,
+   so the install cannot repair it. Fix the server's chain, or see
+   [Fix playback from the app](#fix-playback-from-the-app).
+2. **Is it even a missing-intermediate case?** Re-run the
    [diagnosis](#is-this-actually-your-problem). If the chain is complete, there's
    no `CA Issuers` AIA pointer, or the root is genuinely untrusted/expired, this
    fix can't repair it — that's a different problem.
-2. **Did the AIA fetch fail?** When the chaser tries to fetch the intermediate and
+3. **Did the AIA fetch fail?** When the chaser tries to fetch the intermediate and
    can't, the library logs a warning:
 
    ```
@@ -256,18 +331,20 @@ Work through these in order:
    to enable cleartext; the library's fetch already bypasses that policy.)
 
    ::: warning The logger starts with the playback service
-   The library plants its logging trees when its service first starts, so a fetch
-   that fails **before** any playback has begun logs nothing — even though the
-   socket factory is process-wide and already in use. If you see no line at all,
-   start playback once and retry, or plant your own tree at startup.
+   The library plants its logging trees when its service first starts. A fetch
+   that fails **before** any playback has begun logs nothing, even though the
+   socket factory is process-wide and already in use.
+
+   If you see no line at all, start playback once and retry, or plant your own
+   tree at startup.
    :::
 
-3. **Reachable from your environment?** The fetch is a plain outbound request to
+4. **Reachable from your environment?** The fetch is a plain outbound request to
    the `CA Issuers - URI` during the handshake, so a corporate proxy, VPN,
    firewall, or a locked-down emulator network can block it. Confirm the URL
    resolves by fetching it yourself — `curl -I "http://…/issuer.crt"` — from the
    same network the device is on.
-4. **Custom Network Security Config?** If your app ships a
+5. **Custom Network Security Config?** If your app ships a
    `res/xml/network_security_config.xml` with custom trust anchors or pinning,
    that's an unrelated cause of TLS failures — this fix won't override it.
 
@@ -282,23 +359,26 @@ nothing extra happens. Only when the default _rejects_ a chain does it:
    regardless of your cleartext policy; cached for the process lifetime),
 3. re-validate the completed chain **against the same system trust anchors**.
 
-A fetched certificate is used only if it is genuinely the issuer of the preceding
-one. Because the final decision is still the system trust manager's, this can
-**only ever add a missing intermediate — it can never weaken trust**. Untrusted,
-expired, or self-signed roots still fail exactly as before.
+A fetched certificate joins the chain when its subject matches the issuer name
+of the certificate before it. The system trust manager makes the final decision
+on the completed chain, signatures included. So this can **only ever add a
+missing intermediate — it can never weaken trust**.
+
+Untrusted, expired, or self-signed roots still fail exactly as before.
 
 ## Caveats
 
 - **Scope.** `setDefaultSSLSocketFactory` is process-wide, so it affects every
-  `HttpURLConnection`-based TLS connection in your app, not only playback. (It
-  does not affect OkHttp or a `WebView`, which keep their own TLS stacks.) It is
-  also last-write-wins: if other code sets its own default afterwards, it
+  `HttpURLConnection`-based TLS connection in your app. It does not affect OkHttp
+  or a `WebView`, which keep their own TLS stacks. That includes the player,
+  whose media requests go over OkHttp.
+- **Last write wins.** If other code sets its own default afterwards, it
   overrides this one.
 - **First-connection latency on broken servers.** When a server omits its
-  intermediate, the first connection performs one extra HTTP request for the
-  intermediate during the TLS handshake. Well-configured servers pay no cost. The
-  fetched intermediate is cached for the **process lifetime only**, so this
-  one-time cost recurs once per cold start for each broken server.
+  intermediate, the first connection makes one extra HTTP request during the TLS
+  handshake. Well-configured servers pay nothing. The fetched intermediate is
+  cached for the **process lifetime only**, so the cost recurs once per cold
+  start for each broken server.
 - **Not a cure-all.** It only rescues servers that omit an intermediate _and_
   publish an AIA "CA Issuers" pointer that resolves to a trusted root. Servers
   with no AIA extension, an unreachable intermediate, or a genuinely untrusted
@@ -319,11 +399,11 @@ chain is re-validated by the platform's own trust manager against the same
 system anchors, so anything Android would have rejected is still rejected.
 
 What you are accepting is an outbound request driven by a certificate that just
-failed validation. Completing a chain means fetching the missing intermediate
-from a URL written into that certificate, so a rejected handshake can cause a
-cleartext request to a **host, port and path of the server's choosing** —
-including a loopback or LAN address — and that request is deliberately not
-subject to your app's `NetworkSecurityPolicy` (see
+failed validation. The fetch URL comes from that certificate. So a rejected
+handshake can cause a cleartext request to a **host, port and path of the
+server's choosing**, including a loopback or LAN address.
+
+That request is not subject to your app's `NetworkSecurityPolicy` (see
 [The cleartext fetch is handled for you](#the-cleartext-fetch-is-handled-for-you)).
 
 This is inherent to AIA chasing: browsers and Apple's Secure Transport do the
@@ -331,32 +411,31 @@ same thing, which is why the servers in question work everywhere except Android.
 It is bounded rather than absent:
 
 - the fetch happens **only** when the chain does not already reach one of your
-  trust anchors, so the common non-path failures — an expired leaf, a hostname
-  mismatch — do not trigger one. (The test is on the issuer name at the top of
-  the chain, so a chain topping at a root your device does _not_ carry, such as
-  a server still serving the retired DST Root CA X3 cross-sign, is still chased
-  even if its real problem is expiry.)
+  trust anchors. Common non-path failures, such as an expired leaf or a hostname
+  mismatch, do not trigger one.
+- that test is on the issuer name at the top of the chain. A chain that tops out
+  at a root your device does _not_ carry is still chased, even if its real
+  problem is expiry. An example is a server that serves the retired DST Root CA
+  X3 cross-sign.
 - the URL is rejected unless it is free of control characters, so it cannot
   inject request lines of its own;
 - at most 3 distinct `CA Issuers` URLs per certificate are tried, a response is
   capped at 1 MiB, and at most 5 redirects are followed per fetch;
-- the whole chase runs under a single 20-second wall-clock budget — every
-  connect, TLS handshake, read and redirect hop is clipped to the time
-  remaining, and nothing new starts once it has expired. So the worst case a
-  hostile certificate can inflict on one failed handshake is roughly those
-  20 seconds, plus at most one DNS lookup that was already in flight when the
-  budget expired (Java offers no timeout for name resolution, so a lookup can
-  overrun the budget by its own duration — but a new one is never started past
-  it);
+- the whole chase runs under one 20-second wall-clock budget. Every connect,
+  TLS handshake, read and redirect hop is clipped to the time remaining, and
+  nothing new starts once the budget has expired. So a hostile certificate can
+  hold one failed handshake for about 20 seconds. One DNS lookup already in
+  flight when the budget expires can add its own duration, because Java has no
+  timeout for name resolution. No new lookup starts past the budget;
 - the cache holds at most 32 entries, and only successful fetches;
-- responses are never trusted on their say-so: a fetched certificate is used
-  only if it is the genuine issuer of the certificate below it, and the
-  completed chain still has to validate.
+- responses are never trusted on their say-so. A fetched certificate joins the
+  chain only if its subject matches the issuer name being chased, and the
+  completed chain still has to validate, signatures included.
 
 If your threat model does not allow a failed handshake to trigger an outbound
-connection at all, don't install this — or install it on a single client
-(see [Advanced: custom OkHttp client](#advanced-custom-okhttp-client)) rather
-than as the process default.
+connection at all, don't install this. Or install it on a single client of
+your own (see [Advanced: custom OkHttp client](#advanced-custom-okhttp-client))
+rather than as the process default.
 
 ## Advanced: custom OkHttp client
 
@@ -400,10 +479,13 @@ OkHttpClient client = new OkHttpClient.Builder()
 :::
 
 This confines AIA chasing to that one client and leaves the process default
-untouched.
+untouched. The library has no option for handing such a client to its player,
+so playback stays on the platform trust manager.
 
-> **Lifecycle.** Each call to `AiaTls.socketFactory()` / `AiaTls.trustManager()`
-> builds a fresh component with its **own** fetched-intermediate cache, so build
-> once and reuse it (don't construct one per request). The components are
-> thread-safe — the fetch cache is a synchronized, bounded LRU — so a single
-> instance is safe to install as the process default or share across a client.
+> **Lifecycle.** Each call to `AiaTls.socketFactory()` or `AiaTls.trustManager()`
+> builds a new component with its **own** fetched-intermediate cache. Build one
+> and reuse it; don't build one per request.
+>
+> The components are thread-safe: the fetch cache is a synchronized, bounded
+> LRU. One instance is safe to install as the process default or to share
+> across a client.

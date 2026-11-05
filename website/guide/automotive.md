@@ -16,7 +16,11 @@ already built**:
   whether the user started it in-app or in the car,
 - your [`search` source](/guide/search) answers in-car voice commands
   ("play jazz"),
-- [favorites](/guide/favorites) surface a heart and a "play my favorites" intent.
+- your [favorites](/guide/favorites) are one state shared by the app and the
+  car. With `capabilities.favorite` on, Android Auto shows the heart in its
+  overflow by default; CarPlay shows it once you list it in
+  `ios.carPlayNowPlayingButtons`. Only Siri understands "play my favorites";
+  Android Auto searches the phrase as plain text.
 
 Build those once and they light up every car surface. The per-platform pages
 handle the platform-specific **setup**: **[Android Auto](/guide/android-auto)**
@@ -24,15 +28,15 @@ handle the platform-specific **setup**: **[Android Auto](/guide/android-auto)**
 
 ## Shared vs platform-specific
 
-| Concern                               | Where it's handled                                                                                                       |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Browse tree / menus                   | Shared — [Browser](/guide/browser)                                                                                       |
-| Now-playing metadata & artwork        | Shared — [Now Playing](/guide/now-playing)                                                                               |
-| Player, queue, playback               | Shared — [Playback](/guide/playback)                                                                                     |
-| Voice search ("play …")               | Shared — your [`search`](/guide/search) source                                                                           |
-| Favorites heart & "play my favorites" | Shared — [Favorites](/guide/favorites)                                                                                   |
-| App setup, entitlements, manifest     | Per-platform — [Android Auto](/guide/android-auto) / [CarPlay](/guide/carplay)                                           |
-| Now-playing buttons                   | Per-platform — [Button layout](/guide/remote-controls#button-layout-android) (Android) / [CarPlay](/guide/carplay) (iOS) |
+| Concern                                   | Where it's handled                                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browse tree / menus                       | Shared — [Browser](/guide/browser)                                                                                                                                  |
+| Now-playing metadata & artwork            | Shared — [Now Playing](/guide/now-playing)                                                                                                                          |
+| Player, queue, playback                   | Shared — [Playback](/guide/playback)                                                                                                                                |
+| Voice search ("play …")                   | Shared — your [`search`](/guide/search) source                                                                                                                      |
+| Favorites state                           | Shared — [Favorites](/guide/favorites)                                                                                                                              |
+| App setup, entitlements, manifest         | Per-platform — [Android Auto](/guide/android-auto) / [CarPlay](/guide/carplay)                                                                                      |
+| Now-playing buttons, the heart among them | Per-platform — [Button layout](/guide/remote-controls#button-layout-android) (Android) / [`ios.carPlayNowPlayingButtons`](/guide/carplay#now-playing-buttons) (iOS) |
 
 The takeaway: spend your effort on the shared content model; reach for a platform
 page only for that platform's setup and buttons.

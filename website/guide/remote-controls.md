@@ -1,21 +1,23 @@
 ---
-description: 'Override what the lock-screen, notification, car, and headset buttons do with handleRemote*, and observe presses with the onRemote* events.'
+description: 'Override what the lock-screen, notification, car, and headset buttons do with handleRemote*, observe presses with the onRemote* events, and resume the last session after the app is killed.'
 ---
 
 # Remote Controls
 
 **Remote controls** are the playback buttons on surfaces outside your app — the
 iOS lock screen and Control Center, the Android notification, CarPlay and Android
-Auto, and Bluetooth/headset buttons. By default they just work: the system
-play/pause/next/seek buttons drive the player for you. This guide is for the two
-times you need more — **overriding** what a button does, and **observing** when
-one is pressed.
+Auto, and Bluetooth/headset buttons.
+
+By default they just work: the system play/pause/next/seek buttons drive the
+player for you. This guide is for the two times you need more — **overriding**
+what a button does, and **observing** when one is pressed.
 
 There are two families:
 
 - [`handleRemote*`](#overriding-a-control) — **override** a control's behavior.
   A plain setter: `handleRemoteNext(cb)`, or `handleRemoteNext(undefined)` to
-  clear it.
+  restore the default behavior. To remove a button on iOS or Android, turn off
+  its capability.
 - [`onRemote*`](#listening-to-presses) — **listen** to presses without changing
   behavior (analytics, logging). An emitter:
   `onRemoteNext.addListener(cb)` returns an unsubscribe function.
@@ -36,7 +38,7 @@ Without any wiring, each control drives the player:
 | play / pause / stop     | `play()` / `pause()` / `stop()`     |
 | next / previous         | `skipToNext()` / `skipToPrevious()` |
 | seek                    | `seekTo(position)`                  |
-| jump forward / backward | `seekBy(±interval)`                 |
+| jump forward / backward | seek forward / back (see below)     |
 
 So you only reach for the APIs below to _change_ or _watch_ that behavior.
 
@@ -100,7 +102,11 @@ This catches people out, because `jumpForward` and `jumpBackward` default to
 // ✗ Both jump buttons are silently dropped — no error, no warning.
 updateOptions({
   android: {
-    remoteButtonLayout: { back: 'jump-backward', forward: 'jump-forward' }
+    remoteButtonLayout: {
+      back: 'jump-backward',
+      forward: 'jump-forward',
+      overflow: []
+    }
   }
 })
 
@@ -108,7 +114,11 @@ updateOptions({
 updateOptions({
   capabilities: { jumpBackward: true, jumpForward: true },
   android: {
-    remoteButtonLayout: { back: 'jump-backward', forward: 'jump-forward' }
+    remoteButtonLayout: {
+      back: 'jump-backward',
+      forward: 'jump-forward',
+      overflow: []
+    }
   }
 })
 ```
@@ -122,12 +132,12 @@ capability is enabled.
 `overflow` is an ordered list, and each surface renders as many buttons as it
 has room for, **taking them from the front**:
 
-| Surface                    | Roughly how many              |
-| -------------------------- | ----------------------------- |
-| Collapsed notification     | 3 — back, play/pause, forward |
-| Expanded notification      | all of them                   |
-| Android 13+ media controls | about 5                       |
-| Android Auto               | the head unit decides         |
+| Surface                                      | Roughly how many              |
+| -------------------------------------------- | ----------------------------- |
+| Collapsed notification                       | 3 — back, play/pause, forward |
+| Expanded notification (Android 12 and below) | up to 5, play/pause included  |
+| Android 13+ media controls                   | about 5                       |
+| Android Auto                                 | the head unit decides         |
 
 Two consequences worth knowing:
 
@@ -143,7 +153,7 @@ buttons so there's nothing to promote.
 ::: tip iOS
 This option is Android-only. CarPlay's Now Playing buttons are configured
 separately with `ios.carPlayNowPlayingButtons` — see
-[CarPlay](/guide/carplay).
+[CarPlay → Now Playing Buttons](/guide/carplay#now-playing-buttons).
 :::
 
 ## Overriding a control
@@ -151,9 +161,10 @@ separately with `ios.carPlayNowPlayingButtons` — see
 [`handleRemote*(callback)`](/api/features/remoteControls/#handleremotenext)
 **replaces** a control's default action with your own. Pass `undefined` to remove
 your override (restoring the default); the callback itself does nothing but what
-you write — if you still want the normal action, call it yourself. Each control
-has a **single** override: calling `handleRemote*` again replaces the previous one
-(unlike `onRemote*`, which supports multiple listeners).
+you write — if you still want the normal action, call it yourself.
+
+Each control has a **single** override: calling `handleRemote*` again replaces
+the previous one (unlike `onRemote*`, which supports multiple listeners).
 
 The canonical use is gating a control — e.g. a radio product with a skip
 allowance — paired with a [now-playing flash](/guide/now-playing#the-flash-transient-top-priority)
@@ -192,14 +203,24 @@ handleRemoteSeek(({ position }) => {
   // position is in seconds
 })
 handleRemoteJumpForward(({ interval }) => {
-  // interval is in seconds (from forwardJumpInterval)
+  // interval is in seconds
 })
 ```
 
-The jump controls only appear when `jumpForward` / `jumpBackward` are enabled in
-[`capabilities`](/guide/configuration#capabilities) (off by default). The jump
-distance is the separate `forwardJumpInterval` / `backwardJumpInterval` option
-(default 15s) — that's the `interval` your handler receives.
+On iOS and Android the jump controls only appear when `jumpForward` /
+`jumpBackward` are enabled in [`capabilities`](/guide/configuration#capabilities)
+(off by default); on web capabilities are ignored and the browser's seek
+forward and back actions are always handled. On iOS and Android your handler
+receives the `forwardJumpInterval` / `backwardJumpInterval` option (default
+15s) as `interval`; on web it receives the offset the browser sends, or 10s
+when it sends none. Without a handler, the distance of the default jump depends
+on the platform:
+
+- **iOS** seeks by the interval.
+- **Android** seeks 15s forward and 5s back, whatever the interval. There the
+  interval sets only the button's icon and the handler's `interval`. To jump by
+  the interval on Android, override the control and call `seekBy(±interval)`.
+- **Web** seeks by the offset the browser sends, or 10s when it sends none.
 
 ## Listening to presses
 
@@ -225,14 +246,47 @@ intercepted it (and even when that override refused to act). Use it to _observe_
 use `handleRemote*` to _change behavior_.
 :::
 
+## Resuming after the app is killed
+
+The library saves the last session natively, with nothing to configure: the
+active track (with the browse path it was tapped from), its position, and the
+repeat mode, shuffle and rate.
+
+It saves on every pause, track change and setting change, and every 5 seconds
+while playing. A live stream keeps no position, so it resumes at the live edge;
+a track that had ended resumes from the start.
+
+That session plays again when a listener asks for playback while your app isn't
+running:
+
+- **Android**: a Bluetooth or headset play button, a car head unit, or the play
+  button on the system media controls, which keep your app's last session after
+  it is killed.
+- **iOS**: Siri — "play «App»" or a bare "play" / "resume" (see
+  [Search → Voice playback](/guide/search#voice-playback-siri-google-assistant)).
+  Siri is the only path that resumes a saved session on iOS.
+
+Resuming restores the settings, then rebuilds the queue by expanding the saved
+track's path through your browse configuration, as if the listener had tapped it
+again, and plays from the saved position.
+
+If the path doesn't expand, the saved track plays alone. A saved track marked
+[`disabled`](/guide/track) is never resumed.
+
+Resuming waits for your JS: call `setupPlayer()` and `configureBrowser()` at the
+top level of `index.js`. Android gives up after about 10 seconds, iOS after
+about 8. On Android 12+, battery restrictions can block the background start;
+see [Battery](/guide/battery).
+
 ## Voice commands ("play X")
 
 A voice command like "play jazz on Android Auto" or a Siri "play …" is **not**
-delivered as a remote-control event. It's handled by the library's
-[search source](/guide/search) and play funnel: you provide
-`configureBrowser({ search })`, and the library resolves the query and starts
-playback for you (Android routes the system `MEDIA_PLAY_FROM_SEARCH` intent
-through it). See [Search](/guide/search) for wiring voice intents.
+delivered as a remote-control event.
+
+It's handled by the library's [search source](/guide/search) and play funnel:
+you provide `configureBrowser({ search })`, and the library resolves the query
+and starts playback for you (Android routes the system `MEDIA_PLAY_FROM_SEARCH`
+intent through it). See [Search](/guide/search) for wiring voice intents.
 
 ## Payloads at a glance
 

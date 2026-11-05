@@ -8,10 +8,12 @@ This guide covers the core idea — the **browse tree** — and the minimal code
 
 ## The browse tree
 
-The library models all content as one navigable tree of **Tracks**. A single Track is **browsable**, **playable**, or both, depending on which fields you set:
+The library models all content as one navigable tree of **Tracks**. A Track is **browsable** or **playable**, depending on which field you set:
 
 - **Browsable** — has a `path`; navigating into it resolves its children.
 - **Playable** — has a `src`; the player can stream it.
+
+Set exactly one. On a browse page a Track with both plays, because the page rewrites its `path` to point at its place in the queue. A car search result with both plays its `src`. When you pass such a Track to [`navigate(track)`](/api/features/browser/#navigate) yourself, the platforms disagree: Android and web browse the `path`, iOS plays the `src`.
 
 Three fields at a glance — each answers a different question about a Track:
 
@@ -103,7 +105,7 @@ configureBrowser({
 })
 ```
 
-A route value is a [`BrowserSource`](/api/types/browser/#browsersource): the static page object shown above, an **async callback** that returns one (`'/path': async ({ routeParams }) => ({ title, children })`), or an HTTP request config that fetches it from your API — handy for trees too large to declare upfront.
+A route value is a [`BrowserSource`](/api/types/browser/#browsersource): the static page object shown above, an **async callback** that returns one (`'/path': async ({ path, routeParams }) => ({ path, title, children })`), or an HTTP request config that fetches it from your API — handy for trees too large to declare upfront.
 
 A page can also group its tracks into titled, styled **sections** (`sections: [{ title, style, children }, …]`) — a flat `children` list like the ones above is shorthand for a single untitled section. See [Browser → How a path resolves](/guide/browser#how-a-path-resolves).
 
@@ -129,6 +131,7 @@ The player works through a **queue** of Tracks. The Track at the current positio
 Reactive hooks keep your in-app UI in sync with playback — they re-render automatically as it changes:
 
 ```tsx
+import { Button } from 'react-native'
 import {
   togglePlayback,
   usePlayingState,

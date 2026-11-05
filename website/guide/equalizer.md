@@ -1,5 +1,5 @@
 ---
-description: 'Shape playback tone with the Android system equalizer: named presets, custom band levels, and handling its absence on iOS.'
+description: 'Shape playback tone with the Android system equalizer: named presets, custom band levels, and handling its absence on iOS and web.'
 ---
 
 # Equalizer
@@ -9,9 +9,10 @@ either by applying a named **preset** (e.g. "Rock", "Jazz") or by setting
 **custom band levels** yourself. It wraps the system equalizer effect.
 
 ::: warning Android only
-The equalizer is **Android-only**. Every getter returns `undefined` and every
-setter is a no-op on iOS — Apple exposes no equivalent system equalizer. Always
-treat the settings as possibly-absent (see [Availability](#availability)).
+The equalizer is **Android-only**. On iOS and web every getter returns
+`undefined` and every setter is a no-op; neither platform has an equivalent
+system equalizer. Always treat the settings as possibly-absent (see
+[Availability](#availability)).
 :::
 
 The UI snippets below import `View` / `Text` / `Button` from `react-native` and
@@ -22,10 +23,14 @@ for brevity. Everything else comes from `react-native-audio-browser`.
 
 [`getEqualizerSettings()`](/api/features/equalizer/#getequalizersettings)
 returns [`EqualizerSettings | undefined`](/api/features/equalizer/#equalizersettings).
-It's `undefined` whenever the equalizer isn't available — on iOS, and **on
-Android until the player has an audio session**, which only exists once playback
-has started. A settings screen opened before anything has played may see
-`undefined`; use the reactive hook so it fills in when playback begins.
+It's `undefined` whenever the equalizer isn't available: on iOS and web, and
+**on Android before `setupPlayer`** and for a short moment after it, until the
+player's audio session arrives. Use the reactive hook so a settings screen fills
+in when it does.
+
+On Android, a setter called after `setupPlayer` but before the equalizer exists
+is kept and applied when it appears; the result arrives through
+`onEqualizerChanged`. A setter called before `setupPlayer` is dropped.
 
 ## Reading the settings
 
@@ -129,12 +134,11 @@ flat[0] = 600
 setEqualizerLevels(flat)
 ```
 
-Setting custom levels clears `activePreset` (it becomes `undefined`) — you're no
-longer on a named preset. To go back, apply a preset again.
+Setting custom levels clears `activePreset` (it becomes `undefined`), even if
+they equal a preset's levels. To return to a preset, apply it again.
 
-Whichever you choose, the settings persist across track and audio-session
-changes: a preset wins over custom levels, and the enabled state always carries
-over.
+Whichever you applied last, preset or custom levels, carries over to the next
+audio session, along with the enabled state.
 
 ## A complete equalizer screen
 
@@ -183,21 +187,23 @@ function EqualizerScreen() {
         />
       ))}
 
-      {eq.bandLevels.map((level, index) => (
-        <View key={eq.centerBandFrequencies[index]}>
-          <Text>
-            {formatHz(eq.centerBandFrequencies[index])}:{' '}
-            {(level / 100).toFixed(1)} dB
-          </Text>
-          <Slider
-            minimumValue={eq.lowerBandLevelLimit}
-            maximumValue={eq.upperBandLevelLimit}
-            value={level}
-            // Commit on release; onValueChange fires continuously.
-            onSlidingComplete={(millibels) => setBand(index, millibels)}
-          />
-        </View>
-      ))}
+      {eq.centerBandFrequencies.map((mHz, index) => {
+        const level = eq.bandLevels[index] ?? 0
+        return (
+          <View key={mHz}>
+            <Text>
+              {formatHz(mHz)}: {(level / 100).toFixed(1)} dB
+            </Text>
+            <Slider
+              minimumValue={eq.lowerBandLevelLimit}
+              maximumValue={eq.upperBandLevelLimit}
+              value={level}
+              // Commit on release; onValueChange fires continuously.
+              onSlidingComplete={(millibels) => setBand(index, millibels)}
+            />
+          </View>
+        )
+      })}
     </View>
   )
 }
@@ -228,4 +234,4 @@ The system equalizer works in "milli" units, so convert for display:
 | `setEqualizerPreset(name)`                          | Apply a preset from `settings.presets`.       |
 | `setEqualizerLevels(millibels[])`                   | Set all bands; length must equal `bandCount`. |
 
-All are **Android-only** — no-ops / `undefined` on iOS.
+All are **Android-only**: no-ops or `undefined` on iOS and web.

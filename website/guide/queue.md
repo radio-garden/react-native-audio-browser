@@ -5,7 +5,7 @@ description: 'Build and edit the queue, move between tracks with next and previo
 # Queue
 
 The **queue** is the ordered list of tracks the player works through. The track
-at the current position is the **active track** — it's what plays, and what
+at the current position is the **active track**: what plays, and what
 next/previous move between. This guide covers building the queue, editing it,
 moving between tracks, and reading it back for an "up next" UI.
 
@@ -26,21 +26,23 @@ Optionally pass which track to make active and where to start it:
 ```ts
 import { setQueue, play } from 'react-native-audio-browser'
 
-setQueue(tracks) // replace; first track becomes active
+setQueue(tracks, 0) // replace; first track becomes active
 setQueue(tracks, 2) // start on index 2
 setQueue(tracks, 2, 30) // ...30 seconds in
 ```
 
-One thing to know:
+On iOS and Android, `startIndex` defaults to 0. iOS clamps an index outside
+the queue to its first or last track, and Android throws. On the web, an
+omitted or out-of-range `startIndex` leaves no track active, so pass one (0 for
+the first track).
 
-- **It doesn't start playback.** `setQueue` leaves the play/pause state as-is —
-  if the player was paused it stays paused. Call
-  [`play()`](/api/features/playback/#play) to begin (see [Playback](/guide/playback)).
-
-So the usual "load these and play" is two calls:
+`setQueue` doesn't start playback. On iOS and Android it keeps the current
+play/pause state; on the web it stops playback. Either way, call
+[`play()`](/api/features/playback/#play) after it (see
+[Playback](/guide/playback)):
 
 ```ts
-setQueue(tracks) // or setQueue(tracks, startIndex)
+setQueue(tracks, 0) // or setQueue(tracks, startIndex)
 play() // start playback
 ```
 
@@ -70,7 +72,12 @@ Outside React, read a snapshot with
 [`getTrack(index)`](/api/features/queue/#gettrack) (returns `undefined` if the
 index is empty). To react to changes without a hook, subscribe to
 [`onQueueChanged`](/api/features/queue/#onqueuechanged) — it fires with the new
-queue on every add, remove, reorder, or metadata update.
+queue on every add, remove, or reorder.
+
+A favorite toggle also fires it on iOS
+and Android, but on web it fires only
+[`onFavoriteChanged`](/api/features/favorites/#onfavoritechanged), so listen to
+both, as `useQueue` does.
 
 ## The active track
 
@@ -116,6 +123,9 @@ skipToPrevious() // previous track
 skipToNext(10) // next track, starting 10 seconds in
 ```
 
+On iOS and Android, if there is no next (or previous) track, the position
+still applies: the active track seeks to it. On the web the call does nothing.
+
 This is how you move _between_ tracks
 ([`skip`](/api/features/queue/#skip),
 [`skipToNext`](/api/features/queue/#skiptonext),
@@ -144,7 +154,8 @@ add(track) // append one track (also accepts a Track[])
 add(track, 0) // insert before index 0 (front of the queue)
 
 move(4, 1) // move index 4 to index 1
-// toIndex past the end moves the track to the end.
+// On iOS and Android, toIndex past the end moves the track to the end;
+// the web throws.
 
 remove(2) // remove index 2 (also accepts number[])
 removeUpcomingTracks() // drop everything after the active track
@@ -162,19 +173,32 @@ const i = getActiveTrackIndex()
 add(track, i === undefined ? 0 : i + 1)
 ```
 
-**Removing the active track** doesn't stop playback: the next track becomes
-active, or — if you removed the last one — the first track does.
+With shuffle on, the inserted track goes to a random place in the shuffle
+order, so it may not play next.
+
+**Removing the active track** makes the track after it active. On iOS and the
+web that is the next index, wrapping to the first track, and playback carries
+on.
+
+On Android it is the next track in playback order, with shuffle and repeat
+applied. If you remove the last track there, the first track becomes active,
+and with repeat `'off'` playback ends.
+
+With several indexes, Android checks them all first and throws on a repeated
+one. iOS removes from the highest index down. A repeated index then also removes
+the track that moved into its place, and an invalid index can throw after some
+tracks are already gone. Pass each index once.
 
 ## Repeat and shuffle
 
-[Repeat mode](/api/features/queue/#userepeatmode) is one of `'off'`, `'track'`,
+[Repeat mode](/api/features/queue/#repeatmode) is one of `'off'`, `'track'`,
 or `'queue'`:
 
-| Mode      | Behavior                                         |
-| --------- | ------------------------------------------------ |
-| `'off'`   | Stop when the last track finishes (the default). |
-| `'track'` | Repeat the active track forever.                 |
-| `'queue'` | Loop the whole queue.                            |
+| Mode      | Behavior                                                                   |
+| --------- | -------------------------------------------------------------------------- |
+| `'off'`   | Pause at the end of the last track; state becomes `'ended'` (the default). |
+| `'track'` | Repeat the active track forever.                                           |
+| `'queue'` | Loop the whole queue.                                                      |
 
 ```tsx
 import {
@@ -204,7 +228,16 @@ function ShuffleButton() {
 ```
 
 [`setShuffle(true | false)`](/api/features/queue/#setshuffle) sets it directly;
-[`toggleShuffle()`](/api/features/queue/#toggleshuffle) flips it.
+[`toggleShuffle()`](/api/features/queue/#toggleshuffle) flips it. Outside
+React, read the current values with
+[`getRepeatMode()`](/api/features/queue/#getrepeatmode) and
+[`getShuffle()`](/api/features/queue/#getshuffle), and subscribe to
+[`onRepeatModeChanged`](/api/features/queue/#onrepeatmodechanged) and
+[`onShuffleChanged`](/api/features/queue/#onshufflechanged).
+
+Shuffle changes only the playback order. Indexes, `getQueue` and `useQueue`
+keep list order, while `skipToNext` and `skipToPrevious` follow the shuffle
+order.
 
 ## When the queue ends
 
@@ -233,6 +266,7 @@ import {
   useQueue,
   useActiveTrack,
   getActiveTrackIndex,
+  getTrackIdentity,
   skip,
   move,
   remove
@@ -240,16 +274,16 @@ import {
 
 function UpNext() {
   const queue = useQueue()
-  // `useActiveTrack` re-renders the list when the active track changes; we
-  // compare each row by index (more robust than by id, which is optional on a
-  // Track). `getActiveTrackIndex()` is fresh on each render.
+  // `useActiveTrack` re-renders the list when the active track changes.
+  // Compare by index: the same track can be queued twice.
+  // `getActiveTrackIndex()` is read fresh on each render.
   const active = useActiveTrack()
   const activeIndex = active ? getActiveTrackIndex() : undefined
 
   return (
     <FlatList
       data={queue}
-      keyExtractor={(track, i) => track.id ?? String(i)}
+      keyExtractor={(track, i) => `${getTrackIdentity(track) ?? ''}:${i}`}
       renderItem={({ item, index }) => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text
@@ -270,10 +304,9 @@ function UpNext() {
 ```
 
 A `<Button>` can't be a child of `<Text>`, so each row is a `<View>` with the
-title and buttons as siblings. The `keyExtractor` falls back to the array index
-when a track has no `id` — fine for a static list, but for a **reorderable**
-list like this one, give your tracks a stable `id` so `move`/`remove` don't
-confuse row identity.
+title and buttons as siblings. A key built from the track's `id` alone, or from
+[`getTrackIdentity`](/api/utils/getTrackIdentity/) alone, collides when the same
+track is queued twice, so the `keyExtractor` adds the index.
 
 ## A note on units
 
@@ -283,18 +316,19 @@ All position arguments are **seconds** — `seekTo`, `seekBy`, the
 
 ## API summary
 
-| API                                                               | Purpose                                                         |
-| ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| `setQueue(tracks, startIndex?, startPosition?)`                   | Replace the queue (doesn't auto-play; position in **seconds**). |
-| `add(track \| tracks, insertBeforeIndex?)`                        | Append, or insert before an index.                              |
-| `load(track)`                                                     | Replace the active track (or start the queue if empty).         |
-| `move(from, to)`                                                  | Reorder; `to` past the end → end.                               |
-| `remove(index \| indexes)`                                        | Remove track(s); active removal advances.                       |
-| `removeUpcomingTracks()`                                          | Drop everything after the active track.                         |
-| `skip(index, initialPosition?)`                                   | Jump to a track (position in **seconds**).                      |
-| `skipToNext()` / `skipToPrevious()`                               | Step between tracks.                                            |
-| `useQueue()` / `getQueue()` / `getTrack(i)`                       | Read the queue.                                                 |
-| `useActiveTrack()` / `getActiveTrack()` / `getActiveTrackIndex()` | Read the active track.                                          |
-| `onActiveTrackChanged` / `onQueueChanged` / `onQueueEnded`        | Subscribe to changes.                                           |
-| `setRepeatMode(mode)` / `useRepeatMode()`                         | `'off'` / `'track'` / `'queue'`.                                |
-| `setShuffle(bool)` / `toggleShuffle()` / `useShuffle()`           | Shuffle order.                                                  |
+| API                                                                      | Purpose                                                          |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `setQueue(tracks, startIndex?, startPosition?)`                          | Replace the queue (doesn't auto-play; position in **seconds**).  |
+| `add(track \| tracks, insertBeforeIndex?)`                               | Append, or insert before an index.                               |
+| `load(track)`                                                            | Replace the active track (or start the queue if empty).          |
+| `move(from, to)`                                                         | Reorder; `to` past the end → end (iOS, Android; the web throws). |
+| `remove(index \| indexes)`                                               | Remove track(s); see Removing the active track above.            |
+| `removeUpcomingTracks()`                                                 | Drop everything after the active track.                          |
+| `skip(index, initialPosition?)`                                          | Jump to a track (position in **seconds**).                       |
+| `skipToNext()` / `skipToPrevious()`                                      | Step between tracks.                                             |
+| `useQueue()` / `getQueue()` / `getTrack(i)`                              | Read the queue.                                                  |
+| `useActiveTrack()` / `getActiveTrack()` / `getActiveTrackIndex()`        | Read the active track.                                           |
+| `onActiveTrackChanged` / `onQueueChanged` / `onQueueEnded`               | Subscribe to changes.                                            |
+| `setRepeatMode(mode)` / `useRepeatMode()` / `getRepeatMode()`            | `'off'` / `'track'` / `'queue'`.                                 |
+| `setShuffle(bool)` / `toggleShuffle()` / `useShuffle()` / `getShuffle()` | Shuffle order.                                                   |
+| `onRepeatModeChanged` / `onShuffleChanged`                               | Subscribe to repeat and shuffle changes.                         |

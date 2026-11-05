@@ -47,16 +47,16 @@ string is especially jarring.
 
 `kind` is one of:
 
-| `kind`           | Meaning                                                                                                         | Retrying help?   |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `'offline'`      | The device had no connection at the moment of failure. The stream may be fine.                                  | Once back online |
-| `'unreachable'`  | The host could not be reached: DNS failure, refused connection, timeout, or a connection dropped while loading. | Maybe            |
-| `'not-found'`    | The server said this stream is gone (HTTP 404 / 410).                                                           | No               |
-| `'rejected'`     | The server refused the request (HTTP 401 / 403) — geo-blocking, an expired token.                               | No               |
-| `'server-error'` | The server responded 5xx. Usually transient.                                                                    | Maybe            |
-| `'unplayable'`   | Fetched, but not playable: unknown container, unsupported codec, decoder failure.                               | No               |
-| `'stalled'`      | Playback had started, then stopped, and the player exhausted its recovery budget.                               | Maybe            |
-| `'unknown'`      | Could not be classified. Inspect `code`.                                                                        | Maybe            |
+| `kind`           | Meaning                                                                                                                                                       | Retrying help?        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `'offline'`      | The device had no connection at the moment of failure. The stream may be fine.                                                                                | Once back online      |
+| `'unreachable'`  | The host could not be reached: DNS failure, refused connection, timeout, or a connection dropped while loading.                                               | Maybe                 |
+| `'not-found'`    | The server said this stream is gone (HTTP 404 / 410).                                                                                                         | No                    |
+| `'rejected'`     | The server refused the request: any HTTP 4xx other than 404 / 410 (auth, geo-blocking, rate limiting), or a DRM, licence or region refusal (Android and web). | No (except 408 / 429) |
+| `'server-error'` | The server responded 5xx. Usually transient.                                                                                                                  | Maybe                 |
+| `'unplayable'`   | Fetched, but not playable: unknown container, unsupported codec, decoder failure.                                                                             | No                    |
+| `'stalled'`      | Playback had started, then stopped, and the player exhausted its recovery budget.                                                                             | Maybe                 |
+| `'unknown'`      | Could not be classified. Inspect `code`.                                                                                                                      | Maybe                 |
 
 Codes that name no cause stay `'unknown'` rather than being guessed into a
 friendlier bucket — a wrong classification misleads the listener _and_ poisons
@@ -80,7 +80,8 @@ function errorLine(kind: PlaybackErrorKind): string {
     case 'unreachable':
     case 'server-error':
       return t('…your "could not reach it" copy')
-    // Both permanent — retrying will not help.
+    // Both refusals: a manual retry rarely helps (with automatic
+    // retry on, a 408 / 429 was already retried).
     case 'not-found':
     case 'rejected':
       return t('…your "not available" copy')
@@ -115,19 +116,26 @@ so you can show it on the lock screen / car too.
 
 ### Manual retry
 
-[`retry()`](/api/features/errors/#retry) re-attempts the current item — it only
-does something while the state is `'error'`. It's the action behind a "Try again"
-button, and what you call after [automatic retry](#automatic-retry) has given up.
-It begins a fresh load with fresh retry budgets, exactly as if the listener had
-re-selected the track (a plain play command from `'error'` does the same).
+[`retry()`](/api/features/playback/#retry) re-attempts the current item. It's
+the action behind a "Try again" button, and what you call after
+[automatic retry](#automatic-retry) has given up.
+
+From `'error'` it begins a fresh load with fresh retry budgets, exactly as if
+the listener had re-selected the track. A plain play command from `'error'`
+does the same.
+
+Call it from `'error'` only, because the platforms differ outside that state.
+On Android and web it does nothing unless the player is in `'error'` or
+stopped, where it reloads the item. On iOS it reloads the current item from
+any state, even while it plays.
 
 ## Automatic retry
 
-Configure [`setupPlayer({ retry })`](/guide/configuration) to recover from
-transient **load** failures (network blips, timeouts, a live stream dropping
-mid-play) with exponential backoff. It's **off by default**, and it's native
-only — the web implementation has no automatic retry, so every web error is
-terminal:
+Configure [`setupPlayer({ retry })`](/api/features/player/#retryconfig) to
+recover from transient **load** failures (network blips, timeouts, a live
+stream dropping mid-play) with exponential backoff. It's **off by default**,
+and it's native only — the web implementation has no automatic retry, so every
+web error is terminal:
 
 ```ts
 import { setupPlayer } from 'react-native-audio-browser'
@@ -145,20 +153,26 @@ await setupPlayer({
 })
 ```
 
-Which failures qualify is nearly the same on iOS and Android: HTTP 408 and
-429, plus server errors — every 5xx on iOS, the common four (500, 502, 503, 504) on Android; transport failures (DNS, timeouts, a dropped connection);
-and anything the platform couldn't classify, which is assumed transient
+Which failures qualify is nearly the same on iOS and Android. HTTP 408 and
+429 qualify, and so do server errors: every 5xx on iOS, the common four (500,
+502, 503, 504) on Android.
+
+Transport failures qualify too (DNS, timeouts, a dropped connection), and so
+does anything the platform couldn't classify, which is assumed transient
 rather than fatal.
+
 Permanent failures are never retried — 403 / 404, and media that can't be
 parsed or decoded.
 
 ### Two duration budgets
 
-Retry state is tracked per **load** — one track's playback session, created
-when a track becomes current (selection, queue advance, skip) _or restarted
-from a terminal error_ (`retry()`, or any play command while in `'error'`),
-and surviving every automatic retry of that track. A new load starts fresh
-budgets; retries within it don't.
+Retry state is tracked per **load**: one track's playback session. A load is
+created when a track becomes current (selection, queue advance, skip) _or is
+restarted from a terminal error_ (`retry()`, or any play command while in
+`'error'`), and it survives every automatic retry of that track.
+
+A new load starts fresh budgets. Within a load, the recovery budget refills
+after 20 seconds of uninterrupted playback (see below).
 
 How long the player keeps trying depends on one piece of evidence: **has this
 load ever produced audio?**
@@ -170,25 +184,38 @@ load ever produced audio?**
 
 While the device is **offline**, the first-connect budget does not apply: the
 player parks and retries the moment connectivity returns, so a stream started
-in a tunnel still plays when the network comes back. Any offline observation
-resets the first-connect clock entirely — after restoration the load gets
-another full first-connect window, because the clock only ever measures a
-contiguous online stretch. `maxRetryDurationMs` is different: it is a
-wall-clock ceiling that **includes** offline time, deliberately — it exists so
-playback can't surprise the listener by resuming after a long time offline.
+in a tunnel still plays when the network comes back.
 
-`maxRetries` additionally caps the retry attempts of a load, counted across
-both budgets and across offline/online transitions. (One Android caveat: for
-segmented formats like HLS, ExoPlayer counts attempts per internal loadable —
-playlist and segments separately — so an attempt cap is less predictable there;
-prefer the duration budgets as the bound you rely on.)
+Any offline observation resets the first-connect clock entirely — after
+restoration the load gets another full first-connect window, because the
+clock only ever measures a contiguous online stretch.
+
+`maxRetryDurationMs` is different: it is a wall-clock ceiling that
+**includes** offline time. It exists so playback can't surprise the listener
+by resuming after a long time offline.
+
+`maxRetries` additionally caps the retry attempts, counted across both budgets
+and across offline/online transitions.
+
+One Android caveat: for segmented formats like HLS, ExoPlayer counts attempts
+per internal loadable — playlist and segments separately — so an attempt cap
+is less predictable there. Prefer the duration budgets as the bound you rely
+on.
+
+After 20 seconds of uninterrupted audible playback, the stream counts as
+recovered and the recovery budget refills (on iOS, the attempt count too), so
+each later dropout of a long-lived stream gets a full window.
+
+The load stays the same, and so does its evidence that it has played: the
+first-connect budget does not come back.
 
 Backoff delays grow `1s → 1.5s → 2.3s → 3.4s → 5s` (capped). Once a budget is
 exhausted the state lands on `'error'`, where your `PlaybackErrorView` and
-[`retry()`](#manual-retry) take over. Restarting from `'error'` — via
-`retry()` or any play command — begins a **new load** of the same track:
-fresh budgets, starting with the first-connect one. The tap behaves exactly
-like re-selecting the track.
+[`retry()`](#manual-retry) take over.
+
+Restarting from `'error'` — via `retry()` or any play command — begins a
+**new load** of the same track: fresh budgets, starting with the
+first-connect one. The tap behaves exactly like re-selecting the track.
 
 ### Errors while retrying
 
@@ -197,8 +224,11 @@ classified and surfaced immediately through
 [`onPlaybackChanged`](/api/features/playback/#onplaybackchanged) /
 [`usePlayback()`](/guide/playback#playback-state), attached to the current
 non-terminal state (`'loading'` / `'buffering'`, or `'paused'`) with
-`retrying: true`. Show it as advisory — the cause over a spinner — because the
-next attempt may still succeed:
+`retrying: true`.
+
+Show it as advisory — the cause over a spinner — because the next attempt may
+still succeed. A 408 or 429 arrives here as `kind: 'rejected'` with
+`retrying: true`; it becomes final only once retry gives up:
 
 ```tsx
 const { state, error } = usePlayback()
@@ -213,16 +243,19 @@ if (error?.retrying) {
 `onPlaybackError` and `usePlaybackError()` stay **terminal-only**: they fire on
 _both_ edges of the `'error'` state — entering it (with the error) and leaving
 it (with `error: undefined`; the hook returns `undefined` again). Advisory
-errors never pass through them. The same advisory error also reaches the
-[Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous),
-so the lock screen and the car can show it too.
+errors never pass through them.
+
+The same advisory error also reaches the
+[Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous), so
+the lock screen and the car can show it too.
 
 Advisory emissions are deduplicated by **classification** (`kind`, plus the
-HTTP status when there is one) — never by the raw native `message`. The scope
-is the current advisory episode: consecutive identical failures within one
-retry sequence produce a single event rather than one per backoff tick, and the
-dedupe resets once the advisory clears (recovery, track change, or hardening
-into the terminal error).
+HTTP status when there is one) — never by the raw native `message`.
+
+The scope is the current advisory episode. Consecutive identical failures
+within one retry sequence produce a single event rather than one per backoff
+tick. The dedupe resets once the advisory clears: on recovery, a track change,
+or hardening into the terminal error.
 
 ## Navigation errors
 
@@ -241,17 +274,25 @@ with `onNavigationError` / snapshot with `getNavigationError()`.
 | `'network-error'`     | The request failed (connection error, timeout, no internet).                                  |
 | `'http-error'`        | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`. |
 | `'callback-error'`    | Your browse callback returned an error (e.g. auth/subscription required).                     |
-| `'empty-content'`     | The path resolved but the page has no tracks (empty Favorites, no search results).            |
-| `'timeout'`           | Resolution didn't finish in time.                                                             |
+| `'empty-content'`     | The page has no tracks (empty Favorites, no search results). CarPlay / Android Auto only.     |
+| `'timeout'`           | Resolution didn't finish in time. CarPlay only.                                               |
 | `'unknown-error'`     | An unexpected error (e.g. invalid configuration).                                             |
+
+`'empty-content'` and `'timeout'` never reach `useNavigationError()` or
+`onNavigationError`: the library raises them only for the in-car screens, where
+they pass through [`formatNavigationError`](#showing-navigation-errors). Handle
+them there.
 
 ### Showing navigation errors
 
 For display, prefer
 [`useFormattedNavigationError()`](/api/features/errors/#useformattednavigationerror)
 — it returns a ready-to-show [`FormattedNavigationError`](/api/features/errors/#formattednavigationerror)
-(`{ title, message? }`). The **same** formatted error drives the CarPlay and
-Android Auto error dialogs, so your in-app and in-car messages stay consistent:
+(`{ title, message? }`). Outside React, read it with
+`getFormattedNavigationError()` or subscribe with
+[`onFormattedNavigationError`](/api/features/errors/#onformattednavigationerror).
+The **same** formatted error drives the CarPlay and Android Auto error dialogs,
+so your in-app and in-car messages stay consistent:
 
 ```tsx
 import { Text } from 'react-native'
@@ -302,9 +343,10 @@ message to render.
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `usePlaybackError()` / `getPlaybackError()`                       | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`.                                                  |
 | `onPlaybackError`                                                 | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
-| `retry()`                                                         | Re-attempt the current item (while state is `'error'`).                                                                                             |
+| `retry()`                                                         | Re-attempt the current item; meant for the `'error'` state (on iOS it reloads from any state).                                                      |
 | `setupPlayer({ retry })`                                          | Automatic retry with two duration budgets: first-connect (12s) and recovery (2 min). Off by default.                                                |
 | `useNavigationError()` / `getNavigationError()`                   | The raw navigation error (`code`, `statusCode`, …).                                                                                                 |
 | `onNavigationError`                                               | Subscribe to navigation errors outside React.                                                                                                       |
 | `useFormattedNavigationError()` / `getFormattedNavigationError()` | Display-ready `{ title, message? }`, shared with CarPlay / Android Auto.                                                                            |
+| `onFormattedNavigationError`                                      | Subscribe to the formatted navigation error outside React.                                                                                          |
 | `configureBrowser({ formatNavigationError })`                     | Customize / localize the formatted messages.                                                                                                        |

@@ -31,9 +31,9 @@ const episode: Track = {
 
 This guide is the field-by-field reference. For _where_ tracks come from (routes, callbacks, HTTP) see the [Browser](/guide/browser) guide.
 
-## Browsable, playable, or both
+## Browsable or playable
 
-Two fields decide what a Track _does_. A Track must set at least one of them, and may set both:
+Two fields decide what a Track _does_. A Track must set at least one of them:
 
 | Field  | Makes the track | Effect                                               |
 | ------ | --------------- | ---------------------------------------------------- |
@@ -46,10 +46,9 @@ Two fields decide what a Track _does_. A Track must set at least one of them, an
 
 // Playable: a station you stream
 { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
-
-// Both: a podcast episode you can open *and* play
-{ title: 'Episode 42', path: '/episodes/42', src: 'https://…/42.mp3' }
 ```
+
+Set exactly one. On a browse page a track that sets both plays: the library replaces its `path` with one that points back to the page it appears on. Elsewhere, in search results or a Track you pass to [`navigate(track)`](/api/features/browser/#navigate), Android and web open its `path` and iOS plays its `src`.
 
 `src` is usually an absolute audio URL, but it can be any string — a file path or your own identifier — that you turn into a real request in `media.resolve` (see [Browser → Media and artwork](/guide/browser#media-and-artwork)).
 
@@ -72,7 +71,9 @@ The event also carries `index`, `lastTrack`, and `lastIndex`; `addListener` retu
 `id` is also passed to the per-track `resolve` hooks, so you can set `src` to the same stable identifier and synthesise the real request/artwork from it at request time.
 
 ::: tip `id` is optional
-A track's identity is its `id`, falling back to `src` — so if the same item's `src` string is identical wherever it appears, you can skip `id` entirely. Set ids consistently across your content or not at all: identity is compared whole, and a row carrying an `id` never matches a track without one.
+A track's identity is its `id`, falling back to `src` — so if the same item's `src` string is identical wherever it appears, you can skip `id` entirely.
+
+Set ids consistently across your content or not at all: identity is compared whole, and a row carrying an `id` never matches a track without one. To compare tracks the same way in your own code, use [`getTrackIdentity`](/api/utils/getTrackIdentity/).
 :::
 
 ## Display fields
@@ -104,7 +105,7 @@ Set `artwork` to an image URL. It's transformed through your [artwork configurat
 
 Don't set `artworkSource` yourself — the library populates it.
 
-**SF Symbols (iOS).** Prefix `artwork` with `sf:` to use a system symbol, with optional colors — `bg` (background, transparent if omitted) and `fg` (symbol, black if omitted):
+**SF Symbols (iOS).** Prefix `artwork` with `sf:` to use a system symbol, with optional colors: `bg` (background) and `fg` (symbol). On the lock screen and in `artworkSource`, an omitted `bg` is transparent and an omitted `fg` is black:
 
 ```ts
 {
@@ -114,15 +115,19 @@ Don't set `artworkSource` yourself — the library populates it.
 }
 ```
 
-On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode automatically.
+On CarPlay, an SF Symbol with no `fg` adapts to light/dark mode automatically: black on light grey or white on dark grey, and a `bg` alone is ignored.
 
-**Tinting (`style: { artworkRendering: 'stencil' }`).** For monochrome icons, declare this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there. On Android, an `android.resource://…` artwork URI combines with any declared `display` the library forwards to select Android Auto's icon treatment of that layout (icon margins + system tinting for vector drawables).
+**Tinting (`style: { artworkRendering: 'stencil' }`).** For monochrome icons, declare this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there.
+
+On Android Auto, when a list or grid `display` applies and `artwork` is an `android.resource://` URI, the library asks for the category style, which adds margins around small icons.
 
 **Light and dark images.** When the appearances need genuinely different artwork rather than the same shape recolored, set `artwork` to an [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) pair — `{ light, dark }`. CarPlay adapts between them in place; everywhere that needs a single image uses `dark`. See [Artwork → Light and dark](/guide/artwork#light-and-dark-artwork).
 
 ## Per-track request override
 
-[`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track override for _how_ this track's audio request is made — merged last, after the shared `request` and `media` layers:
+[`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track field for _how_ this track's audio request should be made.
+
+**It is not applied yet:** iOS, Android and web carry it on the track but don't merge it into the media request, so the example below sends no `authorization` header. To vary headers or query per track today, return them from [`media.resolve`](/api/types/browser/#mediarequestconfig) (or `resolveSync`), which receives the track.
 
 ```ts
 {
@@ -132,28 +137,31 @@ On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode autom
 }
 ```
 
-It carries only `userAgent`, `headers`, and `query` — deliberately **not** `baseUrl` / `path` / `method` / `body`, so a track (often server-sourced) can customise _how_ it's fetched but can't repoint its own host or verb. Like every field, it round-trips verbatim through the queue.
+It carries only `userAgent`, `headers`, and `query` — **not** `baseUrl` / `path` / `method` / `body`, so a track (often server-sourced) can't repoint its own host or verb. Like every field, it round-trips verbatim through the queue.
 
 ## Presentation on native surfaces
 
 Optional fields that change how a Track renders on CarPlay / Android Auto. Each surface applies the ones it supports; an unsupported field is a no-op, never an error.
 
-| Field                                      | Effect                                                                 | Platform                   |
-| ------------------------------------------ | ---------------------------------------------------------------------- | -------------------------- |
-| `style: { display: 'list' \| 'grid' }`     | on a browsable track: the layout of the page it opens                  | Android Auto / AAOS        |
-| `style: { artworkRendering: 'stencil' }`   | tint monochrome artwork to the surface appearance                      | CarPlay                    |
-| `style: { imageShape: 'circular' }`        | crop `'image'` and `'condensed'` tile artwork circular (people)        | CarPlay (iOS 26+)          |
-| `style: { accessorySymbol: '…' }`          | SF Symbol accessory; `'none'` restores the derived accessory           | CarPlay                    |
-| `style: { cardTint: '…', cardImage: '…' }` | card color and image mode, when the section renders `gridTile: 'card'` | CarPlay (iOS 26+)          |
-| `disabled`                                 | unavailable: never plays; grayed where drawable, hidden elsewhere      | all                        |
-| `favorited`                                | filled/empty heart (needs the `favorite` capability)                   | Android Auto, notification |
-| `live`                                     | a "live" indicator                                                     | iOS now-playing            |
-| `albumPath`                                | make the now-playing album line tappable                               | CarPlay                    |
-| `icyCharset`                               | decode ICY titles a station sends in a legacy code page                | iOS, Android               |
+| Field                                      | Effect                                                                                                                                                                             | Platform                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `style: { display: 'list' \| 'grid' }`     | on a browsable track: the layout of the page it opens                                                                                                                              | Android Auto / AAOS                             |
+| `style: { artworkRendering: 'stencil' }`   | tint monochrome artwork to the surface appearance                                                                                                                                  | CarPlay                                         |
+| `style: { imageShape: 'circular' }`        | crop `'image'` and `'condensed'` tile artwork circular (people)                                                                                                                    | CarPlay (iOS 26+)                               |
+| `style: { accessorySymbol: '…' }`          | SF Symbol accessory; `'none'` restores the derived accessory                                                                                                                       | CarPlay                                         |
+| `style: { cardTint: '…', cardImage: '…' }` | card color and image mode, when the section renders `gridTile: 'card'`                                                                                                             | CarPlay (iOS 26+)                               |
+| `disabled`                                 | unavailable: taps, voice selection, queue expansion and resume refuse it, but a `setQueue` list is not filtered and plays it when reached; grayed where drawable, hidden elsewhere | all                                             |
+| `favorited`                                | filled/empty heart (Android: needs the `favorite` capability; CarPlay: needs `'favorite'` in `ios.carPlayNowPlayingButtons`)                                                       | Android Auto, notification, CarPlay now-playing |
+| `live`                                     | a "live" indicator                                                                                                                                                                 | iOS now-playing                                 |
+| `albumPath`                                | make the now-playing album line tappable                                                                                                                                           | CarPlay                                         |
 
-A couple of constraints worth knowing:
+Constraints worth knowing:
 
-- **`display` goes on the browsable track as it appears in its parent's list** — Android Auto reads it there, before the page resolves, to decide how to lay out the page once you navigate in. It is only sent when you declare it — the library never infers it from the page's content. The drilled-into page's own sections override it per section via their `style`.
+- **`display` goes on the browsable track as it appears in its parent's list** — Android Auto reads it there, before the page resolves, to decide how to lay out the page once you navigate in.
+
+  It is only sent when you declare it — the library never infers it from the page's content. The drilled-into page's own sections override it per section via their `style`.
+
+- **`live` is more than an indicator.** On iOS it decides how a dropped or stalled stream recovers and stops a resume from seeking a stale position; on every platform, [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) does nothing unless the active track is declared live. Declare it on every live track — see [Live streams](/guide/live-streams).
 - **`albumPath` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumPath` in the [Browser config](/guide/browser).
 
 ```ts
@@ -167,13 +175,19 @@ A couple of constraints worth knowing:
 }
 ```
 
-## Sections — grouping and tile layouts
+## Sections: grouping and tile layouts
 
 A Track appears in two roles. As a **row** in its parent's list it's a handle: its own `style.display` only advertises the layout of the page it opens (see [above](#presentation-on-native-surfaces)). Once resolved, that same Track **is the page** — a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack) — and that is when it carries `sections`.
 
-Headers and layout belong to the container role: declare them on the page's [`Section`](/api/types/browser-nodes/#section)s (`{ title?, subtitle?, style?, path?, children }`), never on the rows. A section groups tracks under a header, and its `style` block's `display` picks their layout: `'list'` rows (the default) or `'grid'` artwork tiles — wrapping unless `gridWrap: false` keeps them to a single line. The section's `path` is the navigation target for its header / "view all" surface; without one the header is a plain label, not a link — the section is self-contained.
+Headers and layout belong to the container role: declare them on the page's [`Section`](/api/types/browser-nodes/#section)s (`{ title?, style?, path?, children }`), never on the rows.
 
-A tile with `src` **plays immediately on tap** (same selection path as a playable list row — a station app can make tiles play their station directly); otherwise its `path` is navigated. Tiles are ordinary Tracks, so playable ones carry the now-playing fields any track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`). Tapping a playable child queues **its section** on every surface (see [Playback behavior](/guide/browser#playback-behavior)):
+A section groups tracks under a header, and its `style` block's `display` picks their layout: `'list'` rows (the default) or `'grid'` artwork tiles — wrapping unless `gridWrap: false` keeps them to a single line.
+
+The section's `path` is the navigation target for its header / "view all" surface; without one the header is a plain label, not a link — the section is self-contained.
+
+A tile with `src` **plays immediately on tap** (same selection path as a playable list row — a station app can make tiles play their station directly); otherwise its `path` is navigated.
+
+Tiles are ordinary Tracks, so playable ones carry the now-playing fields any track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`). Tapping a playable child queues **its section** on every surface (see [Playback behavior](/guide/browser#playback-behavior)):
 
 ```ts
 {
@@ -185,7 +199,11 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
       style: { display: 'grid', gridWrap: false },
       path: '/browse/featured', // header tap → the full list
       children: [
-        { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+        {
+          title: 'Jazz',
+          path: '/browse/jazz',
+          artwork: 'https://…/jazz.jpg'
+        },
         {
           title: 'Beacon FM',
           src: 'https://audio.example.com/beacon.mp3', // tap plays it
@@ -202,9 +220,11 @@ A tile with `src` **plays immediately on tap** (same selection path as a playabl
 
 Each surface renders a declaration as its nearest supported form — CarPlay truncates a single-line grid (`gridWrap: false`) at the tiles that fit, Android Auto's grid always wraps, app UIs typically render a horizontal scroller — see [Browser → Presentation](/guide/browser#presentation) for the full rundown.
 
-## ResolvedTrack — a resolved page
+## ResolvedTrack: a resolved page
 
-A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved content — the page the browser is currently showing. Its `path` is always present, and `sections` is the [`Section`](/api/types/browser-nodes/#section)`[]` to render (optional — a leaf page has none). A page authored with a plain `children` list resolves to a single untitled section: `children` is authoring sugar, never populated on resolved output — read `sections`.
+A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved content — the page the browser is currently showing. Its `path` is always present, and `sections` is the [`Section`](/api/types/browser-nodes/#section)`[]` to render (optional — a leaf page has none).
+
+A page authored with a plain `children` list resolves to a single untitled section: `children` is authoring sugar, never populated on resolved output — read `sections`.
 
 Navigation is **fire-and-forget**: `navigate(path)` returns `void`. Read the resolved page from `useContent()` (or `getContent()` / `onContentChanged`):
 
@@ -222,6 +242,10 @@ function JazzPage() {
 
 A `ResolvedTrack` may also set [`carPlaySiriListButton`](/api/types/browser/#carplaysirilistbuttonposition)`: 'top' | 'bottom'` to show the "Ask Siri to Play" cell on that page (needs Siri wiring — see [CarPlay](/guide/carplay)).
 
+## Stream title encoding: `icyCharset`
+
+Some Shoutcast / Icecast stations send their ICY stream titles in a legacy code page rather than UTF-8. Set `icyCharset` to its IANA label (`'windows-1251'`, …) and the player re-decodes those titles on iOS and Android. See [Metadata](/guide/metadata).
+
 ## Using tracks in your code
 
 Tracks flow through the queue and playback API. A minimal playable track needs just `title` + `src`:
@@ -236,7 +260,7 @@ setQueue([
 play()
 ```
 
-`load(track)` plays a single track, `add(tracks)` appends to the queue, and `getActiveTrack()` / `useActiveTrack()` read what's playing now (with its `artworkSource` populated for your UI). See [Basic Usage](/guide/basic-usage) for the full queue and playback API.
+`load(track)` replaces the active track (or starts the queue if it is empty), `add(tracks)` appends to the queue, and `getActiveTrack()` / `useActiveTrack()` read what's playing now (with its `artworkSource` populated for your UI). See [Basic Usage](/guide/basic-usage) for the full queue and playback API.
 
 ## Where to go next
 
