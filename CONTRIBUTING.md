@@ -17,14 +17,17 @@ corepack yarn install
 corepack yarn codegen      # regenerate the Nitro bindings + build lib/
 ```
 
-[mise](https://mise.jdx.dev) is optional for Node, but it is the easiest way to get the pinned **SwiftFormat**. SwiftFormat is a global tool whose output changes between releases, so `mise.toml` pins one version and `yarn ios:format` / `yarn ci:format:ios` refuse to run any other — a different build would reformat files CI considers correct. Without mise, install that exact version from the [SwiftFormat releases](https://github.com/nicklockwood/SwiftFormat/releases); the error message tells you which one.
+[mise](https://mise.jdx.dev) is optional for Node, but it is the easiest way to get the pinned **SwiftFormat**.
+
+SwiftFormat is a global tool whose output changes between releases, so `mise.toml` pins one version and `yarn ios:format` / `yarn ci:format:ios` refuse to run any other — a different build would reformat files CI considers correct. Without mise, install that exact version from the [SwiftFormat releases](https://github.com/nicklockwood/SwiftFormat/releases); the error message tells you which one.
 
 Run an example app to try changes end-to-end:
 
-- `apps/example-native` — the React Native app (iOS / Android, CarPlay / Android Auto)
-- `apps/example-nextjs` — the web example
+- `apps/example-native` — the React Native app (iOS / Android, CarPlay / Android Auto). Its JSON API tab browses `apps/example-nextjs`; to use that tab, start it with `corepack yarn workspace example-native api-server`
+- `apps/example-nextjs` — the web example, and the API the native example's JSON API tab browses
+- `apps/example-web` — the minimal Vite demo the docs site embeds: `corepack yarn workspace example-web dev`
 
-See each app's README for run commands.
+See the README in `apps/example-native` and `apps/example-nextjs` for their run commands.
 
 ## Project layout
 
@@ -33,7 +36,7 @@ See each app's README for run commands.
 - `ios/` — Swift · `android/` — Kotlin
 - `website/` — the docs site ([audiobrowser.dev](https://audiobrowser.dev))
 
-Changing the Nitro spec means re-running `codegen` **and** implementing the change on every surface (iOS, Android, and the web stub) before it will type-check.
+Changing the Nitro spec means re-running `codegen` **and** implementing the change on every surface (iOS, Android, and the web implementation in `src/web/NativeAudioBrowser.ts`) before it will type-check.
 
 ## Checks
 
@@ -47,7 +50,9 @@ corepack yarn ios:test     # Swift tests (macOS)
 corepack yarn android:test # Kotlin unit tests (needs the Android SDK)
 ```
 
-Formatting is handled for you: `yarn install` points `core.hooksPath` at `.githooks`, whose `pre-commit` runs oxfmt over your staged files and re-stages them. It never blocks a commit, and `git commit --no-verify` skips it. Run `yarn hooks:install` if you cloned before the hook existed, and `yarn format` to format the repo by hand.
+Formatting is handled for you: `corepack yarn codegen` (through the `prepare` script it ends in) points `core.hooksPath` at `.githooks`, whose `pre-commit` formats your staged files (oxfmt for JS/TS/JSON/Markdown, the pinned SwiftFormat for `ios/`, ktfmt for `android/`) and re-stages them.
+
+The hook never blocks a commit, and `git commit --no-verify` skips it. Run `yarn hooks:install` if you haven't run `codegen` or `build` since cloning, or cloned before the hook existed, and `yarn format` to format the repo by hand.
 
 ## Commits & releases
 
