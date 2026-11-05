@@ -14,8 +14,8 @@ protocol AudioSessionPlayer: AnyObject {
 
 extension Player: AudioSessionPlayer {}
 
-/// Owns the app's `AVAudioSession`: its category, activation and release, and the interruption,
-/// route-change, media-services-reset and volume observers, installed once at init.
+/// Owns the app's `AVAudioSession`: category, activation and release, and the interruption,
+/// route-change, media-services-reset and volume observers.
 ///
 /// The session is configured at setup but activated only when playback produces output:
 /// activating a non-mixable session interrupts other apps' audio, which must not happen at
@@ -37,12 +37,11 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
 
-  /// Where `setActive` runs: it blocks until the system has changed the session, which can take
-  /// long enough to stall the main thread. Serial, so a release and a quick re-activation keep
-  /// their order.
+  /// `setActive` blocks until the system has changed the session, long enough to stall the main
+  /// thread. Serial, so a release and a quick re-activation keep their order.
   private let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
-  /// Touched only by `init` and `deinit`.
+  // Touched only by `init` and `deinit`.
   private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
   private var volumeObservation: NSKeyValueObservation?
 
@@ -93,8 +92,8 @@ final class AudioSessionController {
     applyCategory()
   }
 
-  /// Activates the session for output and cancels a pending release. `then` runs on the main
-  /// actor once the activation has run, whether or not it succeeded.
+  /// Activates the session and cancels a pending release. `then` runs on the main actor once the
+  /// activation has run, whether or not it succeeded.
   func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
     activationQueue.async {
@@ -104,7 +103,7 @@ final class AudioSessionController {
   }
 
   /// Releases the session after 3 s unless playback resumes, so other apps' audio can come back.
-  /// Debounced: iOS dislikes deactivating while audio trails off, and a quick pause → resume
+  /// Debounced: iOS dislikes deactivating while audio trails off, and a quick pause and resume
   /// should not thrash it.
   func scheduleRelease() {
     releaseWork?.cancel()
@@ -157,8 +156,8 @@ final class AudioSessionController {
     guard let type = type.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) else { return }
     switch type {
     case .began:
-      // iOS 17+ also begins one, never ended, when an output route disappears; the route
-      // change handles that.
+      // iOS 17+ also begins one, never ended, when an output route disappears; the route change
+      // handles that.
       if #available(iOS 17.0, *),
          let reason,
          AVAudioSession.InterruptionReason(rawValue: reason) == .routeDisconnected
@@ -168,8 +167,8 @@ final class AudioSessionController {
       player?.handleInterruptionBegan()
     case .ended:
       let shouldResume = options.map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) } ?? false
-      // Reactivate only when a resume follows, and resume once it is active: activating while
-      // staying paused would hold a non-mixable session with nothing to release it.
+      // Reactivate only when a resume follows, and resume once active: activating while staying
+      // paused would hold a non-mixable session with nothing to release it.
       if shouldResume, player?.willResumeAfterInterruption == true {
         activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
       } else {
@@ -181,8 +180,8 @@ final class AudioSessionController {
   }
 
   private func handleRouteChange(reason: UInt?) {
-    // The output disappeared (headphones unplugged, a speaker off): pause, as every media app
-    // does, rather than carry on from the built-in speaker.
+    // The output disappeared (headphones unplugged, a speaker off): pause rather than carry on
+    // from the built-in speaker.
     if let reason, AVAudioSession.RouteChangeReason(rawValue: reason) == .oldDeviceUnavailable {
       player?.handleRouteDisconnected()
     }

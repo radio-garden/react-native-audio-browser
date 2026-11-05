@@ -4,20 +4,17 @@ import Foundation
   import NitroModules
 #endif
 
-/// Type alias for the Nitro SleepTimer variant type
 typealias SleepTimerState = SleepTimer
 
-/// A scheduled job that has not run yet. `cancel()` is nonisolated so `deinit`
-/// — always nonisolated in Swift 6 — can tear pending work down.
+/// A scheduled job not yet run. `cancel()` is nonisolated so `deinit`, always nonisolated in
+/// Swift 6, can tear pending work down.
 protocol SleepTimerJob: AnyObject {
   func cancel()
 }
 
 extension DispatchWorkItem: SleepTimerJob {}
 
-/// Runs work after a delay. Injected into `SleepTimerManager` so tests can
-/// drive the clock instead of racing it: production schedules on the main
-/// queue, tests hand in a scheduler they advance by hand.
+/// Runs work after a delay; injected so tests advance the clock by hand instead of racing it.
 @MainActor
 protocol SleepTimerScheduling {
   func schedule(
@@ -37,17 +34,16 @@ struct MainQueueSleepTimerScheduler: SleepTimerScheduling {
   }
 }
 
-/// Manages sleep timer functionality for the audio player.
-/// Supports both time-based timers and end-of-track timers.
+/// Holds one sleep timer at a time: a deadline, optionally faded out, or the end of the current
+/// track. Setting one replaces the other.
 @MainActor
 final class SleepTimerManager {
   // MARK: - Properties
 
   private let scheduler: any SleepTimerScheduling
-  /// Fades the volume out before a time-based timer's deadline.
   private let fader: VolumeFader
 
-  // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
+  // nonisolated(unsafe) so deinit, always nonisolated in Swift 6, can cancel them.
   private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
   private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
 
@@ -56,10 +52,9 @@ final class SleepTimerManager {
     self.scheduler = scheduler
   }
 
-  /// Whether the fade before the deadline is running.
   var isFading: Bool { fader.isActive }
 
-  /// The time when playback should stop (seconds since epoch), or -1 if inactive
+  /// The deadline in seconds since 1970, or -1 when there is none.
   private(set) var sleepTimerTime: TimeInterval = -1 {
     didSet {
       if sleepTimerTime > -1 {
@@ -70,7 +65,6 @@ final class SleepTimerManager {
     }
   }
 
-  /// Whether to stop playback when the current track ends
   private(set) var willSleepWhenCurrentItemReachesEnd: Bool = false {
     didSet {
       if willSleepWhenCurrentItemReachesEnd {
@@ -82,13 +76,12 @@ final class SleepTimerManager {
   /// Halts playback when the timer fires; the pre-fade volume is restored after it returns.
   var onComplete: (() -> Void)?
 
-  /// Callback invoked when the sleep timer state changes
   var onChanged: ((SleepTimerState) -> Void)?
 
   // MARK: - Public Methods
 
-  /// Clears any active sleep timer.
-  /// - Returns: true if a timer was cleared, false if no timer was active
+  /// Clears whichever timer is set and cancels any fade, restoring the volume. False, with no `onChanged`, when none
+  /// was set.
   @discardableResult
   func clear() -> Bool {
     let hasSleepTimer = sleepTimerTime > -1 || willSleepWhenCurrentItemReachesEnd
@@ -100,8 +93,7 @@ final class SleepTimerManager {
     return true
   }
 
-  /// Gets the current sleep timer state.
-  /// - Returns: The current timer state, or nil if no timer is active
+  /// The active timer, its deadline in milliseconds since 1970; nil when none is set.
   func get() -> SleepTimerState? {
     let sleepOnEnd = willSleepWhenCurrentItemReachesEnd
     let hasSleepTimerTime = sleepTimerTime > -1
@@ -109,7 +101,6 @@ final class SleepTimerManager {
     if !hasSleepTimerTime, !sleepOnEnd { return nil }
 
     if hasSleepTimerTime {
-      // Return time in milliseconds since epoch
       return .second(SleepTimerTime(time: sleepTimerTime * 1000))
     }
 
@@ -120,11 +111,8 @@ final class SleepTimerManager {
     return nil
   }
 
-  /// Sets a time-based sleep timer.
-  /// - Parameters:
-  ///   - seconds: Number of seconds until playback stops
-  ///   - fadeDuration: Seconds over which to fade the volume out before the
-  ///     deadline (clamped to `seconds`); silence lands exactly at the deadline
+  /// Stops playback `seconds` from now. With `fadeDuration`, the volume fades over that many
+  /// seconds (clamped to `seconds`) so silence lands at the deadline.
   func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
     fader.cancel(restoringVolume: true)
@@ -141,7 +129,6 @@ final class SleepTimerManager {
     if let state = get() { onChanged?(state) }
   }
 
-  /// Sets the timer to stop playback when the current track ends.
   func setToEndOfTrack() {
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
@@ -151,7 +138,7 @@ final class SleepTimerManager {
     }
   }
 
-  /// Called when the current track changes. Resets end-of-track timer.
+  /// Clears an end-of-track timer: it applies to the track it was set on, not the next.
   func onTrackChanged() {
     if willSleepWhenCurrentItemReachesEnd {
       willSleepWhenCurrentItemReachesEnd = false
@@ -159,8 +146,6 @@ final class SleepTimerManager {
     }
   }
 
-  /// Called when the current track plays to end.
-  /// Triggers completion if end-of-track timer is active.
   func onTrackPlayedToEnd() {
     if willSleepWhenCurrentItemReachesEnd {
       complete()

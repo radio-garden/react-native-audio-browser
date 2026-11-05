@@ -1,24 +1,23 @@
 import AVFoundation
 import Foundation
 
-/// What a playback failure is reported as, and whether another attempt could fix it: one table,
-/// so the error JS receives and the retry decision are read off the same evidence.
+/// Reads the error reported to JS and the retry decision off the same evidence.
 enum PlaybackFailure {
   struct Classification: Equatable {
-    /// The narrowest error the evidence supports, falling back to the context's error.
+    /// The narrowest error the evidence supports, else the caller's `fallback`.
     let error: TrackPlayerError.PlaybackError
     let retryable: Bool
   }
 
-  /// Classifies a failure. AVFoundation reports HTTP failures as opaque CoreMedia errors, so
-  /// `httpStatusCode` comes from the item's error log, passed in by the caller.
+  /// Classifies a failure. `httpStatusCode` comes from the item's error log: AVFoundation reports
+  /// HTTP failures as opaque CoreMedia errors.
   ///
-  /// Both read the error and the errors it wraps, but rank the evidence differently, on purpose:
-  /// - The error: a transport failure first (no response arrived, so a status left in the log
-  ///   describes an earlier attempt), then a non-2xx status, then media that cannot be decoded.
-  /// - Retrying: a status first (a retry cannot conjure content the server refused), then the
-  ///   error and the errors it wraps. An unrecognized failure is transient, bounded by the retry
-  ///   budgets, as on Android: AVFoundation reports most stream failures opaquely.
+  /// The two answers rank the evidence differently, on purpose:
+  /// - The error: a transport failure first (no response arrived, so a logged status belongs to
+  ///   an earlier attempt), then a non-2xx status, then undecodable media.
+  /// - Retrying: a status first (a retry cannot change what the server refused), then the error
+  ///   chain. An unrecognized failure counts as retryable, bounded by the retry budgets, as on
+  ///   Android: AVFoundation reports most stream failures opaquely.
   static func classify(
     _ error: Error?,
     httpStatusCode: Int?,
@@ -30,9 +29,9 @@ enum PlaybackFailure {
     )
   }
 
-  /// Picks the HTTP status out of an `AVPlayerItem` error log's status codes. The codes share
-  /// their space with negative OSStatus values, so only in-range values count, and the newest
-  /// wins: a live stream reconnects, and older entries describe earlier attempts.
+  /// The HTTP status among an `AVPlayerItem` error log's status codes. Negative OSStatus values
+  /// share the field, so only 100–599 counts, and the newest wins: a live stream reconnects, and
+  /// older entries describe earlier attempts.
   static func httpStatusCode(fromErrorStatusCodes codes: [Int]) -> Int? {
     codes.last { (100 ... 599).contains($0) }
   }
@@ -45,7 +44,7 @@ enum PlaybackFailure {
     fallback: TrackPlayerError.PlaybackError,
   ) -> TrackPlayerError.PlaybackError {
     let chain = error.map(errorChain) ?? []
-    // `as?` bridges a plain NSError in NSURLErrorDomain too, AVFoundation's usual form.
+    // `as` also bridges a plain NSError in NSURLErrorDomain, AVFoundation's usual form.
     for case let urlError as URLError in chain {
       switch urlError.code {
       case .notConnectedToInternet:
@@ -67,8 +66,7 @@ enum PlaybackFailure {
     return unplayable ? .trackWasUnplayable : fallback
   }
 
-  /// The stream arrived but cannot be decoded: unknown container, unsupported codec, or no
-  /// decoder.
+  /// The stream arrived but cannot be decoded.
   private static let unplayableAVErrorCodes: Set<Int> = [
     AVError.fileFormatNotRecognized.rawValue,
     AVError.failedToParse.rawValue,
@@ -80,13 +78,12 @@ enum PlaybackFailure {
 
   // MARK: - Retrying
 
-  /// Beyond the 500–599 range. Android shares 408/429 but lists only 500/502/503/504 of 5xx.
+  /// Retried besides 500–599. Android shares 408/429 but retries only 500/502/503/504 of 5xx.
   private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
 
-  /// AVFoundation failures a retry cannot fix: the media is unusable, not the transport
-  /// unreliable. Every unplayable code but the temporary decoder shortage is here, so a failure
-  /// reported as unplayable is never also retried. `AVError.unknown` is absent on purpose: it
-  /// is the wrapper around opaque CoreMedia transport failures.
+  /// Failures a retry cannot fix. Every unplayable code but the temporary decoder shortage is
+  /// here, so a failure reported as unplayable is never also retried. `AVError.unknown` stays out:
+  /// it wraps opaque CoreMedia transport failures.
   private static let fatalAVErrorCodes: Set<Int> = unplayableAVErrorCodes
     .subtracting([AVError.decoderTemporarilyUnavailable.rawValue])
     .union([
@@ -111,8 +108,7 @@ enum PlaybackFailure {
     return true
   }
 
-  /// The error and its `NSUnderlyingError` ancestors, outermost first, bounded so a malformed
-  /// cycle cannot spin.
+  /// The error and its `NSUnderlyingError` ancestors, outermost first; capped so a cycle cannot spin.
   private static func errorChain(_ error: Error) -> [Error] {
     var chain: [Error] = []
     var current: Error? = error

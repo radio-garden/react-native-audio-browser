@@ -22,8 +22,8 @@ struct DeferredSeek {
 
   private(set) var state: State = .idle
 
-  /// Identifies the item a seek was issued against. `reset()` bumps it, so the completion of a
-  /// seek against the previous item can tell it is stale.
+  /// The item a seek was issued against. `reset()` bumps it, so the completion of a seek against
+  /// the previous item can tell it is stale.
   private(set) var generation = 0
 
   /// The target, pending or in flight; `seekBy` offsets from it.

@@ -1,25 +1,23 @@
 import Foundation
 
-/// Ramps the player volume down over a duration (sleep-timer fade).
+/// Ramps the volume down to silence over a duration (the sleep-timer fade).
 /// The gain follows a squared curve: loudness perception is logarithmic, so a
-/// linear gain ramp sounds like a late cutoff rather than a fade.
+/// linear ramp sounds like a late cutoff rather than a fade.
 @MainActor
 final class VolumeFader {
   private static let stepInterval: TimeInterval = 0.05
 
   private let getVolume: () -> Float
   private let setVolume: (Float) -> Void
-  // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
+  // nonisolated(unsafe) so `deinit`, which is nonisolated in Swift 6, can invalidate it.
   private nonisolated(unsafe) var timer: Timer?
 
-  /// Volume captured when the fade started; restored after the fade resolves.
-  /// Non-nil from fade start until cancel/completion, even once the ramp has
-  /// reached silence.
+  /// The volume before the fade, to restore once it resolves. Stays set from
+  /// `start` until `cancel` or `resolve`, also after the ramp reaches silence.
   private(set) var originalVolume: Float?
 
   var isActive: Bool { originalVolume != nil }
 
-  /// The length of the running fade.
   private(set) var duration: TimeInterval?
 
   init(getVolume: @escaping () -> Float, setVolume: @escaping (Float) -> Void) {
@@ -27,9 +25,12 @@ final class VolumeFader {
     self.setVolume = setVolume
   }
 
+  /// Starts a fade, restarting from the pre-fade volume if one is running.
+  /// A `duration` of zero or less marks the fade active without touching the
+  /// volume.
   func start(duration: TimeInterval) {
-    // If a fade is already running, keep its captured volume as the baseline —
-    // the current (partially faded) volume is not the value to restore.
+    // A running fade's current volume is part-faded; its captured one is the
+    // value to restore.
     let baseVolume = originalVolume ?? getVolume()
     cancel(restoringVolume: false)
     originalVolume = baseVolume
@@ -50,12 +51,13 @@ final class VolumeFader {
       }
     }
     self.timer = timer
+    // `.common` so the ramp keeps running while UIKit tracks a scroll.
     RunLoop.main.add(timer, forMode: .common)
   }
 
-  /// Stops the ramp. With `restoringVolume` the pre-fade volume is put back
-  /// immediately (cancellation); without it the caller restores after pausing
-  /// (completion path — restoring first would let full-volume audio slip out).
+  /// Stops the ramp and ends the fade. With `restoringVolume` the pre-fade
+  /// volume comes back at once; without it the volume stays where the ramp
+  /// left it, for a caller that halts playback before restoring.
   func cancel(restoringVolume: Bool) {
     timer?.invalidate()
     timer = nil
@@ -65,10 +67,8 @@ final class VolumeFader {
     if restoringVolume { setVolume(originalVolume) }
   }
 
-  /// Resolves the fade around a halting action: stops the ramp, runs `halt`,
-  /// then restores the pre-fade volume — in that order, because restoring
-  /// before halting would let full-volume audio slip out. The restore is
-  /// skipped when no fade was running.
+  /// Stops the ramp, runs `halt`, then restores the pre-fade volume (if a fade
+  /// was running). Restoring before halting would let full-volume audio out.
   func resolve(around halt: () -> Void) {
     let preFadeVolume = originalVolume
     cancel(restoringVolume: false)
