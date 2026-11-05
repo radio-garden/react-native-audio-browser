@@ -1,3 +1,9 @@
+## [0.2.0-next.53](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.52...v0.2.0-next.53) (2026-11-05)
+
+### Bug Fixes
+
+* **android:** play on the phone when a remote output that failed hands back ([d736405](https://github.com/radio-garden/react-native-audio-browser/commit/d73640513bf2746c81d0729fc2ab5a8b8f0f150c))
+
 ## [0.2.0-next.52](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.51...v0.2.0-next.52) (2026-11-04)
 
 ### Documentation
