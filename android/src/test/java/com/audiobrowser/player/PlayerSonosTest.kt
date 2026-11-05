@@ -12,12 +12,14 @@ import com.audiobrowser.sonos.SonosPosition
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.sonos.SonosRoom
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -45,8 +47,11 @@ class PlayerSonosTest {
       artworkUri: String?,
       live: Boolean,
     ) {
+      check(!refuses) { "refused" }
       calls += "setUri $streamUrl"
     }
+
+    @Volatile var refuses = false
 
     override fun play() {
       calls += "play"
@@ -125,9 +130,22 @@ class PlayerSonosTest {
 
     player.playWhenReady = true
 
-    idleUntil("the start timed out", steps = 500) {
-      player.playbackState == com.margelo.nitro.audiobrowser.PlaybackState.ERROR
-    }
+    idleUntil("the start timed out", steps = 500) { player.playbackState == PlaybackState.ERROR }
+  }
+
+  @Test
+  fun `unselecting a room that refused the item plays on the phone`() {
+    room.refuses = true
+    player.sessionPlayer.setMediaItem(
+      TrackFactory.toMedia3(TestFixtures.track(title = "b", src = "https://s/b.mp3"))
+    )
+    idleUntil("the refusal") { player.playbackState == PlaybackState.ERROR }
+
+    SonosOutputs.unselect(ROOM)
+
+    idleUntil("the phone playing") { player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE }
+    assertEquals(true, player.exoPlayer.playWhenReady)
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
   }
 
   @Test
