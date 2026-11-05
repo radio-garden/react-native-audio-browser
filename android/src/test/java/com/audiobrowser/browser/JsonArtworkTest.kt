@@ -31,8 +31,6 @@ class JsonArtworkTest {
 
   @Test
   fun `decodes a pair nested in children`() {
-    // The shape that shipped broken: a container decodes its children eagerly,
-    // so one unparseable row rejected the whole page rather than losing an image.
     val resolved =
       json.decodeFromString<JsonResolvedTrack>(
         """{"path":"/favorites","title":"Favorites","children":[

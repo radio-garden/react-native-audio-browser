@@ -146,17 +146,13 @@ class SimpleRouterTest {
 
   @Test
   fun `computes correct specificity for tail wildcard patterns`() {
-    // Regression test for issue #27: specificity must account for
-    // segment types before the ** wildcard.
     val result = router.findBestMatch("/api/v1/users", mapOf("/api/v1/**" to true))
-    // constant "api" (1000) + constant "v1" (1000) + tail(1) + 3 segments = 2004
+    // constants "api" and "v1" (2 * 1000) + tail wildcard (1) + 3 pattern segments
     assertEquals(2004, result!!.second.specificity)
   }
 
   @Test
   fun `prefers constant prefix over parameter prefix in tail wildcards`() {
-    // Second part of issue #27: with correct specificity, the constant
-    // prefix should beat the parameter prefix.
     val routes = mapOf("/api/{version}/**" to true, "/api/v1/**" to true)
     val result = router.findBestMatch("/api/v1/users", routes)
     assertEquals("/api/v1/**", result!!.first)

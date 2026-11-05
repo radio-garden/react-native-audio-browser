@@ -4,14 +4,15 @@ import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.Track
 
 /**
- * Remembers how an artwork URI was produced (which Track, which artwork-config kind) so the
- * display-time bitmap loader can re-resolve it Track-first with a real size hint — instead of
- * re-running the artwork Transform on an already-transformed URL, which is only safe for idempotent
- * transforms. Bounded LRU; thread-safe (registered from browse coroutines and the now-playing
- * scope, read from the bitmap loader's IO scope).
+ * Maps a produced artwork URI back to the Track and artwork config it came from, so the
+ * display-time bitmap loader, which gets only the URI from Media3, re-resolves Track-first with the
+ * real size instead of re-running the transform on an already-transformed URL (safe only for
+ * idempotent transforms). Bounded LRU; thread-safe (written from browse coroutines and the
+ * now-playing scope, read from the bitmap loader's IO scope).
  */
 class ArtworkResolutionRegistry(private val maxEntries: Int = 256) {
 
+  /** A null [perRouteConfig] resolves through the browser's current `config.artwork`. */
   data class Entry(val track: Track, val perRouteConfig: ArtworkRequestConfig?)
 
   private val entries =
@@ -28,10 +29,10 @@ class ArtworkResolutionRegistry(private val maxEntries: Int = 256) {
   @Synchronized fun lookup(uri: String): Entry? = entries[uri]
 
   /**
-   * Drops all entries. Must run whenever the browser config is replaced or content is invalidated:
-   * entries pin Tracks and ArtworkRequestConfigs whose transform/resolve fields are Nitro handles
-   * to JS closures — keeping them past their config's lifetime both retains dead closures and
-   * resolves display-time artwork through stale callbacks.
+   * Drops all entries. Call whenever the browser config is replaced or content is invalidated:
+   * entries hold Tracks and configs whose transform/resolve fields are Nitro handles to JS
+   * closures, and keeping them both retains dead closures and resolves artwork through stale
+   * callbacks.
    */
   @Synchronized fun clear() = entries.clear()
 }

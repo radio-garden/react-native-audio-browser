@@ -12,26 +12,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Tests the request/browse layer resolution + caching introduced for resolver thunks.
- *
- * These tests exercise [BrowserManager.ensureLayersResolved]'s generation guard via the STATIC
- * layer path (`config.request` / `config.browse`, with the resolver thunks null). The guard is the
- * core of the per-content-generation caching: a static layer is resolved once and cached until the
- * generation bumps (config-set or [BrowserManager.clearContentCache], which runs from
- * `invalidateAllContent`), after which it is re-resolved.
- *
- * NOTE (gap): a test that proves a *resolver thunk* (`config.requestResolver`) is invoked exactly
- * once per generation is not included here. The resolver returns a Nitro `Promise<Variant<...>>`,
- * and constructing/awaiting a real Nitro `Promise` requires the JNI bridge (`Promise.initHybrid()`
- * / `nativeResolve` are `external`), which is unavailable in a JVM/Robolectric unit test. The
- * generation-guard logic those tests would assert (resolve-once-per-generation, re-resolve after a
- * bump, no in-flight cache) is identical for the static and resolver paths — `resolveLayer` only
- * differs in how it produces the `TransformableRequestConfig` — so the guard is fully covered here.
- * The resolver-await path is covered by the TS/web-stub tests and on iOS.
- *
- * Runs under Robolectric for [BrowserManager]'s `android.util.LruCache` fields: `clearContentCache`
- * calls `evictAll()`, which a plain JVM test cannot execute.
+ * Covers the generation guard through static layers only. A resolver thunk or viewMoreTitle
+ * callback returns a Nitro Promise, which needs the JNI bridge a JVM test lacks; the guard is the
+ * same for both paths.
  */
+// Robolectric provides the android.util.LruCache whose evictAll() clearContentCache calls.
 @RunWith(RobolectricTestRunner::class)
 class BrowserManagerLayerResolutionTest {
 
@@ -62,7 +47,7 @@ class BrowserManagerLayerResolutionTest {
     val browse = staticConfig("/browse")
     browserManager.config = BrowserConfig(request = request, browse = browse)
 
-    // First resolution: nothing cached yet (resolvedLayerGeneration starts at -1).
+    // -1: never resolved.
     val genAfterConfigSet = browserManager.layerGenerationForTest
     assertEquals(-1, browserManager.resolvedLayerGenerationForTest)
 
@@ -72,7 +57,6 @@ class BrowserManagerLayerResolutionTest {
     assertSame(request, browserManager.resolvedRequestLayerForTest)
     assertSame(browse, browserManager.resolvedBrowseLayerForTest)
 
-    // Second call in the same generation is a no-op: the cached layers are untouched.
     browserManager.ensureLayersResolved()
     assertEquals(genAfterConfigSet, browserManager.resolvedLayerGenerationForTest)
     assertSame(request, browserManager.resolvedRequestLayerForTest)
@@ -86,15 +70,10 @@ class BrowserManagerLayerResolutionTest {
     val firstGen = browserManager.resolvedLayerGenerationForTest
     assertSame(request1, browserManager.resolvedRequestLayerForTest)
 
-    // invalidateAllContent() routes through clearContentCache(): bump the generation.
     browserManager.clearContentCache()
     assertEquals(firstGen + 1, browserManager.layerGenerationForTest)
-    // Cache is now stale: the resolved generation no longer matches.
     assertEquals(firstGen, browserManager.resolvedLayerGenerationForTest)
 
-    // Swap the underlying config (the resolver/static layer can change between generations)
-    // WITHOUT bumping generation again via the setter — emulate the resolver returning a new value
-    // by re-resolving against a fresh config set, which itself bumps once.
     val request2 = staticConfig("/v2")
     val genBeforeSet = browserManager.layerGenerationForTest
     browserManager.config = BrowserConfig(request = request2)
@@ -147,8 +126,6 @@ class BrowserManagerLayerResolutionTest {
 
   @Test
   fun `viewMoreTitle falls back to the in-code default when unconfigured`() = runTest {
-    // The only viewMoreTitle path a JVM test can reach — a configured callback returns a Nitro
-    // Promise, see the resolver-thunk gap noted above.
     browserManager.config = BrowserConfig()
 
     assertEquals(BrowserManager.DEFAULT_VIEW_MORE_TITLE, browserManager.viewMoreTitle())

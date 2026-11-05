@@ -20,13 +20,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 
-/**
- * JSON serializable models for parsing API responses. These will be converted to Nitro types after
- * parsing. Legacy `groupTitle`/`imageRow` keys in payloads are simply unknown to these models and
- * decode as ignored dead weight (ADR 0010).
- */
-
-/** JSON model for a track's per-request HTTP override (identity/auth/signed-url). */
 @Serializable
 data class JsonTrackRequest(
   val userAgent: String? = null,
@@ -36,7 +29,6 @@ data class JsonTrackRequest(
   fun toNitro(): TrackRequest = TrackRequest(userAgent, headers, query)
 }
 
-/** JSON model for a page section (ADR 0010). */
 @Serializable
 data class JsonSection(
   val title: String? = null,
@@ -91,33 +83,24 @@ data class JsonTrack(
   val icyCharset: String? = null,
 )
 
-/**
- * Convert JSON models to Nitro types.
- *
- * `style` rides the models as a raw [JsonElement] and maps leniently here — tolerant decoding by
- * design (ADR 0011): a stale value (the retired string vocabulary), a wrong-typed field, or an
- * unknown enum value is "no declaration", never a parse failure. A typed field would fail the whole
- * page, since this decoder is otherwise strict.
- */
+// `style` stays a raw JsonElement and maps leniently here (ADR 0011): a stale, wrong-typed or
+// unknown value is no declaration. A typed field would fail the whole page, as the decoder is
+// otherwise strict.
 private fun JsonObject.stringField(key: String): String? =
   (get(key) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
-/** A strict JSON boolean — a quoted "false" is a wrong-typed field, i.e. no declaration. */
+// booleanOrNull alone accepts a quoted "false"; that is wrong-typed, so no declaration.
 private fun JsonObject.booleanField(key: String): Boolean? =
   (get(key) as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
 
-/**
- * A block that resolves to no declarations at all — `{}` or all-unknown values — maps to null, so
- * "no declaration" has one shape on every platform (iOS makes the same collapse).
- */
+// A block with no declarations maps to null, as on iOS, so "no declaration" has one shape.
 private fun JsonElement?.toTrackStyle(): TrackStyle? =
   (this as? JsonObject)?.let { obj ->
     TrackStyle(
         display = obj.stringField("display").toStyleDisplay(),
         artworkRendering = obj.stringField("artworkRendering").toArtworkRendering(),
         imageShape = obj.stringField("imageShape").toImageShape(),
-        // 'none' is a legitimate accessory value (the inheritance escape);
-        // only emptiness collapses.
+        // 'none' is a real value (the inheritance escape); only emptiness collapses.
         accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() },
         cardTint = obj.stringField("cardTint")?.takeIf { it.isNotEmpty() },
         cardImage = obj.stringField("cardImage").toCardImage(),
@@ -168,7 +151,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     subtitle = subtitle,
     artwork = artwork?.toNitro(),
     artworkSource = null,
-    // Containers carry no per-track media-request override (mirrors iOS JsonResolvedTrack).
+    // Containers carry no per-track request override, as on iOS.
     request = null,
     artist = artist,
     albumPath = albumPath,

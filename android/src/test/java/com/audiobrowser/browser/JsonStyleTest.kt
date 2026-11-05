@@ -42,8 +42,6 @@ class JsonStyleTest {
 
   @Test
   fun `a stale string style decodes as no declaration - never a parse failure`() {
-    // The retired string vocabulary must never kill the page (tolerant
-    // decoding, ADR 0011).
     val resolved =
       json.decodeFromString<JsonResolvedTrack>(
         """{"path":"/home","title":"Home","style":"rail","children":[
@@ -57,8 +55,7 @@ class JsonStyleTest {
 
   @Test
   fun `unknown enum values decode as no declaration`() {
-    // All-unknown declarations collapse to "no block" — one shape for "no
-    // declaration" on every platform.
+    // A block of only unknown values collapses to no block, the shape iOS gives too.
     val track =
       json.decodeFromString<JsonTrack>(
         """{"title":"X","style":{"display":"carousel","artworkRendering":"embossed","gridWrap":"yes"}}"""
@@ -74,8 +71,7 @@ class JsonStyleTest {
 
   @Test
   fun `a quoted boolean gridWrap is a wrong-typed field - no declaration`() {
-    // iOS's strict-typed tolerant decode drops a quoted "false"; the lenient
-    // Kotlin mapper must not read it either, or the same payload renders a
+    // iOS's typed decode drops a quoted "false"; reading it here would render a
     // teaser shelf on one platform and a wrapping grid on the other.
     val resolved =
       json.decodeFromString<JsonResolvedTrack>(
@@ -107,8 +103,7 @@ class JsonStyleTest {
 
   @Test
   fun `accessorySymbol 'none' is a value - not emptiness`() {
-    // The inheritance-escape sentinel must survive the wire — collapsing it
-    // to "no declaration" would let the section value flow back in.
+    // "none" opts out of the section's symbol; dropping it would let that value inherit back.
     val track =
       json.decodeFromString<JsonTrack>("""{"title":"X","style":{"accessorySymbol":"none"}}""")
     assertEquals("none", track.toNitro().style?.accessorySymbol)

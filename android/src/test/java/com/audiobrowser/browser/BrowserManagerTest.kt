@@ -18,17 +18,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Navigation and queue-expansion glue.
- *
- * [BrowserManager.expandQueueFromContextualPath] is the seam between the page a listener tapped in
- * and the queue that starts playing. Its two halves are covered on their own — the section logic in
- * [SectionScopeTest], the caller's single-track fallback in the player tests — but the wiring
- * between them is what decides whether tapping row 3 of a page resumes the right station, and only
- * these tests exercise it.
- *
- * Routes serve `browseStatic`, the one browse arm that needs neither the JNI bridge nor HTTP.
- * Robolectric is required for `android.net.Uri` (contextual-path parsing) and
- * `android.util.LruCache` (the content cache).
+ * The wiring between a tapped page and the queue that starts playing; [SectionScopeTest] covers the
+ * section logic on its own. Routes serve `browseStatic`, the one browse arm that needs neither the
+ * JNI bridge nor HTTP. Robolectric provides `android.net.Uri` (contextual-path parsing) and
+ * `android.util.LruCache`.
  */
 @RunWith(RobolectricTestRunner::class)
 class BrowserManagerTest {
@@ -40,7 +33,6 @@ class BrowserManagerTest {
     browserManager = BrowserManager()
   }
 
-  /** Configures a single static route at [path] serving [children] as its page. */
   private fun servePage(
     path: String,
     vararg children: com.margelo.nitro.audiobrowser.Track,
@@ -54,7 +46,6 @@ class BrowserManagerTest {
       )
   }
 
-  /** Configures a single static route at [path] serving [sections] as its page. */
   private fun serveSections(path: String, vararg sections: com.margelo.nitro.audiobrowser.Section) {
     browserManager.config =
       BrowserConfig(
@@ -113,8 +104,6 @@ class BrowserManagerTest {
     val resolved = browserManager.navigate("/library")
 
     assertEquals(listOf("A", "B"), resolved.flattenedChildren?.map { it.title })
-    // The tap target: a child's path is rewritten to point back at this page
-    // plus its own id and page position (the duplicate-identity tie-breaker).
     assertEquals(
       listOf(
         BrowserPathHelper.build("/library", "a", 0),
@@ -137,7 +126,6 @@ class BrowserManagerTest {
 
     val expanded = browserManager.expandQueueFromContextualPath(contextual("/home", "c"))
 
-    // "Popular" only — a page aggregating sections must not leak next/previous across them.
     val (queue, index) = requireNotNull(expanded)
     assertEquals(listOf("c", "d"), queue.map { it.src })
     assertEquals(0, index)
@@ -160,9 +148,7 @@ class BrowserManagerTest {
 
   @Test
   fun `expandQueueFromContextualPath pins the tapped copy of a duplicate identity`() = runBlocking {
-    // The same src twice in one section (normal for music playlists): the
-    // stamped page index selects the tapped copy, so "next" continues from
-    // there instead of from the first copy.
+    // The stamped index 2 is the second "a".
     servePage("/playlist", track(src = "a"), track(src = "b"), track(src = "a"), track(src = "c"))
 
     val (queue, index) =
@@ -177,8 +163,7 @@ class BrowserManagerTest {
   @Test
   fun `expandQueueFromContextualPath scopes a cross-section duplicate to the tapped section`() =
     runBlocking {
-      // The same identity in a rail section AND the list section below it:
-      // the stamped flat index resolves the tap to the list section.
+      // Flat index 1 is the "dup" in Stations, not the one in Row.
       serveSections(
         "/home",
         section(
@@ -206,9 +191,7 @@ class BrowserManagerTest {
   @Test
   fun `expandQueueFromContextualPath falls back to the first match on a stale index`() =
     runBlocking {
-      // The list shifted since the stamp: the child at the index no longer
-      // carries the identity, so resolution ignores the index and falls back
-      // to the first identity match instead of aborting.
+      // Index 0 holds "x", not "a".
       servePage("/home", track(src = "x"), track(src = "a"), track(src = "b"))
 
       val (queue, index) =
@@ -223,9 +206,6 @@ class BrowserManagerTest {
   @Test
   fun `expandQueueFromContextualPath returns null when the id has vanished from the page`() =
     runBlocking {
-      // The stored path points at a track the page no longer lists — the page changed under a
-      // resumed session. Queueing the current list would resume the wrong station, so expansion
-      // aborts and the caller falls back to the stored single track.
       servePage("/home", track(src = "a"), track(src = "b"))
 
       assertNull(browserManager.expandQueueFromContextualPath(contextual("/home", "gone")))
@@ -266,7 +246,6 @@ class BrowserManagerTest {
     val (queue, index) =
       requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "r2")))
 
-    // A tile tap queues its section, not the list rows beside it.
     assertEquals(listOf("r1", "r2"), queue.map { it.src })
     assertEquals(1, index)
   }
@@ -280,7 +259,7 @@ class BrowserManagerTest {
         children =
           arrayOf(
             track(src = "a"),
-            // A browsable row sitting inside the same section — no src, so not queueable.
+            // No src: browsable, so not queueable.
             track(src = null).copy(path = "/sub"),
             track(src = "b"),
           ),
@@ -305,7 +284,7 @@ class BrowserManagerTest {
 
       val resolved = browserManager.navigate("/home")
 
-      // id when non-blank, else src — Track.identity (ADR 0008).
+      // id when non-blank, else src (ADR 0008).
       assertEquals(
         listOf(
           BrowserPathHelper.build("/home", "stable-a", 0),
@@ -336,8 +315,7 @@ class BrowserManagerTest {
     servePage("/home", track(id = "stable-b", src = "https://s/b.mp3", title = "B"))
     browserManager.navigate("/home")
 
-    // A contextual mediaId whose __trackId is the identity (the id), with a parent path that was
-    // never cached directly — the extract-then-lookup path must find it via the id key.
+    // "/elsewhere" was never resolved, so only the id key can find it.
     val mediaId = contextual("/elsewhere", "stable-b")
 
     assertEquals("B", browserManager.getCachedTrack(mediaId)?.title)
@@ -374,10 +352,6 @@ class BrowserManagerTest {
 
   @Test
   fun `expandQueueFromContextualPath aborts when the tapped track is disabled`() = runBlocking {
-    // A disabled track never plays: with the tapped identity excluded from the
-    // playable list, expansion aborts, and every caller's fallback refuses the
-    // disabled track itself — navigateTrack's guard on tap,
-    // onPlaybackResumption's refusal on resume.
     servePage("/home", track(src = "a"), track(src = "unavailable", disabled = true))
 
     assertNull(browserManager.expandQueueFromContextualPath(contextual("/home", "unavailable")))
@@ -386,9 +360,6 @@ class BrowserManagerTest {
   @Test
   fun `resolveMediaItemsForPlayback refuses a disabled track on the legacy INDEX_UNSET path`() =
     runBlocking {
-      // Android Auto and Assistant request playback through Media3's legacy
-      // path, which passes C.INDEX_UNSET ("the default item") — the refusal
-      // must cover it, or a stale browse row for a now-disabled track plays.
       servePage("/home", track(src = "unavailable", disabled = true))
       browserManager.resolve("/home")
 
@@ -397,9 +368,6 @@ class BrowserManagerTest {
       try {
         browserManager.resolveMediaItemsForPlayback(listOf(item), C.INDEX_UNSET, 0)
         fail("Expected refusal of a disabled track")
-      } catch (expected: IllegalStateException) {
-        // Refused by failing the future: Media3 surfaces an error to the
-        // controller and live playback stays untouched.
-      }
+      } catch (expected: IllegalStateException) {}
     }
 }

@@ -9,10 +9,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Tests [BrowserManager.buildApiRequest] — the single request-building path for browse and search
- * (the Kotlin port of iOS `buildApiRequest`). Static layers only: Nitro Promises
- * (transforms/resolvers) cannot be constructed on the JVM; transform semantics are covered by
- * RequestConfigBuilderTest and the Swift suite.
+ * Static layers only: Nitro Promises (transforms, resolvers) cannot be constructed on the JVM, so
+ * transforms are covered by RequestConfigBuilderTest and the Swift suite.
  */
 class BrowserManagerBuildApiRequestTest {
 
@@ -49,8 +47,6 @@ class BrowserManagerBuildApiRequestTest {
       bm.buildApiRequest(
         kindConfig = transformableConfig(query = mapOf("extra" to "1")),
         routeConfig = null,
-        // The caller seeds the kind's path onto the base (as search does) — a
-        // layer's own static path never applies.
         path = "/search",
         params = emptyMap(),
         initialQuery = mapOf("q" to "jazz", "mode" to "genre"),
@@ -62,8 +58,6 @@ class BrowserManagerBuildApiRequestTest {
 
   @Test
   fun `a layer's static path does not override the base path`() = runTest {
-    // Mirrors iOS applyLayer and the web stub: the path is carried from the
-    // base through every Request-Config Layer; only a Transform may change it.
     bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
     val request =
       bm.buildApiRequest(

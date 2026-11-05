@@ -12,29 +12,20 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import timber.log.Timber
 
-/**
- * Outbound URL resolution for media and artwork — the Android analog of iOS
- * `RequestPipeline.swift`. Owns how a Track's `src` / `artwork` becomes a fetchable request:
- * request layer (shared, incl. its transform) → kind config (media / artwork / nowPlayingArtwork) →
- * per-Track Resolve, with transform-wins semantics centralised in [RequestConfigBuilder].
- */
+// The Android side of iOS `RequestPipeline.swift` and the web stub's `RequestConfigBuilder`: keep
+// the layer order the same on all three.
 
 /**
- * Builds the media request config for [originalUrl], [track]'s src, with `media.resolve` run for
- * [track]. Returns null only when neither a request layer nor a media config is set (the caller
- * then uses the original URL as-is). Mirrors the web stub's and iOS's `resolveMediaUrl`.
+ * Layers the request config, then `media`, over [originalUrl] and runs `media.resolve` for [track].
+ * Returns null when neither a request layer nor a media config is set; the caller then plays
+ * [originalUrl] as is.
  */
 suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): MediaRequestConfig? {
   val mediaConfig = config.media
-  // The request layer counts as present when a static `request` OR a `requestResolver`
-  // is set — a resolver-only consumer still needs its baseUrl/headers/transform
-  // applied to media URLs.
+  // A resolver-only request layer counts: its baseUrl still has to reach a relative src.
   val hasRequestLayer = config.request != null || config.requestResolver != null
   if (mediaConfig == null && !hasRequestLayer) return null
 
-  // Layered: request (shared, incl. its transform) → media. The request layer runs
-  // for media even when no media-specific config is present (so a relative src
-  // still gets baseUrl).
   val requestConfig = resolvedRequestConfig()
   var base =
     RequestConfig(
@@ -71,11 +62,11 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
 }
 
 /**
- * Resolves a Track's artwork into a fetchable [ImageSource]: request layer → artwork config
- * (per-route overrides global) → per-Track `artwork.resolve` → image query params from
- * [imageContext] → artwork transform → `{id}` substitution. Mirrors the web stub's and iOS's
- * `resolveArtworkUrl` flow. Returns null when there is no artwork (or a resolver explicitly
- * produced none and the track has no artwork URL).
+ * Resolves [track]'s artwork into an [ImageSource]: request layer, artwork config ([perRouteConfig]
+ * replaces `config.artwork`, it does not merge), `resolve`, image query params from [imageContext],
+ * transform, then `{id}`. With no artwork config the track's artwork URL is returned untouched.
+ * Returns null when there is no artwork, when `resolve`/`resolveSync` yields nothing for a track
+ * without an artwork URL (even if the config has a static path), or when any callback throws.
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -83,20 +74,15 @@ suspend fun BrowserManager.resolveArtworkUrl(
   imageContext: ImageContext? = null,
 ): ImageSource? {
   val effectiveArtworkConfig = perRouteConfig ?: config.artwork
-  // Treat empty string as null for artwork
   val trackArtwork = track.artwork?.url?.takeIf { it.isNotEmpty() }
 
-  // If no artwork config and no track.artwork, nothing to transform
   if (effectiveArtworkConfig == null && trackArtwork == null) return null
 
-  // If no artwork config, just return the original artwork URL as a simple ImageSource
   if (effectiveArtworkConfig == null) {
     return trackArtwork?.let { ImageSource(uri = it, method = null, headers = null, body = null) }
   }
 
   return try {
-    // Base via the shared request layer (its transform runs for artwork too),
-    // with the track's artwork as the path when present.
     var mergedConfig =
       RequestConfig(
         method = null,
@@ -115,8 +101,6 @@ suspend fun BrowserManager.resolveArtworkUrl(
       mergedConfig = mergedConfig.copy(path = trackArtwork)
     }
 
-    // Per-track resolution — async `resolve` first, then `resolveSync` merged over
-    // it (sync winning) via the tested helper. Matches the web stub.
     val asyncResolved =
       effectiveArtworkConfig.resolve?.let {
         RequestConfigBuilder.awaitAsyncConfig(it.invoke(track))
@@ -127,9 +111,6 @@ suspend fun BrowserManager.resolveArtworkUrl(
       }
     val resolvedConfig = RequestConfigBuilder.composeResolved(asyncResolved, syncResolved)
 
-    // A resolver ran but produced nothing AND there's no artwork URL either → no
-    // artwork (matches the web stub; with a track artwork present the static/url
-    // flow continues).
     if (
       (effectiveArtworkConfig.resolve != null || effectiveArtworkConfig.resolveSync != null) &&
         resolvedConfig == null &&
@@ -138,7 +119,6 @@ suspend fun BrowserManager.resolveArtworkUrl(
       return null
     }
 
-    // Artwork config's static fields (not resolve/transform — those run separately).
     mergedConfig =
       RequestConfigBuilder.mergeConfig(
         mergedConfig,
@@ -146,11 +126,10 @@ suspend fun BrowserManager.resolveArtworkUrl(
       )
     resolvedConfig?.let { mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it) }
 
-    // Image query params BEFORE transform (so the transform can override them).
+    // Before the transform, so the transform can override the size params.
     mergedConfig =
       applyImageQueryParams(mergedConfig, effectiveArtworkConfig.imageQueryParams, imageContext)
 
-    // Transform (async first, then sync), receiving the image context.
     var transformedConfig = mergedConfig
     effectiveArtworkConfig.transform?.let {
       transformedConfig =
@@ -165,16 +144,14 @@ suspend fun BrowserManager.resolveArtworkUrl(
         )
     }
 
-    // `{id}` token substitution. A track without a non-blank id leaves the token LITERALLY in
-    // place — the request then visibly 404s, which is intended (self-describing error trail) —
-    // with a single warning logged below once the URL is built. Mirrors iOS substituteTrackId.
+    // A track without an id leaves `{id}` in the URL on purpose: the request then fails visibly,
+    // and the warning below says why.
     track.id
       ?.takeIf { it.isNotEmpty() }
       ?.let { transformedConfig = substituteTrackId(transformedConfig, it) }
     val hasUnfilledIdToken = configContainsIdToken(transformedConfig)
 
     val uri = RequestConfigBuilder.buildUrl(transformedConfig)
-    // If URI is empty, there's no valid artwork path
     if (uri.isEmpty()) return null
 
     if (hasUnfilledIdToken) {
@@ -194,15 +171,14 @@ suspend fun BrowserManager.resolveArtworkUrl(
     )
   } catch (e: Exception) {
     Timber.e(e, "Failed to transform artwork URL for track: ${track.title}")
-    // On error, return null to clear artwork and avoid broken images
     null
   }
 }
 
 /**
- * Display-time artwork resolution by URI (Media3's BitmapLoader only receives a URI). A registry
- * hit re-resolves Track-first with the real display-size [imageContext] — never re-transforming an
- * already-transformed URL. Returns null for unknown URIs; the caller decides the fallback.
+ * Re-resolves an artwork [uri] registered in [BrowserManager.artworkResolutions] from its track,
+ * with the display size in [imageContext], rather than transforming the already-transformed URI.
+ * Returns null for an unregistered [uri].
  */
 suspend fun BrowserManager.displayArtworkSource(
   uri: String,
@@ -213,12 +189,10 @@ suspend fun BrowserManager.displayArtworkSource(
 }
 
 /**
- * Header-only fallback for display-time artwork URIs that cannot be attributed to a Track (registry
- * eviction, process-death restore): the URI is fetched as-is — never re-transformed — but the
- * *static* request/artwork headers still apply, so header-authenticated artwork keeps working.
- * Transforms are deliberately not run (no Track, no trustworthy base config); headers added by a
- * transform rather than static config are out of reach here, which is the documented limit. Returns
- * null when there are no headers to add.
+ * For an artwork [uri] no track can be found for (evicted from the registry, or restored after
+ * process death): fetches [uri] as is, adding only the static headers of the request and artwork
+ * configs. No transform or resolve runs, so headers a transform adds are missing. Returns null when
+ * there are no headers to add.
  */
 suspend fun BrowserManager.unattributedArtworkSource(uri: String): ImageSource? {
   var merged =
@@ -243,7 +217,6 @@ suspend fun BrowserManager.unattributedArtworkSource(uri: String): ImageSource? 
   return ImageSource(uri = uri, method = null, headers = headers, body = null)
 }
 
-/** Folds [imageContext] width/height into the query under the configured param names. */
 private fun applyImageQueryParams(
   config: RequestConfig,
   imageQueryParams: ImageQueryParams?,
@@ -261,14 +234,8 @@ private fun applyImageQueryParams(
   return config.copy(query = (config.query ?: emptyMap()) + contextQuery)
 }
 
-/** The `{id}` template token — see [substituteTrackId] / [configContainsIdToken]. */
 private const val ID_TOKEN = "{id}"
 
-/**
- * Replaces the `{id}` token with the track id in a request config's path, query values, and header
- * values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves. Configs without
- * the token are returned unchanged. Mirrors the iOS `substituteTrackId` helper.
- */
 private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig {
   fun sub(s: String?): String? = s?.replace(ID_TOKEN, id)
   fun subMap(m: Map<String, String>?): Map<String, String>? =
@@ -280,17 +247,11 @@ private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig 
   )
 }
 
-/**
- * Whether the config still carries an unfilled `{id}` token in its path, query values, or header
- * values (checked AFTER substitution, so it matches exactly when the track had no non-blank id and
- * the config uses the token). Mirrors iOS `TrackIdTemplate.containsToken`.
- */
 private fun configContainsIdToken(config: RequestConfig): Boolean =
   config.path?.contains(ID_TOKEN) == true ||
     config.query?.values?.any { it.contains(ID_TOKEN) } == true ||
     config.headers?.values?.any { it.contains(ID_TOKEN) } == true
 
-/** Builds a headers map, merging explicit headers with userAgent and contentType. */
 private fun buildHeadersMap(
   headers: Map<String, String>?,
   userAgent: String?,
