@@ -39,19 +39,22 @@ export type GateEvent = { reason: GateReason }
 /**
  * A gate's chrome (title and optional message).
  *
- * While the gate is active, every browse or search request on car surfaces
- * (CarPlay, Android Auto) shows this page instead of the real content.
- * Playback, the queue, and now-playing are unaffected.
+ * While the gate is up, a gated browse or search on CarPlay or Android Auto
+ * shows this page instead of the content, and a gated voice search (Siri on
+ * iOS, Google Assistant on Android, including from the phone) is refused.
+ * Playback and the queue are unaffected.
  *
- * - **CarPlay**: plain centered message page.
- * - **Android Auto**: one non-playable list tile (message not shown).
+ * - **CarPlay**: plain centered message page. Now Playing keeps its transport
+ *   controls but hides the `carPlayNowPlayingButtons`.
+ * - **Android Auto**: one non-playable list tile, with the title as its main
+ *   line and the message as its subtitle.
  */
 export type Gate = {
   /** Headline shown on the gate page. */
   title: string
   /**
-   * The explanatory copy under the title. On CarPlay this is the centered
-   * message body; newlines become spaces. Android Auto does not display it.
+   * The explanatory copy under the title: the centered message body on
+   * CarPlay, the tile subtitle on Android Auto. Newlines become spaces on both.
    */
   message?: string
 }
@@ -76,6 +79,8 @@ export type GateRequest =
  * - Return a {@link Gate} to gate with specific chrome for this request.
  * - Return `true` to gate using the default chrome (or the built-in fallback).
  * - Return `false` to allow the request through.
+ * - If the resolver throws, the request is gated (fails closed): only `false`
+ *   lets a request through.
  */
 export type GateResolver = (request: GateRequest) => Gate | boolean
 
@@ -147,7 +152,8 @@ export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
 }
 
 /**
- * Drops the gate — the real content comes back, and the current tab is kept.
+ * Drops the gate — the real content comes back. Android Auto keeps the current
+ * tab; CarPlay rebuilds its tab bar on the first tab.
  *
  * @platform ios android
  * A no-op on web, where no gate was ever raised.

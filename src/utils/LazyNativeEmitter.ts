@@ -1,16 +1,13 @@
 type Callback<T> = (arg: T) => void
 
 /**
- * The subscription object behind the library's **discrete** events — the
- * remote-control exports (`onRemotePlay`, `onRemoteSeek`, …) and other
- * one-shot signals with no "current value" to cache. Subscribe with
- * {@link addListener}; the returned function unsubscribes. The emitter is
- * not callable itself.
+ * The subscription object behind the remote-control exports (`onRemotePlay`,
+ * `onRemoteSeek`, …) and `onGate`. Subscribe with {@link addListener}; the
+ * returned function unsubscribes. The emitter is not callable itself.
  *
- * "Lazy" is an implementation detail you may notice in timing: the native
- * side only starts delivering the event once the first listener is added.
- * State that always has a current reading uses `NativeUpdatedValue`
- * instead.
+ * Native starts delivering the event only once the first listener is added,
+ * and nothing is cached: there is no `lastValue`. The other `on*` exports use
+ * `NativeUpdatedValue`, which listens from module load.
  *
  * @example
  * ```typescript

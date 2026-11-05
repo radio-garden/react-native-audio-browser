@@ -23,8 +23,9 @@ export function getPlayWhenReady(): boolean {
 
 /**
  * Sets whether the player will play automatically when it is ready to do so.
- * This is the equivalent of calling `play()` when `playWhenReady = true`
- * or `pause()` when `playWhenReady = false`.
+ * Before setupPlayer resolves, the value is kept and applied at setup, while
+ * play() is dropped on iOS and Android. On Android, `true` does not restart a
+ * stopped or failed player; call play() or retry() for that.
  */
 export function setPlayWhenReady(playWhenReady: boolean): void {
   nativeBrowser.setPlayWhenReady(playWhenReady)
@@ -33,9 +34,9 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to play when ready changes.
- * @param callback - Called when playWhenReady changes
- * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
+ * Emits each time `playWhenReady` changes. Subscribe with
+ * `onPlayWhenReadyChanged.addListener(cb)`, which returns an unsubscribe
+ * function.
  */
 export const onPlayWhenReadyChanged =
   NativeUpdatedValue.emitterize<PlaybackPlayWhenReadyChangedEvent>(

@@ -33,9 +33,11 @@ export function supportsOutputSwitcher(): boolean {
 
 /**
  * The current audio output, or `undefined` when unknown. iOS reports one while a
- * session is active; Android reports the active output route via AudioManager
- * (the `type` is coarse — e.g. wired headphones may report as `speaker`), or the
- * remote output selected in the Output Switcher when `remoteOutputs` is on.
+ * session is active. Android reports the device media is routed to, from
+ * AudioManager, or the remote output selected in the Output Switcher when
+ * `remoteOutputs` is on. On Android 13+ (API 33) the route is exact and follows
+ * manual reroutes. Below that it is picked from the connected devices and misses
+ * a reroute while a device stays connected.
  * Guard for `undefined`.
  */
 export function getOutput(): Output | undefined {
@@ -46,7 +48,9 @@ export function getOutput(): Output | undefined {
 
 /**
  * Subscribes to current-output changes (headphones unplugged, Bluetooth speaker
- * connected, AirPlay/route selected). Fires on iOS and Android 11+; never below.
+ * connected, AirPlay/route selected). Fires on iOS and Android; never on web.
+ * On Android below 13 it cannot see a manual reroute between two connected
+ * devices.
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOutputChanged = NativeUpdatedValue.emitterize<Output>(

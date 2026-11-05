@@ -34,7 +34,7 @@ export function flattenedChildren(page: ResolvedTrack): Track[] {
 
 /**
  * The section of the page containing the playable `trackId` (a track
- * identity: id when non-blank, else src), or undefined when not found.
+ * identity: id when non-empty, else src), or undefined when not found.
  *
  * `tappedIndex` — the flat page position stamped into the contextual URL —
  * is a tie-breaker, never an identifier: when the child at that position

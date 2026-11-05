@@ -1,8 +1,10 @@
 /**
- * A track's identity: its opaque `id` when present (non-blank), falling back
- * to the playable `src`. Two tracks refer to the same item exactly when their
- * identities are equal. Browsable-only tracks (neither `id` nor `src`) have
- * no identity — they are addressed by their `path` instead.
+ * A track's identity: its opaque `id` when present (non-empty), falling back
+ * to the playable `src`. A whitespace-only `id` is the identity here and on
+ * iOS, but Android falls back to `src` for it, so never send one. Two tracks
+ * refer to the same item exactly when their identities are equal.
+ * Browsable-only tracks (neither `id` nor `src`) have no identity — they are
+ * addressed by their `path` instead.
  *
  * This is the same comparison the library uses everywhere it matches tracks:
  * favorites (`setFavorites`), the CarPlay / Android Auto "now playing" row

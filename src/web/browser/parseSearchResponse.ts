@@ -1,10 +1,9 @@
 import type { Track } from '../../types'
 
 /**
- * Normalise a search endpoint's HTTP body into `Track[]`. Endpoints return the
- * audio-browser page shape `{ children: Track[] }` (matching iOS/Android, which
- * decode a ResolvedTrack and read `.children`). A bare `Track[]` is still
- * accepted for back-compat with callback/array-returning sources.
+ * Normalise a search endpoint's HTTP body into `Track[]`. Endpoints return a
+ * bare `Track[]`, the only shape iOS and Android decode. A page object
+ * `{ children: Track[] }` is also accepted here, on web only.
  */
 export function parseSearchResponse(response: unknown): Track[] {
   if (Array.isArray(response)) return response as Track[]

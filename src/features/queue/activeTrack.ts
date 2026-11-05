@@ -47,7 +47,6 @@ export function getActiveTrackIndex(): number | undefined {
  * {@link onFavoriteChanged} instead; {@link useActiveTrack} subscribes to
  * both, so UI bound through the hook still re-renders on a heart toggle.
  *
- * @param callback - Called when the active track changes
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onActiveTrackChanged =

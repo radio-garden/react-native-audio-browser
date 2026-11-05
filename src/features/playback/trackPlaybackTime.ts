@@ -4,12 +4,16 @@ import { onActiveTrackChanged } from '../queue/activeTrack'
 
 // MARK: - Types
 
+/** What a {@link trackPlaybackTime} callback receives each period. */
 export interface PlaybackElapsed {
   /** Cumulative seconds spent `playing` since this subscription started. */
   total: number
   /** Seconds played since the previous callback (≈ `period`). */
   sinceLast: number
-  /** The currently playing track (id / src / path / title …), if any. */
+  /**
+   * The active track as of the latest track change since the first
+   * subscription; `undefined` until one happens.
+   */
   track?: Track
 }
 
@@ -72,8 +76,11 @@ function install() {
  * subscribe to {@link onActiveTrackChanged} and cancel + re-subscribe here on each
  * change, so every track gets a fresh `total` starting at zero.
  *
+ * On Android, subscribe after `setupPlayer` resolves. After a service restart
+ * no callback fires until every subscription is cancelled and a new one is made.
+ *
  * @param callback Invoked once per elapsed `period`, with cumulative play time
- *                 and the currently playing track.
+ *                 and the active track (see {@link PlaybackElapsed.track}).
  * @param period  Seconds of playback between calls. Must be >= 1.
  * @returns A function that cancels this subscription (idempotent — safe to call
  *          more than once).

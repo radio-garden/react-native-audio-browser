@@ -44,9 +44,10 @@ export function getProgress(): Progress {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to playback progress updates.
- * @param callback - Called periodically with playback progress updates
- * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
+ * Emits the progress every `progressUpdateEventInterval` seconds while the
+ * player is loading, buffering or playing. Off by default (the interval is
+ * `null`). Subscribe with `onProgressUpdated.addListener(cb)`, which returns
+ * an unsubscribe function.
  */
 export const onProgressUpdated =
   NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(
@@ -56,9 +57,14 @@ export const onProgressUpdated =
 // MARK: - Hooks
 
 /**
- * Hook that returns the current playback progress and updates when it changes.
+ * Hook that returns the current playback progress and updates on each
+ * progress event.
  *
- * Progress update frequency is controlled globally via `updateOptions({ progressUpdateEventInterval })`.
+ * Progress events are off by default (`progressUpdateEventInterval: null`), so
+ * this hook does not update until you set an interval in `setupPlayer` or
+ * `updateOptions`. Events fire only while loading, buffering or playing, so a
+ * seek while paused does not show. For updates without configuration, use
+ * {@link usePolledProgress}.
  * @returns The current playback progress
  */
 export function useProgress(): Progress {

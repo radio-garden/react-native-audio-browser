@@ -15,24 +15,25 @@ let currentConfiguration: BrowserConfiguration | undefined
  * Also registers the browser with the player to enable:
  * - Media URL transformation for authenticated playback
  * - Android Auto / CarPlay browsing integration
- * - Playback of browsable tracks via navigate()
+ * - Playing a Playable track selected with navigate()
  *
  * Calling this again REPLACES the entire configuration (no merging) and
- * re-runs initial navigation — external browse UIs such as CarPlay reset to
- * the first tab. For values that change at runtime (base URL, locale, auth
- * token), don't reconfigure: read them inside a `request`/`browse` resolver
- * or a `transform`, and call {@link invalidateAllContent} so every surface
- * re-fetches in place.
- *
- * @param configuration - Browser configuration including routes, tabs, media config, etc.
+ * re-runs initial navigation: the in-app browser returns to `path` or the
+ * first tab (on web, the first tab only when `tabs` is an array; otherwise
+ * '/'). CarPlay and Android Auto keep their place. For values that change at
+ * runtime (base URL, locale, auth token), don't reconfigure: read them
+ * inside a `request`/`browse` resolver or a `transform`, and call
+ * {@link invalidateAllContent} so every surface re-fetches in place.
  *
  * @example
  * ```ts
  * configureBrowser({
  *   request: { baseUrl: 'https://api.example.com' },
  *   routes: {
- *     // `{id}` is a route parameter — see the `routes` docs for matching rules.
- *     '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
+ *     // `{id}` is a route parameter — see the `routes` docs for matching
+ *     // rules.
+ *     '/albums/{id}': async ({ routeParams }) =>
+ *       fetchAlbumPage(routeParams?.id),
  *     // Remapping a browse path to a different API path requires a transform;
  *     // a static `path` on a request config does NOT rewrite the path.
  *     '/artists/{id}': {
@@ -70,6 +71,15 @@ export function getBrowserConfiguration(): BrowserConfiguration | undefined {
   return currentConfiguration
 }
 
+/**
+ * Opens a Path in the in-app browser, or selects a Track.
+ *
+ * A string opens that Path; {@link getPath} and {@link getContent} and their
+ * events update. A Track is a selection: a Playable track plays, by default
+ * with its page as the queue (see `singleTrack` and `handleTrackLoad` on
+ * {@link BrowserConfiguration}); a Browsable track opens its path; a disabled
+ * track is ignored.
+ */
 export function navigate(pathOrTrack: string | Track) {
   if (typeof pathOrTrack === 'string') {
     return nativeBrowser.navigatePath(pathOrTrack)
@@ -78,46 +88,67 @@ export function navigate(pathOrTrack: string | Track) {
   }
 }
 
+/**
+ * The Path the in-app browser shows. Before the first navigation it is '/' on
+ * iOS and Android and `undefined` on web.
+ */
 export function getPath() {
   return nativeBrowser.path
 }
 
+/** Emits the new Path when the in-app browser navigates. */
 export const onPathChanged = NativeUpdatedValue.emitterize<string | undefined>(
   (cb) => (nativeBrowser.onPathChanged = cb)
 )
 
+/** Hook that returns {@link getPath} and updates on {@link onPathChanged}. */
 export function usePath(): string | undefined {
   return useNativeUpdatedValue(getPath, onPathChanged)
 }
 
+/**
+ * The resolved page the in-app browser shows; `undefined` until the first
+ * navigation resolves.
+ */
 export function getContent(): ResolvedTrack | undefined {
   return nativeBrowser.getContent()
 }
 
+/** Emits the new page when the in-app browser's content changes. */
 export const onContentChanged = NativeUpdatedValue.emitterize<
   ResolvedTrack | undefined
 >((cb) => (nativeBrowser.onContentChanged = cb))
 
+/**
+ * Hook that returns {@link getContent} and updates on {@link onContentChanged}.
+ */
 export function useContent(): ResolvedTrack | undefined {
   return useNativeUpdatedValue(getContent, onContentChanged)
 }
+
+/**
+ * The configured tabs, resolved; `undefined` until {@link configureBrowser}
+ * has run and the tabs have resolved.
+ */
 export function getTabs(): Track[] | undefined {
   return nativeBrowser.tabs
 }
 
+/** Emits the new tabs when they resolve or change. */
 export const onTabsChanged = NativeUpdatedValue.emitterize<Track[] | undefined>(
   (cb) => (nativeBrowser.onTabsChanged = cb)
 )
 
+/** Hook that returns {@link getTabs} and updates on {@link onTabsChanged}. */
 export function useTabs(): Track[] | undefined {
   return useNativeUpdatedValue(getTabs, onTabsChanged)
 }
 
 /**
- * Notifies external media controllers (Android Auto, CarPlay) that content
- * at the specified path has changed and should be refreshed.
- *
- * @param path - The path where content has changed (e.g., '/favorites')
+ * Re-fetches the content at `path` on every surface showing it (the in-app
+ * browser, Android Auto, CarPlay); other paths stay as they are. On iOS and
+ * Android it also drops the path's cached page. Pass a container path such as
+ * '/favorites', not a track's Contextual Path, which iOS and Android reject.
  *
  * @example
  * ```ts
@@ -146,7 +177,8 @@ export const invalidateAllContent = (): void => {
 }
 
 /**
- * Returns whether search functionality is configured via `configureBrowser({ search: ... })`.
+ * Returns whether search functionality is configured via
+ * `configureBrowser({ search: ... })`.
  */
 export function hasSearch(): boolean {
   const config = nativeBrowser.configuration
@@ -157,16 +189,25 @@ export function hasSearch(): boolean {
 /**
  * Searches for tracks using the configured search source.
  *
- * Resolves `[]` only when the source found nothing; a failed search rejects,
- * so a caller can tell "no results" from "the request failed". The rejection's
- * message describes the failure — native platforms reject with the underlying
- * throwable and JS sees only its message. On web the `Error` also carries a
- * `code`, the {@link NavigationErrorType} the browse path reports as a
- * {@link NavigationError} (`'http-error'`, `'network-error'`).
+ * When a search source is configured, resolves `[]` only when it found
+ * nothing; a failed search rejects, so a caller can tell "no results" from
+ * "the request failed". Exception: on Android an HTTP search source
+ * (`TransformableRequestConfig`) resolves `[]` on any failure (non-2xx,
+ * network or decode error); a callback source still rejects there. With no
+ * search source configured, Android and web resolve `[]` and iOS rejects;
+ * call {@link hasSearch} first.
  *
- * @param query - The search query string
- * @returns Promise resolving to an array of matching tracks
- * @throws When the search source or its request fails
+ * The rejection's message describes the failure; on native platforms JS sees
+ * only that message. On web, a failed search request's `Error` also carries a
+ * `code`, the
+ * {@link features/errors!NavigationErrorType | NavigationErrorType} the
+ * browse path reports as a
+ * {@link features/errors!NavigationError | NavigationError}
+ * (`'http-error'`, `'network-error'`); a search callback's rejection passes
+ * through unchanged.
+ *
+ * @throws When the search source or its request fails, or on iOS when no
+ *   search source is configured
  *
  * @see {@link configureBrowser}
  *

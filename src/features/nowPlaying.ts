@@ -7,7 +7,11 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 /**
  * Updates the now playing notification metadata.
- * Pass null/undefined to clear overrides and revert to track metadata.
+ *
+ * Lasts until you pass `null`, which clears it, or the active track changes. A `nowPlaying`
+ * formatter's fields win over it. With `nowPlaying: false` the iOS and
+ * Android surface ignores it, though `getNowPlaying` still reports it; web
+ * ignores `nowPlaying`.
  *
  * @example
  * ```ts
@@ -17,7 +21,7 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
  *   artist: streamMetadata.artist,
  * })
  *
- * // Clear overrides, revert to track metadata
+ * // Clear the override
  * updateNowPlaying(null)
  * ```
  */
@@ -26,7 +30,10 @@ export function updateNowPlaying(update: NowPlayingUpdate | null): void {
 }
 
 /**
- * Gets the current now playing metadata (override if set, else track metadata).
+ * Returns what the now-playing surface shows: flash, formatter output,
+ * override or track fields, in that priority. `undefined` when there is no
+ * active track. With `nowPlaying: false`, it returns the flash, override or
+ * track fields, regardless of what the surface shows.
  */
 export function getNowPlaying(): NowPlayingMetadata | undefined {
   return nativeBrowser.getNowPlaying() ?? undefined
@@ -34,15 +41,19 @@ export function getNowPlaying(): NowPlayingMetadata | undefined {
 
 /**
  * Temporarily replaces now-playing fields for `durationMs`, then reverts to
- * the live metadata. The flash outranks the now-playing formatter and the
- * `updateNowPlaying` override while active (live metadata can't stomp it),
- * and the revert runs on a native timer — JS timers pause in a backgrounded
- * host (the lock screen case) — so it fires reliably. A track change clears
- * the flash early; repeated calls restart the window.
+ * the live metadata. While active it outranks the `nowPlaying` formatter
+ * ({@link features/player!FormatNowPlayingCallback | FormatNowPlayingCallback}) and the `updateNowPlaying` override.
+ * The revert runs on a native timer, so it fires while the app is
+ * backgrounded. A track change clears the flash early; repeated calls
+ * restart the window.
  *
- * The feedback channel for refused remote commands: external surfaces have
- * no toast primitive, so a transient metadata swap is the only way to talk
- * to the user there.
+ * On web the flash is a plain `updateNowPlaying` override on a JS timer. It
+ * replaces any override you set, the revert clears the override instead of
+ * restoring it, and a track change does not cancel the timer, so the revert
+ * can also clear an override set for the next track. With
+ * `nowPlaying: false`, Android ignores the flash; iOS still shows it.
+ *
+ * See the [Now playing guide](https://audiobrowser.dev/guide/now-playing#the-flash-transient-top-priority).
  *
  * @example
  * ```ts
@@ -62,7 +73,8 @@ export function flashNowPlaying(
 
 /**
  * Clears an active flash immediately, reverting to the live metadata.
- * No-op when no flash is active.
+ * No-op when no flash is active. On web it also clears the
+ * `updateNowPlaying` override.
  */
 export function clearNowPlayingFlash(): void {
   nativeBrowser.clearNowPlayingFlash()
@@ -72,8 +84,10 @@ export function clearNowPlayingFlash(): void {
 
 /**
  * Subscribes to now playing metadata change events.
- * Fires when updateNowPlaying is called or when the track changes.
- * @param callback - Called when now playing metadata changes
+ * Fires when the now-playing lines change: track change, `updateNowPlaying`,
+ * a flash starting or ending, or a new formatter result. On iOS and
+ * Android, an update that leaves the lines unchanged does not fire; on web
+ * every `updateNowPlaying` call, flash start and revert fires.
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onNowPlayingChanged =

@@ -31,7 +31,6 @@ export function toggleShuffle(): void {
 
 /**
  * Subscribes to shuffle mode changes.
- * @param callback - Called when shuffle mode changes
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onShuffleChanged = NativeUpdatedValue.emitterize<boolean>(
