@@ -1,7 +1,8 @@
 import Foundation
 
-/// A value that exists once `provider` returns one. `wait` returns it, parking until `check()`
-/// finds it; nothing is cached, so the provider's current answer always wins.
+/// A value that exists once `provider` returns one. Nothing is cached, so the provider's current
+/// answer always wins; the provider is not polled, so the owner calls `check()` when it may have
+/// become non-nil.
 @MainActor
 final class ReadyValue<T: Sendable> {
   private let provider: () -> T?

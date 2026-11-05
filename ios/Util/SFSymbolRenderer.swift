@@ -1,22 +1,18 @@
 import os.log
 import UIKit
 
-/// Renders SF Symbols to PNG files in the caches directory.
-/// Returns `file://` URIs usable by both React Native's `<Image>` and native image loaders.
+/// Renders SF Symbols to PNG files in the caches directory, as `file://` URIs that
+/// React Native's `<Image>` and native image loaders both accept.
 ///
-/// Artwork format: `sf:symbol.name?bg=#RRGGBB&fg=#RRGGBB`
-/// - `bg`: background color (default: transparent)
-/// - `fg`: foreground/symbol color (default: #000000)
+/// Artwork format: `sf:symbol.name?bg=#RRGGBB&fg=#RRGGBB` (3- or 6-digit hex).
+/// `bg` defaults to transparent, `fg` to black.
 final class SFSymbolRenderer: @unchecked Sendable {
   @MainActor static let shared = SFSymbolRenderer()
   static let defaultCanvasSize = CGSize(width: 200, height: 200)
 
-  /// Bumped whenever the rendering below changes (symbol point-size factor,
-  /// centering, tinting, background fill). It is part of the cache filename
-  /// because `.cachesDirectory` survives app updates and the existence check is
-  /// the only cache validation — without a version key, every device that had
-  /// rendered a symbol once would keep serving the OLD pixels forever after a
-  /// render change.
+  // Part of the cache filename: bump it whenever the rendering changes. The caches
+  // directory survives app updates and the existence check is the only validation,
+  // so without a bump devices keep serving the old pixels.
   private static let renderVersion = 1
 
   private let logger = Logger(subsystem: "com.audiobrowser", category: "SFSymbolRenderer")
@@ -32,14 +28,9 @@ final class SFSymbolRenderer: @unchecked Sendable {
     try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
   }
 
-  /// Renders an SF Symbol to a PNG file and returns its `file://` URI.
-  ///
-  /// Skips rendering if the file already exists on disk.
-  ///
-  /// - Parameters:
-  ///   - artworkValue: The artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff" or "heart.fill")
-  ///   - canvasSize: The canvas size in points (rendered at device scale)
-  /// - Returns: A file URI string, or nil if the symbol doesn't exist or rendering fails
+  /// Returns the `file://` URI of the PNG for `artworkValue` (with or without the `sf:`
+  /// prefix), rendering it only when no file for it exists yet. `canvasSize` is in points,
+  /// drawn at device scale. Nil when there is no such symbol or the file can't be written.
   func render(_ artworkValue: String, canvasSize: CGSize = defaultCanvasSize) -> String? {
     let safeArtwork = artworkValue.unicodeScalars
       .filter { CharacterSet.alphanumerics.contains($0) || $0 == "_" }
@@ -95,16 +86,15 @@ final class SFSymbolRenderer: @unchecked Sendable {
         width: size.width,
         height: size.height,
       ))
-    }.withRenderingMode(.alwaysOriginal)
+    }.withRenderingMode(.alwaysOriginal) // Keeps the drawn tint inside a tinted view.
   }
 
-  /// Whether the given artwork string is an SF Symbol reference.
   static func isSFSymbol(_ artwork: String) -> Bool {
     artwork.hasPrefix("sf:")
   }
 
-  /// Parses an SF Symbol artwork string into symbol name and resolved colors.
-  /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", bg: black, fg: white)`
+  /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", black, white)`; a colour that is
+  /// absent is nil, one that is not 3 or 6 characters long is black.
   static func parseArtwork(_ value: String) -> (symbolName: String, backgroundColor: UIColor?, symbolColor: UIColor?) {
     let (symbolName, params) = parseArtworkValue(value)
     let bg = params["bg"].map { UIColor(hex: $0) }
@@ -112,8 +102,6 @@ final class SFSymbolRenderer: @unchecked Sendable {
     return (symbolName, bg, fg)
   }
 
-  /// Parses an SF Symbol artwork string, stripping the `sf:` prefix if present.
-  /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", ["bg": "000", "fg": "fff"])`
   private static func parseArtworkValue(_ value: String) -> (symbolName: String, params: [String: String]) {
     let stripped = value.hasPrefix("sf:") ? String(value.dropFirst(3)) : value
     guard let questionMark = stripped.firstIndex(of: "?") else {
@@ -134,6 +122,8 @@ final class SFSymbolRenderer: @unchecked Sendable {
 }
 
 extension UIColor {
+  /// `#` optional. Any length but 3 or 6 is black; the digits are not validated
+  /// (`init(declaredHex:)` does that).
   convenience init(hex: String) {
     let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
     var rgb: UInt64 = 0
@@ -155,11 +145,8 @@ extension UIColor {
     }
   }
 
-  /// Failable form for *declared* colors (`style.cardTint`): anything but a
-  /// 3- or 6-digit hex value is nil, so an unparseable declaration degrades
-  /// to "no declaration" (the system default) instead of rendering black —
-  /// matching how unknown enum values decode. `init(hex:)` keeps its lenient
-  /// black fallback for the `sf:` artwork params it has always served.
+  /// Nil unless 3 or 6 hex digits (`#` optional), so an unparseable declared colour
+  /// (`style.cardTint`) falls back to the system default instead of black.
   convenience init?(declaredHex hex: String) {
     let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
     guard [3, 6].contains(digits.count),

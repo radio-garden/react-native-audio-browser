@@ -1,11 +1,11 @@
 import Foundation
 
-/// Opaque token returned by `addListener` for targeted removal.
 public struct EmitterToken: Sendable {
   fileprivate let id: Int
 }
 
-/// Generic event emitter that allows multiple listeners for a single event type
+/// Delivers each event to every listener, synchronously on the emitting thread. Any method may be
+/// called from any thread, including from inside a listener.
 public final class Emitter<T>: @unchecked Sendable {
   private let lock = NSLock()
   private var nextId = 0
@@ -13,9 +13,6 @@ public final class Emitter<T>: @unchecked Sendable {
 
   public init() {}
 
-  /// Adds a listener to this emitter
-  /// - Parameter listener: The callback to invoke when an event is emitted
-  /// - Returns: A token that can be passed to `removeListener` for targeted removal
   @discardableResult
   public func addListener(_ listener: @escaping (T) -> Void) -> EmitterToken {
     lock.lock()
@@ -29,8 +26,6 @@ public final class Emitter<T>: @unchecked Sendable {
     return EmitterToken(id: id)
   }
 
-  /// Removes a specific listener by its token
-  /// - Parameter token: The token returned by `addListener`
   public func removeListener(_ token: EmitterToken) {
     lock.lock()
     defer { lock.unlock() }
@@ -40,11 +35,11 @@ public final class Emitter<T>: @unchecked Sendable {
     snapshot = next
   }
 
-  /// Emits an event to all registered listeners
-  /// - Parameter event: The event data to emit
   public func emit(_ event: T) {
+    // Listeners run outside the lock, so one may add or remove listeners; a listener removed
+    // during an emit still receives that event.
     lock.lock()
-    let current = snapshot // O(1) reference bump; no array copy here
+    let current = snapshot
     lock.unlock()
 
     for entry in current {
@@ -80,8 +75,8 @@ extension Emitter {
 }
 
 extension Emitter {
-  /// Like `subscribe`, but `handler` runs on the main actor after the emit returns, whichever
-  /// thread emitted.
+  /// Like `subscribe`, but `handler` runs later on the main actor, in a Task, whichever thread
+  /// emitted. Off main it may run before the emit returns.
   func subscribeOnMain(_ handler: @escaping @MainActor (T) -> Void) -> Subscription {
     subscribe { value in
       let event = MainActorHop(value: value)
@@ -90,7 +85,7 @@ extension Emitter {
   }
 }
 
-/// Carries an emitted value to the main actor, where it is only read.
+/// Carries a non-Sendable emitted value to the main actor, where it is only read.
 private struct MainActorHop<T>: @unchecked Sendable {
   let value: T
 }

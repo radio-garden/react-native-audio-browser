@@ -32,7 +32,7 @@ enum OutputPicker {
       logger.error("openOutputPicker: no UIButton found inside AVRoutePickerView")
     }
 
-    // On iPad the picker's popover anchors to this view.
+    // On iPad the picker's popover anchors to this view, so it outlives the tap.
     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
       routePicker.removeFromSuperview()
     }
