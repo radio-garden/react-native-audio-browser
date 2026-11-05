@@ -1,3 +1,22 @@
+## [0.2.0-next.54](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.53...v0.2.0-next.54) (2026-11-05)
+
+### Documentation
+
+* **android:** rebuild the comments in the Android browse tree ([2e9efff](https://github.com/radio-garden/react-native-audio-browser/commit/2e9effff307828eef5d4913cd88ccc33a957b265))
+* **android:** rebuild the comments in the Android entry points and service ([e35894d](https://github.com/radio-garden/react-native-audio-browser/commit/e35894d81436e68f523bea8c91910817685b06e3))
+* **android:** rebuild the comments in the Android HTTP and TLS code ([cf119c2](https://github.com/radio-garden/react-native-audio-browser/commit/cf119c23fd130de8304890339fbe0fef1f22e9ac))
+* **android:** rebuild the comments in the Android models, extensions, Cast and utilities ([de850d9](https://github.com/radio-garden/react-native-audio-browser/commit/de850d979094f9eb040589bb6ce9ac6649966428))
+* **android:** rebuild the comments in the Android player ([ec6d238](https://github.com/radio-garden/react-native-audio-browser/commit/ec6d238c127a9a9f780621d41390574ab623552f))
+* **android:** rebuild the comments in the Android remote switch ([de0ab6c](https://github.com/radio-garden/react-native-audio-browser/commit/de0ab6c39f07e199a77c825961f972285bdfd4b6))
+* **android:** rebuild the comments in the Android Sonos support ([18ea4a0](https://github.com/radio-garden/react-native-audio-browser/commit/18ea4a0b4223e6578925d18baa83a5c12e704429))
+* **ios:** rebuild the comments in the iOS browse tree ([d6e7bfe](https://github.com/radio-garden/react-native-audio-browser/commit/d6e7bfeaeb6c2c301e3305c875950144d9a999b4))
+* **ios:** rebuild the comments in the iOS CarPlay support ([fbf61c4](https://github.com/radio-garden/react-native-audio-browser/commit/fbf61c4bc1c22033131be9f2c3ef6e4273c1a803))
+* **ios:** rebuild the comments in the iOS entry points and models ([b6139dc](https://github.com/radio-garden/react-native-audio-browser/commit/b6139dc9165a2a12a94d155d9a07142eff746b23))
+* **ios:** rebuild the comments in the iOS extensions ([fbd497c](https://github.com/radio-garden/react-native-audio-browser/commit/fbd497c5ea118b83677c82853db7b2cee4bf92d1))
+* **ios:** rebuild the comments in the iOS player ([9a0ba04](https://github.com/radio-garden/react-native-audio-browser/commit/9a0ba043c7604acb7a2c451cd38b5832db5e6503))
+* **ios:** rebuild the comments in the iOS tests ([5c4f895](https://github.com/radio-garden/react-native-audio-browser/commit/5c4f895a1fef10eaa4a51a9db5f05d64ffda5af4))
+* **ios:** rebuild the comments in the iOS utilities ([7b517db](https://github.com/radio-garden/react-native-audio-browser/commit/7b517db88a1d636aae7718cd8b2c3144ab9f104b))
+
 ## [0.2.0-next.53](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.52...v0.2.0-next.53) (2026-11-05)
 
 ### Bug Fixes
