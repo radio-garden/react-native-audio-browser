@@ -12,7 +12,6 @@ import androidx.media3.common.TrackSelectionParameters
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
-/** A local player that keeps the queue it is told. */
 internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
   val items = mutableListOf<MediaItem>()
   var index = C.INDEX_UNSET
@@ -44,7 +43,7 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
       .setShuffleModeEnabled(shuffle)
       .build()
 
-  /** Moves to [index] as the phone does at an item's end. */
+  /** Moves to [index] without a seek, as the player does at an item's end. */
   fun moveTo(index: Int) {
     this.index = index
     invalidateState()
@@ -119,10 +118,10 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
   override fun handleRelease(): ListenableFuture<*> = done()
 }
 
-/** One load a receiver was sent: the item, where it starts, and whether it autoplays. */
+/** [autoplay] is the receiver's playWhenReady when the load arrived. */
 internal data class SentLoad(val item: MediaItem, val positionMs: Long, val autoplay: Boolean)
 
-/** A receiver that plays one item at a time, as [RemotePlayback.player] does. */
+/** Holds one item at a time, as [RemotePlayback.player] does; a load of any other count throws. */
 internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var item: MediaItem? = null
   var positionMs = 0L
@@ -146,7 +145,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
     invalidateState()
   }
 
-  /** The receiver is paused or played from elsewhere. */
+  /** Changes playWhenReady as another sender would, unrecorded in [intents]. */
   fun setIntentFromElsewhere(playWhenReady: Boolean) {
     intent = playWhenReady
     invalidateState()
@@ -173,6 +172,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   ): ListenableFuture<*> {
     val loaded = mediaItems.single()
     loads += SentLoad(loaded, startPositionMs, intent)
+    // A fresh uid makes a reload of the same item a new playlist entry to listeners.
     uid = Any()
     positionMs = if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs
     readiness = STATE_READY
@@ -221,7 +221,6 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   }
 }
 
-/** A remote whose sessions the test starts and ends, each with a receiver of its own. */
 internal class FakeRemote(private val looper: Looper) : RemotePlayback {
   private var receiver: FakeReceiver? = null
   private var listener: RemotePlayback.Listener? = null
@@ -242,7 +241,10 @@ internal class FakeRemote(private val looper: Looper) : RemotePlayback {
     receiver = FakeReceiver(looper)
   }
 
-  /** Starts a session, or another in place of the one up, as selecting another room does. */
+  /**
+   * Starts a session, or another in place of the one up, as selecting another room does. [player]
+   * is then a new receiver; the old one is released.
+   */
   fun startSession() {
     val ended = receiver
     receiver = FakeReceiver(looper)
@@ -255,19 +257,16 @@ internal class FakeRemote(private val looper: Looper) : RemotePlayback {
     listener?.onSessionChanged()
   }
 
-  /** The receiver reports its item playing. */
   fun playing() {
     listener?.onPlaying()
   }
 
-  /** The receiver played its item to the end. */
   fun end() {
     player.readiness = MediaPlayer.STATE_ENDED
     player.update()
     listener?.onEnded()
   }
 
-  /** The receiver failed to play its item. */
   fun fail(code: Int = PlaybackException.ERROR_CODE_REMOTE_ERROR) {
     listener?.onFailed(PlaybackException("receiver failed", null, code))
   }

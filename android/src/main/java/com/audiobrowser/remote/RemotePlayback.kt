@@ -4,14 +4,14 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 
 /**
- * A remote output's side of [RemoteSwitchingPlayer]: a Cast receiver or a Sonos room, each kept
- * apart from its SDK or protocol so the rest of the library compiles without them.
+ * A remote output (a Cast receiver or a Sonos room) as [RemoteSwitchingPlayer] drives it, kept
+ * apart from its SDK or protocol so the library builds without them.
  */
 internal interface RemotePlayback {
   /**
-   * Plays one item at a time on the receiver, read while [isSessionAvailable]. Setting its item
-   * loads it there, from the start position given, and plays as its play intent says, without
-   * [MediaPlayer.prepare]. A session can bring a new player: the switch moves playback to it.
+   * The receiver of the current session; read it only while [isSessionAvailable]. It plays one item
+   * at a time: setting an item loads it there from the given position, and plays it if
+   * `playWhenReady` is set, without [MediaPlayer.prepare]. A new session can bring a new player.
    */
   val player: MediaPlayer
 
@@ -20,7 +20,7 @@ internal interface RemotePlayback {
   /** Calls [listener] on the main thread; null stops the calls. */
   fun setListener(listener: Listener?)
 
-  /** Ends the session on this side; the receiver stops or plays on as it was told. */
+  /** Ends the session on this side; the receiver may stop or play on. */
   fun release()
 
   interface Listener {
@@ -28,8 +28,8 @@ internal interface RemotePlayback {
     fun onSessionChanged()
 
     /**
-     * The receiver reports its item playing, as it plays it: [player]'s own play state follows a
-     * play as soon as it is asked.
+     * The receiver reports its item playing. [player]'s play state turns to playing as soon as play
+     * is asked, before the receiver does.
      */
     fun onPlaying()
 
