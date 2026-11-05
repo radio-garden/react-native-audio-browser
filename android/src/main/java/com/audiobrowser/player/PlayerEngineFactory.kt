@@ -15,13 +15,11 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import java.io.IOException
 
-// media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only
-// on zero loading progress; 60s of silent non-progress is already a bad live-radio experience,
-// while the media3 default of 600s would mean 10 minutes of dead air. (Type-0
-// STUCK_BUFFERING_NOT_LOADING is a separate, uncontrollable fixed-4s check.)
+// media3's no-progress stuck-buffering check (STUCK_BUFFERING_NO_PROGRESS); its 600s default
+// would be ten minutes of dead air on a live stream. The not-loading check is a fixed 4s and not
+// configurable.
 private const val STUCK_BUFFERING_DETECTION_TIMEOUT_MS = 60_000
 
-/** The engine pieces [buildPlayerEngine] constructs together for one setup() generation. */
 internal class PlayerEngine(
   val loadControl: DynamicLoadControl,
   val mediaFactory: MediaFactory,
@@ -29,9 +27,8 @@ internal class PlayerEngine(
 )
 
 /**
- * The buffer configuration described by the setup options. When `rebufferBuffer` is unset
- * (automatic), post-rebuffer playback starts at `playBuffer` and AutomaticBufferManager adjusts it;
- * when set, that fixed value is used. Pure — pinned by PlayerEngineFactoryTest.
+ * A null `rebufferBuffer` means automatic: post-rebuffer playback starts at `playBuffer` and
+ * AutomaticBufferManager adjusts it from there.
  */
 internal fun bufferConfig(options: PlayerSetupOptions): BufferConfig =
   BufferConfig(
@@ -43,10 +40,10 @@ internal fun bufferConfig(options: PlayerSetupOptions): BufferConfig =
   )
 
 /**
- * Constructs the playback engine for one `setup()` generation: load control, media factory, and the
- * ExoPlayer they plug into — pure construction, no lifecycle. Tearing down the previous generation,
- * wiring listeners/session, and everything stateful stays in [Player.setup], which provides its
- * mutable context through the lambdas.
+ * Constructs the load control, media factory and ExoPlayer for one `setup()` generation, and
+ * nothing else: tearing down the previous engine and wiring listeners stay with [Player.setup]. The
+ * lambdas run on ExoPlayer's background threads (playback and loader), never main, so they must
+ * read thread-safe state.
  */
 internal fun buildPlayerEngine(
   context: Context,
@@ -61,14 +58,10 @@ internal fun buildPlayerEngine(
   val renderer = DefaultRenderersFactory(context)
   renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
-  // Bandwidth meter for adaptive bitrate selection in HLS/DASH
   val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
 
   val loadControl = DynamicLoadControl(initialConfig = bufferConfig(options))
 
-  // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
-  // focus) — via a thread-safe cache since this runs on ExoPlayer's playback thread. isOnline and
-  // onRetryPending enable network-aware retry acceleration.
   val mediaFactory =
     MediaFactory(
       context,
@@ -117,9 +110,8 @@ internal fun buildPlayerEngine(
         .setIsGaplessSupportRequired(it.gaplessSupportRequired)
         .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
         .build()
-    // Assigning the public final field compiles to a putfield that throws
-    // IllegalAccessError on ART, and mutating the getter's snapshot wouldn't
-    // reach the selector anyway — go through the builder.
+    // Assigning the field directly throws IllegalAccessError on ART, and mutating the getter's
+    // snapshot never reaches the selector: go through the builder.
     exoPlayer.trackSelectionParameters =
       exoPlayer.trackSelectionParameters
         .buildUpon()

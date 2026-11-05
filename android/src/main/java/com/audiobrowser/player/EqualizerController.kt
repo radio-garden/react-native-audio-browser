@@ -5,7 +5,6 @@ import com.audiobrowser.util.EqualizerManager
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import timber.log.Timber
 
-/** The equalizer operations [EqualizerController] drives, so tests can stand in for the effect. */
 internal interface EqualizerEffect {
   val audioSessionId: Int
 
@@ -23,11 +22,10 @@ internal interface EqualizerEffect {
 }
 
 /**
- * Owns the equalizer's lifecycle across audio sessions. Android's Equalizer effect binds to a
- * single audioSessionId, so there are stretches with no effect at all: startup has no session until
- * the first audio output, and a session change (new ExoPlayer instance) needs a fresh one. Callers
- * see none of that — settings requested during a gap land on whichever effect comes next, and every
- * new effect announces itself through [onSettingsChanged].
+ * Keeps one equalizer effect on the player's current audio session. An effect binds to a single
+ * session, so there is none before the first audio output and a fresh one after a session change;
+ * settings asked for meanwhile apply to the next effect, and each new effect reports its settings
+ * through [onSettingsChanged].
  */
 internal class EqualizerController(
   private val onSettingsChanged: (EqualizerSettings) -> Unit,
@@ -36,14 +34,13 @@ internal class EqualizerController(
 
   private var effect: EqualizerEffect? = null
 
-  // Settings to apply to the next effect: what the caller asked for during a gap, or what the
-  // outgoing effect held across a session change. A preset and custom levels are exclusive — the
-  // last one asked for wins, matching how the two setters behave on a live effect.
+  // For the next effect. A preset and custom levels exclude each other: the last one set wins, as
+  // on a live effect.
   private var pendingPreset: String? = null
   private var pendingLevels: DoubleArray? = null
   private var pendingEnabled: Boolean? = null
 
-  /** Initializes for [audioSessionId]; deferred when the session is still unset. */
+  /** An unset session defers the effect to the first [onAudioSessionChanged]. */
   fun initialize(audioSessionId: Int) {
     if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
       Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
@@ -53,10 +50,9 @@ internal class EqualizerController(
   }
 
   /**
-   * Reacts to an audio session change: a no-op for the same session, otherwise a fresh effect that
-   * picks up the outgoing one's settings. An unset session (playback moved to a remote output)
-   * keeps the effect on the local session, where it applies again on the way back; an effect on
-   * session 0 would equalize the whole device's output instead.
+   * Moves the settings to a fresh effect on [newAudioSessionId]; the same session is a no-op. An
+   * unset session (playback on a remote output) keeps the effect on the local session, which it
+   * equalizes again on the way back: an effect on session 0 would equalize the whole device.
    */
   fun onAudioSessionChanged(newAudioSessionId: Int) {
     if (newAudioSessionId == C.AUDIO_SESSION_ID_UNSET) return
@@ -76,6 +72,7 @@ internal class EqualizerController(
     effect = null
   }
 
+  /** Null while there is no effect, even when settings are pending. */
   fun getSettings(): EqualizerSettings? = effect?.getSettings()
 
   fun setEnabled(enabled: Boolean) {
@@ -105,17 +102,13 @@ internal class EqualizerController(
     effect.setLevels(levels)
   }
 
-  /**
-   * Creates the effect for [audioSessionId] and hands it the pending settings before wiring the
-   * callback, so the restore stays silent and the caller gets one event describing the result. A
-   * failed create keeps the pending settings for the next attempt.
-   */
   private fun install(audioSessionId: Int) {
     val created =
       try {
         createEffect(audioSessionId)
       } catch (e: Exception) {
         Timber.e(e, "Failed to initialize equalizer")
+        // The pending settings stay for the next attempt.
         return
       }
     effect = created
@@ -128,9 +121,10 @@ internal class EqualizerController(
     pendingLevels = null
     pendingEnabled = null
 
+    // Wired after the restore, so its intermediate steps never reach the caller.
     created.setOnSettingsChanged(onSettingsChanged)
-    // Announce unconditionally. The caller reads the settings once at startup, which is exactly
-    // when there may be no effect yet, and nothing else would tell it the equalizer now exists.
+    // Always announced: the caller reads the settings once at startup, often before any effect
+    // exists, and nothing else tells it one does now.
     created.getSettings()?.let(onSettingsChanged)
   }
 

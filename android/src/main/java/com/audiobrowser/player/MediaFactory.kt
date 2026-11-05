@@ -37,10 +37,10 @@ class MediaFactory(
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
 
     /**
-     * The client media requests go out on. One per process so connections are reused; not
+     * The client media requests go out on, one per process so connections are reused. Not
      * `HttpClient`'s browse client, whose read timeout is sized for JSON and would cut a long media
-     * read short. The timeouts are media3's own defaults, so stall detection and
-     * [RetryLoadErrorHandlingPolicy] behave as they did before.
+     * read short. The timeouts are media3's own defaults, which stall detection and
+     * [RetryLoadErrorHandlingPolicy] are tuned to.
      */
     private val mediaHttpClient: OkHttpClient by lazy {
       OkHttpClient.Builder()
@@ -51,12 +51,8 @@ class MediaFactory(
     }
   }
 
-  private val extractorsFactory =
-    DefaultExtractorsFactory()
-      // TODO: reconsider whether this should be enabled by default:
-      .setConstantBitrateSeekingEnabled(true)
+  private val extractorsFactory = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
 
-  // Store reference to custom retry policy so we can reset it on track changes
   private val customRetryPolicy: RetryLoadErrorHandlingPolicy? =
     when (retryPolicy) {
       is RetryPolicy.Default -> null
@@ -87,7 +83,7 @@ class MediaFactory(
       customRetryPolicy?.let { setLoadErrorHandlingPolicy(it) }
     }
 
-  /** Resets the retry timer. Call when track changes. */
+  /** Restarts the retry policy's time budget; call when the track changes. */
   fun resetRetryTimer() {
     customRetryPolicy?.reset()
   }
@@ -109,34 +105,28 @@ class MediaFactory(
   }
 
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-    // URL transformation is deferred to TransformingDataSource.open() which runs on
-    // ExoPlayer's IO thread. This prevents deadlocks when the JS thread is blocked by
-    // synchronous Nitro calls (e.g., seekTo) while a media transform callback needs the
-    // JS thread to resolve.
+    // The URL is resolved in TransformingDataSource.open(), on ExoPlayer's IO thread, not here:
+    // the request config callback needs the JS thread, which a synchronous Nitro call (seekTo)
+    // can be blocking while it waits on the player, a deadlock.
 
-    // OkHttp rather than DefaultHttpDataSource, for how each treats a redirect.
-    // DefaultHttpDataSource re-applies the request headers on every hop, handing
-    // an Authorization header to whatever host the first one named. OkHttp drops
-    // that one header itself, and [CrossOriginHeaderStripper] drops the rest.
+    // OkHttp rather than DefaultHttpDataSource, for redirects: DefaultHttpDataSource re-applies the
+    // request headers on every hop, handing an Authorization header to whatever host the first one
+    // names. OkHttp drops that header itself, and [CrossOriginHeaderStripper] drops the rest.
     val httpFactory =
       OkHttpDataSource.Factory(mediaHttpClient).apply {
-        // Deliberately NOT setUserAgent(): it is applied last via addHeader(),
-        // which appends, so a request already carrying one would send two. As a
-        // default request property it is merged under dataSpec.httpRequestHeaders
-        // and applied with header(), letting TransformingDataSource's per-request
-        // override win.
+        // Not setUserAgent(): it is applied last with addHeader(), which appends, so a request
+        // already carrying one would send two. As a default request property it is merged under
+        // dataSpec.httpRequestHeaders and applied with header(), so TransformingDataSource's
+        // per-request override wins.
         setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
-        // Connect transfer listener for bandwidth measurement
         transferListener?.let { setTransferListener(it) }
       }
     val baseFactory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
 
-    // Wrap with TransformingDataSource to resolve URLs on the IO thread
     val track = TrackFactory.fromMedia3(mediaItem)
     val transformingFactory =
       TransformingDataSource.Factory(baseFactory) { url -> getRequestConfig(url, track) }
 
-    // Configure data source factory with optional caching
     val dataSourceFactory =
       cache?.let {
         CacheDataSource.Factory()
@@ -145,7 +135,6 @@ class MediaFactory(
           .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
       } ?: transformingFactory
 
-    // Use DefaultMediaSourceFactory which supports HLS, DASH, and progressive media
     return mediaFactory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
   }
 }

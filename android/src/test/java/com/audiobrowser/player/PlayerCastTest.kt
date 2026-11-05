@@ -28,7 +28,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** What the player leaves to a remote receiver while one plays: the local-only work steps aside. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class PlayerCastTest {
@@ -130,6 +129,7 @@ class PlayerCastTest {
     shadowOf(looper).idleFor(Duration.ofSeconds(3))
 
     assertFalse(receiver.playWhenReady)
+    // The receiver's starting volume: the fade never touched it.
     assertEquals(10, receiver.volume)
   }
 
@@ -138,11 +138,11 @@ class PlayerCastTest {
 
   private fun idle() = shadowOf(looper).idle()
 
-  /** Casting starts after a resolution on a background thread. */
   private fun idleUntil(what: String, condition: () -> Boolean) {
     repeat(200) {
       idle()
       if (condition()) return
+      // Casting starts after a resolution on a background thread.
       Thread.sleep(10)
     }
     fail("never $what")

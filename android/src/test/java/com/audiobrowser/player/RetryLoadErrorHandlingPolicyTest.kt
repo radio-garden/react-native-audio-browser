@@ -21,16 +21,14 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 
 class RetryLoadErrorHandlingPolicyTest {
-  // LoadEventInfo requires a DataSpec (Android Uri) to construct, so mock it.
-  // MediaLoadData has a dependency-free constructor. The policy only ever reads
-  // LoadErrorInfo.exception and LoadErrorInfo.errorCount.
+  // LoadEventInfo needs an Android Uri to construct; the policy reads only the exception and the
+  // error count.
   private val loadEventInfo = mock(LoadEventInfo::class.java)
   private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
 
   private fun errorInfo(exception: IOException, errorCount: Int = 1) =
     LoadErrorHandlingPolicy.LoadErrorInfo(loadEventInfo, mediaLoadData, exception, errorCount)
 
-  /** Builds an [HttpDataSource.InvalidResponseCodeException] for the given HTTP status code. */
   private fun httpError(responseCode: Int): HttpDataSource.InvalidResponseCodeException =
     HttpDataSource.InvalidResponseCodeException(
       responseCode,
@@ -41,10 +39,6 @@ class RetryLoadErrorHandlingPolicyTest {
       ByteArray(0),
     )
 
-  /**
-   * Asserts the given error is classified non-recoverable: the default policy gives up (no retry is
-   * scheduled) and the network-retry callback is never armed.
-   */
   private fun assertNonRecoverable(exception: IOException) {
     var pendingNetwork: Boolean? = null
     val policy =
@@ -66,16 +60,11 @@ class RetryLoadErrorHandlingPolicyTest {
         onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
       )
 
-    // A wifi drop surfaces as a raw IOException from the socket/DNS layer, NOT a
-    // PlaybackException. This must still be treated as a recoverable network error.
     val delay = policy.getRetryDelayMsFor(errorInfo(UnknownHostException("Unable to resolve host")))
 
-    // Recoverable -> a real (non-TIME_UNSET) retry delay is scheduled.
     assertNotEquals(C.TIME_UNSET, delay)
-    // While offline we use the short fixed delay so reconnect can accelerate.
+    // The offline delay.
     assertEquals(1000L, delay)
-    // The network-retry callback must be armed so connectivity restoration can
-    // trigger an immediate exoPlayer.prepare().
     assertEquals(true, pendingNetwork)
   }
 
@@ -135,8 +124,6 @@ class RetryLoadErrorHandlingPolicyTest {
 
     val delay = policy.getRetryDelayMsFor(errorInfo(httpError(404)))
 
-    // A 404 will never succeed on retry: stop immediately rather than spinning until the
-    // max-retry-duration timeout, and never arm the connectivity-restoration path.
     assertEquals(C.TIME_UNSET, delay)
     assertNull(pendingNetwork)
   }
@@ -163,11 +150,7 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 }
 
-/**
- * The two duration budgets: a never-played load gives up fast while online; a load that produced
- * audio — or a device that is offline — keeps the full recovery budget. Clock-based: budgets are
- * 100ms and the tests sleep 150ms between errors, comfortable margins in both directions.
- */
+/** Clock-based: 100ms budgets and 150ms sleeps between errors leave margin both ways. */
 class RetryLoadErrorHandlingPolicyBudgetTest {
   private val loadEventInfo = org.mockito.Mockito.mock(LoadEventInfo::class.java)
   private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
@@ -200,11 +183,6 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
   }
 
-  /**
-   * Offline failures must not burn the first-connect budget (a station tapped in a tunnel parks for
-   * connectivity); the budget's clock starts at the first error observed online, so a dead station
-   * still gets a fast verdict after restoration.
-   */
   @Test
   fun `offline time does not burn the first-connect budget`() {
     var online = false
@@ -215,23 +193,16 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
         hasPlayed = { false },
       )
 
-    // Offline: the short budget never engages.
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
     Thread.sleep(150)
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
 
-    // Connectivity returns: the short clock starts now — one more error is
-    // retried, then the budget is spent.
     online = true
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
     Thread.sleep(150)
     assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
   }
 
-  /**
-   * An offline stretch in the middle of the budget must not count against it: any offline
-   * observation wipes the clock, which restarts at the next error observed online.
-   */
   @Test
   fun `offline stretch mid-budget restarts the first-connect clock`() {
     var online = true
@@ -242,13 +213,11 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
         hasPlayed = { false },
       )
 
-    // Online failure starts the clock, then the budget elapses while offline.
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
     Thread.sleep(150)
     online = false
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
 
-    // Back online: the clock restarted — a full budget remains.
     online = true
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
     Thread.sleep(150)

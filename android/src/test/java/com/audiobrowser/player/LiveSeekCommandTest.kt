@@ -17,13 +17,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
-// Robolectric: a MediaSession needs the framework.
 @RunWith(RobolectricTestRunner::class)
 class LiveSeekCommandTest {
 
   private val app = RuntimeEnvironment.getApplication()
   private val exoPlayer = ExoPlayer.Builder(app).build()
-  // A controller sees the session's grant intersected with the player's own commands, and an empty
+  // A controller sees the session's grant intersected with the player's commands, and an empty
   // player cannot seek, so this one offers every command to leave only the session's grant.
   private val session =
     MediaSession.Builder(

@@ -17,12 +17,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Tests the Now Playing rendering pipeline through a fake [NowPlayingSurface]: the flash >
- * override > formatter > track precedence, the publish dedupe, the stale-result guards (render
- * generation + track-id keying), timed-metadata reruns, the once-per-track artwork keying, and the
- * flash revert timing — all previously untestable inside Player.kt.
- */
 class NowPlayingUpdaterTest {
 
   private class FakeSurface : NowPlayingSurface {
@@ -99,7 +93,7 @@ class NowPlayingUpdaterTest {
     updater.updateNowPlaying(update(title = "Song"))
 
     assertEquals("Song", surface.stamps.last().title)
-    assertEquals("Place", surface.stamps.last().secondary) // falls back per-field
+    assertEquals("Place", surface.stamps.last().secondary)
     assertEquals("Song", updater.getNowPlaying()?.title)
   }
 
@@ -201,7 +195,7 @@ class NowPlayingUpdaterTest {
     runCurrent()
 
     assertEquals(listOf("Station", "Live Song"), surface.stamps.map { it.title })
-    assertEquals("Place", surface.stamps.last().secondary) // per-field fallback
+    assertEquals("Place", surface.stamps.last().secondary)
   }
 
   @Test
@@ -437,10 +431,10 @@ class NowPlayingUpdaterTest {
       update(title = "Stale")
     }
 
-    updater.render() // launches the gated formatter
-    updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0) // newer generation
+    updater.render()
+    updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0) // the newer render
     runCurrent()
-    gate.complete(Unit) // stale formatter completes after the flash
+    gate.complete(Unit)
     runCurrent()
 
     assertEquals("Flash!", surface.stamps.last().title)
@@ -459,7 +453,7 @@ class NowPlayingUpdaterTest {
     updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0)
     runCurrent()
 
-    updater.render() // e.g. a playback-state change mid-flash
+    updater.render()
     runCurrent()
 
     assertEquals(0, invocations)
@@ -476,7 +470,7 @@ class NowPlayingUpdaterTest {
     }
 
     updater.render()
-    surface.currentTrack = track("B", src = "https://s/b.mp3") // fast skip
+    surface.currentTrack = track("B", src = "https://s/b.mp3")
     gate.complete(Unit)
     runCurrent()
 
@@ -519,7 +513,7 @@ class NowPlayingUpdaterTest {
     runCurrent()
     assertEquals("Song X", seenTimed.last())
 
-    updater.clearOverride() // track change clears timed metadata
+    updater.clearOverride() // as on a track change
     updater.render()
     runCurrent()
     assertNull(seenTimed.last())
@@ -539,7 +533,7 @@ class NowPlayingUpdaterTest {
 
     updater.render()
     runCurrent()
-    updater.updateNowPlaying(update(title = "Song")) // re-render, same track
+    updater.updateNowPlaying(update(title = "Song")) // re-renders the same track
     runCurrent()
 
     assertEquals(1, surface.artworkResolveCount)
@@ -563,7 +557,6 @@ class NowPlayingUpdaterTest {
     runCurrent()
     assertEquals(2, surface.artworkResolveCount)
 
-    // The config runs for id-less tracks too — no blanket skip.
     surface.currentTrack = track("C", id = null, src = "https://s/c.mp3")
     updater.render()
     runCurrent()
@@ -583,7 +576,7 @@ class NowPlayingUpdaterTest {
 
     updater.render()
     runCurrent()
-    updater.updateNowPlaying(update(title = "Song")) // re-render, same track
+    updater.updateNowPlaying(update(title = "Song")) // re-renders the same track
     runCurrent()
 
     assertEquals(1, surface.artworkResolveCount)
@@ -605,7 +598,7 @@ class NowPlayingUpdaterTest {
       assertEquals(1, surface.artworkResolveCount)
 
       surface.hasNowPlayingArtworkConfig = false
-      updater.updateNowPlaying(update(title = "x")) // re-render without config resets the keying
+      updater.updateNowPlaying(update(title = "x")) // a render without the config
       runCurrent()
 
       surface.hasNowPlayingArtworkConfig = true
@@ -624,8 +617,8 @@ class NowPlayingUpdaterTest {
       }
     val updater = NowPlayingUpdater(surface, backgroundScope)
 
-    updater.render() // schedules the artwork resolve
-    surface.currentTrack = track("B", id = "b", src = "https://s/b.mp3") // skip before it lands
+    updater.render()
+    surface.currentTrack = track("B", id = "b", src = "https://s/b.mp3") // before the resolve lands
     runCurrent()
 
     assertTrue(surface.artworkStamps.isEmpty())
@@ -642,8 +635,8 @@ class NowPlayingUpdaterTest {
         }
       val updater = NowPlayingUpdater(surface, backgroundScope)
 
-      updater.render() // schedules the artwork resolve
-      // Skip to another id-less track before it lands: identity (src) keying must catch it.
+      updater.render()
+      // Before the resolve lands.
       surface.currentTrack = track("B", id = null, src = "https://s/b.mp3")
       runCurrent()
 

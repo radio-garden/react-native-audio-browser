@@ -4,8 +4,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ShuffleOrder
 
 /**
- * The phone's engine for the work only it does: retries, reconnects and its shuffle order. While a
- * remote output plays, none of it reaches the remote: each call does nothing.
+ * The phone's ExoPlayer, for the work only it does: retries, reconnects and its shuffle order.
+ * While a remote output plays, each call does nothing.
  */
 internal class LocalEngine(
   private val engine: () -> ExoPlayer,
@@ -14,11 +14,11 @@ internal class LocalEngine(
   private val playing: ExoPlayer?
     get() = engine().takeIf { !isRemote() }
 
-  /** Whether the engine is what plays. */
+  /** Whether the phone's ExoPlayer is what plays, rather than a remote output. */
   val isActive: Boolean
     get() = playing != null
 
-  /** Loads again what failed or stalled, from the live edge when [toLiveEdge]. */
+  /** Prepares again what failed or stalled, from the live edge when [toLiveEdge]. */
   fun retry(toLiveEdge: Boolean = false) {
     val engine = playing ?: return
     if (toLiveEdge) engine.seekToDefaultPosition()
@@ -26,8 +26,8 @@ internal class LocalEngine(
   }
 
   /**
-   * Reconnects a live stream at its edge: a stream with a live window seeks there; anything else
-   * connects again, which for a stream that can't seek is the edge. False while remote.
+   * Reconnects at the live edge: a stream with a live window seeks there; anything else connects
+   * again, which for a stream that can't seek is the edge. False while remote.
    */
   fun reconnectAtLiveEdge(): Boolean {
     val engine = playing ?: return false
@@ -35,8 +35,8 @@ internal class LocalEngine(
       engine.seekToDefaultPosition()
       return true
     }
-    // ExoPlayer.prepare() only re-prepares from STATE_IDLE, hence the raw stop() — not
-    // Player.stop(), which would drop the play intent this reconnect must preserve.
+    // prepare() only re-prepares from STATE_IDLE, hence ExoPlayer's own stop(), not
+    // [Player.stop], which drops the play intent this reconnect keeps.
     engine.stop()
     engine.seekToDefaultPosition()
     engine.prepare()

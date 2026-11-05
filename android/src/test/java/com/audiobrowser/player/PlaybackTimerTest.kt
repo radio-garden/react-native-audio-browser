@@ -35,7 +35,7 @@ class PlaybackTimerTest {
     var callCount = 0
     val timer = playingTimer { callCount++ }
 
-    timer.setInterval(0.1) // active is still false (no state change)
+    timer.setInterval(0.1)
 
     advanceTimeBy(500)
     assertEquals(0, callCount)
@@ -81,7 +81,7 @@ class PlaybackTimerTest {
     assertTrue("Expected events while running, got $callCount", callCount > 0)
 
     val before = callCount
-    timer.setInterval(0.2) // different value — should restart
+    timer.setInterval(0.2)
     advanceTimeBy(500)
     assertTrue("Expected more events after interval change", callCount > before)
 
@@ -107,7 +107,6 @@ class PlaybackTimerTest {
 
   @Test
   fun `isActive predicate gates which states run`() = runTest {
-    // playing-only timer must NOT tick while buffering...
     var playingOnly = 0
     val strict = playingTimer { playingOnly++ }
     strict.setInterval(0.1)
@@ -116,7 +115,6 @@ class PlaybackTimerTest {
     assertEquals(0, playingOnly)
     strict.setInterval(null)
 
-    // ...while a progress-style predicate that includes buffering does.
     var progress = 0
     val lenient =
       PlaybackTimer(

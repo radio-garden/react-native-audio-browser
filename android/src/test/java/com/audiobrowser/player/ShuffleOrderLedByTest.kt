@@ -6,12 +6,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Media3's `ShuffleOrder.cloneAndSet(insertionCount, startIndex)` discards the start index (the
- * interface default clears and re-inserts from 0, and `DefaultShuffleOrder` does not override it),
- * so `setMediaItems(items, startIndex, …)` leaves the starting track at a random shuffle position —
- * last, for a 1-in-N share of queues, which reads as end-of-queue from the very first track.
- */
 class ShuffleOrderLedByTest {
   @Test
   fun `the start index leads the order`() {
@@ -59,8 +53,7 @@ class ShuffleOrderLedByTest {
 
   @Test
   fun `the tail is actually shuffled`() {
-    // Not a strict guarantee of any single draw — but across many draws an
-    // unshuffled tail would be impossible to miss.
+    // Draws may repeat a tail; 50 identical draws out of 7! tails all but prove it is unshuffled.
     val tails =
       (0 until 50)
         .map { shuffleOrderLedBy(startIndex = 0, count = 8) }

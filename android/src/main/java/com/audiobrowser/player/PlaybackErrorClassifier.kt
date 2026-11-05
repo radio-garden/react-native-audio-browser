@@ -7,22 +7,18 @@ import com.margelo.nitro.audiobrowser.PlaybackErrorKind
 import java.io.IOException
 
 /**
- * Maps ExoPlayer's failure codes onto [PlaybackErrorKind], the cross-platform contract iOS
- * populates from AVFoundation. Consumers branch on the kind; the raw ExoPlayer code still travels
- * alongside it as `PlaybackError.code` for telemetry.
- *
- * Codes that carry no real evidence of a cause (`ERROR_CODE_UNSPECIFIED`,
- * `ERROR_CODE_IO_UNSPECIFIED`, a bad HTTP status whose response code we could not recover) stay
- * [PlaybackErrorKind.UNKNOWN] rather than being guessed into a nicer-sounding bucket — a wrong
- * classification is worse than an honest one, both for the listener and for the aggregates.
+ * Maps ExoPlayer failures onto [PlaybackErrorKind], the cross-platform kind iOS fills from
+ * AVFoundation. A code that names no cause, including `ERROR_CODE_IO_BAD_HTTP_STATUS` with no
+ * recoverable status, stays [PlaybackErrorKind.UNKNOWN]: a wrong kind misleads both the listener
+ * and the aggregates more than an honest unknown.
  */
 object PlaybackErrorClassifier {
   /**
-   * Classifies a player failure.
+   * Offline wins over everything, then an HTTP status in the cause chain, then the error code.
    *
-   * @param online whether the device had connectivity at the moment of failure. ExoPlayer's codes
-   *   cannot distinguish "the device is offline" from "this stream is unreachable"; only the
-   *   connectivity monitor can, which is why it is passed in.
+   * @param online whether the device had connectivity when it failed. ExoPlayer reports a dead
+   *   stream and a dead connection with the same codes; only the connectivity monitor tells them
+   *   apart.
    */
   fun classify(error: PlaybackException, online: Boolean): PlaybackErrorKind {
     if (!online) return PlaybackErrorKind.OFFLINE
@@ -31,7 +27,7 @@ object PlaybackErrorClassifier {
     return kindForErrorCode(error.errorCode)
   }
 
-  /** The HTTP status the server answered with, if this failure came from an HTTP response. */
+  /** The HTTP status anywhere in [error]'s cause chain, or null if no HTTP response caused it. */
   fun responseCode(error: PlaybackException): Int? =
     generateSequence(error.cause) { it.cause }
       .filterIsInstance<InvalidResponseCodeException>()
@@ -39,11 +35,10 @@ object PlaybackErrorClassifier {
       ?.responseCode
 
   /**
-   * Classifies a load error the retry policy is still working on, as an advisory (`retrying`)
-   * [PlaybackError]. Load errors arrive as raw [IOException]s (see
-   * [RetryLoadErrorHandlingPolicy.classifyError]), never as [PlaybackException] — that shape only
-   * exists once retries are exhausted. The policy only retries HTTP statuses and transport
-   * failures, so a non-HTTP retryable load error is by construction a network one.
+   * Classifies a load error the retry policy is still retrying, as a `retrying` [PlaybackError].
+   * Load errors arrive as raw [IOException]s, never as [PlaybackException], which exists only once
+   * retries are exhausted. [RetryLoadErrorHandlingPolicy] retries only HTTP statuses and transport
+   * failures, so any other cause is reported as [PlaybackErrorKind.UNREACHABLE].
    */
   fun retryingLoadError(exception: IOException, online: Boolean): PlaybackError {
     val responseCode =
@@ -51,9 +46,8 @@ object PlaybackErrorClassifier {
         .filterIsInstance<InvalidResponseCodeException>()
         .firstOrNull()
         ?.responseCode
-    // Fixed message per classification (mirrors iOS's localized descriptions): raw
-    // IOException messages vary between attempts of the same outage, which would defeat
-    // the caller's identical-repeat dedupe and churn the wire payload.
+    // A fixed message per kind, like iOS: raw IOException messages vary between attempts at the
+    // same outage, which would defeat the caller's identical-repeat dedupe.
     val (kind, code, message) =
       when {
         !online ->
@@ -79,8 +73,7 @@ object PlaybackErrorClassifier {
       404,
       410 -> PlaybackErrorKind.NOT_FOUND
       in 500..599 -> PlaybackErrorKind.SERVER_ERROR
-      // Every other 4xx is the server refusing us — auth, geo-blocking, a rate limit. All of them
-      // mean "you can't have this stream", not "retry".
+      // Every other 4xx (auth, geo-blocking, rate limit) means "you can't have this stream".
       in 400..499 -> PlaybackErrorKind.REJECTED
       else -> PlaybackErrorKind.UNKNOWN
     }
@@ -93,7 +86,6 @@ object PlaybackErrorClassifier {
 
       PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> PlaybackErrorKind.NOT_FOUND
 
-      // The server, the licence server, or the session refused us.
       PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
       PlaybackException.ERROR_CODE_AUTHENTICATION_EXPIRED,
       PlaybackException.ERROR_CODE_PREMIUM_ACCOUNT_REQUIRED,
@@ -102,8 +94,6 @@ object PlaybackErrorClassifier {
       PlaybackException.ERROR_CODE_NOT_AVAILABLE_IN_REGION,
       in DRM_CODES -> PlaybackErrorKind.REJECTED
 
-      // Fetched, but nothing we can turn into audio: wrong content type, malformed or unsupported
-      // container, a decoder that refused it, or an output track we could not open.
       PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
       PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
       PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,

@@ -4,15 +4,14 @@ import androidx.media3.common.Player as MediaPlayer
 import com.margelo.nitro.audiobrowser.PlaybackState
 
 /**
- * An observation that may move the playback state machine. Context (does a track exist, is the
- * engine audibly playing, the queue size) is captured into the event at the call site —
- * [PlaybackStateMachine] itself stays pure.
+ * An input to [PlaybackStateMachine]. The caller captures any context a transition depends on
+ * (queue size, whether a track exists, whether audio plays) into the event, so the machine stays
+ * pure.
  */
 sealed interface PlaybackEvent {
   /**
-   * ExoPlayer's playback state changed. [exoState] MUST be the real ExoPlayer state, not the
-   * InterceptingPlayer-masked value (which reports READY through a masked terminal error to keep
-   * the session alive — feeding that back in would clear the ERROR state).
+   * [exoState] must be the session player's real state, not the InterceptingPlayer's: that one
+   * reports READY through a masked terminal error, which would move the machine out of ERROR.
    */
   data class ExoPlaybackStateChanged(
     @get:MediaPlayer.State val exoState: Int,
@@ -20,13 +19,12 @@ sealed interface PlaybackEvent {
     val shouldPlayWhenReady: Boolean,
   ) : PlaybackEvent
 
-  /** The active media item changed (auto-advance, skip, queue swap). */
   data class MediaItemTransition(val hasTrack: Boolean, val isPlaying: Boolean) : PlaybackEvent
 
   /**
    * An input of [Player.shouldPlayWhenReady] changed: the intent, or a playback suppression such as
    * a transient audio focus loss, which moves the machine as a pause does. [exoState] is the real
-   * ExoPlayer state, as in [ExoPlaybackStateChanged].
+   * state, as in [ExoPlaybackStateChanged].
    */
   data class ShouldPlayWhenReadyChanged(
     val shouldPlayWhenReady: Boolean,
@@ -37,56 +35,52 @@ sealed interface PlaybackEvent {
 }
 
 /**
- * The playback state transitions: the next states (in order) for an event from the current state,
- * empty to suppress. The Android analog of iOS's `nextPlaybackState(from:on:)` — guards here are
- * state-related ("not from ERROR/STOPPED"); context-related guards live in the event fields.
- * Effects (error clearing, event emission, timers) stay with the caller: the machine only decides.
+ * Decides the playback state transitions; the Android counterpart of iOS's
+ * `nextPlaybackState(from:on:)`. Effects (clearing errors, emitting events, timers) stay with the
+ * caller.
  */
 object PlaybackStateMachine {
 
+  /** The states to set, in order, when [event] arrives in [current]; empty to keep [current]. */
   fun transitions(current: PlaybackState, event: PlaybackEvent): List<PlaybackState> =
     when (event) {
       is PlaybackEvent.ExoPlaybackStateChanged ->
         when (event.exoState) {
           MediaPlayer.STATE_BUFFERING -> listOf(PlaybackState.BUFFERING)
           MediaPlayer.STATE_READY ->
-            // While playing (shouldPlayWhenReady), READY is a transient before PLAYING —
-            // suppress it so consumers don't flash a settled/non-loading state
-            // mid-startup (none→loading→buffering→playing). When paused it IS the
-            // settled signal a buffer-that-finished-while-paused needs, so consumers
-            // can clear their loading spinner (mono#3325).
+            // While playing, READY is a transient before PLAYING (which IsPlayingChanged brings)
+            // and would flash a settled state mid-startup. While paused it is the only signal that
+            // a load finished, so consumers can drop their loading indicator.
             if (event.shouldPlayWhenReady) emptyList() else listOf(PlaybackState.READY)
           MediaPlayer.STATE_IDLE ->
-            // A terminal error (or an explicit stop) idles ExoPlayer; transitioning to NONE
-            // would clear the ERROR/STOPPED state the session is rendering.
+            // A terminal error and stop() both idle ExoPlayer; NONE would clear the ERROR or
+            // STOPPED state the session shows.
             if (current == PlaybackState.ERROR || current == PlaybackState.STOPPED) emptyList()
             else listOf(PlaybackState.NONE)
           MediaPlayer.STATE_ENDED ->
-            // An emptied queue also reports STATE_ENDED; without items that is "nothing
-            // loaded", not "played to end".
+            // An emptied queue also reports STATE_ENDED: nothing loaded, not played to the end.
             listOf(if (event.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE)
           else -> emptyList()
         }
       is PlaybackEvent.MediaItemTransition ->
         when {
           !event.hasTrack -> emptyList()
-          // Already audibly playing (gapless auto-advance): run the full burst so consumers
-          // see the canonical loading→ready→playing sequence rather than sticking on LOADING.
+          // Already playing (gapless auto-advance): no IsPlayingChanged follows, so run the whole
+          // sequence here or the state sticks on LOADING.
           event.isPlaying ->
             listOf(PlaybackState.LOADING, PlaybackState.READY, PlaybackState.PLAYING)
           else -> listOf(PlaybackState.LOADING)
         }
       is PlaybackEvent.ShouldPlayWhenReadyChanged ->
         when {
-          // STOPPED and ENDED are terminal: dropping the intent there (stop()'s own
-          // clear, the clear on natural end, or a redundant pause press) must not
-          // re-report the state as PAUSED.
+          // stop() and a natural end both clear the intent themselves; STOPPED and ENDED must not
+          // turn into PAUSED.
           !event.shouldPlayWhenReady &&
             current != PlaybackState.STOPPED &&
             current != PlaybackState.ENDED -> listOf(PlaybackState.PAUSED)
           !event.shouldPlayWhenReady -> emptyList()
-          // Resuming while ExoPlayer still buffers (a pause or suppression that began during a
-          // load): READY will be dropped as the transient before PLAYING, so report the load now.
+          // Resuming while ExoPlayer still buffers: no state change of its own follows, and the
+          // READY after it is dropped while playing, so report the load now.
           current == PlaybackState.PAUSED && event.exoState == MediaPlayer.STATE_BUFFERING ->
             listOf(PlaybackState.BUFFERING)
           else -> emptyList()

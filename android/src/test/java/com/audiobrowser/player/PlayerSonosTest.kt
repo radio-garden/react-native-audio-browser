@@ -130,6 +130,7 @@ class PlayerSonosTest {
 
     player.playWhenReady = true
 
+    // Past the switch's 30 s start timeout.
     idleUntil("the start timed out", steps = 500) { player.playbackState == PlaybackState.ERROR }
   }
 
@@ -201,7 +202,10 @@ class PlayerSonosTest {
       .filter { it.method.name == "onTimedMetadata" }
       .map { it.arguments[0] as TimedMetadata }
 
-  /** Commands run on a background thread, and the speaker is polled every two seconds. */
+  /**
+   * Advances the main looper 100 ms a step, and sleeps so the background thread the speaker's
+   * commands run on can catch up; the speaker is polled every two seconds.
+   */
   private fun idleUntil(what: String, steps: Int = 300, condition: () -> Boolean) {
     repeat(steps) {
       shadowOf(looper).idleFor(Duration.ofMillis(100))

@@ -11,7 +11,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
-// Robolectric: Player builds a real ExoPlayer, which needs the framework and a main looper.
 @RunWith(RobolectricTestRunner::class)
 class PlayerInvalidTrackTest {
 

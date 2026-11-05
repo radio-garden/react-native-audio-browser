@@ -18,10 +18,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * What the now-playing logic needs from the platform — implemented by [Player] (current playback
- * reads, MediaItem stamping via `replaceMediaItem`, artwork resolution through the browser).
- * Mirrors iOS's NowPlayingUpdater / NowPlayingInfoController split: this seam is what makes the
- * precedence/guard/dedupe logic testable with a fake.
+ * What [NowPlayingUpdater] needs from the platform; [Player] implements it, tests fake it. Mirrors
+ * iOS's NowPlayingUpdater / NowPlayingInfoController split.
  */
 interface NowPlayingSurface {
   val currentIndex: Int?
@@ -30,29 +28,24 @@ interface NowPlayingSurface {
   val playbackError: PlaybackError?
 
   /**
-   * MUST be the real play/pause intent read from the underlying ExoPlayer, false while a transient
-   * audio focus loss suppresses output (as iOS pauses on an interruption) — not the
-   * InterceptingPlayer-masked value, which can report false through a masked terminal error to keep
-   * the session paused-but-alive. The formatter receives this; feeding it the masked value breaks
-   * its output exactly in the error case the mask exists for.
+   * The underlying ExoPlayer's real play intent, false during a transient audio focus loss — not
+   * the InterceptingPlayer-masked value, which reads false through a masked terminal error. The
+   * formatter gets this, so the masked value breaks its output in exactly that error case.
    */
   val playWhenReady: Boolean
   val isRebuffering: Boolean
 
-  /** Device connectivity, used to classify a stall as offline vs a plain rebuffer. */
   val isOnline: Boolean
 
   val hasNowPlayingArtworkConfig: Boolean
 
-  /** Stamp title/secondary/album onto the playing item. */
   fun stampFields(index: Int, track: Track, title: String?, secondaryLine: String?, album: String?)
 
-  /** Stamp a resolved artwork uri onto the playing item. */
   fun stampArtwork(index: Int, track: Track, uri: String)
 
   /**
-   * Resolve the now-playing artwork for [track] via the `nowPlayingArtwork` config kind. Returns
-   * the final uri, or null when resolution produced nothing (errors are logged inside).
+   * Resolves [track]'s artwork through the `nowPlayingArtwork` config. Returns null when it
+   * produced nothing; logs its own errors rather than throwing.
    */
   suspend fun resolveNowPlayingArtwork(track: Track, sizePx: Double): String?
 
@@ -60,42 +53,33 @@ interface NowPlayingSurface {
 }
 
 /**
- * Owns the Now Playing rendering pipeline: the flash > override > formatter > track precedence, the
- * publish dedupe, the stale-result guards (render generation + track-id keying), timed (ICY)
- * metadata, and the once-per-track artwork keying. Mirrors iOS's NowPlayingUpdater. The platform is
- * reached only through [NowPlayingSurface]; the JS formatter arrives as a plain suspend lambda
- * (wrapped at the Nitro boundary in Player.setup), so every guard here runs under JVM tests.
+ * Renders the now-playing lines with the precedence flash > override > formatter > track, reaching
+ * the platform only through [NowPlayingSurface]. Mirrors iOS's NowPlayingUpdater.
  */
 class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scope: CoroutineScope) {
 
-  /** Whether now-playing rendering (override/flash/formatter) is enabled (PlayerSetupOptions). */
+  /**
+   * When false, the surface gets the raw track fields, while the event and [getNowPlaying] still
+   * report the flash and override.
+   */
   var enabled = true
 
-  /** The JS formatter, wrapped to a plain suspend call at the Nitro boundary (see Player.setup). */
+  /** Customizes the lines asynchronously; a null result or a throw leaves the default lines. */
   var formatter: (suspend (FormatNowPlayingParams) -> NowPlayingUpdate?)? = null
 
-  /** Latest live timed (ICY/ID3) metadata; cleared on track change. */
   @Volatile private var latestTimedMetadata: TimedMetadata? = null
 
-  /** Imperative override (from `updateNowPlaying()`); cleared on track change. */
   private var override: NowPlayingUpdate? = null
 
-  /**
-   * Transient now-playing fields (e.g. feedback for a refused remote command). Outranks the
-   * formatter and the override while active, so live metadata can't stomp it mid-flash. Reverted by
-   * a coroutine delay on [scope] — NOT a JS timer, which pauses with a backgrounded host (and the
-   * lock screen is exactly the backgrounded case) — and cleared early on track change.
-   */
+  // Reverted by a coroutine on [scope], not a JS timer: a JS timer pauses with a backgrounded host,
+  // and the lock screen is the backgrounded case.
   private var flash: NowPlayingUpdate? = null
   private var flashRevert: Job? = null
 
-  /**
-   * Monotonic stamp for renders. An async formatter result applies only when no newer render —
-   * notably a flash — has superseded the one that launched it.
-   */
+  // An async formatter result applies only if no newer render (a flash, notably) came after the one
+  // that launched it.
   private var renderGeneration = 0L
 
-  /** The last fields actually published, to dedupe redundant stamps. */
   private data class Published(
     val index: Int,
     val trackId: String?,
@@ -106,29 +90,19 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
   private var lastPublished: Published? = null
 
-  /**
-   * The identity of the track whose formatter result the surface shows. While it is the rendering
-   * track's, [render] skips its interim default stamp, which would flash the track's own line over
-   * the formatter's until the async result lands.
-   */
+  // While this is the rendering track's identity, [render] skips its interim default stamp, which
+  // would flash the track's own line over the formatter's until the async result lands.
   private var formattedTrackId: String? = null
 
-  /**
-   * The track identity (id-or-src, falling back to path) whose now-playing artwork has been
-   * resolved (or is being resolved), so a `nowPlayingArtwork` resolve runs once per track — id-less
-   * tracks included — instead of on every render.
-   */
   private var artworkResolvedForTrack: String? = null
 
-  /** Size hint (px, square) for now-playing artwork. Mirrors iOS (screen-width-capped to 1200). */
+  // Square. Matches iOS, which caps the screen width at 1200.
   private val artworkSizePx = 1200.0
 
-  /** Cancels in-flight work. Called from Player.destroy. */
   fun destroy() {
     scope.cancel()
   }
 
-  /** Sets/clears the imperative override (null reverts to track metadata) and re-renders. */
   fun updateNowPlaying(update: NowPlayingUpdate?) {
     override = update
     render()
@@ -147,7 +121,6 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     render()
   }
 
-  /** Clears an active flash immediately, reverting to the live metadata. No-op when none. */
   fun clearNowPlayingFlash() {
     if (flash == null) return
     cancelFlash()
@@ -161,8 +134,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   }
 
   /**
-   * The lines the now-playing surface shows for the current track, formatter output included; until
-   * the track's first render, and while [enabled] is false, the flash, override or track fields.
+   * The lines on the surface for the current track, formatter output included. Before the track's
+   * first render, and while [enabled] is false, the flash, override or track fields instead.
    */
   fun getNowPlaying(): NowPlayingMetadata? {
     val track = surface.currentTrack ?: return null
@@ -197,9 +170,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     )
 
   /**
-   * Forgets what the surface shows, so the next [render] stamps the lines and artwork in full: a
-   * media item that becomes current, or is replaced in place, carries its own default lines and
-   * artwork.
+   * Makes the next [render] stamp lines and artwork in full. Call when a media item becomes current
+   * or is replaced in place: it carries its own default lines and artwork.
    */
   fun forgetPublished() {
     lastPublished = null
@@ -207,10 +179,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     artworkResolvedForTrack = null
   }
 
-  /**
-   * Clears override, flash, timed metadata and the published lines on track change (PlayerListener
-   * transition).
-   */
+  /** Call on track change: clears the override, flash, timed metadata and published lines. */
   fun clearOverride() {
     override = null
     cancelFlash()
@@ -218,10 +187,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     forgetPublished()
   }
 
-  /**
-   * Records the latest live timed (ICY/ID3) metadata and, when a formatter is configured, re-runs
-   * it so the live song is reflected on the now-playing surface.
-   */
+  /** Records live (ICY/ID3) metadata; re-renders only when a formatter would use it. */
   fun onTimedMetadataReceived(timed: TimedMetadata) {
     latestTimedMetadata = timed
     if (enabled && formatter != null) {
@@ -230,11 +196,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   }
 
   /**
-   * Renders the current now playing metadata to the surface. Flash wins while active (formatter
-   * skipped entirely so its async result can't land on top); otherwise the override-or-track
-   * default is stamped immediately, unless a formatter result for the track is already up, and a
-   * configured formatter customizes it asynchronously, guarded by track identity and
-   * [renderGeneration].
+   * Stamps the default lines at once, then the formatter's when its result lands, unless a newer
+   * render or a track change came first.
    */
   fun render() {
     val index = surface.currentIndex ?: return
@@ -242,15 +205,12 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     renderGeneration += 1
     val generation = renderGeneration
 
-    // Metadata source. When metadata is disabled, use the raw track (ignore override + formatter);
-    // otherwise the imperative `updateNowPlaying` override wins over the track's own fields.
     val activeOverride = if (enabled) override else null
     val defaultTitle = activeOverride?.title ?: track.title
     val defaultSecondary = activeOverride?.artist ?: track.artist
     val defaultAlbum = activeOverride?.album ?: track.album
 
-    // A flash outranks both the formatter and the override; while one is active the formatter pass
-    // is skipped entirely so its async result can't land on top.
+    // The formatter is skipped while a flash is up, so its async result can't land on top.
     val activeFlash = if (enabled) flash else null
     if (activeFlash != null) {
       applyFields(
@@ -264,22 +224,16 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       return
     }
 
-    // Apply the default immediately so the now-playing never lags a track/status change, unless
-    // a formatter result for this track is on the surface.
+    // The default goes out at once so the surface never lags a track or state change.
     val activeFormatter = if (enabled) formatter else null
     if (activeFormatter == null || formattedTrackId != (track.identity ?: track.path)) {
       applyFields(index, track, defaultTitle, defaultSecondary, defaultAlbum)
     }
 
-    // If a formatter is configured, let it customize the fields asynchronously. Falls back to the
-    // default on null/throw.
     if (activeFormatter != null) {
       val capturedId = track.src ?: track.path
-      // Gate the raw load-control signal to the buffering state so `stalled` is correct on its
-      // own: ExoPlayer's rebuffering flag is polled on a different cadence than state transitions
-      // and can linger true into the PLAYING transition as a rebuffer recovers. Classify by
-      // connectivity so the formatter can show "offline" vs a plain rebuffer; null when not
-      // stalled.
+      // ExoPlayer's rebuffering flag is polled on its own cadence and can linger true into PLAYING
+      // as a rebuffer recovers, so only BUFFERING counts as a stall.
       val isStalled = surface.playbackState == PlaybackState.BUFFERING && surface.isRebuffering
       val stalled =
         if (isStalled) {
@@ -303,10 +257,6 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
             Timber.e(e, "NowPlaying formatter threw; using default")
             null
           }
-        // Apply only if still the same track (a fast skip must not be overwritten by a stale
-        // result) AND no newer render superseded this one — without the generation check, a
-        // formatter round-trip in flight when a flash starts lands a beat later and overwrites
-        // the flash (mirrors the iOS renderGeneration guard).
         val current = surface.currentTrack
         val currentIdx = surface.currentIndex
         if (
@@ -328,7 +278,6 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     }
   }
 
-  /** Stamps the fields via the surface, deduped on (index, track identity, fields). */
   private fun applyFields(
     index: Int,
     track: Track,
@@ -336,10 +285,9 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     secondaryLine: String?,
     album: String?,
   ) {
-    // Skip republishing identical fields. The formatter is re-invoked on every state change, so
-    // the same fields are recomputed often; an unconditional stamp would churn the MediaSession
-    // (and flicker Android Auto / now-playing) for no visible change. Keyed on the track identity
-    // so a new track with a coincidentally identical line still publishes.
+    // The formatter reruns on every state change; restamping identical lines churns the
+    // MediaSession and flickers Android Auto. Keyed on track identity so a new track with the same
+    // lines still publishes.
     val published = Published(index, track.identity ?: track.path, title, secondaryLine, album)
     val unchanged = published == lastPublished
     lastPublished = published
@@ -350,27 +298,20 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       if (enabled) metadata(track, title, secondaryLine, album) else layered(track)
     )
 
-    // Resolve the now-playing-only artwork (lock screen / notification / Android Auto
-    // now-playing), keyed on track id so it runs once per track and not on every render.
     maybeResolveArtwork(track)
   }
 
   /**
-   * Resolves the playing track's now-playing artwork and stamps it onto the playing media item.
-   * Runs for EVERY playing track when `nowPlayingArtwork` is configured — id or not, exactly like
-   * iOS (an id-less track leaves any `{id}` token unfilled; the resolver warns and the request
-   * visibly 404s). Without a config, the existing artworkUri — which came from `artwork` (browse
-   * list path) — is left in place.
+   * Resolves the now-playing artwork once per track identity, id-less tracks included as on iOS (an
+   * unfilled `{id}` token makes the request 404 visibly). Without the config, the media item keeps
+   * the artwork from `artwork`.
    */
   private fun maybeResolveArtwork(track: Track) {
     if (!surface.hasNowPlayingArtworkConfig) {
-      // No now-playing artwork config (or no browser) → fall back to the existing artworkUri.
       artworkResolvedForTrack = null
       return
     }
 
-    // Already resolved (or resolving) for this track — avoid a redundant resolve per render.
-    // Keyed on track identity (id-or-src, falling back to path) so id-less tracks dedupe too.
     val trackKey = track.identity ?: track.path
     if (trackKey != null && artworkResolvedForTrack == trackKey) return
     artworkResolvedForTrack = trackKey
@@ -380,8 +321,6 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
         surface.resolveNowPlayingArtwork(track, artworkSizePx)?.takeIf { it.isNotEmpty() }
           ?: return@launch
 
-      // Apply only if still the same track (a fast skip must not be overwritten by a stale
-      // result), compared on the same identity key the resolve was launched under.
       val currentIdx = surface.currentIndex ?: return@launch
       val current = surface.currentTrack ?: return@launch
       if ((current.identity ?: current.path) != trackKey) return@launch

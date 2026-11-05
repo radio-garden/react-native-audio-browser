@@ -6,38 +6,27 @@ import okhttp3.Request
 import okhttp3.Response
 
 /**
- * Drops the caller's headers once a redirect leaves the origin.
+ * Drops the caller's headers from a redirect hop that leaves the origin the call addressed.
  *
- * OkHttp does this for `Authorization` alone — RetryAndFollowUpInterceptor.buildRedirectRequest is
- * a single `removeHeader("Authorization")` — so every other configured header, an `X-Api-Key` say,
- * still reaches whatever host the first one named. iOS forwards none across a hop and web clears
- * them too; this brings Android in line.
+ * OkHttp's redirect follow-up removes only `Authorization`; every other configured header (an
+ * `X-Api-Key`, a cookie) would reach whichever host the redirect names. iOS and web forward none.
  *
- * Installed as a **network** interceptor, which runs once per hop. `chain.call().request()` is the
- * call's original request, so the comparison is always against the URL the credential was addressed
- * to rather than the hop before.
+ * Must be installed as a network interceptor: an application interceptor sees only the first
+ * request, not each hop. `chain.call().request()` is the call's original request, so each hop is
+ * compared against the URL the caller addressed, not the hop before it.
  *
- * Scoped to the redirect hop, and only that. An HLS segment or key fetch is its own Call, already
- * addressed to the absolute CDN URL, and [TransformingDataSource] deliberately re-applies the
- * config's headers to it — authenticated segments are a supported shape, and web does the same
- * through Shaka's request filter. So this closes the leak of handing a credential to a host the
- * caller never named; it is not a rule that the credential stays on one origin.
+ * Covers redirects only. An HLS segment or key fetch is its own call to the CDN URL, and
+ * [TransformingDataSource] applies the config's headers to it on purpose.
  */
 internal object CrossOriginHeaderStripper : Interceptor {
 
   /**
-   * Headers that describe the transport rather than the caller. OkHttp and media3 set these per hop
-   * — `Range` carries the seek, `Host` and `Connection` are the connection's own — so the request
-   * breaks without them. Everything else on a media request came from the media config, and is the
-   * caller's to send only to the host it addressed.
+   * Lowercase names of headers OkHttp and media3 set per hop, which the request breaks without:
+   * `range` carries the seek, so dropping it restarts the read from zero.
    *
-   * `Icy-MetaData` is media3's, not the caller's: `ProgressiveMediaPeriod` asks for Shoutcast
-   * metadata through `ICY_METADATA_HEADERS` on the DataSpec — the same channel
-   * [TransformingDataSource] puts the config's headers on, so nothing downstream can tell them
-   * apart. Dropping it on a hop costs the station's `icy-metaint`, so `IcyDataSource` is never
-   * installed and `onMetadata` stops firing: live "now playing" disappears on exactly the
-   * redirecting streams this interceptor exists for, and the interleaved metadata bytes stay in the
-   * audio as audible chirping. It is a request for a response format, never a credential.
+   * `icy-metadata` is media3's request for Shoutcast metadata, arriving on the DataSpec alongside
+   * the config's headers. Dropping it loses `icy-metaint`: "now playing" stops on redirected
+   * streams and the interleaved metadata bytes play as audible chirps.
    */
   private val TRANSPORT_HEADERS =
     setOf(
@@ -60,11 +49,10 @@ internal object CrossOriginHeaderStripper : Interceptor {
     )
   }
 
-  /** Scheme, host and port — the same origin test `followMediaRedirect` applies on web. */
+  /** Scheme, host and port: the same test web's `followMediaRedirect` applies. */
   internal fun sameOrigin(a: HttpUrl, b: HttpUrl): Boolean =
     a.scheme == b.scheme && a.host == b.host && a.port == b.port
 
-  /** The request with every caller-supplied header removed. */
   internal fun stripCallerHeaders(request: Request): Request =
     request
       .newBuilder()

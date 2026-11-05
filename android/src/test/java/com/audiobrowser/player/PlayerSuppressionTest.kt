@@ -35,11 +35,10 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-// Robolectric: Player builds a real ExoPlayer, whose audio focus handling the framework's
-// AudioManager drives. Robolectric's clock stands still, so a delayed message on ExoPlayer's
-// playback thread never runs: the audio track is disabled because an audio renderer can wait in
-// BUFFERING on one. SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes,
-// which Robolectric 4.11 answers with null.
+// Robolectric's clock stands still, so a delayed message on ExoPlayer's playback thread never
+// runs: the audio track is disabled because an audio renderer can wait in BUFFERING on one.
+// SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes, which Robolectric 4.11
+// answers with null.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class PlayerSuppressionTest {
@@ -120,7 +119,7 @@ class PlayerSuppressionTest {
   fun `toggling during a transient focus loss keeps the intent`() {
     focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
 
-    // As during a call: a request for focus would be refused.
+    // As during a call: a request for focus is refused.
     audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
 
     player.togglePlayback()
@@ -144,7 +143,6 @@ class PlayerSuppressionTest {
     assertEquals(PlayingState(false, false), player.getPlayingState())
   }
 
-  /** Delivers [change] and waits for ExoPlayer's playback thread to report the suppression. */
   private fun focus(change: Int) {
     audioManager.lastAudioFocusRequest.listener.onAudioFocusChange(change)
     val suppressed = change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
