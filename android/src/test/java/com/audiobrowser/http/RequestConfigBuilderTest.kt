@@ -177,15 +177,13 @@ class RequestConfigBuilderTest {
 
     val result = RequestConfigBuilder.mergeConfig(base, override)
 
-    // Headers should be merged with override winning
     assertEquals("base-value", result.headers!!["Base-Header"])
     assertEquals("override-value", result.headers!!["Override-Header"])
-    assertEquals("override-shared", result.headers!!["Shared"]) // Override wins
+    assertEquals("override-shared", result.headers!!["Shared"])
 
-    // Query should be merged with override winning
     assertEquals("base-value", result.query!!["base-query"])
     assertEquals("override-value", result.query!!["override-query"])
-    assertEquals("override-shared", result.query!!["shared"]) // Override wins
+    assertEquals("override-shared", result.query!!["shared"])
   }
 
   @Test
@@ -205,7 +203,7 @@ class RequestConfigBuilderTest {
     val configWithoutSlash =
       RequestConfig(
         method = null,
-        path = "albums", // No leading slash
+        path = "albums",
         baseUrl = "https://api.example.com",
         headers = null,
         query = null,
@@ -218,7 +216,7 @@ class RequestConfigBuilderTest {
     val result2 = RequestConfigBuilder.buildHttpRequest(configWithoutSlash)
 
     assertEquals("https://api.example.com/albums", result1.url)
-    assertEquals("https://api.example.com/albums", result2.url) // Should add slash
+    assertEquals("https://api.example.com/albums", result2.url)
   }
 
   @Test
@@ -229,7 +227,7 @@ class RequestConfigBuilderTest {
         path = "/albums",
         baseUrl = "https://api.example.com",
         headers = null,
-        query = emptyMap(), // Empty map
+        query = emptyMap(),
         body = null,
         contentType = null,
         userAgent = null,
@@ -237,10 +235,8 @@ class RequestConfigBuilderTest {
 
     val result = RequestConfigBuilder.buildHttpRequest(config)
 
-    assertEquals("https://api.example.com/albums", result.url) // No query string
+    assertEquals("https://api.example.com/albums", result.url)
   }
-
-  // Run-both composition: the sync/async split replaced the old ambiguous variant.
 
   @Test
   fun `composeResolved merges async then sync with sync winning`() {
@@ -250,8 +246,8 @@ class RequestConfigBuilderTest {
 
     val merged = RequestConfigBuilder.composeResolved(async, sync)
 
-    assertEquals("SYNC", merged?.userAgent) // sync wins
-    assertEquals("https://async.example.com", merged?.baseUrl) // async's baseUrl survives
+    assertEquals("SYNC", merged?.userAgent)
+    assertEquals("https://async.example.com", merged?.baseUrl)
   }
 
   @Test
@@ -286,10 +282,6 @@ class RequestConfigBuilderTest {
       assertEquals("abc", merged.query?.get("token"))
       assertEquals("base-ua", merged.userAgent)
     }
-
-  // Request-Config Layer rule (mirrors iOS applyLayer and the web stub): a
-  // layer's static `path` never overrides the base path — the path is carried
-  // from the base; only a Transform may change it.
 
   @Test
   fun `mergeConfig TransformableRequestConfig carries the base path over a static layer path`() =

@@ -44,7 +44,6 @@ class CachingCertificateFetcherTest {
 
   @Test
   fun `decodes a chunked body`() {
-    // "DEAD" + "BEEF" split across two chunks, terminated by a zero-length chunk.
     val raw =
       ("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n" +
           "4\r\nDEAD\r\n4\r\nBEEF\r\n0\r\n\r\n")
@@ -75,8 +74,6 @@ class CachingCertificateFetcherTest {
     )
   }
 
-  // -- response cap (the AIA URL, so the host serving it, comes from the presented cert) --
-
   // -- URL validation (the AIA URL is attacker-supplied text from the presented cert) --
 
   @Test
@@ -87,8 +84,6 @@ class CachingCertificateFetcherTest {
 
   @Test
   fun `rejects a URL carrying CRLF, which would inject request lines`() {
-    // java.net.URL keeps the CRLF in `file`, and the cleartext fetch writes `file` straight
-    // into "GET $path HTTP/1.0\r\n" on a raw socket.
     assertTrue(!CachingCertificateFetcher.isSafeUrl("http://127.0.0.1:6379/\r\nSET foo bar\r\n"))
     assertTrue(!CachingCertificateFetcher.isSafeUrl("http://ca.example/a\nX-Injected: 1"))
   }
@@ -97,6 +92,8 @@ class CachingCertificateFetcherTest {
   fun `rejects a URL carrying a space, which would split the request line`() {
     assertTrue(!CachingCertificateFetcher.isSafeUrl("http://ca.example/a b"))
   }
+
+  // -- response cap (the AIA URL, so the host serving it, comes from the presented cert) --
 
   @Test
   fun `reads a response that fits within the cap`() {
@@ -117,8 +114,6 @@ class CachingCertificateFetcherTest {
 
   @Test
   fun `a stream that never ends does not read without bound`() {
-    // Endless: read() always fills the buffer and never signals EOF, the shape a slow-drip
-    // server takes — the per-read timeout never fires because every read succeeds.
     val endless =
       object : InputStream() {
         override fun read() = 0
@@ -131,9 +126,8 @@ class CachingCertificateFetcherTest {
 
   @Test
   fun `a slow drip is cut off by the deadline, not left to exhaust the byte cap`() {
-    // One byte per read, each one landing just inside the socket's read timeout: the byte cap
-    // alone would let this run for a million reads. The clock advances 1s per read, so the
-    // 10s budget must end it after ~10 — far short of the 1 MiB cap.
+    // The clock advances 1 s per one-byte read, so the 10 s budget ends it after about 10 reads;
+    // the 1 MiB byte cap alone would allow a million.
     var reads = 0
     val drip =
       object : InputStream() {

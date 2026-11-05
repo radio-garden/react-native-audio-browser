@@ -18,11 +18,9 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
 /**
- * Exercises [CachingCertificateFetcher.fetch] against a real loopback server.
- *
- * The safety helpers have their own unit tests, but a predicate that is never consulted protects
- * nothing: these cover the *wiring*, so that removing the `isSafeUrl` guard or swapping
- * `readCapped` back for a plain read-to-EOF fails a test rather than passing silently.
+ * [CachingCertificateFetcher.fetch] against a loopback server: the wiring of the safety helpers,
+ * which have their own unit tests, so dropping the `isSafeUrl` guard or the `readCapped` read fails
+ * here.
  */
 class CachingCertificateFetcherCallSiteTest {
 
@@ -33,10 +31,6 @@ class CachingCertificateFetcherCallSiteTest {
     server?.close()
   }
 
-  /**
-   * Serves [response] to every connection, recording the request line of the first. [handled]
-   * counts accepted connections.
-   */
   private fun startServer(
     response: ByteArray = "HTTP/1.0 404 Not Found\r\n\r\n".toByteArray(),
     handled: AtomicInteger = AtomicInteger(),
@@ -58,7 +52,7 @@ class CachingCertificateFetcherCallSiteTest {
             }
           }
         } catch (e: Exception) {
-          return@thread // socket closed, or the client hung up
+          return@thread
         }
       }
     }
@@ -70,7 +64,6 @@ class CachingCertificateFetcherCallSiteTest {
     val handled = AtomicInteger()
     val port = startServer(handled = handled)
 
-    // Without the isSafeUrl guard this connects and emits "SET foo bar" as its own request line.
     val certs = CachingCertificateFetcher().fetch("http://127.0.0.1:$port/\r\nSET foo bar\r\n")
 
     assertTrue(certs.isEmpty())
@@ -104,9 +97,8 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test(timeout = 30_000)
   fun `an oversized response is abandoned rather than read to EOF`() {
-    // Asserting only that the fetch fails would prove nothing — 4 MiB crosses loopback in
-    // milliseconds and would fail to parse either way. What has to be true is that the client
-    // stopped reading, which shows up as the server's write not draining.
+    // An empty result alone proves nothing: 64 MiB crosses loopback in milliseconds and fails to
+    // parse either way. The client must stop reading, which shows as the server's write failing.
     val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
     server = socket
     val written = AtomicInteger()
@@ -118,8 +110,6 @@ class CachingCertificateFetcherCallSiteTest {
           val out = client.getOutputStream()
           out.write("HTTP/1.0 200 OK\r\n\r\n".toByteArray())
           val chunk = ByteArray(64 * 1024)
-          // 64 MiB — far past the 1 MiB cap. Once the client stops reading and closes, this
-          // throws a broken pipe, which is the signal we want.
           repeat(1024) {
             out.write(chunk)
             written.addAndGet(chunk.size)
@@ -133,8 +123,7 @@ class CachingCertificateFetcherCallSiteTest {
 
     assertTrue(certs.isEmpty())
     assertTrue(finished.await(20, TimeUnit.SECONDS))
-    // Socket buffers mean the server gets somewhat past the cap before the write fails, but it
-    // must be nowhere near the 64 MiB it wanted to send.
+    // Socket buffers let the server write somewhat past the 1 MiB cap before the write fails.
     assertTrue(
       "server wrote ${written.get()} bytes; the read was not cut off",
       written.get() < 16 shl 20,
@@ -143,8 +132,6 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test(timeout = 30_000)
   fun `a real certificate is fetched, parsed and then served from cache`() {
-    // The success path, end to end over a socket: every other wire test serves a failure, so a
-    // broken body offset or a broken cache write would not show up anywhere.
     val der = CertFixtures.bytes("letsencrypt-r13.der")
     val handled = AtomicInteger()
     val port =
@@ -161,17 +148,13 @@ class CachingCertificateFetcherCallSiteTest {
     assertEquals(1, certs.size)
     assertEquals("CN=R13,O=Let's Encrypt,C=US", certs.first().subjectX500Principal.name)
 
-    // Second call must be served from the cache, not the network.
     assertEquals(certs, fetcher.fetch(url))
     assertEquals("a successful fetch must be cached", 1, handled.get())
   }
 
-  /**
-   * A mock certificate whose AIA extension lists [url] as its one CA-Issuers location, so
-   * [AiaCertChaser.completeChain] chases it with this fetcher — the real wiring, end to end.
-   */
+  /** A mock certificate whose AIA extension lists [url] as its one CA Issuers location. */
   private fun certPointingAt(url: String): X509Certificate {
-    // Short-form DER lengths only; a loopback URL is far under 128 bytes.
+    // Short-form DER lengths only, which a loopback URL under 128 bytes fits.
     fun der(tag: Int, content: ByteArray) =
       byteArrayOf(tag.toByte(), content.size.toByte()) + content
     val caIssuersOid = byteArrayOf(0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
@@ -185,7 +168,7 @@ class CachingCertificateFetcherCallSiteTest {
       )
     return mock(X509Certificate::class.java).also {
       `when`(it.getExtensionValue("1.3.6.1.5.5.7.1.1")).thenReturn(aia)
-      // Distinct principals, or the chaser reads the mock as a self-signed root and never fetches.
+      // Distinct principals, or the chaser takes the mock for a self-signed root and never fetches.
       `when`(it.subjectX500Principal).thenReturn(X500Principal("CN=leaf"))
       `when`(it.issuerX500Principal).thenReturn(X500Principal("CN=issuer"))
     }
@@ -193,9 +176,8 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test(timeout = 30_000)
   fun `a drip-feeding server is cut off by the chase deadline, not only the per-fetch caps`() {
-    // One byte every 100 ms: each read lands well inside the socket timeout, so per-read limits
-    // never fire, and the per-fetch read budget alone would let this run for its full 10 s. The
-    // walk's 1 s budget must cut the fetch *itself* — not merely decline to start the next one.
+    // A byte every 100 ms stays inside the read timeout, and the per-fetch read budget would allow
+    // 10 s: only the chase's 1 s budget cutting the fetch itself keeps this under 8 s.
     val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
     server = socket
     thread(isDaemon = true) {
@@ -205,7 +187,7 @@ class CachingCertificateFetcherCallSiteTest {
           val out = client.getOutputStream()
           out.write("HTTP/1.0 200 OK\r\n\r\n".toByteArray())
           out.flush()
-          repeat(300) { // 30 s of drip on offer; the client must not stay for it
+          repeat(300) {
             out.write(0)
             out.flush()
             Thread.sleep(100)
@@ -224,16 +206,13 @@ class CachingCertificateFetcherCallSiteTest {
     val elapsedMs = (System.nanoTime() - started) / 1_000_000
 
     assertEquals(listOf(cert), completed)
-    // Well past the 1 s budget to absorb scheduling noise, but far short of the 10 s the
-    // per-fetch read budget alone would have allowed.
     assertTrue("chase ran for $elapsedMs ms", elapsedMs < 8_000)
   }
 
   @Test(timeout = 30_000)
   fun `the chase deadline spans redirect hops, not just fetch starts`() {
-    // Every hop stalls 1 s and then redirects back to itself. Each hop sits comfortably inside
-    // the per-operation timeouts, so only a deadline threaded through the redirect recursion
-    // can end the fetch — without one it walks all 5 redirects, ~6 s here.
+    // Each hop stalls 1 s, inside every per-operation timeout, then redirects to itself; without
+    // the deadline the fetch walks all 5 redirects, about 6 s.
     val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
     server = socket
     thread(isDaemon = true) {
@@ -271,7 +250,6 @@ class CachingCertificateFetcherCallSiteTest {
     val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
     server = socket
     val accepted = CountDownLatch(1)
-    // Accept, then hold the connection open saying nothing at all.
     thread(isDaemon = true) {
       runCatching {
         val client = socket.accept()
@@ -314,8 +292,6 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test
   fun `the cache is bounded`() {
-    // Far more distinct URLs than MAX_CACHE_ENTRIES; nothing is cached here (every fetch fails),
-    // but the bound is what stops an attacker-chosen URL space from growing without limit.
     assertFalse(CachingCertificateFetcher.MAX_CACHE_ENTRIES <= 0)
     assertTrue(CachingCertificateFetcher.MAX_CACHE_ENTRIES <= 128)
   }

@@ -16,8 +16,6 @@ object RequestConfigBuilder {
 
   suspend fun buildHttpRequest(config: RequestConfig): HttpClient.HttpRequest =
     withContext(Dispatchers.Default) {
-
-      // Build final URL with query parameters
       val url = buildUrl(config)
 
       HttpClient.HttpRequest(
@@ -30,6 +28,9 @@ object RequestConfigBuilder {
       )
     }
 
+  /**
+   * Every non-null field of [override] wins, `path` included; headers and query merge key by key.
+   */
   fun mergeConfig(base: RequestConfig, override: RequestConfig): RequestConfig {
     return RequestConfig(
       path = override.path ?: base.path,
@@ -43,12 +44,7 @@ object RequestConfigBuilder {
     )
   }
 
-  /**
-   * Run-both resolve composition: the async-resolved config first, then the sync-resolved merged
-   * over it (sync winning). Returns null when neither produced a config. Extracted so the merge
-   * ordering is unit-testable without Nitro callbacks; used by [applyMediaResolve] and the artwork
-   * resolve in BrowserUrlResolution.
-   */
+  /** Merges the sync-resolved config over the async-resolved one; null when both are null. */
   fun composeResolved(asyncResolved: RequestConfig?, syncResolved: RequestConfig?): RequestConfig? {
     return when {
       asyncResolved == null -> syncResolved
@@ -58,18 +54,14 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Awaits an **async** config callback. It lowers to `Promise<Promise<RequestConfig>>` (bridge hop
-   * → JS promise), so it is a DOUBLE await. That depth is the bug-prone part (single-awaiting an
-   * async callback hands a `Promise` downstream — the original "empty config" bug), so it lives in
-   * exactly one place. Pairs with [awaitSyncConfig].
+   * An async config callback lowers to `Promise<Promise<RequestConfig>>` (the bridge hop, then the
+   * JS promise); awaiting it once hands a Promise downstream as the config.
    */
   suspend fun awaitAsyncConfig(promise: Promise<Promise<RequestConfig>>): RequestConfig =
     promise.await().await()
 
-  /** Awaits a **sync** config callback (`Promise<RequestConfig>` — a single await). */
   suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
 
-  /** Rebuilds a [MediaRequestConfig] with [c]'s request fields, preserving callbacks. */
   private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
     MediaRequestConfig(
       resolve = resolve,
@@ -94,11 +86,10 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Request-Config Layer application: a transform (async and/or sync) wins completely — with both
-   * set they run as a pipeline, async first, then sync, each replacing the running config —
-   * otherwise the override's static fields merge over the base, EXCEPT `path`, which is carried
-   * from the base (only a transform may change it; mirrors iOS `applyLayer` and the web stub). A
-   * thrown transform falls back to the base.
+   * Applies [override] as a Request-Config Layer (GLOSSARY.md): its transforms, async then sync,
+   * replace the config and its static fields are then ignored; without one, its static fields merge
+   * over [base] except `path`, which stays the base's. Mirrors iOS `applyLayer`. A transform that
+   * throws yields [base].
    */
   suspend fun mergeConfig(
     base: RequestConfig,
@@ -109,8 +100,6 @@ object RequestConfigBuilder {
       return mergeConfig(base, toRequestConfig(override)).copy(path = base.path)
     }
     return try {
-      // Async first, then sync (each replaces the running config). The bridge await
-      // depth is centralised in awaitAsync/SyncConfig.
       var result = base
       override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
       override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
@@ -122,9 +111,8 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Media-kind layer application. A media config's transform/transformSync have the same shape as a
-   * [TransformableRequestConfig]'s, so this delegates to the layer overload above and rewraps — the
-   * layer semantics live in one place.
+   * The layer rule of the [TransformableRequestConfig] overload, keeping [override]'s resolve
+   * callbacks.
    */
   suspend fun mergeConfig(
     base: RequestConfig,
@@ -148,20 +136,14 @@ object RequestConfigBuilder {
     )
 
   /**
-   * Applies the per-track `media.resolve(track)` callback as the final, most-specific layer over an
-   * already request+media-layered config. The callback receives the full Track — carrying any
-   * per-track `request` override (e.g. a strict-UA sentinel the consumer swaps for a clean
-   * User-Agent) — and returns the config whose fields win.
-   *
-   * No-op when the media config has no `resolve` callback (so the request/media layers stand). The
-   * callback may return its config synchronously (variant `first`) or via a Promise (`second`).
-   * Mirrors iOS resolveMediaTrackConfig + applyMediaResolveLayer.
+   * Merges the config `media.resolve(track)` and `resolveSync(track)` return over [layered], as the
+   * last layer: its non-null fields win, `path` included. Returns [layered] unchanged when there is
+   * no resolve callback or it throws. Mirrors iOS `resolveMediaTrackConfig`.
    */
   suspend fun applyMediaResolve(layered: MediaRequestConfig, track: Track): MediaRequestConfig {
     if (layered.resolve == null && layered.resolveSync == null) return layered
     val resolved: RequestConfig =
       try {
-        // Async first, then sync (merged, sync winning) — via the tested helper.
         val asyncResolved = layered.resolve?.let { awaitAsyncConfig(it.invoke(track)) }
         val syncResolved = layered.resolveSync?.let { awaitSyncConfig(it.invoke(track)) }
         composeResolved(asyncResolved, syncResolved) ?: return layered
@@ -169,7 +151,6 @@ object RequestConfigBuilder {
         Timber.e(e, "Failed to apply media.resolve, using layered config")
         return layered
       }
-    // Resolve wins: merge it over the layered config (override-wins on every field).
     val merged = mergeConfig(toRequestConfig(layered), resolved)
     return layered.withRequestFields(merged)
   }
@@ -220,7 +201,7 @@ object RequestConfigBuilder {
     return when {
       base == null -> override
       override == null -> base
-      else -> base + override // Override wins for duplicate keys
+      else -> base + override
     }
   }
 
@@ -231,7 +212,7 @@ object RequestConfigBuilder {
     return when {
       base == null -> override
       override == null -> base
-      else -> base + override // Override wins for duplicate keys
+      else -> base + override
     }
   }
 
@@ -239,10 +220,8 @@ object RequestConfigBuilder {
     val path = config.path ?: ""
     val baseUrl = config.baseUrl
 
-    // Use BrowserPathHelper for consistent URL building
     val url = BrowserPathHelper.buildUrl(baseUrl, path)
 
-    // Add query parameters if any
     val queryString =
       config.query?.let { query ->
         if (query.isNotEmpty()) {

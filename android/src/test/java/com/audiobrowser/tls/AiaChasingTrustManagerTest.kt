@@ -12,7 +12,7 @@ import org.junit.Test
 
 class AiaChasingTrustManagerTest {
 
-  /** Records every chain it is asked to validate; trusts only chains of [trustsChainOfSize]. */
+  /** Records the size of every chain it checks; trusts only chains of [trustsChainOfSize]. */
   private class FakeDelegate(private val trustsChainOfSize: Int) : X509TrustManager {
     val checkedChainSizes = mutableListOf<Int>()
 
@@ -38,8 +38,6 @@ class AiaChasingTrustManagerTest {
         if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
-    // Must not throw: the leaf-only chain is rejected, AIA fills in R13, the [leaf, R13] chain
-    // passes.
     tm.checkServerTrusted(arrayOf(leaf), "RSA")
 
     assertEquals(listOf(1, 2), delegate.checkedChainSizes)
@@ -53,7 +51,7 @@ class AiaChasingTrustManagerTest {
 
     assertThrows(CertificateException::class.java) { tm.checkServerTrusted(arrayOf(leaf), "RSA") }
 
-    // Only the original short chain was checked; no pointless re-validation of an unchanged chain.
+    // The unchanged chain is not checked a second time.
     assertEquals(listOf(1), delegate.checkedChainSizes)
   }
 
@@ -78,7 +76,7 @@ class AiaChasingTrustManagerTest {
 
   /**
    * Stands in for Android's `RootTrustManager` under a per-domain network security config: the
-   * hostname-aware overloads work, and the two-argument one refuses to answer at all.
+   * hostname-aware overloads work, and the two-argument one always throws.
    */
   private class FakeDomainConfigDelegate(private val trustsChainOfSize: Int) :
     X509ExtendedTrustManager() {
@@ -129,8 +127,7 @@ class AiaChasingTrustManagerTest {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val root = CertFixtures.cert("isrg-root-x1.pem")
-    // Trusts nothing — an expired chain, a hostname mismatch, a CT refusal all look like this:
-    // the delegate rejects a chain that is not missing anything.
+    // Rejects a chain that lacks nothing (as for an expired leaf): r13's issuer is an anchor.
     val delegate =
       object : X509TrustManager {
         override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
@@ -151,8 +148,6 @@ class AiaChasingTrustManagerTest {
       tm.checkServerTrusted(arrayOf(leaf, r13), "RSA")
     }
 
-    // Chasing could not have helped, so it must not have reached out to a host named by a
-    // certificate that just failed validation.
     assertEquals(0, fetches)
   }
 
@@ -160,7 +155,7 @@ class AiaChasingTrustManagerTest {
   fun `the original failure is kept when the completed chain fails too`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
-    // Trusts no chain of any size, so the retry fails as well.
+    // Trusts no chain, so the retry fails too.
     val delegate = FakeDelegate(trustsChainOfSize = -1)
     val tm = AiaChasingTrustManager(delegate) { _, _ -> listOf(r13) }
 
@@ -222,7 +217,7 @@ class AiaChasingTrustManagerTest {
     assertEquals(3, clientChecks)
   }
 
-  /** A delegate carrying the Android-specific hostname-aware method, as `RootTrustManager` does. */
+  /** Carries the Android-specific hostname-aware method, as `RootTrustManager` does. */
   @Suppress("unused")
   private class HostAwareDelegate(private val trustsChainOfSize: Int) : X509TrustManager {
     val hosts = mutableListOf<String>()
@@ -257,7 +252,7 @@ class AiaChasingTrustManagerTest {
         if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
-    // The method X509TrustManagerExtensions looks up reflectively must exist on the wrapper...
+    // X509TrustManagerExtensions looks this up reflectively and needs it to return a List.
     val method =
       tm.javaClass.getMethod(
         "checkServerTrusted",
@@ -266,10 +261,10 @@ class AiaChasingTrustManagerTest {
         String::class.java,
       )
 
-    // ...and must reach the delegate's own host-aware method, so pinning still sees the host.
     val accepted = tm.checkServerTrusted(arrayOf(leaf), "RSA", "ca.example")
 
     assertEquals(listOf(leaf, r13), accepted)
+    // Once for the presented chain, once for the completed one.
     assertEquals(listOf("ca.example", "ca.example"), delegate.hosts)
     assertEquals(List::class.java, method.returnType)
   }
@@ -278,9 +273,6 @@ class AiaChasingTrustManagerTest {
   fun `the host-aware signature falls back to the extended overloads when the delegate lacks it`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
-    // An extended delegate without the Android-specific String-host method, whose two-argument
-    // form refuses outright — the domain-config case. The fallback must route through its
-    // extended overloads, and must report the AIA-completed chain that actually validated.
     val delegate = FakeDomainConfigDelegate(trustsChainOfSize = 2)
     val tm =
       AiaChasingExtendedTrustManager(delegate) { url, _ ->
@@ -293,7 +285,7 @@ class AiaChasingTrustManagerTest {
     assertEquals(listOf(1, 2), delegate.hostnameAwareChecks)
   }
 
-  /** A host-aware delegate that validates fine but reports an empty accepted chain. */
+  /** Validates fine but reports an empty accepted chain. */
   @Suppress("unused")
   private class SilentHostAwareDelegate(private val trustsChainOfSize: Int) : X509TrustManager {
     fun checkServerTrusted(
@@ -325,8 +317,6 @@ class AiaChasingTrustManagerTest {
         if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
-    // An empty list from the delegate on success must not be passed through: the checked chain
-    // is what it accepted, and a pinning consumer given [] would fail a valid connection.
     val accepted = tm.checkServerTrusted(arrayOf(leaf), "RSA", "ca.example")
 
     assertEquals(listOf(leaf, r13), accepted)
@@ -342,9 +332,6 @@ class AiaChasingTrustManagerTest {
         if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
-    // The socket overload must reach the delegate's socket overload. Routing it through the
-    // two-argument form instead would throw the domain-config refusal, which is what a plain
-    // X509TrustManager wrapper causes for every connection in the process.
     tm.checkServerTrusted(arrayOf(leaf), "RSA", null as Socket?)
 
     assertEquals(listOf(1, 2), delegate.hostnameAwareChecks)
@@ -380,7 +367,7 @@ class AiaChasingTrustManagerTest {
   fun `the extended variant does not weaken trust`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
-    // Trusts nothing, whatever the chain.
+    // Trusts no chain.
     val delegate = FakeDomainConfigDelegate(trustsChainOfSize = -1)
     val tm = AiaChasingExtendedTrustManager(delegate) { _, _ -> listOf(r13) }
 
@@ -388,7 +375,6 @@ class AiaChasingTrustManagerTest {
       tm.checkServerTrusted(arrayOf(leaf), "RSA", null as Socket?)
     }
 
-    // The completed chain was offered to the delegate and refused, rather than assumed good.
     assertEquals(listOf(1, 2), delegate.hostnameAwareChecks)
   }
 }

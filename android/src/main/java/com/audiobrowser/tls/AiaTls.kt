@@ -9,46 +9,31 @@ import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
 
 /**
- * Builds TLS components that recover from servers which omit intermediate CA certificates, by
- * following the leaf's Authority Information Access (AIA) "CA Issuers" pointer — the behaviour
- * Apple's Secure Transport has by default but Android's lacks.
+ * TLS components that recover from servers omitting intermediate CA certificates, by fetching them
+ * from the AIA "CA Issuers" URL, as Apple's TLS stack does and Android's does not.
  *
- * The returned components wrap the platform default trust manager and only ever *add* a missing
- * intermediate before re-validating against the same system trust anchors, so they cannot weaken
- * trust: whatever the platform would have refused, it still refuses.
- *
- * What they are not is side-effect-free. Completing a chain means fetching the missing intermediate
- * from a URL named by the certificate that just failed to validate — so a rejected handshake can
- * make an outbound request to a host, port and path of that server's choosing, over cleartext, not
- * subject to the app's `NetworkSecurityPolicy`. That is inherent to AIA chasing and is what
- * browsers and Apple's Secure Transport do too, but it is a real consequence of installing this,
- * and it is bounded rather than absent: see [CachingCertificateFetcher] for the per-fetch limits
- * and [AiaCertChaser.MAX_CHASE_MILLIS] for the wall-clock ceiling on the whole chase. The fetch is
- * skipped when the chain already reaches one of the system anchors — an issuer-name test, so it
- * spares the common expired-leaf and hostname-mismatch failures, but a chain topping at a root the
- * device does not carry is still chased whatever its real problem was.
- *
- * Installing them as a process default (e.g.
- * `HttpsURLConnection.setDefaultSSLSocketFactory(AiaTls.socketFactory())`) applies that to every
- * connection in the process, and is the caller's decision.
+ * They wrap the platform default trust manager and re-validate against the same system anchors, so
+ * they never accept a chain the platform refuses. They are not free of side effects: a rejected
+ * handshake can make a cleartext request to a URL the server's certificate chooses, outside the
+ * app's `NetworkSecurityPolicy`. That is bounded by [CachingCertificateFetcher] per fetch and by
+ * [AiaCertChaser.MAX_CHASE_MILLIS] per chase, and installing these as the process default (e.g.
+ * `HttpsURLConnection.setDefaultSSLSocketFactory(AiaTls.socketFactory())`) applies it to every
+ * connection in the process.
  */
 object AiaTls {
 
   /**
-   * An [SSLSocketFactory] whose handshake validation chases missing intermediates via AIA. Intended
-   * to be built once (e.g. installed as the process default at startup); each call gets its own
-   * fetched-intermediate cache.
+   * An [SSLSocketFactory] that chases missing intermediates. Each call gets its own
+   * fetched-intermediate cache, so build it once.
    */
   fun socketFactory(): SSLSocketFactory =
     SSLContext.getInstance("TLS").apply { init(null, arrayOf(trustManager()), null) }.socketFactory
 
   /**
-   * An [X509TrustManager] wrapping the platform default with AIA intermediate chasing.
+   * The platform default trust manager with AIA chasing, with its own fetched-intermediate cache.
    *
-   * On API 24+ this is an [X509ExtendedTrustManager]. That is not cosmetic: the platform's default
-   * trust manager rejects the two-argument `checkServerTrusted` outright once the app declares any
-   * `<domain-config>`, so a plain wrapper would break every HTTPS connection in the process. See
-   * [AiaChasingExtendedTrustManager].
+   * On API 24+ it is an [X509ExtendedTrustManager]; see [AiaChasingExtendedTrustManager] for why a
+   * plain wrapper would fail every HTTPS connection there.
    */
   fun trustManager(): X509TrustManager {
     val fetcher = CachingCertificateFetcher()
