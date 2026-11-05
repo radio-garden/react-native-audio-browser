@@ -2,30 +2,13 @@
   import NitroModules
 #endif
 
-/// The one place style declarations resolve to effective values (ADR 0011).
-///
-/// Two mechanisms, deliberately distinct:
-/// - **Inherited item properties** resolve `track ?? section ?? page`,
-///   per property — a track's own declaration wins over the blocks that
-///   contain it.
-/// - **Container properties and the positional `display`** resolve by scope
-///   override: `section ?? page` — the page declares for its whole scope, a
-///   section overrides for its own children. `display` is never inherited
-///   item-to-container: each holder describes its own children, and a
-///   track's `display` is the promise for the page *it* opens, not its
-///   rendering inside this section.
-///
-/// Every key of `SectionStyle` must be read by `sectionStyle(section:page:)`
-/// and every inherited key of `TrackStyle` by `trackStyle(track:section:)` —
-/// Nitro flattens the spec's `extends`, so `src/style-resolution.test.ts`
-/// enforces this completeness, not the type system.
+/// Resolves style declarations to effective values (ADR 0011). Nitro flattens the spec's
+/// `extends`, so nothing in the types makes these merges read a new style key:
+/// `src/style-resolution.test.ts` does.
 enum StyleResolver {
-  /// Folds the page block into a section's block: every `SectionStyle` key
-  /// resolves `section ?? page`. The result is the section's effective
-  /// block; item resolution then only needs `track ?? section`.
+  /// A section's effective block: each key is the section's own value, else the page's,
+  /// `display` included.
   static func sectionStyle(section: SectionStyle?, page: SectionStyle?) -> SectionStyle {
-    // Argument order is the generated init's (own properties before inherited
-    // ones — Nitro flattens `extends` own-props-first); the stub mirrors it.
     SectionStyle(
       gridWrap: section?.gridWrap ?? page?.gridWrap,
       gridTile: section?.gridTile ?? page?.gridTile,
@@ -38,18 +21,18 @@ enum StyleResolver {
     )
   }
 
-  /// Resolves a track's effective item properties against its (page-folded)
-  /// section block.
+  /// A track's effective item properties: each key is the track's own value, else its
+  /// section's. Pass the section block `sectionStyle` returned, so the page's values reach
+  /// the track. `display` is always nil.
   static func trackStyle(track: TrackStyle?, section: SectionStyle?) -> TrackStyle {
     TrackStyle(
-      // Positional deny-list: `display` is never inherited onto an item —
-      // resolved nil, so no renderer can mistake the handle's page promise
-      // for this item's own layout.
+      // A track's `display` describes the page it opens, not its own layout here, so it is
+      // never inherited onto an item.
       display: nil,
       artworkRendering: track?.artworkRendering ?? section?.artworkRendering,
       imageShape: track?.imageShape ?? section?.imageShape,
-      // `'none'` resolves like any value — it is the renderer that treats it
-      // as "no accessory, derived behavior" (the inheritance escape).
+      // `'none'` stays a value here; the renderer reads it as no accessory. As nil it would
+      // inherit the section's symbol.
       accessorySymbol: track?.accessorySymbol ?? section?.accessorySymbol,
       cardTint: track?.cardTint ?? section?.cardTint,
       cardImage: track?.cardImage ?? section?.cardImage,

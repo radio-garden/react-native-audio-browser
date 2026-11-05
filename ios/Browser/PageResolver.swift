@@ -2,9 +2,8 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Turns a path into its page: matches the route, resolves its source (callback, config or
-/// static content), then normalizes and stamps the result (contextual paths, browse-time
-/// artwork). Also resolves the tabs and search routes.
+/// Turns a path into its page: matches the route, resolves its source, then stamps contextual
+/// paths and browse-time artwork. Also resolves the tabs and search routes.
 @MainActor
 final class PageResolver {
   let logger = Logger(subsystem: "com.audiobrowser", category: "PageResolver")
@@ -18,28 +17,22 @@ final class PageResolver {
     self.requests = requests
   }
 
-  /// The page at `path`, uncached and without favorites hydrated.
+  /// The page at `path`, uncached and without favorites hydrated. A path no route matches is
+  /// fetched through the request and browse layers. The result carries `sections`, never
+  /// `children` (ADR 0010).
   func resolve(_ path: String) async throws -> ResolvedTrack {
-    // Match an explicit route (or the '*' default). With no match, fall back to
-    // the implicit default: fetch the path via the request + browse config.
     let routeEntry = config.routes.flatMap { SimpleRouter.browseRoute(for: path, in: $0) }
 
     let resolvedTrack: ResolvedTrack = if let (entry, routeMatch) = routeEntry {
       try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
     } else {
-      // Implicit default — no route config, just request → browse → fetch path.
       try await requests.fetchPage(
         nil, path: path, params: ["path": path],
       )
     }
 
-    // Normalize to the canonical sectioned shape (children sugar → one
-    // untitled section — ADR 0010), then validate and transform. The output
-    // never carries `children`.
     if let sections = resolvedTrack.normalizedSections {
-      // Dev diagnostic (ADR 0011) — before the blocks are folded, while each
-      // level is still attributable. Every page passes here whatever its
-      // source, and only on a cache miss. No-op outside debug builds.
+      // Before the sections transform, while each level is still attributable (ADR 0011).
       InertStyleDiagnostic.warn(path: path, pageStyle: resolvedTrack.style, sections: sections)
       let transformed = try await transformSections(
         sections, parentPath: path, routeEntry: routeEntry?.0,
@@ -50,15 +43,15 @@ final class PageResolver {
     return resolvedTrack
   }
 
-  /// The tabs: the `__tabs__` route's page, flattened. Nil when there is no such route.
+  /// The `__tabs__` route's page, flattened. Nil when there is no such route.
   func tabs() async throws -> [Track]? {
     guard let tabsEntry = config.routes?.first(where: { $0.path == SimpleRouter.tabsRoutePath }) else { return nil }
     let resolved = try await resolveRouteEntry(tabsEntry, path: SimpleRouter.tabsRoutePath, params: [:])
-    // Tabs are a flat list, not a page: a sectioned tabs source flattens.
     return resolved.flattenedChildren ?? []
   }
 
-  /// The `__search__` route's results for `params`, unhydrated.
+  /// The `__search__` route's results for `params`, unhydrated. Throws `contentNotFound` when
+  /// that route is missing or has neither a callback nor a config.
   func search(_ params: SearchParams) async throws -> [Track] {
     guard let searchEntry = config.routes?.first(where: { $0.path == SimpleRouter.searchRoutePath }) else {
       throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
@@ -79,13 +72,10 @@ final class PageResolver {
     path: String,
     params: [String: String],
   ) async throws -> ResolvedTrack {
-    // Priority: callback > config > static
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      // BrowserSourceCallback may return a BrowseResult synchronously or via a
-      // Promise. Nitro flattens (ResolvedTrack | BrowseError) | Promise<BrowseResult>
-      // into a 3-arm variant: sync track, sync error, or a Promise resolving to a
-      // BrowseResult (which is itself a ResolvedTrack | BrowseError variant).
+      // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms:
+      // a sync track, a sync error, or a promise of the same two.
       switch try await callback(callbackParam).await() {
       case let .first(resolvedTrack):
         return resolvedTrack
@@ -116,8 +106,8 @@ final class PageResolver {
 
   // MARK: - Stamping
 
-  /// `sections` stamped with contextual paths, every track's browse-time artwork (no size
-  /// context) resolved at once.
+  /// `sections` with contextual paths stamped and every track's browse-time artwork (no size
+  /// context) resolved, all tracks at once.
   private func transformSections(
     _ sections: [Section],
     parentPath: String,

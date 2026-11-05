@@ -1,6 +1,5 @@
 import Foundation
 
-/// Custom browser errors.
 enum BrowserError: LocalizedError {
   case contentNotFound(path: String)
   case invalidConfiguration(String)

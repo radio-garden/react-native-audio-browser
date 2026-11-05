@@ -3,18 +3,8 @@ import Foundation
   import NitroModules
 #endif
 
-/// JSON serializable models for parsing API responses.
-/// These will be converted to Nitro types after parsing.
-
-/// A track's `artwork` on the wire: a URL string, or `{ light, dark }`.
-///
-/// These models are the browse-response format as well as the persistence
-/// format, so this is what decides whether a payload parses at all — a plain
-/// `String?` here rejects the whole page with a type mismatch, however tolerant
-/// the layers above it are.
-///
-/// Encodes back to whichever shape it came from, so a persisted snapshot
-/// round-trips, and one written before pairs existed still decodes as `.single`.
+/// A track's `artwork` on the wire: a URL string, or `{ light, dark }`. Encodes back to the
+/// shape it came from, so a persisted snapshot round-trips.
 enum JsonArtwork: Codable, Equatable {
   case single(String)
   case variants(light: String, dark: String)
@@ -44,7 +34,6 @@ enum JsonArtwork: Codable, Equatable {
 }
 
 extension JsonArtwork {
-  /// The Nitro union this maps onto, one case per case.
   func toNitro() -> Variant_String_ArtworkVariants {
     switch self {
     case let .single(url): .first(url)
@@ -52,7 +41,6 @@ extension JsonArtwork {
     }
   }
 
-  /// Snapshot a live artwork value back to its JSON model.
   init?(_ artwork: Variant_String_ArtworkVariants?) {
     switch artwork {
     case nil: return nil
@@ -62,18 +50,11 @@ extension JsonArtwork {
   }
 }
 
-/// A style declaration block on the wire (ADR 0011):
-/// `{ display?, gridWrap?, artworkRendering? }`.
+/// A style block on the wire (ADR 0011), for both the track and the section position.
 ///
-/// One JSON model serves both the `TrackStyle` and `SectionStyle` positions —
-/// keys that don't exist at the narrower position simply don't map.
-///
-/// Decoding is tolerant by design: a stale payload — the retired string
-/// styles, a wrong-typed field, an unknown enum value — must degrade to "no
-/// declaration", never fail the page or the persisted playback state (the
-/// decoders above this are strict, so a throw here would kill the whole
-/// payload). `init(from:)` therefore never throws, and unknown enum values
-/// map to nil at `toNitro` time.
+/// Decoding never throws: a non-object value, a wrong-typed field or an unknown enum value
+/// degrades to no declaration, because the decoders above are strict and a throw here fails
+/// the whole page or the persisted playback state.
 struct JsonStyle: Codable, Equatable {
   var display: String? = nil
   var gridWrap: Bool? = nil
@@ -87,8 +68,6 @@ struct JsonStyle: Codable, Equatable {
 
 extension JsonStyle {
   init(from decoder: Decoder) throws {
-    // A non-object value (the retired `style: 'grid'` string) decodes as an
-    // empty block rather than failing the parent.
     guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
       self.init()
       return
@@ -107,12 +86,8 @@ extension JsonStyle {
 }
 
 extension JsonStyle {
-  /// The wire strings map to Nitro enums here, tolerantly: an unknown value
-  /// (a future `display` mode, say) is no declaration, not an error. A block
-  /// that resolves to no declarations at all — `{}`, the tolerant decoder's
-  /// empty result for the retired string vocabulary, or all-unknown values —
-  /// maps to nil, so "no declaration" has one shape on every platform
-  /// (Android's lenient mapper makes the same collapse).
+  /// Maps the wire strings case-insensitively; an unknown value or an empty string is no
+  /// declaration, and a block left with none is nil, as Android's mapper does.
   func toTrackStyle() -> TrackStyle? {
     let declarations = trackDeclarations
     return Self.declaresAnything(declarations) ? declarations : nil
@@ -122,8 +97,6 @@ extension JsonStyle {
     let declarations = trackDeclarations
     let gridTile = gridTile.flatMap { GridTile(fromString: $0.lowercased()) }
     guard Self.declaresAnything(declarations) || gridWrap != nil || gridTile != nil else { return nil }
-    // Argument order is the generated init's (own properties before
-    // inherited ones — Nitro flattens `extends` own-props-first).
     return SectionStyle(
       gridWrap: gridWrap,
       gridTile: gridTile,
@@ -136,13 +109,12 @@ extension JsonStyle {
     )
   }
 
-  /// The declarations a section shares with a track, each nil when absent or unknown.
   private var trackDeclarations: TrackStyle {
     TrackStyle(
       display: display.flatMap { StyleDisplay(fromString: $0.lowercased()) },
       artworkRendering: artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) },
       imageShape: imageShape.flatMap { ImageShape(fromString: $0.lowercased()) },
-      // The 'none' sentinel is a legitimate value; only emptiness collapses.
+      // 'none' is a legitimate symbol; only an empty string collapses.
       accessorySymbol: accessorySymbol?.isEmpty == false ? accessorySymbol : nil,
       cardTint: cardTint?.isEmpty == false ? cardTint : nil,
       cardImage: cardImage.flatMap { CardImage(fromString: $0.lowercased()) },
@@ -154,9 +126,7 @@ extension JsonStyle {
       || style.accessorySymbol != nil || style.cardTint != nil || style.cardImage != nil
   }
 
-  /// Snapshot a live track block back to its JSON model (for persistence).
-  /// An all-nil block snapshots as no block — the decoders collapse it to
-  /// "no declaration" anyway, so never persist the distinction.
+  /// The persistable form of a live block; nil when it declares nothing.
   init?(_ style: TrackStyle?) {
     guard let style, Self.declaresAnything(style) else { return nil }
     self.init(
@@ -202,9 +172,6 @@ extension JsonStyle {
   }
 }
 
-/// JSON model for a page section (ADR 0010). Legacy `groupTitle`/`imageRow`
-/// keys in payloads are simply unknown to these models and decode as
-/// ignored dead weight.
 struct JsonSection: Codable {
   var title: String? = nil
   var style: JsonStyle? = nil
@@ -212,7 +179,6 @@ struct JsonSection: Codable {
   var children: [JsonTrack]
 }
 
-/// JSON model for per-track HTTP request configuration.
 struct JsonTrackRequest: Codable {
   let userAgent: String?
   let headers: [String: String]?
@@ -223,7 +189,6 @@ struct JsonTrackRequest: Codable {
   }
 }
 
-/// JSON model for resolved track (container with children).
 struct JsonResolvedTrack: Codable {
   var id: String? = nil
   var path: String
@@ -246,7 +211,6 @@ struct JsonResolvedTrack: Codable {
   var carPlaySiriListButton: String? = nil
 }
 
-/// JSON model for individual tracks.
 struct JsonTrack: Codable {
   var id: String? = nil
   var path: String? = nil
@@ -270,17 +234,13 @@ struct JsonTrack: Codable {
 // MARK: - Snapshot live Nitro types back to JSON models (for persistence)
 
 extension JsonTrackRequest {
-  /// Snapshot a live TrackRequest back to its JSON model.
   init(from request: TrackRequest) {
     self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
   }
 }
 
 extension JsonTrack {
-  /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
-  /// The track's own declared style block and `disabled` persist (ADR 0011);
-  /// section/page-inherited values are never stamped onto tracks and
-  /// re-resolve at render, exactly as they do live.
+  /// Snapshots the persistable subset of a live Track. Its style is the track's own block; section- and page-inherited style re-resolves at render.
   init(from track: Track) {
     self.init(
       id: track.id,
