@@ -2,12 +2,24 @@
 
 **Status:** accepted
 
-Siri media intents (`INPlayMediaIntent`, and later `INAddMediaIntent` / `INUpdateMediaAffinityIntent`) and consumer-authored App Intents are handled in the **main app process** — via `application(_:handlerForIntent:)` and `AppIntent.perform()` — never in an Intents app extension. Both entry points funnel through one native path: resolve → queue → play → surface Now Playing, guarded by the existing player-readiness gate. The consumer supplies the intent→tracks mapping through a `resolvePlayMedia` config callback (cross-platform) and authors their own App Shortcuts against native `AudioBrowserCommand` primitives; the library never ships pre-baked shortcuts.
+Siri media intents (`INPlayMediaIntent`, and later `INAddMediaIntent` / `INUpdateMediaAffinityIntent`) and consumer-authored App Intents are handled in the **main app process**, via `application(_:handlerFor:)` (returning `RNABAudioBrowser.handler(for:)`) and `AppIntent.perform()`. They are never handled in an Intents app extension.
+
+Both entry points funnel through one native path: resolve → queue → play → surface Now Playing, guarded by the existing player-readiness gate.
+
+The consumer supplies the intent→tracks mapping through a `resolvePlayMedia` config callback (cross-platform). They author their own App Shortcuts against native `AudioBrowserCommand` primitives; the library never ships pre-baked shortcuts.
 
 ## Considered options
 
-- **An Intents app extension** (the shape of Apple's `ManagingAudioWithSiriKit` sample: resolve in the extension, return `.handleInApp` to the app). Rejected: an extension is a separate, memory-limited, short-lived process that cannot share the React Native runtime or live player state, so its resolve step would need a native reimplementation or a second RN runtime booted per invocation. iOS 14+ in-app handling reuses the already-configured runtime for free. (RN _can_ run in extensions, but it's memory-gated — per React Native's docs, unreliable near the 16 MB Today-widget limit, only "more viable" at the ~120 MB share-extension limit.)
-- **Inlining intent handling in the consumer app's native code.** Rejected: the player, queue, search, readiness gate and CarPlay Now-Playing surfacing are library-owned and not exposed to the app; the app would have to expose or reimplement them — strictly more work than owning the handling in the library, where the intent entry point already lives.
+- **An Intents app extension** (the shape of Apple's `ManagingAudioWithSiriKit` sample: resolve in the extension, return `.handleInApp` to the app). Rejected: an extension is a separate, memory-limited, short-lived process. It cannot share the React Native runtime or live player state.
+
+  Its resolve step would need a native reimplementation or a second RN runtime booted per invocation. iOS 14+ in-app handling reuses the already-configured runtime for free.
+
+  RN _can_ run in extensions, but React Native's docs call it memory-gated: unreliable near the 16 MB Today-widget limit, only "more viable" at the ~120 MB share-extension limit.
+
+- **Inlining intent handling in the consumer app's native code.** Rejected: the player, queue, search, readiness gate and CarPlay Now-Playing surfacing are library-owned and not exposed to the app.
+
+  The app would have to expose or reimplement them. That is more work than owning the handling in the library, where the intent entry point already lives.
+
 - **Library-shipped App Shortcuts.** Rejected: App Shortcut phrases and entities are compile-time and app-specific (the app name, the consumer's vocabulary). The library exposes command primitives instead, and the consumer writes the ~15-line `AppIntent` / `AppShortcutsProvider`.
 
 ## Consequences
@@ -15,5 +27,16 @@ Siri media intents (`INPlayMediaIntent`, and later `INAddMediaIntent` / `INUpdat
 - **No resolve-phase disambiguation.** Without an extension there is no `INMediaItem` resolution for Siri to speak or disambiguate; the funnel plays the consumer-resolved tracks and returns `.success`. Acceptable for "play the result" audio UX.
 - **One shared timeout budget.** The readiness gate plus `resolvePlayMedia` must complete inside the assistant's ~10s window. The funnel enforces a single hard budget (not additive waits) and fails natively rather than letting the assistant hang.
 - **Non-playback intents need a background-task assertion.** `onAddMedia` / `onUpdateAffinity` don't start an audio session, so a backgrounded app may be suspended before the JS callback's network write completes; their native handling takes a `beginBackgroundTask` assertion.
-- **Cold-start resume needs native persistence.** A no-criteria "resume" intent on a cold launch has nothing to resume. iOS gains a `PlaybackStateStore` mirroring the Android contract (persist track / position / repeat / shuffle / speed; restore on the resume path) so the last session is restorable without JS. No browse path is involved on either platform: Android resumption is served by media3's `onPlaybackResumption`, iOS by the resume path reading the store directly.
+- **Cold-start resume needs native persistence.** A no-criteria "resume" intent on a cold launch has nothing to resume. iOS gains a `PlaybackPersistence` mirroring the Android `PlaybackStateStore` contract (persist track / position / repeat / shuffle / speed; restore on the resume path), so the last session is restorable without JS.
+
+  No recents browse node is involved. Android resumption is served by media3's `onPlaybackResumption`, iOS by the resume path reading `PlaybackPersistence`. Both rebuild the queue from the persisted track's contextual path.
+
 - **`AppIntent.perform()` calls the player directly**, not a deep link — avoiding the React Native "runtime not ready" lost-deep-link race that deep-link-based App Intents hit.
+
+**Since then (November 2026):** only the SiriKit half of this was built. What the code does now:
+
+- **SiriKit only.** `RNABAudioBrowser.handler(for:)` vends handlers for `INPlayMediaIntent`, `INAddMediaIntent` and `INUpdateMediaAffinityIntent` (`ios/CarPlay/IntentHandlers.swift`). There are no App Intents, no `AppIntent.perform()` path, no `AudioBrowserCommand` primitives and no `resolvePlayMedia` callback.
+- **Play-media resolves through the configured `search` source.** After the readiness wait, a non-resume intent goes through the browse gate (`browseGate.decide`) and then `BrowserManager.searchPlayable` (`ios/CarPlay/MediaIntentPlayback.swift`). A resume is not gated. It plays the current track, or restores the `PlaybackPersistence` session and rebuilds the queue from the track's contextual path.
+- **Only the readiness wait is bounded**, at 8 seconds. After it, the gate decision, the search and the resume's queue expansion have no timeout of their own and there is no overall deadline, so the waits add up.
+- **The favorite intents act natively on the playing track.** `FavoriteIntentHandler` calls `favoriteActiveTrack` on the main actor, the same path as the CarPlay favorite button, and completes at once. The change reaches JS as `onFavoriteChanged`, where the consumer persists it. No background-task assertion is taken.
+- **Resuming the stored session is not JS-free.** On iOS, `MediaIntentPlayback` waits up to about 8 s for `setupPlayer()` and `configureBrowser()` before it reads `PlaybackPersistence`. On Android, `onPlaybackResumption` waits up to 10 s for the browser to register. Both expand the queue through the configured browser.

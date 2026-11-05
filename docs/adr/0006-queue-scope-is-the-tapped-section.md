@@ -1,11 +1,17 @@
 # Queue scope is the tapped section
 
+**Status:** accepted
+
 Selecting a playable track from a browse page expands the queue from the
 _section_ the track sits in — its contiguous `groupTitle` run, or the image
-row it belongs to — not from the page's full children. A page aggregating
+row it belongs to — not from the page's full children.
+
+A page aggregating
 several sections (regional picks below a city's stations, an image row above
 a list) must not leak next/previous across them: the playback context a
-listener expects is the list they tapped in. Image-row items are stamped
+listener expects is the list they tapped in.
+
+Image-row items are stamped
 with contextual URLs at transform time like any list row, so thumbnail taps
 flow through the same expansion instead of loading a queue of one.
 
@@ -16,18 +22,19 @@ flow through the same expansion instead of loading a queue of one.
 - **A per-route/per-section queue policy knob** — deferred until a surface
   actually varies (`singleTrack` already covers the opt-out extreme); its
   natural home is a `Section` property in the sectioned-model migration
-  (issue #93), not a route-keyed setting on the flat model.
+  (issue [#93](https://github.com/radio-garden/react-native-audio-browser/issues/93)),
+  not a route-keyed setting on the flat model.
 
 ## Consequences
 
-- A track id that no longer appears on the page aborts the expansion; the
-  caller falls back to the stored single track. Both platforms agree on this
-  now — iOS previously defaulted a vanished id to index 0, which could
-  resume a _different_ station after the list changed (masked on recency
-  lists, where the last-played track is always first).
+- A track id missing from the page aborts the expansion; the caller falls
+  back to the stored single track. Both platforms agree on this.
+- iOS previously defaulted a vanished id to index 0, which could resume a
+  _different_ station after the list changed (masked on recency lists, where
+  the last-played track is always first).
 - Section identity is still derived from `groupTitle` adjacency; #93 would
   make the derivation structural.
 
-_Amended by ADR 0010: sections are now structural (`Section`), so the
-`groupTitle`-run derivation this ADR describes no longer exists — the
-decision itself (queue scope is the tapped section) stands._
+_Amended by ADR 0010: sections are structural (`Section`), not derived
+from `groupTitle` runs as this ADR describes. The decision itself (queue
+scope is the tapped section) stands._
