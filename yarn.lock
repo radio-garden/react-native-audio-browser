@@ -4588,6 +4588,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native/assets-registry@npm:0.88.0":
+  version: 0.88.0
+  resolution: "@react-native/assets-registry@npm:0.88.0"
+  peerDependencies:
+    react-native: "*"
+  checksum: 10/5bf5615ecca42495498fa6e79a6e10584e261b3f109c13dce4f67937fc32b4d9d5963c0893a25c6a71e4cd9abdb61c3a5915a8af4788f827721cbc58fa0298bb
+  languageName: node
+  linkType: hard
+
 "@react-native/babel-plugin-codegen@npm:0.81.5":
   version: 0.81.5
   resolution: "@react-native/babel-plugin-codegen@npm:0.81.5"
@@ -10239,6 +10248,7 @@ __metadata:
     "@react-native-community/cli-platform-ios": "npm:20.2.0"
     "@react-native-community/slider": "npm:^5.1.1"
     "@react-native-vector-icons/fontawesome6": "npm:^12.0.1"
+    "@react-native/assets-registry": "npm:0.88.0"
     "@react-native/babel-preset": "npm:0.88.0"
     "@react-native/metro-config": "npm:0.88.0"
     "@react-native/new-app-screen": "npm:0.88.0"
