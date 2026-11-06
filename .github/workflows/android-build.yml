@@ -7,9 +7,11 @@ on:
   push:
     branches:
       - main
+      - next
     paths:
       - '.github/workflows/android-build.yml'
-      - 'apps/example-native/android/**'
+      - 'apps/example-native/**'
+      - 'src/**'
       - 'nitrogen/generated/shared/**'
       - 'nitrogen/generated/android/**'
       - 'cpp/**'
@@ -20,7 +22,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/android-build.yml'
-      - 'apps/example-native/android/**'
+      - 'apps/example-native/**'
+      - 'src/**'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/android/**'
       - 'cpp/**'
@@ -68,9 +71,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Gradle build
+      - name: Build debug
         working-directory: apps/example-native/android
         run: ./gradlew assembleDebug --no-daemon --build-cache
+
+      - name: Build release
+        working-directory: apps/example-native/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --build-cache
 
       - name: Stop Gradle daemon
         working-directory: apps/example-native/android
