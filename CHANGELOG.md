@@ -1,3 +1,9 @@
+## [0.2.0-next.56](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.55...v0.2.0-next.56) (2026-11-06)
+
+### Bug Fixes
+
+* **example:** build the Android release variant on React Native 0.88 ([d59d829](https://github.com/radio-garden/react-native-audio-browser/commit/d59d8299533a0d0fd2c8f09ad8a8fef57d7ed6ed)), closes [#218](https://github.com/radio-garden/react-native-audio-browser/issues/218)
+
 ## [0.2.0-next.55](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.54...v0.2.0-next.55) (2026-11-05)
 
 ### Documentation
