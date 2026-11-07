@@ -1,3 +1,10 @@
+## [0.2.0-next.60](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.59...v0.2.0-next.60) (2026-11-07)
+
+### Bug Fixes
+
+* **android:** drop a browse that outlives invalidateAllContent, and re-resolve the tabs ([73fca08](https://github.com/radio-garden/react-native-audio-browser/commit/73fca08e85e7e8f05cbef730bdbe36d1c02efbbe))
+* **ios:** drop a browse that outlives invalidateAll ([6b7bd36](https://github.com/radio-garden/react-native-audio-browser/commit/6b7bd3621f3c3dc089db786df6bd2e76138f6830))
+
 ## [0.2.0-next.59](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.58...v0.2.0-next.59) (2026-11-07)
 
 ### Bug Fixes
