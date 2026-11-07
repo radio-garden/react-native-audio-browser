@@ -873,11 +873,10 @@ final class Player {
   /// connectivity returns re-establishes a stalled stream. AVPlayer doesn't reliably report a
   /// live stream's mid-stream drop as a failure: it waits with no error, so the retry loop never
   /// engages. Only while stalled (.buffering) with play intent, so a pause or a retry that gave up
-  /// isn't resumed; and not while the retry loop is itself waiting for the network, which owns
-  /// that reload.
+  /// isn't resumed; and not while a retry is pending, which owns that reload.
   func networkStatusDidChange(isOnline: Bool) {
     engine.renderNowPlaying()
-    guard isOnline, playWhenReady, state == .buffering, !retry.isWaitingForNetwork else { return }
+    guard isOnline, playWhenReady, state == .buffering, retry.pendingTask == nil else { return }
     logger.info("Connectivity restored while stalled — re-resolving to reconnect")
     reloadResolving(startFromCurrentTime: true)
   }

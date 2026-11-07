@@ -78,9 +78,6 @@ final class RetryLoop {
 
   /// The retry in flight; session release waits while there is one.
   private(set) var pendingTask: Task<Void, Never>?
-  /// True only while a scheduled retry waits for connectivity, so a stall-driven reconnect can
-  /// defer to it rather than load twice.
-  private(set) var isWaitingForNetwork = false
   private(set) var attempts = 0
 
   /// Continuous audible playback after which the budgets refill (Android's HEALTHY_PLAYBACK_MS).
@@ -171,7 +168,6 @@ final class RetryLoop {
     attempts = 0
     firstRetryTime = nil
     firstOnlineRetryTime = nil
-    isWaitingForNetwork = false
   }
 
   // MARK: - Healthy Playback
@@ -269,8 +265,6 @@ final class RetryLoop {
   }
 
   private func waitForNetworkRestored(monitor: any NetworkStatusProviding) async -> Bool {
-    isWaitingForNetwork = true
-    defer { isWaitingForNetwork = false }
     while !monitor.isOnline {
       guard await (try? sleep(0.5)) != nil else { return false }
     }
