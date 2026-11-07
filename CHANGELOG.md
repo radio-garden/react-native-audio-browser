@@ -1,3 +1,9 @@
+## [0.2.0-next.57](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.56...v0.2.0-next.57) (2026-11-07)
+
+### Bug Fixes
+
+* **android:** serve a car browse only once the browser is configured ([2660962](https://github.com/radio-garden/react-native-audio-browser/commit/2660962a88996941dd00522679b5a5e652dd0537))
+
 ## [0.2.0-next.56](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.55...v0.2.0-next.56) (2026-11-06)
 
 ### Bug Fixes
