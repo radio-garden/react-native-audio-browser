@@ -488,8 +488,8 @@ export class NativeAudioBrowser
     }
 
     await this.handleLoad(track, result.tracks, result.startIndex, () => {
-      // setQueue stops playback, so start it explicitly: selecting a track
-      // is an intent to play (matches the skip-to-existing-queue-track path).
+      // Selecting a track is an intent to play, even from paused (matches the
+      // skip-to-existing-queue-track path).
       this.setQueue(result.tracks, result.startIndex)
       this.play()
     })
@@ -1059,7 +1059,14 @@ export class NativeAudioBrowser
 
   // MARK: Queue management
   setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void {
-    this.stop()
+    // Before the queue is touched, so a call before `setupPlayer()` throws
+    // rather than half-applying.
+    this.requireElement()
+    const hasStart =
+      startIndex !== undefined && tracks[startIndex] !== undefined
+    // Loading the start track supersedes the old one; a stop would drop the
+    // play intent, which native keeps.
+    if (!hasStart) this.stop()
     // Clear stale references from previous queue
     this.current = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
@@ -1081,9 +1088,7 @@ export class NativeAudioBrowser
     )
     this.emitQueueChanged()
 
-    if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
-      this.skip(startIndex, startPosition)
-    }
+    if (hasStart) this.skip(startIndex, startPosition)
   }
 
   getQueue(): Track[] {

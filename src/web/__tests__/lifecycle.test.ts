@@ -342,4 +342,25 @@ describe('parity — what native emits for the same flow', () => {
 
     expect(h.browser.getPlayback().state).toBe('loading')
   })
+
+  /**
+   * Android's `setQueue` replaces the media items and prepares again, leaving
+   * `playWhenReady` alone, so the new queue plays and no `stopped` is reported
+   * on the way.
+   */
+  it('keeps playing across a setQueue', async () => {
+    h.browser.setPlayWhenReady(true)
+    h.browser.load(trackA)
+    await h.flush()
+    await h.completeLoad()
+    h.clear()
+
+    h.browser.setQueue([trackA, trackB], 1)
+    await h.flush()
+    await h.completeLoad()
+
+    expect(h.recorded).not.toContain('playWhenReady:false')
+    expect(h.recorded).not.toContain('state:stopped')
+    expect(h.browser.getPlayback().state).toBe('playing')
+  })
 })
