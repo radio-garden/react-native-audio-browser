@@ -1,3 +1,9 @@
+## [0.2.0-next.58](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.57...v0.2.0-next.58) (2026-11-07)
+
+### Bug Fixes
+
+* **android:** keep a recovered load's budget, and stay stopped when the network returns ([f75b843](https://github.com/radio-garden/react-native-audio-browser/commit/f75b8436aab2a7c6ef413eb9dfd69e3af7c6188c))
+
 ## [0.2.0-next.57](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.56...v0.2.0-next.57) (2026-11-07)
 
 ### Bug Fixes
