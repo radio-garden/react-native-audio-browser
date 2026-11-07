@@ -55,6 +55,8 @@ final class Player {
     var primedNowPlaying = false
     /// One of this load's items is in the engine; until then it reports the previous one's position.
     var itemPrepared = false
+    /// A pause cancelled this load's retry, leaving the failed item for the next play to replace.
+    var reloadOnPlay = false
 
     mutating func claimNowPlayingPrime() -> Bool {
       guard !primedNowPlaying else { return false }
@@ -169,16 +171,23 @@ final class Player {
     // A play during an interruption owns the intent: a later pause must not be auto-resumed.
     if newValue { shouldResumeAfterInterruption = false }
 
-    // A terminal state has no item to play, or one parked at its end: reload, re-resolving a URL
-    // that may have expired since. Only .error resumes from the last position.
-    if newValue, state == .error || state == .stopped || state == .ended {
-      reloadResolving(startFromCurrentTime: state == .error)
+    // A terminal state or a cancelled retry has no item to play, or one parked at its end: reload,
+    // re-resolving a URL that may have expired since. Only .error and a cancelled retry resume where they failed.
+    let resumes = state == .error || load?.reloadOnPlay == true
+    if newValue, resumes || state == .stopped || state == .ended {
+      reloadResolving(startFromCurrentTime: resumes)
     }
     if state != .loading {
       if newValue { engine.play() } else { engine.pause() }
     }
 
     guard changed else { return }
+    // Left to run, the retry would give up on the dropped intent and surface .error.
+    if !newValue, retry.pendingTask != nil {
+      retry.reset()
+      load?.reloadOnPlay = true
+      if errorStatus.isRetrying { errorStatus = .none }
+    }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
@@ -361,8 +370,10 @@ final class Player {
   }
 
   func stop() {
-    // Before the intent drop: a pending retry would surface .error and hold the session.
+    // A pending retry would turn the stop into .error, and the next play must start over rather
+    // than resume where it failed.
     retry.cancel()
+    load?.reloadOnPlay = false
     shouldResumeAfterInterruption = false
     transition(.stopped)
     setPlayWhenReady(false)
@@ -703,6 +714,7 @@ final class Player {
   /// never get here in .error, since the retry loop keeps the state non-terminal. `time` is held
   /// as the deferred seek before the loading transition saves the snapshot.
   private func prepareForReload(resumingAt time: TimeInterval?) {
+    load?.reloadOnPlay = false
     if state == .error {
       beginLoad()
       clearItem()
