@@ -18,6 +18,8 @@ final class BrowserManager {
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
+  // Moves on `invalidateAll`, so a fetch that outlives one caches nothing.
+  private var contentGeneration = 0
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -143,9 +145,10 @@ final class BrowserManager {
       return favorites.hydrate(cached)
     }
 
+    let generation = contentGeneration
     let resolvedTrack = try await pages.resolve(normalizedPath)
 
-    contentCache.set(normalizedPath, value: resolvedTrack)
+    if generation == contentGeneration { contentCache.set(normalizedPath, value: resolvedTrack) }
 
     return favorites.hydrate(resolvedTrack)
   }
@@ -165,6 +168,7 @@ final class BrowserManager {
   /// a failed tabs query keeps the current tabs.
   func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
     contentCache.clear()
+    contentGeneration &+= 1
     requests.invalidateLayers()
     lastSearchKey = nil
     lastSearchResults = nil
@@ -206,10 +210,13 @@ final class BrowserManager {
       return makeSearchResult(query: query, results: results)
     }
 
+    let generation = contentGeneration
     let results = try await pages.search(params)
 
-    lastSearchKey = cacheKey
-    lastSearchResults = results
+    if generation == contentGeneration {
+      lastSearchKey = cacheKey
+      lastSearchResults = results
+    }
 
     return makeSearchResult(query: query, results: results)
   }
@@ -256,8 +263,9 @@ final class BrowserManager {
   // MARK: - Tabs
 
   func queryTabs() async throws -> [Track] {
+    let generation = contentGeneration
     guard let tabs = try await pages.tabs() else { return [] }
-    self.tabs = tabs
+    if generation == contentGeneration { self.tabs = tabs }
     return tabs
   }
 
