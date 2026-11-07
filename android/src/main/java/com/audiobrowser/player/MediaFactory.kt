@@ -28,7 +28,7 @@ class MediaFactory(
   private val shouldRetry: () -> Boolean,
   private val isOnline: () -> Boolean = { true },
   private val hasPlayed: () -> Boolean = { false },
-  private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
+  private val onRetryPending: ((exception: IOException) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String, track: Track) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
@@ -83,7 +83,7 @@ class MediaFactory(
       customRetryPolicy?.let { setLoadErrorHandlingPolicy(it) }
     }
 
-  /** Restarts the retry policy's time budget; call when the track changes. */
+  /** Restarts the retry policy's time budgets. */
   fun resetRetryTimer() {
     customRetryPolicy?.reset()
   }

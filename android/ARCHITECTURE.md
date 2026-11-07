@@ -402,7 +402,7 @@ trust anchors, so they cannot weaken trust.
   across audio-session changes and the JS callback; `EqualizerManager` is the low-level Android
   `Equalizer` effect wrapper (presets, band levels) bound to an audio session id.
 - **NetworkConnectivityMonitor.kt**: `ConnectivityManager.NetworkCallback` exposed as a `StateFlow`;
-  owned by `Player`, used to drive online/offline events and accelerate pending network retries.
+  owned by `Player`, used to drive online/offline events and classify offline errors.
 - **SystemVolumeMonitor.kt**: System-volume `BroadcastReceiver` reporting a normalized 0–1 value;
   owned by `AudioBrowser`.
 

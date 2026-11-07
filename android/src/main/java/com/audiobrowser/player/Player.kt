@@ -157,9 +157,6 @@ internal constructor(
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
 
-  /** A network-caused retry is waiting; regaining connectivity retries at once. */
-  @Volatile private var pendingNetworkRetry = false
-
   @Volatile private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
@@ -239,7 +236,9 @@ internal constructor(
       throw e
     }
 
-  private lateinit var playerListener: PlayerListener
+  internal lateinit var playerListener: PlayerListener
+    private set
+
   private var cache: SimpleCache? = null
 
   private val progressTimer: PlaybackTimer by lazy {
@@ -465,13 +464,7 @@ internal constructor(
         shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
         hasPlayed = { hasPlayedCache },
-        onRetryPending = { exception, isNetworkError ->
-          pendingNetworkRetry = isNetworkError
-          if (isNetworkError) {
-            Timber.d("Network retry pending, will accelerate on connectivity restoration")
-          }
-          reportRetryingError(exception)
-        },
+        onRetryPending = ::reportRetryingError,
         resolveMediaConfig = { url, track -> browser?.getMediaRequestConfig(url, track) },
       )
     loadControl = engine.loadControl
@@ -543,13 +536,6 @@ internal constructor(
 
       // The formatter tells a stall from being offline, so it renders on a connectivity change too.
       nowPlaying.render()
-
-      if (isOnline && pendingNetworkRetry) {
-        Timber.d("Network restored with pending retry, triggering immediate retry")
-        pendingNetworkRetry = false
-        // Only while the play intent holds, and only locally: a receiver reconnects by itself.
-        if (playWhenReadyCache) localEngine.retry()
-      }
     }
   }
 
@@ -799,9 +785,9 @@ internal constructor(
       .build()
 
   /**
-   * Fresh retry budgets and unproven playback, as when the track is selected again (ADR 0004).
-   * Called when the player error clears: every restart from a terminal error goes through
-   * prepare().
+   * Fresh retry budgets and unproven playback (ADR 0004): when the track changes, and when an error
+   * goes terminal, since whatever restarts playback from it starts a new load and nothing loads
+   * until then.
    */
   internal fun resetForNewLoad() {
     resetRetryTimer()
@@ -1043,9 +1029,8 @@ internal constructor(
       val oldState = playbackState
       playbackState = state
 
-      if (state == PlaybackState.PLAYING) {
-        hasPlayedCache = true
-      }
+      if (state == PlaybackState.PLAYING) hasPlayedCache = true
+      if (state == PlaybackState.ERROR) resetForNewLoad()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and
       // the periodic save. Emitted before the state and queue-ended callbacks, matching iOS. The
