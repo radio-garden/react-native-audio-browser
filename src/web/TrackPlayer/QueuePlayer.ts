@@ -44,10 +44,8 @@ export class QueuePlayer extends Player {
       return
     }
 
-    // Suppressing `ended` is only safe when something takes over the state. A
-    // handler that declines to advance — the sleep timer set to end-of-track —
-    // leaves nothing to move it, and the player would sit reporting `playing`
-    // with nothing playing. Report the end in that case, as before.
+    // Suppressing `ended` is only safe when something takes over the state;
+    // report the end when nothing did.
     if (!this.onTrackEnded()) super.applyState(state)
   }
 
@@ -66,7 +64,9 @@ export class QueuePlayer extends Player {
    */
   protected onTrackEnded(): boolean {
     if (this.queue.repeatMode === RepeatMode.Track) {
-      if (this.queue.currentIndex === undefined) return false
+      // As iOS: without the intent, the track settles in `ended`.
+      if (this.queue.currentIndex === undefined || !this.playWhenReady)
+        return false
       this.goToIndex(this.queue.currentIndex)
       return true
     }

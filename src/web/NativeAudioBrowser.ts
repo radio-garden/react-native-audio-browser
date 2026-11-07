@@ -1042,21 +1042,14 @@ export class NativeAudioBrowser
   }
 
   /**
-   * Override to check for sleep timer when track ends
+   * An end-of-track sleep clears the intent, then the end runs its course as
+   * on iOS: the queue moves on paused.
    */
   protected onTrackEnded(): boolean {
-    // Check if sleep timer is set to end on track completion
     if (this.sleepTimer.sleepWhenPlayedToEnd) {
-      console.log('Sleep timer triggered on track end, pausing playback')
-      this.sleepTimer.clear()
+      this.clearSleepTimer()
       this.pause()
-      this.onSleepTimerChanged(null)
-      // Nothing is loading, so the caller must still report the end — the
-      // element has stopped and its own `pause` is swallowed as end-of-track.
-      return false
     }
-
-    // Otherwise proceed with normal track end behavior
     return super.onTrackEnded()
   }
 
