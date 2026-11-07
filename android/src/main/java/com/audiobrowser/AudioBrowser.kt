@@ -137,7 +137,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         if (service.player.getCallbacks() === callbacks) service.player.setCallbacks(null)
         if (service.player.browser === this) {
           service.player.browser = null
-          service.player.forgetBrowserRegistration()
           // It wraps a JS callback from this runtime: left set, every track change throws into the
           // now-playing updater's fallback until the next setup().
           service.player.nowPlaying.formatter = null
@@ -186,6 +185,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
   // MARK: Browser state
+  private var isConfigured = false
   private var _configuration =
     NativeBrowserConfiguration(
       path = null,
@@ -444,7 +444,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // Reaches MediaSession, which asserts the main thread, from this JS-thread setter. Launched,
       // not blocked: what it triggers can wait on JS callbacks, which cannot run while the JS
       // thread waits. Queued on mainScope ahead of navigationJob, so the two stay ordered.
-      launchInScope { connectedService?.player?.notifyBrowserConfigurationReady() }
+      launchInScope {
+        // Here, not in the setter: onServiceConnected reads it on main, and must not see it before
+        // browserManager.config is set.
+        isConfigured = true
+        connectedService?.player?.notifyBrowserConfigurationReady()
+      }
 
       clearNavigationError()
 
@@ -1132,9 +1137,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.browser = this@AudioBrowser
 
           // The configuration setter's notify finds no service when it runs before connect.
-          if (_configuration.routes?.isNotEmpty() == true) {
-            player.notifyBrowserConfigurationReady()
-          }
+          if (isConfigured) player.notifyBrowserConfigurationReady()
         }
 
       connectedService?.onBatteryWarningPendingChanged = onBatteryWarningPending
