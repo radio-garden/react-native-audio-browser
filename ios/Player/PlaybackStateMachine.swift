@@ -12,6 +12,9 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case .avPlayerPlaying: return .playing
   case .audioFrameDecoded: return .playing
   case .errorOccurred: return .error
+  case .retryCancelled:
+    guard current != .stopped, current != .ended, current != .error else { return nil }
+    return .paused
   case .loadSeekCompleted:
     guard current == .loading else { return nil }
     return .ready

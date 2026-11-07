@@ -222,7 +222,7 @@ struct RetryingErrorTests {
   }
 
   @Test @MainActor
-  func pauseDuringRetry_clearsTheRetryingError() throws {
+  func pauseDuringRetry_whileBuffering_reportsPausedWithoutTheRetryingError() throws {
     let (c, eh, cb) = try makePlayingWithRetries()
     c.transition(.avPlayerWaiting)
     eh.emit(.failed(URLError(.cannotConnectToHost), httpStatusCode: nil))
@@ -230,7 +230,52 @@ struct RetryingErrorTests {
 
     c.pause()
 
+    #expect(cb.playbackChanges.last?.state == .paused)
     #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_whileLoading_reportsPausedWithoutTheRetryingError() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+    #expect(cb.playbackChanges.last?.state == .loading)
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+
+    c.pause()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func interruptionDuringALoadRetry_reportsPaused() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.hasLoadedAsset = false
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+
+    c.handleInterruptionBegan()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+  }
+
+  /// The failed item can't seek, so a seek waits for the reload, as one does while loading.
+  @Test @MainActor
+  func seekAfterPauseDuringRetry_landsOnTheReload() throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    eh.currentTime = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    c.pause()
+
+    c.seek(by: 10)
+    #expect(c.deferredSeek.target == 52)
+    c.seek(to: 100)
+    c.play()
+
+    #expect(eh.seekCalls.isEmpty)
+    #expect(c.deferredSeek.target == 100)
   }
 
   @Test @MainActor

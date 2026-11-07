@@ -107,10 +107,16 @@ final class Player {
     }
   }
 
+  /// Whether the engine's item is not this Load's playable one: one loads, or a pause cancelled
+  /// the retry that was to replace a failed one. A seek waits for the next item meanwhile.
+  private var awaitingItem: Bool {
+    state == .loading || load?.reloadOnPlay == true
+  }
+
   /// Whether the engine reports this Load's position: not before one of its items is prepared,
-  /// nor while one reloads.
+  /// nor while it awaits the next one.
   private var enginePositionIsCurrent: Bool {
-    state != .loading && load?.itemPrepared == true
+    !awaitingItem && load?.itemPrepared == true
   }
 
   private var resumePosition: TimeInterval? {
@@ -185,8 +191,9 @@ final class Player {
     // Left to run, the retry would give up on the dropped intent and surface .error.
     if !newValue, retry.pendingTask != nil {
       retry.reset()
+      if let position = resumePosition { deferredSeek.capture(position) }
       load?.reloadOnPlay = true
-      if errorStatus.isRetrying { errorStatus = .none }
+      transition(.retryCancelled)
     }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
@@ -395,7 +402,7 @@ final class Player {
     // A nested interruption keeps the intent the first one captured.
     shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
     pause()
-    if playbackActive, state != .loading {
+    if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
     }
   }
@@ -631,10 +638,11 @@ final class Player {
 
   // MARK: - Seeking
 
-  /// Seeks the current item. While loading, the target is held until the item is ready and the
-  /// ready transition waits for it (`DeferredSeek`); `completion` then reports false at once.
+  /// Seeks the current item. While it awaits the next item, the target is held until that one is
+  /// ready and the ready transition waits for it (`DeferredSeek`); `completion` then reports false
+  /// at once.
   func seek(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void = { _ in }) {
-    if state == .loading {
+    if awaitingItem {
       deferredSeek.capture(seconds)
       completion(false)
     } else if engine.hasItem {
@@ -645,7 +653,7 @@ final class Player {
   }
 
   func seek(by offset: TimeInterval) {
-    if state == .loading {
+    if awaitingItem {
       seek(to: (deferredSeek.target ?? 0) + offset)
     } else if engine.hasItem {
       seek(to: engine.currentTime + offset)
