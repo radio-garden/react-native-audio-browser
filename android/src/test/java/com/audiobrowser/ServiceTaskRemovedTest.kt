@@ -4,9 +4,13 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Binder
 import android.os.Looper
+import androidx.media3.common.C
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.player.PlaybackStateStore
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.PlaybackState
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -68,6 +72,45 @@ class ServiceTaskRemovedTest {
     assertTrue(shadowOf(service).isForegroundStopped)
     assertTrue(shadowOf(service).notificationShouldRemoved)
     assertTrue(shadowOf(service).isStoppedBySelf)
+  }
+
+  private fun playAndSavePositionAt61s() {
+    playTrack("a")
+    player.seekTo(61, TimeUnit.SECONDS)
+    shadowOf(Looper.getMainLooper())
+      .idleFor(Duration.ofMillis(PlaybackStateStore.PERIODIC_SAVE_INTERVAL_MS))
+    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+  }
+
+  @Test
+  fun `a removed task keeps the saved position while AudioBrowser is bound`() {
+    controller.bind()
+    playAndSavePositionAt61s()
+
+    removeTask()
+
+    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+  }
+
+  @Test
+  fun `a removed task keeps the saved position when AudioBrowser never bound`() {
+    playAndSavePositionAt61s()
+
+    removeTask()
+
+    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+  }
+
+  @Test
+  fun `a stream swiped away before it has loaded resumes at its default position`() {
+    controller.bind()
+    // Unloaded, it is not yet known to be live and reports position 0, which is the window start
+    // of a live stream.
+    playTrack("a")
+
+    removeTask()
+
+    assertEquals(C.TIME_UNSET, player.playbackStateStore.get()?.positionMs)
   }
 
   @Test
