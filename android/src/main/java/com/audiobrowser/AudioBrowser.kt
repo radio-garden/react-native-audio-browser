@@ -440,6 +440,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     set(value) {
       _configuration = value
       browserManager.config = buildConfig()
+      browserManager.clearContentCache()
 
       // Reaches MediaSession, which asserts the main thread, from this JS-thread setter. Launched,
       // not blocked: what it triggers can wait on JS callbacks, which cannot run while the JS
@@ -702,6 +703,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // MediaSession asserts the main thread; this override runs on the JS thread.
     launchInScope { connectedService?.player?.invalidateAllContent() }
 
+    mainScope.launch {
+      runCatching { browserManager.queryTabs() }
+        .onFailure { Timber.e(it, "Re-querying tabs failed") }
+    }
     mainScope.launch { browserManager.refresh() }
   }
 
