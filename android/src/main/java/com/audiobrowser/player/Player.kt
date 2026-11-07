@@ -160,7 +160,7 @@ internal constructor(
   /** A network-caused retry is waiting; regaining connectivity retries at once. */
   @Volatile private var pendingNetworkRetry = false
 
-  private var browserRegistered = CompletableDeferred<AudioBrowser>()
+  @Volatile private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
   /** For SVG pre-rendering of Android Auto browse items. Set by the service. */
@@ -187,9 +187,14 @@ internal constructor(
       _coilBitmapLoader = value
     }
 
-  // Setting this does not release callers already waiting in [awaitBrowser]: call
-  // [notifyBrowserConfigurationReady] once its routes and tabs are configured.
   var browser: AudioBrowser? = null
+    set(value) {
+      // A completed registration is the previous browser's; an open one keeps its waiters.
+      if (browserRegistered.isCompleted) {
+        browserRegistered = CompletableDeferred()
+      }
+      field = value
+    }
 
   /**
    * Marks the browser's routes and tabs configured: completes [awaitBrowser] and lets Android Auto
@@ -222,31 +227,17 @@ internal constructor(
   }
 
   /**
-   * Makes [awaitBrowser] wait for a replacement browser instead of returning the disposed one; a
-   * [CompletableDeferred] completes only once.
-   */
-  fun forgetBrowserRegistration() {
-    if (browserRegistered.isCompleted) {
-      browserRegistered = CompletableDeferred()
-    }
-  }
-
-  /**
-   * [browser] if set, else the one [notifyBrowserConfigurationReady] registers next.
+   * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
    *
    * @throws TimeoutCancellationException if it is not registered within 10 seconds
    */
   suspend fun awaitBrowser(): AudioBrowser =
-    browser
-      ?: try {
-        withTimeout(10.seconds) {
-          Timber.d("Waiting for browser registration...")
-          browserRegistered.await()
-        }
-      } catch (e: TimeoutCancellationException) {
-        Timber.e("Timed out waiting for browser registration (10s)")
-        throw e
-      }
+    try {
+      withTimeout(10.seconds) { browserRegistered.await() }
+    } catch (e: TimeoutCancellationException) {
+      Timber.e("Timed out waiting for browser registration (10s)")
+      throw e
+    }
 
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
