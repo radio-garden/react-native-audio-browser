@@ -91,11 +91,9 @@ import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -151,7 +149,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // connected list, holding a binder and a listener.
       mediaBrowserFuture?.let { MediaBrowser.releaseFuture(it) }
       mediaBrowserFuture = null
-      setupPromise = null
 
       serviceBinding.unbind(this)
 
@@ -232,7 +229,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private val onBatteryWarningPending: (Boolean) -> Unit = { pending ->
     post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(pending)) }
   }
-  private var setupPromise: ((Unit) -> Unit)? = null
+  // Every setupPlayer waiting for the service awaits it. Replaced on disconnect, after
+  // cancelChildren has rejected its waiters.
+  private var connectionReady = CompletableDeferred<Unit>()
 
   // Staged by setup options or by setters called before the player exists; last write wins, and
   // [applyPendingPlayerState] consumes them.
@@ -792,18 +791,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         return@async
       }
 
-      suspendCoroutine<Unit> { continuation ->
-        Timber.d("Binding to AudioBrowserService")
-        val bound = serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)
-
-        if (!bound) {
-          continuation.resumeWithException(
-            RuntimeException("Failed to bind to AudioBrowserService")
-          )
-        } else {
-          setupPromise = { continuation.resume(Unit) }
-        }
+      if (!serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)) {
+        throw RuntimeException("Failed to bind to AudioBrowserService")
       }
+      connectionReady.await()
     }
   }
 
@@ -1150,8 +1141,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       val sessionToken = SessionToken(context, ComponentName(context, Service::class.java))
       mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
-      setupPromise?.invoke(Unit)
-      setupPromise = null
+      connectionReady.complete(Unit)
     }
   }
 
@@ -1171,6 +1161,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     mainScope.coroutineContext.cancelChildren()
     mediaBrowserFuture = null
     connectedService = null
+    connectionReady = CompletableDeferred()
     Timber.d("AudioBrowser.onServiceDisconnected()")
   }
 
