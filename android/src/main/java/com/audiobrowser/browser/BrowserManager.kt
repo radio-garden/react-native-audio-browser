@@ -81,6 +81,13 @@ class BrowserManager {
 
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
+  // Moves on clearContentCache, so a fetch that outlives one caches nothing. Separate from
+  // layerGeneration, which also moves on every path change. Car browses run on IO threads and the
+  // clear on the JS thread: each check and its write hold [cacheLock].
+  @Volatile private var contentGeneration = 0
+  private var tabsGeneration = -1
+  private val cacheLock = Any()
+
   // Query and results stored as one pair, so a concurrent reader never matches one query with
   // another query's results.
   @Volatile private var lastSearch: Pair<String, Array<Track>>? = null
@@ -446,9 +453,12 @@ class BrowserManager {
       Timber.d("Content cache MISS for path='$normalizedPath'")
     }
 
+    val generation = contentGeneration
     val resolvedTrack = resolveUncached(normalizedPath)
 
-    contentCache.put(normalizedPath, resolvedTrack)
+    synchronized(cacheLock) {
+      if (generation == contentGeneration) contentCache.put(normalizedPath, resolvedTrack)
+    }
 
     cacheChildren(resolvedTrack)
 
@@ -466,11 +476,15 @@ class BrowserManager {
 
   /**
    * Clears every cached page and the last search, which nothing else evicts, and re-resolves the
-   * resolver layers and "view more" title on the next request.
+   * tabs, resolver layers and "view more" title on the next request. A fetch in flight caches
+   * nothing.
    */
   fun clearContentCache() {
-    contentCache.evictAll()
-    lastSearch = null
+    synchronized(cacheLock) {
+      contentGeneration += 1
+      contentCache.evictAll()
+      lastSearch = null
+    }
     layerGeneration += 1
     artworkResolutions.clear()
     onArtworkRegistriesCleared?.invoke()
@@ -776,6 +790,7 @@ class BrowserManager {
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
 
     val searchPath = BrowserPathHelper.createSearchPath(params.query)
+    val generation = contentGeneration
 
     try {
       // Search results skip validateTrack, so one without a path or src is dropped here:
@@ -817,7 +832,9 @@ class BrowserManager {
           icyCharset = null,
         )
 
-      lastSearch = params.query to searchResults
+      synchronized(cacheLock) {
+        if (generation == contentGeneration) lastSearch = params.query to searchResults
+      }
 
       cacheChildren(searchResolvedTrack)
       Timber.d(
@@ -864,11 +881,16 @@ class BrowserManager {
     onArtworkRegistriesCleared = callback
   }
 
-  /** Resolves the tabs once; later calls return the first result. */
+  /**
+   * Resolves the tabs once per [clearContentCache]; later calls return that result. The previous
+   * tabs stay until new ones resolve.
+   */
   suspend fun queryTabs(): Array<Track> {
-    this.tabs?.let {
-      return it
-    }
+    val generation = contentGeneration
+    synchronized(cacheLock) { tabs.takeIf { tabsGeneration == generation } }
+      ?.let {
+        return it
+      }
 
     Timber.d("Getting navigation tabs")
 
@@ -879,7 +901,12 @@ class BrowserManager {
       Timber.d("[TABS] Tab[$index] '${tab.title}': path=${tab.path}")
     }
 
-    this.tabs = tabs
+    synchronized(cacheLock) {
+      if (generation == contentGeneration) {
+        this.tabs = tabs
+        tabsGeneration = generation
+      }
+    }
     return tabs
   }
 
