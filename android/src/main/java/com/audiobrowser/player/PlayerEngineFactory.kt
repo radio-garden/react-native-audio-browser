@@ -52,7 +52,7 @@ internal fun buildPlayerEngine(
   shouldRetry: () -> Boolean,
   isOnline: () -> Boolean,
   hasPlayed: () -> Boolean,
-  onRetryPending: (exception: IOException, isNetworkError: Boolean) -> Unit,
+  onRetryPending: (exception: IOException) -> Unit,
   resolveMediaConfig: (url: String, track: Track) -> MediaRequestConfig?,
 ): PlayerEngine {
   val renderer = DefaultRenderersFactory(context)

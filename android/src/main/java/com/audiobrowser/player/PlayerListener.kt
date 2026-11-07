@@ -100,9 +100,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // It also emits onNowPlayingChanged.
     player.nowPlaying.render()
 
-    // The new load is unproven: its failures get the short first-connect budget until it plays.
-    player.resetRetryTimer()
-    player.hasPlayedCache = false
+    player.resetForNewLoad()
 
     // Emits on its own: the incoming track may hold LOADING/BUFFERING and emit no state change.
     player.clearRetryingError()
@@ -182,11 +180,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     }
   }
 
-  override fun onPlayerErrorChanged(error: PlaybackException?) {
-    // Cleared means a recovery path ran prepare(), which starts a new load.
-    if (error == null) player.resetForNewLoad()
-  }
-
   override fun onPlayerError(error: PlaybackException) {
     if (player.localEngine.isActive && recoverLocally(error)) return
     surface(error)
@@ -196,6 +189,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   private fun recoverLocally(error: PlaybackException): Boolean {
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
       Timber.d("Playback fell behind live window, recovering to live edge")
+      player.resetRetryTimer()
       player.localEngine.retry(toLiveEdge = true)
       return true
     }
@@ -254,6 +248,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           "Stuck player recovery: type=${error.stuckType} timeoutMs=${error.timeoutMs} " +
             "live=${player.isCurrentItemLive}"
         )
+        player.resetRetryTimer()
         player.localEngine.retry(toLiveEdge = player.isCurrentItemLive)
       }
       StuckRecoveryPolicy.Decision.GIVE_UP -> {

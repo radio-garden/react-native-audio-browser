@@ -14,8 +14,8 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito.mock
@@ -40,24 +40,21 @@ class RetryLoadErrorHandlingPolicyTest {
     )
 
   private fun assertNonRecoverable(exception: IOException) {
-    var pendingNetwork: Boolean? = null
-    val policy =
-      RetryLoadErrorHandlingPolicy(
-        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError }
-      )
+    var retryPending = false
+    val policy = RetryLoadErrorHandlingPolicy(onRetryPending = { retryPending = true })
     val delay = policy.getRetryDelayMsFor(errorInfo(exception))
     assertEquals(C.TIME_UNSET, delay)
-    assertNull(pendingNetwork)
+    assertFalse(retryPending)
   }
 
   @Test
-  fun `offline network IOException is retried and arms the network-retry callback`() {
-    var pendingNetwork: Boolean? = null
+  fun `offline network IOException is retried and reports the pending retry`() {
+    var retryPending = false
     val policy =
       RetryLoadErrorHandlingPolicy(
         maxRetries = null,
         isOnline = { false },
-        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
+        onRetryPending = { retryPending = true },
       )
 
     val delay = policy.getRetryDelayMsFor(errorInfo(UnknownHostException("Unable to resolve host")))
@@ -65,23 +62,20 @@ class RetryLoadErrorHandlingPolicyTest {
     assertNotEquals(C.TIME_UNSET, delay)
     // The offline delay.
     assertEquals(1000L, delay)
-    assertEquals(true, pendingNetwork)
+    assertTrue(retryPending)
   }
 
   @Test
   fun `socket timeout is classified as a recoverable network error`() {
-    var pendingNetwork: Boolean? = null
+    var retryPending = false
     val policy =
-      RetryLoadErrorHandlingPolicy(
-        isOnline = { true },
-        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
-      )
+      RetryLoadErrorHandlingPolicy(isOnline = { true }, onRetryPending = { retryPending = true })
 
     val delay = policy.getRetryDelayMsFor(errorInfo(SocketTimeoutException("timeout")))
 
     assertNotEquals(C.TIME_UNSET, delay)
     assertTrue("expected a positive retry delay, got $delay", delay > 0)
-    assertEquals(true, pendingNetwork)
+    assertTrue(retryPending)
   }
 
   @Test
@@ -100,32 +94,26 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 
   @Test
-  fun `retryable HTTP status (503) is recoverable and arms the network-retry callback`() {
-    var pendingNetwork: Boolean? = null
+  fun `retryable HTTP status (503) is recoverable and reports the pending retry`() {
+    var retryPending = false
     val policy =
-      RetryLoadErrorHandlingPolicy(
-        isOnline = { true },
-        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
-      )
+      RetryLoadErrorHandlingPolicy(isOnline = { true }, onRetryPending = { retryPending = true })
 
     val delay = policy.getRetryDelayMsFor(errorInfo(httpError(503)))
 
     assertNotEquals(C.TIME_UNSET, delay)
-    assertEquals(true, pendingNetwork)
+    assertTrue(retryPending)
   }
 
   @Test
   fun `non-retryable HTTP status (404) is not retried`() {
-    var pendingNetwork: Boolean? = null
-    val policy =
-      RetryLoadErrorHandlingPolicy(
-        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError }
-      )
+    var retryPending = false
+    val policy = RetryLoadErrorHandlingPolicy(onRetryPending = { retryPending = true })
 
     val delay = policy.getRetryDelayMsFor(errorInfo(httpError(404)))
 
     assertEquals(C.TIME_UNSET, delay)
-    assertNull(pendingNetwork)
+    assertFalse(retryPending)
   }
 
   @Test

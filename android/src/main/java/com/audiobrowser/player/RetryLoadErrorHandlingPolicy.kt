@@ -40,15 +40,14 @@ class RetryLoadErrorHandlingPolicy(
   private val shouldRetry: () -> Boolean = { true },
   private val isOnline: () -> Boolean = { true },
   private val hasPlayed: () -> Boolean = { false },
-  private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
+  private val onRetryPending: ((exception: IOException) -> Unit)? = null,
 ) : DefaultLoadErrorHandlingPolicy() {
 
   companion object {
     private const val INITIAL_RETRY_DELAY_MS = 1000L
     private const val MAX_RETRY_DELAY_MS = 5000L
     private const val BACKOFF_MULTIPLIER = 1.5
-    // Fixed while offline: ExoPlayer's retry timer can't be interrupted, so a short delay lets the
-    // retry fired on network restoration land soon, and keeps polling if that never fires.
+    // Fixed while offline, so the first retry after connectivity returns lands soon.
     private const val OFFLINE_RETRY_DELAY_MS = 1000L
     private const val DEFAULT_MAX_RETRY_DURATION_MS = 120_000L
     private const val DEFAULT_FIRST_CONNECT_MAX_RETRY_DURATION_MS = 12_000L
@@ -135,9 +134,7 @@ class RetryLoadErrorHandlingPolicy(
 
       val delay =
         if (currentlyOffline && isNetworkError) {
-          Timber.d(
-            "Device is offline, using short retry delay (will accelerate when network returns)"
-          )
+          Timber.d("Device is offline, using short retry delay")
           OFFLINE_RETRY_DELAY_MS
         } else {
           calculateBackoffDelay(errorCount)
@@ -147,7 +144,7 @@ class RetryLoadErrorHandlingPolicy(
         "Retrying after IO error (attempt $errorCount, delay ${delay}ms, offline=$currentlyOffline): ${exception.message}"
       )
 
-      onRetryPending?.invoke(exception, isNetworkError)
+      onRetryPending?.invoke(exception)
 
       delay
     } else {
@@ -162,8 +159,7 @@ class RetryLoadErrorHandlingPolicy(
 
   /**
    * Walks the cause chain: load errors arrive as raw IOExceptions (a Wi-Fi drop is a socket or DNS
-   * error), never as a PlaybackException. Anything not known to be fatal counts as a network error,
-   * so connectivity restoration can retry it at once.
+   * error), never as a PlaybackException. Anything not known to be fatal counts as a network error.
    */
   private fun classifyError(exception: IOException): ErrorClassification {
     val nonRecoverable = ErrorClassification(isRecoverable = false, isNetworkError = false)
