@@ -363,4 +363,20 @@ describe('parity — what native emits for the same flow', () => {
     expect(h.recorded).not.toContain('state:stopped')
     expect(h.browser.getPlayback().state).toBe('playing')
   })
+
+  /**
+   * Native shows each now-playing line from the flash, else the override, else
+   * the track (`NowPlayingUpdater.kt`), so the end of a flash brings the
+   * override back rather than the track's own metadata.
+   */
+  it('restores the now-playing override when a flash ends', async () => {
+    h.browser.load(trackA)
+    await h.flush()
+    h.browser.updateNowPlaying({ title: 'Live Title' })
+
+    h.browser.flashNowPlaying({ title: 'Flash' }, 1)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+
+    expect(h.browser.getNowPlaying()?.title).toBe('Live Title')
+  })
 })

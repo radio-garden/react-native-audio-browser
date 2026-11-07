@@ -247,7 +247,10 @@ export class NativeAudioBrowser
     this.favoriteManager = new FavoriteManager()
     this.navigationErrorManager = new NavigationErrorManager()
     this.optionsManager = new OptionsManager()
-    this.nowPlayingManager = new NowPlayingManager()
+    this.nowPlayingManager = new NowPlayingManager(() => ({
+      track: this.getActiveTrack(),
+      duration: this.getProgress().duration
+    }))
     this.remoteCommands = new RemoteCommandController(this)
 
     this.browserManager = new BrowserManager(
@@ -1145,35 +1148,19 @@ export class NativeAudioBrowser
 
   // MARK: Now playing metadata
   updateNowPlaying(update: NowPlayingUpdate | undefined): void {
-    const track = this.getActiveTrack()
-    const duration = this.getProgress().duration
-    this.nowPlayingManager.updateNowPlaying(update, track, duration)
+    this.nowPlayingManager.updateNowPlaying(update)
   }
 
   getNowPlaying(): NowPlayingMetadata | undefined {
-    const track = this.getActiveTrack()
-    const duration = this.getProgress().duration
-    return this.nowPlayingManager.getNowPlaying(track, duration)
+    return this.nowPlayingManager.getNowPlaying()
   }
 
-  private nowPlayingFlashRevert: ReturnType<typeof setTimeout> | undefined
-
   flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void {
-    // Web approximation: an override + timer is sufficient here — the
-    // background-timer and formatter-priority concerns are native-only.
-    this.updateNowPlaying(update)
-    if (this.nowPlayingFlashRevert) clearTimeout(this.nowPlayingFlashRevert)
-    this.nowPlayingFlashRevert = setTimeout(() => {
-      this.nowPlayingFlashRevert = undefined
-      this.updateNowPlaying(undefined)
-    }, durationMs)
+    this.nowPlayingManager.flashNowPlaying(update, durationMs)
   }
 
   clearNowPlayingFlash(): void {
-    if (!this.nowPlayingFlashRevert) return
-    clearTimeout(this.nowPlayingFlashRevert)
-    this.nowPlayingFlashRevert = undefined
-    this.updateNowPlaying(undefined)
+    this.nowPlayingManager.clearNowPlayingFlash()
   }
 
   // MARK: Network connectivity
