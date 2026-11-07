@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { NativeUpdatedValue } from './NativeUpdatedValue'
 import { useNativeUpdatedValue } from './useNativeUpdatedValue'
 
@@ -19,14 +19,12 @@ function makeEmitter<T>() {
   return {
     emitter,
     /** Emit from outside React, as a native event would arrive. */
-    fire: (value: T) => act(() => emit(value)),
-    /** Emit from inside a render pass, where wrapping in `act` would nest. */
-    fireDuringRender: (value: T) => emit(value)
+    fire: (value: T) => act(() => emit(value))
   }
 }
 
 describe('useNativeUpdatedValue', () => {
-  it('falls back to the getter when nothing has fired yet', () => {
+  it('reads the getter', () => {
     const { emitter } = makeEmitter<string>()
     const { result } = renderHook(() =>
       useNativeUpdatedValue(() => 'a', emitter)
@@ -34,13 +32,13 @@ describe('useNativeUpdatedValue', () => {
     expect(result.current).toBe('a')
   })
 
-  it('prefers lastValue over the getter', () => {
+  it('prefers the getter over a stale lastValue', () => {
     const { emitter, fire } = makeEmitter<string>()
-    fire('fromNative')
-    const getter = vi.fn(() => 'fromGetter')
-    const { result } = renderHook(() => useNativeUpdatedValue(getter, emitter))
-    expect(result.current).toBe('fromNative')
-    expect(getter).not.toHaveBeenCalled()
+    fire('stale')
+    const { result } = renderHook(() =>
+      useNativeUpdatedValue(() => 'current', emitter)
+    )
+    expect(result.current).toBe('current')
   })
 
   it('updates when the emitter fires', () => {
@@ -52,30 +50,36 @@ describe('useNativeUpdatedValue', () => {
     expect(result.current).toBe('b')
   })
 
-  it('extracts eventKey from both lastValue and later events', () => {
+  it('extracts eventKey from events', () => {
     const { emitter, fire } = makeEmitter<{ volume: number }>()
-    fire({ volume: 0.5 })
     const { result } = renderHook(() =>
-      useNativeUpdatedValue(() => 0, emitter, 'volume')
+      useNativeUpdatedValue(() => 0.5, emitter, 'volume')
     )
     expect(result.current).toBe(0.5)
     fire({ volume: 0.9 })
     expect(result.current).toBe(0.9)
   })
 
-  // The reason the effect re-reads `lastValue` instead of going straight to
-  // `addListener`. Nothing reads the value again until the next native event, so
-  // a value landing in this window would otherwise be missed permanently.
-  it('re-syncs a value that lands between the render read and the effect', () => {
-    const { emitter, fireDuringRender } = makeEmitter<string>()
-    // Firing from inside the getter puts the emit exactly where the race is:
-    // after the useState initializer has read, before the effect subscribes.
+  it('re-syncs a change that lands between the render read and the effect', () => {
+    const { emitter } = makeEmitter<string>()
+    let native = 'atRender'
     const getter = () => {
-      fireDuringRender('landedMidRender')
-      return 'staleAtRender'
+      const value = native
+      native = 'changedBeforeEffect'
+      return value
     }
     const { result } = renderHook(() => useNativeUpdatedValue(getter, emitter))
-    expect(result.current).toBe('landedMidRender')
+    expect(result.current).toBe('changedBeforeEffect')
+  })
+
+  it('keeps an event over an inline getter on re-render', () => {
+    const { emitter, fire } = makeEmitter<string>()
+    const { result, rerender } = renderHook(() =>
+      useNativeUpdatedValue(() => 'a', emitter)
+    )
+    fire('b')
+    rerender()
+    expect(result.current).toBe('b')
   })
 
   it('stops updating after unmount', () => {

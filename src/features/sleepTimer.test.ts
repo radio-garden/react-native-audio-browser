@@ -19,11 +19,7 @@ const { onSleepTimerChanged, useSleepTimer, useSleepTimerActive } =
 const fire = (timer: SleepTimer) =>
   act(() => native.onSleepTimerChanged?.(timer))
 
-/**
- * The emitter is a module-level singleton, so `lastValue` outlives each test.
- * `undefined` is its pre-native state and distinct from `null`, which is a real
- * value meaning "no timer" — the distinction the re-sync gate turns on.
- */
+/** The emitter is a module-level singleton, so `lastValue` outlives each test. */
 beforeEach(() => {
   onSleepTimerChanged.lastValue = undefined
   native.getSleepTimer.mockReturnValue(null)
@@ -52,23 +48,20 @@ describe('useSleepTimerActive', () => {
     expect(result.current).toBe(true)
   })
 
-  // The regression from f7a25040. The getter ran during render and saw a live
-  // timer; the clear landed before the effect subscribed. Without the re-sync
-  // the UI shows a running timer that is already gone — permanently, since
-  // nothing reads it again until the next native event.
+  // The getter ran during render and saw a live timer; the clear landed
+  // before the effect subscribed.
   it('re-syncs a clear that landed between the render read and the effect', () => {
-    native.getSleepTimer.mockReturnValue({ time: Date.now() + 60_000 })
-    onSleepTimerChanged.lastValue = null
+    native.getSleepTimer
+      .mockReturnValueOnce({ time: Date.now() + 60_000 })
+      .mockReturnValue(null)
     const { result } = renderHook(() => useSleepTimerActive())
     expect(result.current).toBe(false)
   })
 
-  // The gate is `!== undefined`, not truthiness: `undefined` means native has
-  // never spoken, so the getter's answer must stand.
-  it('keeps the getter value when native has not fired at all', () => {
-    native.getSleepTimer.mockReturnValue({ time: Date.now() + 60_000 })
+  it('prefers the getter over a stale lastValue', () => {
+    onSleepTimerChanged.lastValue = { time: Date.now() + 60_000 }
     const { result } = renderHook(() => useSleepTimerActive())
-    expect(result.current).toBe(true)
+    expect(result.current).toBe(false)
   })
 
   it('stops tracking after unmount', () => {
@@ -162,10 +155,16 @@ describe('useSleepTimer', () => {
     }
   })
 
-  // Same race as useSleepTimerActive, and the reason both hooks carry the gate.
   it('re-syncs a clear that landed between the render read and the effect', () => {
-    native.getSleepTimer.mockReturnValue({ time: Date.now() + 60_000 })
-    onSleepTimerChanged.lastValue = null
+    native.getSleepTimer
+      .mockReturnValueOnce({ time: Date.now() + 60_000 })
+      .mockReturnValue(null)
+    const { result } = renderHook(() => useSleepTimer())
+    expect(result.current).toBeUndefined()
+  })
+
+  it('prefers the getter over a stale lastValue', () => {
+    onSleepTimerChanged.lastValue = { time: Date.now() + 60_000 }
     const { result } = renderHook(() => useSleepTimer())
     expect(result.current).toBeUndefined()
   })
