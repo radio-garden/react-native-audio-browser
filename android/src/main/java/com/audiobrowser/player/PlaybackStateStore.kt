@@ -66,8 +66,8 @@ class PlaybackStateStore(private val player: Player) {
   private var periodicSaveJob: Job? = null
 
   /**
-   * Saves the position every [PERIODIC_SAVE_INTERVAL_MS] while playing, skipping live tracks. A
-   * no-op when already running or when the player is not set to play.
+   * Calls [save] every [PERIODIC_SAVE_INTERVAL_MS] while playing. A no-op when already running or
+   * when the player is not set to play.
    */
   fun startPeriodicSave() {
     if (periodicSaveJob != null) return
@@ -87,9 +87,7 @@ class PlaybackStateStore(private val player: Player) {
       scope.launch {
         while (true) {
           delay(PERIODIC_SAVE_INTERVAL_MS)
-          if (!player.isCurrentItemLive) {
-            savePosition()
-          }
+          save()
         }
       }
   }
@@ -103,33 +101,28 @@ class PlaybackStateStore(private val player: Player) {
     periodicSaveJob = null
   }
 
-  /** Stops the periodic save and saves the position once more. */
+  /** Stops the periodic save and calls [save] once more. */
   fun stopPeriodicSave() {
     cancelPeriodicSave()
     // After a natural end, setPlaybackState(ENDED) has saved position 0 and the dropped intent
     // calls this afterwards; saving here would make resumption start at the end of the track.
-    if (!player.isCurrentItemLive && player.playbackState != PlaybackState.ENDED) {
-      savePosition()
+    if (player.playbackState != PlaybackState.ENDED) {
+      save()
     }
   }
 
   /** Saves the current track and its position; does nothing without a current track. */
   fun save() {
     val track = player.currentTrack ?: return
-    val positionMs = if (player.isCurrentItemLive) C.TIME_UNSET else player.position
+    // A live item reports 0 until it has loaded, so 0 is saved unset too.
+    val positionMs =
+      player.position.takeUnless { player.isCurrentItemLive || it == 0L } ?: C.TIME_UNSET
 
     prefs.edit {
       putLong(KEY_POSITION_MS, positionMs)
       putString(KEY_TRACK, trackToJson(track))
     }
     Timber.d("Saved playback state: title=${track.title}, positionMs=$positionMs")
-  }
-
-  fun savePosition() {
-    val positionMs = if (player.isCurrentItemLive) C.TIME_UNSET else player.position
-
-    prefs.edit { putLong(KEY_POSITION_MS, positionMs) }
-    Timber.d("Saved position: positionMs=$positionMs")
   }
 
   fun savePositionZero() {
@@ -262,6 +255,6 @@ class PlaybackStateStore(private val player: Player) {
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
     private const val KEY_PLAYBACK_SPEED = "playback_speed"
     private const val KEY_TRACK = "track"
-    private const val PERIODIC_SAVE_INTERVAL_MS = 5000L
+    internal const val PERIODIC_SAVE_INTERVAL_MS = 5000L
   }
 }
