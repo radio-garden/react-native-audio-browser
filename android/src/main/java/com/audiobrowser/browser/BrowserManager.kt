@@ -81,10 +81,12 @@ class BrowserManager {
 
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
-  // Moves on clearContentCache, so a fetch that outlives one caches nothing. Separate from
-  // layerGeneration, which also moves on every path change. Car browses run on IO threads and the
-  // clear on the JS thread: each check and its write hold [cacheLock].
+  // Moves on clearContentCache, so a fetch that outlives one caches nothing; [pageGenerations]
+  // does the same for one path, and is cleared only together with a move of this. Separate from
+  // layerGeneration, which also moves on every path change. Car browses run on IO threads and
+  // the clear on the JS thread: each check and its write hold [cacheLock].
   @Volatile private var contentGeneration = 0
+  private val pageGenerations = HashMap<String, Int>()
   private var tabsGeneration = -1
   private val cacheLock = Any()
 
@@ -453,11 +455,13 @@ class BrowserManager {
       Timber.d("Content cache MISS for path='$normalizedPath'")
     }
 
-    val generation = contentGeneration
+    val generation = synchronized(cacheLock) { pageGeneration(normalizedPath) }
     val resolvedTrack = resolveUncached(normalizedPath)
 
     synchronized(cacheLock) {
-      if (generation == contentGeneration) contentCache.put(normalizedPath, resolvedTrack)
+      if (generation == pageGeneration(normalizedPath)) {
+        contentCache.put(normalizedPath, resolvedTrack)
+      }
     }
 
     cacheChildren(resolvedTrack)
@@ -470,9 +474,14 @@ class BrowserManager {
     require(!BrowserPathHelper.isContextual(path)) {
       "invalidateContentCache() expects a container path, not a contextual path: $path"
     }
-    contentCache.remove(path)
+    synchronized(cacheLock) {
+      pageGenerations[path] = (pageGenerations[path] ?: 0) + 1
+      contentCache.remove(path)
+    }
     Timber.d("Invalidated content cache for path='$path'")
   }
+
+  private fun pageGeneration(path: String) = contentGeneration to pageGenerations[path]
 
   /**
    * Clears every cached page and the last search, which nothing else evicts, and re-resolves the
@@ -482,6 +491,7 @@ class BrowserManager {
   fun clearContentCache() {
     synchronized(cacheLock) {
       contentGeneration += 1
+      pageGenerations.clear()
       contentCache.evictAll()
       lastSearch = null
     }
