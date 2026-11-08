@@ -55,7 +55,7 @@ class PlaybackStateMachineTest {
   }
 
   @Test
-  fun `idle maps to none except from error or stopped`() {
+  fun `idle maps to none except from error, stopped or paused`() {
     val idle =
       PlaybackEvent.ExoPlaybackStateChanged(
         MediaPlayer.STATE_IDLE,
@@ -65,6 +65,7 @@ class PlaybackStateMachineTest {
     assertEquals(listOf(PlaybackState.NONE), on(idle, from = PlaybackState.PLAYING))
     assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.ERROR))
     assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.STOPPED))
+    assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.PAUSED))
   }
 
   @Test

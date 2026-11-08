@@ -53,9 +53,10 @@ object PlaybackStateMachine {
             // a load finished, so consumers can drop their loading indicator.
             if (event.shouldPlayWhenReady) emptyList() else listOf(PlaybackState.READY)
           MediaPlayer.STATE_IDLE ->
-            // A terminal error and stop() both idle ExoPlayer; NONE would clear the ERROR or
-            // STOPPED state the session shows.
-            if (current == PlaybackState.ERROR || current == PlaybackState.STOPPED) emptyList()
+            // A terminal error, stop() and a pause during a retry all idle ExoPlayer; NONE would
+            // clear the state the session shows.
+            if (current in setOf(PlaybackState.ERROR, PlaybackState.STOPPED, PlaybackState.PAUSED))
+              emptyList()
             else listOf(PlaybackState.NONE)
           MediaPlayer.STATE_ENDED ->
             // An emptied queue also reports STATE_ENDED: nothing loaded, not played to the end.
