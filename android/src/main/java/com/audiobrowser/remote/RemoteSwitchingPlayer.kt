@@ -54,6 +54,9 @@ internal class RemoteSwitchingPlayer(
   private var repeat = MediaPlayer.REPEAT_MODE_OFF
   private var shuffle = false
 
+  /** Set as the receiver moves on at an item's end; the next [getState] reports it as automatic. */
+  private var pendingAutoTransition = false
+
   private sealed interface Route {
     data object Local : Route
 
@@ -393,6 +396,7 @@ internal class RemoteSwitchingPlayer(
       val duration = remote.receiver.duration
       remote.load = Load.Ended(if (duration == C.TIME_UNSET) positionOn(remote) else duration)
     } else {
+      pendingAutoTransition = true
       queue.moveTo(next)
       load(remote, C.TIME_UNSET)
     }
@@ -459,6 +463,10 @@ internal class RemoteSwitchingPlayer(
           is Load.Playing -> if (!holds) setPlaybackState(STATE_IDLE).setContentPositionMs(0)
         }
         if (queue.isEmpty) setPlaybackState(STATE_IDLE)
+        if (pendingAutoTransition) {
+          pendingAutoTransition = false
+          setPositionDiscontinuity(DISCONTINUITY_REASON_AUTO_TRANSITION, 0)
+        }
       }
       .build()
   }

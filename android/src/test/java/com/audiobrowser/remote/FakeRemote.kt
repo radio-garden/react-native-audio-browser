@@ -9,6 +9,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.common.util.Util
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -125,6 +126,7 @@ internal data class SentLoad(val item: MediaItem, val positionMs: Long, val auto
 internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var item: MediaItem? = null
   var positionMs = 0L
+  var durationMs = C.TIME_UNSET
   var intent = false
   var readiness = STATE_IDLE
   var volume = 10
@@ -156,7 +158,11 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   override fun getState(): State =
     State.Builder()
       .setAvailableCommands(MediaPlayer.Commands.Builder().addAllCommands().build())
-      .setPlaylist(listOfNotNull(item).map { MediaItemData.Builder(uid).setMediaItem(it).build() })
+      .setPlaylist(
+        listOfNotNull(item).map {
+          MediaItemData.Builder(uid).setMediaItem(it).setDurationUs(Util.msToUs(durationMs)).build()
+        }
+      )
       .setCurrentMediaItemIndex(if (item == null) C.INDEX_UNSET else 0)
       .setContentPositionMs(positionMs)
       .setPlayWhenReady(intent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
