@@ -16,6 +16,8 @@ public extension HybridAudioBrowser {
         self.audioSession.configure(options.ios)
 
         // A re-setup replaces the player, so the outgoing one is torn down first. No-op on first setup.
+        let oldPlayer = player
+        oldPlayer?.sleepTimerManager.clear()
         destroyPlayer()
 
         let newEngine = AVPlayerEngine(
@@ -43,6 +45,18 @@ public extension HybridAudioBrowser {
         if let mode = options.repeatMode { pendingRepeatMode = mode }
         if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
         applyPendingPlayerState()
+        // The new player starts at its defaults without emitting them; listeners still hold the old values.
+        if let oldPlayer {
+          if oldPlayer.repeatMode != newPlayer.repeatMode {
+            playerDidChangeRepeatMode(RepeatModeChangedEvent(repeatMode: newPlayer.repeatMode))
+          }
+          if oldPlayer.shuffleEnabled != newPlayer.shuffleEnabled {
+            playerDidChangeShuffleEnabled(newPlayer.shuffleEnabled)
+          }
+          if oldPlayer.playWhenReady != newPlayer.playWhenReady {
+            playerDidChangePlayWhenReady(newPlayer.playWhenReady)
+          }
+        }
         // The stored options outlive the player, so a re-setup applies them to the new one.
         applyOptions()
         playerAndConfiguredBrowser.check()

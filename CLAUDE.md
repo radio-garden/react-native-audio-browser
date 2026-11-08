@@ -47,9 +47,9 @@ Two things to know before writing one:
 - Start the file with `/** @vitest-environment happy-dom */`, detached by a blank line so the import sort cannot pull it off line 1. Without it the file runs in node and every render fails on `document is not defined`.
 - `'react-native'` is aliased to `src/test-utils/reactNativeStub.ts` in `vitest.config.ts`, because `react-native/index.js` is Flow-typed and Rollup cannot parse it. Extend the stub when a test needs more of the RN surface.
 
-Emitters are module-level singletons created at import, so `lastValue` and any log store outlive an individual test. Reset them in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both.
+Emitters are module-level singletons created at import, so their `eventCount` and any log store outlive an individual test. Reset the mocks in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both.
 
-The tests that pin the render-vs-effect re-sync (`utils/useNativeUpdatedValue.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the `lastValue` re-read is removed.
+The tests that pin the render-vs-effect re-read (`utils/useNativeUpdatedValue.test.ts`, `utils/useNativeValueRefreshedBy.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the effect stops re-reading the getter after an event lands between render and subscription.
 
 ## Breaking Changes Policy
 
