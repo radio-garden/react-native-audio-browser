@@ -502,7 +502,13 @@ internal constructor(
     if (::forwardingPlayer.isInitialized) forwardingPlayer.removeListener(playerListener)
     sessionPlayer = remoteOutputs.player ?: exoPlayer
     forwardingPlayer =
-      InterceptingPlayer(sessionPlayer, { callbacks }, { options }, keepSessionAliveOnError)
+      InterceptingPlayer(
+        sessionPlayer,
+        { callbacks },
+        { options },
+        keepSessionAliveOnError,
+        isPaused = { playbackState == PlaybackState.PAUSED },
+      )
     forwardingPlayer.addListener(playerListener)
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
   }
@@ -1008,7 +1014,24 @@ internal constructor(
       playbackError = error
       callbacks?.onPlaybackChanged(Playback(playbackState, error))
       nowPlaying.render()
+      // A pause before this first report found no retry to cancel.
+      if (!playWhenReadyCache) cancelRetry()
     }
+  }
+
+  /**
+   * Cancels the retry a dropped play intent leaves scheduled: ExoPlayer still runs it, and its
+   * failure would be terminal. The engine idles in PAUSED, where the next prepare() reloads where
+   * it failed. No-op unless a retrying error shows.
+   */
+  internal fun cancelRetry() {
+    // The ENDED path drops the intent before it clears the error.
+    if (playbackError?.retrying != true || playbackState == PlaybackState.ENDED) return
+    // Before the stop: the state machine holds PAUSED through the IDLE that follows.
+    setPlaybackState(PlaybackState.PAUSED)
+    clearRetryingError()
+    exoPlayer.stop()
+    resetRetryTimer()
   }
 
   /**

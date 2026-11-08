@@ -104,6 +104,52 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a pause during a retry stays paused and the next play reloads`() {
+    pauseDuringRetry { player.pause() }
+
+    player.play()
+    awaitRetry("the reload's retry")
+  }
+
+  @Test
+  fun `a session pause during a retry stays paused and a session play reloads`() {
+    pauseDuringRetry { player.forwardingPlayer.pause() }
+
+    // Masked as paused and ready, so the session's play button doesn't prepare it itself.
+    assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
+    player.forwardingPlayer.play()
+    awaitRetry("the reload's retry")
+  }
+
+  /** Pauses with a retry pending and runs past every backoff it would have taken. */
+  private fun pauseDuringRetry(pause: () -> Unit) {
+    play("https://127.0.0.1:9/stream", RetryPolicy.Infinite())
+    awaitRetry("a pending retry")
+
+    pause()
+    repeat(10) {
+      ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
+      Thread.sleep(20)
+      shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    assertEquals(Playback(PlaybackState.PAUSED, null), player.getPlayback())
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertFalse(
+      "a terminal error was reported",
+      mockingDetails(callbacks).invocations.any {
+        it.method.name == "onPlaybackError" && it.arguments[0] != null
+      },
+    )
+  }
+
+  private fun awaitRetry(what: String) =
+    idleUntil(what) {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      player.playbackError?.retrying == true
+    }
+
+  @Test
   fun `emptying the queue clears a terminal error`() {
     failTerminally()
 

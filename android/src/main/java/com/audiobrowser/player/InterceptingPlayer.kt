@@ -9,9 +9,10 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
- * With `keepAlive`, a terminal error (idle with an error) reads as paused and ready to the platform
- * session rather than STATE_NONE, which Android Auto takes for "nothing playing": it closes the
- * now-playing screen and its next/previous buttons with it.
+ * With `keepAlive`, a terminal error (idle with an error) or a pause that cancelled a retry (idle
+ * in PAUSED) reads as paused and ready to the platform session rather than STATE_NONE, which
+ * Android Auto takes for "nothing playing": it closes the now-playing screen and its next/previous
+ * buttons with it.
  */
 internal object SessionErrorMask {
   fun playbackState(state: Int, hasError: Boolean, keepAlive: Boolean): Int =
@@ -24,15 +25,20 @@ internal object SessionErrorMask {
 /**
  * The player the MediaSession sees. Offers each transport command from an external surface (lock
  * screen, notification, Bluetooth, Android Auto) to the app's `handleRemote*` callback first: true
- * consumes it, anything else runs the default. Masks a terminal error from the session (see
- * [SessionErrorMask]); the error still reaches JS through `onPlaybackError` and `playbackState`.
+ * consumes it, anything else runs the default. Masks a terminal error and a cancelled retry from
+ * the session (see [SessionErrorMask]); the error still reaches JS through `onPlaybackError` and
+ * `playbackState`.
  */
 internal class InterceptingPlayer(
   player: MediaPlayer,
   private val callbacksProvider: () -> Callbacks?,
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
+  private val isPaused: () -> Boolean,
 ) : ForwardingPlayer(player) {
+
+  private val parked: Boolean
+    get() = super.getPlayerError() != null || isPaused()
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
   // show as a disruptive error. Hidden whatever keepSessionAliveOnError says.
@@ -42,7 +48,7 @@ internal class InterceptingPlayer(
   override fun getPlaybackState(): Int =
     SessionErrorMask.playbackState(
       super.getPlaybackState(),
-      hasError = super.getPlayerError() != null,
+      hasError = parked,
       keepAlive = keepSessionAliveOnError,
     )
 
@@ -50,14 +56,14 @@ internal class InterceptingPlayer(
     SessionErrorMask.playWhenReady(
       super.getPlayWhenReady(),
       super.getPlaybackState(),
-      hasError = super.getPlayerError() != null,
+      hasError = parked,
       keepAlive = keepSessionAliveOnError,
     )
 
-  // After a terminal error the player is idle, and the default play/skip only move playWhenReady or
-  // the index; prepare() restarts it. prepare() is a no-op unless idle.
+  // After a terminal error or a cancelled retry the player is idle, and the default play/skip only
+  // move playWhenReady or the index; prepare() restarts it. prepare() is a no-op unless idle.
   private fun recoverFromErrorIfNeeded() {
-    if (keepSessionAliveOnError && super.getPlayerError() != null) {
+    if (keepSessionAliveOnError && parked) {
       prepare()
     }
   }
