@@ -150,11 +150,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   override fun onEvents(media3Player: MediaPlayer, events: MediaPlayer.Events) {
     // In event order: each setPlaybackState emits.
     for (i in 0 until events.size()) {
-      // A new item clears the prior error even when no state transition follows (queue emptied).
-      if (events[i] == MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION) {
-        player.playbackError = null
-      }
-
       val event =
         when (events[i]) {
           MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED ->
