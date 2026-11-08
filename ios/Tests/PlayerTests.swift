@@ -539,6 +539,21 @@ struct PlayWhenReadyTests {
   }
 
   @Test @MainActor
+  func toggle_fromErrorWithIntentRaised_reloads() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try loadTrack(c)
+    c.setPlayWhenReady(true)
+    c.transition(.errorOccurred(.playbackFailed))
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    c.togglePlayback()
+
+    #expect(c.playWhenReady)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
+    #expect(c.state == .loading)
+  }
+
+  @Test @MainActor
   func true_fromStopped_triggersReload() throws {
     let (c, eh, _, _) = makeCoordinator()
     try loadTrack(c)
