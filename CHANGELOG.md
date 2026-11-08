@@ -1,3 +1,9 @@
+## [0.2.0-next.62](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.61...v0.2.0-next.62) (2026-11-08)
+
+### Bug Fixes
+
+* **ios:** keep a seek made during a load when the load reloads ([4fd18ab](https://github.com/radio-garden/react-native-audio-browser/commit/4fd18abcb3093ea6213a799fdb998307b6e8c2df))
+
 ## [0.2.0-next.61](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.60...v0.2.0-next.61) (2026-11-08)
 
 ### Bug Fixes
