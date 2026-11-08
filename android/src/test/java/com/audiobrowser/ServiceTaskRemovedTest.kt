@@ -1,10 +1,17 @@
 package com.audiobrowser
 
 import android.content.ComponentName
+import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Binder
+import android.os.Bundle
 import android.os.Looper
+import android.os.Process
+import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
+import androidx.media3.session.MediaSession
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.PlaybackStateStore
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
@@ -50,6 +57,35 @@ class ServiceTaskRemovedTest {
     player.load(TestFixtures.track(title = title, src = "https://s/$title.mp3"))
     player.play()
     idle()
+  }
+
+  @OptIn(UnstableApi::class)
+  private fun connectController(packageName: String) {
+    val application = RuntimeEnvironment.getApplication()
+    shadowOf(application.packageManager)
+      .setPackagesForUid(Process.myUid(), application.packageName, packageName)
+    val context =
+      object : ContextWrapper(application) {
+        override fun getPackageName() = packageName
+      }
+    // Only to reach the private session: onGetSession ignores its argument.
+    val session =
+      service.onGetSession(
+        MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+          packageName,
+          0,
+          Process.myUid(),
+          0,
+          0,
+          false,
+          Bundle.EMPTY,
+          false,
+        )
+      )
+    val future = MediaController.Builder(context, session.token).buildAsync()
+    idle()
+    // Throws if the session refused the controller.
+    future.get()
   }
 
   private fun removeTask(behavior: AppKilledPlaybackBehavior? = null) {
@@ -197,5 +233,44 @@ class ServiceTaskRemovedTest {
     assertEquals(listOf("a"), player.tracks.map { it.title })
     assertTrue(player.exoPlayer.playWhenReady)
     assertFalse(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task stops playback while the Bluetooth stack is connected as a controller`() {
+    controller.bind()
+    playTrack("a")
+    connectController("com.google.android.bluetooth")
+
+    removeTask()
+
+    assertEquals(emptyList<String>(), player.tracks.map { it.title })
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+    assertTrue(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task only pauses while Android Auto is connected`() {
+    playTrack("a")
+    connectController("com.google.android.projection.gearhead")
+
+    removeTask()
+
+    assertFalse(player.exoPlayer.isReleased)
+    assertEquals(listOf("a"), player.tracks.map { it.title })
+    assertFalse(player.exoPlayer.playWhenReady)
+    assertTrue(shadowOf(service).isForegroundStopped)
+    assertTrue(shadowOf(service).notificationShouldRemoved)
+    assertFalse(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task only pauses while Android Automotive is connected`() {
+    playTrack("a")
+    connectController("com.android.car.media")
+
+    removeTask()
+
+    assertFalse(player.exoPlayer.isReleased)
+    assertEquals(listOf("a"), player.tracks.map { it.title })
   }
 }
