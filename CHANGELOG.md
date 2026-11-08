@@ -1,3 +1,16 @@
+## [0.2.0-next.67](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.66...v0.2.0-next.67) (2026-11-08)
+
+### Bug Fixes
+
+* **android:** give no session to a client binding after a swipe's shutdown ([ad3d269](https://github.com/radio-garden/react-native-audio-browser/commit/ad3d2697cca84e69c670518b13dd020c3a779953))
+* **android:** play the next track after removing a failed one ([97fc6b5](https://github.com/radio-garden/react-native-audio-browser/commit/97fc6b519bed4d78f146223bba70593649481b9a))
+* **android:** stop playback on a task swipe while Bluetooth is on ([143c41f](https://github.com/radio-garden/react-native-audio-browser/commit/143c41f7e5ae2d6ed35b76c06c98902851dcdf6f))
+* play on a toggle after a terminal error ([948a41e](https://github.com/radio-garden/react-native-audio-browser/commit/948a41ef29e1f141dd50ab69149af24c9e32c109))
+
+### Documentation
+
+* **android:** say onEvents walks events in constant order ([f6d4339](https://github.com/radio-garden/react-native-audio-browser/commit/f6d4339155b0b6520dcb749d03a691fd9435574a))
+
 ## [0.2.0-next.66](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.65...v0.2.0-next.66) (2026-11-08)
 
 ### Bug Fixes
