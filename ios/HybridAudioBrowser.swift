@@ -55,6 +55,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browserManager = BrowserManager()
   let browseGate = BrowseGate()
   let trackSelector: TrackSelector
+  @MainActor private(set) var initialNavigation: Task<Void, Never>?
   @MainActor private(set) lazy var audioSession = AudioSessionController()
   // Player state set before the player exists, by setup options or the setters; last write wins,
   // consumed when the player comes up.
@@ -124,14 +125,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       onMainActor {
         browserManager.config = BrowserConfig(from: configuration)
         browserManager.clearContent()
+        initialNavigation?.cancel()
+        initialNavigation = Task {
+          let tabs = try? await browserManager.queryTabs()
+          guard !Task.isCancelled else { return }
+          navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
+        }
       }
 
       Task { @MainActor in
         playerAndConfiguredBrowser.check()
-      }
-      Task {
-        let tabs = try? await browserManager.queryTabs()
-        navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
       }
     }
   }
