@@ -1,3 +1,9 @@
+## [0.2.0-next.66](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.65...v0.2.0-next.66) (2026-11-08)
+
+### Bug Fixes
+
+* **android:** settle every promise after dispose and on a dead binding ([0599c7e](https://github.com/radio-garden/react-native-audio-browser/commit/0599c7e92b68ada3e866dcef5bb69fa3dc0b8a7b))
+
 ## [0.2.0-next.65](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.64...v0.2.0-next.65) (2026-11-08)
 
 ### Bug Fixes
