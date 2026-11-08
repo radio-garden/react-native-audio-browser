@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import timber.log.Timber
 
 /**
@@ -304,8 +305,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     stopForeground(STOP_FOREGROUND_REMOVE)
   }
 
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
+
+    // Cancelled with the session's release. A client still bound keeps the service alive after
+    // a swipe's shutdown, and Media3 throws on adding a released session.
+    if (!scope.isActive) return null
 
     // No setup() here: default options would replace the ones setupPlayer applied.
     if (player.getCallbacks() == null) {

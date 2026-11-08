@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -82,7 +83,7 @@ class ServiceTaskRemovedTest {
           false,
         )
       )
-    val future = MediaController.Builder(context, session.token).buildAsync()
+    val future = MediaController.Builder(context, session!!.token).buildAsync()
     idle()
     // Throws if the session refused the controller.
     future.get()
@@ -272,5 +273,14 @@ class ServiceTaskRemovedTest {
 
     assertFalse(player.exoPlayer.isReleased)
     assertEquals(listOf("a"), player.tracks.map { it.title })
+  }
+
+  @Test
+  fun `a media browser binding after the task is removed gets no session`() {
+    playTrack("a")
+    connectController("com.google.android.bluetooth")
+    removeTask()
+
+    assertNull(service.onBind(Intent("android.media.browse.MediaBrowserService")))
   }
 }
