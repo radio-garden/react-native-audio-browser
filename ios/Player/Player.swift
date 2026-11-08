@@ -384,6 +384,7 @@ final class Player {
     shouldResumeAfterInterruption = false
     transition(.stopped)
     setPlayWhenReady(false)
+    deferredSeek.reset()
     if currentTrack?.live != true { seek(to: 0) }
   }
 
@@ -665,7 +666,7 @@ final class Player {
   func seekToLiveEdge() {
     guard currentTrack?.live == true, engine.hasItem else { return }
     if let edge = engine.liveEdge {
-      engine.seek(to: edge) { _ in }
+      seek(to: edge)
     } else {
       reloadResolving(startFromCurrentTime: false)
     }
@@ -680,7 +681,7 @@ final class Player {
         completion(false)
         return
       }
-      seekDidLand()
+      seekDidLand(finished: finished)
       completion(finished)
     }
   }
@@ -692,8 +693,8 @@ final class Player {
     return true
   }
 
-  private func seekDidLand() {
-    switch deferredSeek.land() {
+  private func seekDidLand(finished: Bool) {
+    switch deferredSeek.land(finished: finished) {
     case .done:
       if state == .loading { transition(.loadSeekCompleted) }
     case let .reseek(time):
@@ -719,10 +720,12 @@ final class Player {
   }
 
   /// A restart from a terminal error begins a new Load on a new AVPlayer; automatic retries
-  /// never get here in .error, since the retry loop keeps the state non-terminal. `time` is held
-  /// as the deferred seek before the loading transition saves the snapshot.
+  /// never get here in .error, since the retry loop keeps the state non-terminal. `time`, else the
+  /// pending target, is held as the deferred seek before the loading transition saves the snapshot.
   private func prepareForReload(resumingAt time: TimeInterval?) {
     load?.reloadOnPlay = false
+    let target = time ?? deferredSeek.target
+    deferredSeek.reset()
     if state == .error {
       beginLoad()
       clearItem()
@@ -732,7 +735,7 @@ final class Player {
       engine.dropAsset()
       engine.pause()
     }
-    if let time { deferredSeek.capture(time) }
+    if let target { deferredSeek.capture(target) }
     transition(.trackLoading)
   }
 

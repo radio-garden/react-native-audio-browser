@@ -50,7 +50,10 @@ struct DeferredSeek {
     return time
   }
 
-  mutating func land() -> Landing {
+  /// A seek cut short, as when its item fails, keeps the target for the reload; a seek that cut it
+  /// short lands in its place.
+  mutating func land(finished: Bool) -> Landing {
+    guard finished else { return .none }
     switch state {
     case .inFlight:
       state = .idle
