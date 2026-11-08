@@ -18,8 +18,10 @@ final class BrowserManager {
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
-  // Moves on `clearContent`, so a fetch that outlives one caches nothing.
+  // Moves on `clearContent`, so a fetch that outlives one caches nothing; `pageGenerations` does
+  // the same for one path, and is cleared only together with a move of this.
   private var contentGeneration = 0
+  private var pageGenerations: [String: Int] = [:]
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -145,10 +147,12 @@ final class BrowserManager {
       return favorites.hydrate(cached)
     }
 
-    let generation = contentGeneration
+    let generation = pageGeneration(normalizedPath)
     let resolvedTrack = try await pages.resolve(normalizedPath)
 
-    if generation == contentGeneration { contentCache.set(normalizedPath, value: resolvedTrack) }
+    if generation == pageGeneration(normalizedPath) {
+      contentCache.set(normalizedPath, value: resolvedTrack)
+    }
 
     return favorites.hydrate(resolvedTrack)
   }
@@ -160,7 +164,12 @@ final class BrowserManager {
         "invalidateContentCache() expects a container path, not a contextual path: \(path)",
       )
     }
+    pageGenerations[path, default: 0] += 1
     contentCache.remove(path)
+  }
+
+  private func pageGeneration(_ path: String) -> (Int, Int?) {
+    (contentGeneration, pageGenerations[path])
   }
 
   /// Clears every cache and the resolved request layers, then re-queries the tabs and reloads
@@ -183,6 +192,7 @@ final class BrowserManager {
   func clearContent() {
     contentCache.clear()
     contentGeneration &+= 1
+    pageGenerations.removeAll()
     lastSearchKey = nil
     lastSearchResults = nil
   }
