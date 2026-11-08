@@ -143,13 +143,13 @@ final class MockPlayerEngine: PlayerEngine {
   }
 }
 
-/// A Player whose retries reload while `retries` and otherwise give up, persisting to a
-/// test-only defaults suite.
+/// A Player whose retries reload while `retries` and otherwise give up, or follow the play intent
+/// when `retries` is nil, persisting to a test-only defaults suite.
 @MainActor
 func makePlayer(
   engine: MockPlayerEngine = MockPlayerEngine(),
   retry: RetryLoop = makeRetryLoop(),
-  retries: Bool = true,
+  retries: Bool? = true,
   sleepTimerScheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
   saveInterval: Duration = .seconds(5),
 ) -> Player {
@@ -158,7 +158,7 @@ func makePlayer(
     persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
   // Player's init installs its own `shouldRetry`; replace it afterwards.
-  retry.shouldRetry = { retries }
+  if let retries { retry.shouldRetry = { retries } }
   return player
 }
 

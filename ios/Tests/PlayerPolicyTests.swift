@@ -185,6 +185,23 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
+  @Test func theNetworkReturningDuringABackoffLeavesTheReloadToTheRetry() async throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")])
+    player.play()
+    player.transition(.avPlayerWaiting)
+    engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    let retrying = player.retry.pendingTask
+    let loadsBefore = engine.resolveAndLoadCalls.count
+
+    player.networkStatusDidChange(isOnline: true)
+    await retrying?.value
+
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == loadsBefore + 1)
+  }
+
   @Test func theNetworkGoingReRendersTheStallLineWithoutReconnecting() throws {
     let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)

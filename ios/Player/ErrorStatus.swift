@@ -27,12 +27,13 @@ enum ErrorStatus: Equatable {
   }
 
   /// The status once `event` moves the state from `old` to `new`: an error event is a new
-  /// terminal report; leaving `.error` clears it, and so does a retrying error reaching a state
-  /// that carries no advisory error.
+  /// terminal report; leaving `.error` clears it, and so does a cancelled retry or a retrying
+  /// error reaching a state that carries no advisory error.
   func after(event: PlaybackEvent, from old: PlaybackState, to new: PlaybackState) -> ErrorStatus {
     if case let .errorOccurred(error) = event {
       return .terminal(error, report: terminalReport &+ 1)
     }
+    if case .retryCancelled = event { return .none }
     if old == .error || (isRetrying && !new.carriesAdvisoryError) { return .none }
     return self
   }

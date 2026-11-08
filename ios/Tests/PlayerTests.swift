@@ -198,6 +198,132 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.last?.error?.retrying == nil)
     #expect(cb.errorEvents.count == 1)
   }
+
+  /// The listener chose to pause, so the retry the pause stops is no failure; the next play
+  /// reloads where it failed, since the item it would have replaced is dead.
+  @Test @MainActor
+  func pauseDuringRetry_staysQuietAndReloadsOnPlay() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+
+    c.pause()
+    await retrying?.value
+
+    #expect(c.state != .error)
+    #expect(cb.errorEvents.isEmpty)
+    #expect(eh.resolveAndLoadCalls.isEmpty)
+
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target == 42)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_whileBuffering_reportsPausedWithoutTheRetryingError() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.transition(.avPlayerWaiting)
+    eh.emit(.failed(URLError(.cannotConnectToHost), httpStatusCode: nil))
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+
+    c.pause()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_whileLoading_reportsPausedWithoutTheRetryingError() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+    #expect(cb.playbackChanges.last?.state == .loading)
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+
+    c.pause()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func interruptionDuringALoadRetry_reportsPaused() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.hasLoadedAsset = false
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+
+    c.handleInterruptionBegan()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+  }
+
+  /// The failed item can't seek, so a seek waits for the reload, as one does while loading.
+  @Test @MainActor
+  func seekAfterPauseDuringRetry_landsOnTheReload() throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    eh.currentTime = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    c.pause()
+
+    c.seek(by: 10)
+    #expect(c.deferredSeek.target == 52)
+    c.seek(to: 100)
+    c.play()
+
+    #expect(eh.seekCalls.isEmpty)
+    #expect(c.deferredSeek.target == 100)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_refillsTheBudgets() async throws {
+    let (c, _, cb) = try makePlayingWithRetries()
+    c.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    await c.retry.pendingTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    c.pause()
+    c.play()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    await c.retry.pendingTask?.value
+
+    #expect(c.state != .error)
+    #expect(cb.errorEvents.isEmpty)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_thenStop_playsFromTheStart() throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    c.pause()
+    c.stop()
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target ?? 0 == 0)
+  }
+}
+
+/// Playing a track whose retries follow the play intent and back off long enough to pause in.
+@MainActor
+private func makePlayingWithRetries() throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  try startPlaying(player, engine)
+  // The engine's position counts only once an item is prepared.
+  engine.emit(.itemPrepared(likelyToKeepUp: false))
+  engine.resolveAndLoadCalls.removeAll()
+  return (player, engine, callbacks)
 }
 
 // MARK: - emitStateChange
@@ -1279,6 +1405,19 @@ struct SessionReleaseTests {
     c.handleInterruptionBegan()
     eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: false)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_requestsRelease() async throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.pause()
+    await retrying?.value
+
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 }

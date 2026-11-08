@@ -55,6 +55,8 @@ final class Player {
     var primedNowPlaying = false
     /// One of this load's items is in the engine; until then it reports the previous one's position.
     var itemPrepared = false
+    /// A pause cancelled this load's retry, leaving the failed item for the next play to replace.
+    var reloadOnPlay = false
 
     mutating func claimNowPlayingPrime() -> Bool {
       guard !primedNowPlaying else { return false }
@@ -105,10 +107,16 @@ final class Player {
     }
   }
 
+  /// Whether the engine's item is not this Load's playable one: one loads, or a pause cancelled
+  /// the retry that was to replace a failed one. A seek waits for the next item meanwhile.
+  private var awaitingItem: Bool {
+    state == .loading || load?.reloadOnPlay == true
+  }
+
   /// Whether the engine reports this Load's position: not before one of its items is prepared,
-  /// nor while one reloads.
+  /// nor while it awaits the next one.
   private var enginePositionIsCurrent: Bool {
-    state != .loading && load?.itemPrepared == true
+    !awaitingItem && load?.itemPrepared == true
   }
 
   private var resumePosition: TimeInterval? {
@@ -169,16 +177,24 @@ final class Player {
     // A play during an interruption owns the intent: a later pause must not be auto-resumed.
     if newValue { shouldResumeAfterInterruption = false }
 
-    // A terminal state has no item to play, or one parked at its end: reload, re-resolving a URL
-    // that may have expired since. Only .error resumes from the last position.
-    if newValue, state == .error || state == .stopped || state == .ended {
-      reloadResolving(startFromCurrentTime: state == .error)
+    // A terminal state or a cancelled retry has no item to play, or one parked at its end: reload,
+    // re-resolving a URL that may have expired since. Only .error and a cancelled retry resume where they failed.
+    let resumes = state == .error || load?.reloadOnPlay == true
+    if newValue, resumes || state == .stopped || state == .ended {
+      reloadResolving(startFromCurrentTime: resumes)
     }
     if state != .loading {
       if newValue { engine.play() } else { engine.pause() }
     }
 
     guard changed else { return }
+    // Left to run, the retry would give up on the dropped intent and surface .error.
+    if !newValue, retry.pendingTask != nil {
+      retry.reset()
+      if let position = resumePosition { deferredSeek.capture(position) }
+      load?.reloadOnPlay = true
+      transition(.retryCancelled)
+    }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
@@ -361,8 +377,10 @@ final class Player {
   }
 
   func stop() {
-    // Before the intent drop: a pending retry would surface .error and hold the session.
+    // A pending retry would turn the stop into .error, and the next play must start over rather
+    // than resume where it failed.
     retry.cancel()
+    load?.reloadOnPlay = false
     shouldResumeAfterInterruption = false
     transition(.stopped)
     setPlayWhenReady(false)
@@ -384,7 +402,7 @@ final class Player {
     // A nested interruption keeps the intent the first one captured.
     shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
     pause()
-    if playbackActive, state != .loading {
+    if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
     }
   }
@@ -620,10 +638,11 @@ final class Player {
 
   // MARK: - Seeking
 
-  /// Seeks the current item. While loading, the target is held until the item is ready and the
-  /// ready transition waits for it (`DeferredSeek`); `completion` then reports false at once.
+  /// Seeks the current item. While it awaits the next item, the target is held until that one is
+  /// ready and the ready transition waits for it (`DeferredSeek`); `completion` then reports false
+  /// at once.
   func seek(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void = { _ in }) {
-    if state == .loading {
+    if awaitingItem {
       deferredSeek.capture(seconds)
       completion(false)
     } else if engine.hasItem {
@@ -634,7 +653,7 @@ final class Player {
   }
 
   func seek(by offset: TimeInterval) {
-    if state == .loading {
+    if awaitingItem {
       seek(to: (deferredSeek.target ?? 0) + offset)
     } else if engine.hasItem {
       seek(to: engine.currentTime + offset)
@@ -703,6 +722,7 @@ final class Player {
   /// never get here in .error, since the retry loop keeps the state non-terminal. `time` is held
   /// as the deferred seek before the loading transition saves the snapshot.
   private func prepareForReload(resumingAt time: TimeInterval?) {
+    load?.reloadOnPlay = false
     if state == .error {
       beginLoad()
       clearItem()
@@ -861,11 +881,10 @@ final class Player {
   /// connectivity returns re-establishes a stalled stream. AVPlayer doesn't reliably report a
   /// live stream's mid-stream drop as a failure: it waits with no error, so the retry loop never
   /// engages. Only while stalled (.buffering) with play intent, so a pause or a retry that gave up
-  /// isn't resumed; and not while the retry loop is itself waiting for the network, which owns
-  /// that reload.
+  /// isn't resumed; and not while a retry is pending, which owns that reload.
   func networkStatusDidChange(isOnline: Bool) {
     engine.renderNowPlaying()
-    guard isOnline, playWhenReady, state == .buffering, !retry.isWaitingForNetwork else { return }
+    guard isOnline, playWhenReady, state == .buffering, retry.pendingTask == nil else { return }
     logger.info("Connectivity restored while stalled — re-resolving to reconnect")
     reloadResolving(startFromCurrentTime: true)
   }
