@@ -121,7 +121,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // Copied on the setter's thread: the Task below outlives this call, and Nitro can reassign
       // `configuration` (a C++ struct holding std::string/std::function) from the JS thread.
       let configuredPath = configuration.path
-      onMainActor { browserManager.config = BrowserConfig(from: configuration) }
+      onMainActor {
+        browserManager.config = BrowserConfig(from: configuration)
+        browserManager.clearContent()
+      }
 
       Task { @MainActor in
         playerAndConfiguredBrowser.check()

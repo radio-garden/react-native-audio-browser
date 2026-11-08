@@ -18,7 +18,7 @@ final class BrowserManager {
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
-  // Moves on `invalidateAll`, so a fetch that outlives one caches nothing.
+  // Moves on `clearContent`, so a fetch that outlives one caches nothing.
   private var contentGeneration = 0
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
@@ -167,11 +167,8 @@ final class BrowserManager {
   /// the current path, independently: a failed reload goes to `reloadFailed` with its path, and
   /// a failed tabs query keeps the current tabs.
   func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
-    contentCache.clear()
-    contentGeneration &+= 1
+    clearContent()
     requests.invalidateLayers()
-    lastSearchKey = nil
-    lastSearchResults = nil
     Task { _ = try? await queryTabs() }
     Task {
       do {
@@ -180,6 +177,14 @@ final class BrowserManager {
         await reloadFailed(error, path)
       }
     }
+  }
+
+  /// Clears the cached pages and the last search; a fetch in flight caches nothing.
+  func clearContent() {
+    contentCache.clear()
+    contentGeneration &+= 1
+    lastSearchKey = nil
+    lastSearchResults = nil
   }
 
   /// The app's `formatNavigationError` result, or the default when it has none or it fails.
