@@ -1,3 +1,15 @@
+## [0.2.0-next.61](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.60...v0.2.0-next.61) (2026-11-08)
+
+### Bug Fixes
+
+* **android:** fire the end-of-track sleep timer under repeat-track ([8848251](https://github.com/radio-garden/react-native-audio-browser/commit/884825152c7a617845a3727f6844123ffe40310d))
+* **android:** fire the end-of-track sleep timer when a remote output ends a track ([f0dbe86](https://github.com/radio-garden/react-native-audio-browser/commit/f0dbe86049f87a6441ebf44640356765e313ae90))
+* **android:** save the position on teardown even when not playing ([e783625](https://github.com/radio-garden/react-native-audio-browser/commit/e783625673deed7c00844dafbb7eec9809e73521))
+* **android:** settle every setupPlayer that waits for the service ([ee99afe](https://github.com/radio-garden/react-native-audio-browser/commit/ee99afec7976b4a3c77e6deea7f179ef51635194))
+* **ios:** keep a pause during a retry paused, and release the session ([9a3d50b](https://github.com/radio-garden/react-native-audio-browser/commit/9a3d50bd7d7f1773a8559691752d433142257ead)), closes [#60](https://github.com/radio-garden/react-native-audio-browser/issues/60)
+* **ios:** leave a reconnect to the pending retry during an online backoff ([8a6e3a7](https://github.com/radio-garden/react-native-audio-browser/commit/8a6e3a7203e43f07325f7c81b46dc886a5b0f143))
+* **ios:** report paused for a pause during a retry ([7c82c7c](https://github.com/radio-garden/react-native-audio-browser/commit/7c82c7cdffdad4196698ebeb710f4b5febf23e47))
+
 ## [0.2.0-next.60](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.59...v0.2.0-next.60) (2026-11-07)
 
 ### Bug Fixes
