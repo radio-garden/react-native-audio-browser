@@ -1,3 +1,19 @@
+## [0.2.0-next.63](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.62...v0.2.0-next.63) (2026-11-08)
+
+### ⚠ BREAKING CHANGES
+
+* the `on*` emitters no longer have `lastValue`. Read the
+matching getter (`getOutput`, `getQueue`, …) for the current value. The
+favorite, queue-ended and metadata events have no getter: subscribe to them.
+
+### Bug Fixes
+
+* **android:** keep the error state through a pause and clear it with an emptied queue ([e6b469e](https://github.com/radio-garden/react-native-audio-browser/commit/e6b469e04c37d1902b98f88229a19e1382a66319))
+* drop a page in flight across invalidateContentCache of its path ([831249b](https://github.com/radio-garden/react-native-audio-browser/commit/831249bb9c3f8db6d21bdba3d456b6fd6be4109a))
+* hooks read the current value, not the last event, and iOS re-setup emits its reset state ([fbda2e9](https://github.com/radio-garden/react-native-audio-browser/commit/fbda2e994d8b26305d7cb7b0f92ea5c9538df526))
+* hooks read the getter once per mount, and emitters drop lastValue ([5fcaca7](https://github.com/radio-garden/react-native-audio-browser/commit/5fcaca7a0164790f60516548d49cc830a037cf32))
+* **ios:** clear cached pages and the last search on a new configuration ([fdc023a](https://github.com/radio-garden/react-native-audio-browser/commit/fdc023a7f5eda7802f8a4aa763c1da6e6c1e75cb))
+
 ## [0.2.0-next.62](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.61...v0.2.0-next.62) (2026-11-08)
 
 ### Bug Fixes
