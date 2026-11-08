@@ -1,3 +1,13 @@
+## [0.2.0-next.68](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.67...v0.2.0-next.68) (2026-11-08)
+
+### Bug Fixes
+
+* **android:** give up offline within the recovery budget after a stuck player ([24e6d8d](https://github.com/radio-garden/react-native-audio-browser/commit/24e6d8d16339fc91f9de6899a696ccdd4b593aae))
+
+### Code Refactors
+
+* **android:** reduce the retry policy's error classification to one Boolean ([b266603](https://github.com/radio-garden/react-native-audio-browser/commit/b266603b9d0be012f70c5a29180e91f435d050a2))
+
 ## [0.2.0-next.67](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.66...v0.2.0-next.67) (2026-11-08)
 
 ### Bug Fixes
