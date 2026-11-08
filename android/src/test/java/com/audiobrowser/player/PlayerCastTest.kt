@@ -133,6 +133,28 @@ class PlayerCastTest {
     assertEquals(10, receiver.volume)
   }
 
+  @Test
+  fun `the end-of-track sleep pauses when the receiver ends a track short of its duration`() {
+    player.setQueue(
+      arrayOf(
+        TestFixtures.track(title = "b", src = "https://s/b.mp3"),
+        TestFixtures.track(title = "c", src = "https://s/c.mp3"),
+      )
+    )
+    idleUntil("the first item on the receiver") { receiver.loads.size == 2 }
+    receiver.durationMs = 180_000
+    receiver.positionMs = 179_000
+    receiver.update()
+    idle()
+    player.sleepTimer.setEndOfTrack()
+
+    remote.end()
+    idleUntil("the next item on the receiver") { receiver.loads.size == 3 }
+
+    assertTrue(player.sleepTimer.get().isFirst)
+    assertFalse(receiver.loads.last().autoplay)
+  }
+
   private fun calls(name: String) =
     mockingDetails(callbacks).invocations.filter { it.method.name == name }
 
