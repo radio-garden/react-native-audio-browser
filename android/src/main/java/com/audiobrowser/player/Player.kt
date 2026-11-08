@@ -949,8 +949,8 @@ internal constructor(
   }
 
   fun destroy() {
-    // No final save: it would persist position 0 from the released player over the real one.
-    playbackStateStore.cancelPeriodicSave()
+    // stop() saves only if playing; before it, so its STOPPED doesn't defeat the ENDED guard.
+    playbackStateStore.stopPeriodicSave()
     // An armed timer would fire pause() into the released player. Cleared before the release,
     // while a mid-ramp fade can still restore the volume.
     sleepTimer.clear()
