@@ -8,6 +8,7 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.util.StuckPlayerException
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
@@ -231,6 +232,56 @@ class PlayerRetryTest {
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
     assertEquals(PlaybackState.ERROR, player.playbackState)
   }
+
+  @Test
+  fun `offline, a stuck recovery leaves the recovery budget running`() {
+    stuckRecoveryMidBudget(online = false)
+
+    assertEquals(PlaybackState.ERROR, player.playbackState)
+    // The load error, not a stuck give-up.
+    assertEquals("not-connected-to-internet", player.playbackError?.code)
+  }
+
+  @Test
+  fun `online, a stuck recovery refills the recovery budget`() {
+    stuckRecoveryMidBudget(online = true)
+
+    assertEquals(true, player.playbackError?.retrying)
+  }
+
+  /**
+   * A load marked as played retries a closed port under a 30 s recovery budget, takes a stuck
+   * report at 25 s, and runs on to 45 s, short of media3's own 60 s stuck detection. The player is
+   * not idle, so the recovery's re-prepare does nothing: this covers the budget refill only.
+   */
+  private fun stuckRecoveryMidBudget(online: Boolean) {
+    connectivity.setNetworkCapabilities(wifi, capabilities(validated = online))
+    connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
+    play(
+      "https://127.0.0.1:9/stream",
+      retryPolicy = RetryPolicy.Infinite(maxRetryDurationMs = 30_000),
+    )
+    awaitRetry("a pending retry")
+    player.hasPlayedCache = true
+    advanceSeconds(25)
+    assertEquals(true, player.playbackError?.retrying)
+
+    player.playerListener.onPlayerError(
+      PlaybackException(
+        "stuck",
+        StuckPlayerException(StuckPlayerException.STUCK_BUFFERING_NO_PROGRESS, 60_000),
+        PlaybackException.ERROR_CODE_TIMEOUT,
+      )
+    )
+    advanceSeconds(20)
+  }
+
+  private fun advanceSeconds(seconds: Int) =
+    repeat(seconds) {
+      ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
+      Thread.sleep(10)
+      shadowOf(Looper.getMainLooper()).idle()
+    }
 
   /** A closed port: the load fails at once, and with no retries the failure is terminal. */
   private fun failTerminally(vararg next: String) {

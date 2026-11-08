@@ -1,5 +1,6 @@
 package com.audiobrowser.player
 
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
 import androidx.media3.datasource.DataSourceException
@@ -100,7 +101,7 @@ class RetryLoadErrorHandlingPolicy(
   override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
     val exception = loadErrorInfo.exception
     val errorCount = loadErrorInfo.errorCount
-    val currentTime = System.currentTimeMillis()
+    val currentTime = SystemClock.elapsedRealtime()
 
     if (!shouldRetry()) {
       Timber.d("Retry skipped: shouldRetry() returned false (player likely paused)")

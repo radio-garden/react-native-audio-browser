@@ -250,7 +250,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           "Stuck player recovery: type=${error.stuckType} timeoutMs=${error.timeoutMs} " +
             "live=${player.isCurrentItemLive}"
         )
-        player.resetRetryTimer()
+        // Offline time counts against the recovery budget, and offline media3 reports stuck every
+        // minute: a refill here would keep the budget from ever running out.
+        if (player.networkMonitor.getOnline()) player.resetRetryTimer()
         player.localEngine.retry(toLiveEdge = player.isCurrentItemLive)
       }
       StuckRecoveryPolicy.Decision.GIVE_UP -> {

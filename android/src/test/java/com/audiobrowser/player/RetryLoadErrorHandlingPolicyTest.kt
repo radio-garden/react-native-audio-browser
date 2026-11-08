@@ -13,13 +13,18 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.time.Duration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowSystemClock
 
+@RunWith(RobolectricTestRunner::class)
 class RetryLoadErrorHandlingPolicyTest {
   // LoadEventInfo needs an Android Uri to construct; the policy reads only the exception and the
   // error count.
@@ -138,7 +143,7 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 }
 
-/** Clock-based: 100ms budgets and 150ms sleeps between errors leave margin both ways. */
+@RunWith(RobolectricTestRunner::class)
 class RetryLoadErrorHandlingPolicyBudgetTest {
   private val loadEventInfo = org.mockito.Mockito.mock(LoadEventInfo::class.java)
   private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
@@ -157,7 +162,7 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
       RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
 
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
   }
 
@@ -167,7 +172,7 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
       RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { true })
 
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
   }
 
@@ -182,12 +187,12 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
       )
 
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
 
     online = true
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
   }
 
@@ -202,13 +207,13 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
       )
 
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     online = false
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
 
     online = true
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
   }
 
@@ -218,7 +223,7 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
       RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
 
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    Thread.sleep(150)
+    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
     policy.reset()
     assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
   }
