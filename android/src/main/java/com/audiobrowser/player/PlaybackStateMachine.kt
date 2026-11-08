@@ -64,7 +64,10 @@ object PlaybackStateMachine {
         }
       is PlaybackEvent.MediaItemTransition ->
         when {
-          !event.hasTrack -> emptyList()
+          // An emptied queue. STOPPED holds: the service clears the queue just before stop(), and
+          // the events arrive after it.
+          !event.hasTrack ->
+            if (current == PlaybackState.STOPPED) emptyList() else listOf(PlaybackState.NONE)
           // Already playing (gapless auto-advance): no IsPlayingChanged follows, so run the whole
           // sequence here or the state sticks on LOADING.
           event.isPlaying ->
@@ -74,11 +77,11 @@ object PlaybackStateMachine {
       is PlaybackEvent.ShouldPlayWhenReadyChanged ->
         when {
           // stop() and a natural end both clear the intent themselves; STOPPED and ENDED must not
-          // turn into PAUSED.
-          !event.shouldPlayWhenReady &&
-            current != PlaybackState.STOPPED &&
-            current != PlaybackState.ENDED -> listOf(PlaybackState.PAUSED)
-          !event.shouldPlayWhenReady -> emptyList()
+          // turn into PAUSED. A pause holds ERROR, as on iOS.
+          !event.shouldPlayWhenReady ->
+            if (current in setOf(PlaybackState.STOPPED, PlaybackState.ENDED, PlaybackState.ERROR))
+              emptyList()
+            else listOf(PlaybackState.PAUSED)
           // Resuming while ExoPlayer still buffers: no state change of its own follows, and the
           // READY after it is dropped while playing, so report the load now.
           current == PlaybackState.PAUSED && event.exoState == MediaPlayer.STATE_BUFFERING ->

@@ -33,6 +33,8 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -90,6 +92,30 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a pause keeps a terminal error`() {
+    failTerminally()
+    val failed = player.getPlayback()
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(failed, player.getPlayback())
+    verify(callbacks, never()).onPlaybackError(null)
+  }
+
+  @Test
+  fun `emptying the queue clears a terminal error`() {
+    failTerminally()
+
+    player.clear()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(Playback(PlaybackState.NONE, null), player.getPlayback())
+    verify(callbacks).onPlaybackError(null)
+    verify(callbacks).onPlaybackChanged(Playback(PlaybackState.NONE, null))
+  }
+
+  @Test
   fun `a player that gave up stays stopped when the network returns`() {
     connectivity.setNetworkCapabilities(wifi, capabilities(validated = false))
     connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
@@ -118,6 +144,15 @@ class PlayerRetryTest {
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
     assertEquals(PlaybackState.ERROR, player.playbackState)
+  }
+
+  /** A closed port: the load fails at once, and with no retries the failure is terminal. */
+  private fun failTerminally() {
+    play("https://127.0.0.1:9/stream", RetryPolicy.Limited(maxRetries = 0))
+    idleUntil("a terminal error") {
+      ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
+      player.playbackState == PlaybackState.ERROR
+    }
   }
 
   private fun play(src: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {

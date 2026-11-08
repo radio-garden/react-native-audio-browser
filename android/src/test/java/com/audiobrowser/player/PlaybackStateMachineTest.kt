@@ -146,17 +146,17 @@ class PlaybackStateMachineTest {
   }
 
   @Test
-  fun `a transition without a track is suppressed`() {
-    assertEquals(
-      emptyList<PlaybackState>(),
-      on(PlaybackEvent.MediaItemTransition(hasTrack = false, isPlaying = true)),
-    )
+  fun `a transition without a track is none, except from stopped`() {
+    val emptied = PlaybackEvent.MediaItemTransition(hasTrack = false, isPlaying = false)
+    assertEquals(listOf(PlaybackState.NONE), on(emptied, from = PlaybackState.ERROR))
+    assertEquals(listOf(PlaybackState.NONE), on(emptied, from = PlaybackState.ENDED))
+    assertEquals(emptyList<PlaybackState>(), on(emptied, from = PlaybackState.STOPPED))
   }
 
   // MARK: shouldPlayWhenReady / isPlaying
 
   @Test
-  fun `losing shouldPlayWhenReady pauses except from stopped or ended`() {
+  fun `losing shouldPlayWhenReady pauses except from stopped, ended or error`() {
     val paused =
       PlaybackEvent.ShouldPlayWhenReadyChanged(
         shouldPlayWhenReady = false,
@@ -165,6 +165,7 @@ class PlaybackStateMachineTest {
     assertEquals(listOf(PlaybackState.PAUSED), on(paused, from = PlaybackState.PLAYING))
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.STOPPED))
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.ENDED))
+    assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.ERROR))
     assertEquals(
       emptyList<PlaybackState>(),
       on(
