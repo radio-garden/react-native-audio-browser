@@ -1,6 +1,8 @@
 package com.audiobrowser.cast
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.cast.Cast
 import androidx.media3.cast.CastParams
 import androidx.media3.cast.DefaultMediaItemConverter
@@ -9,15 +11,18 @@ import androidx.media3.cast.RemoteCastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import com.audiobrowser.RemoteOutputs
 import com.audiobrowser.remote.RemotePlayback
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaQueueItem
 import com.google.android.gms.cast.MediaStatus
+import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.margelo.nitro.audiobrowser.OutputType
 import timber.log.Timber
 
 private fun receiverOrDefault(receiverApplicationId: String?) =
@@ -25,6 +30,8 @@ private fun receiverOrDefault(receiverApplicationId: String?) =
 
 // Cast takes its receiver once per process; a later one waits for a restart.
 private var initializedReceiver: String? = null
+
+private const val RESUME_GRACE_MS = 10_000L
 
 /**
  * The MediaRouter control category of the routes that can run the receiver: the one Cast started
@@ -109,9 +116,27 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
       override fun onSessionSuspended(session: CastSession, reason: Int) = Unit
     }
 
+  private val handler = Handler(Looper.getMainLooper())
+
+  // A process that died while casting comes back with the Cast route still selected, and audio on
+  // the phone unless Cast resumes the session. The current session is set while one starts or
+  // resumes, and a resume can only begin once the context has loaded.
+  private val dropStaleRoute =
+    object : Runnable {
+      override fun run() {
+        when {
+          CastContext.getSharedInstance() == null && cast.castContextLoadFailure == null ->
+            handler.postDelayed(this, RESUME_GRACE_MS)
+          RemoteOutputs.current?.type == OutputType.CAST && cast.currentCastSession == null ->
+            RemoteOutputs.unselect()
+        }
+      }
+    }
+
   init {
     cast.addSessionManagerListener(sessions)
     watch(cast.currentCastSession)
+    handler.postDelayed(dropStaleRoute, RESUME_GRACE_MS)
   }
 
   private fun watch(session: CastSession?) {
@@ -137,6 +162,7 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   }
 
   override fun release() {
+    handler.removeCallbacks(dropStaleRoute)
     cast.removeSessionManagerListener(sessions)
     watch(null)
     player.release()

@@ -109,11 +109,18 @@ object RemoteOutputs {
   private fun stop() {
     val router = router ?: return
     router.removeCallback(callback)
+    unselect()
+    this.router = null
+    setCurrent(null)
+  }
+
+  /** Brings the Output Switcher back to the phone if a remote output is selected. */
+  @MainThread
+  internal fun unselect() {
+    val router = router ?: return
     if (router.selectedRoute.matchesSelector(selector)) {
       router.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
     }
-    this.router = null
-    setCurrent(null)
   }
 
   /** Never throws: a failed check must not keep [start] from setting up the router. */
