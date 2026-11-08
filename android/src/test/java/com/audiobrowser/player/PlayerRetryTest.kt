@@ -122,8 +122,8 @@ class PlayerRetryTest {
   }
 
   /** Pauses with a retry pending and runs past every backoff it would have taken. */
-  private fun pauseDuringRetry(pause: () -> Unit) {
-    play("https://127.0.0.1:9/stream", RetryPolicy.Infinite())
+  private fun pauseDuringRetry(vararg next: String, pause: () -> Unit) {
+    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
 
     pause()
@@ -150,6 +150,36 @@ class PlayerRetryTest {
     }
 
   @Test
+  fun `removing a failed current track plays the next`() {
+    failTerminally(Uri.fromFile(silentWav()).toString())
+
+    player.remove(listOf(0))
+
+    idleUntil("the next track playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `removing another track keeps a terminal error`() {
+    failTerminally(Uri.fromFile(silentWav()).toString())
+
+    player.remove(listOf(1))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackState.ERROR, player.playbackState)
+  }
+
+  @Test
+  fun `removing the current track after a cancelled retry stays idle`() {
+    pauseDuringRetry(Uri.fromFile(silentWav()).toString()) { player.pause() }
+
+    player.remove(listOf(0))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
   fun `emptying the queue clears a terminal error`() {
     failTerminally()
 
@@ -167,7 +197,7 @@ class PlayerRetryTest {
     connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
     // A closed port: the load fails at once, the retry is pending, and the next failure is
     // terminal.
-    play("https://127.0.0.1:9/stream", RetryPolicy.Limited(maxRetries = 1))
+    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Limited(maxRetries = 1))
     player.observeNetworkConnectivity(scope)
     idleUntil("the retry gave up") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
@@ -193,15 +223,15 @@ class PlayerRetryTest {
   }
 
   /** A closed port: the load fails at once, and with no retries the failure is terminal. */
-  private fun failTerminally() {
-    play("https://127.0.0.1:9/stream", RetryPolicy.Limited(maxRetries = 0))
+  private fun failTerminally(vararg next: String) {
+    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Limited(maxRetries = 0))
     idleUntil("a terminal error") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
       player.playbackState == PlaybackState.ERROR
     }
   }
 
-  private fun play(src: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
+  private fun play(vararg srcs: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
     player.exoPlayer.trackSelectionParameters =
@@ -210,7 +240,9 @@ class PlayerRetryTest {
         .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
         .build()
     player.exoPlayer.setMediaItems(
-      listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = src)))
+      srcs.mapIndexed { i, src ->
+        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = src))
+      }
     )
     player.exoPlayer.prepare()
     player.play()

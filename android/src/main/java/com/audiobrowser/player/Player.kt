@@ -578,20 +578,16 @@ internal constructor(
     sessionPlayer.prepare()
   }
 
-  /** @throws IllegalArgumentException if [index] is out of bounds. */
-  fun remove(index: Int) {
-    validateIndex(index)
-    sessionPlayer.removeMediaItem(index)
-  }
-
   /** @throws IllegalArgumentException if an index is out of bounds or repeated. */
   fun remove(indexes: List<Int>) {
     if (indexes.toSet().size != indexes.size) {
       throw IllegalArgumentException("Duplicate indexes provided")
     }
     indexes.forEach { validateIndex(it) }
-    val sorted = indexes.sortedDescending()
-    sorted.forEach { sessionPlayer.removeMediaItem(it) }
+    val removesCurrent = sessionPlayer.currentMediaItemIndex in indexes
+    indexes.sortedDescending().forEach { sessionPlayer.removeMediaItem(it) }
+    // Loads the new current track on an engine an error left idle; a no-op otherwise.
+    if (removesCurrent && playWhenReady) prepare()
   }
 
   fun next() {

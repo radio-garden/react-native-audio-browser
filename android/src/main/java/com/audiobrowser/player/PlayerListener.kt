@@ -151,7 +151,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onEvents(media3Player: MediaPlayer, events: MediaPlayer.Events) {
-    // In event order: each setPlaybackState emits.
+    // In event-constant order, not the order the events happened; the transitions rely on it.
+    // Each setPlaybackState emits.
     for (i in 0 until events.size()) {
       val event =
         when (events[i]) {
