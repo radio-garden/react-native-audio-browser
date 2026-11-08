@@ -48,7 +48,7 @@ class LegacyRatingTest {
       Bundle.EMPTY,
       false,
     )
-  private val session = service.onGetSession(legacyController)
+  private val session = service.onGetSession(legacyController)!!
 
   @After
   fun destroy() {

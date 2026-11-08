@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import timber.log.Timber
 
 /**
@@ -244,18 +245,11 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     super.onRebind(intent)
   }
 
+  @OptIn(UnstableApi::class)
   override fun onTaskRemoved(rootIntent: Intent?) {
     val appKilledPlaybackBehavior = player.appKilledPlaybackBehavior
 
     Timber.d("player = $player, appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
-
-    // The system UI's controller backs the notification, so it doesn't count as external.
-    val hasExternalControllers =
-      mediaSession.connectedControllers.any { controller ->
-        controller.packageName != packageName && controller.packageName != "com.android.systemui"
-      }
-
-    Timber.d("hasExternalControllers = $hasExternalControllers")
 
     when (appKilledPlaybackBehavior) {
       AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> {
@@ -264,8 +258,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       }
 
       AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> {
-        if (hasExternalControllers) {
-          Timber.d("External controllers still connected - deferring aggressive cleanup")
+        // Only a car keeps the session through a swipe: the Bluetooth stack connects as a
+        // controller whenever Bluetooth is on, with or without a device.
+        val carConnected =
+          mediaSession.connectedControllers.any {
+            mediaSession.isAutomotiveController(it) || mediaSession.isAutoCompanionController(it)
+          }
+        if (carConnected) {
+          Timber.d("A car is connected - pausing instead of stopping")
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
         } else if (moduleBound) {
@@ -274,7 +274,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
           // Ends the service once AudioBrowser unbinds.
           stopSelf()
         } else {
-          Timber.d("No external controllers - proceeding with service shutdown")
+          Timber.d("No car connected - shutting the service down")
           try {
             if (::mediaSession.isInitialized) {
               mediaSession.release()
@@ -305,8 +305,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     stopForeground(STOP_FOREGROUND_REMOVE)
   }
 
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
+
+    // Cancelled with the session's release. A client still bound keeps the service alive after
+    // a swipe's shutdown, and Media3 throws on adding a released session.
+    if (!scope.isActive) return null
 
     // No setup() here: default options would replace the ones setupPlayer applied.
     if (player.getCallbacks() == null) {
