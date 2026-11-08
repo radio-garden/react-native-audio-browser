@@ -172,7 +172,8 @@ restarted from a terminal error_ (`retry()`, or any play command while in
 `'error'`), and it survives every automatic retry of that track.
 
 A new load starts fresh budgets. Within a load, the recovery budget refills
-after a stretch of uninterrupted playback (see below).
+after a stretch of uninterrupted playback, and on Android after a recovery
+(see below).
 
 How long the player keeps trying depends on one piece of evidence: **has this
 load ever produced audio?**
@@ -204,7 +205,9 @@ on.
 
 After 20 seconds of uninterrupted audible playback, the stream counts as
 recovered and the recovery budget refills (on iOS, the attempt count too), so
-each later dropout of a long-lived stream gets a full window.
+each later dropout of a long-lived stream gets a full window. On Android, a
+recovery from falling behind a live window refills it too, and so does one
+from a stalled player while the device is online.
 
 The load stays the same, and so does its evidence that it has played: the
 first-connect budget does not come back.
