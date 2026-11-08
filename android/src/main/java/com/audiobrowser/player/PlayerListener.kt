@@ -83,7 +83,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       )
     player.callbacks?.onPlaybackActiveTrackChanged(event)
 
-    if (reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+    if (
+      reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+        reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+    ) {
       player.sleepTimer.onTrackEnd()
     }
 
