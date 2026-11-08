@@ -12,17 +12,23 @@ const native = vi.hoisted(() => ({
 
 vi.mock('../native', () => ({ nativeBrowser: native }))
 
-const { onSleepTimerChanged, useSleepTimer, useSleepTimerActive } =
-  await import('./sleepTimer')
+const { useSleepTimer, useSleepTimerActive } = await import('./sleepTimer')
+
+/**
+ * A first read that sees a live timer while native clears it before the hook
+ * subscribes: the clear's event lands mid-render, before any listener exists.
+ */
+const clearDuringRead = (): SleepTimer => {
+  native.onSleepTimerChanged?.(null)
+  return { time: Date.now() + 60_000 }
+}
 
 /** Push a value the way native would. */
 const fire = (timer: SleepTimer) =>
   act(() => native.onSleepTimerChanged?.(timer))
 
-/** The emitter is a module-level singleton, so `lastValue` outlives each test. */
 beforeEach(() => {
-  onSleepTimerChanged.lastValue = undefined
-  native.getSleepTimer.mockReturnValue(null)
+  native.getSleepTimer.mockReset().mockReturnValue(null)
 })
 afterEach(cleanup)
 
@@ -50,18 +56,15 @@ describe('useSleepTimerActive', () => {
 
   // The getter ran during render and saw a live timer; the clear landed
   // before the effect subscribed.
-  it('re-syncs a clear that landed between the render read and the effect', () => {
-    native.getSleepTimer
-      .mockReturnValueOnce({ time: Date.now() + 60_000 })
-      .mockReturnValue(null)
+  it('re-reads a clear that landed between the render read and the effect', () => {
+    native.getSleepTimer.mockImplementationOnce(clearDuringRead)
     const { result } = renderHook(() => useSleepTimerActive())
     expect(result.current).toBe(false)
   })
 
-  it('prefers the getter over a stale lastValue', () => {
-    onSleepTimerChanged.lastValue = { time: Date.now() + 60_000 }
-    const { result } = renderHook(() => useSleepTimerActive())
-    expect(result.current).toBe(false)
+  it('calls the getter once when no event lands before subscribing', () => {
+    renderHook(() => useSleepTimerActive())
+    expect(native.getSleepTimer).toHaveBeenCalledTimes(1)
   })
 
   it('stops tracking after unmount', () => {
@@ -155,17 +158,14 @@ describe('useSleepTimer', () => {
     }
   })
 
-  it('re-syncs a clear that landed between the render read and the effect', () => {
-    native.getSleepTimer
-      .mockReturnValueOnce({ time: Date.now() + 60_000 })
-      .mockReturnValue(null)
+  it('re-reads a clear that landed between the render read and the effect', () => {
+    native.getSleepTimer.mockImplementationOnce(clearDuringRead)
     const { result } = renderHook(() => useSleepTimer())
     expect(result.current).toBeUndefined()
   })
 
-  it('prefers the getter over a stale lastValue', () => {
-    onSleepTimerChanged.lastValue = { time: Date.now() + 60_000 }
-    const { result } = renderHook(() => useSleepTimer())
-    expect(result.current).toBeUndefined()
+  it('calls the getter once when no event lands before subscribing', () => {
+    renderHook(() => useSleepTimer())
+    expect(native.getSleepTimer).toHaveBeenCalledTimes(1)
   })
 })

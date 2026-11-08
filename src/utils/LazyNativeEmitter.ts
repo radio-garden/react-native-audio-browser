@@ -5,9 +5,9 @@ type Callback<T> = (arg: T) => void
  * `onRemoteSeek`, …) and `onGate`. Subscribe with {@link addListener}; the
  * returned function unsubscribes. The emitter is not callable itself.
  *
- * Native starts delivering the event only once the first listener is added,
- * and nothing is cached: there is no `lastValue`. The other `on*` exports use
- * `NativeUpdatedValue`, which listens from module load.
+ * Native starts delivering the event only once the first listener is added.
+ * The other `on*` exports use `NativeUpdatedValue`, which listens from module
+ * load.
  *
  * @example
  * ```typescript

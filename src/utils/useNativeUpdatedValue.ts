@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NativeUpdatedValue } from './NativeUpdatedValue'
 
 /**
  * Generic hook for values that are fetched from native and updated via callbacks.
  *
- * Reads the getter rather than `emitter.lastValue`, which is stale after a
- * change that emits nothing, and reads it again on subscribing so a change
- * between render and subscription is not missed.
+ * Reads the getter on mount, and again on subscribing only if an event landed
+ * since, so a change between render and subscription is not missed.
  *
  * @param getter - Synchronous function returning the current value
  * @param emitter - NativeUpdatedValue that provides the subscription
@@ -18,10 +17,13 @@ export function useNativeUpdatedValue<T, E = T>(
   emitter: NativeUpdatedValue<E>,
   eventKey?: keyof E
 ): T {
+  const eventCountAtRender = useRef(emitter.eventCount)
   const [value, setValue] = useState(getter)
 
   useEffect(() => {
-    setValue(getter)
+    if (emitter.eventCount !== eventCountAtRender.current) setValue(getter)
+    // A re-run, for another emitter or eventKey, always reads afresh.
+    eventCountAtRender.current = NaN
     return emitter.addListener((event) => {
       const newValue = eventKey !== undefined ? event[eventKey] : event
       setValue(newValue as T)

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { NativeUpdatedValue } from './NativeUpdatedValue'
 import { useNativeUpdatedValue } from './useNativeUpdatedValue'
 
@@ -19,7 +19,9 @@ function makeEmitter<T>() {
   return {
     emitter,
     /** Emit from outside React, as a native event would arrive. */
-    fire: (value: T) => act(() => emit(value))
+    fire: (value: T) => act(() => emit(value)),
+    /** Emit from inside a render pass, where wrapping in `act` would nest. */
+    fireDuringRender: (value: T) => emit(value)
   }
 }
 
@@ -30,15 +32,6 @@ describe('useNativeUpdatedValue', () => {
       useNativeUpdatedValue(() => 'a', emitter)
     )
     expect(result.current).toBe('a')
-  })
-
-  it('prefers the getter over a stale lastValue', () => {
-    const { emitter, fire } = makeEmitter<string>()
-    fire('stale')
-    const { result } = renderHook(() =>
-      useNativeUpdatedValue(() => 'current', emitter)
-    )
-    expect(result.current).toBe('current')
   })
 
   it('updates when the emitter fires', () => {
@@ -60,16 +53,27 @@ describe('useNativeUpdatedValue', () => {
     expect(result.current).toBe(0.9)
   })
 
-  it('re-syncs a change that lands between the render read and the effect', () => {
-    const { emitter } = makeEmitter<string>()
+  it('re-reads a change that lands between the render read and the effect', () => {
+    const { emitter, fireDuringRender } = makeEmitter<string>()
     let native = 'atRender'
     const getter = () => {
       const value = native
-      native = 'changedBeforeEffect'
+      if (value === 'atRender') {
+        native = 'changed'
+        fireDuringRender('changed')
+      }
       return value
     }
     const { result } = renderHook(() => useNativeUpdatedValue(getter, emitter))
-    expect(result.current).toBe('changedBeforeEffect')
+    expect(result.current).toBe('changed')
+  })
+
+  it('calls the getter once when no event lands before subscribing', () => {
+    const { emitter, fire } = makeEmitter<string>()
+    fire('earlier')
+    const getter = vi.fn(() => 'a')
+    renderHook(() => useNativeUpdatedValue(getter, emitter))
+    expect(getter).toHaveBeenCalledTimes(1)
   })
 
   it('keeps an event over an inline getter on re-render', () => {
