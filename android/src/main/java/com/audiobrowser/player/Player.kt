@@ -933,10 +933,10 @@ internal constructor(
 
   fun togglePlayback() {
     when {
-      shouldPlayWhenReady -> pause()
       // Suppressed with the intent raised: ExoPlayer resumes when focus returns. play() would
       // request focus again, and during a call that refusal drops the intent.
-      playWhenReady -> Unit
+      playWhenReady && !shouldPlayWhenReady -> Unit
+      PlayingStateFactory.derive(shouldPlayWhenReady, playbackState).playing -> pause()
       else -> play()
     }
   }

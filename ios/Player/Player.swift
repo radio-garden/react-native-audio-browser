@@ -373,7 +373,7 @@ final class Player {
   }
 
   func togglePlayback() {
-    setPlayWhenReady(!playWhenReady)
+    setPlayWhenReady(!playingState.playing)
   }
 
   func stop() {

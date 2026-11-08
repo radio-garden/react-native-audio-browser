@@ -104,6 +104,16 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a toggle after a terminal error reloads`() {
+    failTerminally()
+
+    player.togglePlayback()
+
+    assertTrue(player.exoPlayer.playWhenReady)
+    assertEquals(MediaPlayer.STATE_BUFFERING, player.exoPlayer.playbackState)
+  }
+
+  @Test
   fun `a pause during a retry stays paused and the next play reloads`() {
     pauseDuringRetry { player.pause() }
 
