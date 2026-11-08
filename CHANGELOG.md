@@ -1,3 +1,9 @@
+## [0.2.0-next.65](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.64...v0.2.0-next.65) (2026-11-08)
+
+### Bug Fixes
+
+* **android:** stay paused when a pause lands during a retry ([d208301](https://github.com/radio-garden/react-native-audio-browser/commit/d20830102e288d7fa3f723e66bfeb1578fbeca86))
+
 ## [0.2.0-next.64](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.63...v0.2.0-next.64) (2026-11-08)
 
 ### Bug Fixes
