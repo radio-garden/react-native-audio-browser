@@ -95,11 +95,14 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -230,7 +233,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(pending)) }
   }
   // Every setupPlayer waiting for the service awaits it. Replaced on disconnect, after
-  // cancelChildren has rejected its waiters.
+  // cancelChildren has rejected its waiters, and on a dead binding, after failing them.
   private var connectionReady = CompletableDeferred<Unit>()
 
   // Staged by setup options or by setters called before the player exists; last write wins, and
@@ -659,7 +662,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun search(query: String): Promise<Array<Track>> {
-    return Promise.async(mainScope) {
+    return promise {
       Timber.d("Searching for: $query")
       // Rejects with the error a browse would raise but leaves the navigation error unset: a failed
       // search must not replace the displayed page's state (mirrors iOS HybridAudioBrowser.search).
@@ -776,7 +779,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
-    return Promise.async(mainScope) {
+    return promise {
       setupOptions.update(options)
       // Staged to apply together with the engine below, or at service connect. Last write wins
       // against the imperative setters.
@@ -788,7 +791,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         it.player.applyOptions(updateOptions)
         it.player.setup(setupOptions)
         applyPendingPlayerState(it.player)
-        return@async
+        return@promise
       }
 
       if (!serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)) {
@@ -1165,9 +1168,26 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     Timber.d("AudioBrowser.onServiceDisconnected()")
   }
 
+  // Android never reconnects a dead binding: release it so the next setupPlayer binds afresh.
+  override fun onBindingDied(name: ComponentName) = dropDeadBinding()
+
+  override fun onNullBinding(name: ComponentName) = dropDeadBinding()
+
+  private fun dropDeadBinding() {
+    serviceBinding.unbind(this)
+    connectionReady.completeExceptionally(IllegalStateException("AudioBrowserService binding died"))
+    connectionReady = CompletableDeferred()
+  }
+
   // ============================================================================
   // MARK: Internal Helpers
   // ============================================================================
+
+  private fun <T> promise(run: suspend () -> T): Promise<T> {
+    val promise = Promise<T>()
+    mainScope.launchSettled({ it.fold(promise::resolve, promise::reject) }, run)
+    return promise
+  }
 
   private fun launchInScope(block: suspend () -> Unit) {
     mainScope.launch { block() }
@@ -1552,6 +1572,22 @@ internal suspend fun formattedOrDefault(
 ): FormattedNavigationError {
   val hop = scope.async { runCatching { format() }.getOrNull() }
   return withTimeoutOrNull(FORMATTER_TIMEOUT) { hop.await() } ?: default
+}
+
+/**
+ * Runs [run] in this scope and hands its outcome to [settle] once. Unlike Nitro's `Promise.async`,
+ * a scope cancelled before [run] starts still settles, with the cancellation, and [run] never runs.
+ */
+@OptIn(DelicateCoroutinesApi::class)
+internal fun <T> CoroutineScope.launchSettled(settle: (Result<T>) -> Unit, run: suspend () -> T) {
+  launch(start = CoroutineStart.ATOMIC) {
+    settle(
+      runCatching {
+        ensureActive()
+        run()
+      }
+    )
+  }
 }
 
 private fun httpStatusText(statusCode: Int): String {
