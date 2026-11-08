@@ -74,6 +74,92 @@ struct PlayerSeekingTests {
     #expect(player.state == .loading)
   }
 
+  @Test func aCompletionFromBeforeAReloadIsDropped() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    player.reloadResolving(startFromCurrentTime: true)
+    engine.completeSeeks(true)
+    engine.completeSeeks(true)
+
+    #expect(player.state == .loading)
+    #expect(player.deferredSeek.target == 25)
+    #expect(engine.seekCalls == [25])
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls == [25, 25])
+  }
+
+  @Test func aStartSeekCutShortWaitsForTheNextItem() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    engine.completeSeeks(false)
+
+    #expect(player.state == .loading)
+    #expect(player.deferredSeek.target == 25)
+    #expect(engine.seekCalls == [25])
+  }
+
+  /// A media-load retry passes no position, so the start in flight is what it resumes from.
+  @Test func aReloadThatDoesNotResumeKeepsTheStartInFlight() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    player.reloadResolving(startFromCurrentTime: false)
+    engine.completeSeeks(true)
+
+    #expect(player.state == .loading)
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls == [25, 25])
+  }
+
+  @Test func aPlayRightAfterAStopDuringTheStartSeekStartsOver() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    player.stop()
+    player.play()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    #expect(engine.seekCalls == [25, 0])
+    #expect(player.deferredSeek.target == nil)
+  }
+
+  @Test func theLiveEdgeDuringALoadWaitsForTheStartSeek() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.m3u8", title: "T", live: true)], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.liveEdge = 120
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [25])
+    engine.completeSeeks(true)
+    engine.completeSeeks(true)
+
+    #expect(engine.seekCalls == [25, 120])
+    #expect(player.state != .loading)
+  }
+
   @Test func theLiveEdgeIsTheSeekableWindowsEnd_orAReconnectWithoutOne() throws {
     let (player, engine, _) = try makePlaying(live: true)
     engine.liveEdge = 120
