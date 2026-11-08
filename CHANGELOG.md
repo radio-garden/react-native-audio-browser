@@ -1,3 +1,9 @@
+## [0.2.0-next.64](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.63...v0.2.0-next.64) (2026-11-08)
+
+### Bug Fixes
+
+* **ios:** let a newer configuration or navigation supersede a pending start path ([c817304](https://github.com/radio-garden/react-native-audio-browser/commit/c817304a8be43fbfddec60c644d6f3d6383e5dbe))
+
 ## [0.2.0-next.63](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.62...v0.2.0-next.63) (2026-11-08)
 
 ### ⚠ BREAKING CHANGES
