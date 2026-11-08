@@ -357,6 +357,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) = 0;
       virtual void clearNowPlayingFlash() = 0;
       virtual std::optional<NowPlayingMetadata> getNowPlaying() = 0;
+      virtual std::optional<TimedMetadata> getTimedMetadata() = 0;
       virtual bool getOnline() = 0;
       virtual double getSystemVolume() = 0;
       virtual void setSystemVolume(double volume) = 0;

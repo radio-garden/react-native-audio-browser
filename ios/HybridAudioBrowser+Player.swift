@@ -298,6 +298,10 @@ public extension HybridAudioBrowser {
     onMainActor { engine?.nowPlayingUpdater.nowPlaying }
   }
 
+  func getTimedMetadata() throws -> TimedMetadata? {
+    onMainActor { engine?.nowPlayingUpdater.timedMetadata }
+  }
+
   // MARK: - Network
 
   func getOnline() throws -> Bool {

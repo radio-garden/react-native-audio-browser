@@ -492,7 +492,7 @@ class NowPlayingUpdaterTest {
   // MARK: timed metadata
 
   @Test
-  fun `timed metadata re-runs the formatter and clears on track change`() = runTest {
+  fun `timed metadata re-runs the formatter, is readable and clears on track change`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
     val updater = NowPlayingUpdater(surface, backgroundScope)
     val seenTimed = mutableListOf<String?>()
@@ -512,11 +512,13 @@ class NowPlayingUpdaterTest {
     updater.onTimedMetadataReceived(timed)
     runCurrent()
     assertEquals("Song X", seenTimed.last())
+    assertEquals(timed, updater.timedMetadata)
 
     updater.clearOverride() // as on a track change
     updater.render()
     runCurrent()
     assertNull(seenTimed.last())
+    assertNull(updater.timedMetadata)
   }
 
   // MARK: artwork keying

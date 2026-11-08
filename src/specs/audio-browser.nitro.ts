@@ -309,6 +309,11 @@ export interface AudioBrowser extends HybridObject<{
    * Gets the current now playing metadata (override if set, else track metadata).
    */
   getNowPlaying(): NowPlayingMetadata | undefined
+  /**
+   * Gets the last timed metadata received for the current track, cleared on
+   * a track change.
+   */
+  getTimedMetadata(): TimedMetadata | undefined
 
   // MARK: network connectivity
   getOnline(): boolean

@@ -1145,6 +1145,10 @@ export class NativeAudioBrowser
     this.nowPlayingManager.updateNowPlaying(update, track, duration)
   }
 
+  getTimedMetadata(): TimedMetadata | undefined {
+    return undefined
+  }
+
   getNowPlaying(): NowPlayingMetadata | undefined {
     const track = this.getActiveTrack()
     const duration = this.getProgress().duration

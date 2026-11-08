@@ -1815,6 +1815,11 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
+  std::optional<TimedMetadata> JHybridAudioBrowserSpec::getTimedMetadata() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JTimedMetadata>()>("getTimedMetadata");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
   bool JHybridAudioBrowserSpec::getOnline() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("getOnline");
     auto __result = method(_javaPart);
