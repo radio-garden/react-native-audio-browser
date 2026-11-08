@@ -126,14 +126,11 @@ class RetryLoadErrorHandlingPolicy(
       return C.TIME_UNSET
     }
 
-    val errorClassification = classifyError(exception)
-
-    return if (errorClassification.isRecoverable) {
+    return if (isRecoverable(exception)) {
       val currentlyOffline = !isOnline()
-      val isNetworkError = errorClassification.isNetworkError
 
       val delay =
-        if (currentlyOffline && isNetworkError) {
+        if (currentlyOffline) {
           Timber.d("Device is offline, using short retry delay")
           OFFLINE_RETRY_DELAY_MS
         } else {
@@ -155,38 +152,28 @@ class RetryLoadErrorHandlingPolicy(
     }
   }
 
-  private data class ErrorClassification(val isRecoverable: Boolean, val isNetworkError: Boolean)
-
   /**
    * Walks the cause chain: load errors arrive as raw IOExceptions (a Wi-Fi drop is a socket or DNS
-   * error), never as a PlaybackException. Anything not known to be fatal counts as a network error.
+   * error), never as a PlaybackException. Anything not known to be fatal is recoverable.
    */
-  private fun classifyError(exception: IOException): ErrorClassification {
-    val nonRecoverable = ErrorClassification(isRecoverable = false, isNetworkError = false)
-
+  private fun isRecoverable(exception: IOException): Boolean {
     var current: Throwable? = exception
     while (current != null) {
       when (current) {
-        is HttpDataSource.InvalidResponseCodeException -> {
-          val retryable = current.responseCode in RETRYABLE_HTTP_STATUS_CODES
-          return ErrorClassification(isRecoverable = retryable, isNetworkError = retryable)
-        }
+        is HttpDataSource.InvalidResponseCodeException ->
+          return current.responseCode in RETRYABLE_HTTP_STATUS_CODES
         // Mirrors DefaultLoadErrorHandlingPolicy's fatal set.
         is HttpDataSource.CleartextNotPermittedException,
         is ParserException,
         is FileNotFoundException,
-        is Loader.UnexpectedLoaderException -> return nonRecoverable
+        is Loader.UnexpectedLoaderException -> return false
       }
       current = current.cause
     }
 
     // A position the source can no longer serve (e.g. behind a live window) won't come back on an
     // in-place retry.
-    if (DataSourceException.isCausedByPositionOutOfRange(exception)) {
-      return nonRecoverable
-    }
-
-    return ErrorClassification(isRecoverable = true, isNetworkError = true)
+    return !DataSourceException.isCausedByPositionOutOfRange(exception)
   }
 
   override fun getMinimumLoadableRetryCount(dataType: Int): Int {
