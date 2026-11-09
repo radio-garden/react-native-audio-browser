@@ -68,6 +68,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -890,6 +892,8 @@ internal constructor(
         "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
       )
       val tracks = browserManager.searchPlayable(params)
+      // A search callback's await ignores cancellation.
+      currentCoroutineContext().ensureActive()
 
       if (tracks != null && tracks.isNotEmpty()) {
         Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
@@ -901,6 +905,7 @@ internal constructor(
         false
       }
     } catch (e: Exception) {
+      currentCoroutineContext().ensureActive()
       Timber.e(e, "Error handling voice search: ${params}")
       false
     }
