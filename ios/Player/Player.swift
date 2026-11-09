@@ -345,6 +345,11 @@ final class Player {
     } else if old == .playing {
       retry.playbackStoppedBeingAudible()
     }
+    if new == .buffering, playWhenReady {
+      retry.startStallWatch()
+    } else if old == .buffering {
+      retry.stopStallWatch()
+    }
 
     switch new {
     case .ready:
@@ -805,7 +810,7 @@ final class Player {
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:
-      // Nudge, don't reconnect: a genuine drop is recovered by the retry and network paths.
+      // A nudge only: this also arrives while audio plays, so the stall watch keys on .buffering.
       recoverFromStall(reconnectIfLive: false)
     case let .timedMetadata(metadata):
       callbacks?.playerDidReceiveTimedMetadata(metadata)

@@ -18,10 +18,13 @@ public enum PlaybackErrorContext {
   case playback
   /// A MediaLoader key-value load failure: retries start from the beginning.
   case mediaLoad
+  /// Playback that stopped receiving data without AVFoundation failing it: retries resume from
+  /// the current time.
+  case stall
 
   var startFromCurrentTime: Bool {
     switch self {
-    case .playback: true
+    case .playback, .stall: true
     case .mediaLoad: false
     }
   }
@@ -30,6 +33,7 @@ public enum PlaybackErrorContext {
     switch self {
     case .playback: .playbackFailed
     case .mediaLoad: .failedToLoadKeyValue
+    case .stall: .playbackStalled
     }
   }
 }
@@ -86,6 +90,11 @@ final class RetryLoop {
   var healthyPlaybackDuration: Duration = .seconds(20)
   private(set) var healthyPlaybackTask: Task<Void, Never>?
 
+  /// How long a stall may last before it counts as a failure; longer than AVPlayer takes to fail
+  /// a stalled item itself, so its error, which says more, is the one usually retried.
+  var stallTimeout: Duration = .seconds(30)
+  private(set) var stallTask: Task<Void, Never>?
+
   private var policy: Policy = .disabled
   private var firstRetryTime: Date?
   // The first-connect budget's clock: never set while offline and wiped by any offline
@@ -139,7 +148,18 @@ final class RetryLoop {
       logger.error("[\(String(describing: context))] failure with nil error")
     }
 
-    let failure = PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError)
+    handle(PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError), context: context)
+  }
+
+  /// A failure the Player judges from what playback did, with no error to classify: retryable,
+  /// and reported as the context's fallback error.
+  func handleFailure(_ context: PlaybackErrorContext) {
+    logger.error("[\(String(describing: context))] failure")
+    handle(.init(error: context.fallbackError, retryable: true), context: context)
+  }
+
+  private func handle(_ failure: PlaybackFailure.Classification, context: PlaybackErrorContext) {
+    stopStallWatch()
     guard isEnabled, failure.retryable else {
       let reason = isEnabled ? "Error not retryable" : "Retry disabled"
       logger.warning("\(reason), surfacing \(String(describing: failure.error))")
@@ -164,10 +184,31 @@ final class RetryLoop {
     }
   }
 
-  /// Drops the retry in flight without touching the budgets.
+  /// Drops the retry in flight and the stall watch without touching the budgets.
   func cancel() {
     pendingTask?.cancel()
     pendingTask = nil
+    stopStallWatch()
+  }
+
+  // MARK: - Stalls
+
+  /// Starts the stall watch: unless stopped within `stallTimeout`, the stall becomes a `.stall`
+  /// failure, provided the play intent holds and no retry is pending. Any failure ends it.
+  func startStallWatch() {
+    stallTask?.cancel()
+    stallTask = Task { [weak self, stallTimeout] in
+      try? await Task.sleep(for: stallTimeout)
+      guard let self, !Task.isCancelled else { return }
+      stallTask = nil
+      guard pendingTask == nil, shouldRetry() else { return }
+      handleFailure(.stall)
+    }
+  }
+
+  func stopStallWatch() {
+    stallTask?.cancel()
+    stallTask = nil
   }
 
   /// Drops the retry in flight and refills the budgets.

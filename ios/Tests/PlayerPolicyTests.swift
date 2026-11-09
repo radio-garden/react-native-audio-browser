@@ -26,6 +26,25 @@ private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine
   return (player, engine, callbacks)
 }
 
+/// Playing with retries that follow the play intent, then stalled: the buffer ran dry and
+/// AVPlayer waits (.buffering), with a stall timeout short enough to await.
+@MainActor
+private func makeStalling(givesUp: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(givesUp: givesUp), retries: nil)
+  player.retry.stallTimeout = .milliseconds(10)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+  engine.hasItem = true
+  engine.hasLoadedAsset = true
+  engine.emit(.itemPrepared(likelyToKeepUp: true))
+  player.transition(.avPlayerPlaying)
+  engine.emit(.stalled)
+  player.transition(.avPlayerWaiting)
+  return (player, engine, callbacks)
+}
+
 @Suite("Player - seeking")
 @MainActor
 struct PlayerSeekingTests {
@@ -298,6 +317,77 @@ struct PlayerEngineEventTests {
 @Suite("Player - recovering")
 @MainActor
 struct PlayerRecoveringTests {
+  @Test func aStallThatOutlastsTheTimeoutIsRetried() async throws {
+    let (player, engine, callbacks) = try makeStalling()
+    await player.retry.stallTask?.value
+    #expect(callbacks.playbackChanges.last?.error?.code == TrackPlayerError.PlaybackError.playbackStalled.code)
+    #expect(callbacks.playbackChanges.last?.error?.retrying == true)
+    await player.retry.pendingTask?.value
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+  }
+
+  @Test func aStallWithNoFailureEndsInPlaybackStalledOnceTheBudgetIsSpent() async throws {
+    let (player, _, callbacks) = try makeStalling(givesUp: true)
+    await player.retry.stallTask?.value
+    await player.retry.pendingTask?.value
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  @Test func aStallThatRecoversIsNotRetried() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.transition(.avPlayerPlaying)
+    await player.retry.stallTask?.value
+    #expect(player.retry.pendingTask == nil)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// Without `automaticallyWaitsToMinimizeStalling`, AVPlayer reports a stall while the state
+  /// stays .playing, and audio may well be playing.
+  @Test func aStallReportedWhilePlayingStartsNoWatch() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.emit(.stalled)
+    #expect(player.state == .playing)
+    #expect(player.retry.stallTask == nil)
+  }
+
+  @Test func aResumeIntoBufferingStartsANewWatch() throws {
+    let (player, engine, _) = try makeStalling()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    player.play()
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
+    #expect(player.state == .buffering)
+    #expect(player.retry.stallTask != nil)
+    player.retry.cancel()
+  }
+
+  @Test func aPauseEndsTheStallWatch() throws {
+    let (player, engine, _) = try makeStalling()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(player.retry.stallTask == nil)
+    #expect(player.load?.reloadOnPlay == false)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aTrackChangeEndsTheStallWatch() throws {
+    let (player, _, _) = try makeStalling()
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    #expect(player.retry.stallTask == nil)
+  }
+
+  @Test func aStallWithRetryOffIsTerminalAtTheTimeout() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.retry.updatePolicy(from: nil)
+    await player.retry.stallTask?.value
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
   @Test func theNetworkReturningReconnectsAStalledStream() throws {
     let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)
