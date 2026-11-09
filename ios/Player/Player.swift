@@ -100,7 +100,7 @@ final class Player {
   ) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        of: $0, state: state, position: enginePositionIsCurrent ? engine.currentTime : deferredSeek.target ?? 0,
+        of: $0, state: state, position: deferredSeek.target ?? (enginePositionIsCurrent ? engine.currentTime : 0),
         repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
@@ -120,7 +120,7 @@ final class Player {
   }
 
   private var resumePosition: TimeInterval? {
-    enginePositionIsCurrent ? engine.resumePosition : deferredSeek.target
+    deferredSeek.target ?? (enginePositionIsCurrent ? engine.resumePosition : nil)
   }
 
   // MARK: - Track State (for active track changed events)
@@ -617,7 +617,7 @@ final class Player {
         engine.resolveAndLoad(src: src, track: currentTrack)
       } else {
         logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
-        clearItem()
+        engine.clearItem()
         transition(.errorOccurred(.invalidSourceUrl("nil")))
       }
     } else {
@@ -729,7 +729,7 @@ final class Player {
     deferredSeek.reset()
     if state == .error {
       beginLoad()
-      clearItem()
+      engine.clearItem()
       engine.recreate()
     } else {
       engine.cancelLoading()
@@ -740,13 +740,8 @@ final class Player {
     transition(.trackLoading)
   }
 
-  private func clearItem() {
-    engine.clearItem()
-    deferredSeek.reset()
-  }
-
   private func unload() {
-    clearItem()
+    engine.clearItem()
     transition(.trackUnloaded)
   }
 
@@ -756,7 +751,7 @@ final class Player {
   func mediaServicesWereReset() {
     guard currentTrack != nil else { return }
     logger.info("Media services were reset — recreating player and reloading current track")
-    clearItem()
+    engine.clearItem()
     engine.recreate()
     reloadResolving(startFromCurrentTime: false)
   }

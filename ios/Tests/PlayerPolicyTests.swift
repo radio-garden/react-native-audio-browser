@@ -125,6 +125,18 @@ struct PlayerSeekingTests {
     #expect(engine.seekCalls == [25, 25])
   }
 
+  @Test func aMediaServicesResetDuringTheLoadKeepsTheStart() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+
+    player.mediaServicesWereReset()
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    #expect(engine.seekCalls == [25])
+  }
+
   @Test func aPlayRightAfterAStopDuringTheStartSeekStartsOver() throws {
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retries: false)
@@ -380,6 +392,27 @@ struct PlayerRecoveringTests {
 @Suite("Player - review regressions", .serialized)
 @MainActor
 struct PlayerReviewRegressionTests {
+  @Test func aRestartFromAnErrorDuringTheStartSeekKeepsTheStart() throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    // The failed item's own time.
+    engine.resumePosition = 0
+    engine.emit(.unplayable)
+    #expect(player.state == .error)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 25000)
+
+    player.play()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    #expect(engine.seekCalls == [25, 25])
+  }
+
   @Test func endingWithTheIntentAlreadyOffSavesPositionZero() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
