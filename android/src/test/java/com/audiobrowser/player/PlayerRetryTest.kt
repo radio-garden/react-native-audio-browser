@@ -237,6 +237,45 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a stop after a cancelled retry tells the session`() {
+    pauseDuringRetry { player.pause() }
+    val states = mutableListOf<Int>()
+    player.forwardingPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          states += playbackState
+        }
+      }
+    )
+
+    player.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.forwardingPlayer.playbackState)
+    assertEquals(listOf(MediaPlayer.STATE_IDLE), states)
+  }
+
+  @Test
+  fun `a session stop after a cancelled retry is a stop the session sees`() {
+    pauseDuringRetry { player.pause() }
+    val states = mutableListOf<Int>()
+    player.forwardingPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          states += playbackState
+        }
+      }
+    )
+
+    player.forwardingPlayer.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.forwardingPlayer.playbackState)
+    assertEquals(listOf(MediaPlayer.STATE_IDLE), states)
+  }
+
+  @Test
   fun `a load failing while paused stays paused and the next play reloads`() {
     val server = ServerSocket(0)
     val wav = silentWav().readBytes()

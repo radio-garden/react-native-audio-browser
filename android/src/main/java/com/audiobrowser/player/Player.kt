@@ -117,7 +117,7 @@ internal constructor(
     private set
 
   /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
-  lateinit var forwardingPlayer: MediaPlayer
+  internal lateinit var forwardingPlayer: InterceptingPlayer
 
   private val remoteOutputs =
     RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
@@ -500,6 +500,7 @@ internal constructor(
         { options },
         keepSessionAliveOnError,
         isPaused = { playbackState == PlaybackState.PAUSED },
+        stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
@@ -1052,6 +1053,9 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
+      if ((oldState == PlaybackState.PAUSED) != (state == PlaybackState.PAUSED)) {
+        forwardingPlayer.onPausedChanged()
+      }
       if (state == PlaybackState.ERROR) resetForNewLoad()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and
