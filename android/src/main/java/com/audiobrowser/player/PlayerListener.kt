@@ -81,6 +81,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         index = player.currentIndex?.toDouble(),
         track = player.currentTrack,
       )
+    player.nowPlaying.clearOverride()
     player.callbacks?.onPlaybackActiveTrackChanged(event)
 
     if (
@@ -95,8 +96,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
     player.updateLiveState(player.currentTrack?.live == true)
-
-    player.nowPlaying.clearOverride()
 
     // The browse MediaItem's artist is the list subtitle; render() restamps the playing item with
     // the canonical artist for the now-playing surfaces (Android Auto reads both from that field).

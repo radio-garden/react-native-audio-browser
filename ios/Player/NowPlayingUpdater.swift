@@ -66,7 +66,6 @@ final class NowPlayingUpdater {
     override = nil
     cancelFlash()
     timedMetadata = nil
-    render()
   }
 
   /// The lines last published for the current track; before its first render, or while `enabled`

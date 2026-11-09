@@ -85,7 +85,8 @@ enum EngineEvent {
   func clearNowPlaying()
   /// Re-renders the now-playing lines from the Player's state.
   func renderNowPlaying()
-  /// Drops the previous track's override, flash and timed metadata, and re-renders.
+  /// Drops the previous track's override, flash and timed metadata; the lines change at the next
+  /// render.
   func nowPlayingTrackChanged()
   func applyTimedMetadata(_ metadata: TimedMetadata)
   func updateRemoteRepeatMode(_ mode: RepeatMode)

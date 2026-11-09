@@ -601,6 +601,7 @@ final class Player {
 
     let lastPosition = engine.currentTime
     let shouldContinuePlayback = playWhenReady
+    engine.nowPlayingTrackChanged()
     if let currentTrack {
       engine.stopObservingItem()
       engine.pause()
@@ -632,7 +633,7 @@ final class Player {
       track: currentTrack,
     )
     callbacks?.playerDidChangeActiveTrack(eventData)
-    engine.nowPlayingTrackChanged()
+    engine.renderNowPlaying()
     lastTrack = currentTrack
     lastIndex = queue.currentIndex
   }
