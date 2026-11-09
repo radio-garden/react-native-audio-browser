@@ -51,6 +51,7 @@ internal class InterceptingPlayer(
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
   private val playerState: () -> PlaybackState,
+  private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
@@ -100,8 +101,8 @@ internal class InterceptingPlayer(
   override fun getPlayWhenReady(): Boolean =
     SessionView.playWhenReady(super.getPlayWhenReady(), super.getPlaybackState(), playbackState)
 
-  // After a terminal error or a cancelled retry the player is idle, and the default play/skip only
-  // move playWhenReady or the index; prepare() restarts it. prepare() is a no-op unless idle.
+  // After a terminal error or a cancelled retry the engine is idle, and the default skips only move
+  // the index; prepare() restarts it. prepare() is a no-op unless idle.
   private fun recoverFromErrorIfNeeded() {
     if (
       super.getPlaybackState() == MediaPlayer.STATE_IDLE && playbackState != MediaPlayer.STATE_IDLE
@@ -120,7 +121,7 @@ internal class InterceptingPlayer(
     if (recover) recoverFromErrorIfNeeded()
   }
 
-  override fun play() = intercept({ it.handleRemotePlay() }, recover = true) { super.play() }
+  override fun play() = intercept({ it.handleRemotePlay() }) { playPlayer() }
 
   override fun pause() = intercept({ it.handleRemotePause() }) { super.pause() }
 

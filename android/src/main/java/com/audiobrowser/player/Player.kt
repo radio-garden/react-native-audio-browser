@@ -299,17 +299,26 @@ internal constructor(
   var playWhenReady: Boolean
     get() = sessionPlayer.playWhenReady
     set(value) {
-      // ExoPlayer's setPlayWhenReady(true) never restarts an ended player (media3 replays only on
-      // its media-button path). Here in the setter so every writer replays: play(),
-      // togglePlayback(), JS.
+      // ExoPlayer's setPlayWhenReady(true) neither restarts an ended engine (media3 replays only on
+      // its media-button path) nor loads an idle one. Here in the setter so every writer plays
+      // alike: play(), togglePlayback(), JS, the session.
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
-      } else if (value && playbackState == PlaybackState.ENDED) {
-        // A rebuild carries an ended engine idle, at its start or where a seek since left it.
-        sessionPlayer.prepare()
       }
       sessionPlayer.playWhenReady = value
+      // No-op unless the engine is idle, so this reconnects only after a stop, an error, a
+      // cancelled retry or a rebuild, and never re-buffers a healthy stream. Reconnecting is also
+      // how a live stream rejoins its live edge.
+      if (value && currentTrack != null) sessionPlayer.prepare()
     }
+
+  /**
+   * The intent a setup carries, raised without loading: a setup repeats, as on a JS reload, and
+   * would otherwise start a stopped or failed queue. A play loads.
+   */
+  internal fun applySetupPlayWhenReady(value: Boolean) {
+    sessionPlayer.playWhenReady = value
+  }
 
   val duration: Long
     get() = if (sessionPlayer.duration == C.TIME_UNSET) 0 else sessionPlayer.duration
@@ -531,6 +540,7 @@ internal constructor(
         { options },
         keepSessionAliveOnError,
         playerState = { playbackState },
+        playPlayer = ::play,
         stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
@@ -878,13 +888,7 @@ internal constructor(
   }
 
   fun play() {
-    // Through the setter for its replay of an ended player.
     playWhenReady = true
-    if (currentTrack != null) {
-      // No-op unless the player is idle, so this reconnects only after stop() or an error and never
-      // re-buffers a healthy stream. Reconnecting is also how a live stream rejoins its live edge.
-      sessionPlayer.prepare()
-    }
   }
 
   /**
