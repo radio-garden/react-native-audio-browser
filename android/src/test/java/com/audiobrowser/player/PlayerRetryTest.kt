@@ -17,9 +17,13 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.File
+import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -138,6 +142,11 @@ class PlayerRetryTest {
     awaitRetry("a pending retry")
 
     pause()
+    assertStaysPausedAndIdle()
+  }
+
+  /** Runs past every backoff a retry would have taken. */
+  private fun assertStaysPausedAndIdle() {
     repeat(10) {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
       Thread.sleep(20)
@@ -188,6 +197,45 @@ class PlayerRetryTest {
     shadowOf(Looper.getMainLooper()).idle()
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a load failing while paused stays paused and the next play reloads`() {
+    val server = ServerSocket(0)
+    val wav = silentWav().readBytes()
+    val sent = CountDownLatch(1)
+    val drop = CountDownLatch(1)
+    // Serves five seconds of the minute, holds the connection until the drop, then refuses.
+    thread(isDaemon = true) {
+      server.accept().use { socket ->
+        val request = socket.getInputStream().bufferedReader()
+        while (!request.readLine().isNullOrEmpty()) Unit
+        socket.getOutputStream().run {
+          write("HTTP/1.1 200 OK\r\nContent-Length: ${wav.size}\r\n\r\n".toByteArray())
+          write(wav, 0, 40_000)
+          flush()
+        }
+        sent.countDown()
+        drop.await(10, TimeUnit.SECONDS)
+      }
+      server.close()
+    }
+    play("http://127.0.0.1:${server.localPort}/stream.wav", retryPolicy = RetryPolicy.Infinite())
+    // A source with no track enabled stops loading, and the load must still run when it fails.
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+        .build()
+    idleUntil("the first bytes") { sent.count == 0L }
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+    drop.countDown()
+    assertStaysPausedAndIdle()
+
+    player.play()
+    awaitRetry("the reload's retry")
   }
 
   @Test

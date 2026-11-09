@@ -128,12 +128,6 @@ internal constructor(
   private var keepSessionAliveOnError = true
 
   /**
-   * [playWhenReady] for the retry policy, which reads it off the main thread. Written eagerly by
-   * the setter, ahead of ExoPlayer's listener round-trip.
-   */
-  @Volatile internal var playWhenReadyCache = false
-
-  /**
    * Whether the current load has produced audio: picks the retry policy's first-connect or recovery
    * budget. Read on ExoPlayer's loader thread. Cleared on a media-item transition; retry reloads of
    * the same load keep it.
@@ -311,7 +305,6 @@ internal constructor(
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
       }
-      playWhenReadyCache = value
       sessionPlayer.playWhenReady = value
     }
 
@@ -463,7 +456,6 @@ internal constructor(
         context,
         setupOptions,
         cache,
-        shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
         hasPlayed = { hasPlayedCache },
         onRetryPending = ::reportRetryingError,
@@ -923,7 +915,6 @@ internal constructor(
   }
 
   fun pause() {
-    // Through the setter, so the retry policy sees playWhenReadyCache drop at once.
     playWhenReady = false
   }
 
@@ -999,6 +990,14 @@ internal constructor(
     val generation = retryingErrorGeneration
     mainHandler.post {
       if (generation != retryingErrorGeneration) return@post
+      // Paused, the retry would run unseen and its failure be terminal. STOPPED, ERROR and ENDED
+      // reach here only from a post that raced them.
+      if (
+        !playWhenReady &&
+          playbackState !in setOf(PlaybackState.STOPPED, PlaybackState.ERROR, PlaybackState.ENDED)
+      ) {
+        return@post stopRetrying()
+      }
       // Only over a spinner: while PLAYING, buffered audio still plays and ExoPlayer's in-place
       // retry can succeed with no state change, so an error attached there would never clear.
       if (
@@ -1013,19 +1012,23 @@ internal constructor(
       playbackError = error
       callbacks?.onPlaybackChanged(Playback(playbackState, error))
       nowPlaying.render()
-      // A pause before this first report found no retry to cancel.
-      if (!playWhenReadyCache) cancelRetry()
     }
   }
 
   /**
-   * Cancels the retry a dropped play intent leaves scheduled: ExoPlayer still runs it, and its
-   * failure would be terminal. The engine idles in PAUSED, where the next prepare() reloads where
-   * it failed. No-op unless a retrying error shows.
+   * Cancels the retry a dropped play intent leaves scheduled. No-op unless a retrying error shows.
    */
   internal fun cancelRetry() {
     // The ENDED path drops the intent before it clears the error.
     if (playbackError?.retrying != true || playbackState == PlaybackState.ENDED) return
+    stopRetrying()
+  }
+
+  /**
+   * Gives up a load ExoPlayer would retry. The engine idles in PAUSED, where the next prepare()
+   * reloads where it failed.
+   */
+  private fun stopRetrying() {
     // Before the stop: the state machine holds PAUSED through the IDLE that follows.
     setPlaybackState(PlaybackState.PAUSED)
     clearRetryingError()

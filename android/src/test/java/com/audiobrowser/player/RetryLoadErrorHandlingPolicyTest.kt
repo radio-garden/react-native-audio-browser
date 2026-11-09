@@ -84,13 +84,6 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 
   @Test
-  fun `retry is skipped when shouldRetry is false`() {
-    val policy = RetryLoadErrorHandlingPolicy(shouldRetry = { false })
-    val delay = policy.getRetryDelayMsFor(errorInfo(UnknownHostException("offline")))
-    assertEquals(C.TIME_UNSET, delay)
-  }
-
-  @Test
   fun `retry stops once max retries is exceeded`() {
     val policy = RetryLoadErrorHandlingPolicy(maxRetries = 3)
     val delay =

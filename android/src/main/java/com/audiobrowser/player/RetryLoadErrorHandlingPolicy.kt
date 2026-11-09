@@ -29,7 +29,6 @@ import timber.log.Timber
  * @param maxRetryDurationMs the full recovery budget; null for 2 minutes
  * @param firstConnectMaxRetryDurationMs the online budget of a load that has never produced audio;
  *   null for 12 seconds
- * @param shouldRetry false gives up at once (e.g. the player is paused)
  * @param hasPlayed whether the current load has produced audio; called on ExoPlayer's loader thread
  * @param onRetryPending called on ExoPlayer's loader thread each time a retry is scheduled, with
  *   the error being retried
@@ -38,7 +37,6 @@ class RetryLoadErrorHandlingPolicy(
   private val maxRetries: Int? = null,
   maxRetryDurationMs: Long? = null,
   firstConnectMaxRetryDurationMs: Long? = null,
-  private val shouldRetry: () -> Boolean = { true },
   private val isOnline: () -> Boolean = { true },
   private val hasPlayed: () -> Boolean = { false },
   private val onRetryPending: ((exception: IOException) -> Unit)? = null,
@@ -102,11 +100,6 @@ class RetryLoadErrorHandlingPolicy(
     val exception = loadErrorInfo.exception
     val errorCount = loadErrorInfo.errorCount
     val currentTime = SystemClock.elapsedRealtime()
-
-    if (!shouldRetry()) {
-      Timber.d("Retry skipped: shouldRetry() returned false (player likely paused)")
-      return C.TIME_UNSET
-    }
 
     if (maxRetries != null && errorCount > maxRetries) {
       Timber.d("Max retries ($maxRetries) exceeded, not retrying")

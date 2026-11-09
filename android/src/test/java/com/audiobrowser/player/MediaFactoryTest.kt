@@ -30,7 +30,6 @@ class MediaFactoryTest {
         context,
         cache = null,
         RetryPolicy.Default,
-        shouldRetry = { false },
         getRequestConfig = { url, track ->
           requests.add(url to track)
           null
