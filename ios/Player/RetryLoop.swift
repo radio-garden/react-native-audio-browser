@@ -152,13 +152,15 @@ final class RetryLoop {
   }
 
   /// A failure the Player judges from what playback did, with no error to classify: retryable,
-  /// and reported as the context's fallback error.
-  func handleFailure(_ context: PlaybackErrorContext) {
+  /// and reported as the context's fallback error. `immediately` skips the backoff, not the budgets.
+  func handleFailure(_ context: PlaybackErrorContext, immediately: Bool = false) {
     logger.error("[\(String(describing: context))] failure")
-    handle(.init(error: context.fallbackError, retryable: true), context: context)
+    handle(.init(error: context.fallbackError, retryable: true), context: context, immediately: immediately)
   }
 
-  private func handle(_ failure: PlaybackFailure.Classification, context: PlaybackErrorContext) {
+  private func handle(
+    _ failure: PlaybackFailure.Classification, context: PlaybackErrorContext, immediately: Bool = false,
+  ) {
     stopStallWatch()
     guard isEnabled, failure.retryable else {
       let reason = isEnabled ? "Error not retryable" : "Retry disabled"
@@ -175,7 +177,7 @@ final class RetryLoop {
     pendingTask?.cancel()
     pendingTask = Task { [weak self] in
       guard let self else { return }
-      let retried = await attemptRetry(startFromCurrentTime: context.startFromCurrentTime)
+      let retried = await attemptRetry(startFromCurrentTime: context.startFromCurrentTime, immediately: immediately)
       // Cancelled by a track change or stop: stay silent, or the new track or the stop would
       // flip to .error. The canceller owns `pendingTask`.
       if Task.isCancelled { return }
@@ -261,7 +263,7 @@ final class RetryLoop {
 
   /// Waits out the backoff, or connectivity's return, then calls `onRetry`. False when the policy,
   /// the play intent or a budget says stop, or the wait was cancelled.
-  func attemptRetry(startFromCurrentTime: Bool) async -> Bool {
+  func attemptRetry(startFromCurrentTime: Bool, immediately: Bool = false) async -> Bool {
     guard isEnabled, shouldRetry() else { return false }
     if case let .limited(maxRetries) = policy, attempts >= maxRetries {
       logger.info("Max retries (\(maxRetries)) exceeded, giving up")
@@ -279,8 +281,9 @@ final class RetryLoop {
       return false
     }
 
-    logger.info("Scheduling retry after \(self.backoff)s")
-    guard await waitForDelayOrNetworkRestored(delaySeconds: backoff), !Task.isCancelled, shouldRetry() else {
+    let delay = immediately ? 0 : backoff
+    logger.info("Scheduling retry after \(delay)s")
+    guard await waitForDelayOrNetworkRestored(delaySeconds: delay), !Task.isCancelled, shouldRetry() else {
       return false
     }
     // The wait for connectivity may have been long.

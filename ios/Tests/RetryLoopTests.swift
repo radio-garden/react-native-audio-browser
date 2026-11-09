@@ -241,6 +241,31 @@ struct RetryLoopHandleErrorTests {
   }
 }
 
+@Suite("RetryLoop.handleFailure")
+@MainActor
+struct RetryLoopHandleFailureTests {
+  private final class Sleeps: @unchecked Sendable {
+    var seconds: [TimeInterval] = []
+  }
+
+  @Test func anImmediateFailureSkipsTheBackoff_butSpendsAnAttempt() async {
+    let sleeps = Sleeps()
+    let loop = RetryLoop(sleep: { sleeps.seconds.append($0) })
+    loop.updatePolicy(from: .first(true))
+    var reloads: [Bool] = []
+    loop.onRetry = { reloads.append($0) }
+
+    loop.handleFailure(.stall)
+    await loop.pendingTask?.value
+    loop.handleFailure(.stall, immediately: true)
+    await loop.pendingTask?.value
+
+    #expect(sleeps.seconds == [1, 0])
+    #expect(reloads == [true, true])
+    #expect(loop.attempts == 2)
+  }
+}
+
 @MainActor
 private final class LoopHolder {
   weak var loop: RetryLoop?

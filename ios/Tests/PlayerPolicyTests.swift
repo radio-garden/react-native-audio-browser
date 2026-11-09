@@ -388,12 +388,44 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkReturningReconnectsAStalledStream() throws {
+  @Test func theNetworkReturningReconnectsAStalledStream_throughTheRetryLoop() async throws {
     let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
     player.transition(.avPlayerWaiting)
     #expect(player.state == .buffering)
     player.networkStatusDidChange(isOnline: true)
+    await player.retry.pendingTask?.value
     #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.retry.attempts == 1)
+  }
+
+  @Test func aFlappingConnectionEndsInATerminalErrorOnceTheBudgetIsSpent() async throws {
+    let (player, engine, callbacks) = try makePlaying()
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    for flap in 1 ... 3 {
+      player.transition(.avPlayerWaiting)
+      player.networkStatusDidChange(isOnline: true)
+      await player.retry.pendingTask?.value
+      if flap == 3 { break }
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+      player.transition(.avPlayerPlaying)
+    }
+    #expect(engine.resolveAndLoadCalls.count == 3)
+    #expect(player.state == .error)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  @Test func theNetworkReturningWithRetryOffLeavesTheStallToAVPlayer() throws {
+    let (player, engine, callbacks) = try makePlaying()
+    player.retry.updatePolicy(from: nil)
+    player.transition(.avPlayerWaiting)
+    player.networkStatusDidChange(isOnline: true)
+    #expect(player.state == .buffering)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(callbacks.errorEvents.isEmpty)
   }
 
   @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() throws {
@@ -432,14 +464,16 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkReturningReRendersBeforeReconnecting() throws {
+  @Test func theNetworkReturningReRendersBeforeReconnecting() async throws {
     let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
     player.transition(.avPlayerWaiting)
     var order: [String] = []
     engine.onSeamCall = { order.append($0) }
     let loadsBefore = engine.resolveAndLoadCalls.count
 
     player.networkStatusDidChange(isOnline: true)
+    await player.retry.pendingTask?.value
 
     #expect(order.first == "renderNowPlaying")
     #expect(engine.resolveAndLoadCalls.count == loadsBefore + 1)
