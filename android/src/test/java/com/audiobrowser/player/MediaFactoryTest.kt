@@ -28,13 +28,7 @@ class MediaFactoryTest {
 
   private fun mediaFactory(
     getRequestConfig: (String, Track) -> MediaRequestConfig? = { _, _ -> null }
-  ) =
-    MediaFactory(
-      context,
-      cache = null,
-      RetryPolicy.Default,
-      getRequestConfig = getRequestConfig,
-    )
+  ) = MediaFactory(context, cache = null, RetryPolicy.Default, getRequestConfig = getRequestConfig)
 
   /** Starts loading [track]'s media from position 0, runs [block], then releases the source. */
   private fun loading(factory: MediaFactory, track: Track, block: () -> Unit) {
