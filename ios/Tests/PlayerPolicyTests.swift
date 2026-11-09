@@ -492,6 +492,21 @@ struct PlayerRecoveringTests {
     #expect(player.retry.stallTask == nil)
   }
 
+  /// A link slower than the bitrate rebuffers for longer than the timeout, and a reload would
+  /// throw away the buffer it is filling.
+  @Test func aStallThatStillReceivesDataKeepsWaiting_untilAWindowBringsNone() async throws {
+    let (player, engine, _) = try makeStalling()
+    engine.bufferedPosition = 12
+    await player.retry.stallTask?.value
+    #expect(player.retry.pendingTask == nil)
+    #expect(player.retry.stallTask != nil)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+
+    await player.retry.stallTask?.value
+    await player.retry.pendingTask?.value
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
   /// The stalled item is still alive: data arriving later must not play it under the error.
   @Test func aTerminalStallLeavesNothingThatCanPlay() async throws {
     let (player, engine, _) = try makeStalling()

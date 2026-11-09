@@ -93,9 +93,11 @@ final class RetryLoop {
   var healthyPlaybackDuration: Duration = .seconds(20)
   private(set) var healthyPlaybackTask: Task<Void, Never>?
 
-  /// How long a stall may last before it counts as a failure; longer than AVPlayer takes to fail
-  /// a stalled item itself, so its error, which says more, is the one usually retried.
+  /// How long a stall may go without new data before it counts as a failure; longer than AVPlayer
+  /// takes to fail a stalled item itself, so its error, which says more, is the one usually retried.
   var stallTimeout: Duration = .seconds(30)
+  /// The end of the loaded range; the stall watch reads progress off it.
+  var bufferedPosition: () -> Double = { 0 }
   private(set) var stallTask: Task<Void, Never>?
 
   private var policy: Policy = .disabled
@@ -198,14 +200,17 @@ final class RetryLoop {
 
   // MARK: - Stalls
 
-  /// Starts the stall watch: unless stopped within `stallTimeout`, the stall becomes a `.stall`
-  /// failure, provided the play intent holds and no retry is pending. Any failure ends it.
+  /// Starts the stall watch: a `stallTimeout` in which `bufferedPosition` does not advance makes
+  /// the stall a `.stall` failure, provided the play intent holds and no retry is pending; one in
+  /// which it advances starts another. Any failure ends it.
   func startStallWatch() {
     stallTask?.cancel()
+    let buffered = bufferedPosition()
     stallTask = Task { [weak self, stallTimeout] in
       try? await Task.sleep(for: stallTimeout)
       guard let self, !Task.isCancelled else { return }
       stallTask = nil
+      if bufferedPosition() > buffered { return startStallWatch() }
       guard pendingTask == nil, shouldRetry() else { return }
       handleFailure(.stall)
     }

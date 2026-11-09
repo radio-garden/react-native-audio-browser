@@ -255,6 +255,7 @@ final class Player {
     retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
     retry.shouldRetry = { [weak self] in self?.playWhenReady ?? false }
     retry.hasPlayed = { [weak self] in self?.load?.hasPlayed ?? false }
+    retry.bufferedPosition = { [weak self] in self?.engine.bufferedPosition ?? 0 }
   }
 
   /// Shows a failure the retry loop is still working on over the current state: not a
