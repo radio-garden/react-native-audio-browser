@@ -298,6 +298,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   }
 
   private fun stopPlaybackAndRemoveNotification() {
+    // Before clear(), which leaves no track to save.
+    player.playbackStateStore.stopPeriodicSave()
     // Before stop(), while a mid-ramp fade can still restore the volume.
     player.sleepTimer.clear()
     player.clear()

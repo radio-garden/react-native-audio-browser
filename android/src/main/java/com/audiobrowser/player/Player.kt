@@ -241,6 +241,8 @@ internal constructor(
 
   private var cache: SimpleCache? = null
 
+  private var destroyed = false
+
   private val progressTimer: PlaybackTimer by lazy {
     PlaybackTimer(
       isActive = {
@@ -950,7 +952,10 @@ internal constructor(
     queueSourcePath = null
   }
 
+  /** Idempotent. */
   fun destroy() {
+    if (destroyed) return
+    destroyed = true
     // stop() saves only if playing; before it, so its STOPPED doesn't defeat the ENDED guard.
     playbackStateStore.stopPeriodicSave()
     // An armed timer would fire pause() into the released player. Cleared before the release,
