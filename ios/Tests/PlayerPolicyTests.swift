@@ -507,6 +507,19 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  /// Near a track's end, a pause leaves the state in .buffering, so the resume is no transition.
+  @Test func aResumeWhileTheStateHeldBufferingStartsANewWatch() async throws {
+    let (player, _, _) = try makeStalling()
+    player.pause()
+    await player.retry.stallTask?.value
+    #expect(player.state == .buffering)
+    #expect(player.retry.stallTask == nil)
+
+    player.play()
+    #expect(player.retry.stallTask != nil)
+    player.retry.cancel()
+  }
+
   /// The stalled item is still alive: data arriving later must not play it under the error.
   @Test func aTerminalStallLeavesNothingThatCanPlay() async throws {
     let (player, engine, _) = try makeStalling()

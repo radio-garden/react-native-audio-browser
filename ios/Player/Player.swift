@@ -192,6 +192,8 @@ final class Player {
     if !newValue { engine.pause() } else if state != .loading { engine.play() }
 
     guard changed else { return }
+    // A resume can find the state still .buffering (a pause near the end leaves it), with no watch.
+    if newValue, state == .buffering { retry.startStallWatch() }
     // Left to run, the retry would give up on the dropped intent and surface .error.
     if !newValue, retry.pendingTask != nil { parkForReloadOnPlay() }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
