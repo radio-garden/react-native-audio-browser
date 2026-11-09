@@ -1,3 +1,13 @@
+## [0.2.0-next.72](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.71...v0.2.0-next.72) (2026-11-09)
+
+### Bug Fixes
+
+* **android:** re-derive the playing state when setup() rebuilds the engine ([8f6a42b](https://github.com/radio-garden/react-native-audio-browser/commit/8f6a42b87b3f99c32583ee8f0fe5dd884dee0d50))
+
+### Code Refactors
+
+* **android:** drop the rebuild's play-intent write ([5cbd826](https://github.com/radio-garden/react-native-audio-browser/commit/5cbd8266bed13c5d0f35ba6a18277e42361e8698))
+
 ## [0.2.0-next.71](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.70...v0.2.0-next.71) (2026-11-09)
 
 ### Bug Fixes
