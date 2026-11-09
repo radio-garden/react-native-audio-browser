@@ -1,3 +1,9 @@
+## [0.2.0-next.73](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.72...v0.2.0-next.73) (2026-11-09)
+
+### Bug Fixes
+
+* **ios:** keep a held start position through a restart from an error or a media-services reset ([9973e16](https://github.com/radio-garden/react-native-audio-browser/commit/9973e16adddc3d508939e6e2f14cf893ed24901a))
+
 ## [0.2.0-next.72](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.71...v0.2.0-next.72) (2026-11-09)
 
 ### Bug Fixes
