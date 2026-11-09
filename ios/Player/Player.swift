@@ -640,11 +640,11 @@ final class Player {
 
   // MARK: - Seeking
 
-  /// Seeks the current item. While it awaits the next item, the target is held until that one is
-  /// ready and the ready transition waits for it (`DeferredSeek`); `completion` then reports false
-  /// at once.
+  /// Seeks the current item. While it awaits the next item, or in .error for the restart, the
+  /// target is held until the next item is ready and the ready transition waits for it
+  /// (`DeferredSeek`); `completion` then reports false at once.
   func seek(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void = { _ in }) {
-    if awaitingItem {
+    if awaitingItem || state == .error {
       deferredSeek.capture(seconds)
       completion(false)
     } else if engine.hasItem {
@@ -655,18 +655,19 @@ final class Player {
   }
 
   func seek(by offset: TimeInterval) {
-    if awaitingItem {
-      seek(to: (deferredSeek.target ?? 0) + offset)
+    if awaitingItem || state == .error {
+      seek(to: (resumePosition ?? 0) + offset)
     } else if engine.hasItem {
       seek(to: engine.currentTime + offset)
     }
   }
 
   /// Jumps to the live edge: the end of the seekable window when there is one; without one
-  /// (ICY) there is nothing to seek within, so it reconnects. No-op for a track that isn't live.
+  /// (ICY), or in .error, whose item's window is stale, it reconnects. No-op for a track that
+  /// isn't live.
   func seekToLiveEdge() {
     guard currentTrack?.live == true, engine.hasItem else { return }
-    if let edge = engine.liveEdge {
+    if let edge = engine.liveEdge, state != .error {
       seek(to: edge)
     } else {
       reloadResolving(startFromCurrentTime: false)

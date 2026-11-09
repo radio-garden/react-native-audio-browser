@@ -183,6 +183,16 @@ struct PlayerSeekingTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
     #expect(player.state == .loading)
   }
+
+  @Test func theLiveEdgeInAnErrorIsAReconnect() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = 120
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    player.seekToLiveEdge()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
 }
 
 @Suite("Player - engine events")
@@ -411,6 +421,38 @@ struct PlayerReviewRegressionTests {
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     #expect(engine.seekCalls == [25, 25])
+  }
+
+  @Test func aSeekInAnErrorDuringTheStartSeekReplacesTheStart() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retries: false)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
+    engine.seekResult = nil
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    #expect(player.state == .error)
+
+    player.seek(to: 40)
+    player.seek(by: 5)
+    engine.completeSeeks(false)
+    player.play()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    #expect(engine.seekCalls == [25, 45])
+  }
+
+  @Test func aSeekInAnErrorIsWhereThePlayResumes() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.resumePosition = 120
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    #expect(player.state == .error)
+
+    player.seek(by: -80)
+    player.play()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+
+    #expect(engine.seekCalls == [40])
   }
 
   @Test func endingWithTheIntentAlreadyOffSavesPositionZero() throws {
