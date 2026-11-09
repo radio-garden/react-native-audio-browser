@@ -221,6 +221,25 @@ struct PlayerEngineEventTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  @Test func aPauseWhileLoadingReachesTheEngine_aPlayDoesNot() throws {
+    let (player, engine, _) = try makeLoading()
+    player.setPlayWhenReady(true)
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: false))
+    #expect(player.state == .loading)
+    let plays = engine.startPlaybackCallCount
+    let pauses = engine.pausePlaybackCallCount
+
+    player.setPlayWhenReady(false)
+    #expect(engine.pausePlaybackCallCount == pauses + 1)
+
+    player.setPlayWhenReady(true)
+    #expect(engine.startPlaybackCallCount == plays)
+    engine.emit(.likelyToKeepUp(true))
+    #expect(engine.startPlaybackCallCount == plays + 1)
+  }
+
   @Test func anUnplayableAssetIsTerminal() throws {
     let (player, engine, _) = try makeLoading()
     engine.emit(.unplayable)

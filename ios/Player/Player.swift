@@ -188,9 +188,8 @@ final class Player {
     if newValue, resumes || state == .stopped || state == .ended {
       reloadResolving(startFromCurrentTime: resumes)
     }
-    if state != .loading {
-      if newValue { engine.play() } else { engine.pause() }
-    }
+    // While loading, the engine may still hold the previous track's item: a play waits for the new one.
+    if !newValue { engine.pause() } else if state != .loading { engine.play() }
 
     guard changed else { return }
     // Left to run, the retry would give up on the dropped intent and surface .error.
