@@ -34,7 +34,7 @@ See the README in `apps/example-native` and `apps/example-nextjs` for their run 
 The hard playback cases are server behaviours: a live stream that closes, one that stops sending without an error, a track that ends short. `corepack yarn stream-server` starts a local server that produces each of them on request, so you can reproduce one in the example app or on a device without hunting for a station that misbehaves. It needs nothing but Node.
 
 ```sh
-corepack yarn stream-server     # port 8787; PORT=9000 for another
+corepack yarn stream-server     # port 7385; PORT=9000 for another
 ```
 
 It serves one 10 s, 32 kbit/s MP3 tone (`scripts/stream-server/tone.mp3`) in two ways:
@@ -62,11 +62,11 @@ They combine: `/live.mp3?icy=5&stall=20` sends titles and then stalls, and `/liv
 
 The server listens on every interface. It refuses to start when another process answers on `127.0.0.1` at its port, which macOS allows beside it, and which an emulator would reach instead. Where to reach it:
 
-- **iOS simulator:** `http://localhost:8787`
-- **Android emulator:** `http://10.0.2.2:8787`, the emulator's address for the host
-- **A phone on the same network:** `http://<your machine's LAN address>:8787`; the server prints the addresses at start
+- **iOS simulator:** `http://localhost:7385`
+- **Android emulator:** `http://10.0.2.2:7385`, the emulator's address for the host
+- **A phone on the same network:** `http://<your machine's LAN address>:7385`; the server prints the addresses at start
 
-In `apps/example-native`, the Library tab's **Stream server** section plays the main cases from the simulator or the emulator, from the server on port 8787. A URL typed into search plays as a track: for a phone, another port, or any other combination. The example's debug builds allow plain HTTP on both platforms; an app of your own needs an App Transport Security exception on iOS and cleartext traffic allowed on Android.
+In `apps/example-native`, the Library tab's **Stream server** section plays the main cases from the simulator or the emulator, from the server on port 7385. A URL typed into search plays as a track: for a phone, another port, or any other combination. The example's debug builds allow plain HTTP on both platforms; an app of your own needs an App Transport Security exception on iOS and cleartext traffic allowed on Android.
 
 Its tests (`scripts/stream-server/index.test.ts`) run with `corepack yarn test`.
 

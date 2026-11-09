@@ -2,7 +2,7 @@ import type { Section, Track } from 'react-native-audio-browser'
 import { Platform } from 'react-native'
 
 // `corepack yarn stream-server`, on the machine the simulator or emulator runs on.
-const BASE = `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:8787`
+const BASE = `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:7385`
 
 const isLive = (url: string) => new URL(url).pathname === '/live.mp3'
 

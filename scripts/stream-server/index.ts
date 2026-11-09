@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 export const AUDIO = readFileSync(new URL('./tone.mp3', import.meta.url))
 export const AUDIO_BYTES_PER_SECOND = 4000
 export const ICY_METAINT = AUDIO_BYTES_PER_SECOND
-export const DEFAULT_PORT = 8787
+export const DEFAULT_PORT = 7385
 
 /** Sent with every response, carrying this process's id, so a client can tell this server from another on the same port. */
 export const SERVER_HEADER = 'x-stream-server'
