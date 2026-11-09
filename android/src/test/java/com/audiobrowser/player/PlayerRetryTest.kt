@@ -308,6 +308,7 @@ class PlayerRetryTest {
     player.pause()
     shadowOf(Looper.getMainLooper()).idle()
     drop.countDown()
+    idleUntil("the load given up") { player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE }
     assertStaysPausedAndIdle()
 
     player.play()
