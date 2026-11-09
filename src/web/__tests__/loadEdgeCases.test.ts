@@ -42,12 +42,12 @@ describe('a load superseded while still in flight', () => {
 
 describe('a track end that does not advance the queue', () => {
   /**
-   * Suppressing `ended` mid-queue is only safe when a load takes over the
-   * state. The sleep timer set to end-of-track pauses instead, and its
-   * `element.pause()` is a no-op on an already-ended element — so nothing
-   * moved the state and the player sat reporting `playing` with silence.
+   * Native's end-of-track sleep timer clears the intent and lets the end run
+   * its course: mid-queue, the next track loads paused (iOS
+   * `Player.trackDidPlayToEnd`), so play resumes there rather than replaying
+   * the finished one.
    */
-  it('reports ended when the sleep timer stops instead of advancing', async () => {
+  it('moves to the next track, paused, when the sleep timer stops', async () => {
     h.browser.setQueue([trackA, trackB])
     h.browser.setPlayWhenReady(true)
     h.browser.skip(0)
@@ -58,7 +58,49 @@ describe('a track end that does not advance the queue', () => {
 
     h.endTrack()
     await h.flush()
+    await h.completeLoad()
 
+    expect(h.browser.getActiveTrack()).toBe(trackB)
+    expect(h.recorded).not.toContain('state:ended')
+    expect(h.browser.getPlayWhenReady()).toBe(false)
+    expect(h.browser.getPlayback().state).toBe('ready')
+  })
+
+  /**
+   * With repeat-track, nothing takes over the state once the intent is gone,
+   * so the end is reported, as on iOS.
+   */
+  it('reports ended when the sleep timer stops a repeating track', async () => {
+    h.browser.setQueue([trackA, trackB])
+    h.browser.setRepeatMode('track')
+    h.browser.setPlayWhenReady(true)
+    h.browser.skip(0)
+    await h.flush()
+    await h.completeLoad()
+    h.browser.setSleepTimerToEndOfTrack()
+    h.clear()
+
+    h.endTrack()
+    await h.flush()
+
+    expect(h.browser.getActiveTrack()).toBe(trackA)
+    expect(h.browser.getPlayback().state).toBe('ended')
+  })
+
+  it('ends the queue when the sleep timer stops the last track', async () => {
+    h.browser.setQueue([trackA, trackB])
+    h.browser.setPlayWhenReady(true)
+    h.browser.skip(1)
+    await h.flush()
+    await h.completeLoad()
+    h.browser.setSleepTimerToEndOfTrack()
+    h.clear()
+
+    h.endTrack()
+    await h.flush()
+
+    expect(h.browser.getActiveTrack()).toBe(trackB)
+    expect(h.recorded).toContain('queueEnded')
     expect(h.browser.getPlayback().state).toBe('ended')
   })
 

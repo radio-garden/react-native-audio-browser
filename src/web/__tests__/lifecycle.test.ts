@@ -342,4 +342,41 @@ describe('parity — what native emits for the same flow', () => {
 
     expect(h.browser.getPlayback().state).toBe('loading')
   })
+
+  /**
+   * Android's `setQueue` replaces the media items and prepares again, leaving
+   * `playWhenReady` alone, so the new queue plays and no `stopped` is reported
+   * on the way.
+   */
+  it('keeps playing across a setQueue', async () => {
+    h.browser.setPlayWhenReady(true)
+    h.browser.load(trackA)
+    await h.flush()
+    await h.completeLoad()
+    h.clear()
+
+    h.browser.setQueue([trackA, trackB], 1)
+    await h.flush()
+    await h.completeLoad()
+
+    expect(h.recorded).not.toContain('playWhenReady:false')
+    expect(h.recorded).not.toContain('state:stopped')
+    expect(h.browser.getPlayback().state).toBe('playing')
+  })
+
+  /**
+   * Native shows each now-playing line from the flash, else the override, else
+   * the track (`NowPlayingUpdater.kt`), so the end of a flash brings the
+   * override back rather than the track's own metadata.
+   */
+  it('restores the now-playing override when a flash ends', async () => {
+    h.browser.load(trackA)
+    await h.flush()
+    h.browser.updateNowPlaying({ title: 'Live Title' })
+
+    h.browser.flashNowPlaying({ title: 'Flash' }, 1)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+
+    expect(h.browser.getNowPlaying()?.title).toBe('Live Title')
+  })
 })

@@ -247,7 +247,10 @@ export class NativeAudioBrowser
     this.favoriteManager = new FavoriteManager()
     this.navigationErrorManager = new NavigationErrorManager()
     this.optionsManager = new OptionsManager()
-    this.nowPlayingManager = new NowPlayingManager()
+    this.nowPlayingManager = new NowPlayingManager(() => ({
+      track: this.getActiveTrack(),
+      duration: this.getProgress().duration
+    }))
     this.remoteCommands = new RemoteCommandController(this)
 
     this.browserManager = new BrowserManager(
@@ -488,8 +491,8 @@ export class NativeAudioBrowser
     }
 
     await this.handleLoad(track, result.tracks, result.startIndex, () => {
-      // setQueue stops playback, so start it explicitly: selecting a track
-      // is an intent to play (matches the skip-to-existing-queue-track path).
+      // Selecting a track is an intent to play, even from paused (matches the
+      // skip-to-existing-queue-track path).
       this.setQueue(result.tracks, result.startIndex)
       this.play()
     })
@@ -1035,27 +1038,27 @@ export class NativeAudioBrowser
   }
 
   /**
-   * Override to check for sleep timer when track ends
+   * An end-of-track sleep clears the intent, then the end runs its course as
+   * on iOS: the queue moves on paused.
    */
   protected onTrackEnded(): boolean {
-    // Check if sleep timer is set to end on track completion
     if (this.sleepTimer.sleepWhenPlayedToEnd) {
-      console.log('Sleep timer triggered on track end, pausing playback')
-      this.sleepTimer.clear()
+      this.clearSleepTimer()
       this.pause()
-      this.onSleepTimerChanged(null)
-      // Nothing is loading, so the caller must still report the end — the
-      // element has stopped and its own `pause` is swallowed as end-of-track.
-      return false
     }
-
-    // Otherwise proceed with normal track end behavior
     return super.onTrackEnded()
   }
 
   // MARK: Queue management
   setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void {
-    this.stop()
+    // Before the queue is touched, so a call before `setupPlayer()` throws
+    // rather than half-applying.
+    this.requireElement()
+    const hasStart =
+      startIndex !== undefined && tracks[startIndex] !== undefined
+    // Loading the start track supersedes the old one; a stop would drop the
+    // play intent, which native keeps.
+    if (!hasStart) this.stop()
     // Clear stale references from previous queue
     this.current = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
@@ -1077,9 +1080,7 @@ export class NativeAudioBrowser
     )
     this.emitQueueChanged()
 
-    if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
-      this.skip(startIndex, startPosition)
-    }
+    if (hasStart) this.skip(startIndex, startPosition)
   }
 
   getQueue(): Track[] {
@@ -1136,9 +1137,7 @@ export class NativeAudioBrowser
 
   // MARK: Now playing metadata
   updateNowPlaying(update: NowPlayingUpdate | undefined): void {
-    const track = this.getActiveTrack()
-    const duration = this.getProgress().duration
-    this.nowPlayingManager.updateNowPlaying(update, track, duration)
+    this.nowPlayingManager.updateNowPlaying(update)
   }
 
   getTimedMetadata(): TimedMetadata | undefined {
@@ -1146,29 +1145,15 @@ export class NativeAudioBrowser
   }
 
   getNowPlaying(): NowPlayingMetadata | undefined {
-    const track = this.getActiveTrack()
-    const duration = this.getProgress().duration
-    return this.nowPlayingManager.getNowPlaying(track, duration)
+    return this.nowPlayingManager.getNowPlaying()
   }
 
-  private nowPlayingFlashRevert: ReturnType<typeof setTimeout> | undefined
-
   flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void {
-    // Web approximation: an override + timer is sufficient here — the
-    // background-timer and formatter-priority concerns are native-only.
-    this.updateNowPlaying(update)
-    if (this.nowPlayingFlashRevert) clearTimeout(this.nowPlayingFlashRevert)
-    this.nowPlayingFlashRevert = setTimeout(() => {
-      this.nowPlayingFlashRevert = undefined
-      this.updateNowPlaying(undefined)
-    }, durationMs)
+    this.nowPlayingManager.flashNowPlaying(update, durationMs)
   }
 
   clearNowPlayingFlash(): void {
-    if (!this.nowPlayingFlashRevert) return
-    clearTimeout(this.nowPlayingFlashRevert)
-    this.nowPlayingFlashRevert = undefined
-    this.updateNowPlaying(undefined)
+    this.nowPlayingManager.clearNowPlayingFlash()
   }
 
   // MARK: Network connectivity
