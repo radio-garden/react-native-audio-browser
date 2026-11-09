@@ -134,6 +134,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Deduped: the ENDED path in setPlaybackState may already have emitted it, before queue-ended.
     player.emitPlayWhenReadyChanged(playWhenReady)
     player.refreshPlayingState()
+    player.rebuildIfDueLater()
 
     if (playWhenReady) {
       player.playbackStateStore.startPeriodicSave()
@@ -144,6 +145,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
     player.refreshPlayingState()
+    player.rebuildIfDueLater()
+  }
+
+  override fun onPlaybackStateChanged(playbackState: Int) {
+    player.rebuildIfDueLater()
   }
 
   override fun onEvents(media3Player: MediaPlayer, events: MediaPlayer.Events) {
