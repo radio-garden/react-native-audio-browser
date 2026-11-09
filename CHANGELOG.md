@@ -1,3 +1,9 @@
+## [0.2.0-next.69](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.68...v0.2.0-next.69) (2026-11-09)
+
+### Bug Fixes
+
+* **web:** play on a toggle after a terminal error ([be0938f](https://github.com/radio-garden/react-native-audio-browser/commit/be0938f40833db90c4ba6b7b0b214ee2e4252438))
+
 ## [0.2.0-next.68](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.67...v0.2.0-next.68) (2026-11-08)
 
 ### Bug Fixes
