@@ -19,7 +19,16 @@ sealed interface PlaybackEvent {
     val shouldPlayWhenReady: Boolean,
   ) : PlaybackEvent
 
-  data class MediaItemTransition(val hasTrack: Boolean, val isPlaying: Boolean) : PlaybackEvent
+  /**
+   * [loads] is false when the engine idles, so nothing loads the track. Read after the command's
+   * own prepare(): onEvents runs once the command returns.
+   */
+  data class MediaItemTransition(
+    val hasTrack: Boolean,
+    val isPlaying: Boolean,
+    val loads: Boolean,
+    val shouldPlayWhenReady: Boolean,
+  ) : PlaybackEvent
 
   /**
    * An input of [Player.shouldPlayWhenReady] changed: the intent, or a playback suppression such as
@@ -69,6 +78,11 @@ object PlaybackStateMachine {
           // the events arrive after it.
           !event.hasTrack ->
             if (current == PlaybackState.STOPPED) emptyList() else listOf(PlaybackState.NONE)
+          // Removing the current track after a stop, an error or a cancelled retry: play() loads
+          // the new one. With the intent up PAUSED would read as playing; ERROR's toggle reloads.
+          !event.loads ->
+            if (current == PlaybackState.STOPPED || event.shouldPlayWhenReady) emptyList()
+            else listOf(PlaybackState.PAUSED)
           // Already playing (gapless auto-advance): no IsPlayingChanged follows, so run the whole
           // sequence here or the state sticks on LOADING.
           event.isPlaying ->

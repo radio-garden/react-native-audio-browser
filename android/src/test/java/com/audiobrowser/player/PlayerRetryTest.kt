@@ -30,6 +30,7 @@ import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -190,13 +191,49 @@ class PlayerRetryTest {
   }
 
   @Test
-  fun `removing the current track after a cancelled retry stays idle`() {
+  fun `removing the current track after a cancelled retry stays idle and paused`() {
     pauseDuringRetry(Uri.fromFile(silentWav()).toString()) { player.pause() }
 
     player.remove(listOf(0))
     shadowOf(Looper.getMainLooper()).idle()
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
+  }
+
+  @Test
+  fun `removing a failed current track while paused is paused`() {
+    failTerminally(Uri.fromFile(silentWav()).toString())
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    player.remove(listOf(0))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(Playback(PlaybackState.PAUSED, null), player.getPlayback())
+  }
+
+  @Test
+  fun `adding a track after a cancelled retry stays idle and paused`() {
+    pauseDuringRetry { player.pause() }
+
+    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+  }
+
+  @Test
+  fun `adding to an empty queue loads`() {
+    player.setup(PlayerSetupOptions())
+
+    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
   }
 
   @Test

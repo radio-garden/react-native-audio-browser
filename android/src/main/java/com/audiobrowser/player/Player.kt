@@ -549,25 +549,22 @@ internal constructor(
     }
   }
 
-  fun add(track: Track) {
-    val mediaItem = TrackFactory.toMedia3(track)
-    sessionPlayer.addMediaItem(mediaItem)
-    sessionPlayer.prepare()
-  }
+  fun add(track: Track) = add(arrayOf(track))
 
-  fun add(tracks: Array<Track>) {
-    val mediaItems = TrackFactory.toMedia3(tracks)
-    sessionPlayer.addMediaItems(mediaItems.toList())
-    sessionPlayer.prepare()
-  }
-
-  /** @throws IllegalArgumentException unless [atIndex] is within the queue, or -1 to append. */
-  fun add(tracks: Array<Track>, atIndex: Int) {
+  /**
+   * Loads only into an empty queue: a queue that had tracks keeps its current one as it was, idle
+   * after a stop or a cancelled retry.
+   *
+   * @throws IllegalArgumentException unless [atIndex] is within the queue, or -1 to append.
+   */
+  fun add(tracks: Array<Track>, atIndex: Int = -1) {
     validateInsertIndex(atIndex)
-    val index = if (atIndex == -1) sessionPlayer.mediaItemCount else atIndex
-    val mediaItems = tracks.map { TrackFactory.toMedia3(it) }
-    sessionPlayer.addMediaItems(index, mediaItems)
-    sessionPlayer.prepare()
+    val count = sessionPlayer.mediaItemCount
+    sessionPlayer.addMediaItems(
+      if (atIndex == -1) count else atIndex,
+      TrackFactory.toMedia3(tracks),
+    )
+    if (count == 0) sessionPlayer.prepare()
   }
 
   /** @throws IllegalArgumentException if an index is out of bounds or repeated. */

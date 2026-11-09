@@ -161,7 +161,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
               player.shouldPlayWhenReady,
             )
           MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->
-            PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)
+            PlaybackEvent.MediaItemTransition(
+              player.currentTrack != null,
+              player.isPlaying,
+              loads = player.sessionPlayer.playbackState != MediaPlayer.STATE_IDLE,
+              player.shouldPlayWhenReady,
+            )
           MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED,
           MediaPlayer.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED ->
             PlaybackEvent.ShouldPlayWhenReadyChanged(
