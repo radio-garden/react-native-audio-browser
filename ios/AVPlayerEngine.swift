@@ -162,10 +162,14 @@ final class AVPlayerEngine: PlayerEngine {
     itemObserver = nil
   }
 
+  var playerFailed: Bool { avPlayer.status == .failed }
+
   func recreate() {
     playerObserver?.invalidate()
     nowPlayingInfoController.unlinkPlayer()
+    let volume = avPlayer.volume
     avPlayer = AVPlayer()
+    avPlayer.volume = volume
     setUpAVPlayer()
   }
 
@@ -264,7 +268,7 @@ final class AVPlayerEngine: PlayerEngine {
   private func playerDidEmit(_ event: PlayerObserver.Event) {
     switch event {
     case let .status(status):
-      if status == .failed { reportFailure(nil) }
+      if status == .failed { reportFailure(avPlayer.error) }
     case let .timeControlStatus(status):
       let mapped: PlayerTimeControlStatus
       switch status {

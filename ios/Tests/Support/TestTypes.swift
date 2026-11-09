@@ -43,6 +43,7 @@ final class MockPlayerEngine: PlayerEngine {
   var liveEdge: Double?
   var isPlaybackLikelyToKeepUp = false
   var isAirPlayRoute = false
+  var playerFailed = false
   var volume: Float = 1
 
   var resolveAndLoadCalls: [String] = []
@@ -62,7 +63,10 @@ final class MockPlayerEngine: PlayerEngine {
   }
 
   func stopObservingItem() { stopObservingItemCount += 1 }
-  func recreate() { recreateCount += 1 }
+  func recreate() {
+    recreateCount += 1
+    playerFailed = false
+  }
 
   var startPlaybackCallCount = 0
   var pausePlaybackCallCount = 0

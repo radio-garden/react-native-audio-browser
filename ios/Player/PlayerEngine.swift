@@ -62,6 +62,8 @@ enum EngineEvent {
   /// Drops the asset and removes the item.
   func clearItem()
   func stopObservingItem()
+  /// Whether the AVPlayer itself has failed, not only its item: it plays nothing until recreated.
+  var playerFailed: Bool { get }
   /// Replaces the AVPlayer: every handle to the old one is invalid.
   func recreate()
 

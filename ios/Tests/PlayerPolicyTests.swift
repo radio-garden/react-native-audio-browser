@@ -557,6 +557,22 @@ struct PlayerRecoveringTests {
     #expect(engine.recreateCount == 0)
   }
 
+  @Test func aRetryAfterTheAVPlayerItselfFailedReloadsOnANewOne_inTheSameLoad() async throws {
+    let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
+    engine.emit(.audioDidStart)
+    let first = player.load
+    engine.playerFailed = true
+
+    engine.emit(.failed(URLError(.networkConnectionLost), httpStatusCode: nil))
+    await player.retry.pendingTask?.value
+
+    #expect(engine.recreateCount == 1)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.load?.id == first?.id)
+    #expect(player.load?.hasPlayed == true)
+  }
+
   @Test func aMediaServicesResetReloadsOnANewPlayer() throws {
     let (player, engine, _) = try makePlaying()
     player.mediaServicesWereReset()

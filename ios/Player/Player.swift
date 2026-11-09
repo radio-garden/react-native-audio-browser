@@ -740,14 +740,16 @@ final class Player {
   }
 
   /// A restart from a terminal error begins a new Load on a new AVPlayer; automatic retries
-  /// never get here in .error, since the retry loop keeps the state non-terminal. `time`, else the
-  /// pending target, is held as the deferred seek before the loading transition saves the snapshot.
+  /// never get here in .error, since the retry loop keeps the state non-terminal, but get a new
+  /// AVPlayer in the same Load when the AVPlayer itself failed. `time`, else the pending target,
+  /// is held as the deferred seek before the loading transition saves the snapshot.
   private func prepareForReload(resumingAt time: TimeInterval?) {
     load?.reloadOnPlay = false
     let target = time ?? deferredSeek.target
     deferredSeek.reset()
-    if state == .error {
-      beginLoad()
+    let restart = state == .error
+    if restart { beginLoad() }
+    if restart || engine.playerFailed {
       engine.clearItem()
       engine.recreate()
     } else {
