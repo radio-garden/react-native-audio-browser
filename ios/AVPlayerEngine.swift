@@ -112,7 +112,8 @@ final class AVPlayerEngine: PlayerEngine {
 
   var resumePosition: Double? {
     guard let item = avPlayer.currentItem, !item.duration.isIndefinite else { return nil }
-    return item.currentTime().seconds
+    let seconds = item.currentTime().seconds
+    return seconds.isFinite ? seconds : nil
   }
 
   var liveEdge: Double? {

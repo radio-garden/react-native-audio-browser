@@ -42,7 +42,7 @@ enum EngineEvent {
   var currentTime: Double { get }
   var duration: Double { get }
   var bufferedPosition: Double { get }
-  /// The position a reload resumes from: nil without an item, or for an indefinite duration.
+  /// The position a reload resumes from: nil without an item, for an indefinite duration, or when the item's time isn't finite.
   var resumePosition: Double? { get }
   /// The end of the seekable window; nil when there is none.
   var liveEdge: Double? { get }
