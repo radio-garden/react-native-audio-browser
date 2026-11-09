@@ -141,7 +141,8 @@ final class RetryLoop {
 
     let failure = PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError)
     guard isEnabled, failure.retryable else {
-      logger.warning("Error not retryable, surfacing \(String(describing: failure.error))")
+      let reason = isEnabled ? "Error not retryable" : "Retry disabled"
+      logger.warning("\(reason), surfacing \(String(describing: failure.error))")
       onError?(failure.error)
       return
     }
