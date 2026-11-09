@@ -11,6 +11,7 @@ import type { PlaybackEvent } from './PlaybackStateMachine'
 import { playbackErrorKind } from '../playbackErrorKind'
 import { LoadAttempt } from './LoadAttempt'
 import { nextPlaybackState } from './PlaybackStateMachine'
+import { derivePlayingState } from './PlayingStateFactory'
 import { SetupNotCalledError } from './SetupNotCalledError'
 import { State } from './State'
 
@@ -597,7 +598,7 @@ export class Player {
 
   public togglePlayback(): void {
     this.requireElement()
-    if (this.playWhenReady) {
+    if (derivePlayingState(this.playWhenReady, this.state.state).playing) {
       this.pause()
     } else {
       this.play()

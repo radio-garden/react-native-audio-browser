@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Playback, PlaybackState } from '../../features'
+import type { Track } from '../../types'
 import type { PlaybackEvent } from './PlaybackStateMachine'
 import { Player } from './Player'
 import { QueuePlayer } from './QueuePlayer'
@@ -7,6 +8,25 @@ import { QueuePlayer } from './QueuePlayer'
 // Exercises the integration seam between the element/Shaka events and the state
 // machine — the web-specific behaviour the pure machine test doesn't cover.
 class TestPlayer extends Player {
+  loads = 0
+
+  constructor() {
+    super()
+    this.element = {
+      play: () => Promise.resolve(),
+      pause: () => {}
+    } as unknown as HTMLMediaElement
+    this.player = {
+      load: () => {
+        this.loads++
+        return new Promise<void>(() => {})
+      },
+      unload: () => Promise.resolve()
+    } as unknown as typeof this.player
+  }
+  fail(): void {
+    this.onError({ code: 1001, message: 'HTTP 404' })
+  }
   forceState(state: PlaybackState): void {
     this.state = { state }
   }
@@ -66,6 +86,30 @@ describe('Player.dispatch', () => {
     player.emit({ type: 'bufferingSufficient', playWhenReady: false })
 
     expect(player.read().state).toBe('playing')
+  })
+
+  it('pauses on a toggle while playing', () => {
+    const player = new TestPlayer()
+    player.load({ src: 'https://example.com/a.mp3' } as Track)
+    player.play()
+    player.emit({ type: 'playing' })
+
+    player.togglePlayback()
+
+    expect(player.playWhenReady).toBe(false)
+    expect(player.loads).toBe(1)
+  })
+
+  it('reloads on the first toggle after a terminal error', () => {
+    const player = new TestPlayer()
+    player.load({ src: 'https://example.com/a.mp3' } as Track)
+    player.play()
+    player.fail()
+
+    player.togglePlayback()
+
+    expect(player.playWhenReady).toBe(true)
+    expect(player.loads).toBe(2)
   })
 
   it('settles to ready after a load completes', () => {
@@ -132,8 +176,7 @@ describe('QueuePlayer queue end', () => {
 
     player.emit({ type: 'trackEndedNaturally' })
 
-    // A natural end exhausts the intent: keeping it set inverted
-    // togglePlayback (first press was a silent pause) and armed load()'s
+    // A natural end exhausts the intent: keeping it set would arm load()'s
     // auto-play with phantom intent.
     expect(player.playWhenReady).toBe(false)
   })
