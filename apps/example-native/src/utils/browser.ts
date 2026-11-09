@@ -17,6 +17,7 @@ import {
   radioGardenMediaTransform,
   radioGardenRoutes
 } from '../api/radio-garden'
+import { streamServerSection, urlTrack } from '../api/stream-server'
 import { fetchFavorites, setupFavorites } from '../favorites'
 import { styleLabRoutes } from './style-lab'
 import { throttle } from './throttle'
@@ -68,6 +69,7 @@ const configuration: BrowserConfiguration = {
       sections: [
         archiveLibrarySection,
         radioGardenLibrarySection,
+        streamServerSection,
         {
           title: 'Other',
           children: [
@@ -84,7 +86,8 @@ const configuration: BrowserConfiguration = {
   },
 
   async search({ query }) {
-    return searchArchive(query)
+    const track = urlTrack(query)
+    return track ? [track] : searchArchive(query)
   },
 
   formatNavigationError({ error, defaultFormatted, path }) {
@@ -99,7 +102,10 @@ const configuration: BrowserConfiguration = {
 }
 
 export const setupBrowser = async () => {
-  await AudioBrowser.setupPlayer({ remoteOutputs: { cast: true, sonos: true } })
+  await AudioBrowser.setupPlayer({
+    retry: true,
+    remoteOutputs: { cast: true, sonos: true }
+  })
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
