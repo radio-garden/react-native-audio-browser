@@ -102,6 +102,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -749,15 +750,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * Whether [request] is gated, and with which chrome. No active gate allows; a gate without a
    * resolver gates with its stored chrome and never asks JS. A resolver that throws, rejects or
    * times out fails closed, gating rather than serving content; only a successful `gated: false`
-   * allows. Chrome falls back from the resolver's to the stored one to [builtInGate].
+   * allows. Chrome falls back from the resolver's to the stored one to [builtInGate]. A caller
+   * cancelled while it waits gets the cancellation.
    */
   suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
     val s = gateState
     if (!s.active) return GateOutcome(false, null)
     if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate)
-    val decision =
-      runCatching { resolveGate(request).await().await() }.getOrNull()
-        ?: return GateOutcome(true, s.chrome ?: builtInGate)
+    val result = runCatching { resolveGate(request).await().await() }
+    currentCoroutineContext().ensureActive()
+    val decision = result.getOrNull() ?: return GateOutcome(true, s.chrome ?: builtInGate)
     if (!decision.gated) return GateOutcome(false, null)
     return GateOutcome(true, decision.gate ?: s.chrome ?: builtInGate)
   }
