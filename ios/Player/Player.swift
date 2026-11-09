@@ -872,7 +872,7 @@ final class Player {
     case .ended: trackDidPlayToEnd()
     case .stalled:
       // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
-      if playWhenReady { transition(.avPlayerWaiting) }
+      if playWhenReady, retry.isEnabled { transition(.avPlayerWaiting) }
       retry.handleFailure(isLive ? .liveEnd : .stall)
     }
   }

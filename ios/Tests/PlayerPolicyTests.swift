@@ -344,12 +344,14 @@ struct PlayerEngineEventTests {
     #expect(callbacks.errorEvents.isEmpty)
   }
 
-  @Test func aLiveEndWithRetryOffIsTerminal() throws {
-    let (player, engine, _) = try makePlaying(live: true)
+  @Test func aLiveEndWithRetryOffIsTerminal_withNoBufferingOnTheWay() throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
     player.retry.updatePolicy(from: nil)
+    let changesBefore = callbacks.playbackChanges.count
     engine.emit(.playedToEnd)
     #expect(player.state == .error)
     #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(callbacks.playbackChanges.dropFirst(changesBefore).map(\.state) == [.error])
   }
 
   @Test func aShortEndIsRetriedWhereItStopped() async throws {
