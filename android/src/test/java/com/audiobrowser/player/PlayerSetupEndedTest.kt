@@ -53,6 +53,15 @@ class PlayerSetupEndedTest {
   }
 
   @Test
+  fun `a session play after a rebuild in ENDED restarts`() {
+    endAndRebuild()
+
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
   fun `a play after a rebuild in ENDED keeps a seek`() {
     endAndRebuild()
 

@@ -22,6 +22,12 @@ class SessionViewRulesTest {
   }
 
   @Test
+  fun `an ended queue on an idle engine reads ended, keep-alive or not`() {
+    assertEquals(MediaPlayer.STATE_ENDED, view(state = PlaybackState.ENDED))
+    assertEquals(MediaPlayer.STATE_ENDED, view(state = PlaybackState.ENDED, keepAlive = false))
+  }
+
+  @Test
   fun `no masking without keep-alive`() {
     assertEquals(MediaPlayer.STATE_IDLE, view(engineFailed = true, keepAlive = false))
     assertEquals(MediaPlayer.STATE_IDLE, view(state = PlaybackState.ERROR, keepAlive = false))

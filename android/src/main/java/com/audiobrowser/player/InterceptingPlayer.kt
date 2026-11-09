@@ -10,10 +10,11 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
- * What the platform session reads of an idle engine. With `keepAlive`, a terminal error (the
- * engine's, or ERROR once a rebuild dropped it) and a pause that cancelled a retry (PAUSED) read as
- * paused and ready rather than STATE_IDLE, which Android Auto takes for "nothing playing": it
- * closes the now-playing screen and its next/previous buttons with it.
+ * What the platform session reads of an idle engine. Android Auto takes STATE_IDLE for "nothing
+ * playing": it closes the now-playing screen and its next/previous buttons with it. So an ended
+ * queue reads ended, as on an ended engine (a rebuild carries an ended engine idle), and with
+ * `keepAlive` a terminal error (the engine's, or ERROR once a rebuild dropped it) and a pause that
+ * cancelled a retry (PAUSED) read as paused and ready.
  */
 internal object SessionView {
   private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
@@ -26,7 +27,9 @@ internal object SessionView {
     keepAlive: Boolean,
   ): Int =
     when {
-      engineState != MediaPlayer.STATE_IDLE || !keepAlive -> engineState
+      engineState != MediaPlayer.STATE_IDLE -> engineState
+      state == PlaybackState.ENDED -> MediaPlayer.STATE_ENDED
+      !keepAlive -> engineState
       state in PARKED_STATES -> MediaPlayer.STATE_READY
       // The engine keeps its error through a stop or an emptied queue, until its next prepare. It
       // counts until the player's state reaches ERROR, which follows the engine's IDLE event.
@@ -105,7 +108,7 @@ internal class InterceptingPlayer(
   // the index; prepare() restarts it. prepare() is a no-op unless idle.
   private fun recoverFromErrorIfNeeded() {
     if (
-      super.getPlaybackState() == MediaPlayer.STATE_IDLE && playbackState != MediaPlayer.STATE_IDLE
+      super.getPlaybackState() == MediaPlayer.STATE_IDLE && playbackState == MediaPlayer.STATE_READY
     ) {
       prepare()
     }

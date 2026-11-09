@@ -111,6 +111,18 @@ class SessionViewTest {
   }
 
   @Test
+  fun `an ended queue a rebuild carried idle reads ended`() {
+    play(RetryPolicy.Default, Uri.fromFile(silentWav()).toString())
+    idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackStateCompat.STATE_STOPPED, session.legacyState())
+  }
+
+  @Test
   fun `the session hears the current track's title`() {
     play(RetryPolicy.Default, Uri.fromFile(silentWav()).toString())
     idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
