@@ -70,6 +70,7 @@
     "ios:test": "swift test --disable-sandbox",
     "lint": "oxlint --fix",
     "release": "semantic-release",
+    "stream-server": "node scripts/stream-server/index.ts",
     "test": "vitest run",
     "types": "tsc --noEmit",
     "vocab-check": "node scripts/vocab-check.ts"
