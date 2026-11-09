@@ -1,3 +1,9 @@
+## [0.2.0-next.71](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.70...v0.2.0-next.71) (2026-11-09)
+
+### Bug Fixes
+
+* **android:** save the current position when the task is swiped away ([5404299](https://github.com/radio-garden/react-native-audio-browser/commit/540429933ddacb6dbb400c3b9c3f5326f3887740))
+
 ## [0.2.0-next.70](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.69...v0.2.0-next.70) (2026-11-09)
 
 ### Features
