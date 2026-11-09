@@ -304,6 +304,9 @@ internal constructor(
       // togglePlayback(), JS.
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
+      } else if (value && playbackState == PlaybackState.ENDED) {
+        // A rebuild carries an ended engine idle, at its start or where a seek since left it.
+        sessionPlayer.prepare()
       }
       sessionPlayer.playWhenReady = value
     }
@@ -478,10 +481,8 @@ internal constructor(
     } else if (localEngine.isActive) {
       // No listener heard the restore, and its prepare() leaves the engine buffering. While remote,
       // the receiver plays on unchanged.
-      setPlaybackState(
-        if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
-        else PlaybackState.BUFFERING
-      )
+      if (exoPlayer.playbackState != ExoPlayer.STATE_IDLE) setPlaybackState(PlaybackState.BUFFERING)
+      else if (playbackState != PlaybackState.ENDED) setPlaybackState(PlaybackState.NONE)
       // The new engine starts unsuppressed: an unchanged state would not re-derive it.
       refreshPlayingState()
     }
