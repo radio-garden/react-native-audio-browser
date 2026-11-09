@@ -1,3 +1,9 @@
+## [0.2.0-next.74](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.73...v0.2.0-next.74) (2026-11-09)
+
+### Bug Fixes
+
+* **android:** ask for an open-ended range on a progressive read from the start ([f654b7c](https://github.com/radio-garden/react-native-audio-browser/commit/f654b7c4b9cf612f488f7c5fa15a1e6ed0457f36))
+
 ## [0.2.0-next.73](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.72...v0.2.0-next.73) (2026-11-09)
 
 ### Bug Fixes
