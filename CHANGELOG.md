@@ -1,3 +1,19 @@
+## [0.2.0-next.75](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.74...v0.2.0-next.75) (2026-11-09)
+
+### Bug Fixes
+
+* **android:** leave the current track alone when the queue changes on an idle engine ([681b6e0](https://github.com/radio-garden/react-native-audio-browser/commit/681b6e0c927a19d5a194fda46449a94cfe585f73))
+* **android:** make a session stop a stop, and tell the session when the paused mask moves ([3e20f88](https://github.com/radio-garden/react-native-audio-browser/commit/3e20f88d320e3056c0fde486e8bdc608c6aa5891))
+* **android:** stay paused when a load fails while paused ([fc938ba](https://github.com/radio-garden/react-native-audio-browser/commit/fc938ba0f83f90f246408dff6429912a9bd14d35))
+* **ios:** hold a seek made in .error for the restart ([bbe4af9](https://github.com/radio-garden/react-native-audio-browser/commit/bbe4af98cd7866220f09acd9f9f0ba05a13d0b2a))
+* **ios:** ignore a NaN or infinite time passed to seek, skip and setQueue ([675fcea](https://github.com/radio-garden/react-native-audio-browser/commit/675fcea3840732b69280767a589360471cd733a6))
+* **ios:** resume an on-demand track after a media-services reset ([e900452](https://github.com/radio-garden/react-native-audio-browser/commit/e90045201158ff3c62d83838485c7c63bcdefc95))
+* **ios:** resume from no position when the item's time isn't finite ([3ec03aa](https://github.com/radio-garden/react-native-audio-browser/commit/3ec03aad933743d4bf4d8c79ed0309d8b032d8a5))
+
+### Code Refactors
+
+* **android:** one teardown for a task swipe's shutdown and onDestroy ([fe664f8](https://github.com/radio-garden/react-native-audio-browser/commit/fe664f84e5fbd123171e04ad022b481c373d969f))
+
 ## [0.2.0-next.74](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.73...v0.2.0-next.74) (2026-11-09)
 
 ### Bug Fixes
