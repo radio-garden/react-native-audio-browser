@@ -194,12 +194,7 @@ final class Player {
 
     guard changed else { return }
     // Left to run, the retry would give up on the dropped intent and surface .error.
-    if !newValue, retry.pendingTask != nil {
-      retry.reset()
-      if let position = resumePosition { deferredSeek.capture(position) }
-      load?.reloadOnPlay = true
-      transition(.retryCancelled)
-    }
+    if !newValue, retry.pendingTask != nil { parkForReloadOnPlay() }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
@@ -257,6 +252,7 @@ final class Player {
 
     retry.onError = { [weak self] in self?.transition(.errorOccurred($0)) }
     retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
+    retry.onFailedWithoutIntent = { [weak self] in self?.parkForReloadOnPlay() }
     retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
     retry.shouldRetry = { [weak self] in self?.playWhenReady ?? false }
     retry.hasPlayed = { [weak self] in self?.load?.hasPlayed ?? false }
@@ -724,6 +720,13 @@ final class Player {
     }
     prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
     engine.resolveAndLoad(src: src, track: track)
+  }
+
+  private func parkForReloadOnPlay() {
+    retry.reset()
+    if let position = reloadPosition { deferredSeek.capture(position) }
+    load?.reloadOnPlay = true
+    transition(.retryCancelled)
   }
 
   /// A restart from a terminal error begins a new Load on a new AVPlayer; automatic retries

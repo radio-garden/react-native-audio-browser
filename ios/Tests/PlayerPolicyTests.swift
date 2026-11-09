@@ -211,12 +211,14 @@ struct PlayerEngineEventTests {
     #expect(engine.primeCount == 2)
   }
 
-  @Test func aFailedLoadWithoutIntentDoesNotPrime() async throws {
+  @Test func aFailedLoadWithoutIntentDoesNotPrime_andWaitsForAPlay() throws {
     let (player, engine, _) = try makeLoading()
     engine.emit(.loadFailed(URLError(.timedOut)))
-    await player.retry.pendingTask?.value
     #expect(engine.primeCount == 0)
-    #expect(player.state == .error)
+    #expect(player.state == .paused)
+
+    player.setPlayWhenReady(true)
+    #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
   @Test func anUnplayableAssetIsTerminal() throws {
