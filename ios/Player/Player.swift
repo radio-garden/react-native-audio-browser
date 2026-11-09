@@ -862,21 +862,16 @@ final class Player {
     engine.primeNowPlaying()
   }
 
-  /// A genuine end advances the queue; a dropped live stream or an underrun reported as an end
-  /// is a failure for the retry loop instead (see `EndOfTrackJudgement`), since AVPlayer will not
-  /// play on from an item it has ended.
+  /// An on-demand item's end is the end, whatever its duration estimate said: a truncated file
+  /// stalls instead, which is the stall watch's. A live stream's is a dropped connection, a
+  /// failure for the retry loop, since AVPlayer will not play on from an item it has ended.
   private func itemDidPlayToEnd() {
-    let isLive = currentTrack?.live == true
-    let judgement = EndOfTrackJudgement(isLive: isLive, currentTime: engine.currentTime, duration: engine.duration)
-    switch judgement.outcome {
-    case .ended: trackDidPlayToEnd()
-    case .stalled:
-      // The engine stops observing the item it replaces: an end delivered during the load is stale.
-      guard state != .loading else { return }
-      // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
-      if playWhenReady, retry.isEnabled { transition(.avPlayerWaiting) }
-      retry.handleFailure(isLive ? .liveEnd : .stall)
-    }
+    guard currentTrack?.live == true else { return trackDidPlayToEnd() }
+    // The engine stops observing the item it replaces: an end delivered during the load is stale.
+    guard state != .loading else { return }
+    // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
+    if playWhenReady, retry.isEnabled { transition(.avPlayerWaiting) }
+    retry.handleFailure(.liveEnd)
   }
 
   private var previousTimeControlStatus: PlayerTimeControlStatus?
