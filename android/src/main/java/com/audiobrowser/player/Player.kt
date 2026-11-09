@@ -72,6 +72,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
+/** The states the session reads as paused on an idle engine, once a rebuild drops its error. */
+private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
+
 @SuppressLint("RestrictedApi")
 class Player
 internal constructor(
@@ -479,10 +482,9 @@ internal constructor(
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
       equalizer.initialize(exoPlayer.audioSessionId)
     } else if (localEngine.isActive) {
-      // No listener heard the restore, and its prepare() leaves the engine buffering. While remote,
-      // the receiver plays on unchanged.
+      // No listener heard the restore. Its prepare() leaves the engine buffering; an unprepared one
+      // keeps its state. While remote, the receiver plays on unchanged.
       if (exoPlayer.playbackState != ExoPlayer.STATE_IDLE) setPlaybackState(PlaybackState.BUFFERING)
-      else if (playbackState != PlaybackState.ENDED) setPlaybackState(PlaybackState.NONE)
       // The new engine starts unsuppressed: an unchanged state would not re-derive it.
       refreshPlayingState()
     }
@@ -500,7 +502,7 @@ internal constructor(
         { callbacks },
         { options },
         keepSessionAliveOnError,
-        isPaused = { playbackState == PlaybackState.PAUSED },
+        isParked = { playbackState in PARKED_STATES },
         stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
@@ -1054,8 +1056,8 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
-      if ((oldState == PlaybackState.PAUSED) != (state == PlaybackState.PAUSED)) {
-        forwardingPlayer.onPausedChanged()
+      if ((oldState in PARKED_STATES) != (state in PARKED_STATES)) {
+        forwardingPlayer.onParkedChanged()
       }
       if (state == PlaybackState.ERROR) resetForNewLoad()
 

@@ -9,10 +9,10 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
- * With `keepAlive`, a terminal error (idle with an error) or a pause that cancelled a retry (idle
- * in PAUSED) reads as paused and ready to the platform session rather than STATE_NONE, which
- * Android Auto takes for "nothing playing": it closes the now-playing screen and its next/previous
- * buttons with it.
+ * With `keepAlive`, a terminal error (idle with an error, or in ERROR once a rebuild dropped it) or
+ * a pause that cancelled a retry (idle in PAUSED) reads as paused and ready to the platform session
+ * rather than STATE_NONE, which Android Auto takes for "nothing playing": it closes the now-playing
+ * screen and its next/previous buttons with it.
  */
 internal object SessionErrorMask {
   fun playbackState(state: Int, hasError: Boolean, keepAlive: Boolean): Int =
@@ -34,7 +34,7 @@ internal class InterceptingPlayer(
   private val callbacksProvider: () -> Callbacks?,
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
-  private val isPaused: () -> Boolean,
+  private val isParked: () -> Boolean,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
@@ -50,15 +50,15 @@ internal class InterceptingPlayer(
     super.removeListener(listener)
   }
 
-  /** Call when [isPaused] changes: on an idle engine the masked state moves with no event. */
-  fun onPausedChanged() {
+  /** Call when [isParked] changes: on an idle engine the masked state moves with no event. */
+  fun onParkedChanged() {
     if (keepSessionAliveOnError && super.getPlaybackState() == MediaPlayer.STATE_IDLE) {
       listeners.toList().forEach { it.onPlaybackStateChanged(playbackState) }
     }
   }
 
   private val parked: Boolean
-    get() = super.getPlayerError() != null || isPaused()
+    get() = super.getPlayerError() != null || isParked()
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
   // show as a disruptive error. Hidden whatever keepSessionAliveOnError says.

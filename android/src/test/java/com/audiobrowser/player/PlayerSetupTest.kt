@@ -121,15 +121,25 @@ class PlayerSetupTest {
   }
 
   @Test
-  fun setupWithChangedOptionsKeepsAnUnpreparedQueueStopped() {
+  fun setupWithChangedOptionsKeepsAnUnpreparedQueueAndItsState() {
     player.setup(PlayerSetupOptions())
     player.exoPlayer.setMediaItems(listOf(item("a")))
+    listOf(PlaybackState.PAUSED, PlaybackState.STOPPED, PlaybackState.ERROR).forEachIndexed {
+      i,
+      state ->
+      player.setPlaybackState(state)
 
-    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+      // A different maxBuffer each time, so each setup() rebuilds.
+      player.setup(PlayerSetupOptions(maxBuffer = 120_000.0 + i))
 
-    assertEquals(listOf("a"), player.tracks.map { it.title })
-    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
-    assertEquals(PlaybackState.NONE, player.playbackState)
+      assertEquals(listOf("a"), player.tracks.map { it.title })
+      assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+      assertEquals(state, player.playbackState)
+      assertEquals(
+        if (state == PlaybackState.STOPPED) MediaPlayer.STATE_IDLE else MediaPlayer.STATE_READY,
+        player.forwardingPlayer.playbackState,
+      )
+    }
   }
 
   private fun item(title: String) =
