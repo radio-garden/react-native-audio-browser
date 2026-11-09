@@ -885,7 +885,9 @@ final class Player {
   private var previousWaitingForNoItem = false
 
   /// AVPlayer can strand itself in .paused after a `.noItemToPlay` wait over AirPlay while the
-  /// intent is to play: play() is re-issued on exactly that transition.
+  /// intent is to play: play() is re-issued on exactly that transition. Outside the retry loop:
+  /// nothing failed, and play() is the whole recovery; an item that is dead fails, and that
+  /// failure goes through the loop.
   private func recoverIfAirPlayStalled(transitioningTo current: PlayerTimeControlStatus, waitingForNoItem: Bool) {
     let stalled = AirPlayStallJudgement(
       previous: previousTimeControlStatus,
