@@ -102,7 +102,10 @@ const configuration: BrowserConfiguration = {
 }
 
 export const setupBrowser = async () => {
-  await AudioBrowser.setupPlayer({ remoteOutputs: { cast: true, sonos: true } })
+  await AudioBrowser.setupPlayer({
+    retry: true,
+    remoteOutputs: { cast: true, sonos: true }
+  })
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
