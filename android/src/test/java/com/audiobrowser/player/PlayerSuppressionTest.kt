@@ -9,10 +9,12 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -48,7 +50,13 @@ class PlayerSuppressionTest {
   @get:Rule val folder = TemporaryFolder()
 
   private val context = RuntimeEnvironment.getApplication()
-  private val player = Player(context)
+  private val remote = FakeRemote(Looper.getMainLooper())
+  private val player =
+    Player(
+      context,
+      castRemote = { _, _ -> remote },
+      sonosRemote = { _, _ -> FakeRemote(Looper.getMainLooper()) },
+    )
   private val callbacks = mock(Callbacks::class.java)
   private val audioManager =
     shadowOf(context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
@@ -203,7 +211,7 @@ class PlayerSuppressionTest {
   }
 
   @Test
-  fun `a play during a transient focus loss runs a held rebuild`() {
+  fun `a play during a transient focus loss runs a held rebuild after it`() {
     focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
     val engine = player.exoPlayer
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
@@ -211,6 +219,8 @@ class PlayerSuppressionTest {
 
     // ExoPlayer's play() asks for focus again, so it plays over the transient loss.
     player.play()
+    // The rebuild follows the play: it is posted, never run inside it.
+    assertSame(engine, player.exoPlayer)
     shadowOf(Looper.getMainLooper()).idle()
 
     assertNotSame(engine, player.exoPlayer)
@@ -218,7 +228,7 @@ class PlayerSuppressionTest {
   }
 
   @Test
-  fun `a rebuild runs on an engine stopped during a transient focus loss`() {
+  fun `an engine stopped during a transient focus loss holds no rebuild`() {
     focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
     // As a handover to a remote output does: the engine stops but keeps the intent.
     player.exoPlayer.stop()
@@ -228,6 +238,33 @@ class PlayerSuppressionTest {
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
 
     assertNotSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `a held rebuild runs when a remote output takes over`() {
+    player.setup(
+      PlayerSetupOptions(
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+      )
+    )
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(
+      PlayerSetupOptions(
+        maxBuffer = 120_000.0,
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null),
+      )
+    )
+    assertSame(engine, player.exoPlayer)
+
+    remote.startSession()
+    idleUntil("remote") { !player.localEngine.isActive }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotSame(engine, player.exoPlayer)
+    assertFalse(player.localEngine.isActive)
   }
 
   @Test
