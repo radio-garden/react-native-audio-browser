@@ -72,9 +72,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
-/** The states the session reads as paused on an idle engine, once a rebuild drops its error. */
-private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
-
 @SuppressLint("RestrictedApi")
 class Player
 internal constructor(
@@ -533,7 +530,7 @@ internal constructor(
         { callbacks },
         { options },
         keepSessionAliveOnError,
-        isParked = { playbackState in PARKED_STATES },
+        playerState = { playbackState },
         stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
@@ -1091,9 +1088,7 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
-      if ((oldState in PARKED_STATES) != (state in PARKED_STATES)) {
-        forwardingPlayer.onParkedChanged()
-      }
+      forwardingPlayer.onStateChanged(oldState)
       if (state == PlaybackState.ERROR) resetForNewLoad()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and
