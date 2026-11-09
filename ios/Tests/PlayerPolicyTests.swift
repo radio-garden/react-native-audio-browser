@@ -278,7 +278,7 @@ struct PlayerEngineEventTests {
     #expect(player.errorStatus == .terminal(.httpStatus(404), report: 1))
   }
 
-  @Test func aGenuineEndAdvances_aLiveEndReconnects() throws {
+  @Test func aGenuineEndAdvances_aLiveEndReconnectsThroughTheRetryLoop() async throws {
     let (player, engine, _) = try makePlaying()
     engine.currentTime = 300
     engine.duration = 300
@@ -286,9 +286,70 @@ struct PlayerEngineEventTests {
     #expect(player.state == .ended)
 
     let (live, liveEngine, _) = try makePlaying(live: true)
+    live.retry.shouldRetry = { true }
     liveEngine.emit(.playedToEnd)
+    await live.retry.pendingTask?.value
     #expect(live.state == .loading)
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
+    #expect(live.retry.attempts == 1)
+  }
+
+  /// AVPlayer pauses an item at its end, so a seek within its window would leave it silent.
+  @Test func aLiveEndReconnectsEvenWithASeekableWindow() async throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.retry.shouldRetry = { true }
+    engine.liveEdge = 120
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func liveEndsThatKeepComingEndInATerminalErrorWithinTheBudget() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 3, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    for _ in 0 ..< 20 where player.state != .error {
+      engine.emit(.playedToEnd)
+      await player.retry.pendingTask?.value
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+    }
+    #expect(engine.resolveAndLoadCalls.count == 4)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  /// Each reconnect plays long enough to refill the budget, as a stream closing once an hour does.
+  @Test func liveEndsFarApartNeverSpendTheBudget() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    player.retry.healthyPlaybackDuration = .milliseconds(10)
+    for _ in 0 ..< 5 {
+      engine.emit(.playedToEnd)
+      await player.retry.pendingTask?.value
+      #expect(player.retry.attempts == 1)
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+      player.transition(.avPlayerPlaying)
+      await player.retry.healthyPlaybackTask?.value
+      #expect(player.retry.attempts == 0)
+    }
+    #expect(engine.resolveAndLoadCalls.count == 6)
+    #expect(player.state == .playing)
+    #expect(callbacks.errorEvents.isEmpty)
+  }
+
+  @Test func aLiveEndWithRetryOffIsTerminal() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: nil)
+    engine.emit(.playedToEnd)
+    #expect(player.state == .error)
+    #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
   @Test func aShortEndIsRetriedWhereItStopped() async throws {

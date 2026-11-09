@@ -813,7 +813,7 @@ final class Player {
       itemDidPlayToEnd()
     case .stalled:
       // A nudge only: this also arrives while audio plays, so the stall watch keys on .buffering.
-      recoverFromStall(reconnectIfLive: false)
+      if playWhenReady { engine.play() }
     case let .timedMetadata(metadata):
       callbacks?.playerDidReceiveTimedMetadata(metadata)
       engine.applyTimedMetadata(metadata)
@@ -854,32 +854,17 @@ final class Player {
   }
 
   /// A genuine end advances the queue; a dropped live stream or an underrun reported as an end
-  /// is recovered instead (see `EndOfTrackJudgement`): an underrun is a stall for the retry
-  /// loop, since AVPlayer will not play on from an item it has ended.
+  /// is a failure for the retry loop instead (see `EndOfTrackJudgement`), since AVPlayer will not
+  /// play on from an item it has ended.
   private func itemDidPlayToEnd() {
-    let judgement = EndOfTrackJudgement(
-      isLive: currentTrack?.live == true,
-      currentTime: engine.currentTime,
-      duration: engine.duration,
-    )
+    let isLive = currentTrack?.live == true
+    let judgement = EndOfTrackJudgement(isLive: isLive, currentTime: engine.currentTime, duration: engine.duration)
     switch judgement.outcome {
     case .ended: trackDidPlayToEnd()
-    case .stalled where currentTrack?.live == true: recoverFromStall(reconnectIfLive: true)
     case .stalled:
       // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
       if playWhenReady { transition(.avPlayerWaiting) }
-      retry.handleFailure(.stall)
-    }
-  }
-
-  /// Recovers from a stall while the play intent holds: a live stream that ran out of data
-  /// (`reconnectIfLive`) rejoins the edge; otherwise play() un-parks AVPlayer from waiting.
-  private func recoverFromStall(reconnectIfLive: Bool) {
-    guard playWhenReady else { return }
-    if reconnectIfLive, currentTrack?.live == true {
-      seekToLiveEdge()
-    } else {
-      engine.play()
+      retry.handleFailure(isLive ? .liveEnd : .stall)
     }
   }
 

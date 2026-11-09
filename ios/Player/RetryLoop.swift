@@ -21,11 +21,14 @@ public enum PlaybackErrorContext {
   /// Playback that stopped receiving data without AVFoundation failing it: retries resume from
   /// the current time.
   case stall
+  /// A live stream that reported played-to-end, as a cleanly closed connection does: retries
+  /// reconnect, since AVPlayer will not play on from an item it has ended.
+  case liveEnd
 
   var startFromCurrentTime: Bool {
     switch self {
     case .playback, .stall: true
-    case .mediaLoad: false
+    case .mediaLoad, .liveEnd: false
     }
   }
 
@@ -33,7 +36,7 @@ public enum PlaybackErrorContext {
     switch self {
     case .playback: .playbackFailed
     case .mediaLoad: .failedToLoadKeyValue
-    case .stall: .playbackStalled
+    case .stall, .liveEnd: .playbackStalled
     }
   }
 }
