@@ -268,26 +268,13 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
           Timber.d("A car is connected - pausing instead of stopping")
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
-        } else if (moduleBound) {
-          Timber.d("AudioBrowser still bound - stopping playback but keeping the player")
-          stopPlaybackAndRemoveNotification()
-          // Ends the service once AudioBrowser unbinds.
-          stopSelf()
         } else {
-          Timber.d("No car connected - shutting the service down")
-          try {
-            if (::mediaSession.isInitialized) {
-              mediaSession.release()
-            }
-            stopPlaybackAndRemoveNotification()
-            tearDownArtworkProvider()
-            player.destroy()
-            scope.cancel()
-            stopSelf()
-          } catch (e: Exception) {
-            Timber.e(e, "Error during aggressive cleanup in onTaskRemoved")
-            stopSelf()
-          }
+          Timber.d("No car connected - stopping playback, moduleBound = $moduleBound")
+          stopPlaybackAndRemoveNotification()
+          // AudioBrowser keeps the player. Otherwise tear down now: a media controller still bound
+          // keeps the service alive after stopSelf().
+          if (!moduleBound) tearDown()
+          stopSelf()
         }
       }
 
@@ -340,16 +327,17 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     onBatteryWarningPendingChanged?.invoke(true)
   }
 
-  /**
-   * Cancels the artwork provider's scope and clears its holder. Idempotent. Call it before
-   * player.destroy() on every teardown path, so no in-flight load reaches a destroyed player.
-   */
-  private fun tearDownArtworkProvider() {
+  /** Idempotent: a swipe's shutdown runs it, and onDestroy runs it again. */
+  private fun tearDown() {
+    // Before player.destroy(), so no in-flight artwork load reaches a destroyed player.
     artworkProviderDeps?.let {
       it.scope.cancel()
       CoilArtworkLoaderHolder.clearIf(it)
     }
     artworkProviderDeps = null
+    if (::mediaSession.isInitialized) mediaSession.release()
+    player.destroy()
+    scope.cancel()
   }
 
   override fun onDestroy() {
@@ -361,13 +349,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       headlessBound = false
     }
 
-    tearDownArtworkProvider()
-
-    Timber.d("Releasing media session and destroying player")
-    if (::mediaSession.isInitialized) {
-      mediaSession.release()
-    }
-    player.destroy()
+    tearDown()
 
     super.onDestroy()
   }
