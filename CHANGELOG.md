@@ -1,3 +1,13 @@
+## [0.2.0-next.70](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.69...v0.2.0-next.70) (2026-11-09)
+
+### Features
+
+* add getTimedMetadata() and useTimedMetadata() ([9b6cc20](https://github.com/radio-garden/react-native-audio-browser/commit/9b6cc20812e460d3e98a04221450989fe5963df8))
+
+### Bug Fixes
+
+* clear the previous track's now-playing state before the track change event ([9d2fb87](https://github.com/radio-garden/react-native-audio-browser/commit/9d2fb874a73b5f6cdef615f74c2cd0d549182500))
+
 ## [0.2.0-next.69](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.68...v0.2.0-next.69) (2026-11-09)
 
 ### Bug Fixes
