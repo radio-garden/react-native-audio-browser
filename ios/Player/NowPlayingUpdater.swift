@@ -23,7 +23,7 @@ final class NowPlayingUpdater {
   private weak var networkStatus: (any NetworkStatusProviding)?
 
   private var override: NowPlayingUpdate?
-  private var timedMetadata: TimedMetadata?
+  private(set) var timedMetadata: TimedMetadata?
   /// Reverted by a native timer, not by JS: JS timers pause in the background.
   private var flash: NowPlayingUpdate?
   private var flashRevert: DispatchWorkItem?
@@ -66,7 +66,6 @@ final class NowPlayingUpdater {
     override = nil
     cancelFlash()
     timedMetadata = nil
-    render()
   }
 
   /// The lines last published for the current track; before its first render, or while `enabled`

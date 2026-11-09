@@ -1187,6 +1187,14 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline std::optional<TimedMetadata> getTimedMetadata() override {
+      auto __result = _swiftPart.getTimedMetadata();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
     inline bool getOnline() override {
       auto __result = _swiftPart.getOnline();
       if (__result.hasError()) [[unlikely]] {

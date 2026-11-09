@@ -1003,6 +1003,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun getNowPlaying(): NowPlayingMetadata? =
     readPlayer(null) { player -> player.nowPlaying.getNowPlaying() }
 
+  override fun getTimedMetadata(): TimedMetadata? =
+    readPlayer(null) { player -> player.nowPlaying.timedMetadata }
+
   // ============================================================================
   // MARK: Network Connectivity
   // ============================================================================

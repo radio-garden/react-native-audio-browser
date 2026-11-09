@@ -111,6 +111,8 @@ const meta = useNowPlaying()
 //   description?, mediaId?, elapsedTime? (iOS only, not live) }
 ```
 
+[**`useTimedMetadata()`**](/api/features/metadata/#usetimedmetadata) → [`TimedMetadata`](/api/features/metadata/#timedmetadata)` | undefined` — the stream's current song (ICY or ID3), cleared on a track change until the next one arrives. Always `undefined` on web.
+
 ## Browsing
 
 Mirror the browse tree your app draws — the same state CarPlay and Android Auto render.
@@ -223,6 +225,7 @@ The **Event** column is the emitter for the getter/event form, the **Hook** name
 | [`useRepeatMode`](/api/features/queue/#userepeatmode)                                 | [`RepeatMode`](/api/features/queue/#repeatmode)                                             | `onRepeatModeChanged`                | all                 |
 | [`useShuffle`](/api/features/queue/#useshuffle)                                       | `boolean`                                                                                   | `onShuffleChanged`                   | all                 |
 | [`useNowPlaying`](/api/features/nowPlaying/#usenowplaying)                            | `NowPlayingMetadata \| undefined`                                                           | `onNowPlayingChanged`                | all                 |
+| [`useTimedMetadata`](/api/features/metadata/#usetimedmetadata)                        | [`TimedMetadata`](/api/features/metadata/#timedmetadata)` \| undefined`                     | `onTimedMetadata`                    | iOS, Android        |
 | [`useTabs`](/api/features/browser/#usetabs)                                           | [`Track`](/api/types/browser-nodes/#track)`[] \| undefined`                                 | `onTabsChanged`                      | all                 |
 | [`usePath`](/api/features/browser/#usepath)                                           | `string \| undefined`                                                                       | `onPathChanged`                      | all                 |
 | [`useContent`](/api/features/browser/#usecontent)                                     | [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack)` \| undefined`                   | `onContentChanged`                   | all                 |

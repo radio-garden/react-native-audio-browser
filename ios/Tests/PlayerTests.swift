@@ -1489,15 +1489,21 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func activeTrackChange_resetsTheNowPlayingLinesAfterJSHearsIt() throws {
+  func activeTrackChange_clearsTheTrackStateBeforeJSHearsIt_thenRendersTheLines() throws {
     let (c, eh, cb, _) = makeCoordinator()
     eh.onSeamCall = { [weak cb] call in
-      if call == "nowPlayingTrackChanged" { cb?.queueAndTrackOrder.append(call) }
+      if call == "nowPlayingTrackChanged" || call == "renderNowPlaying" {
+        cb?.queueAndTrackOrder.append(call)
+      }
     }
 
     try c.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")])
 
-    #expect(cb.queueAndTrackOrder == ["queue", "activeTrack", "nowPlayingTrackChanged"])
+    let order = cb.queueAndTrackOrder
+    let cleared = try #require(order.firstIndex(of: "nowPlayingTrackChanged"))
+    let heard = try #require(order.firstIndex(of: "activeTrack"))
+    #expect(cleared < heard)
+    #expect(try #require(order.lastIndex(of: "renderNowPlaying")) > heard)
     #expect(eh.nowPlayingTrackChangedCount == 1)
   }
 

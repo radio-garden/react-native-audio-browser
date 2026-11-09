@@ -1053,6 +1053,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun getTimedMetadata(): TimedMetadata?
+  
+  @DoNotStrip
+  @Keep
   abstract fun getOnline(): Boolean
   
   @DoNotStrip

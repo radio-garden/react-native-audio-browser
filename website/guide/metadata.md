@@ -21,8 +21,12 @@ what's displayed anywhere. It's up to you to do something with them: feed the
 [Now Playing](/guide/now-playing) surfaces, render your own UI, or build a
 chapter list.
 
-Each is subscription-only: there's no getter or hook. You subscribe and keep the
-latest value yourself, as shown below.
+Timed metadata also has a getter and a hook,
+[`getTimedMetadata()`](/api/features/metadata/#gettimedmetadata) and
+[`useTimedMetadata()`](/api/features/metadata/#usetimedmetadata), so a screen
+that mounts mid-song still has the title. Track metadata and chapters are
+subscription-only: you subscribe and keep the latest value yourself, as shown
+below.
 
 The UI snippets below import `useEffect` / `useState` from `react`, and `Text` /
 `Button` / `FlatList` from `react-native`; those import lines are
@@ -95,7 +99,18 @@ lock screen / car, you usually don't subscribe here directly — you read it ins
 the Now Playing formatter, which is re-invoked on every timed-metadata update.
 See [Now Playing → the formatter](/guide/now-playing#the-formatter-derived-continuous).
 
-Subscribe to `onTimedMetadata` when you want the live song for _your own_ UI.
+For the live song in _your own_ UI, use `useTimedMetadata()`. It returns the
+last timed metadata of the current track, and `undefined` from a track change
+until the new track's first update:
+
+```tsx
+function NowPlayingSong() {
+  const song = useTimedMetadata()
+  return <Text>{song?.title ?? 'Unknown'}</Text>
+}
+```
+
+Outside React, `getTimedMetadata()` reads the same value.
 
 ## Track metadata: the track's static fields
 
@@ -240,27 +255,27 @@ through the web player and simply isn't wired up yet — that part is tracked in
 
 ## Holding metadata in state
 
-None of these come with a built-in hook, but each `addListener` returns the
-cleanup function `useEffect` expects, so a reusable hook is a few lines:
+Track metadata and chapters come with no built-in hook, but each `addListener`
+returns the cleanup function `useEffect` expects, so a reusable hook is a few
+lines:
 
 ```tsx
-import { onTimedMetadata, type TimedMetadata } from 'react-native-audio-browser'
+import {
+  onChapterMetadata,
+  type ChapterMetadata
+} from 'react-native-audio-browser'
 
-// Returns TimedMetadata | undefined (undefined until the first event).
-function useTimedMetadata(): TimedMetadata | undefined {
-  const [metadata, setMetadata] = useState<TimedMetadata>()
-  useEffect(() => onTimedMetadata.addListener(setMetadata), [])
-  return metadata
-}
-
-function NowPlayingSong() {
-  const song = useTimedMetadata()
-  return <Text>{song?.title ?? 'Unknown'}</Text>
+// Returns ChapterMetadata[] | undefined (undefined until the first event).
+function useChapters(): ChapterMetadata[] | undefined {
+  const [chapters, setChapters] = useState<ChapterMetadata[]>()
+  useEffect(() => onChapterMetadata.addListener(setChapters), [])
+  return chapters
 }
 ```
 
-The same pattern works for `onTrackMetadata` and `onChapterMetadata` — swap the
-event and the state type.
+The same pattern works for `onTrackMetadata`: swap the event and the state type.
+A hook built this way stays `undefined` until the next event, so a screen that
+mounts after the file loaded sees nothing.
 
 ## API summary
 
@@ -271,3 +286,4 @@ event and the state type.
 | `onChapterMetadata` | `ChapterMetadata[]` (chapter markers, times in seconds).                                     |
 
 All three are subscriptions: `addListener(cb)` returns an unsubscribe function.
+`getTimedMetadata()` and `useTimedMetadata()` read the current timed metadata.

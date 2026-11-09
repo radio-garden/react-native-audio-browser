@@ -3712,6 +3712,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<std::optional<NowPlayingMetadata>>::withError(error);
   }
   
+  // pragma MARK: Result<std::optional<TimedMetadata>>
+  using Result_std__optional_TimedMetadata__ = Result<std::optional<TimedMetadata>>;
+  inline Result_std__optional_TimedMetadata__ create_Result_std__optional_TimedMetadata__(const std::optional<TimedMetadata>& value) noexcept {
+    return Result<std::optional<TimedMetadata>>::withValue(value);
+  }
+  inline Result_std__optional_TimedMetadata__ create_Result_std__optional_TimedMetadata__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<TimedMetadata>>::withError(error);
+  }
+  
   // pragma MARK: Result<std::optional<Output>>
   using Result_std__optional_Output__ = Result<std::optional<Output>>;
   inline Result_std__optional_Output__ create_Result_std__optional_Output__(const std::optional<Output>& value) noexcept {
