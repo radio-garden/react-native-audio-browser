@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -88,7 +89,7 @@ internal class InterceptingPlayer(
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
   // show as a disruptive error. Hidden whatever keepSessionAliveOnError says.
-  override fun getPlayerError(): androidx.media3.common.PlaybackException? = null
+  override fun getPlayerError(): PlaybackException? = null
 
   private val engineFailed: Boolean
     get() = super.getPlayerError() != null
@@ -104,11 +105,15 @@ internal class InterceptingPlayer(
   override fun getPlayWhenReady(): Boolean =
     SessionView.playWhenReady(super.getPlayWhenReady(), super.getPlaybackState(), playbackState)
 
-  // After a terminal error or a cancelled retry the engine is idle, and the default skips only move
-  // the index; prepare() restarts it. prepare() is a no-op unless idle.
-  private fun recoverFromErrorIfNeeded() {
+  // After a terminal error, a cancelled retry or a rebuild in ENDED the engine is idle, and the
+  // default skips only move the index. An ended queue that stayed put stays ended, as on an ended
+  // engine.
+  private fun loadIdleEngine(fromIndex: Int) {
+    if (super.getPlaybackState() != MediaPlayer.STATE_IDLE) return
+    val view = playbackState
     if (
-      super.getPlaybackState() == MediaPlayer.STATE_IDLE && playbackState == MediaPlayer.STATE_READY
+      view == MediaPlayer.STATE_READY ||
+        view == MediaPlayer.STATE_ENDED && currentMediaItemIndex != fromIndex
     ) {
       prepare()
     }
@@ -120,8 +125,9 @@ internal class InterceptingPlayer(
     fallback: () -> Unit,
   ) {
     if (callbacksProvider()?.let(handler) == true) return
+    val index = currentMediaItemIndex
     fallback()
-    if (recover) recoverFromErrorIfNeeded()
+    if (recover) loadIdleEngine(index)
   }
 
   override fun play() = intercept({ it.handleRemotePlay() }) { playPlayer() }

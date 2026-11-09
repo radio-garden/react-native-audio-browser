@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.Util
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
@@ -62,6 +63,50 @@ class PlayerSetupEndedTest {
   }
 
   @Test
+  fun `prepare after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.prepare()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `next at the end after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.next()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.previous()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a session skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.forwardingPlayer.seekToPreviousMediaItem()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
   fun `a play after a rebuild in ENDED keeps a seek`() {
     endAndRebuild()
 
@@ -92,8 +137,8 @@ class PlayerSetupEndedTest {
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
   }
 
-  private fun endAndRebuild() {
-    end()
+  private fun endAndRebuild(tracks: Int = 1) {
+    end(tracks)
 
     val before = states().size
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
@@ -103,16 +148,13 @@ class PlayerSetupEndedTest {
     assertEquals(PlaybackState.ENDED, player.playbackState)
   }
 
-  private fun end() {
+  private fun end(tracks: Int = 1) {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
     disableAudio()
+    val src = Uri.fromFile(silentWav()).toString()
     player.exoPlayer.setMediaItems(
-      listOf(
-        TrackFactory.toMedia3(
-          TestFixtures.track(title = "a", src = Uri.fromFile(silentWav()).toString())
-        )
-      )
+      List(tracks) { TrackFactory.toMedia3(TestFixtures.track(title = "$it", src = src)) }
     )
     player.exoPlayer.prepare()
     player.play()

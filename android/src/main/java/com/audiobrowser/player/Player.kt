@@ -621,13 +621,18 @@ internal constructor(
     if (removesCurrent && playWhenReady) prepare()
   }
 
-  fun next() {
-    sessionPlayer.seekToNextMediaItem()
-    sessionPlayer.prepare()
-  }
+  fun next() = loadAfter { sessionPlayer.seekToNextMediaItem() }
 
-  fun previous() {
-    sessionPlayer.seekToPreviousMediaItem()
+  fun previous() = loadAfter { sessionPlayer.seekToPreviousMediaItem() }
+
+  /**
+   * Runs [move] and prepares an idle engine, unless the queue ended and stays where it was: a
+   * rebuild carries an ended engine idle, and it stays ended as an ended engine does.
+   */
+  private inline fun loadAfter(move: () -> Unit) {
+    val index = sessionPlayer.currentMediaItemIndex
+    move()
+    if (playbackState == PlaybackState.ENDED && sessionPlayer.currentMediaItemIndex == index) return
     sessionPlayer.prepare()
   }
 
@@ -941,10 +946,9 @@ internal constructor(
     }
   }
 
+  /** An ended queue stays ended, as on an ended engine. */
   fun prepare() {
-    if (currentTrack != null) {
-      sessionPlayer.prepare()
-    }
+    if (currentTrack != null && playbackState != PlaybackState.ENDED) sessionPlayer.prepare()
   }
 
   fun pause() {
