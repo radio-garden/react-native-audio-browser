@@ -613,13 +613,13 @@ final class Player {
       engine.loadNowPlayingMetadata(for: currentTrack)
       persistence.save()
 
-      guard let src = currentTrack.src else {
+      if let src = currentTrack.src {
+        engine.resolveAndLoad(src: src, track: currentTrack)
+      } else {
         logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
         clearItem()
         transition(.errorOccurred(.invalidSourceUrl("nil")))
-        return
       }
-      engine.resolveAndLoad(src: src, track: currentTrack)
     } else {
       unload()
       engine.clearNowPlaying()

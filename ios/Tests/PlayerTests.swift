@@ -708,6 +708,33 @@ struct HandleCurrentTrackChangedTests {
   }
 
   @Test @MainActor
+  func nilSrc_emitsActiveTrackChangedEvent() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    try c.setQueue([
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", path: "/no-source", src: nil, title: "No Source"),
+    ])
+    cb.activeTrackChanges.removeAll()
+
+    try c.skipTo(1)
+
+    #expect(cb.activeTrackChanges.count == 1)
+    let event = cb.activeTrackChanges.first
+    #expect(event?.track?.id == "t2")
+    #expect(event?.index == 1)
+    #expect(event?.lastTrack?.id == "t1")
+    #expect(event?.lastIndex == 0)
+    #expect(c.state == .error)
+    #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
+
+    cb.activeTrackChanges.removeAll()
+    try c.skipTo(0)
+
+    #expect(cb.activeTrackChanges.first?.lastTrack?.id == "t2")
+    #expect(cb.activeTrackChanges.first?.lastIndex == 1)
+  }
+
+  @Test @MainActor
   func emitsActiveTrackChangedEvent() throws {
     let (c, _, cb, _) = makeCoordinator()
 
