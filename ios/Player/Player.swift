@@ -769,10 +769,12 @@ final class Player {
   /// Recovers from a media-services reset: every AVPlayer and session handle is invalid, so a
   /// new player reloads the current track, keeping the play intent, so a live stream reconnects
   /// instead of going silent. An on-demand track resumes where it was, unless it ended, or was
-  /// stopped and its rewind may not have landed. No-op when nothing is loaded.
+  /// stopped and its rewind may not have landed. Replaces any retry pending. No-op when nothing is
+  /// loaded.
   func mediaServicesWereReset() {
     guard let track = currentTrack else { return }
     logger.info("Media services were reset — recreating player and reloading current track")
+    retry.cancel()
     if track.live != true, let position = reloadPosition {
       deferredSeek.capture(position)
     }

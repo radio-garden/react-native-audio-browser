@@ -634,6 +634,21 @@ struct PlayerRecoveringTests {
     #expect(player.load?.hasPlayed == true)
   }
 
+  @Test func aMediaServicesResetDuringABackoffReloadsOnce() async throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    engine.hasItem = true
+    engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    let retrying = player.retry.pendingTask
+
+    player.mediaServicesWereReset()
+    await retrying?.value
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.retry.pendingTask == nil)
+  }
+
   @Test func aMediaServicesResetReloadsOnANewPlayer() throws {
     let (player, engine, _) = try makePlaying()
     player.mediaServicesWereReset()
