@@ -297,6 +297,16 @@ class ServiceTaskRemovedTest {
   }
 
   @Test
+  fun `a search waiting for AudioBrowser ends with the removed task while AudioBrowser is bound`() {
+    controller.bind()
+
+    removeTaskDuringASearchWaitingForAudioBrowser()
+
+    assertEquals(NEVER_STOPPED, shadowOf(service).stopSelfId)
+    assertFalse(player.exoPlayer.isReleased)
+  }
+
+  @Test
   fun `a media browser binding after the task is removed gets no session`() {
     playTrack("a")
     connectController("com.google.android.bluetooth")
