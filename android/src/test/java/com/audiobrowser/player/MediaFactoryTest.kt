@@ -33,7 +33,6 @@ class MediaFactoryTest {
       context,
       cache = null,
       RetryPolicy.Default,
-      shouldRetry = { false },
       getRequestConfig = getRequestConfig,
     )
 

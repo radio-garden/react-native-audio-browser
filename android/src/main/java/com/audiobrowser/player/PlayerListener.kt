@@ -128,9 +128,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       player.sleepTimer.clear()
     }
 
-    // The second writer: Player.playWhenReady's setter writes first so loader-thread readers see
-    // the intent early; this syncs changes ExoPlayer makes itself (e.g. audio focus).
-    player.playWhenReadyCache = playWhenReady
     // Here rather than in Player.pause(): a session pause, a noisy-audio pause and a permanent
     // focus loss all drop the intent without it.
     if (!playWhenReady) player.cancelRetry()
@@ -164,7 +161,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
               player.shouldPlayWhenReady,
             )
           MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->
-            PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)
+            PlaybackEvent.MediaItemTransition(
+              player.currentTrack != null,
+              player.isPlaying,
+              loads = player.sessionPlayer.playbackState != MediaPlayer.STATE_IDLE,
+              player.shouldPlayWhenReady,
+            )
           MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED,
           MediaPlayer.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED ->
             PlaybackEvent.ShouldPlayWhenReadyChanged(

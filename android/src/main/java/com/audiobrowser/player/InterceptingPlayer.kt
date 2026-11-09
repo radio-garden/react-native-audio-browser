@@ -35,7 +35,27 @@ internal class InterceptingPlayer(
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
   private val isPaused: () -> Boolean,
+  private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
+
+  private val listeners = mutableSetOf<MediaPlayer.Listener>()
+
+  override fun addListener(listener: MediaPlayer.Listener) {
+    listeners += listener
+    super.addListener(listener)
+  }
+
+  override fun removeListener(listener: MediaPlayer.Listener) {
+    listeners -= listener
+    super.removeListener(listener)
+  }
+
+  /** Call when [isPaused] changes: on an idle engine the masked state moves with no event. */
+  fun onPausedChanged() {
+    if (keepSessionAliveOnError && super.getPlaybackState() == MediaPlayer.STATE_IDLE) {
+      listeners.toList().forEach { it.onPlaybackStateChanged(playbackState) }
+    }
+  }
 
   private val parked: Boolean
     get() = super.getPlayerError() != null || isPaused()
@@ -86,7 +106,7 @@ internal class InterceptingPlayer(
   // the recovery.
   override fun setPlayWhenReady(playWhenReady: Boolean) = if (playWhenReady) play() else pause()
 
-  override fun stop() = intercept({ it.handleRemoteStop() }) { super.stop() }
+  override fun stop() = intercept({ it.handleRemoteStop() }) { stopPlayer() }
 
   override fun seekToNext() =
     intercept({ it.handleRemoteNext() }, recover = true) { super.seekToNext() }

@@ -138,17 +138,55 @@ class PlaybackStateMachineTest {
   fun `a transition to a track synthesizes the loading burst`() {
     assertEquals(
       listOf(PlaybackState.LOADING),
-      on(PlaybackEvent.MediaItemTransition(hasTrack = true, isPlaying = false)),
+      on(
+        PlaybackEvent.MediaItemTransition(
+          hasTrack = true,
+          isPlaying = false,
+          loads = true,
+          shouldPlayWhenReady = false,
+        )
+      ),
     )
     assertEquals(
       listOf(PlaybackState.LOADING, PlaybackState.READY, PlaybackState.PLAYING),
-      on(PlaybackEvent.MediaItemTransition(hasTrack = true, isPlaying = true)),
+      on(
+        PlaybackEvent.MediaItemTransition(
+          hasTrack = true,
+          isPlaying = true,
+          loads = true,
+          shouldPlayWhenReady = false,
+        )
+      ),
+    )
+  }
+
+  @Test
+  fun `a transition nothing loads is paused, except from stopped`() {
+    val idle =
+      PlaybackEvent.MediaItemTransition(
+        hasTrack = true,
+        isPlaying = false,
+        loads = false,
+        shouldPlayWhenReady = false,
+      )
+    assertEquals(listOf(PlaybackState.PAUSED), on(idle, from = PlaybackState.ERROR))
+    assertEquals(listOf(PlaybackState.PAUSED), on(idle, from = PlaybackState.PAUSED))
+    assertEquals(emptyList<PlaybackState>(), on(idle, from = PlaybackState.STOPPED))
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(idle.copy(shouldPlayWhenReady = true), from = PlaybackState.ERROR),
     )
   }
 
   @Test
   fun `a transition without a track is none, except from stopped`() {
-    val emptied = PlaybackEvent.MediaItemTransition(hasTrack = false, isPlaying = false)
+    val emptied =
+      PlaybackEvent.MediaItemTransition(
+        hasTrack = false,
+        isPlaying = false,
+        loads = false,
+        shouldPlayWhenReady = false,
+      )
     assertEquals(listOf(PlaybackState.NONE), on(emptied, from = PlaybackState.ERROR))
     assertEquals(listOf(PlaybackState.NONE), on(emptied, from = PlaybackState.ENDED))
     assertEquals(emptyList<PlaybackState>(), on(emptied, from = PlaybackState.STOPPED))

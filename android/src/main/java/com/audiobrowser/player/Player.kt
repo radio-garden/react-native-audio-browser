@@ -117,7 +117,7 @@ internal constructor(
     private set
 
   /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
-  lateinit var forwardingPlayer: MediaPlayer
+  internal lateinit var forwardingPlayer: InterceptingPlayer
 
   private val remoteOutputs =
     RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
@@ -126,12 +126,6 @@ internal constructor(
     LocalEngine({ exoPlayer }, isRemote = { remoteOutputs.player?.isRemote == true })
 
   private var keepSessionAliveOnError = true
-
-  /**
-   * [playWhenReady] for the retry policy, which reads it off the main thread. Written eagerly by
-   * the setter, ahead of ExoPlayer's listener round-trip.
-   */
-  @Volatile internal var playWhenReadyCache = false
 
   /**
    * Whether the current load has produced audio: picks the retry policy's first-connect or recovery
@@ -311,7 +305,6 @@ internal constructor(
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
       }
-      playWhenReadyCache = value
       sessionPlayer.playWhenReady = value
     }
 
@@ -463,7 +456,6 @@ internal constructor(
         context,
         setupOptions,
         cache,
-        shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
         hasPlayed = { hasPlayedCache },
         onRetryPending = ::reportRetryingError,
@@ -508,6 +500,7 @@ internal constructor(
         { options },
         keepSessionAliveOnError,
         isPaused = { playbackState == PlaybackState.PAUSED },
+        stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
@@ -557,25 +550,22 @@ internal constructor(
     }
   }
 
-  fun add(track: Track) {
-    val mediaItem = TrackFactory.toMedia3(track)
-    sessionPlayer.addMediaItem(mediaItem)
-    sessionPlayer.prepare()
-  }
+  fun add(track: Track) = add(arrayOf(track))
 
-  fun add(tracks: Array<Track>) {
-    val mediaItems = TrackFactory.toMedia3(tracks)
-    sessionPlayer.addMediaItems(mediaItems.toList())
-    sessionPlayer.prepare()
-  }
-
-  /** @throws IllegalArgumentException unless [atIndex] is within the queue, or -1 to append. */
-  fun add(tracks: Array<Track>, atIndex: Int) {
+  /**
+   * Loads only into an empty queue: a queue that had tracks keeps its current one as it was, idle
+   * after a stop or a cancelled retry.
+   *
+   * @throws IllegalArgumentException unless [atIndex] is within the queue, or -1 to append.
+   */
+  fun add(tracks: Array<Track>, atIndex: Int = -1) {
     validateInsertIndex(atIndex)
-    val index = if (atIndex == -1) sessionPlayer.mediaItemCount else atIndex
-    val mediaItems = tracks.map { TrackFactory.toMedia3(it) }
-    sessionPlayer.addMediaItems(index, mediaItems)
-    sessionPlayer.prepare()
+    val count = sessionPlayer.mediaItemCount
+    sessionPlayer.addMediaItems(
+      if (atIndex == -1) count else atIndex,
+      TrackFactory.toMedia3(tracks),
+    )
+    if (count == 0) sessionPlayer.prepare()
   }
 
   /** @throws IllegalArgumentException if an index is out of bounds or repeated. */
@@ -923,7 +913,6 @@ internal constructor(
   }
 
   fun pause() {
-    // Through the setter, so the retry policy sees playWhenReadyCache drop at once.
     playWhenReady = false
   }
 
@@ -999,6 +988,14 @@ internal constructor(
     val generation = retryingErrorGeneration
     mainHandler.post {
       if (generation != retryingErrorGeneration) return@post
+      // Paused, the retry would run unseen and its failure be terminal. STOPPED, ERROR and ENDED
+      // reach here only from a post that raced them.
+      if (
+        !playWhenReady &&
+          playbackState !in setOf(PlaybackState.STOPPED, PlaybackState.ERROR, PlaybackState.ENDED)
+      ) {
+        return@post stopRetrying()
+      }
       // Only over a spinner: while PLAYING, buffered audio still plays and ExoPlayer's in-place
       // retry can succeed with no state change, so an error attached there would never clear.
       if (
@@ -1013,19 +1010,23 @@ internal constructor(
       playbackError = error
       callbacks?.onPlaybackChanged(Playback(playbackState, error))
       nowPlaying.render()
-      // A pause before this first report found no retry to cancel.
-      if (!playWhenReadyCache) cancelRetry()
     }
   }
 
   /**
-   * Cancels the retry a dropped play intent leaves scheduled: ExoPlayer still runs it, and its
-   * failure would be terminal. The engine idles in PAUSED, where the next prepare() reloads where
-   * it failed. No-op unless a retrying error shows.
+   * Cancels the retry a dropped play intent leaves scheduled. No-op unless a retrying error shows.
    */
   internal fun cancelRetry() {
     // The ENDED path drops the intent before it clears the error.
     if (playbackError?.retrying != true || playbackState == PlaybackState.ENDED) return
+    stopRetrying()
+  }
+
+  /**
+   * Gives up a load ExoPlayer would retry. The engine idles in PAUSED, where the next prepare()
+   * reloads where it failed.
+   */
+  private fun stopRetrying() {
     // Before the stop: the state machine holds PAUSED through the IDLE that follows.
     setPlaybackState(PlaybackState.PAUSED)
     clearRetryingError()
@@ -1052,6 +1053,9 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
+      if ((oldState == PlaybackState.PAUSED) != (state == PlaybackState.PAUSED)) {
+        forwardingPlayer.onPausedChanged()
+      }
       if (state == PlaybackState.ERROR) resetForNewLoad()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and

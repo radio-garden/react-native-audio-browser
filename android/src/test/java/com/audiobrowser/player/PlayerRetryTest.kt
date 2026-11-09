@@ -17,15 +17,20 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.File
+import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -138,6 +143,11 @@ class PlayerRetryTest {
     awaitRetry("a pending retry")
 
     pause()
+    assertStaysPausedAndIdle()
+  }
+
+  /** Runs past every backoff a retry would have taken. */
+  private fun assertStaysPausedAndIdle() {
     repeat(10) {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
       Thread.sleep(20)
@@ -181,13 +191,128 @@ class PlayerRetryTest {
   }
 
   @Test
-  fun `removing the current track after a cancelled retry stays idle`() {
+  fun `removing the current track after a cancelled retry stays idle and paused`() {
     pauseDuringRetry(Uri.fromFile(silentWav()).toString()) { player.pause() }
 
     player.remove(listOf(0))
     shadowOf(Looper.getMainLooper()).idle()
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
+  }
+
+  @Test
+  fun `removing a failed current track while paused is paused`() {
+    failTerminally(Uri.fromFile(silentWav()).toString())
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    player.remove(listOf(0))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(Playback(PlaybackState.PAUSED, null), player.getPlayback())
+  }
+
+  @Test
+  fun `adding a track after a cancelled retry stays idle and paused`() {
+    pauseDuringRetry { player.pause() }
+
+    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+  }
+
+  @Test
+  fun `adding to an empty queue loads`() {
+    player.setup(PlayerSetupOptions())
+
+    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a stop after a cancelled retry tells the session`() {
+    pauseDuringRetry { player.pause() }
+    val states = mutableListOf<Int>()
+    player.forwardingPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          states += playbackState
+        }
+      }
+    )
+
+    player.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(MediaPlayer.STATE_IDLE, player.forwardingPlayer.playbackState)
+    assertEquals(listOf(MediaPlayer.STATE_IDLE), states)
+  }
+
+  @Test
+  fun `a session stop after a cancelled retry is a stop the session sees`() {
+    pauseDuringRetry { player.pause() }
+    val states = mutableListOf<Int>()
+    player.forwardingPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          states += playbackState
+        }
+      }
+    )
+
+    player.forwardingPlayer.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.forwardingPlayer.playbackState)
+    assertEquals(listOf(MediaPlayer.STATE_IDLE), states)
+  }
+
+  @Test
+  fun `a load failing while paused stays paused and the next play reloads`() {
+    val server = ServerSocket(0)
+    val wav = silentWav().readBytes()
+    val sent = CountDownLatch(1)
+    val drop = CountDownLatch(1)
+    // Serves five seconds of the minute, holds the connection until the drop, then refuses.
+    thread(isDaemon = true) {
+      server.accept().use { socket ->
+        val request = socket.getInputStream().bufferedReader()
+        while (!request.readLine().isNullOrEmpty()) Unit
+        socket.getOutputStream().run {
+          write("HTTP/1.1 200 OK\r\nContent-Length: ${wav.size}\r\n\r\n".toByteArray())
+          write(wav, 0, 40_000)
+          flush()
+        }
+        sent.countDown()
+        drop.await(10, TimeUnit.SECONDS)
+      }
+      server.close()
+    }
+    play("http://127.0.0.1:${server.localPort}/stream.wav", retryPolicy = RetryPolicy.Infinite())
+    // A source with no track enabled stops loading, and the load must still run when it fails.
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+        .build()
+    idleUntil("the first bytes") { sent.count == 0L }
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+    drop.countDown()
+    idleUntil("the load given up") { player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE }
+    assertStaysPausedAndIdle()
+
+    player.play()
+    awaitRetry("the reload's retry")
   }
 
   @Test

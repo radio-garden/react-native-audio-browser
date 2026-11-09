@@ -73,7 +73,6 @@ class PlayerSetupTest {
     assertEquals(0.5f, rebuilt.volume)
     assertTrue(rebuilt.playbackState != MediaPlayer.STATE_IDLE)
     assertTrue(rebuilt.playWhenReady)
-    assertTrue(player.playWhenReadyCache)
     // The new engine buffers again from the kept position.
     assertEquals(PlaybackState.BUFFERING, player.playbackState)
     assertEquals(
