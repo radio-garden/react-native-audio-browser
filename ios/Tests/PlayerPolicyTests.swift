@@ -291,6 +291,58 @@ struct PlayerEngineEventTests {
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
   }
 
+  @Test func aShortEndIsRetriedWhereItStopped() async throws {
+    let (player, engine, callbacks) = try makePlaying()
+    player.retry.shouldRetry = { true }
+    engine.currentTime = 120
+    engine.resumePosition = 120
+    engine.duration = 300
+
+    engine.emit(.playedToEnd)
+    #expect(player.state == .buffering)
+    #expect(callbacks.playbackChanges.last?.error?.retrying == true)
+    await player.retry.pendingTask?.value
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.deferredSeek.target == 120)
+    #expect(callbacks.errorEvents.isEmpty)
+  }
+
+  @Test func shortEndsThatKeepComingEndInPlaybackStalledOnceTheBudgetIsSpent() async throws {
+    let (player, engine, _) = try makePlaying()
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    engine.currentTime = 120
+    engine.duration = 300
+
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+  }
+
+  @Test func aShortEndWithoutIntentReloadsWhereItStoppedOnPlay() throws {
+    let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { [weak player] in player?.playWhenReady ?? false }
+    player.pause()
+    engine.currentTime = 120
+    engine.resumePosition = 120
+    engine.duration = 300
+
+    engine.emit(.playedToEnd)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    player.play()
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.deferredSeek.target == 120)
+  }
+
   @Test func aStallNudgesPlayback_onlyWithIntent() throws {
     let (player, engine, _) = try makePlaying()
     engine.startPlaybackCallCount = 0

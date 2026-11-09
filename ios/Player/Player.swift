@@ -852,7 +852,8 @@ final class Player {
   }
 
   /// A genuine end advances the queue; a dropped live stream or an underrun reported as an end
-  /// is recovered instead (see `EndOfTrackJudgement`).
+  /// is recovered instead (see `EndOfTrackJudgement`): an underrun is a stall for the retry
+  /// loop, since AVPlayer will not play on from an item it has ended.
   private func itemDidPlayToEnd() {
     let judgement = EndOfTrackJudgement(
       isLive: currentTrack?.live == true,
@@ -861,7 +862,11 @@ final class Player {
     )
     switch judgement.outcome {
     case .ended: trackDidPlayToEnd()
-    case .stalled: recoverFromStall(reconnectIfLive: true)
+    case .stalled where currentTrack?.live == true: recoverFromStall(reconnectIfLive: true)
+    case .stalled:
+      // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
+      if playWhenReady { transition(.avPlayerWaiting) }
+      retry.handleFailure(.stall)
     }
   }
 
