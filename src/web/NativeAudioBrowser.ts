@@ -856,10 +856,6 @@ export class NativeAudioBrowser
     })
   }
 
-  togglePlayback(): void {
-    super.togglePlayback()
-  }
-
   /**
    * Copies before emitting: the queue mutates in place, and handing out the
    * live array defeats React's reference-equality change detection.

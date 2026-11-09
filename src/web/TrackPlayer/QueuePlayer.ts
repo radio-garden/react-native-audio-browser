@@ -18,8 +18,7 @@ export class QueuePlayer extends Player {
 
   protected applyState(state: PlaybackState) {
     // A natural queue end exhausts the play intent — nothing is left to play.
-    // Keeping it set inverted togglePlayback (the first press after completion
-    // was a silent pause) and armed load()'s auto-play with phantom intent.
+    // Keeping it set would arm load()'s auto-play with phantom intent.
     // Cleared before the state lands so consumers observe the native order
     // (intent → state → queueEnded), independent of onQueueEnded overrides.
     if (state !== State.Ended) {
