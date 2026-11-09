@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.net.Uri
 import androidx.core.net.toUri
+import androidx.media3.common.C
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
@@ -26,6 +27,19 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     // Matches the default request property MediaFactory sets upstream; a config with this user
     // agent adds no User-Agent header of its own.
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
+
+    private const val OPEN_ENDED_RANGE = "bytes=0-"
+
+    /**
+     * Whether to send `Range: bytes=0-` on a progressive read from the start, where media3 sends
+     * none, as a browser does: some live servers cut a browser User-Agent without it off after a
+     * few seconds. Media3 marks every progressive read with `Icy-MetaData`; HLS reads go without.
+     */
+    private fun wantsOpenEndedRange(dataSpec: DataSpec, headers: Map<String, String>): Boolean =
+      dataSpec.position == 0L &&
+        dataSpec.length == C.LENGTH_UNSET.toLong() &&
+        headers.keys.any { it.equals("Icy-MetaData", ignoreCase = true) } &&
+        headers.keys.none { it.equals("Range", ignoreCase = true) }
   }
 
   private var resolvedUri: Uri? = null
@@ -51,13 +65,19 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
         else -> Triple(originalUrl, cached.second, cached.third)
       }
 
-    val mergedHeaders = buildMap {
+    val requestHeaders = buildMap {
       putAll(dataSpec.httpRequestHeaders)
       putAll(headers)
       if (userAgent != DEFAULT_USER_AGENT) {
         put("User-Agent", userAgent)
       }
     }
+    val mergedHeaders =
+      if (wantsOpenEndedRange(dataSpec, requestHeaders)) {
+        requestHeaders + ("Range" to OPEN_ENDED_RANGE)
+      } else {
+        requestHeaders
+      }
 
     val transformedSpec =
       dataSpec.buildUpon().setUri(finalUrl.toUri()).setHttpRequestHeaders(mergedHeaders).build()
