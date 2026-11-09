@@ -354,6 +354,17 @@ struct PlayerEngineEventTests {
     #expect(callbacks.playbackChanges.dropFirst(changesBefore).map(\.state) == [.error])
   }
 
+  /// The engine stops observing an item on a reload; a played-to-end it delivered late is stale.
+  @Test func aPlayedToEndDuringALoadIsIgnored() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.retry.shouldRetry = { true }
+    player.reloadResolving(startFromCurrentTime: false)
+    #expect(player.state == .loading)
+    engine.emit(.playedToEnd)
+    #expect(player.state == .loading)
+    #expect(player.retry.pendingTask == nil)
+  }
+
   @Test func aShortEndIsRetriedWhereItStopped() async throws {
     let (player, engine, callbacks) = try makePlaying()
     player.retry.shouldRetry = { true }

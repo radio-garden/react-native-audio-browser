@@ -871,6 +871,8 @@ final class Player {
     switch judgement.outcome {
     case .ended: trackDidPlayToEnd()
     case .stalled:
+      // The engine stops observing the item it replaces: an end delivered during the load is stale.
+      guard state != .loading else { return }
       // AVPlayer pauses an ended item, which the play intent hides: the state would read playing.
       if playWhenReady, retry.isEnabled { transition(.avPlayerWaiting) }
       retry.handleFailure(isLive ? .liveEnd : .stall)
