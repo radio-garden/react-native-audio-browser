@@ -360,6 +360,10 @@ final class Player {
     case .ended:
       // A natural end exhausts the play intent; the setter also requests the session release.
       setPlayWhenReady(false)
+    case .error:
+      // A stall or a lost connection can fail an item that is still alive: data arriving later
+      // must not play it under the error.
+      engine.pause()
     default: break
     }
 
@@ -815,7 +819,7 @@ final class Player {
       itemDidPlayToEnd()
     case .stalled:
       // A nudge only: this also arrives while audio plays, so the stall watch keys on .buffering.
-      if playWhenReady { engine.play() }
+      if playWhenReady, state != .error { engine.play() }
     case let .timedMetadata(metadata):
       callbacks?.playerDidReceiveTimedMetadata(metadata)
       engine.applyTimedMetadata(metadata)
@@ -883,7 +887,7 @@ final class Player {
       current: current,
       previousWaitingReasonWasNoItemToPlay: previousWaitingForNoItem,
       isAirPlay: engine.isAirPlayRoute,
-      playWhenReady: playWhenReady,
+      playWhenReady: playWhenReady && state != .error,
     ).shouldNudge
     previousTimeControlStatus = current
     previousWaitingForNoItem = current == .waitingToPlayAtSpecifiedRate && waitingForNoItem

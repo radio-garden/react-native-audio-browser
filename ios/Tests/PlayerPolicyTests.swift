@@ -492,6 +492,30 @@ struct PlayerRecoveringTests {
     #expect(player.retry.stallTask == nil)
   }
 
+  /// The stalled item is still alive: data arriving later must not play it under the error.
+  @Test func aTerminalStallLeavesNothingThatCanPlay() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.retry.updatePolicy(from: nil)
+    let pauses = engine.pausePlaybackCallCount
+    await player.retry.stallTask?.value
+    #expect(player.state == .error)
+    #expect(engine.pausePlaybackCallCount == pauses + 1)
+
+    engine.startPlaybackCallCount = 0
+    engine.emit(.stalled)
+    #expect(engine.startPlaybackCallCount == 0)
+  }
+
+  @Test func anAirPlayStrandingInAnErrorIsNotNudged() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isAirPlayRoute = true
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: true))
+    player.transition(.errorOccurred(.playbackStalled))
+    engine.startPlaybackCallCount = 0
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.startPlaybackCallCount == 0)
+  }
+
   @Test func aStallWithRetryOffIsTerminalAtTheTimeout() async throws {
     let (player, engine, _) = try makeStalling()
     player.retry.updatePolicy(from: nil)
