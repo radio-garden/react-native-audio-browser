@@ -3,6 +3,17 @@
 ### Bug Fixes
 
 * **android:** save the current position when the task is swiped away ([5404299](https://github.com/radio-garden/react-native-audio-browser/commit/540429933ddacb6dbb400c3b9c3f5326f3887740))
+* **ios:** fire the active track change for a track without a src ([2a0ddc9](https://github.com/radio-garden/react-native-audio-browser/commit/2a0ddc917785098a6a6ea5db148078b2f6ab77ef))
+
+### Other changes
+
+* **release:** 0.2.0-next.71 [skip ci] ([c8b4cfa](https://github.com/radio-garden/react-native-audio-browser/commit/c8b4cfac4a5c1493775e4f47f8e7a4e1d103acd7))
+
+## [0.2.0-next.71](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.70...v0.2.0-next.71) (2026-11-09)
+
+### Bug Fixes
+
+* **android:** save the current position when the task is swiped away ([5404299](https://github.com/radio-garden/react-native-audio-browser/commit/540429933ddacb6dbb400c3b9c3f5326f3887740))
 
 ## [0.2.0-next.70](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.69...v0.2.0-next.70) (2026-11-09)
 
