@@ -490,10 +490,8 @@ internal constructor(
         if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
         else PlaybackState.BUFFERING
       )
-      // The new engine can refuse the carried intent (audio focus denied) without a change event,
-      // which would leave a stale true in the cache and in JS.
-      playWhenReadyCache = exoPlayer.playWhenReady
-      emitPlayWhenReadyChanged(exoPlayer.playWhenReady)
+      // The new engine starts unsuppressed: an unchanged state would not re-derive it.
+      refreshPlayingState()
     }
 
     setupAutomaticBufferManager(setupOptions.automaticBuffer)

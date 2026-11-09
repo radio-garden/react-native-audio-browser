@@ -143,6 +143,19 @@ class PlayerSuppressionTest {
     assertEquals(PlayingState(false, false), player.getPlayingState())
   }
 
+  @Test
+  fun `a rebuild during a transient focus loss reports the new engine's intent`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    // As after a skip while suppressed.
+    player.setPlaybackState(PlaybackState.BUFFERING)
+    assertEquals(PlayingState(false, false), player.getPlayingState())
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+
+    assertEquals(PlayingState(true, true), player.getPlayingState())
+    verify(callbacks).onPlaybackPlayingState(PlayingState(true, true))
+  }
+
   private fun focus(change: Int) {
     audioManager.lastAudioFocusRequest.listener.onAudioFocusChange(change)
     val suppressed = change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
