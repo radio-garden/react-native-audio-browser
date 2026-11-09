@@ -111,31 +111,32 @@ class ServiceTaskRemovedTest {
     assertTrue(shadowOf(service).isStoppedBySelf)
   }
 
-  private fun playAndSavePositionAt61s() {
+  private fun playAndSeekTo63sAfterAPeriodicSave() {
     playTrack("a")
     player.seekTo(61, TimeUnit.SECONDS)
     shadowOf(Looper.getMainLooper())
       .idleFor(Duration.ofMillis(PlaybackStateStore.PERIODIC_SAVE_INTERVAL_MS))
     assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    player.seekTo(63, TimeUnit.SECONDS)
   }
 
   @Test
-  fun `a removed task keeps the saved position while AudioBrowser is bound`() {
+  fun `a removed task saves the current position while AudioBrowser is bound`() {
     controller.bind()
-    playAndSavePositionAt61s()
+    playAndSeekTo63sAfterAPeriodicSave()
 
     removeTask()
 
-    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    assertEquals(63_000L, player.playbackStateStore.get()?.positionMs)
   }
 
   @Test
-  fun `a removed task keeps the saved position when AudioBrowser never bound`() {
-    playAndSavePositionAt61s()
+  fun `a removed task saves the current position when AudioBrowser never bound`() {
+    playAndSeekTo63sAfterAPeriodicSave()
 
     removeTask()
 
-    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    assertEquals(63_000L, player.playbackStateStore.get()?.positionMs)
   }
 
   @Test

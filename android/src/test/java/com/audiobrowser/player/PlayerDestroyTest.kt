@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
 class PlayerDestroyTest {
@@ -44,5 +45,16 @@ class PlayerDestroyTest {
     player.destroy()
 
     assertEquals(0L, player.playbackStateStore.get()?.positionMs)
+  }
+
+  @Test
+  fun destroyTwiceReleasesTheEngineOnce() {
+    player.destroy()
+    player.destroy()
+
+    assertEquals(
+      1,
+      ShadowLog.getLogsForTag("ExoPlayerImpl").count { it.msg.startsWith("Release ") },
+    )
   }
 }
