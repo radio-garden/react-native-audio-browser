@@ -123,6 +123,11 @@ final class Player {
     deferredSeek.target ?? (enginePositionIsCurrent ? engine.resumePosition : nil)
   }
 
+  /// Where a reload resumes: nowhere after the end, or after a stop whose rewind may not have landed.
+  private var reloadPosition: TimeInterval? {
+    state == .ended || state == .stopped ? nil : resumePosition
+  }
+
   // MARK: - Track State (for active track changed events)
 
   private var lastIndex: Int = -1
@@ -717,7 +722,7 @@ final class Player {
       transition(.errorOccurred(.invalidSourceUrl("nil")))
       return
     }
-    prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)
+    prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
     engine.resolveAndLoad(src: src, track: track)
   }
 
@@ -753,7 +758,7 @@ final class Player {
   func mediaServicesWereReset() {
     guard let track = currentTrack else { return }
     logger.info("Media services were reset — recreating player and reloading current track")
-    if track.live != true, state != .ended, state != .stopped, let position = resumePosition {
+    if track.live != true, let position = reloadPosition {
       deferredSeek.capture(position)
     }
     engine.clearItem()

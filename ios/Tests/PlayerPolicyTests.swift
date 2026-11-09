@@ -397,6 +397,30 @@ struct PlayerRecoveringTests {
     #expect(stopped.deferredSeek.target == nil)
   }
 
+  @Test func aReloadAfterTheEndStartsOver() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    engine.resumePosition = 300
+    engine.emit(.playedToEnd)
+    #expect(player.state == .ended)
+
+    player.reloadResolving(startFromCurrentTime: true)
+    #expect(player.deferredSeek.target == nil)
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aReloadAfterAStopStartsOver() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.seekResult = nil
+    player.stop()
+    // The stop's rewind has not landed.
+    engine.resumePosition = 120
+    player.reloadResolving(startFromCurrentTime: true)
+    #expect(player.deferredSeek.target == nil)
+  }
+
   @Test func aStopRewindsAFiniteTrack_notALiveOne() throws {
     let (player, engine, _) = try makePlaying()
     player.stop()
