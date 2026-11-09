@@ -721,6 +721,12 @@ final class Player {
     engine.resolveAndLoad(src: src, track: track)
   }
 
+  /// The caller's retry: reloads now, resuming where it was, in place of any retry pending.
+  func retryNow() {
+    retry.cancel()
+    reloadResolving(startFromCurrentTime: true)
+  }
+
   private func parkForReloadOnPlay() {
     retry.reset()
     if let position = reloadPosition { deferredSeek.capture(position) }

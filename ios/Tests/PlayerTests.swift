@@ -362,6 +362,20 @@ struct RetryingErrorTests {
   }
 
   @Test @MainActor
+  func aRetryNowDuringABackoff_reloadsOnce() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+
+    c.retryNow()
+    await retrying?.value
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.retry.pendingTask == nil)
+    #expect(cb.errorEvents.isEmpty)
+  }
+
+  @Test @MainActor
   func pauseDuringRetry_thenStop_playsFromTheStart() throws {
     let (c, eh, _) = try makePlayingWithRetries()
     eh.resumePosition = 42
