@@ -964,8 +964,11 @@ internal constructor(
   fun stop() {
     // State first, so the state machine's STOPPED guard swallows the PAUSED the drop below causes.
     setPlaybackState(PlaybackState.STOPPED)
+    val ended = sessionPlayer.playbackState == MediaPlayer.STATE_ENDED
     playWhenReady = false
     sessionPlayer.stop()
+    // Idle at its end, the next prepare would end it again at once.
+    if (ended) sessionPlayer.seekToDefaultPosition()
   }
 
   fun clear() {

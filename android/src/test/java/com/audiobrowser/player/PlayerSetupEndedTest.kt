@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.util.Util
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
@@ -61,7 +62,39 @@ class PlayerSetupEndedTest {
     assertEquals(200L, player.exoPlayer.currentPosition)
   }
 
+  @Test
+  fun `a session play after a session stop on an ended queue restarts`() {
+    end()
+    player.forwardingPlayer.stop()
+
+    // What media3 runs for a controller's play.
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a play after a stop on an ended queue restarts`() {
+    end()
+    player.stop()
+
+    player.play()
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
   private fun endAndRebuild() {
+    end()
+
+    val before = states().size
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    disableAudio()
+    idleFor(2)
+    assertEquals(emptyList<PlaybackState>(), states().drop(before))
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+  }
+
+  private fun end() {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
     disableAudio()
@@ -75,13 +108,6 @@ class PlayerSetupEndedTest {
     player.exoPlayer.prepare()
     player.play()
     idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
-
-    val before = states().size
-    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
-    disableAudio()
-    idleFor(2)
-    assertEquals(emptyList<PlaybackState>(), states().drop(before))
-    assertEquals(PlaybackState.ENDED, player.playbackState)
   }
 
   private fun states() =
