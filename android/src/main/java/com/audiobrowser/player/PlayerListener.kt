@@ -29,7 +29,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   private val stuckRecoveryPolicy = StuckRecoveryPolicy()
 
   // Main looper: Player.Listener callbacks arrive on the main thread.
-  private val healthyPlaybackHandler = Handler(Looper.getMainLooper())
+  private val mainHandler = Handler(Looper.getMainLooper())
   private val healthyPlaybackRunnable =
     object : Runnable {
       override fun run() {
@@ -39,12 +39,34 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         player.resetRetryTimer()
         // Re-arm while playing: errors the buffer absorbs never flip isPlaying.
         if (player.isPlaying) {
-          healthyPlaybackHandler.postDelayed(this, HEALTHY_PLAYBACK_MS)
+          mainHandler.postDelayed(this, HEALTHY_PLAYBACK_MS)
         }
       }
     }
 
+  /**
+   * Set from an app-started track change until the playback thread has handled it. Until then every
+   * metadata delivery is the outgoing item's: its renderer posted them to the main looper before
+   * the change, and nothing removes them.
+   */
+  private var metadataFence: Any? = null
+
+  /**
+   * Its target runs on the playback thread right after the command that changed the item. A
+   * main-looper target goes to the back of that thread's queue, where a release would drop it.
+   */
+  private fun fenceOutgoingMetadata() {
+    val fence = Any()
+    metadataFence = fence
+    player.exoPlayer
+      .createMessage { _, _ ->
+        mainHandler.post { if (metadataFence === fence) metadataFence = null }
+      }
+      .send()
+  }
+
   override fun onMetadata(metadata: Metadata) {
+    if (metadataFence != null) return
     val chapters = MetadataAdapter.extractChapters(metadata)
     if (chapters.isNotEmpty()) {
       player.callbacks?.onChapterMetadata(chapters)
@@ -81,15 +103,14 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         index = player.currentIndex?.toDouble(),
         track = player.currentTrack,
       )
-    player.nowPlaying.clearOverride()
-    player.callbacks?.onPlaybackActiveTrackChanged(event)
-
-    if (
+    val ended =
       reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
         reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_REPEAT
-    ) {
-      player.sleepTimer.onTrackEnd()
-    }
+    player.nowPlaying.clearOverride()
+    if (!ended) fenceOutgoingMetadata()
+    player.callbacks?.onPlaybackActiveTrackChanged(event)
+
+    if (ended) player.sleepTimer.onTrackEnd()
 
     player.lastTrack = player.currentTrack
     player.lastIndex = player.currentIndex
@@ -107,7 +128,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Emits on its own: the incoming track may hold LOADING/BUFFERING and emit no state change.
     player.clearRetryingError()
 
-    healthyPlaybackHandler.removeCallbacks(healthyPlaybackRunnable)
+    mainHandler.removeCallbacks(healthyPlaybackRunnable)
     stuckRecoveryPolicy.reset()
 
     player.playbackStateStore.save()
@@ -115,9 +136,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onIsPlayingChanged(isPlaying: Boolean) {
-    healthyPlaybackHandler.removeCallbacks(healthyPlaybackRunnable)
+    mainHandler.removeCallbacks(healthyPlaybackRunnable)
     if (isPlaying) {
-      healthyPlaybackHandler.postDelayed(healthyPlaybackRunnable, HEALTHY_PLAYBACK_MS)
+      mainHandler.postDelayed(healthyPlaybackRunnable, HEALTHY_PLAYBACK_MS)
     }
   }
 
