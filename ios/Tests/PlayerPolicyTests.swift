@@ -368,6 +368,35 @@ struct PlayerRecoveringTests {
     #expect(player.playWhenReady)
   }
 
+  @Test func aMediaServicesResetResumesAnOnDemandTrack_notALiveOne() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.resumePosition = 120
+    player.mediaServicesWereReset()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls == [120])
+
+    let (live, liveEngine, _) = try makePlaying(live: true)
+    liveEngine.resumePosition = 120
+    live.mediaServicesWereReset()
+    liveEngine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(liveEngine.seekCalls.isEmpty)
+  }
+
+  @Test func aMediaServicesResetAfterTheEndOrAStopStartsOver() throws {
+    let (ended, endedEngine, _) = try makePlaying()
+    endedEngine.resumePosition = 300
+    ended.transition(.trackEndedNaturally)
+    ended.mediaServicesWereReset()
+    #expect(ended.deferredSeek.target == nil)
+
+    let (stopped, stoppedEngine, _) = try makePlaying()
+    stopped.stop()
+    // The stop's rewind has not landed.
+    stoppedEngine.resumePosition = 120
+    stopped.mediaServicesWereReset()
+    #expect(stopped.deferredSeek.target == nil)
+  }
+
   @Test func aStopRewindsAFiniteTrack_notALiveOne() throws {
     let (player, engine, _) = try makePlaying()
     player.stop()

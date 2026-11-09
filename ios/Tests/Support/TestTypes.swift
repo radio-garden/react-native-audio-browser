@@ -55,7 +55,12 @@ final class MockPlayerEngine: PlayerEngine {
   func resolveAndLoad(src: String, track _: Track) { resolveAndLoadCalls.append(src) }
   func cancelLoading() { cancelLoadingCount += 1 }
   func dropAsset() { dropAssetCount += 1 }
-  func clearItem() { clearItemCount += 1 }
+  func clearItem() {
+    clearItemCount += 1
+    hasItem = false
+    resumePosition = nil
+  }
+
   func stopObservingItem() { stopObservingItemCount += 1 }
   func recreate() { recreateCount += 1 }
 
