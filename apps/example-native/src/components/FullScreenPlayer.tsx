@@ -10,7 +10,8 @@ import {
   StyleSheet,
   Text,
   useWindowDimensions,
-  View
+  View,
+  type ViewInstance
 } from 'react-native'
 import {
   getRate,
@@ -349,7 +350,7 @@ function Scrubber({
 }) {
   const barWidth = useRef(0)
   const barX = useRef(0)
-  const viewRef = useRef<View>(null)
+  const viewRef = useRef<ViewInstance>(null)
   const durationRef = useRef(duration)
   const onSeekRef = useRef(onSeek)
   durationRef.current = duration
