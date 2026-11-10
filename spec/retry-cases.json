@@ -1,0 +1,1700 @@
+{
+  "about": "Conformance cases for SilenceBudget and ReconnectPacer (docs/adr/0014), run by ios/Tests/RetryCaseTests.swift and android/src/test/java/com/audiobrowser/player/RetryCaseTest.kt. Times are milliseconds. Each step is one event and the deadline after it (null for none); an \"ended\" step also states what the connection delivered (audio or nothing), when it started, and the wait before the next connect: milliseconds, \"online\" or \"giveUp\". Any other step may state the wait too. Each case starts online, with no play intent.",
+  "cases": [
+    {
+      "name": "a dead address that never played gives up 12 s after its first failure",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 1600,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 1300,
+          "deadline": 12300,
+          "wait": 1500
+        },
+        {
+          "at": 3400,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 3100,
+          "deadline": 12300,
+          "wait": 2250
+        },
+        {
+          "at": 5950,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 5650,
+          "deadline": 12300,
+          "wait": 3375
+        },
+        {
+          "at": 9625,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 9325,
+          "deadline": 12300,
+          "wait": 5000
+        }
+      ]
+    },
+    {
+      "name": "a stream that played and whose server is gone gives up after 120 s of silence, the backoff capped at 5 s",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 60000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 180000,
+          "wait": 0
+        },
+        {
+          "at": 60100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 60000,
+          "deadline": 180000,
+          "wait": 1000
+        },
+        {
+          "at": 61200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 61100,
+          "deadline": 180000,
+          "wait": 1500
+        },
+        {
+          "at": 62800,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 62700,
+          "deadline": 180000,
+          "wait": 2250
+        },
+        {
+          "at": 65150,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 65050,
+          "deadline": 180000,
+          "wait": 3375
+        },
+        {
+          "at": 68625,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 68525,
+          "deadline": 180000,
+          "wait": 5000
+        },
+        {
+          "at": 73725,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 73625,
+          "deadline": 180000,
+          "wait": 5000
+        }
+      ]
+    },
+    {
+      "name": "a stream that closes every 30 s reconnects at once and keeps playing",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        { "at": 30800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 60000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 30000,
+          "deadline": 180000,
+          "wait": 0
+        },
+        { "at": 60800, "event": "audioStarts", "deadline": null }
+      ]
+    },
+    {
+      "name": "a stream that closes every 10 s reconnects at once and keeps playing past 120 s",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 10000, "event": "audioStops", "deadline": 130000 },
+        {
+          "at": 10000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 130000,
+          "wait": 0
+        },
+        { "at": 10800, "event": "audioStarts", "deadline": null },
+        { "at": 20000, "event": "audioStops", "deadline": 140000 },
+        {
+          "at": 20000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 10000,
+          "deadline": 140000,
+          "wait": 0
+        },
+        { "at": 20800, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 20000,
+          "deadline": 150000,
+          "wait": 0
+        },
+        { "at": 30800, "event": "audioStarts", "deadline": null },
+        { "at": 40000, "event": "audioStops", "deadline": 160000 },
+        {
+          "at": 40000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 30000,
+          "deadline": 160000,
+          "wait": 0
+        },
+        { "at": 40800, "event": "audioStarts", "deadline": null },
+        { "at": 50000, "event": "audioStops", "deadline": 170000 },
+        {
+          "at": 50000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 40000,
+          "deadline": 170000,
+          "wait": 0
+        },
+        { "at": 50800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 60000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 50000,
+          "deadline": 180000,
+          "wait": 0
+        },
+        { "at": 60800, "event": "audioStarts", "deadline": null },
+        { "at": 70000, "event": "audioStops", "deadline": 190000 },
+        {
+          "at": 70000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 60000,
+          "deadline": 190000,
+          "wait": 0
+        },
+        { "at": 70800, "event": "audioStarts", "deadline": null },
+        { "at": 80000, "event": "audioStops", "deadline": 200000 },
+        {
+          "at": 80000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 70000,
+          "deadline": 200000,
+          "wait": 0
+        },
+        { "at": 80800, "event": "audioStarts", "deadline": null },
+        { "at": 90000, "event": "audioStops", "deadline": 210000 },
+        {
+          "at": 90000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 80000,
+          "deadline": 210000,
+          "wait": 0
+        },
+        { "at": 90800, "event": "audioStarts", "deadline": null },
+        { "at": 100000, "event": "audioStops", "deadline": 220000 },
+        {
+          "at": 100000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 90000,
+          "deadline": 220000,
+          "wait": 0
+        },
+        { "at": 100800, "event": "audioStarts", "deadline": null },
+        { "at": 110000, "event": "audioStops", "deadline": 230000 },
+        {
+          "at": 110000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 100000,
+          "deadline": 230000,
+          "wait": 0
+        },
+        { "at": 110800, "event": "audioStarts", "deadline": null },
+        { "at": 120000, "event": "audioStops", "deadline": 240000 },
+        {
+          "at": 120000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 110000,
+          "deadline": 240000,
+          "wait": 0
+        },
+        { "at": 120800, "event": "audioStarts", "deadline": null },
+        { "at": 130000, "event": "audioStops", "deadline": 250000 },
+        {
+          "at": 130000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 120000,
+          "deadline": 250000,
+          "wait": 0
+        },
+        { "at": 130800, "event": "audioStarts", "deadline": null },
+        { "at": 140000, "event": "audioStops", "deadline": 260000 },
+        {
+          "at": 140000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 130000,
+          "deadline": 260000,
+          "wait": 0
+        },
+        { "at": 140800, "event": "audioStarts", "deadline": null }
+      ]
+    },
+    {
+      "name": "a stream that sends 2 s of audio per connection plays choppy and gives up 120 s into its silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 2800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 2800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 3600, "event": "audioStarts", "deadline": null },
+        { "at": 5600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 5600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 2800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 6400, "event": "audioStarts", "deadline": null },
+        { "at": 8400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 8400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 5600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 9200, "event": "audioStarts", "deadline": null },
+        { "at": 11200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 11200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 8400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 12000, "event": "audioStarts", "deadline": null },
+        { "at": 14000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 14000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 11200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 14800, "event": "audioStarts", "deadline": null },
+        { "at": 16800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 16800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 14000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 17600, "event": "audioStarts", "deadline": null },
+        { "at": 19600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 19600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 16800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 20400, "event": "audioStarts", "deadline": null },
+        { "at": 22400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 22400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 19600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 23200, "event": "audioStarts", "deadline": null },
+        { "at": 25200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 25200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 22400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 26000, "event": "audioStarts", "deadline": null },
+        { "at": 28000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 28000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 25200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 28800, "event": "audioStarts", "deadline": null },
+        { "at": 30800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 30800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 28000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 31600, "event": "audioStarts", "deadline": null },
+        { "at": 33600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 33600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 30800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 34400, "event": "audioStarts", "deadline": null },
+        { "at": 36400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 36400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 33600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 37200, "event": "audioStarts", "deadline": null },
+        { "at": 39200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 39200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 36400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 40000, "event": "audioStarts", "deadline": null },
+        { "at": 42000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 42000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 39200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 42800, "event": "audioStarts", "deadline": null },
+        { "at": 44800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 44800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 42000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 45600, "event": "audioStarts", "deadline": null },
+        { "at": 47600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 47600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 44800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 48400, "event": "audioStarts", "deadline": null },
+        { "at": 50400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 50400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 47600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 51200, "event": "audioStarts", "deadline": null },
+        { "at": 53200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 53200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 50400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 54000, "event": "audioStarts", "deadline": null },
+        { "at": 56000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 56000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 53200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 56800, "event": "audioStarts", "deadline": null },
+        { "at": 58800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 58800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 56000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 59600, "event": "audioStarts", "deadline": null },
+        { "at": 61600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 61600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 58800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 62400, "event": "audioStarts", "deadline": null },
+        { "at": 64400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 64400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 61600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 65200, "event": "audioStarts", "deadline": null },
+        { "at": 67200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 67200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 64400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 68000, "event": "audioStarts", "deadline": null },
+        { "at": 70000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 70000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 67200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 70800, "event": "audioStarts", "deadline": null },
+        { "at": 72800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 72800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 70000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 73600, "event": "audioStarts", "deadline": null },
+        { "at": 75600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 75600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 72800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 76400, "event": "audioStarts", "deadline": null },
+        { "at": 78400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 78400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 75600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 79200, "event": "audioStarts", "deadline": null },
+        { "at": 81200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 81200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 78400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 82000, "event": "audioStarts", "deadline": null },
+        { "at": 84000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 84000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 81200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 84800, "event": "audioStarts", "deadline": null },
+        { "at": 86800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 86800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 84000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 87600, "event": "audioStarts", "deadline": null },
+        { "at": 89600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 89600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 86800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 90400, "event": "audioStarts", "deadline": null },
+        { "at": 92400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 92400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 89600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 93200, "event": "audioStarts", "deadline": null },
+        { "at": 95200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 95200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 92400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 96000, "event": "audioStarts", "deadline": null },
+        { "at": 98000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 98000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 95200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 98800, "event": "audioStarts", "deadline": null },
+        { "at": 100800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 100800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 98000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 101600, "event": "audioStarts", "deadline": null },
+        { "at": 103600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 103600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 100800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 104400, "event": "audioStarts", "deadline": null },
+        { "at": 106400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 106400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 103600,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 107200, "event": "audioStarts", "deadline": null },
+        { "at": 109200, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 109200,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 106400,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 110000, "event": "audioStarts", "deadline": null },
+        { "at": 112000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 112000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 109200,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 112800, "event": "audioStarts", "deadline": null },
+        { "at": 114800, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 114800,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 112000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 115600, "event": "audioStarts", "deadline": null },
+        { "at": 117600, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 117600,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 114800,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 118400, "event": "audioStarts", "deadline": null },
+        { "at": 120400, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 120400,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 117600,
+          "deadline": 120000,
+          "wait": 0
+        }
+      ]
+    },
+    {
+      "name": "a connection that stays open with no data is replaced after the watch, and silence still ends it at 120 s",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 90000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 180000,
+          "wait": 0
+        },
+        {
+          "at": 120000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 90000,
+          "deadline": 180000,
+          "wait": 1000
+        },
+        {
+          "at": 151000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 121000,
+          "deadline": 180000,
+          "wait": 1500
+        }
+      ]
+    },
+    {
+      "name": "a network frozen for 40 s plays again, and the silence ends",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 90000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 180000,
+          "wait": 0
+        },
+        {
+          "at": 98000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 90000,
+          "deadline": 180000,
+          "wait": 1000
+        },
+        {
+          "at": 99500,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 99000,
+          "deadline": 180000,
+          "wait": 1500
+        },
+        { "at": 101800, "event": "audioStarts", "deadline": null },
+        { "at": 200000, "event": "audioStops", "deadline": 320000 }
+      ]
+    },
+    {
+      "name": "a network frozen for 150 s gives up at 120 s of silence, whatever ends in between",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        {
+          "at": 90000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 180000,
+          "wait": 0
+        },
+        {
+          "at": 98000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 90000,
+          "deadline": 180000,
+          "wait": 1000
+        },
+        {
+          "at": 120000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 99000,
+          "deadline": 180000,
+          "wait": 1500
+        },
+        {
+          "at": 150000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 121500,
+          "deadline": 180000,
+          "wait": 2250
+        },
+        {
+          "at": 158000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 152250,
+          "deadline": 180000,
+          "wait": 3375
+        }
+      ]
+    },
+    {
+      "name": "4.9 s of audio leaves a silence's deadline where it was, and 5 s ends the silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 1000, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 },
+        { "at": 70000, "event": "audioStarts", "deadline": null },
+        { "at": 74900, "event": "audioStops", "deadline": 180000 },
+        { "at": 80000, "event": "audioStarts", "deadline": null },
+        { "at": 85000, "event": "audioStops", "deadline": 205000 }
+      ]
+    },
+    {
+      "name": "the backoff grows with each connection that delivers nothing and starts over after one that delivers audio",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        {
+          "at": 32800,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 32700,
+          "deadline": 150000,
+          "wait": 2250
+        },
+        { "at": 35500, "event": "audioStarts", "deadline": null },
+        { "at": 36500, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 36500,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 35050,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 36600,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 36500,
+          "deadline": 150000,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "offline during the silence of a played stream: the time counts, and the connect goes out when the network returns",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "offline", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": "online"
+        },
+        { "at": 90000, "event": "online", "deadline": 150000, "wait": 0 },
+        {
+          "at": 90200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 90000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        { "at": 91500, "event": "audioStarts", "deadline": null }
+      ]
+    },
+    {
+      "name": "offline before a load ever played: the first-connect clock restarts at the next online failure, and the silence still counts",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 1400,
+          "event": "offline",
+          "deadline": 120000,
+          "wait": "online"
+        },
+        {
+          "at": 1500,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 1300,
+          "deadline": 120000,
+          "wait": "online"
+        },
+        { "at": 60000, "event": "online", "deadline": 120000, "wait": 0 },
+        {
+          "at": 60300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 60000,
+          "deadline": 72300,
+          "wait": 1500
+        }
+      ]
+    },
+    {
+      "name": "a load that never played and stays offline gives up after 120 s",
+      "steps": [
+        { "at": 0, "event": "offline", "deadline": null },
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 120000,
+          "wait": "online"
+        }
+      ]
+    },
+    {
+      "name": "a play intent that goes down clears the deadline, and one that comes up starts a new silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        { "at": 40000, "event": "intentDown", "deadline": null },
+        { "at": 300000, "event": "intentUp", "deadline": 420000 }
+      ]
+    },
+    {
+      "name": "before a load ever played, a play intent that comes up again restarts the first-connect clock at the next failure, and the backoff",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        { "at": 5000, "event": "intentDown", "deadline": null },
+        { "at": 60000, "event": "intentUp", "deadline": 180000 },
+        {
+          "at": 60300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 60000,
+          "deadline": 72300,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "a new load starts over: the short budget again, and the first backoff",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        { "at": 50000, "event": "load", "deadline": 170000 },
+        {
+          "at": 50300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 50000,
+          "deadline": 62300,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "maxRetries 2 gives up on the third connection in a row that delivers nothing",
+      "maxRetries": 2,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        {
+          "at": 32800,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 32700,
+          "deadline": 150000,
+          "wait": "giveUp"
+        }
+      ]
+    },
+    {
+      "name": "maxRetries counts in a row: a connection that delivers audio starts the count over, one that ends offline leaves it",
+      "maxRetries": 1,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        { "at": 31500, "event": "audioStarts", "deadline": null },
+        { "at": 32000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 32000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 100
+        },
+        {
+          "at": 32200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 32100,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 33000,
+          "event": "offline",
+          "deadline": 150000,
+          "wait": "online"
+        },
+        {
+          "at": 33400,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 33200,
+          "deadline": 150000,
+          "wait": "online"
+        },
+        { "at": 34000, "event": "online", "deadline": 150000, "wait": 200 },
+        {
+          "at": 34300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 34200,
+          "deadline": 150000,
+          "wait": "giveUp"
+        }
+      ]
+    },
+    {
+      "name": "a connection that plays and then stalls starts the maxRetries count and the backoff over",
+      "maxRetries": 2,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        { "at": 33500, "event": "audioStarts", "deadline": null },
+        { "at": 93500, "event": "audioStops", "deadline": 213500 },
+        {
+          "at": 123500,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 32700,
+          "deadline": 213500,
+          "wait": 0
+        },
+        {
+          "at": 123600,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 123500,
+          "deadline": 213500,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "maxRetries 0 gives up when the first connection delivers nothing",
+      "maxRetries": 0,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": "giveUp"
+        }
+      ]
+    },
+    {
+      "name": "a restart after giving up is a new load: the waits and the deadline start over",
+      "maxRetries": 1,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 1600,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 1300,
+          "deadline": 12300,
+          "wait": "giveUp"
+        },
+        { "at": 20000, "event": "load", "deadline": 140000 },
+        {
+          "at": 20300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 20000,
+          "deadline": 32300,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "a play intent that comes up while audio plays starts its silence when the audio stops",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 1500, "event": "audioStops", "deadline": 120000 },
+        { "at": 2000, "event": "intentDown", "deadline": null },
+        { "at": 2400, "event": "audioStarts", "deadline": null },
+        { "at": 2500, "event": "intentUp", "deadline": null },
+        { "at": 3000, "event": "audioStops", "deadline": 123000 }
+      ]
+    },
+    {
+      "name": "a first failure late in the silence leaves the 120 s deadline, the earlier of the two",
+      "steps": [
+        { "at": 0, "event": "offline", "deadline": null },
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 120000,
+          "wait": "online"
+        },
+        { "at": 110000, "event": "online", "deadline": 120000, "wait": 0 },
+        {
+          "at": 115000,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 114000,
+          "deadline": 120000,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "back online, the next connect goes out at once: what remains of the backoff is dropped",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        {
+          "at": 32800,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 32700,
+          "deadline": 150000,
+          "wait": 2250
+        },
+        {
+          "at": 33000,
+          "event": "offline",
+          "deadline": 150000,
+          "wait": "online"
+        },
+        { "at": 34000, "event": "online", "deadline": 150000, "wait": 0 }
+      ]
+    },
+    {
+      "name": "a stream that closes every 5 s, audible 4.2 s of each, gives up 120 s after its load: no run reaches 5 s",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 5000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 5000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 5800, "event": "audioStarts", "deadline": null },
+        { "at": 10000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 10000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 5000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 10800, "event": "audioStarts", "deadline": null },
+        { "at": 15000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 15000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 10000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 15800, "event": "audioStarts", "deadline": null },
+        { "at": 20000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 20000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 15000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 20800, "event": "audioStarts", "deadline": null },
+        { "at": 25000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 25000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 20000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 25800, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 25000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 30800, "event": "audioStarts", "deadline": null },
+        { "at": 35000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 35000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 30000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 35800, "event": "audioStarts", "deadline": null },
+        { "at": 40000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 40000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 35000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 40800, "event": "audioStarts", "deadline": null },
+        { "at": 45000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 45000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 40000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 45800, "event": "audioStarts", "deadline": null },
+        { "at": 50000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 50000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 45000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 50800, "event": "audioStarts", "deadline": null },
+        { "at": 55000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 55000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 50000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 55800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 60000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 55000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 60800, "event": "audioStarts", "deadline": null },
+        { "at": 65000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 65000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 60000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 65800, "event": "audioStarts", "deadline": null },
+        { "at": 70000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 70000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 65000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 70800, "event": "audioStarts", "deadline": null },
+        { "at": 75000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 75000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 70000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 75800, "event": "audioStarts", "deadline": null },
+        { "at": 80000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 80000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 75000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 80800, "event": "audioStarts", "deadline": null },
+        { "at": 85000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 85000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 80000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 85800, "event": "audioStarts", "deadline": null },
+        { "at": 90000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 90000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 85000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 90800, "event": "audioStarts", "deadline": null },
+        { "at": 95000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 95000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 90000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 95800, "event": "audioStarts", "deadline": null },
+        { "at": 100000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 100000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 95000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 100800, "event": "audioStarts", "deadline": null },
+        { "at": 105000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 105000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 100000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 105800, "event": "audioStarts", "deadline": null },
+        { "at": 110000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 110000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 105000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 110800, "event": "audioStarts", "deadline": null },
+        { "at": 115000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 115000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 110000,
+          "deadline": 120000,
+          "wait": 0
+        },
+        { "at": 115800, "event": "audioStarts", "deadline": null },
+        { "at": 120000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 120000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 115000,
+          "deadline": 120000,
+          "wait": 0
+        }
+      ]
+    },
+    {
+      "name": "maxRetries 0 on a stream that played: a drop reconnects once, and that connection delivering nothing gives up",
+      "maxRetries": 0,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": "giveUp"
+        }
+      ]
+    },
+    {
+      "name": "audio after a first failure lifts a never-played load to the 120 s budget, counted from its silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        { "at": 2000, "event": "audioStarts", "deadline": null },
+        { "at": 3000, "event": "audioStops", "deadline": 120000 },
+        {
+          "at": 3000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 1300,
+          "deadline": 120000,
+          "wait": 0
+        }
+      ]
+    },
+    {
+      "name": "the budgets follow the limits they are given",
+      "recoveryMs": 60000,
+      "firstConnectMs": 5000,
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 60000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 5300,
+          "wait": 1000
+        },
+        { "at": 2000, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 90000 }
+      ]
+    }
+  ]
+}
