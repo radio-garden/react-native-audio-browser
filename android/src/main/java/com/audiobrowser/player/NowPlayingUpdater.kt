@@ -189,6 +189,11 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     forgetPublished()
   }
 
+  /** Call when the stream stops: its title no longer applies. The caller renders. */
+  fun clearTimedMetadata() {
+    timedMetadata = null
+  }
+
   /** Records live (ICY/ID3) metadata; re-renders only when a formatter would use it. */
   fun onTimedMetadataReceived(timed: TimedMetadata) {
     timedMetadata = timed

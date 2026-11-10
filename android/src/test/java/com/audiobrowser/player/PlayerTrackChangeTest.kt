@@ -9,6 +9,7 @@ import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import kotlin.concurrent.thread
 import org.junit.After
@@ -147,5 +148,52 @@ class PlayerTrackChangeTest {
     player.playerListener.onMetadata(icy("B song 1"))
 
     assertEquals("B song 1", player.nowPlaying.timedMetadata?.title)
+  }
+
+  /** Plays a station whose formatter shows the stream title as the second line, as an app does. */
+  private fun playStationWithTitle() {
+    player.setup(PlayerSetupOptions())
+    player.nowPlaying.formatter = { params ->
+      NowPlayingUpdate(title = null, artist = params.timedMetadata?.title, album = null)
+    }
+    player.sessionPlayer.setMediaItems(
+      listOf(TrackFactory.toMedia3(TestFixtures.track(title = "A", artist = "A's city")))
+    )
+    idle()
+    player.playerListener.onMetadata(icy("A song 1"))
+    idle()
+  }
+
+  private fun shownSecondLines() =
+    listOf(
+      player.sessionPlayer.mediaMetadata.artist?.toString(),
+      player.nowPlaying.getNowPlaying()?.artist,
+    )
+
+  @Test
+  fun `a stop clears the stream title the session and the now-playing info show`() {
+    playStationWithTitle()
+    assertEquals(listOf("A song 1", "A song 1"), shownSecondLines())
+
+    player.stop()
+    idle()
+
+    assertNull(player.nowPlaying.timedMetadata)
+    assertEquals(listOf("A's city", "A's city"), shownSecondLines())
+  }
+
+  @Test
+  fun `a play after a stop shows the track's own lines until the stream sends a title`() {
+    playStationWithTitle()
+    player.stop()
+    idle()
+
+    player.play()
+    idle()
+    assertEquals(listOf("A's city", "A's city"), shownSecondLines())
+
+    player.playerListener.onMetadata(icy("A song 2"))
+    idle()
+    assertEquals(listOf("A song 2", "A song 2"), shownSecondLines())
   }
 }
