@@ -246,6 +246,8 @@ final class RequestPipeline {
         headers: RequestLayer.imageHeaders(request),
         body: request.body,
       )
+    } catch is CancellationError {
+      return nil
     } catch {
       logger.error("Failed to transform artwork URL for track: \(track.title), error: \(error.localizedDescription)")
       return nil
