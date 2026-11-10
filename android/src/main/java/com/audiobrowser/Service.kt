@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.isActive
 import timber.log.Timber
 
@@ -271,6 +272,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         } else {
           Timber.d("No car connected - stopping playback, moduleBound = $moduleBound")
           stopPlaybackAndRemoveNotification()
+          // Ends a waiting play-from-search, also while AudioBrowser is bound.
+          scope.coroutineContext.cancelChildren()
           // AudioBrowser keeps the player. Otherwise tear down now: a media controller still bound
           // keeps the service alive after stopSelf().
           if (!moduleBound) tearDown()

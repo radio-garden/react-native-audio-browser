@@ -1,6 +1,8 @@
 package com.audiobrowser.http
 
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.awaitCancellable
+import com.audiobrowser.util.awaitNested
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -8,6 +10,7 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 import java.net.URLEncoder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -58,9 +61,10 @@ object RequestConfigBuilder {
    * JS promise); awaiting it once hands a Promise downstream as the config.
    */
   suspend fun awaitAsyncConfig(promise: Promise<Promise<RequestConfig>>): RequestConfig =
-    promise.await().await()
+    promise.awaitNested()
 
-  suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
+  suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig =
+    promise.awaitCancellable()
 
   private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
     MediaRequestConfig(
@@ -104,6 +108,8 @@ object RequestConfigBuilder {
       override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
       override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
       result
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Timber.e(e, "Failed to apply transform function, using base config")
       base
@@ -147,6 +153,8 @@ object RequestConfigBuilder {
         val asyncResolved = layered.resolve?.let { awaitAsyncConfig(it.invoke(track)) }
         val syncResolved = layered.resolveSync?.let { awaitSyncConfig(it.invoke(track)) }
         composeResolved(asyncResolved, syncResolved) ?: return layered
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         Timber.e(e, "Failed to apply media.resolve, using layered config")
         return layered

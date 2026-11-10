@@ -1,5 +1,6 @@
 package com.audiobrowser
 
+import android.app.SearchManager
 import android.content.ComponentName
 import android.content.ContextWrapper
 import android.content.Intent
@@ -276,6 +277,35 @@ class ServiceTaskRemovedTest {
     assertEquals(listOf("a"), player.tracks.map { it.title })
   }
 
+  private fun removeTaskDuringASearchWaitingForAudioBrowser() {
+    controller
+      .withIntent(
+        Intent("android.media.action.MEDIA_PLAY_FROM_SEARCH").putExtra(SearchManager.QUERY, "a")
+      )
+      .startCommand(0, 4)
+
+    removeTask()
+    // Past AudioBrowser's registration timeout.
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
+  }
+
+  @Test
+  fun `a search waiting for AudioBrowser ends with the removed task`() {
+    removeTaskDuringASearchWaitingForAudioBrowser()
+
+    assertEquals(NEVER_STOPPED, shadowOf(service).stopSelfId)
+  }
+
+  @Test
+  fun `a search waiting for AudioBrowser ends with the removed task while AudioBrowser is bound`() {
+    controller.bind()
+
+    removeTaskDuringASearchWaitingForAudioBrowser()
+
+    assertEquals(NEVER_STOPPED, shadowOf(service).stopSelfId)
+    assertFalse(player.exoPlayer.isReleased)
+  }
+
   @Test
   fun `a media browser binding after the task is removed gets no session`() {
     playTrack("a")
@@ -283,5 +313,10 @@ class ServiceTaskRemovedTest {
     removeTask()
 
     assertNull(service.onBind(Intent("android.media.browse.MediaBrowserService")))
+  }
+
+  private companion object {
+    // ShadowService's stopSelfId before any stopSelf(startId); Android's start ids begin at 1.
+    const val NEVER_STOPPED = 0
   }
 }

@@ -1,21 +1,26 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.FALLBACK_TIMEOUT
+import com.audiobrowser.util.JsPromise
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.Promise
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/**
- * Covers the generation guard through static layers only. A resolver thunk or viewMoreTitle
- * callback returns a Nitro Promise, which needs the JNI bridge a JVM test lacks; the guard is the
- * same for both paths.
- */
+/** Covers the generation guard, through static layers, and the viewMoreTitle callback. */
 // Robolectric provides the android.util.LruCache whose evictAll() clearContentCache calls.
 @RunWith(RobolectricTestRunner::class)
 class BrowserManagerLayerResolutionTest {
@@ -130,4 +135,69 @@ class BrowserManagerLayerResolutionTest {
 
     assertEquals(BrowserManager.DEFAULT_VIEW_MORE_TITLE, browserManager.viewMoreTitle())
   }
+
+  /** A viewMoreTitle callback answering from the next of [promises], counting its calls. */
+  private class TitleCallback(vararg promises: JsPromise<String>) {
+    private val queue = ArrayDeque(promises.toList())
+    var calls = 0
+    val callback: () -> Promise<String> = {
+      calls += 1
+      queue.removeFirst().promise
+    }
+  }
+
+  @Test
+  fun `a viewMoreTitle answering inside the timeout is kept for the generation`() =
+    runTest(timeout = 5.seconds) {
+      val js = JsPromise<String>()
+      val title = TitleCallback(js)
+      browserManager.config = BrowserConfig(viewMoreTitle = title.callback)
+      val first = backgroundScope.async { browserManager.viewMoreTitle() }
+      runCurrent()
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      js.resolve("More")
+      runCurrent()
+
+      assertTrue(first.isCompleted)
+      assertEquals("More", first.await())
+      assertEquals("More", browserManager.viewMoreTitle())
+      assertEquals(1, title.calls)
+    }
+
+  @Test
+  fun `a viewMoreTitle that times out falls back for the generation`() =
+    runTest(timeout = 5.seconds) {
+      val title = TitleCallback(JsPromise())
+      browserManager.config = BrowserConfig(viewMoreTitle = title.callback)
+      val first = backgroundScope.async { browserManager.viewMoreTitle() }
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      runCurrent()
+      assertFalse(first.isCompleted)
+      advanceTimeBy(2.seconds)
+      runCurrent()
+
+      assertTrue(first.isCompleted)
+      assertEquals(BrowserManager.DEFAULT_VIEW_MORE_TITLE, first.await())
+      assertEquals(BrowserManager.DEFAULT_VIEW_MORE_TITLE, browserManager.viewMoreTitle())
+      assertEquals(1, title.calls)
+    }
+
+  @Test
+  fun `a viewMoreTitle whose caller is cancelled caches nothing`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<String>()
+      val next = JsPromise<String>().apply { resolve("More") }
+      val title = TitleCallback(silent, next)
+      browserManager.config = BrowserConfig(viewMoreTitle = title.callback)
+      val first = backgroundScope.async { browserManager.viewMoreTitle() }
+      runCurrent()
+
+      first.cancel()
+      runCurrent()
+
+      assertTrue(first.isCompleted)
+      assertEquals("More", browserManager.viewMoreTitle())
+    }
 }

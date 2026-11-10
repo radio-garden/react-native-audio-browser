@@ -40,6 +40,7 @@ import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.SvgArtworkRenderer
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.TrackFactory.setFavorite
+import com.audiobrowser.util.awaitOrTimeout
 import com.audiobrowser.util.isAutomotive
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
@@ -68,6 +69,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -411,7 +414,9 @@ internal constructor(
     nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
     // Unwrapped from the Nitro Func so the updater never touches bridge types.
     nowPlaying.formatter =
-      setupOptions.nowPlayingMetadataFormatter?.let { f -> { params -> f.invoke(params).await() } }
+      setupOptions.nowPlayingMetadataFormatter?.let { f ->
+        { params -> f.invoke(params).awaitOrTimeout() }
+      }
 
     val newEngineOptions = setupOptions.engineOptions()
     if (newEngineOptions == engineOptions) {
@@ -901,6 +906,7 @@ internal constructor(
         false
       }
     } catch (e: Exception) {
+      currentCoroutineContext().ensureActive()
       Timber.e(e, "Error handling voice search: ${params}")
       false
     }
