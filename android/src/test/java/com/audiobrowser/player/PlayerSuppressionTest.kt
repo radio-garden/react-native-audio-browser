@@ -9,16 +9,20 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -46,7 +50,13 @@ class PlayerSuppressionTest {
   @get:Rule val folder = TemporaryFolder()
 
   private val context = RuntimeEnvironment.getApplication()
-  private val player = Player(context)
+  private val remote = FakeRemote(Looper.getMainLooper())
+  private val player =
+    Player(
+      context,
+      castRemote = { _, _ -> remote },
+      sonosRemote = { _, _ -> FakeRemote(Looper.getMainLooper()) },
+    )
   private val callbacks = mock(Callbacks::class.java)
   private val audioManager =
     shadowOf(context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
@@ -144,16 +154,182 @@ class PlayerSuppressionTest {
   }
 
   @Test
-  fun `a rebuild during a transient focus loss reports the new engine's intent`() {
+  fun `a rebuild during a transient focus loss stays suppressed until focus returns`() {
     focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
-    // As after a skip while suppressed.
-    player.setPlaybackState(PlaybackState.BUFFERING)
-    assertEquals(PlayingState(false, false), player.getPlayingState())
+    val engine = player.exoPlayer
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertSame(engine, player.exoPlayer)
+    assertSuppressed()
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing on a new engine") {
+      player.playbackState == PlaybackState.PLAYING && player.exoPlayer !== engine
+    }
+  }
+
+  @Test
+  fun `a rebuild during a call keeps the intent`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    // ExoPlayer requests focus on its playback thread and posts a refusal back.
+    Thread.sleep(200)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertSuppressed()
+    audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing again") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a rebuild held during a transient focus loss runs when the intent drops`() {
+    listOf<() -> Unit>(
+        { focus(AudioManager.AUDIOFOCUS_LOSS) },
+        { player.pause() },
+        { player.stop() },
+      )
+      .forEachIndexed { i, drop ->
+        player.play()
+        idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+        focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        val engine = player.exoPlayer
+        // A different maxBuffer each time, so each setup() rebuilds.
+        player.setup(PlayerSetupOptions(maxBuffer = 120_000.0 + i))
+        assertSame(engine, player.exoPlayer)
+        drop()
+
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertNotSame(engine, player.exoPlayer)
+        assertFalse(player.exoPlayer.playWhenReady)
+      }
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+  }
+
+  @Test
+  fun `a play during a transient focus loss runs a held rebuild after it`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    assertSame(engine, player.exoPlayer)
+
+    // ExoPlayer's play() asks for focus again, so it plays over the transient loss.
+    player.play()
+    // The rebuild follows the play: it is posted, never run inside it.
+    assertSame(engine, player.exoPlayer)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotSame(engine, player.exoPlayer)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `an engine stopped during a transient focus loss holds no rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    // As a handover to a remote output does: the engine stops but keeps the intent.
+    player.exoPlayer.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+    val engine = player.exoPlayer
 
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
 
-    assertEquals(PlayingState(true, true), player.getPlayingState())
-    verify(callbacks).onPlaybackPlayingState(PlayingState(true, true))
+    assertNotSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `a held rebuild runs when a remote output takes over`() {
+    player.setup(
+      PlayerSetupOptions(
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+      )
+    )
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(
+      PlayerSetupOptions(
+        maxBuffer = 120_000.0,
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null),
+      )
+    )
+    assertSame(engine, player.exoPlayer)
+
+    remote.startSession()
+    idleUntil("remote") { !player.localEngine.isActive }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotSame(engine, player.exoPlayer)
+    assertFalse(player.localEngine.isActive)
+  }
+
+  @Test
+  fun `a held rebuild runs when the engine idles`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    assertSame(engine, player.exoPlayer)
+
+    // As a terminal error does: the engine idles with the intent and the suppression unchanged.
+    player.exoPlayer.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertNotSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `the last setup during a transient focus loss wins`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engines = mutableSetOf(player.exoPlayer)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    engines += player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 130_000.0))
+    engines += player.exoPlayer
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    val engine = player.exoPlayer
+    engines += engine
+
+    assertEquals("one rebuild", 2, engines.size)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 130_000.0))
+    assertSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `a setup back to the current options during a transient focus loss cancels the rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    player.setup(PlayerSetupOptions())
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    assertSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `destroying the player drops a held rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+
+    player.destroy()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertSame(engine, player.exoPlayer)
+  }
+
+  private fun assertSuppressed() {
+    assertTrue(player.exoPlayer.playWhenReady)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(PlayingState(false, false), player.getPlayingState())
   }
 
   private fun focus(change: Int) {

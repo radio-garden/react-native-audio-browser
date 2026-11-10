@@ -75,6 +75,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
+/** The states the session reads as paused on an idle engine, once a rebuild drops its error. */
+private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
+
 @SuppressLint("RestrictedApi")
 class Player
 internal constructor(
@@ -307,6 +310,9 @@ internal constructor(
       // togglePlayback(), JS.
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
+      } else if (value && playbackState == PlaybackState.ENDED) {
+        // A rebuild carries an ended engine idle, at its start or where a seek since left it.
+        sessionPlayer.prepare()
       }
       sessionPlayer.playWhenReady = value
     }
@@ -406,9 +412,13 @@ internal constructor(
 
   private var engineOptions: PlayerSetupOptions? = null
 
+  private var deferredSetup: PlayerSetupOptions? = null
+
   /**
    * Builds the ExoPlayer on the first call, and rebuilds it only when the engine options changed. A
-   * rebuild carries over the queue, the position and the play intent.
+   * rebuild carries over the queue, the position and the play intent. During a transient audio
+   * focus loss with the intent up, the rebuild waits until focus returns, the intent drops, or a
+   * play asks for focus again.
    */
   fun setup(setupOptions: PlayerSetupOptions) {
     nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
@@ -418,14 +428,41 @@ internal constructor(
         { params -> f.invoke(params).awaitOrTimeout() }
       }
 
-    val newEngineOptions = setupOptions.engineOptions()
-    if (newEngineOptions == engineOptions) {
-      Timber.Forest.d("Setup options unchanged: keeping the player")
-    } else {
-      buildEngine(setupOptions)
-      engineOptions = newEngineOptions
-    }
+    deferredSetup = setupOptions.takeIf { it.engineOptions() != engineOptions }
+    rebuildIfDue()
     if (remoteOutputs.apply(setupOptions.remoteOutputs, exoPlayer)) attachSessionPlayer()
+  }
+
+  /**
+   * Runs a [deferredSetup] rebuild unless the engine waits out a transient focus loss with the
+   * intent up: the new engine would ask for focus at once, taking it from the app that holds it, or
+   * lose the intent when refused, as during a call. Call when the engine's state, intent or
+   * suppression changes.
+   */
+  internal fun rebuildIfDue() {
+    val options = deferredSetup ?: return
+    // A stopped engine keeps the suppression but holds no focus, and is carried unprepared.
+    if (
+      engineOptions != null &&
+        exoPlayer.playbackState != MediaPlayer.STATE_IDLE &&
+        exoPlayer.playWhenReady &&
+        exoPlayer.playbackSuppressionReason ==
+          MediaPlayer.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+    ) {
+      return
+    }
+    deferredSetup = null
+    buildEngine(options)
+    engineOptions = options.engineOptions()
+  }
+
+  /**
+   * [rebuildIfDue] once the current command returns: ExoPlayer reports an intent change from inside
+   * the command, and a rebuild there would land between its steps, as between stop()'s drop of the
+   * intent and its stop.
+   */
+  internal fun rebuildIfDueLater() {
+    if (deferredSetup != null) mainHandler.post(::rebuildIfDue)
   }
 
   private fun buildEngine(setupOptions: PlayerSetupOptions) {
@@ -481,12 +518,9 @@ internal constructor(
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
       equalizer.initialize(exoPlayer.audioSessionId)
     } else if (localEngine.isActive) {
-      // No listener heard the restore, and its prepare() leaves the engine buffering. While remote,
-      // the receiver plays on unchanged.
-      setPlaybackState(
-        if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) PlaybackState.NONE
-        else PlaybackState.BUFFERING
-      )
+      // No listener heard the restore. Its prepare() leaves the engine buffering; an unprepared one
+      // keeps its state. While remote, the receiver plays on unchanged.
+      if (exoPlayer.playbackState != ExoPlayer.STATE_IDLE) setPlaybackState(PlaybackState.BUFFERING)
       // The new engine starts unsuppressed: an unchanged state would not re-derive it.
       refreshPlayingState()
     }
@@ -504,7 +538,7 @@ internal constructor(
         { callbacks },
         { options },
         keepSessionAliveOnError,
-        isPaused = { playbackState == PlaybackState.PAUSED },
+        isParked = { playbackState in PARKED_STATES },
         stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
@@ -949,6 +983,7 @@ internal constructor(
   fun destroy() {
     if (destroyed) return
     destroyed = true
+    deferredSetup = null
     // stop() saves only if playing; before it, so its STOPPED doesn't defeat the ENDED guard.
     playbackStateStore.stopPeriodicSave()
     // An armed timer would fire pause() into the released player. Cleared before the release,
@@ -1059,8 +1094,8 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
-      if ((oldState == PlaybackState.PAUSED) != (state == PlaybackState.PAUSED)) {
-        forwardingPlayer.onPausedChanged()
+      if ((oldState in PARKED_STATES) != (state in PARKED_STATES)) {
+        forwardingPlayer.onParkedChanged()
       }
       if (state == PlaybackState.ERROR) resetForNewLoad()
 
