@@ -116,13 +116,15 @@ struct RetryLoopCaseTests {
     #expect(rig.connects.allSatisfy { $0 < endedAt })
   }
 
-  @Test func aConnectionOpenWithNoDataEndsAt120s() async {
+  /// The watch gives the silent connect up at 30 s, a failure that starts the first-connect
+  /// budget; having delivered nothing, it is replaced 1 s later.
+  @Test func aConnectionOpenWithNoDataIsReplacedAt30s_andEndsAt42s() async {
     let rig = Rig()
     rig.play { _ in }
     await rig.run(untilMs: 300_000)
-    #expect(rig.errors.map(\.atMs) == [120_000])
+    #expect(rig.connects == [0, 31_000])
+    #expect(rig.errors.map(\.atMs) == [42_000])
     #expect(rig.errors.map(\.error) == [.playbackStalled])
-    #expect(rig.connects == [0])
   }
 
   @Test func aDeadAddressThatNeverPlayedEnds12sAfterItsFirstFailure() async {
@@ -204,7 +206,8 @@ struct RetryLoopCaseTests {
   @Test func aPauseClearsTheDeadline() async {
     let rig = Rig()
     rig.play { _ in }
-    rig.clock.at(60_000) { rig.loop.playIntentChanged(false) }
+    // Before the watch gives the connect up at 30 s.
+    rig.clock.at(20_000) { rig.loop.playIntentChanged(false) }
     await rig.run(untilMs: 300_000)
     #expect(rig.errors.isEmpty)
   }
@@ -212,7 +215,7 @@ struct RetryLoopCaseTests {
   @Test func aCancelClearsTheDeadline_untilTheNextConnect() async {
     let rig = Rig()
     rig.play { _ in }
-    rig.clock.at(60_000) { rig.loop.cancel() }
+    rig.clock.at(20_000) { rig.loop.cancel() }
     await rig.run(untilMs: 300_000)
     #expect(rig.errors.isEmpty)
   }

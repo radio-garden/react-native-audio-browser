@@ -1402,6 +1402,22 @@ struct StopCancelsRetryTests {
     #expect(player.state == .stopped)
     #expect(callbacks.errorEvents.isEmpty)
   }
+
+  /// Guards where stop() cancels the retry, not the order of its render: lowering the intent with
+  /// a retry pending would park it for a reload on play, and a stop is no pause.
+  @Test @MainActor
+  func stop_duringARetry_goesStraightToStopped() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    #expect(c.retry.pendingTask != nil)
+    cb.playbackChanges.removeAll()
+
+    c.stop()
+
+    #expect(cb.playbackChanges.map(\.state) == [.stopped])
+    #expect(c.load?.reloadOnPlay == false)
+  }
 }
 
 // MARK: - Audio session release (#60)
@@ -1561,6 +1577,22 @@ struct MediaStackEffectTests {
 
     let cleared = try #require(cb.publishOrder.firstIndex(of: "clearTimedMetadata"))
     #expect(try cleared < #require(cb.publishOrder.firstIndex(of: "renderNowPlaying")))
+  }
+
+  @Test @MainActor
+  func stop_rendersTheStoppedStateWithThePlayIntentDown() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    var renders: [(PlaybackState, Bool)] = []
+    eh.onSeamCall = { [unowned c] in
+      if $0 == "renderNowPlaying" { renders.append((c.state, c.playWhenReady)) }
+    }
+
+    c.stop()
+
+    let stopped = renders.filter { $0.0 == .stopped }
+    #expect(!stopped.isEmpty)
+    #expect(stopped.allSatisfy { !$0.1 })
   }
 
   @Test @MainActor

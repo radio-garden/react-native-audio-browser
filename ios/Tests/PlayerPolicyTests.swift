@@ -62,6 +62,23 @@ private func makeVirtual(online: Bool = true) throws -> (Player, MockPlayerEngin
   return (player, engine, callbacks, clock)
 }
 
+/// A live stream connecting, its retry loop on a virtual clock; the engine reports `previousBuffered`
+/// from the item the connect replaces until the test prepares one.
+@MainActor
+private func makeConnecting(
+  playWhenReady: Bool = true,
+  previousBuffered: Double = 0,
+) throws -> (Player, MockPlayerEngine, VirtualClock) {
+  let clock = VirtualClock()
+  let retry = RetryLoop(clock: clock)
+  retry.updatePolicy(from: .first(true))
+  let engine = MockPlayerEngine()
+  engine.bufferedPosition = previousBuffered
+  let player = makePlayer(engine: engine, retry: retry)
+  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)], playWhenReady: playWhenReady)
+  return (player, engine, clock)
+}
+
 @Suite("Player - seeking")
 @MainActor
 struct PlayerSeekingTests {
@@ -476,8 +493,91 @@ struct PlayerRecoveringTests {
 
   @Test func aTrackChangeEndsTheStallWatch() throws {
     let (player, _, _) = try makeStalling()
+    let stallWatch = player.retry.stallTask
     try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
-    #expect(player.retry.stallTask == nil)
+    #expect(stallWatch?.isCancelled == true)
+  }
+
+  @Test func aConnectThatSendsNothingIsReplacedAfterTheTimeout() async throws {
+    let (player, engine, clock) = try makeConnecting()
+    await clock.run(until: 30_999)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    await clock.run(until: 31_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+  }
+
+  /// The item it replaces had buffered further than the new one has yet.
+  @Test func aSlowConnectThatKeepsReceivingDataIsKept() async throws {
+    let (player, engine, clock) = try makeConnecting(previousBuffered: 50)
+    engine.hasItem = true
+    engine.bufferedPosition = 1
+    engine.emit(.itemPrepared(likelyToKeepUp: false))
+    for atMs in stride(from: 20_000, through: 100_000, by: 20_000) {
+      clock.at(atMs) { engine.bufferedPosition += 1 }
+    }
+    await clock.run(until: 100_000)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// A stall's reconnect: the stalled item stays in the engine, still buffering, while the new
+  /// connect sends nothing.
+  @Test func theItemAConnectReplacesBufferingOnIsNoProgress() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    engine.bufferedPosition = 50
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 40_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+
+    for atMs in stride(from: 45_000, through: 70_000, by: 5_000) {
+      clock.at(atMs) { engine.bufferedPosition += 1 }
+    }
+    await clock.run(until: 70_000)
+    await clock.run(until: 71_000)
+    #expect(engine.resolveAndLoadCalls.count == 3)
+  }
+
+  @Test func aPauseDuringAConnectHoldsItPastTheTimeout() async throws {
+    let (player, engine, clock) = try makeConnecting()
+    await clock.run(until: 10_000)
+    player.pause()
+    await clock.run(until: 200_000)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(player.load?.reloadOnPlay == false)
+    #expect(player.state == .loading)
+  }
+
+  @Test func withRetryOffASilentConnectIsTerminalAtTheTimeout() async throws {
+    let (player, engine, clock) = try makeConnecting()
+    player.retry.updatePolicy(from: nil)
+    await clock.run(until: 29_999)
+    #expect(player.state == .loading)
+    await clock.run(until: 30_000)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aPlayWhileConnectingWatchesTheConnect() async throws {
+    let (player, engine, clock) = try makeConnecting(playWhenReady: false)
+    await clock.run(until: 10_000)
+    player.play()
+    await clock.run(until: 41_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  /// Ready and waiting for AVPlayer to start: its waiting is a stall, watched in .buffering.
+  @Test func aConnectThatIsReadyIsNoLongerWatched() async throws {
+    let (player, engine, clock) = try makeConnecting()
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(player.state == .ready)
+    await clock.run(until: 100_000)
+    #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
   /// A link slower than the bitrate rebuffers for longer than the timeout, and a reload would
@@ -550,11 +650,15 @@ struct PlayerRecoveringTests {
     let callbacks = MockPlayerCallbacks()
     player.callbacks = callbacks
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    // The watch replaces the silent connect at 30 s, 1 s after it gives up on it; that failure
+    // brings the deadline to 42 s.
+    await clock.run(until: 31_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
     let cancels = engine.cancelLoadingCount, stops = engine.stopObservingItemCount
 
-    await clock.run(until: 119_999)
+    await clock.run(until: 41_999)
     #expect(player.state == .loading)
-    await clock.run(until: 120_000)
+    await clock.run(until: 42_000)
 
     #expect(player.state == .error)
     #expect(player.errorStatus.error == .playbackStalled)
@@ -598,14 +702,17 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  /// The watch replaces the stall at 40 s at once, having played, then each silent connect 30 s
+  /// after it starts, 1 s and then 1.5 s later: the deadline still falls 120 s into the silence.
   @Test func playbackThatStopsWithNoFailureEndsAtTheDeadline() async throws {
-    let (player, _, callbacks, clock) = try makeVirtual()
+    let (player, engine, callbacks, clock) = try makeVirtual()
     player.transition(.avPlayerPlaying)
     await clock.run(until: 10_000)
     player.transition(.avPlayerWaiting)
 
     await clock.run(until: 129_999)
-    #expect(player.state == .buffering)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 4)
     await clock.run(until: 130_000)
     #expect(player.state == .error)
     #expect(player.errorStatus.error == .playbackStalled)
@@ -614,6 +721,8 @@ struct PlayerRecoveringTests {
 
   @Test func aRetryNowKeepsTheSilenceDeadline() async throws {
     let (player, _, _, clock) = try makeVirtual()
+    // Its watch would end the reload's connect first.
+    player.retry.stallTimeout = .seconds(600)
     await clock.run(until: 60_000)
     player.retryNow()
 
