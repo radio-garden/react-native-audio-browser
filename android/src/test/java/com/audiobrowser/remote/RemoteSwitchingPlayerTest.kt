@@ -3,8 +3,10 @@ package com.audiobrowser.remote
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.extractor.metadata.icy.IcyInfo
 import java.time.Duration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.MainScope
@@ -871,6 +873,45 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a title for the outgoing item while the next one resolves never shows on it`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.player.title("A 1")
+    idle()
+    val seen = transitionsAndTitles()
+    gate = CompletableDeferred()
+
+    player.seekToNextMediaItem()
+    idle()
+    remote.player.title("A 2")
+    idle()
+    gate!!.complete(Unit)
+    idle()
+    remote.player.title("B 1")
+    idle()
+
+    assertEquals(listOf("b", "B 1"), seen)
+  }
+
+  @Test
+  fun `a new load of the same stream shows its title again`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.title("Song")
+    idle()
+    val seen = transitionsAndTitles()
+
+    player.setMediaItems(items("a"))
+    idle()
+    remote.player.title("Song")
+    idle()
+
+    assertEquals(listOf("a", "Song"), seen)
+  }
+
+  @Test
   fun `release brings playback back and lets every remote go`() {
     playLocally(listOf("a"))
     remote.startSession()
@@ -904,6 +945,23 @@ class RemoteSwitchingPlayerTest {
     local.playWhenReady = true
     local.prepare()
     idle()
+  }
+
+  /** The id of each item transitioned to, and each stream title, in the order the player tells. */
+  private fun transitionsAndTitles(): List<String> {
+    val seen = mutableListOf<String>()
+    player.addListener(
+      object : MediaPlayer.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+          seen += mediaItem?.mediaId.orEmpty()
+        }
+
+        override fun onMetadata(metadata: Metadata) {
+          seen += (metadata[0] as IcyInfo).title.orEmpty()
+        }
+      }
+    )
+    return seen
   }
 
   private fun queue() = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
