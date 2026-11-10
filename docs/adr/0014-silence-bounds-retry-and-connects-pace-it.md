@@ -17,7 +17,7 @@ Two questions are now kept apart: when to give up, and when to connect.
 ## Silence bounds
 
 1. **Silent** means the listener wants audio (the play intent is up) and is not hearing it. A silence ends only once audio has played for 5 s in a row; a shorter burst does not end it.
-2. **Give up after 120 s of silence** (the recovery budget). A load that never played also gives up 12 s after its first failure, counted over a contiguous online stretch (the first-connect budget, unchanged from ADR 0004).
+2. **Give up after 120 s of silence** (the recovery budget). A load that never played also gives up 12 s after its first failure seen online (the first-connect budget). Going offline clears that clock, and the next failure seen online starts it again, so it only ever measures one online stretch, as ADR 0004 says. Both platforms' code before this cleared the clock only when a failure arrived while offline. For a load that failed, went offline briefly and came back with no failure in between, the first failure after the blip gave up at once if 12 s had passed since the one before it; now that failure starts a fresh 12 s.
 3. **A deadline enforces it.** The deadline is set when silence starts and cleared while audio plays. The verdict does not wait for the next failure.
 4. **Time offline counts** toward the 120 s, so playback never resumes by surprise.
 
@@ -25,8 +25,8 @@ Two questions are now kept apart: when to give up, and when to connect.
 
 5. **After a connection that delivered audio, reconnect at once.** This covers a clean close and a drop.
 6. **After a connection that delivered nothing, wait.** The wait grows 1, 1.5, 2.25, 3.375, then 5 s, and starts again at 1 s once a connection delivers audio. `maxRetries` counts these connections, in a row.
-7. **Connects start at least 1 s apart**, whatever the cause, so a server that sends a moment of audio and closes is never hit in a tight loop.
-8. **Offline, no connects.** The first goes out when the network returns, with no backoff left to wait out. A connection that ends while offline says nothing about the source, so it does not grow the wait.
+7. **Connects start at least 1 s apart**, whatever ended the last one, so a server that sends a moment of audio and closes is never hit in a tight loop. A new Load or a play intent that comes up again starts over without it: those are the listener's, not the retry's.
+8. **Offline, no connects.** The first goes out when the network returns: its return drops what remains of the pending wait, keeping only the 1 s floor. The backoff's growth stays, so if that connect delivers nothing, the next waits 1.5 s, not 1 s. A connection that ends while offline says nothing about the source, so it does not grow the wait. A report that the network is up while it already was changes nothing.
 9. **A connection that is open but silent** is given up for a new one after a fixed watch, and paced by what it delivered before it went silent. Rule 2 bounds how long that can repeat.
 
 ## Buffers follow the cause
@@ -38,11 +38,11 @@ Two questions are now kept apart: when to give up, and when to connect.
 Per ADR 0003 the rule lives in two pure units with the same name on both platforms. Time comes in as an argument; neither holds a timer, a thread or a player type.
 
 - `SilenceBudget` takes the play intent, audio starting and stopping, connectivity, connection ends and new Loads, and answers the deadline (rules 1 to 4). Each of those inputs can move the deadline, not only audio and the intent: a first failure brings a never-played Load's deadline forward to 12 s.
-- `ReconnectPacer` takes whether each connection delivered audio, when it started and when it ended, and answers the wait before the next connect, or that it waits for the network, or that `maxRetries` is spent (rules 5 to 8).
+- `ReconnectPacer` takes whether each connection delivered audio, when it started and when it ended, the play intent, connectivity and new Loads, and answers the wait before the next connect, or that it waits for the network, or that `maxRetries` is spent (rules 5 to 8).
 
 A restart from the terminal error is a new Load for both, so the waits and the deadline start over. A play intent that comes up again starts both over too, as a retry parked by a pause does today.
 
-A `ReconnectPacer` paces one sequence of connections made one at a time. Where the platform runs several at once, as media3 does with an HLS playlist and its segments, the wiring decides which sequence each one paces.
+Both units take the play intent and connectivity, and the wiring feeds them the same transitions. A `ReconnectPacer` paces one sequence of connections made one at a time. Where the platform runs several at once, as media3 does with an HLS playlist and its segments, the wiring decides which sequence each one paces.
 
 `spec/retry-cases.json` holds timelines of events with the outputs expected after each, and the Swift and Kotlin tests run every case. Parity is checked by the same cases, not by experiment. A behaviour the rule changes is changed in the case file first.
 

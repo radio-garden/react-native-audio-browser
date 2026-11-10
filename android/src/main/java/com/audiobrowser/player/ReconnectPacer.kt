@@ -6,7 +6,7 @@ import kotlin.math.pow
 sealed interface ReconnectWait {
   data class After(val ms: Long) : ReconnectWait
 
-  /** Offline: no connect until the network returns; call `networkReturned` and ask again then. */
+  /** Offline: no connect until the network returns; ask again then. */
   data object UntilOnline : ReconnectWait
 
   /** More than `maxRetries` connections in a row delivered nothing. */
@@ -19,12 +19,13 @@ sealed interface ReconnectWait {
  * monotonic clock.
  *
  * The 1 s floor counts from when the last connection started and the backoff from when it ended, so
- * the floor binds only after a connection that delivered audio.
+ * the floor binds only where no backoff applies: after a connection that delivered audio or ended
+ * offline, and once the network returns.
  *
  * @param maxRetries connections in a row that may deliver nothing before giving up; null for no
  *   limit
  */
-class ReconnectPacer(var maxRetries: Int? = null) {
+class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
   companion object {
     const val MIN_CONNECT_INTERVAL_MS = 1_000L
     const val FIRST_BACKOFF_MS = 1_000L
@@ -32,13 +33,14 @@ class ReconnectPacer(var maxRetries: Int? = null) {
     const val BACKOFF_GROWTH = 1.5
   }
 
+  private var playIntent = false
   private var deliveredNothingInARow = 0
   private var lastStartedAtMs: Long? = null
   private var nextConnectMs: Long? = null
 
   /**
-   * Starts the count and the waits over: on a new Load (a track change, or a restart from the
-   * terminal error) and when the play intent comes up again. Never on a retry's reload.
+   * Starts the count and the waits over on a new Load: a track change, or a restart from the
+   * terminal error. Never on a retry's reload.
    */
   fun reset() {
     deliveredNothingInARow = 0
@@ -46,9 +48,23 @@ class ReconnectPacer(var maxRetries: Int? = null) {
     nextConnectMs = null
   }
 
-  /** Drops what remains of the backoff, keeping the floor: the next connect goes out at once. */
-  fun networkReturned() {
-    nextConnectMs = lastStartedAtMs?.let { it + MIN_CONNECT_INTERVAL_MS }
+  /**
+   * A play intent that comes up starts the count and the waits over; a repeat while up does not.
+   */
+  fun playIntentChanged(up: Boolean) {
+    if (up && !playIntent) reset()
+    playIntent = up
+  }
+
+  /**
+   * The network returning drops what remains of the wait, keeping the floor, so the next connect
+   * goes out at once; the backoff still grows from where it was. A repeat while online does
+   * nothing.
+   */
+  fun onlineChanged(online: Boolean) {
+    if (online && !this.online)
+      nextConnectMs = lastStartedAtMs?.let { it + MIN_CONNECT_INTERVAL_MS }
+    this.online = online
   }
 
   /**
@@ -56,7 +72,7 @@ class ReconnectPacer(var maxRetries: Int? = null) {
    * delivered nothing for want of a network, not of a source. A stall the watch gives up on reports
    * what its connection delivered.
    */
-  fun connectionEnded(deliveredAudio: Boolean, startedAtMs: Long, atMs: Long, online: Boolean) {
+  fun connectionEnded(deliveredAudio: Boolean, startedAtMs: Long, atMs: Long) {
     lastStartedAtMs = startedAtMs
     var next = startedAtMs + MIN_CONNECT_INTERVAL_MS
     if (deliveredAudio) {
@@ -68,7 +84,7 @@ class ReconnectPacer(var maxRetries: Int? = null) {
     nextConnectMs = next
   }
 
-  fun wait(atMs: Long, online: Boolean): ReconnectWait {
+  fun wait(atMs: Long): ReconnectWait {
     maxRetries?.let { if (deliveredNothingInARow > it) return ReconnectWait.GiveUp }
     if (!online) return ReconnectWait.UntilOnline
     return ReconnectWait.After(maxOf(0, (nextConnectMs ?: atMs) - atMs))

@@ -16,7 +16,7 @@ import org.junit.runners.Parameterized
 
 /** Runs every case in spec/retry-cases.json, which build.gradle puts on the test classpath. */
 @RunWith(Parameterized::class)
-class RetryCaseTest(@Suppress("unused") private val name: String, private val case: JsonObject) {
+class RetryCaseTest(private val name: String, private val case: JsonObject) {
   companion object {
     private val CASE_KEYS = setOf("name", "maxRetries", "recoveryMs", "firstConnectMs", "steps")
     private val STEP_KEYS = setOf("at", "event", "delivered", "startedAt", "deadline", "wait")
@@ -29,7 +29,9 @@ class RetryCaseTest(@Suppress("unused") private val name: String, private val ca
             "spec/retry-cases.json is not on the test classpath"
           }
           .readText()
-      val cases = Json.parseToJsonElement(text).jsonObject.getValue("cases").jsonArray
+      val file = Json.parseToJsonElement(text).jsonObject
+      (file.keys - setOf("about", "cases")).firstOrNull()?.let { error("unknown key $it") }
+      val cases = file.getValue("cases").jsonArray
       check(cases.isNotEmpty()) { "spec/retry-cases.json holds no case" }
       return cases.map {
         arrayOf(it.jsonObject.getValue("name").jsonPrimitive.content, it.jsonObject)
@@ -49,10 +51,15 @@ class RetryCaseTest(@Suppress("unused") private val name: String, private val ca
     val budget = SilenceBudget(online = true)
     case["recoveryMs"]?.let { budget.recoveryMs = it.strictLong("recoveryMs") }
     case["firstConnectMs"]?.let { budget.firstConnectMs = it.strictLong("firstConnectMs") }
-    val pacer = ReconnectPacer(maxRetries = case["maxRetries"]?.strictLong("maxRetries")?.toInt())
-    var online = true
+    val pacer =
+      ReconnectPacer(
+        maxRetries = case["maxRetries"]?.strictLong("maxRetries")?.toInt(),
+        online = true,
+      )
     var lastAt = Long.MIN_VALUE
-    for (element in case.getValue("steps").jsonArray) {
+    val steps = case.getValue("steps").jsonArray
+    check(steps.isNotEmpty()) { "$name: no steps" }
+    for (element in steps) {
       // Strict, so a misspelt or missing key fails the case instead of dropping an assertion.
       val step = element.jsonObject
       (step.keys - STEP_KEYS).firstOrNull()?.let { error("unknown key $it") }
@@ -65,21 +72,17 @@ class RetryCaseTest(@Suppress("unused") private val name: String, private val ca
           budget.loadStarted(at)
           pacer.reset()
         }
-        "intentUp" -> {
-          budget.playIntentChanged(true, at)
-          pacer.reset()
+        "intentUp",
+        "intentDown" -> {
+          budget.playIntentChanged(event == "intentUp", at)
+          pacer.playIntentChanged(event == "intentUp")
         }
-        "intentDown" -> budget.playIntentChanged(false, at)
         "audioStarts" -> budget.audioStarted(at)
         "audioStops" -> budget.audioStopped(at)
-        "offline" -> {
-          online = false
-          budget.onlineChanged(false)
-        }
+        "offline",
         "online" -> {
-          online = true
-          budget.onlineChanged(true)
-          pacer.networkReturned()
+          budget.onlineChanged(event == "online")
+          pacer.onlineChanged(event == "online")
         }
         "ended" -> {
           check("wait" in step) { "at $at: an end states the wait" }
@@ -94,7 +97,7 @@ class RetryCaseTest(@Suppress("unused") private val name: String, private val ca
           budget.connectionEnded(at)
           val startedAtMs = startedAt.strictLong("startedAt")
           check(startedAtMs <= at) { "at $at: started after it ended" }
-          pacer.connectionEnded(deliveredAudio, startedAtMs, at, online)
+          pacer.connectionEnded(deliveredAudio, startedAtMs, at)
         }
         else -> error("at $at: unknown event $event")
       }
@@ -115,7 +118,7 @@ class RetryCaseTest(@Suppress("unused") private val name: String, private val ca
           } else {
             ReconnectWait.After(wait.strictLong("wait at $at"))
           }
-        assertEquals("wait at $at ($event)", expected, pacer.wait(at, online))
+        assertEquals("wait at $at ($event)", expected, pacer.wait(at))
       }
     }
   }

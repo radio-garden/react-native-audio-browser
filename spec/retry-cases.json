@@ -1695,6 +1695,180 @@
         { "at": 2000, "event": "audioStarts", "deadline": null },
         { "at": 30000, "event": "audioStops", "deadline": 90000 }
       ]
+    },
+    {
+      "name": "an online event while already online leaves the backoff to run",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        {
+          "at": 31200,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": 1500
+        },
+        { "at": 31500, "event": "online", "deadline": 150000, "wait": 1200 }
+      ]
+    },
+    {
+      "name": "before a load ever played, a blip offline drops the 12 s deadline until the next online failure",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 5000,
+          "event": "offline",
+          "deadline": 120000,
+          "wait": "online"
+        },
+        { "at": 6000, "event": "online", "deadline": 120000, "wait": 0 }
+      ]
+    },
+    {
+      "name": "a connection that delivered audio and ended offline starts the count over and waits for the network",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 30000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 150000,
+          "wait": 0
+        },
+        {
+          "at": 30100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 150000,
+          "wait": 1000
+        },
+        { "at": 31500, "event": "audioStarts", "deadline": null },
+        { "at": 32000, "event": "offline", "deadline": null, "wait": "online" },
+        { "at": 32000, "event": "audioStops", "deadline": 150000 },
+        {
+          "at": 32000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 31100,
+          "deadline": 150000,
+          "wait": "online"
+        },
+        { "at": 40000, "event": "online", "deadline": 150000, "wait": 0 },
+        {
+          "at": 40100,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 40000,
+          "deadline": 150000,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "a new load while audio plays clears hasPlayed and starts a silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 500, "event": "audioStarts", "deadline": null },
+        { "at": 30000, "event": "load", "deadline": 150000 },
+        {
+          "at": 30300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 30000,
+          "deadline": 42300,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "a play intent that goes down offline and comes up online starts over",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 2000,
+          "event": "offline",
+          "deadline": 120000,
+          "wait": "online"
+        },
+        { "at": 3000, "event": "intentDown", "deadline": null },
+        { "at": 10000, "event": "online", "deadline": null },
+        { "at": 20000, "event": "intentUp", "deadline": 140000, "wait": 0 },
+        {
+          "at": 20300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 20000,
+          "deadline": 32300,
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "a play intent that comes up while already up changes nothing",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        {
+          "at": 300,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 0,
+          "deadline": 12300,
+          "wait": 1000
+        },
+        {
+          "at": 1600,
+          "event": "ended",
+          "delivered": "nothing",
+          "startedAt": 1300,
+          "deadline": 12300,
+          "wait": 1500
+        },
+        { "at": 2000, "event": "intentUp", "deadline": 12300, "wait": 1100 }
+      ]
     }
   ]
 }

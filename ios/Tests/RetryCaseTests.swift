@@ -84,6 +84,9 @@ private struct RetryCase: Decodable, CustomTestStringConvertible {
     recoveryMs = try c.decodeIfPresent(Int.self, forKey: Key(stringValue: "recoveryMs"))
     firstConnectMs = try c.decodeIfPresent(Int.self, forKey: Key(stringValue: "firstConnectMs"))
     steps = try c.decode([RetryStep].self, forKey: Key(stringValue: "steps"))
+    if steps.isEmpty {
+      throw DecodingError.dataCorrupted(.init(codingPath: c.codingPath, debugDescription: "\(name): no steps"))
+    }
     if zip(steps, steps.dropFirst()).contains(where: { $0.at > $1.at }) {
       throw DecodingError.dataCorrupted(.init(codingPath: c.codingPath, debugDescription: "\(name): time runs backwards"))
     }
@@ -94,7 +97,12 @@ private let loadedCases = Result<[RetryCase], Error> {
   let url = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     .appendingPathComponent("spec/retry-cases.json")
-  struct File: Decodable { let cases: [RetryCase] }
+  struct File: Decodable {
+    let cases: [RetryCase]
+    init(from decoder: Decoder) throws {
+      cases = try strictContainer(decoder, keys: ["about", "cases"]).decode([RetryCase].self, forKey: Key(stringValue: "cases"))
+    }
+  }
   return try JSONDecoder().decode(File.self, from: Data(contentsOf: url)).cases
 }
 
@@ -109,35 +117,29 @@ struct RetryCaseTests {
     var budget = SilenceBudget(online: true)
     if let recoveryMs = retryCase.recoveryMs { budget.recoveryMs = recoveryMs }
     if let firstConnectMs = retryCase.firstConnectMs { budget.firstConnectMs = firstConnectMs }
-    var pacer = ReconnectPacer(maxRetries: retryCase.maxRetries)
-    var online = true
+    var pacer = ReconnectPacer(maxRetries: retryCase.maxRetries, online: true)
     for step in retryCase.steps {
       switch step.event {
       case .load:
         budget.loadStarted(atMs: step.at)
         pacer.reset()
-      case .intentUp:
-        budget.playIntentChanged(true, atMs: step.at)
-        pacer.reset()
-      case .intentDown: budget.playIntentChanged(false, atMs: step.at)
+      case .intentUp, .intentDown:
+        budget.playIntentChanged(step.event == .intentUp, atMs: step.at)
+        pacer.playIntentChanged(step.event == .intentUp)
       case .audioStarts: budget.audioStarted(atMs: step.at)
       case .audioStops: budget.audioStopped(atMs: step.at)
-      case .offline:
-        online = false
-        budget.onlineChanged(false)
-      case .online:
-        online = true
-        budget.onlineChanged(true)
-        pacer.networkReturned()
+      case .offline, .online:
+        budget.onlineChanged(step.event == .online)
+        pacer.onlineChanged(step.event == .online)
       case .ended:
         let delivered = try #require(step.delivered)
         let startedAt = try #require(step.startedAt)
         budget.connectionEnded(atMs: step.at)
-        pacer.connectionEnded(deliveredAudio: delivered == .audio, startedAtMs: startedAt, atMs: step.at, online: online)
+        pacer.connectionEnded(deliveredAudio: delivered == .audio, startedAtMs: startedAt, atMs: step.at)
       }
       #expect(budget.deadlineMs == step.deadline, "deadline at \(step.at) (\(step.event))")
       if let wait = step.wait {
-        #expect(pacer.wait(atMs: step.at, online: online) == wait, "wait at \(step.at) (\(step.event))")
+        #expect(pacer.wait(atMs: step.at) == wait, "wait at \(step.at) (\(step.event))")
       }
     }
   }
