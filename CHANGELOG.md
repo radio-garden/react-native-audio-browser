@@ -1,3 +1,9 @@
+## [0.2.0-next.78](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.77...v0.2.0-next.78) (2026-11-10)
+
+### Bug Fixes
+
+* **android:** show a stream's title again after a stop and play ([c789b86](https://github.com/radio-garden/react-native-audio-browser/commit/c789b8632c9d13ef812c3cf6967e1be4e059f60e))
+
 ## [0.2.0-next.77](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.76...v0.2.0-next.77) (2026-11-10)
 
 ### Bug Fixes
