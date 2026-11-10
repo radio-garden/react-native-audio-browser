@@ -132,7 +132,7 @@ class RetryLoadErrorHandlingPolicy(
         }
 
       Timber.d(
-        "Retrying after IO error (attempt $errorCount, delay ${delay}ms, offline=$currentlyOffline): ${exception.message}"
+        "Retrying after IO error (load error $errorCount, delay ${delay}ms unless deferred, offline=$currentlyOffline): ${exception.message}"
       )
 
       onRetryPending?.invoke(exception)
