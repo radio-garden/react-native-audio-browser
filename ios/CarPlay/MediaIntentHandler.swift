@@ -23,8 +23,13 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     Self.logger.info("Play media intent — query=\(criteria.query) matchesApp=\(criteria.matchesAppName) resume=\(criteria.isResume)")
 
     Task { @MainActor in
-      let success = await MediaIntentPlayback.play(criteria: criteria)
-      completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
+      let success = await withDeadline(MediaIntentPlayback.budget) { deadline in
+        await MediaIntentPlayback.play(criteria: criteria, deadline: deadline)
+      }
+      if success == nil {
+        Self.logger.error("Play media intent — no answer within \(MediaIntentPlayback.budget)")
+      }
+      completion(INPlayMediaIntentResponse(code: success == true ? .success : .failure, userActivity: nil))
     }
   }
 

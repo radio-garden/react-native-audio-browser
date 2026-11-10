@@ -72,6 +72,7 @@ let package = Package(
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/SupersedingTask.swift",
+        "Util/Deadline.swift",
         "Util/AwaitCallback.swift",
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
