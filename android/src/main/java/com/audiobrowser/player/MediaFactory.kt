@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -75,10 +76,14 @@ class MediaFactory(
         )
     }
 
-  private val mediaFactory =
-    DefaultMediaSourceFactory(context, extractorsFactory).apply {
+  private fun mediaSourceFactory(extractors: ExtractorsFactory) =
+    DefaultMediaSourceFactory(context, extractors).apply {
       customRetryPolicy?.let { setLoadErrorHandlingPolicy(it) }
     }
+
+  private val mediaFactory = mediaSourceFactory(extractorsFactory)
+
+  private val liveMediaFactory = mediaSourceFactory(LiveStreamExtractor.Factory(extractorsFactory))
 
   /** Restarts the retry policy's time budgets. */
   fun resetRetryTimer() {
@@ -88,12 +93,14 @@ class MediaFactory(
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider
   ): MediaSource.Factory {
+    liveMediaFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
     return mediaFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
   }
 
   override fun setLoadErrorHandlingPolicy(
     loadErrorHandlingPolicy: LoadErrorHandlingPolicy
   ): MediaSource.Factory {
+    liveMediaFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
     return mediaFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
   }
 
@@ -132,6 +139,8 @@ class MediaFactory(
           .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
       } ?: transformingFactory
 
-    return mediaFactory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+    return (if (track.live == true) liveMediaFactory else mediaFactory)
+      .setDataSourceFactory(dataSourceFactory)
+      .createMediaSource(mediaItem)
   }
 }
