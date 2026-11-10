@@ -402,13 +402,14 @@ final class Player {
 
   func stop() {
     // A pending retry would turn the stop into .error, and the next play must start over rather
-    // than resume where it failed.
+    // than resume where it failed. Cancelled first, or the lowered intent parks it for a reload.
     retry.cancel()
     load?.reloadOnPlay = false
     shouldResumeAfterInterruption = false
     engine.clearTimedMetadata()
-    transition(.stopped)
+    // Before the transition, whose render the formatter reads the intent from.
     setPlayWhenReady(false)
+    transition(.stopped)
     deferredSeek.reset()
     if currentTrack?.live != true { seek(to: 0) }
   }
