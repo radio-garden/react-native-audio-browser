@@ -49,4 +49,8 @@ extension PlaybackState {
   var carriesAdvisoryError: Bool {
     self == .loading || self == .buffering || self == .paused
   }
+
+  var awaitsData: Bool {
+    self == .loading || self == .buffering
+  }
 }

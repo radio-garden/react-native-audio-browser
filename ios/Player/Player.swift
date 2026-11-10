@@ -192,8 +192,9 @@ final class Player {
     if !newValue { engine.pause() } else if state != .loading { engine.play() }
 
     guard changed else { return }
-    // A resume can find the state still .buffering (a pause near the end leaves it), with no watch.
-    if newValue, state == .buffering { retry.startStallWatch() }
+    // A resume can find the state still .buffering (a pause near the end leaves it) or .loading,
+    // with no transition to start the watch.
+    if newValue, state.awaitsData { retry.startStallWatch() }
     // Left to run, the retry would give up on the dropped intent and surface .error.
     if !newValue, retry.pendingTask != nil { parkForReloadOnPlay() }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
@@ -262,7 +263,11 @@ final class Player {
     retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
     retry.onFailedWithoutIntent = { [weak self] in self?.parkForReloadOnPlay() }
     retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
-    retry.bufferedPosition = { [weak self] in self?.engine.bufferedPosition ?? 0 }
+    // Until the connect's item is prepared, the engine still holds the item it replaces.
+    retry.bufferedPosition = { [weak self] in
+      guard let self, connectionItemPrepared else { return 0 }
+      return engine.bufferedPosition
+    }
   }
 
   /// Shows a failure the retry loop is still working on over the current state: not a
@@ -353,9 +358,10 @@ final class Player {
     } else if old == .playing {
       retry.playbackStoppedBeingAudible()
     }
+    // A reload within .loading is no transition: the retry loop watches each connect itself.
     if new == .buffering, playWhenReady {
       retry.startStallWatch()
-    } else if old == .buffering {
+    } else if old.awaitsData, !new.awaitsData {
       retry.stopStallWatch()
     }
 
@@ -633,8 +639,7 @@ final class Player {
       persistence.save()
 
       if let src = currentTrack.src {
-        retry.connectionStarted()
-        engine.resolveAndLoad(src: src, track: currentTrack)
+        connect(src: src, track: currentTrack)
       } else {
         logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
         engine.clearItem()
@@ -738,6 +743,13 @@ final class Player {
       return
     }
     prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
+    connect(src: src, track: track)
+  }
+
+  private var connectionItemPrepared = false
+
+  private func connect(src: String, track: Track) {
+    connectionItemPrepared = false
     retry.connectionStarted()
     engine.resolveAndLoad(src: src, track: track)
   }
@@ -805,6 +817,7 @@ final class Player {
     switch event {
     case let .itemPrepared(likelyToKeepUp):
       load?.itemPrepared = true
+      connectionItemPrepared = true
       if playWhenReady { engine.play() }
       if !beginDeferredSeek(), likelyToKeepUp { bufferBecameSufficient() }
     case let .loadFailed(error):
@@ -832,7 +845,7 @@ final class Player {
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:
-      // A nudge only: this also arrives while audio plays, so the stall watch keys on .buffering.
+      // A nudge only: this also arrives while audio plays, so the stall watch keys on the state.
       if playWhenReady, state != .error { engine.play() }
     case let .timedMetadata(metadata):
       callbacks?.playerDidReceiveTimedMetadata(metadata)

@@ -84,10 +84,11 @@ final class RetryLoop {
   /// The retry in flight; session release waits while there is one.
   private(set) var pendingTask: Task<Void, Never>?
 
-  /// How long a stall may go without new data before it counts as a failure; longer than AVPlayer
-  /// takes to fail a stalled item itself, so its error, which says more, is the one usually retried.
+  /// How long a connect or a stall may go without new data before it counts as a failure. Longer
+  /// than AVPlayer takes to fail a stalled item itself, so its error, which says more, is usually
+  /// the one retried; a connect's request can outlast it.
   var stallTimeout: Duration = .seconds(30)
-  /// The end of the loaded range; the stall watch reads progress off it.
+  /// The end of the current connection's loaded range; the stall watch reads progress off it.
   var bufferedPosition: () -> Double = { 0 }
   private(set) var stallTask: Task<Void, Never>?
 
@@ -145,7 +146,8 @@ final class RetryLoop {
 
   /// A connect going out: the Load's first, a reconnect, or a reload by the Player, which ends the
   /// connection it replaces. A replaced connection counts only if it delivered audio: one cut off
-  /// while connecting says nothing about the source.
+  /// while connecting says nothing about the source. With the play intent up, the stall watch runs
+  /// from the start, so a connect that opens and sends nothing is replaced (docs/adr/0014, rule 9).
   func connectionStarted() {
     let now = clock.nowMs
     if let startedAtMs = connectionStartedAtMs, replacedConnectionCounts, connectionDeliveredAudio, !connectionEndReported {
@@ -157,6 +159,7 @@ final class RetryLoop {
     connectionEndReported = false
     deadlineArmed = true
     armDeadline()
+    if playIntent { startStallWatch() }
   }
 
   func playIntentChanged(_ up: Bool) {
@@ -181,6 +184,7 @@ final class RetryLoop {
   /// Audio clears the failure the deadline would report: a silence after it that ends with no
   /// failure is a stall.
   func playbackBecameAudible() {
+    stopStallWatch()
     connectionDeliveredAudio = true
     lastFailure = nil
     budget.audioStarted(atMs: clock.nowMs)
@@ -304,14 +308,14 @@ final class RetryLoop {
 
   // MARK: - Stalls
 
-  /// Starts the stall watch: a `stallTimeout` in which `bufferedPosition` does not advance makes
-  /// the stall a `.stall` failure, provided the play intent holds and no retry is pending; one in
-  /// which it advances starts another. Any failure ends it.
+  /// Starts the stall watch, over a connect or a stall: a `stallTimeout` in which `bufferedPosition`
+  /// does not advance makes it a `.stall` failure, provided the play intent holds and no retry is
+  /// pending; one in which it advances starts another. Any failure ends it.
   func startStallWatch() {
     stallTask?.cancel()
     let buffered = bufferedPosition()
-    stallTask = Task { [weak self, stallTimeout] in
-      try? await Task.sleep(for: stallTimeout)
+    stallTask = Task { [weak self, clock, stallTimeout] in
+      guard await (try? clock.sleep(ms: Int(stallTimeout / .milliseconds(1)))) != nil else { return }
       guard let self, !Task.isCancelled else { return }
       stallTask = nil
       if bufferedPosition() > buffered { return startStallWatch() }
