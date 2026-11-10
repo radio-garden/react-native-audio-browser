@@ -30,7 +30,7 @@ final class CarPlayNowPlayingManager {
 
   /// Resolved on track change, not on tap, so the album line shows only when a destination exists.
   private var albumArtistDestination: String?
-  private let albumPathResolution = SupersedingTask<String, String?>()
+  private let albumPathResolution = SupersedingTask<String, String>()
   /// The tapped track while its load runs, which wins over `currentTrack`: CarPlay reads
   /// `isAlbumArtistButtonEnabled` only when Now Playing is displayed, and that push comes first.
   private var pendingAlbumArtistTrack: Track?

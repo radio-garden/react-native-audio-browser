@@ -11,10 +11,10 @@ struct SupersedingTaskTests {
     var started = 0
     var cancelled = 0
 
-    func run() async throws -> Int {
+    func run() async throws -> Int? {
       started += 1
       do {
-        return try await awaitCallback { (_: @escaping @Sendable (Result<Int, Error>) -> Void) in }
+        return try await awaitCallback { (_: @escaping @Sendable (Result<Int?, Error>) -> Void) in }
       } catch {
         if error is CancellationError { cancelled += 1 }
         throw error
@@ -32,7 +32,7 @@ struct SupersedingTaskTests {
   @Test func aNewRunCancelsTheSilentOneBefore() async {
     let task = SupersedingTask<String, Int>()
     let work = SilentWork()
-    var delivered: [Result<Int, Error>] = []
+    var delivered: [Result<Int?, Error>] = []
     task.run(key: nil) { try await work.run() } deliver: { delivered.append($0) }
     await yieldUntil { work.started == 1 }
     task.run(key: nil) { try await work.run() } deliver: { delivered.append($0) }
@@ -60,7 +60,7 @@ struct SupersedingTaskTests {
   @Test func deliversOnlyTheLatestResult() async {
     let task = SupersedingTask<String, Int>()
     var resumeFirst: CheckedContinuation<Void, Never>?
-    var delivered: [Int] = []
+    var delivered: [Int?] = []
     task.run(key: nil) {
       // Ignores cancellation, so its answer arrives after it was superseded.
       await withCheckedContinuation { resumeFirst = $0 }
@@ -91,7 +91,7 @@ struct SupersedingTaskTests {
   @Test func aDeliveredKeyIsSkippedUntilCancel() async {
     let task = SupersedingTask<String, Int>()
     var runs = 0
-    var delivered: [Int] = []
+    var delivered: [Int?] = []
     task.run(key: "a") { runs += 1; return 1 } deliver: { delivered.append(try! $0.get()) }
     await yieldUntil { delivered == [1] }
     task.run(key: "a") { runs += 1; return 2 } deliver: { delivered.append(try! $0.get()) }
@@ -112,6 +112,16 @@ struct SupersedingTaskTests {
     var failed = false
     task.run(key: "a") { runs += 1; throw Failure() } deliver: { _ in failed = true }
     await yieldUntil { failed }
+    task.run(key: "a") { runs += 1; return 1 } deliver: { _ in }
+    await yieldUntil { runs == 2 }
+  }
+
+  @Test func aNilAnswerRunsAgain() async {
+    let task = SupersedingTask<String, Int>()
+    var runs = 0
+    var answered = false
+    task.run(key: "a") { runs += 1; return nil } deliver: { _ in answered = true }
+    await yieldUntil { answered }
     task.run(key: "a") { runs += 1; return 1 } deliver: { _ in }
     await yieldUntil { runs == 2 }
   }

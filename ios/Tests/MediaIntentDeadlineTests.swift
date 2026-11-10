@@ -2,8 +2,9 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-/// The Siri play-media intent's search under `withDeadline`, as `MediaIntentHandler` runs it: the
-/// work plays only while not cancelled, as `MediaIntentPlayback.livePlayer(of:)` allows. A search
+/// The Siri play-media intent's search under `withDeadline`, as `MediaIntentHandler` runs it. The
+/// work's own cancellation guard stands in for `MediaIntentPlayback.livePlayer(of:)`, which needs
+/// the bridge and is not compiled here. A search
 /// answering in the same main-actor turn as the deadline is not covered: `withDeadline` settles both
 /// on the main actor, cancelling before it answers nil.
 @MainActor
