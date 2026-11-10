@@ -30,6 +30,8 @@ let package = Package(
         "Player/ErrorStatus.swift",
         "Player/NowPlayingLines.swift",
         "Player/RetryLoop.swift",
+        "Player/SilenceBudget.swift",
+        "Player/ReconnectPacer.swift",
         "Player/PlaybackStateMachine.swift",
         "Player/PlayerStatusTypes.swift",
         "Player/AirPlayStallJudgement.swift",
