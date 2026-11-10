@@ -3,6 +3,8 @@ package com.audiobrowser.player
 import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.util.Util
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
@@ -52,6 +54,59 @@ class PlayerSetupEndedTest {
   }
 
   @Test
+  fun `a session play after a rebuild in ENDED restarts`() {
+    endAndRebuild()
+
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `prepare after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.prepare()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `next at the end after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.next()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.previous()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a session skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.forwardingPlayer.seekToPreviousMediaItem()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
   fun `a play after a rebuild in ENDED keeps a seek`() {
     endAndRebuild()
 
@@ -61,20 +116,29 @@ class PlayerSetupEndedTest {
     assertEquals(200L, player.exoPlayer.currentPosition)
   }
 
-  private fun endAndRebuild() {
-    player.setup(PlayerSetupOptions())
-    player.setCallbacks(callbacks)
-    disableAudio()
-    player.exoPlayer.setMediaItems(
-      listOf(
-        TrackFactory.toMedia3(
-          TestFixtures.track(title = "a", src = Uri.fromFile(silentWav()).toString())
-        )
-      )
-    )
-    player.exoPlayer.prepare()
+  @Test
+  fun `a session play after a session stop on an ended queue restarts`() {
+    end()
+    player.forwardingPlayer.stop()
+
+    // What media3 runs for a controller's play.
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a play after a stop on an ended queue restarts`() {
+    end()
+    player.stop()
+
     player.play()
-    idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  private fun endAndRebuild(tracks: Int = 1) {
+    end(tracks)
 
     val before = states().size
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
@@ -82,6 +146,19 @@ class PlayerSetupEndedTest {
     idleFor(2)
     assertEquals(emptyList<PlaybackState>(), states().drop(before))
     assertEquals(PlaybackState.ENDED, player.playbackState)
+  }
+
+  private fun end(tracks: Int = 1) {
+    player.setup(PlayerSetupOptions())
+    player.setCallbacks(callbacks)
+    disableAudio()
+    val src = Uri.fromFile(silentWav()).toString()
+    player.exoPlayer.setMediaItems(
+      List(tracks) { TrackFactory.toMedia3(TestFixtures.track(title = "$it", src = src)) }
+    )
+    player.exoPlayer.prepare()
+    player.play()
+    idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
   }
 
   private fun states() =

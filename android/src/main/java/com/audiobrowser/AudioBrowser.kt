@@ -1159,7 +1159,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       pendingRepeatMode = null
     }
     pendingPlayWhenReady?.let {
-      player.playWhenReady = it
+      player.applySetupPlayWhenReady(it)
       pendingPlayWhenReady = null
     }
   }

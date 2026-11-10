@@ -75,9 +75,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
-/** The states the session reads as paused on an idle engine, once a rebuild drops its error. */
-private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
-
 @SuppressLint("RestrictedApi")
 class Player
 internal constructor(
@@ -305,17 +302,26 @@ internal constructor(
   var playWhenReady: Boolean
     get() = sessionPlayer.playWhenReady
     set(value) {
-      // ExoPlayer's setPlayWhenReady(true) never restarts an ended player (media3 replays only on
-      // its media-button path). Here in the setter so every writer replays: play(),
-      // togglePlayback(), JS.
+      // ExoPlayer's setPlayWhenReady(true) neither restarts an ended engine (media3 replays only on
+      // its media-button path) nor loads an idle one. Here in the setter so every writer plays
+      // alike: play(), togglePlayback(), JS, the session.
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
-      } else if (value && playbackState == PlaybackState.ENDED) {
-        // A rebuild carries an ended engine idle, at its start or where a seek since left it.
-        sessionPlayer.prepare()
       }
       sessionPlayer.playWhenReady = value
+      // No-op unless the engine is idle, so this reconnects only after a stop, an error, a
+      // cancelled retry or a rebuild, and never re-buffers a healthy stream. Reconnecting is also
+      // how a live stream rejoins its live edge.
+      if (value && currentTrack != null) sessionPlayer.prepare()
     }
+
+  /**
+   * The intent a setup carries, raised without loading: a setup repeats, as on a JS reload, and
+   * would otherwise start a stopped or failed queue. A play loads.
+   */
+  internal fun applySetupPlayWhenReady(value: Boolean) {
+    sessionPlayer.playWhenReady = value
+  }
 
   val duration: Long
     get() = if (sessionPlayer.duration == C.TIME_UNSET) 0 else sessionPlayer.duration
@@ -538,7 +544,8 @@ internal constructor(
         { callbacks },
         { options },
         keepSessionAliveOnError,
-        isParked = { playbackState in PARKED_STATES },
+        playerState = { playbackState },
+        playPlayer = ::play,
         stopPlayer = ::stop,
       )
     forwardingPlayer.addListener(playerListener)
@@ -619,13 +626,18 @@ internal constructor(
     if (removesCurrent && playWhenReady) prepare()
   }
 
-  fun next() {
-    sessionPlayer.seekToNextMediaItem()
-    sessionPlayer.prepare()
-  }
+  fun next() = loadAfter { sessionPlayer.seekToNextMediaItem() }
 
-  fun previous() {
-    sessionPlayer.seekToPreviousMediaItem()
+  fun previous() = loadAfter { sessionPlayer.seekToPreviousMediaItem() }
+
+  /**
+   * Runs [move] and prepares an idle engine, unless the queue ended and stays where it was: a
+   * rebuild carries an ended engine idle, and it stays ended as an ended engine does.
+   */
+  private inline fun loadAfter(move: () -> Unit) {
+    val index = sessionPlayer.currentMediaItemIndex
+    move()
+    if (playbackState == PlaybackState.ENDED && sessionPlayer.currentMediaItemIndex == index) return
     sessionPlayer.prepare()
   }
 
@@ -886,13 +898,7 @@ internal constructor(
   }
 
   fun play() {
-    // Through the setter for its replay of an ended player.
     playWhenReady = true
-    if (currentTrack != null) {
-      // No-op unless the player is idle, so this reconnects only after stop() or an error and never
-      // re-buffers a healthy stream. Reconnecting is also how a live stream rejoins its live edge.
-      sessionPlayer.prepare()
-    }
   }
 
   /**
@@ -946,10 +952,9 @@ internal constructor(
     }
   }
 
+  /** An ended queue stays ended, as on an ended engine. */
   fun prepare() {
-    if (currentTrack != null) {
-      sessionPlayer.prepare()
-    }
+    if (currentTrack != null && playbackState != PlaybackState.ENDED) sessionPlayer.prepare()
   }
 
   fun pause() {
@@ -970,8 +975,11 @@ internal constructor(
   fun stop() {
     // State first, so the state machine's STOPPED guard swallows the PAUSED the drop below causes.
     setPlaybackState(PlaybackState.STOPPED)
+    val ended = sessionPlayer.playbackState == MediaPlayer.STATE_ENDED
     playWhenReady = false
     sessionPlayer.stop()
+    // Idle at its end, the next prepare would end it again at once.
+    if (ended) sessionPlayer.seekToDefaultPosition()
   }
 
   fun clear() {
@@ -1094,9 +1102,7 @@ internal constructor(
       playbackState = state
 
       if (state == PlaybackState.PLAYING) hasPlayedCache = true
-      if ((oldState in PARKED_STATES) != (state in PARKED_STATES)) {
-        forwardingPlayer.onParkedChanged()
-      }
+      forwardingPlayer.onStateChanged(oldState)
       if (state == PlaybackState.ERROR) resetForNewLoad()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and
