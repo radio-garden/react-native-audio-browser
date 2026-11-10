@@ -29,7 +29,7 @@
     "ios:release": "react-native run-ios --simulator='iPhone 16' --scheme \"AudioBrowserExample (Release)\" --mode Release",
     "ios": "react-native run-ios --simulator='iPhone 16' --scheme \"AudioBrowserExample (Debug)\" --mode Debug",
     "lint": "oxlint --fix",
-    "pod": "bundle install && bundle exec pod install --project-directory=ios",
+    "pod": "pod install --project-directory=ios",
     "start": "react-native start --reset-cache",
     "types": "tsc --noEmit true"
   },
