@@ -30,8 +30,7 @@ final class CarPlayNowPlayingManager {
 
   /// Resolved on track change, not on tap, so the album line shows only when a destination exists.
   private var albumArtistDestination: String?
-  /// Drops a `resolveAlbumPath` result that finishes after the track changed.
-  private var albumArtistGeneration: UInt = 0
+  private let albumPathResolution = SupersedingTask<String?>()
   /// The tapped track while its load runs, which wins over `currentTrack`: CarPlay reads
   /// `isAlbumArtistButtonEnabled` only when Now Playing is displayed, and that push comes first.
   private var pendingAlbumArtistTrack: Track?
@@ -84,7 +83,7 @@ final class CarPlayNowPlayingManager {
     subscriptions = []
     pendingAlbumArtistTrack = nil
     // A resolve in flight must not set the shared template for the next session.
-    albumArtistGeneration &+= 1
+    albumPathResolution.cancel()
   }
 
   func refresh() {
@@ -182,8 +181,7 @@ final class CarPlayNowPlayingManager {
   // MARK: - Album Line
 
   private func updateAlbumArtistDestination() {
-    albumArtistGeneration &+= 1
-    let generation = albumArtistGeneration
+    albumPathResolution.cancel()
 
     guard let track = pendingAlbumArtistTrack ?? player?.currentTrack else {
       logger.debug("AlbumArtist: no current track → disabled")
@@ -199,16 +197,14 @@ final class CarPlayNowPlayingManager {
       setAlbumArtistDestination(nil)
       return
     }
-    Task { @MainActor [weak self] in
-      let path: String?
-      do {
-        path = try await resolver(track).awaitCancellable()
-      } catch {
-        self?.logger.error("resolveAlbumPath failed: \(error.localizedDescription)")
-        path = nil
+    albumPathResolution.run {
+      try await resolver(track).awaitCancellable()
+    } deliver: { [weak self] result in
+      guard let self else { return }
+      if case let .failure(error) = result {
+        logger.error("resolveAlbumPath failed: \(error.localizedDescription)")
       }
-      guard let self, self.albumArtistGeneration == generation else { return }
-      self.setAlbumArtistDestination(path)
+      setAlbumArtistDestination(try? result.get())
     }
   }
 
