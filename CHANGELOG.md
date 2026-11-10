@@ -1,3 +1,10 @@
+## [0.2.0-next.83](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.82...v0.2.0-next.83) (2026-11-10)
+
+### Bug Fixes
+
+* **ios:** render a stop with the play intent down ([e5a3f25](https://github.com/radio-garden/react-native-audio-browser/commit/e5a3f25123e2c2a2a70d448a368980849f84d1b1))
+* **ios:** replace a connect that opens and sends nothing ([7e5dd30](https://github.com/radio-garden/react-native-audio-browser/commit/7e5dd309736a28c473ce12381e76cb13e45998b5))
+
 ## [0.2.0-next.82](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.81...v0.2.0-next.82) (2026-11-10)
 
 ### Bug Fixes
