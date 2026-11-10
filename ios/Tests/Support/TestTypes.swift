@@ -136,6 +136,10 @@ final class MockPlayerEngine: PlayerEngine {
     onSeamCall?("applyTimedMetadata")
   }
 
+  func clearTimedMetadata() {
+    onSeamCall?("clearTimedMetadata")
+  }
+
   func activateAudioSession() {
     activateAudioSessionCount += 1
     onSeamCall?("activateAudioSession")

@@ -236,6 +236,10 @@ final class AVPlayerEngine: PlayerEngine {
     nowPlayingUpdater.receivedTimedMetadata(metadata)
   }
 
+  func clearTimedMetadata() {
+    nowPlayingUpdater.clearTimedMetadata()
+  }
+
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     remoteCommandController.updateRepeatMode(mode)
   }

@@ -394,6 +394,7 @@ final class Player {
     retry.cancel()
     load?.reloadOnPlay = false
     shouldResumeAfterInterruption = false
+    engine.clearTimedMetadata()
     transition(.stopped)
     setPlayWhenReady(false)
     deferredSeek.reset()

@@ -1624,6 +1624,57 @@ struct MediaStackEffectTests {
     #expect(cb.timedMetadata == [metadata])
     #expect(eh.appliedTimedMetadata == [metadata])
   }
+
+  @Test @MainActor
+  func stop_clearsTheStreamTitleBeforeRendering() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    c.stop()
+
+    let cleared = try #require(cb.publishOrder.firstIndex(of: "clearTimedMetadata"))
+    #expect(try cleared < #require(cb.publishOrder.firstIndex(of: "renderNowPlaying")))
+  }
+
+  @Test @MainActor
+  func pause_keepsTheStreamTitle() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    c.pause()
+
+    #expect(!cb.publishOrder.contains("clearTimedMetadata"))
+  }
+
+  @Test @MainActor
+  func trackEnd_keepsTheStreamTitle() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    eh.emit(.playedToEnd)
+
+    #expect(c.state == .ended)
+    #expect(!cb.publishOrder.contains("clearTimedMetadata"))
+  }
+
+  /// The stream resends its current title after the reload; nothing may drop it as unchanged.
+  @Test @MainActor
+  func stopThenPlay_appliesTheSameTitleAgain() throws {
+    let (c, eh, cb) = makeTraced()
+    let metadata = TimedMetadata(title: "Song", artist: "Artist")
+    try startPlaying(c, eh)
+    eh.emit(.timedMetadata(metadata))
+
+    c.stop()
+    c.play()
+    eh.emit(.timedMetadata(metadata))
+
+    #expect(eh.appliedTimedMetadata == [metadata, metadata])
+    #expect(cb.timedMetadata == [metadata, metadata])
+  }
 }
 
 @Suite("Player - now-playing preview")
