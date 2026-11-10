@@ -1,40 +1,61 @@
 package com.audiobrowser.player
 
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
- * With `keepAlive`, a terminal error (idle with an error, or in ERROR once a rebuild dropped it) or
- * a pause that cancelled a retry (idle in PAUSED) reads as paused and ready to the platform session
- * rather than STATE_NONE, which Android Auto takes for "nothing playing": it closes the now-playing
- * screen and its next/previous buttons with it.
+ * What the platform session reads of an idle engine. Android Auto takes STATE_IDLE for "nothing
+ * playing": it closes the now-playing screen and its next/previous buttons with it. So an ended
+ * queue reads ended, as on an ended engine (a rebuild carries an ended engine idle), and with
+ * `keepAlive` a terminal error (the engine's, or ERROR once a rebuild dropped it) and a pause that
+ * cancelled a retry (PAUSED) read as paused and ready.
  */
-internal object SessionErrorMask {
-  fun playbackState(state: Int, hasError: Boolean, keepAlive: Boolean): Int =
-    if (keepAlive && state == MediaPlayer.STATE_IDLE && hasError) MediaPlayer.STATE_READY else state
+internal object SessionView {
+  private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
+  private val SETTLED_STATES = setOf(PlaybackState.STOPPED, PlaybackState.NONE)
 
-  fun playWhenReady(raw: Boolean, state: Int, hasError: Boolean, keepAlive: Boolean): Boolean =
-    if (keepAlive && state == MediaPlayer.STATE_IDLE && hasError) false else raw
+  fun playbackState(
+    engineState: Int,
+    state: PlaybackState,
+    engineFailed: Boolean,
+    keepAlive: Boolean,
+  ): Int =
+    when {
+      engineState != MediaPlayer.STATE_IDLE -> engineState
+      state == PlaybackState.ENDED -> MediaPlayer.STATE_ENDED
+      !keepAlive -> engineState
+      state in PARKED_STATES -> MediaPlayer.STATE_READY
+      // The engine keeps its error through a stop or an emptied queue, until its next prepare. It
+      // counts until the player's state reaches ERROR, which follows the engine's IDLE event.
+      engineFailed && state !in SETTLED_STATES -> MediaPlayer.STATE_READY
+      else -> engineState
+    }
+
+  /** An idle engine read as anything else isn't loading, so it can't be about to play. */
+  fun playWhenReady(raw: Boolean, engineState: Int, view: Int): Boolean =
+    raw && (engineState != MediaPlayer.STATE_IDLE || view == MediaPlayer.STATE_IDLE)
 }
 
 /**
  * The player the MediaSession sees. Offers each transport command from an external surface (lock
  * screen, notification, Bluetooth, Android Auto) to the app's `handleRemote*` callback first: true
- * consumes it, anything else runs the default. Masks a terminal error and a cancelled retry from
- * the session (see [SessionErrorMask]); the error still reaches JS through `onPlaybackError` and
- * `playbackState`.
+ * consumes it, anything else runs the default. Shows the session the [SessionView] of an idle
+ * engine; the error still reaches JS through `onPlaybackError` and `playbackState`.
  */
 internal class InterceptingPlayer(
   player: MediaPlayer,
   private val callbacksProvider: () -> Callbacks?,
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
-  private val isParked: () -> Boolean,
+  private val playerState: () -> PlaybackState,
+  private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
@@ -50,40 +71,50 @@ internal class InterceptingPlayer(
     super.removeListener(listener)
   }
 
-  /** Call when [isParked] changes: on an idle engine the masked state moves with no event. */
-  fun onParkedChanged() {
-    if (keepSessionAliveOnError && super.getPlaybackState() == MediaPlayer.STATE_IDLE) {
-      listeners.toList().forEach { it.onPlaybackStateChanged(playbackState) }
-    }
+  /**
+   * Call when the player's state changes from [old]: on an idle engine the view can move with no
+   * engine event.
+   */
+  fun onStateChanged(old: PlaybackState) {
+    val view = playbackState
+    val was =
+      SessionView.playbackState(
+        super.getPlaybackState(),
+        old,
+        engineFailed,
+        keepSessionAliveOnError,
+      )
+    if (view != was) listeners.toList().forEach { it.onPlaybackStateChanged(view) }
   }
-
-  private val parked: Boolean
-    get() = super.getPlayerError() != null || isParked()
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
   // show as a disruptive error. Hidden whatever keepSessionAliveOnError says.
-  override fun getPlayerError(): androidx.media3.common.PlaybackException? = null
+  override fun getPlayerError(): PlaybackException? = null
 
-  // The masks read super's error: this player's getPlayerError() is always null.
+  private val engineFailed: Boolean
+    get() = super.getPlayerError() != null
+
   override fun getPlaybackState(): Int =
-    SessionErrorMask.playbackState(
+    SessionView.playbackState(
       super.getPlaybackState(),
-      hasError = parked,
-      keepAlive = keepSessionAliveOnError,
+      playerState(),
+      engineFailed,
+      keepSessionAliveOnError,
     )
 
   override fun getPlayWhenReady(): Boolean =
-    SessionErrorMask.playWhenReady(
-      super.getPlayWhenReady(),
-      super.getPlaybackState(),
-      hasError = parked,
-      keepAlive = keepSessionAliveOnError,
-    )
+    SessionView.playWhenReady(super.getPlayWhenReady(), super.getPlaybackState(), playbackState)
 
-  // After a terminal error or a cancelled retry the player is idle, and the default play/skip only
-  // move playWhenReady or the index; prepare() restarts it. prepare() is a no-op unless idle.
-  private fun recoverFromErrorIfNeeded() {
-    if (keepSessionAliveOnError && parked) {
+  // After a terminal error, a cancelled retry or a rebuild in ENDED the engine is idle, and the
+  // default skips only move the index. An ended queue that stayed put stays ended, as on an ended
+  // engine.
+  private fun loadIdleEngine(fromIndex: Int) {
+    if (super.getPlaybackState() != MediaPlayer.STATE_IDLE) return
+    val view = playbackState
+    if (
+      view == MediaPlayer.STATE_READY ||
+        view == MediaPlayer.STATE_ENDED && currentMediaItemIndex != fromIndex
+    ) {
       prepare()
     }
   }
@@ -94,11 +125,12 @@ internal class InterceptingPlayer(
     fallback: () -> Unit,
   ) {
     if (callbacksProvider()?.let(handler) == true) return
+    val index = currentMediaItemIndex
     fallback()
-    if (recover) recoverFromErrorIfNeeded()
+    if (recover) loadIdleEngine(index)
   }
 
-  override fun play() = intercept({ it.handleRemotePlay() }, recover = true) { super.play() }
+  override fun play() = intercept({ it.handleRemotePlay() }) { playPlayer() }
 
   override fun pause() = intercept({ it.handleRemotePause() }) { super.pause() }
 
