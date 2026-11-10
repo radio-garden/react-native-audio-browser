@@ -62,6 +62,11 @@ final class NowPlayingUpdater {
     render()
   }
 
+  /// The caller renders.
+  func clearTimedMetadata() {
+    timedMetadata = nil
+  }
+
   func trackChanged() {
     override = nil
     cancelFlash()

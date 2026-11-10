@@ -91,6 +91,8 @@ enum EngineEvent {
   /// render.
   func nowPlayingTrackChanged()
   func applyTimedMetadata(_ metadata: TimedMetadata)
+  /// Drops the stream's title, so the next render shows the track's own lines.
+  func clearTimedMetadata()
   func updateRemoteRepeatMode(_ mode: RepeatMode)
   func updateRemoteShuffleMode(_ enabled: Bool)
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool)
