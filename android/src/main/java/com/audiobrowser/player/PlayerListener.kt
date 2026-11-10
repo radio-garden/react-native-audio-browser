@@ -232,11 +232,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         player.setPlaybackState(state)
       }
     }
-    // The session's controllers took the engine's own state and error from these events; within
-    // this turn, before the session sends them on, they get the loop's view instead.
-    val engineState = player.sessionPlayer.playbackState
-    if (local && (player.retryView(engineState) != engineState || player.retryMasksPlaying))
-      player.forwardingPlayer.republishView(this)
+    // The retry loop's state moved with these events, after the session's listeners heard them.
+    player.forwardingPlayer.refreshViews()
   }
 
   override fun onPlayerError(error: PlaybackException) {

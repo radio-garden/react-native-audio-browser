@@ -205,7 +205,10 @@ nothing, so a stream that played and dropped reconnects once more than it.
 On Android, a failure that media3 can resume within its connection, an HLS
 segment or playlist and a file whose length the server declared, is retried in
 place with the same backoff and keeps the buffered audio playing. It is not a
-connection: only the duration budgets bound it.
+connection, so the rules above for connections don't hold for it: only the
+duration budgets bound it, it keeps retrying every few seconds while offline,
+it waits out its backoff once the network returns, and its loads can start
+less than 1 s apart.
 
 Once a budget is exhausted the state lands on `'error'`, where your
 `PlaybackErrorView` and [`retry()`](#manual-retry) take over.

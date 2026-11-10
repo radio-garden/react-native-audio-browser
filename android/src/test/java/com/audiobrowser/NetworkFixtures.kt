@@ -8,8 +8,9 @@ import org.robolectric.shadows.ShadowNetwork
 import org.robolectric.shadows.ShadowNetworkCapabilities
 
 /**
- * Brings Robolectric's network up, validated, for every connectivity monitor already registered.
- * Robolectric starts offline, where the retry loop waits for the network instead of failing.
+ * Brings Robolectric's network up, with internet, for every connectivity monitor already
+ * registered. Robolectric starts offline, where the retry loop waits for the network instead of
+ * failing.
  */
 fun goOnline(context: Context) {
   val connectivity =
@@ -18,7 +19,6 @@ fun goOnline(context: Context) {
   val capabilities =
     ShadowNetworkCapabilities.newInstance().also {
       shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-      shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
   connectivity.setNetworkCapabilities(wifi, capabilities)
   connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }

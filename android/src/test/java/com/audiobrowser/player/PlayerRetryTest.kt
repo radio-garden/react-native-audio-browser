@@ -15,6 +15,7 @@ import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.File
@@ -318,7 +319,7 @@ class PlayerRetryTest {
 
   @Test
   fun `a player that gave up stays stopped when the network returns`() {
-    connectivity.setNetworkCapabilities(wifi, capabilities(validated = false))
+    connectivity.setNetworkCapabilities(wifi, capabilities(internet = false))
     connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
     // A closed port: the load fails at once, the retry is pending, and the next failure is
     // terminal.
@@ -337,14 +338,34 @@ class PlayerRetryTest {
       },
     )
 
-    connectivity.setNetworkCapabilities(wifi, capabilities(validated = true))
+    connectivity.setNetworkCapabilities(wifi, capabilities(internet = true))
     connectivity.networkCallbacks.forEach {
-      it.onCapabilitiesChanged(wifi, capabilities(validated = true))
+      it.onCapabilitiesChanged(wifi, capabilities(internet = true))
     }
     shadowOf(Looper.getMainLooper()).idle()
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
     assertEquals(PlaybackState.ERROR, player.playbackState)
+  }
+
+  @Test
+  fun `the wake mode's lock is held while the loop keeps the idle engine, and let go on pause`() {
+    goOnline(context)
+    play(
+      "https://127.0.0.1:9/stream",
+      retryPolicy = RetryPolicy.Infinite(),
+      wakeMode = AndroidPlayerWakeMode.NETWORK,
+    )
+    idleUntil("the loop holding the idle engine") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      player.retryLoop!!.reconnecting && player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE
+    }
+    assertTrue("no wake lock while held", player.retryLocks!!.wakeLockHeld)
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse("a wake lock over a pause", player.retryLocks!!.wakeLockHeld)
   }
 
   @Test
@@ -457,8 +478,12 @@ class PlayerRetryTest {
     }
   }
 
-  private fun play(vararg srcs: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
-    player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
+  private fun play(
+    vararg srcs: String,
+    retryPolicy: RetryPolicy = RetryPolicy.Default,
+    wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
+  ) {
+    player.setup(PlayerSetupOptions(retryPolicy = retryPolicy, wakeMode = wakeMode))
     player.setCallbacks(callbacks)
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters
@@ -474,10 +499,9 @@ class PlayerRetryTest {
     player.play()
   }
 
-  private fun capabilities(validated: Boolean) =
+  private fun capabilities(internet: Boolean) =
     ShadowNetworkCapabilities.newInstance().also {
-      shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-      if (validated) shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+      if (internet) shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
   private fun idleUntil(what: String, condition: () -> Boolean) {

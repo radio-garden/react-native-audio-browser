@@ -25,6 +25,7 @@ import kotlin.concurrent.thread
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -56,15 +57,16 @@ class RetryMaskingTest {
 
   @After
   fun release() {
+    server.close()
     session.release()
     player.networkMonitor.destroy()
     player.exoPlayer.release()
   }
 
-  @Test
-  fun `the loop reconnects, and its idle engine and error reach no surface`() {
-    val server = ServerSocket(0)
-    val connections = AtomicInteger()
+  private val server = ServerSocket(0)
+  private val connections = AtomicInteger()
+
+  init {
     // Takes each connection and ends it unanswered: a recoverable failure of a live stream.
     thread(isDaemon = true) {
       while (!server.isClosed) {
@@ -76,6 +78,10 @@ class RetryMaskingTest {
         }
       }
     }
+  }
+
+  @Test
+  fun `the loop reconnects, and its idle engine and error reach no surface`() {
     play("http://127.0.0.1:${server.localPort}/live.mp3")
     var held = 0
     stepUntil("the loop holding the idle engine a while") {
@@ -86,8 +92,23 @@ class RetryMaskingTest {
       if (player.retryLoop!!.reconnecting) assertLoading()
       held >= 30 && connections.get() >= 3
     }
-    server.close()
     assertNoTerminalError()
+  }
+
+  @Test
+  fun `a give-up while the loop holds the idle engine leaves no surface buffering`() {
+    play(
+      "http://127.0.0.1:${server.localPort}/live.mp3",
+      RetryPolicy.Infinite(firstConnectMaxRetryDurationMs = 2_000),
+    )
+    stepUntil("the give-up") { player.playbackState == PlaybackState.ERROR }
+
+    assertNotEquals("media3 controllers", MediaPlayer.STATE_BUFFERING, session.controllerState())
+    assertNotEquals(
+      "legacy controllers",
+      PlaybackStateCompat.STATE_BUFFERING,
+      session.legacyState(),
+    )
   }
 
   private fun assertLoading() {
@@ -117,9 +138,9 @@ class RetryMaskingTest {
     )
   }
 
-  private fun play(src: String) {
+  private fun play(src: String, retryPolicy: RetryPolicy = RetryPolicy.Infinite()) {
     goOnline(context)
-    player.setup(PlayerSetupOptions(retryPolicy = RetryPolicy.Infinite()))
+    player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
     session = MediaSession.Builder(context, player.forwardingPlayer).build()
     player.setMediaSession(session)

@@ -24,14 +24,31 @@ internal class SessionViewListener(
   private val target: MediaPlayer.Listener,
   private val view: MediaPlayer,
 ) : MediaPlayer.Listener {
-  override fun onPlaybackStateChanged(playbackState: Int) =
-    target.onPlaybackStateChanged(view.playbackState)
+  private var toldState = view.playbackState
+  private var toldPlaying = view.isPlaying
+
+  /**
+   * Tells the session the view's state and playing where they moved since it was last told: the
+   * view can move with no engine event, as when the retry loop lets go of an idle engine.
+   */
+  fun refresh() {
+    if (view.playbackState != toldState) onPlaybackStateChanged(view.playbackState)
+    if (view.isPlaying != toldPlaying) onIsPlayingChanged(view.isPlaying)
+  }
+
+  override fun onPlaybackStateChanged(playbackState: Int) {
+    toldState = view.playbackState
+    target.onPlaybackStateChanged(toldState)
+  }
 
   @Deprecated("Deprecated in Java")
   override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) =
     @Suppress("DEPRECATION") target.onPlayerStateChanged(view.playWhenReady, view.playbackState)
 
-  override fun onIsPlayingChanged(isPlaying: Boolean) = target.onIsPlayingChanged(view.isPlaying)
+  override fun onIsPlayingChanged(isPlaying: Boolean) {
+    toldPlaying = view.isPlaying
+    target.onIsPlayingChanged(toldPlaying)
+  }
 
   override fun onPlayerError(error: PlaybackException) = Unit
 

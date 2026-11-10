@@ -31,6 +31,12 @@ internal class RetryLoop(
     fun awaitNetwork()
 
     /**
+     * The loop starts or stops keeping the idle engine for a play intent that is up: what keeps the
+     * device awake for its reconnect is the loop's to hold.
+     */
+    fun holdChanged(held: Boolean)
+
+    /**
      * Stops the engine and surfaces the terminal error, caused by the last connection's failure, if
      * the loop holds one.
      */
@@ -62,6 +68,7 @@ internal class RetryLoop(
   private var lastError: PlaybackException? = null
 
   private var waitingForNetwork = false
+  private var holding = false
   private var pendingReconnect: (() -> Unit)? = null
   private var cancelDeadline: (() -> Unit)? = null
 
@@ -109,6 +116,7 @@ internal class RetryLoop(
     deliveredAudio = false
     connectionStartedAtMs = now
     rearmDeadline()
+    syncHold()
   }
 
   /** Stops the loop until the next [loadStarted]: a terminal error, a stop, or a remote output. */
@@ -117,6 +125,7 @@ internal class RetryLoop(
     failedAtMs = null
     holdsIdleEngine = false
     stopped = true
+    syncHold()
   }
 
   /**
@@ -135,6 +144,7 @@ internal class RetryLoop(
       cancelReconnect()
     }
     rearmDeadline()
+    syncHold()
   }
 
   /** The local engine plays audio, or stops; a READY blip the wiring hides is not audio. */
@@ -178,6 +188,7 @@ internal class RetryLoop(
     failedAtMs = null
     endReported = false
     lastError = null
+    syncHold()
   }
 
   /**
@@ -188,6 +199,7 @@ internal class RetryLoop(
     cancelReconnect()
     failedAtMs = null
     holdsIdleEngine = false
+    syncHold()
   }
 
   /**
@@ -223,6 +235,7 @@ internal class RetryLoop(
     holdsIdleEngine = true
     if (playIntent) scheduleReconnect()
     rearmDeadline()
+    syncHold()
     return true
   }
 
@@ -275,6 +288,14 @@ internal class RetryLoop(
     holdsIdleEngine = false
     stopped = true
     engine.giveUp(lastError)
+    syncHold()
+  }
+
+  private fun syncHold() {
+    val held = holdsIdleEngine && playIntent && !stopped
+    if (held == holding) return
+    holding = held
+    engine.holdChanged(held)
   }
 
   private fun cancelAll() {

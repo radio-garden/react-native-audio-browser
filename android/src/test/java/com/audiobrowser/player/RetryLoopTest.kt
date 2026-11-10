@@ -14,6 +14,7 @@ class RetryLoopTest {
   private val tasks = mutableListOf<Pair<Long, () -> Unit>>()
   private var reconnects = 0
   private var gaveUp = false
+  private var holding = false
 
   private val loop =
     RetryLoop(
@@ -31,6 +32,10 @@ class RetryLoopTest {
           }
 
           override fun awaitNetwork() {}
+
+          override fun holdChanged(held: Boolean) {
+            holding = held
+          }
 
           override fun giveUp(cause: PlaybackException?) {
             gaveUp = true
@@ -139,6 +144,27 @@ class RetryLoopTest {
     assertFalse(loop.reconnecting)
     loop.connectionFailed(inPlace = false, atMs = 2_000)
     assertTrue("the new connection's end is the loop's", loop.onPlayerError(null, stuck = false))
+  }
+
+  @Test
+  fun `holds the device awake only while it keeps the idle engine for a play intent`() {
+    playedAndEnded(at = 30_000)
+    assertTrue("held between connections", holding)
+
+    loop.playIntentChanged(false)
+    assertFalse("held over a pause", holding)
+    loop.playIntentChanged(true)
+    assertTrue(holding)
+
+    advanceTo(31_000)
+    loop.connectionStarted()
+    assertFalse("held over a connection", holding)
+
+    loop.connectionFailed(inPlace = false, atMs = 31_100)
+    loop.onPlayerError(null, stuck = false)
+    advanceTo(200_000)
+    assertTrue(gaveUp)
+    assertFalse("held after the give-up", holding)
   }
 
   @Test

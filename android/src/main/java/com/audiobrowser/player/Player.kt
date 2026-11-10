@@ -143,6 +143,10 @@ internal constructor(
   internal var retryLoop: RetryLoop? = null
     private set
 
+  /** What the wake mode holds while [retryLoop] keeps the engine idle; see [RetryLocks]. */
+  internal var retryLocks: RetryLocks? = null
+    private set
+
   /** The playing item's id, for the load error policy on ExoPlayer's playback thread. */
   @Volatile internal var playingMediaId: String? = null
 
@@ -154,6 +158,10 @@ internal constructor(
       override fun reconnect() = localEngine.retry(toLiveEdge = isCurrentItemLive)
 
       // A play after a pause over a retry connects nothing until then: no failure shows it.
+      override fun holdChanged(held: Boolean) {
+        retryLocks?.hold(held)
+      }
+
       override fun awaitNetwork() =
         showRetryingError(
           PlaybackErrorClassifier.retryingLoadError(lastLoadFailure ?: IOException(), false)
@@ -567,7 +575,7 @@ internal constructor(
     if (heldIdle && exoPlayer.playbackState == ExoPlayer.STATE_IDLE && exoPlayer.mediaItemCount > 0)
       exoPlayer.prepare()
     playerListener.engineAttached()
-    retryLoop = newRetryLoop(setupOptions.retryPolicy)
+    retryLoop = newRetryLoop(setupOptions)
     playingMediaId = exoPlayer.currentMediaItem?.mediaId
 
     if (isInitialSetup) {
@@ -880,9 +888,9 @@ internal constructor(
       .setTag(track)
       .build()
 
-  private fun newRetryLoop(policy: RetryPolicy): RetryLoop? {
+  private fun newRetryLoop(options: PlayerSetupOptions): RetryLoop? {
     val (maxRetries, recoveryMs, firstConnectMs) =
-      when (policy) {
+      when (val policy = options.retryPolicy) {
         RetryPolicy.Default -> return null
         is RetryPolicy.Infinite ->
           Triple(null, policy.maxRetryDurationMs, policy.firstConnectMaxRetryDurationMs)
@@ -893,6 +901,9 @@ internal constructor(
             policy.firstConnectMaxRetryDurationMs,
           )
       }
+    val recovery = recoveryMs ?: 120_000
+    val firstConnect = firstConnectMs ?: 12_000
+    retryLocks = RetryLocks(context, options.wakeMode, maxHoldMs = recovery + firstConnect)
     return RetryLoop(
         clock = SystemClock::elapsedRealtime,
         timer = { delayMs, action ->
@@ -903,8 +914,8 @@ internal constructor(
         },
         engine = retryEngine,
         maxRetries = maxRetries,
-        recoveryMs = recoveryMs ?: 120_000,
-        firstConnectMs = firstConnectMs ?: 12_000,
+        recoveryMs = recovery,
+        firstConnectMs = firstConnect,
         online = networkMonitor.getOnline(),
       )
       .also {

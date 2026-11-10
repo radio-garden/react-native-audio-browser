@@ -63,24 +63,23 @@ internal class InterceptingPlayer(
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
-  private val listeners = mutableSetOf<MediaPlayer.Listener>()
+  private val engineListeners = mutableSetOf<MediaPlayer.Listener>()
 
   /** Each listener the session added, and the [SessionViewListener] it hears the engine through. */
-  private val views = mutableMapOf<MediaPlayer.Listener, MediaPlayer.Listener>()
+  private val views = mutableMapOf<MediaPlayer.Listener, SessionViewListener>()
 
   /** Adds the player's own listener, which hears the engine's events as they are. */
   fun addEngineListener(listener: MediaPlayer.Listener) {
-    listeners += listener
+    engineListeners += listener
     super.addListener(listener)
   }
 
   override fun addListener(listener: MediaPlayer.Listener) {
-    listeners += listener
     super.addListener(views.getOrPut(listener) { SessionViewListener(listener, this) })
   }
 
   override fun removeListener(listener: MediaPlayer.Listener) {
-    listeners -= listener
+    engineListeners -= listener
     super.removeListener(views.remove(listener) ?: listener)
   }
 
@@ -97,7 +96,8 @@ internal class InterceptingPlayer(
         engineFailed,
         keepSessionAliveOnError,
       )
-    if (view != was) listeners.toList().forEach { it.onPlaybackStateChanged(view) }
+    if (view != was) engineListeners.toList().forEach { it.onPlaybackStateChanged(view) }
+    refreshViews()
   }
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
@@ -107,19 +107,8 @@ internal class InterceptingPlayer(
   private val engineFailed: Boolean
     get() = super.getPlayerError() != null
 
-  /**
-   * Sends every listener but [except] the view of the state and of playing, as the engine's own
-   * events just told them otherwise.
-   */
-  fun republishView(except: MediaPlayer.Listener) {
-    val view = playbackState
-    val playing = isPlaying
-    listeners.toList().forEach {
-      if (it === except) return@forEach
-      it.onPlaybackStateChanged(view)
-      it.onIsPlayingChanged(playing)
-    }
-  }
+  /** Tells the session's listeners where the view moved with no event of the engine's. */
+  fun refreshViews() = views.values.toList().forEach { it.refresh() }
 
   override fun isPlaying(): Boolean = super.isPlaying() && !masksPlaying()
 
