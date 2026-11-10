@@ -1,3 +1,55 @@
+## [0.2.0-next.77](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.76...v0.2.0-next.77) (2026-11-10)
+
+### Bug Fixes
+
+* **android:** clear the stream title when playback stops ([e62b475](https://github.com/radio-garden/react-native-audio-browser/commit/e62b4757e4926830a112f31f10d1f7c70d425554))
+* **android:** hold a setup() rebuild through a transient focus loss ([38aceed](https://github.com/radio-garden/react-native-audio-browser/commit/38aceed6e287f4e2c231fd9fcec3503c9c403cbb))
+* **android:** keep a remote receiver's title for the outgoing item off the next one ([3238069](https://github.com/radio-garden/react-native-audio-browser/commit/3238069b42889990200f21e9941145b85b760cc6))
+* **android:** keep an ended queue ended on prepare() and a skip that doesn't move ([4809459](https://github.com/radio-garden/react-native-audio-browser/commit/48094597857f460670b5f9ad6c8374531522bab3))
+* **android:** keep ENDED across a setup() rebuild, so play restarts ([a7ace3e](https://github.com/radio-garden/react-native-audio-browser/commit/a7ace3eca784dcbc330dd10e78aa04580bb684fb))
+* **android:** keep the state of an idle engine across a setup() rebuild ([9afb3fc](https://github.com/radio-garden/react-native-audio-browser/commit/9afb3fc9dc6693b9b45aefdf2ba8b3b5c22c905c))
+* **android:** load an idle engine on setPlayWhenReady(true), as play() does ([63d327c](https://github.com/radio-garden/react-native-audio-browser/commit/63d327c3667c80baba8940b22521e2a19b5b8ee8))
+* **android:** reconnect a live stream that the server closes cleanly ([9d1c5f9](https://github.com/radio-garden/react-native-audio-browser/commit/9d1c5f9b68e5c89f71cbbcb77838928680607de7))
+* **android:** replay the track from its start on a play after a stop at its end ([91374d4](https://github.com/radio-garden/react-native-audio-browser/commit/91374d4e080becac9a2f84a8b63ff9eeb035f7da))
+* **android:** say in the retry log that the delay can be skipped ([62b179b](https://github.com/radio-garden/react-native-audio-browser/commit/62b179b4cbc3d09a5da996ce4b8194ea2dbfb590))
+* **android:** show the session an ended queue on an idle engine as ended ([bd30a8e](https://github.com/radio-garden/react-native-audio-browser/commit/bd30a8ef37c39cb2118ec0e8a01cf87373035f36))
+* **android:** tell the session when a stop leaves a terminal error ([d74eb38](https://github.com/radio-garden/react-native-audio-browser/commit/d74eb3898457be7e49484bf7b95d50c192d82f2a))
+* **ios:** a 2xx status in the error log leaves retrying to the error chain ([ed94acc](https://github.com/radio-garden/react-native-audio-browser/commit/ed94accbccdb0e33f3b36b44a1c01199d2795c10))
+* **ios:** a live stream that ends goes through the retry loop ([b26c500](https://github.com/radio-garden/react-native-audio-browser/commit/b26c500f17ab2aed62dcb5938fbe5b3a07129671))
+* **ios:** a media-services reset during a pending retry reloads once ([c2b40d2](https://github.com/radio-garden/react-native-audio-browser/commit/c2b40d2fed5db49df58bd7ac71dab5da1107687a))
+* **ios:** a played-to-end that arrives during a load starts no retry ([88362f1](https://github.com/radio-garden/react-native-audio-browser/commit/88362f110a45fe2b5f954afd46844b7eac49e68a))
+* **ios:** a resume while the state held buffering starts a stall watch ([de6f58f](https://github.com/radio-garden/react-native-audio-browser/commit/de6f58f5de2f04a461b290cbcf1c6a0af0df5a4e))
+* **ios:** a retry after the AVPlayer itself failed reloads on a new one ([9a35adb](https://github.com/radio-garden/react-native-audio-browser/commit/9a35adbaf096b0455ce1d2fab1b6bbaa959efdf1))
+* **ios:** a stall that outlasts a timeout goes through the retry loop ([63f6484](https://github.com/radio-garden/react-native-audio-browser/commit/63f6484b501582e629fea499040d90d799231a67))
+* **ios:** a terminal error leaves nothing that can play ([bd077d6](https://github.com/radio-garden/react-native-audio-browser/commit/bd077d6119dcb19c4a91e738bd3674de99e42a5d))
+* **ios:** an on-demand item that reports played-to-end has ended ([ad4804a](https://github.com/radio-garden/react-native-audio-browser/commit/ad4804a50a1b50b02c3aba84f3d37a4e4987c521))
+* **ios:** an on-demand track that ends short goes through the retry loop ([e3f8c11](https://github.com/radio-garden/react-native-audio-browser/commit/e3f8c11cf5bbd33d846b2692c1a12dbd4e161705))
+* **ios:** connectivity returning to a stalled stream retries through the loop ([b2cebfe](https://github.com/radio-garden/react-native-audio-browser/commit/b2cebfe53e8e3b7c1d73e1700a06d97d0c047794))
+* **ios:** end a cancelled CarPlay page load without an error ([9f4cd5f](https://github.com/radio-garden/react-native-audio-browser/commit/9f4cd5f85e7ddd833f688b28b1389a8f654a6fed))
+* **ios:** end the JS callbacks that have a fallback at a timeout ([e26b454](https://github.com/radio-garden/react-native-audio-browser/commit/e26b4543240ae71c5f488a83d5f8ff9f826c07f0))
+* **ios:** end the other JS-callback awaits when their caller is cancelled ([4fdc17d](https://github.com/radio-garden/react-native-audio-browser/commit/4fdc17dd0709a5df31da495cc263e4b74e2e0028))
+* **ios:** leave a load that fails while paused to the next play ([988046a](https://github.com/radio-garden/react-native-audio-browser/commit/988046a0bad9a0e391387a3e91fd674ebfd15b3f))
+* **ios:** log whether retry is disabled or the error is not retryable ([bcfea1e](https://github.com/radio-garden/react-native-audio-browser/commit/bcfea1e491a23443584cc97ecc6f46c7f008fade))
+* **ios:** pause the engine when a pause arrives during a load ([7da4579](https://github.com/radio-garden/react-native-audio-browser/commit/7da4579d7e0762f3bdbce53d0deaac09161fd243))
+* **ios:** retry() during a pending retry reloads once ([fbd0748](https://github.com/radio-garden/react-native-audio-browser/commit/fbd0748804eb9460621a524502d57a4aba517bc0))
+* **ios:** start over when reload() follows the end or a stop ([2900b72](https://github.com/radio-garden/react-native-audio-browser/commit/2900b721be8613becdda0629e57fb5f84ac5445d))
+* **ios:** the stall watch fails only a stall that receives no data ([31e3aaa](https://github.com/radio-garden/react-native-audio-browser/commit/31e3aaa0bb471dc066490a79d2d51a03412b1dae))
+* **ios:** with retry off, a live end goes to the error without buffering ([728e7f5](https://github.com/radio-garden/react-native-audio-browser/commit/728e7f5762b5c13b488e54bbd6f51ac0e8e097ed))
+
+### Code Refactors
+
+* **ios:** add a cancellable await for JS callbacks ([dd6bdf3](https://github.com/radio-garden/react-native-audio-browser/commit/dd6bdf35e0f61d0994721906a201031eefad030f))
+
+### Documentation
+
+* **ios:** say why the AirPlay nudge stays outside the retry loop ([03150f0](https://github.com/radio-garden/react-native-audio-browser/commit/03150f0fafdc967e4b0c1556aa0de07829692386))
+
+### Other changes
+
+* **example:** install pods with plain `pod install` ([8f554e9](https://github.com/radio-garden/react-native-audio-browser/commit/8f554e99e2ec68f9729c06c43717f3cf0e779c40))
+* **example:** make the example app type-check, and check it in CI ([bd171c3](https://github.com/radio-garden/react-native-audio-browser/commit/bd171c3c4206c304b5b44de6937e47aa0b44e9e8))
+* let the pre-commit hook find the Android SDK without ANDROID_HOME ([89e6798](https://github.com/radio-garden/react-native-audio-browser/commit/89e67986a13d5d739e61d807ce8644444b272c4e))
+
 ## [0.2.0-next.76](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.75...v0.2.0-next.76) (2026-11-10)
 
 ### Bug Fixes
