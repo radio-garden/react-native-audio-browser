@@ -262,7 +262,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       }
       browseGate.resolve = { [weak self] request in
         guard let self else { throw CancellationError() }
-        return try await resolveGate(request).await().await()
+        return try await resolveGate(request).awaitNestedOrTimeout()
       }
       // Unconditional: `shared` is weak, so after a reload the old instance may be gone while
       // CarPlay is still subscribed to its emitters.

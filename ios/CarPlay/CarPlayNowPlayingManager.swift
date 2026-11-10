@@ -202,7 +202,7 @@ final class CarPlayNowPlayingManager {
     Task { @MainActor [weak self] in
       let path: String?
       do {
-        path = try await resolver(track).await()
+        path = try await resolver(track).awaitCancellable()
       } catch {
         self?.logger.error("resolveAlbumPath failed: \(error.localizedDescription)")
         path = nil

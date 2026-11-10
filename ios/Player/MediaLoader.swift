@@ -54,7 +54,7 @@ final class MediaLoader {
   func resolveAndLoad(src: String, track: Track? = nil) {
     mediaResolverTask?.cancel()
     // `self` stays weak across the await: a consumer resolver that never settles must not pin
-    // the loader, and cancellation cannot force its `await` to return.
+    // the loader.
     let resolveUrl = resolveUrl
     mediaResolverTask = Task { [weak self] in
       guard !Task.isCancelled else { return }

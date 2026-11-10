@@ -119,6 +119,8 @@ extension CarPlaySession {
   /// The chrome to show if the Browse Gate gates this request, reported to JS; nil when allowed.
   func gate(_ reason: GateReason, path: String?, search: SearchParams? = nil) async -> Gate? {
     let chrome = await audioBrowser.browseGate.decide(NativeGateRequest(reason: reason, path: path, search: search))
+    // A cancelled decision fails closed, but the user never met this gate.
+    guard !Task.isCancelled else { return chrome }
     reportGates([chrome], reason: reason)
     return chrome
   }

@@ -87,7 +87,7 @@ final class BrowserManager {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     guard let handler = config.handleTrackLoad else { return false }
     do {
-      try await handler(event).await().await()
+      try await handler(event).awaitNested()
     } catch {
       logger.error("handleTrackLoad failed: \(error.localizedDescription)")
     }
@@ -204,7 +204,7 @@ final class BrowserManager {
     let params = FormatNavigationErrorParams(
       error: error, defaultFormatted: fallback, path: path, kind: NavigationErrorKind(path: path),
     )
-    return await (try? formatter(params).await()) ?? fallback
+    return await (try? formatter(params).awaitOrTimeout()) ?? fallback
   }
 
   // MARK: - Search

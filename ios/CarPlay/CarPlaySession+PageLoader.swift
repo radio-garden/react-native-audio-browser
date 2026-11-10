@@ -48,6 +48,7 @@ extension CarPlaySession {
         await showNavigationError(.code(.emptyContent), path: path, on: template)
       }
     case let .failure(error):
+      guard !(error is CancellationError || Task.isCancelled) else { return }
       logger.error("Failed to load content for \(path): \(error.localizedDescription)")
       await showNavigationError(NavigationError.from(error), path: path, on: template)
     }
