@@ -37,6 +37,8 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 
 React Native with the **New Architecture** (Fabric + TurboModules), [`react-native-nitro-modules`](https://nitro.margelo.com) as a peer dependency, and on web [`shaka-player`](https://github.com/shaka-project/shaka-player) as an optional peer dependency. The minimum React Native, React, iOS, Android, nitro and shaka-player versions are listed in [Getting Started](https://audiobrowser.dev/guide/getting-started#installation). iOS builds need Xcode 26.4 or later (Swift 6.3).
 
+Built with Xcode 27, an app whose `react-native-nitro-modules` lacks the fix of [margelo/nitro#1824](https://github.com/margelo/nitro/pull/1824) does not launch on iOS below 18 (dyld: `Symbol not found: std::exception_ptr::__from_native_exception_pointer`). The fix is in 0.37.2; where 0.37.2 does not build ([margelo/nitro#2052](https://github.com/margelo/nitro/issues/2052)), patch the two header hunks of #1824 into the version you use.
+
 ## Installation
 
 ```sh
