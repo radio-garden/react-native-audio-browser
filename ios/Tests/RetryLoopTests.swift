@@ -77,8 +77,8 @@ struct RetryLoopHandleErrorTests {
     var reloads: [Bool] = []
   }
 
-  private func makeLoop(retries: Bool = true, delay: TimeInterval = 0) -> (RetryLoop, Record) {
-    let loop = makeRetryLoop(retries: retries, delay: delay)
+  private func makeLoop(givesUp: Bool = false, delay: TimeInterval = 0) -> (RetryLoop, Record) {
+    let loop = makeRetryLoop(givesUp: givesUp, delay: delay)
     let record = Record()
     loop.onRetryingError = { record.retrying.append($0) }
     loop.onError = { record.errors.append($0) }
@@ -128,7 +128,7 @@ struct RetryLoopHandleErrorTests {
   }
 
   @Test func givingUpReportsTheAdvisoryThenTheTerminalError() async {
-    let (loop, record) = makeLoop(retries: false)
+    let (loop, record) = makeLoop(givesUp: true)
     loop.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await loop.pendingTask?.value
     #expect(record.retrying == [.hostUnreachable])
@@ -159,7 +159,7 @@ struct RetryLoopHandleErrorTests {
   }
 
   @Test func theHTTPStatusReachesTheReport() async {
-    let (loop, record) = makeLoop(retries: false)
+    let (loop, record) = makeLoop(givesUp: true)
     loop.handleError(nil, context: .playback, httpStatusCode: 404)
     loop.handleError(URLError(.badURL), context: .playback, httpStatusCode: 503)
     await loop.pendingTask?.value
@@ -167,7 +167,7 @@ struct RetryLoopHandleErrorTests {
   }
 
   @Test func givingUpOnAnOpaqueFailureReportsTheFallback() async {
-    let (loop, record) = makeLoop(retries: false)
+    let (loop, record) = makeLoop(givesUp: true)
     loop.handleError(NSError(domain: "CoreMediaErrorDomain", code: -12939), context: .mediaLoad)
     await loop.pendingTask?.value
     #expect(record.errors == [.failedToLoadKeyValue])

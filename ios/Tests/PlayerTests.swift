@@ -185,11 +185,13 @@ struct RetryingErrorTests {
   @Test @MainActor
   func exhaustion_hardensIntoTerminalError() async {
     let (c, retryHandler, cb, _) = makeRetrying()
+    retryHandler.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
     c.transition(.trackLoading)
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
-    retryHandler.shouldRetry = { false }
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
@@ -219,6 +221,68 @@ struct RetryingErrorTests {
 
     #expect(eh.resolveAndLoadCalls.count == 1)
     #expect(c.deferredSeek.target == 42)
+  }
+
+  /// AVPlayer fails a paused live item once its data stalls.
+  @Test @MainActor
+  func retryableFailureWhilePaused_staysPausedAndReloadsOnPlay() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.pause()
+    let changesBefore = cb.playbackChanges.count
+
+    eh.emit(.failed(NSError(domain: "CoreMediaErrorDomain", code: -16830), httpStatusCode: nil))
+
+    #expect(c.state == .paused)
+    #expect(cb.errorEvents.isEmpty)
+    #expect(cb.playbackChanges.dropFirst(changesBefore).allSatisfy { $0.error == nil })
+    #expect(c.retry.pendingTask == nil)
+    #expect(eh.resolveAndLoadCalls.isEmpty)
+    #expect(c.getPlayback().state == .paused)
+    #expect(c.getPlayback().error == nil)
+
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target == 42)
+  }
+
+  @Test @MainActor
+  func aParkedLoadThatKeepsFailingAfterPlay_endsInTheTerminalErrorOnAFullBudget() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    let stall = NSError(domain: "CoreMediaErrorDomain", code: -16830)
+    // One retry spent before the pause; the park refills the budget.
+    eh.emit(.failed(stall, httpStatusCode: nil))
+    await c.retry.pendingTask?.value
+    #expect(c.retry.attempts == 1)
+
+    c.pause()
+    eh.emit(.failed(stall, httpStatusCode: nil))
+    #expect(c.retry.attempts == 0)
+    c.play()
+    eh.resolveAndLoadCalls.removeAll()
+
+    for _ in 0 ..< 3 {
+      eh.emit(.failed(stall, httpStatusCode: nil))
+      await c.retry.pendingTask?.value
+    }
+
+    #expect(eh.resolveAndLoadCalls.count == 2)
+    #expect(c.state == .error)
+    #expect(cb.errorEvents.count == 1)
+    #expect(c.getPlayback().error != nil)
+  }
+
+  @Test @MainActor
+  func nonRetryableFailureWhilePaused_isTerminal() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.pause()
+    eh.emit(.failed(URLError(.fileDoesNotExist), httpStatusCode: 404))
+    #expect(c.state == .error)
+    #expect(cb.errorEvents.count == 1)
   }
 
   @Test @MainActor

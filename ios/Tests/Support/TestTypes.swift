@@ -148,8 +148,9 @@ final class MockPlayerEngine: PlayerEngine {
   }
 }
 
-/// A Player whose retries reload while `retries` and otherwise give up, or follow the play intent
-/// when `retries` is nil, persisting to a test-only defaults suite.
+/// A Player whose retry loop sees a play intent of `retries`, or the real one when `retries` is
+/// nil, persisting to a test-only defaults suite. Without a play intent, a retryable failure is
+/// left to the next play.
 @MainActor
 func makePlayer(
   engine: MockPlayerEngine = MockPlayerEngine(),
@@ -249,13 +250,16 @@ final class MockPlayerCallbacks: PlayerCallbacks {
 
 // MARK: - RetryLoop
 
-/// An enabled RetryLoop that backs off for `delay` seconds and reloads while `retries`.
+/// An enabled RetryLoop with play intent that backs off for `delay` seconds and reloads, or gives
+/// up on the first retry when `givesUp`.
 @MainActor
-func makeRetryLoop(retries: Bool = true, delay: TimeInterval = 0) -> RetryLoop {
+func makeRetryLoop(givesUp: Bool = false, delay: TimeInterval = 0) -> RetryLoop {
   let loop = RetryLoop(sleep: { _ in
     if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
   })
-  loop.updatePolicy(from: .first(true))
-  loop.shouldRetry = { retries }
+  loop.updatePolicy(from: givesUp ? .second(RetryConfig(
+    maxRetries: 0, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+  )) : .first(true))
+  loop.shouldRetry = { true }
   return loop
 }

@@ -73,6 +73,8 @@ final class RetryLoop {
   /// A failure a retry is now scheduled for, reported before the backoff while the state stays
   /// non-terminal.
   var onRetryingError: ((TrackPlayerError.PlaybackError) -> Void)?
+  /// A retryable failure with no play intent: nothing retries it and nothing reports it.
+  var onFailedWithoutIntent: (() -> Void)?
 
   weak var networkMonitor: (any NetworkStatusProviding)?
 
@@ -126,9 +128,9 @@ final class RetryLoop {
 
   // MARK: - Failures
 
-  /// Reports a non-retryable failure through `onError` at once; otherwise reports it through
-  /// `onRetryingError`, replaces any retry in flight, and calls `onError` only if that retry gives
-  /// up.
+  /// Reports a non-retryable failure through `onError` at once, and one with no play intent
+  /// through `onFailedWithoutIntent`; otherwise reports it through `onRetryingError`, replaces any
+  /// retry in flight, and calls `onError` only if that retry gives up.
   func handleError(_ error: Error?, context: PlaybackErrorContext, httpStatusCode: Int? = nil) {
     if let error {
       let nsError = error as NSError
@@ -141,6 +143,11 @@ final class RetryLoop {
     guard isEnabled, failure.retryable else {
       logger.warning("Error not retryable, surfacing \(String(describing: failure.error))")
       onError?(failure.error)
+      return
+    }
+    guard shouldRetry() else {
+      logger.info("No play intent: \(String(describing: failure.error)) is left to the next play")
+      onFailedWithoutIntent?()
       return
     }
     onRetryingError?(failure.error)

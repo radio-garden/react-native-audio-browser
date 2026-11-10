@@ -123,6 +123,11 @@ final class Player {
     deferredSeek.target ?? (enginePositionIsCurrent ? engine.resumePosition : nil)
   }
 
+  /// Where a reload resumes: nowhere after the end, or after a stop whose rewind may not have landed.
+  private var reloadPosition: TimeInterval? {
+    state == .ended || state == .stopped ? nil : resumePosition
+  }
+
   // MARK: - Track State (for active track changed events)
 
   private var lastIndex: Int = -1
@@ -183,18 +188,12 @@ final class Player {
     if newValue, resumes || state == .stopped || state == .ended {
       reloadResolving(startFromCurrentTime: resumes)
     }
-    if state != .loading {
-      if newValue { engine.play() } else { engine.pause() }
-    }
+    // While loading, the engine may still hold the previous track's item: a play waits for the new one.
+    if !newValue { engine.pause() } else if state != .loading { engine.play() }
 
     guard changed else { return }
     // Left to run, the retry would give up on the dropped intent and surface .error.
-    if !newValue, retry.pendingTask != nil {
-      retry.reset()
-      if let position = resumePosition { deferredSeek.capture(position) }
-      load?.reloadOnPlay = true
-      transition(.retryCancelled)
-    }
+    if !newValue, retry.pendingTask != nil { parkForReloadOnPlay() }
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
@@ -252,6 +251,7 @@ final class Player {
 
     retry.onError = { [weak self] in self?.transition(.errorOccurred($0)) }
     retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
+    retry.onFailedWithoutIntent = { [weak self] in self?.parkForReloadOnPlay() }
     retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
     retry.shouldRetry = { [weak self] in self?.playWhenReady ?? false }
     retry.hasPlayed = { [weak self] in self?.load?.hasPlayed ?? false }
@@ -717,8 +717,15 @@ final class Player {
       transition(.errorOccurred(.invalidSourceUrl("nil")))
       return
     }
-    prepareForReload(resumingAt: startFromCurrentTime ? resumePosition : nil)
+    prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
     engine.resolveAndLoad(src: src, track: track)
+  }
+
+  private func parkForReloadOnPlay() {
+    retry.reset()
+    if let position = reloadPosition { deferredSeek.capture(position) }
+    load?.reloadOnPlay = true
+    transition(.retryCancelled)
   }
 
   /// A restart from a terminal error begins a new Load on a new AVPlayer; automatic retries
@@ -753,7 +760,7 @@ final class Player {
   func mediaServicesWereReset() {
     guard let track = currentTrack else { return }
     logger.info("Media services were reset — recreating player and reloading current track")
-    if track.live != true, state != .ended, state != .stopped, let position = resumePosition {
+    if track.live != true, let position = reloadPosition {
       deferredSeek.capture(position)
     }
     engine.clearItem()

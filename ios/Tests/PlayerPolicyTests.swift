@@ -211,12 +211,33 @@ struct PlayerEngineEventTests {
     #expect(engine.primeCount == 2)
   }
 
-  @Test func aFailedLoadWithoutIntentDoesNotPrime() async throws {
+  @Test func aFailedLoadWithoutIntentDoesNotPrime_andWaitsForAPlay() throws {
     let (player, engine, _) = try makeLoading()
     engine.emit(.loadFailed(URLError(.timedOut)))
-    await player.retry.pendingTask?.value
     #expect(engine.primeCount == 0)
-    #expect(player.state == .error)
+    #expect(player.state == .paused)
+
+    player.setPlayWhenReady(true)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aPauseWhileLoadingReachesTheEngine_aPlayDoesNot() throws {
+    let (player, engine, _) = try makeLoading()
+    player.setPlayWhenReady(true)
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: false))
+    #expect(player.state == .loading)
+    let plays = engine.startPlaybackCallCount
+    let pauses = engine.pausePlaybackCallCount
+
+    player.setPlayWhenReady(false)
+    #expect(engine.pausePlaybackCallCount == pauses + 1)
+
+    player.setPlayWhenReady(true)
+    #expect(engine.startPlaybackCallCount == plays)
+    engine.emit(.likelyToKeepUp(true))
+    #expect(engine.startPlaybackCallCount == plays + 1)
   }
 
   @Test func anUnplayableAssetIsTerminal() throws {
@@ -395,6 +416,30 @@ struct PlayerRecoveringTests {
     stoppedEngine.resumePosition = 120
     stopped.mediaServicesWereReset()
     #expect(stopped.deferredSeek.target == nil)
+  }
+
+  @Test func aReloadAfterTheEndStartsOver() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    engine.resumePosition = 300
+    engine.emit(.playedToEnd)
+    #expect(player.state == .ended)
+
+    player.reloadResolving(startFromCurrentTime: true)
+    #expect(player.deferredSeek.target == nil)
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aReloadAfterAStopStartsOver() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.seekResult = nil
+    player.stop()
+    // The stop's rewind has not landed.
+    engine.resumePosition = 120
+    player.reloadResolving(startFromCurrentTime: true)
+    #expect(player.deferredSeek.target == nil)
   }
 
   @Test func aStopRewindsAFiniteTrack_notALiveOne() throws {
