@@ -132,7 +132,7 @@ public extension HybridAudioBrowser {
   func retry() throws {
     // Re-resolves rather than replaying the cached URL: short-lived URLs or tokens may have
     // expired since the failure.
-    onMainActor { player?.reloadResolving(startFromCurrentTime: true) }
+    onMainActor { player?.retryNow() }
   }
 
   // MARK: - Sleep Timer

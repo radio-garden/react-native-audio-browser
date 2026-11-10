@@ -18,11 +18,17 @@ public enum PlaybackErrorContext {
   case playback
   /// A MediaLoader key-value load failure: retries start from the beginning.
   case mediaLoad
+  /// Playback that stopped receiving data without AVFoundation failing it: retries resume from
+  /// the current time.
+  case stall
+  /// A live stream that reported played-to-end, as a cleanly closed connection does: retries
+  /// reconnect, since AVPlayer will not play on from an item it has ended.
+  case liveEnd
 
   var startFromCurrentTime: Bool {
     switch self {
-    case .playback: true
-    case .mediaLoad: false
+    case .playback, .stall: true
+    case .mediaLoad, .liveEnd: false
     }
   }
 
@@ -30,6 +36,7 @@ public enum PlaybackErrorContext {
     switch self {
     case .playback: .playbackFailed
     case .mediaLoad: .failedToLoadKeyValue
+    case .stall, .liveEnd: .playbackStalled
     }
   }
 }
@@ -86,6 +93,13 @@ final class RetryLoop {
   var healthyPlaybackDuration: Duration = .seconds(20)
   private(set) var healthyPlaybackTask: Task<Void, Never>?
 
+  /// How long a stall may go without new data before it counts as a failure; longer than AVPlayer
+  /// takes to fail a stalled item itself, so its error, which says more, is the one usually retried.
+  var stallTimeout: Duration = .seconds(30)
+  /// The end of the loaded range; the stall watch reads progress off it.
+  var bufferedPosition: () -> Double = { 0 }
+  private(set) var stallTask: Task<Void, Never>?
+
   private var policy: Policy = .disabled
   private var firstRetryTime: Date?
   // The first-connect budget's clock: never set while offline and wiped by any offline
@@ -139,9 +153,23 @@ final class RetryLoop {
       logger.error("[\(String(describing: context))] failure with nil error")
     }
 
-    let failure = PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError)
+    handle(PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError), context: context)
+  }
+
+  /// A failure the Player judges from what playback did, with no error to classify: retryable,
+  /// and reported as the context's fallback error. `immediately` skips the backoff, not the budgets.
+  func handleFailure(_ context: PlaybackErrorContext, immediately: Bool = false) {
+    logger.error("[\(String(describing: context))] failure")
+    handle(.init(error: context.fallbackError, retryable: true), context: context, immediately: immediately)
+  }
+
+  private func handle(
+    _ failure: PlaybackFailure.Classification, context: PlaybackErrorContext, immediately: Bool = false,
+  ) {
+    stopStallWatch()
     guard isEnabled, failure.retryable else {
-      logger.warning("Error not retryable, surfacing \(String(describing: failure.error))")
+      let reason = isEnabled ? "Error not retryable" : "Retry disabled"
+      logger.warning("\(reason), surfacing \(String(describing: failure.error))")
       onError?(failure.error)
       return
     }
@@ -154,7 +182,7 @@ final class RetryLoop {
     pendingTask?.cancel()
     pendingTask = Task { [weak self] in
       guard let self else { return }
-      let retried = await attemptRetry(startFromCurrentTime: context.startFromCurrentTime)
+      let retried = await attemptRetry(startFromCurrentTime: context.startFromCurrentTime, immediately: immediately)
       // Cancelled by a track change or stop: stay silent, or the new track or the stop would
       // flip to .error. The canceller owns `pendingTask`.
       if Task.isCancelled { return }
@@ -163,10 +191,34 @@ final class RetryLoop {
     }
   }
 
-  /// Drops the retry in flight without touching the budgets.
+  /// Drops the retry in flight and the stall watch without touching the budgets.
   func cancel() {
     pendingTask?.cancel()
     pendingTask = nil
+    stopStallWatch()
+  }
+
+  // MARK: - Stalls
+
+  /// Starts the stall watch: a `stallTimeout` in which `bufferedPosition` does not advance makes
+  /// the stall a `.stall` failure, provided the play intent holds and no retry is pending; one in
+  /// which it advances starts another. Any failure ends it.
+  func startStallWatch() {
+    stallTask?.cancel()
+    let buffered = bufferedPosition()
+    stallTask = Task { [weak self, stallTimeout] in
+      try? await Task.sleep(for: stallTimeout)
+      guard let self, !Task.isCancelled else { return }
+      stallTask = nil
+      if bufferedPosition() > buffered { return startStallWatch() }
+      guard pendingTask == nil, shouldRetry() else { return }
+      handleFailure(.stall)
+    }
+  }
+
+  func stopStallWatch() {
+    stallTask?.cancel()
+    stallTask = nil
   }
 
   /// Drops the retry in flight and refills the budgets.
@@ -219,7 +271,7 @@ final class RetryLoop {
 
   /// Waits out the backoff, or connectivity's return, then calls `onRetry`. False when the policy,
   /// the play intent or a budget says stop, or the wait was cancelled.
-  func attemptRetry(startFromCurrentTime: Bool) async -> Bool {
+  func attemptRetry(startFromCurrentTime: Bool, immediately: Bool = false) async -> Bool {
     guard isEnabled, shouldRetry() else { return false }
     if case let .limited(maxRetries) = policy, attempts >= maxRetries {
       logger.info("Max retries (\(maxRetries)) exceeded, giving up")
@@ -237,8 +289,9 @@ final class RetryLoop {
       return false
     }
 
-    logger.info("Scheduling retry after \(self.backoff)s")
-    guard await waitForDelayOrNetworkRestored(delaySeconds: backoff), !Task.isCancelled, shouldRetry() else {
+    let delay = immediately ? 0 : backoff
+    logger.info("Scheduling retry after \(delay)s")
+    guard await waitForDelayOrNetworkRestored(delaySeconds: delay), !Task.isCancelled, shouldRetry() else {
       return false
     }
     // The wait for connectivity may have been long.

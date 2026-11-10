@@ -26,6 +26,25 @@ private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine
   return (player, engine, callbacks)
 }
 
+/// Playing with retries that follow the play intent, then stalled: the buffer ran dry and
+/// AVPlayer waits (.buffering), with a stall timeout short enough to await.
+@MainActor
+private func makeStalling(givesUp: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(givesUp: givesUp), retries: nil)
+  player.retry.stallTimeout = .milliseconds(10)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+  engine.hasItem = true
+  engine.hasLoadedAsset = true
+  engine.emit(.itemPrepared(likelyToKeepUp: true))
+  player.transition(.avPlayerPlaying)
+  engine.emit(.stalled)
+  player.transition(.avPlayerWaiting)
+  return (player, engine, callbacks)
+}
+
 @Suite("Player - seeking")
 @MainActor
 struct PlayerSeekingTests {
@@ -259,7 +278,7 @@ struct PlayerEngineEventTests {
     #expect(player.errorStatus == .terminal(.httpStatus(404), report: 1))
   }
 
-  @Test func aGenuineEndAdvances_aLiveEndReconnects() throws {
+  @Test func aGenuineEndAdvances_aLiveEndReconnectsThroughTheRetryLoop() async throws {
     let (player, engine, _) = try makePlaying()
     engine.currentTime = 300
     engine.duration = 300
@@ -267,9 +286,97 @@ struct PlayerEngineEventTests {
     #expect(player.state == .ended)
 
     let (live, liveEngine, _) = try makePlaying(live: true)
+    live.retry.shouldRetry = { true }
     liveEngine.emit(.playedToEnd)
+    await live.retry.pendingTask?.value
     #expect(live.state == .loading)
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
+    #expect(live.retry.attempts == 1)
+  }
+
+  /// AVPlayer pauses an item at its end, so a seek within its window would leave it silent.
+  @Test func aLiveEndReconnectsEvenWithASeekableWindow() async throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.retry.shouldRetry = { true }
+    engine.liveEdge = 120
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func liveEndsThatKeepComingEndInATerminalErrorWithinTheBudget() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 3, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    for _ in 0 ..< 20 where player.state != .error {
+      engine.emit(.playedToEnd)
+      await player.retry.pendingTask?.value
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+    }
+    #expect(engine.resolveAndLoadCalls.count == 4)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  /// Each reconnect plays long enough to refill the budget, as a stream closing once an hour does.
+  @Test func liveEndsFarApartNeverSpendTheBudget() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    player.retry.healthyPlaybackDuration = .milliseconds(10)
+    for _ in 0 ..< 5 {
+      engine.emit(.playedToEnd)
+      await player.retry.pendingTask?.value
+      #expect(player.retry.attempts == 1)
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+      player.transition(.avPlayerPlaying)
+      await player.retry.healthyPlaybackTask?.value
+      #expect(player.retry.attempts == 0)
+    }
+    #expect(engine.resolveAndLoadCalls.count == 6)
+    #expect(player.state == .playing)
+    #expect(callbacks.errorEvents.isEmpty)
+  }
+
+  @Test func aLiveEndWithRetryOffIsTerminal_withNoBufferingOnTheWay() throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    player.retry.updatePolicy(from: nil)
+    let changesBefore = callbacks.playbackChanges.count
+    engine.emit(.playedToEnd)
+    #expect(player.state == .error)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(callbacks.playbackChanges.dropFirst(changesBefore).map(\.state) == [.error])
+  }
+
+  /// The engine stops observing an item on a reload; a played-to-end it delivered late is stale.
+  @Test func aPlayedToEndDuringALoadIsIgnored() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.retry.shouldRetry = { true }
+    player.reloadResolving(startFromCurrentTime: false)
+    #expect(player.state == .loading)
+    engine.emit(.playedToEnd)
+    #expect(player.state == .loading)
+    #expect(player.retry.pendingTask == nil)
+  }
+
+  /// A truncated file stalls rather than ending (the stall watch's); a short end is a duration
+  /// AVPlayer overestimated, as for a VBR file without a header.
+  @Test func anOnDemandEndShortOfItsEstimatedDurationAdvances() throws {
+    let (player, engine, _) = try makePlaying()
+    try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    engine.currentTime = 120
+    engine.duration = 300
+
+    engine.emit(.playedToEnd)
+
+    #expect(player.queue.currentIndex == 1)
+    #expect(player.retry.pendingTask == nil)
   }
 
   @Test func aStallNudgesPlayback_onlyWithIntent() throws {
@@ -298,12 +405,167 @@ struct PlayerEngineEventTests {
 @Suite("Player - recovering")
 @MainActor
 struct PlayerRecoveringTests {
-  @Test func theNetworkReturningReconnectsAStalledStream() throws {
+  @Test func aStallThatOutlastsTheTimeoutIsRetried() async throws {
+    let (player, engine, callbacks) = try makeStalling()
+    await player.retry.stallTask?.value
+    #expect(callbacks.playbackChanges.last?.error?.code == TrackPlayerError.PlaybackError.playbackStalled.code)
+    #expect(callbacks.playbackChanges.last?.error?.retrying == true)
+    await player.retry.pendingTask?.value
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+  }
+
+  @Test func aStallWithNoFailureEndsInPlaybackStalledOnceTheBudgetIsSpent() async throws {
+    let (player, _, callbacks) = try makeStalling(givesUp: true)
+    await player.retry.stallTask?.value
+    await player.retry.pendingTask?.value
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  @Test func aStallThatRecoversIsNotRetried() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.transition(.avPlayerPlaying)
+    await player.retry.stallTask?.value
+    #expect(player.retry.pendingTask == nil)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// Without `automaticallyWaitsToMinimizeStalling`, AVPlayer reports a stall while the state
+  /// stays .playing, and audio may well be playing.
+  @Test func aStallReportedWhilePlayingStartsNoWatch() throws {
     let (player, engine, _) = try makePlaying()
+    engine.emit(.stalled)
+    #expect(player.state == .playing)
+    #expect(player.retry.stallTask == nil)
+  }
+
+  @Test func aResumeIntoBufferingStartsANewWatch() throws {
+    let (player, engine, _) = try makeStalling()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    player.play()
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
+    #expect(player.state == .buffering)
+    #expect(player.retry.stallTask != nil)
+    player.retry.cancel()
+  }
+
+  @Test func aPauseEndsTheStallWatch() throws {
+    let (player, engine, _) = try makeStalling()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(player.retry.stallTask == nil)
+    #expect(player.load?.reloadOnPlay == false)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aTrackChangeEndsTheStallWatch() throws {
+    let (player, _, _) = try makeStalling()
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    #expect(player.retry.stallTask == nil)
+  }
+
+  /// A link slower than the bitrate rebuffers for longer than the timeout, and a reload would
+  /// throw away the buffer it is filling.
+  @Test func aStallThatStillReceivesDataKeepsWaiting_untilAWindowBringsNone() async throws {
+    let (player, engine, _) = try makeStalling()
+    engine.bufferedPosition = 12
+    await player.retry.stallTask?.value
+    #expect(player.retry.pendingTask == nil)
+    #expect(player.retry.stallTask != nil)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+
+    await player.retry.stallTask?.value
+    await player.retry.pendingTask?.value
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  /// Near a track's end, a pause leaves the state in .buffering, so the resume is no transition.
+  @Test func aResumeWhileTheStateHeldBufferingStartsANewWatch() async throws {
+    let (player, _, _) = try makeStalling()
+    player.pause()
+    await player.retry.stallTask?.value
+    #expect(player.state == .buffering)
+    #expect(player.retry.stallTask == nil)
+
+    player.play()
+    #expect(player.retry.stallTask != nil)
+    player.retry.cancel()
+  }
+
+  /// The stalled item is still alive: data arriving later must not play it under the error.
+  @Test func aTerminalStallLeavesNothingThatCanPlay() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.retry.updatePolicy(from: nil)
+    let pauses = engine.pausePlaybackCallCount
+    await player.retry.stallTask?.value
+    #expect(player.state == .error)
+    #expect(engine.pausePlaybackCallCount == pauses + 1)
+
+    engine.startPlaybackCallCount = 0
+    engine.emit(.stalled)
+    #expect(engine.startPlaybackCallCount == 0)
+  }
+
+  @Test func anAirPlayStrandingInAnErrorIsNotNudged() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isAirPlayRoute = true
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: true))
+    player.transition(.errorOccurred(.playbackStalled))
+    engine.startPlaybackCallCount = 0
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.startPlaybackCallCount == 0)
+  }
+
+  @Test func aStallWithRetryOffIsTerminalAtTheTimeout() async throws {
+    let (player, engine, _) = try makeStalling()
+    player.retry.updatePolicy(from: nil)
+    await player.retry.stallTask?.value
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func theNetworkReturningReconnectsAStalledStream_throughTheRetryLoop() async throws {
+    let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
     player.transition(.avPlayerWaiting)
     #expect(player.state == .buffering)
     player.networkStatusDidChange(isOnline: true)
+    await player.retry.pendingTask?.value
     #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.retry.attempts == 1)
+  }
+
+  @Test func aFlappingConnectionEndsInATerminalErrorOnceTheBudgetIsSpent() async throws {
+    let (player, engine, callbacks) = try makePlaying()
+    player.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    player.retry.shouldRetry = { true }
+    for flap in 1 ... 3 {
+      player.transition(.avPlayerWaiting)
+      player.networkStatusDidChange(isOnline: true)
+      await player.retry.pendingTask?.value
+      if flap == 3 { break }
+      engine.emit(.itemPrepared(likelyToKeepUp: true))
+      player.transition(.avPlayerPlaying)
+    }
+    #expect(engine.resolveAndLoadCalls.count == 3)
+    #expect(player.state == .error)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  @Test func theNetworkReturningWithRetryOffLeavesTheStallToAVPlayer() throws {
+    let (player, engine, callbacks) = try makePlaying()
+    player.retry.updatePolicy(from: nil)
+    player.transition(.avPlayerWaiting)
+    player.networkStatusDidChange(isOnline: true)
+    #expect(player.state == .buffering)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(callbacks.errorEvents.isEmpty)
   }
 
   @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() throws {
@@ -342,14 +604,16 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkReturningReRendersBeforeReconnecting() throws {
+  @Test func theNetworkReturningReRendersBeforeReconnecting() async throws {
     let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
     player.transition(.avPlayerWaiting)
     var order: [String] = []
     engine.onSeamCall = { order.append($0) }
     let loadsBefore = engine.resolveAndLoadCalls.count
 
     player.networkStatusDidChange(isOnline: true)
+    await player.retry.pendingTask?.value
 
     #expect(order.first == "renderNowPlaying")
     #expect(engine.resolveAndLoadCalls.count == loadsBefore + 1)
@@ -379,6 +643,37 @@ struct PlayerRecoveringTests {
     await player.retry.pendingTask?.value
     #expect(player.load?.id == first?.id)
     #expect(engine.recreateCount == 0)
+  }
+
+  @Test func aRetryAfterTheAVPlayerItselfFailedReloadsOnANewOne_inTheSameLoad() async throws {
+    let (player, engine, _) = try makePlaying()
+    player.retry.shouldRetry = { true }
+    engine.emit(.audioDidStart)
+    let first = player.load
+    engine.playerFailed = true
+
+    engine.emit(.failed(URLError(.networkConnectionLost), httpStatusCode: nil))
+    await player.retry.pendingTask?.value
+
+    #expect(engine.recreateCount == 1)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.load?.id == first?.id)
+    #expect(player.load?.hasPlayed == true)
+  }
+
+  @Test func aMediaServicesResetDuringABackoffReloadsOnce() async throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    engine.hasItem = true
+    engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    let retrying = player.retry.pendingTask
+
+    player.mediaServicesWereReset()
+    await retrying?.value
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.retry.pendingTask == nil)
   }
 
   @Test func aMediaServicesResetReloadsOnANewPlayer() throws {

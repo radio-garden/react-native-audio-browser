@@ -15,8 +15,8 @@ enum PlaybackFailure {
   /// The two answers rank the evidence differently, on purpose:
   /// - The error: a transport failure first (no response arrived, so a logged status belongs to
   ///   an earlier attempt), then a non-2xx status, then undecodable media.
-  /// - Retrying: a status first (a retry cannot change what the server refused), then the error
-  ///   chain. An unrecognized failure counts as retryable, bounded by the retry budgets, as on
+  /// - Retrying: a non-2xx status first (a retry cannot change what the server refused), then the
+  ///   error chain. An unrecognized failure counts as retryable, bounded by the retry budgets, as on
   ///   Android: AVFoundation reports most stream failures opaquely.
   static func classify(
     _ error: Error?,
@@ -93,7 +93,7 @@ enum PlaybackFailure {
     ])
 
   private static func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool {
-    if let status = httpStatusCode {
+    if let status = httpStatusCode, !(200 ... 299).contains(status) {
       return retryableHTTPStatusCodes.contains(status) || (500 ... 599).contains(status)
     }
     guard let error else { return false }

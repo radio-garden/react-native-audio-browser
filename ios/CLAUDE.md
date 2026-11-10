@@ -160,8 +160,7 @@ ios/
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track), fade via VolumeFader
 │   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware;
 │   │                                 #   healthy-playback budget refill
-│   ├── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
-│   └── EndOfTrackJudgement.swift     # Pure judgement: end-of-track detection
+│   └── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
 ├── NowPlayingInfo/
 │   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo fields by key
 │   └── SilentAudioPrimer.swift       # Renders silence so iOS elects the app (ADR 0005)

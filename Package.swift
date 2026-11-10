@@ -32,7 +32,6 @@ let package = Package(
         "Player/RetryLoop.swift",
         "Player/PlaybackStateMachine.swift",
         "Player/PlayerStatusTypes.swift",
-        "Player/EndOfTrackJudgement.swift",
         "Player/AirPlayStallJudgement.swift",
         "Player/PlayerEngine.swift",
         "Player/PlayerCallbacks.swift",
