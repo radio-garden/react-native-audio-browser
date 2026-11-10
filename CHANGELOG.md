@@ -1,3 +1,17 @@
+## [0.2.0-next.82](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.81...v0.2.0-next.82) (2026-11-10)
+
+### Bug Fixes
+
+* **ios:** answer Siri's play-media intent within its time budget ([7b85d8d](https://github.com/radio-garden/react-native-audio-browser/commit/7b85d8de935d4a6b56978513a3b9beff98a368e1))
+* **ios:** ask for CarPlay's album path again after a nil answer ([cfd47a3](https://github.com/radio-garden/react-native-audio-browser/commit/cfd47a37b280a7a34cba92cf7faea95410714fe3))
+* **ios:** ask for CarPlay's album path once per track ([9a028dc](https://github.com/radio-garden/react-native-audio-browser/commit/9a028dc70db017e5fa05fbed4cc92e6b7f5da48e))
+* **ios:** cancel CarPlay's album-path resolve on the next track change ([53cb5f6](https://github.com/radio-garden/react-native-audio-browser/commit/53cb5f64e090143acccb2d01d9ed7467e82f22b8))
+* **ios:** skip the gate report on a cancelled Siri decision ([612fac5](https://github.com/radio-garden/react-native-audio-browser/commit/612fac5a89e27241b48387fd00a6c0d6ed20cdf8))
+
+### Code Refactors
+
+* **ios:** bound retry by silence and pace reconnects with the units ([ff980a3](https://github.com/radio-garden/react-native-audio-browser/commit/ff980a36537f8c47a44dad847d3fb699ef3c3b67))
+
 ## [0.2.0-next.81](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.80...v0.2.0-next.81) (2026-11-10)
 
 ### Bug Fixes
