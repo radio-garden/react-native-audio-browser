@@ -4,6 +4,7 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingSimpleBasePlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
@@ -69,6 +70,9 @@ internal class RemoteSwitchingPlayer(
 
       /** Whether the receiver reported the current item playing since the start timeout armed. */
       var reportedPlaying = false
+
+      /** The receiver's last timed metadata for the current item; none until it holds that item. */
+      var timedMetadata = NO_TIMED_METADATA
     }
   }
 
@@ -133,6 +137,11 @@ internal class RemoteSwitchingPlayer(
 
   private val receiverListener =
     object : MediaPlayer.Listener {
+      override fun onMetadata(metadata: Metadata) {
+        val remote = remoteRoute ?: return
+        if (holdsCurrent(remote)) remote.timedMetadata = metadata
+      }
+
       override fun onEvents(player: MediaPlayer, events: MediaPlayer.Events) {
         val remote = remoteRoute ?: return
         if (player !== remote.receiver) return
@@ -301,6 +310,7 @@ internal class RemoteSwitchingPlayer(
 
   private fun load(remote: Route.Remote, positionMs: Long) {
     cancelLoad(remote)
+    remote.timedMetadata = NO_TIMED_METADATA
     val item = queue.current
     if (item == null) {
       remote.load = Load.Idle(C.TIME_UNSET)
@@ -421,6 +431,14 @@ internal class RemoteSwitchingPlayer(
   private fun receiverHolds(remote: Route.Remote, item: MediaItem) =
     remote.receiver.currentMediaItem === item
 
+  /** Counts [Load.Sent] too: a receiver's onMetadata comes before onEvents moves it to Playing. */
+  private fun holdsCurrent(remote: Route.Remote): Boolean =
+    when (val load = remote.load) {
+      is Load.Sent -> receiverHolds(remote, load.item)
+      is Load.Playing -> receiverHolds(remote, load.item)
+      else -> false
+    }
+
   override fun getState(): State {
     val state = super.getState()
     val remote = remoteRoute ?: return state
@@ -445,6 +463,7 @@ internal class RemoteSwitchingPlayer(
       .setVolume(if (maxVolume > 0) state.deviceVolume.toFloat() / maxVolume else 0f)
       .setAvailableCommands(state.availableCommands.buildUpon().addAll(*QUEUE_COMMANDS).build())
       .setPlayerError(null)
+      .setTimedMetadata(remote.timedMetadata)
       .apply {
         if (!holds) setPlayWhenReady(playIntent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
         when (load) {
@@ -658,6 +677,8 @@ internal class RemoteSwitchingPlayer(
   private fun done() = Futures.immediateVoidFuture()
 
   private companion object {
+    val NO_TIMED_METADATA = Metadata(C.TIME_UNSET)
+
     // Served from the queue this side keeps, whatever the receiver offers.
     val QUEUE_COMMANDS =
       intArrayOf(

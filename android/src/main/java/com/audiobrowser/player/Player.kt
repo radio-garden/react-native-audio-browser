@@ -973,6 +973,7 @@ internal constructor(
 
   /** Keeps the queue; the state becomes STOPPED. */
   fun stop() {
+    nowPlaying.clearTimedMetadata()
     // State first, so the state machine's STOPPED guard swallows the PAUSED the drop below causes.
     setPlaybackState(PlaybackState.STOPPED)
     val ended = sessionPlayer.playbackState == MediaPlayer.STATE_ENDED

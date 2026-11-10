@@ -4,12 +4,14 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.Util
+import androidx.media3.extractor.metadata.icy.IcyInfo
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -140,6 +142,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var lagging = false
   private var held: MediaItem? = null
   private var uid = Any()
+  private var metadata: Metadata? = null
 
   fun catchUp() {
     held?.let { item = it }
@@ -155,6 +158,12 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
 
   fun update() = invalidateState()
 
+  /** Reports a stream title for whatever it plays, as a receiver's poll does; a load clears it. */
+  fun title(title: String) {
+    metadata = Metadata(0, IcyInfo(title.toByteArray(), title, null))
+    invalidateState()
+  }
+
   override fun getState(): State =
     State.Builder()
       .setAvailableCommands(MediaPlayer.Commands.Builder().addAllCommands().build())
@@ -169,6 +178,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
       .setPlaybackState(if (item == null) STATE_IDLE else readiness)
       .setDeviceInfo(DEVICE_INFO)
       .setDeviceVolume(volume)
+      .apply { metadata?.let(::setTimedMetadata) }
       .build()
 
   override fun handleSetMediaItems(
@@ -180,6 +190,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
     loads += SentLoad(loaded, startPositionMs, intent)
     // A fresh uid makes a reload of the same item a new playlist entry to listeners.
     uid = Any()
+    metadata = null
     positionMs = if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs
     readiness = STATE_READY
     if (lagging) held = loaded else item = loaded
