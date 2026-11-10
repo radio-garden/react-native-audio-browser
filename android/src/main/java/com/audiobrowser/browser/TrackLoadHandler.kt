@@ -1,8 +1,10 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.awaitNested
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackLoadEvent
 import com.margelo.nitro.core.Promise
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 /**
@@ -23,9 +25,9 @@ suspend fun <T> handleTrackLoad(
   if (handler != null) {
     val event = TrackLoadEvent(track, queue, startIndex)
     try {
-      val outerPromise = handler(event)
-      val innerPromise = outerPromise.await()
-      innerPromise.await()
+      handler(event).awaitNested()
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Timber.e(e, "handleTrackLoad failed")
     }

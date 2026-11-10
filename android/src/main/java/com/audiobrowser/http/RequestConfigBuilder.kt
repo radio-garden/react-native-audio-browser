@@ -1,6 +1,8 @@
 package com.audiobrowser.http
 
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.awaitCancellable
+import com.audiobrowser.util.awaitNested
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -58,9 +60,10 @@ object RequestConfigBuilder {
    * JS promise); awaiting it once hands a Promise downstream as the config.
    */
   suspend fun awaitAsyncConfig(promise: Promise<Promise<RequestConfig>>): RequestConfig =
-    promise.await().await()
+    promise.awaitNested()
 
-  suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
+  suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig =
+    promise.awaitCancellable()
 
   private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
     MediaRequestConfig(

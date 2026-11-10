@@ -11,6 +11,8 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.FALLBACK_TIMEOUT
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
+import com.audiobrowser.util.awaitCancellable
+import com.audiobrowser.util.awaitNested
 import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
@@ -680,6 +682,8 @@ class BrowserManager {
         "singleTrack=false - returning ${playableTracks.size} playable tracks (from ${sectionTracks.size} in section), starting at index $selectedIndex"
       )
       return Pair(playableTracks.toTypedArray(), selectedIndex)
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Timber.e(e, "Error expanding queue from contextual path: $contextualPath")
       return null
@@ -965,13 +969,13 @@ class BrowserManager {
       // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms.
       return callback
         .invoke(param)
-        .await()
+        .awaitCancellable()
         .match(
           first = { resolvedTrack -> resolvedTrack },
           second = { browseError -> throw CallbackException(browseError.error) },
           third = { promise ->
             promise
-              .await()
+              .awaitCancellable()
               .match(
                 first = { resolvedTrack -> resolvedTrack },
                 second = { browseError -> throw CallbackException(browseError.error) },
@@ -1004,9 +1008,7 @@ class BrowserManager {
 
     searchEntry.searchCallback?.let { callback ->
       Timber.d("Resolving search via callback")
-      val promise = callback.invoke(params)
-      val innerPromise = promise.await()
-      return innerPromise.await()
+      return callback.invoke(params).awaitNested()
     }
 
     searchEntry.searchConfig?.let { apiConfig ->
@@ -1039,7 +1041,7 @@ class BrowserManager {
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
     // The TS layer wraps the thunk in Promise.resolve: await the bridge promise, then the JS one.
-    return resolver.invoke().await().await()
+    return resolver.invoke().awaitNested()
   }
 
   // No in-flight dedupe: concurrent first requests may both resolve, which is harmless, and a
