@@ -49,8 +49,6 @@ final class Player {
   /// One track's playback session, which automatic retry reloads keep (glossary: Load).
   struct Load: Equatable {
     let id: UInt
-    /// Audio has rendered: retries get the recovery budget, not the first-connect one (ADR 0004).
-    var hasPlayed = false
     /// The silent primer has run for this load's first failure (ADR 0005).
     var primedNowPlaying = false
     /// One of this load's items is in the engine; until then it reports the previous one's position.
@@ -73,7 +71,7 @@ final class Player {
   private func beginLoad() {
     loadCount &+= 1
     load = Load(id: loadCount)
-    retry.reset()
+    retry.loadStarted()
     deferredSeek.reset()
   }
 
@@ -88,7 +86,8 @@ final class Player {
         rate = oldValue
         return
       }
-      engine.setRate(rate, playing: playWhenReady)
+      // The intent stays up in .error, over an item the retry gave up on.
+      engine.setRate(rate, playing: playWhenReady && state != .error)
       persistence.save()
     }
   }
@@ -179,6 +178,7 @@ final class Player {
   func setPlayWhenReady(_ newValue: Bool) {
     let changed = newValue != playWhenReady
     playWhenReady = newValue
+    retry.playIntentChanged(newValue)
     // A play during an interruption owns the intent: a later pause must not be auto-resumed.
     if newValue { shouldResumeAfterInterruption = false }
 
@@ -251,12 +251,17 @@ final class Player {
     sleepTimerManager.onComplete = { [weak self] in self?.pause() }
     sleepTimerManager.onChanged = { [weak self] in self?.callbacks?.playerDidChangeSleepTimer($0) }
 
-    retry.onError = { [weak self] in self?.transition(.errorOccurred($0)) }
+    retry.onError = { [weak self] error in
+      guard let self else { return }
+      // The deadline can pass with a connect in flight: its item must neither play nor fail
+      // under the error.
+      engine.cancelLoading()
+      engine.stopObservingItem()
+      transition(.errorOccurred(error))
+    }
     retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
     retry.onFailedWithoutIntent = { [weak self] in self?.parkForReloadOnPlay() }
     retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
-    retry.shouldRetry = { [weak self] in self?.playWhenReady ?? false }
-    retry.hasPlayed = { [weak self] in self?.load?.hasPlayed ?? false }
     retry.bufferedPosition = { [weak self] in self?.engine.bufferedPosition ?? 0 }
   }
 
@@ -367,6 +372,7 @@ final class Player {
       // A stall or a lost connection can fail an item that is still alive: data arriving later
       // must not play it under the error.
       engine.pause()
+      retry.cancel()
     default: break
     }
 
@@ -627,6 +633,7 @@ final class Player {
       persistence.save()
 
       if let src = currentTrack.src {
+        retry.connectionStarted()
         engine.resolveAndLoad(src: src, track: currentTrack)
       } else {
         logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
@@ -731,6 +738,7 @@ final class Player {
       return
     }
     prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
+    retry.connectionStarted()
     engine.resolveAndLoad(src: src, track: track)
   }
 
@@ -741,7 +749,7 @@ final class Player {
   }
 
   private func parkForReloadOnPlay() {
-    retry.reset()
+    retry.cancel()
     if let position = reloadPosition { deferredSeek.capture(position) }
     load?.reloadOnPlay = true
     transition(.retryCancelled)
@@ -762,7 +770,7 @@ final class Player {
       engine.recreate()
     } else {
       engine.cancelLoading()
-      engine.dropAsset()
+      engine.stopObservingItem()
       engine.pause()
     }
     if let target { deferredSeek.capture(target) }
@@ -800,6 +808,8 @@ final class Player {
       if playWhenReady { engine.play() }
       if !beginDeferredSeek(), likelyToKeepUp { bufferBecameSufficient() }
     case let .loadFailed(error):
+      // A failure after the terminal error is the same connection's, reported late.
+      guard state != .error else { return }
       primeNowPlayingIfNeeded()
       retry.handleError(error, context: .mediaLoad)
     case .unplayable:
@@ -809,6 +819,7 @@ final class Player {
       primeNowPlayingIfNeeded()
       transition(.errorOccurred(.invalidSourceUrl(url)))
     case let .failed(error, httpStatusCode):
+      guard state != .error else { return }
       retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     case let .likelyToKeepUp(isLikely):
       guard isLikely, engine.hasItem, !beginDeferredSeek() else { return }
@@ -817,7 +828,6 @@ final class Player {
       recoverIfAirPlayStalled(transitioningTo: status, waitingForNoItem: waitingForNoItem)
       timeControlStatusDidChange(status)
     case .audioDidStart:
-      load?.hasPlayed = true
       if state != .loading { transition(.audioFrameDecoded) }
     case .playedToEnd:
       itemDidPlayToEnd()
@@ -900,16 +910,19 @@ final class Player {
 
   // MARK: - Connectivity
 
-  /// Re-renders the now-playing lines, whose stall line tells offline from buffering, and when
-  /// connectivity returns retries a stalled stream at once, spending an attempt, rather than wait
-  /// for AVPlayer to fail it. Only while stalled (.buffering) with play intent, so a pause or a
-  /// retry that gave up isn't resumed; not while a retry is pending, whose wait watches connectivity
-  /// itself; and not with retry off, which leaves the stall to AVPlayer.
+  /// Re-renders the now-playing lines, whose stall line tells offline from buffering, and passes
+  /// the change to the retry loop. When connectivity returns to a stalled stream, its connection
+  /// is given up first, as one that ended offline, so the reconnect goes out at once rather than
+  /// wait for AVPlayer to fail it. Only while stalled (.buffering) with play intent, so a pause or
+  /// a retry that gave up isn't resumed; not while a retry is pending, which the loop paces itself;
+  /// and not with retry off, which leaves the stall to AVPlayer.
   func networkStatusDidChange(isOnline: Bool) {
     engine.renderNowPlaying()
-    guard isOnline, playWhenReady, state == .buffering, retry.isEnabled, retry.pendingTask == nil else { return }
-    logger.info("Connectivity restored while stalled — retrying now")
-    retry.handleFailure(.stall, immediately: true)
+    if isOnline, playWhenReady, state == .buffering, retry.isEnabled, retry.pendingTask == nil {
+      logger.info("Connectivity restored while stalled — retrying now")
+      retry.handleFailure(.stall)
+    }
+    retry.onlineChanged(isOnline)
   }
 
   /// Time playback must have progressed before a buffer dip counts as a stall, so the initial

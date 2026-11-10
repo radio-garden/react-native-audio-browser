@@ -8,7 +8,7 @@ private func makeLoading(
   live: Bool = false,
 ) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retries: false)
+  let player = makePlayer(engine: engine)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
@@ -31,7 +31,7 @@ private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine
 @MainActor
 private func makeStalling(givesUp: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retry: makeRetryLoop(givesUp: givesUp), retries: nil)
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(givesUp: givesUp))
   player.retry.stallTimeout = .milliseconds(10)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
@@ -43,6 +43,23 @@ private func makeStalling(givesUp: Bool = false) throws -> (Player, MockPlayerEn
   engine.emit(.stalled)
   player.transition(.avPlayerWaiting)
   return (player, engine, callbacks)
+}
+
+/// A live stream that loaded and waits to play, its retry loop on a virtual clock.
+@MainActor
+private func makeVirtual(online: Bool = true) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks, VirtualClock) {
+  let clock = VirtualClock()
+  let retry = RetryLoop(online: online, clock: clock)
+  retry.updatePolicy(from: .first(true))
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: retry)
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)], playWhenReady: true)
+  engine.hasItem = true
+  engine.hasLoadedAsset = true
+  engine.emit(.itemPrepared(likelyToKeepUp: true))
+  return (player, engine, callbacks, clock)
 }
 
 @Suite("Player - seeking")
@@ -95,7 +112,7 @@ struct PlayerSeekingTests {
 
   @Test func aCompletionFromBeforeAReloadIsDropped() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -114,7 +131,7 @@ struct PlayerSeekingTests {
 
   @Test func aStartSeekCutShortWaitsForTheNextItem() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -130,7 +147,7 @@ struct PlayerSeekingTests {
   /// A media-load retry passes no position, so the start in flight is what it resumes from.
   @Test func aReloadThatDoesNotResumeKeepsTheStartInFlight() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -146,7 +163,7 @@ struct PlayerSeekingTests {
 
   @Test func aMediaServicesResetDuringTheLoadKeepsTheStart() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
 
     player.mediaServicesWereReset()
@@ -158,7 +175,7 @@ struct PlayerSeekingTests {
 
   @Test func aPlayRightAfterAStopDuringTheStartSeekStartsOver() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -174,7 +191,7 @@ struct PlayerSeekingTests {
 
   @Test func theLiveEdgeDuringALoadWaitsForTheStartSeek() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.m3u8", title: "T", live: true)], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -220,7 +237,6 @@ struct PlayerEngineEventTests {
   @Test func aFailedLoadPrimesNowPlayingOncePerLoad() throws {
     let (player, engine, _) = try makeLoading()
     player.setPlayWhenReady(true)
-    player.retry.shouldRetry = { true }
     engine.emit(.loadFailed(URLError(.timedOut)))
     engine.emit(.loadFailed(URLError(.timedOut)))
     #expect(engine.primeCount == 1)
@@ -286,18 +302,15 @@ struct PlayerEngineEventTests {
     #expect(player.state == .ended)
 
     let (live, liveEngine, _) = try makePlaying(live: true)
-    live.retry.shouldRetry = { true }
     liveEngine.emit(.playedToEnd)
     await live.retry.pendingTask?.value
     #expect(live.state == .loading)
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
-    #expect(live.retry.attempts == 1)
   }
 
   /// AVPlayer pauses an item at its end, so a seek within its window would leave it silent.
   @Test func aLiveEndReconnectsEvenWithASeekableWindow() async throws {
     let (player, engine, _) = try makePlaying(live: true)
-    player.retry.shouldRetry = { true }
     engine.liveEdge = 120
     engine.emit(.playedToEnd)
     await player.retry.pendingTask?.value
@@ -310,34 +323,30 @@ struct PlayerEngineEventTests {
     player.retry.updatePolicy(from: .second(RetryConfig(
       maxRetries: 3, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
     )))
-    player.retry.shouldRetry = { true }
     for _ in 0 ..< 20 where player.state != .error {
       engine.emit(.playedToEnd)
       await player.retry.pendingTask?.value
+      engine.hasLoadedAsset = true
       engine.emit(.itemPrepared(likelyToKeepUp: true))
     }
-    #expect(engine.resolveAndLoadCalls.count == 4)
+    // The first connection played, so its end starts the count: four that deliver nothing follow.
+    #expect(engine.resolveAndLoadCalls.count == 5)
     #expect(player.state == .error)
     #expect(player.errorStatus.error == .playbackStalled)
     #expect(callbacks.errorEvents.count == 1)
   }
 
-  /// Each reconnect plays long enough to refill the budget, as a stream closing once an hour does.
-  @Test func liveEndsFarApartNeverSpendTheBudget() async throws {
+  /// A connection that delivered audio starts `maxRetries`' count over (docs/adr/0014).
+  @Test func liveEndsBetweenAudioNeverSpendMaxRetries() async throws {
     let (player, engine, callbacks) = try makePlaying(live: true)
     player.retry.updatePolicy(from: .second(RetryConfig(
       maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
     )))
-    player.retry.shouldRetry = { true }
-    player.retry.healthyPlaybackDuration = .milliseconds(10)
     for _ in 0 ..< 5 {
       engine.emit(.playedToEnd)
       await player.retry.pendingTask?.value
-      #expect(player.retry.attempts == 1)
       engine.emit(.itemPrepared(likelyToKeepUp: true))
       player.transition(.avPlayerPlaying)
-      await player.retry.healthyPlaybackTask?.value
-      #expect(player.retry.attempts == 0)
     }
     #expect(engine.resolveAndLoadCalls.count == 6)
     #expect(player.state == .playing)
@@ -357,7 +366,6 @@ struct PlayerEngineEventTests {
   /// The engine stops observing an item on a reload; a played-to-end it delivered late is stale.
   @Test func aPlayedToEndDuringALoadIsIgnored() throws {
     let (player, engine, _) = try makePlaying(live: true)
-    player.retry.shouldRetry = { true }
     player.reloadResolving(startFromCurrentTime: false)
     #expect(player.state == .loading)
     engine.emit(.playedToEnd)
@@ -416,7 +424,12 @@ struct PlayerRecoveringTests {
   }
 
   @Test func aStallWithNoFailureEndsInPlaybackStalledOnceTheBudgetIsSpent() async throws {
-    let (player, _, callbacks) = try makeStalling(givesUp: true)
+    let (player, engine, callbacks) = try makeStalling(givesUp: true)
+    await player.retry.stallTask?.value
+    await player.retry.pendingTask?.value
+    // The stalled connection had played, so even `maxRetries: 0` reconnects it once.
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    player.transition(.avPlayerWaiting)
     await player.retry.stallTask?.value
     await player.retry.pendingTask?.value
     #expect(player.state == .error)
@@ -528,34 +541,138 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
-  @Test func theNetworkReturningReconnectsAStalledStream_throughTheRetryLoop() async throws {
-    let (player, engine, _) = try makePlaying()
-    player.retry.shouldRetry = { true }
-    player.transition(.avPlayerWaiting)
-    #expect(player.state == .buffering)
-    player.networkStatusDidChange(isOnline: true)
-    await player.retry.pendingTask?.value
-    #expect(engine.resolveAndLoadCalls.count == 2)
-    #expect(player.retry.attempts == 1)
+  @Test func theDeadlineEndsASilentLoadInOneError_droppingTheConnectInFlight() async throws {
+    let clock = VirtualClock()
+    let retry = RetryLoop(clock: clock)
+    retry.updatePolicy(from: .first(true))
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: retry)
+    let callbacks = MockPlayerCallbacks()
+    player.callbacks = callbacks
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    let cancels = engine.cancelLoadingCount, stops = engine.stopObservingItemCount
+
+    await clock.run(until: 119_999)
+    #expect(player.state == .loading)
+    await clock.run(until: 120_000)
+
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+    #expect(engine.cancelLoadingCount == cancels + 1)
+    #expect(engine.stopObservingItemCount == stops + 1)
   }
 
-  @Test func aFlappingConnectionEndsInATerminalErrorOnceTheBudgetIsSpent() async throws {
+  /// The error pauses AVPlayer, and an item still connecting can report late: neither the pause,
+  /// nor its playing, nor its failure takes the state out of .error.
+  @Test func aTerminalErrorHoldsAgainstTheAVPlayersLateEvents() async throws {
+    let (player, engine, callbacks) = try makeStalling(givesUp: true)
+    engine.emit(.failed(URLError(.badURL), httpStatusCode: nil))
+    #expect(player.state == .error)
+    let loads = engine.resolveAndLoadCalls.count
+
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    engine.emit(.timeControlStatus(.playing, waitingForNoItem: false))
+    engine.emit(.audioDidStart)
+    engine.emit(.failed(NSError(domain: "AVFoundationErrorDomain", code: -11800), httpStatusCode: nil))
+    await player.retry.pendingTask?.value
+
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackFailed)
+    #expect(callbacks.errorEvents.count == 1)
+    #expect(player.retry.pendingTask == nil)
+    #expect(engine.resolveAndLoadCalls.count == loads)
+  }
+
+  /// The stalled connection ends with the network, before its return reaches the loop, so it
+  /// grows no backoff: only the 1 s floor applies, long past.
+  @Test func theNetworkReturningReconnectsAStalledStreamAtOnce() async throws {
+    let (player, engine, _, clock) = try makeVirtual(online: false)
+    player.transition(.avPlayerWaiting)
+    #expect(player.state == .buffering)
+    await clock.run(until: 5_000)
+
+    player.networkStatusDidChange(isOnline: true)
+    await clock.run(until: 5_000)
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func playbackThatStopsWithNoFailureEndsAtTheDeadline() async throws {
+    let (player, _, callbacks, clock) = try makeVirtual()
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.transition(.avPlayerWaiting)
+
+    await clock.run(until: 129_999)
+    #expect(player.state == .buffering)
+    await clock.run(until: 130_000)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
+  @Test func aRetryNowKeepsTheSilenceDeadline() async throws {
+    let (player, _, _, clock) = try makeVirtual()
+    await clock.run(until: 60_000)
+    player.retryNow()
+
+    await clock.run(until: 119_999)
+    #expect(player.state != .error)
+    await clock.run(until: 120_000)
+    #expect(player.state == .error)
+  }
+
+  @Test func hasPlayedSurvivesAPark_aRetryNowAndAMediaReset() async throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    player.transition(.avPlayerPlaying)
+    #expect(player.retry.hasPlayed)
+
+    engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    player.pause()
+    #expect(player.state == .paused)
+    player.play()
+    player.retryNow()
+    player.mediaServicesWereReset()
+
+    #expect(player.retry.hasPlayed)
+    player.retry.cancel()
+  }
+
+  @Test func aRateChangeInAnErrorLeavesTheAbandonedItemPaused() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.emit(.failed(URLError(.badURL), httpStatusCode: nil))
+    #expect(player.state == .error)
+    #expect(player.playWhenReady)
+
+    player.rate = 1.5
+
+    #expect(engine.rates.last?.rate == 1.5)
+    #expect(engine.rates.last?.playing == false)
+  }
+
+  /// `maxRetries` counts connections in a row that delivered nothing; one that plays between
+  /// flaps starts it over, and only the silence deadline bounds it (docs/adr/0014).
+  @Test func aFlappingConnectionThatPlaysBetweenKeepsReconnecting() async throws {
     let (player, engine, callbacks) = try makePlaying()
     player.retry.updatePolicy(from: .second(RetryConfig(
       maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
     )))
-    player.retry.shouldRetry = { true }
-    for flap in 1 ... 3 {
+    for _ in 1 ... 5 {
       player.transition(.avPlayerWaiting)
       player.networkStatusDidChange(isOnline: true)
       await player.retry.pendingTask?.value
-      if flap == 3 { break }
       engine.emit(.itemPrepared(likelyToKeepUp: true))
       player.transition(.avPlayerPlaying)
     }
-    #expect(engine.resolveAndLoadCalls.count == 3)
-    #expect(player.state == .error)
-    #expect(callbacks.errorEvents.count == 1)
+    #expect(engine.resolveAndLoadCalls.count == 6)
+    #expect(player.state == .playing)
+    #expect(callbacks.errorEvents.isEmpty)
   }
 
   @Test func theNetworkReturningWithRetryOffLeavesTheStallToAVPlayer() throws {
@@ -578,7 +695,7 @@ struct PlayerRecoveringTests {
 
   @Test func theNetworkReturningDuringABackoffLeavesTheReloadToTheRetry() async throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")])
     player.play()
     player.transition(.avPlayerWaiting)
@@ -606,7 +723,6 @@ struct PlayerRecoveringTests {
 
   @Test func theNetworkReturningReRendersBeforeReconnecting() async throws {
     let (player, engine, _) = try makePlaying()
-    player.retry.shouldRetry = { true }
     player.transition(.avPlayerWaiting)
     var order: [String] = []
     engine.onSeamCall = { order.append($0) }
@@ -623,21 +739,20 @@ struct PlayerRecoveringTests {
     let (player, engine, _) = try makePlaying()
     engine.emit(.audioDidStart)
     let first = player.load
-    #expect(first?.hasPlayed == true)
+    #expect(player.retry.hasPlayed)
 
     engine.emit(.unplayable)
     #expect(player.state == .error)
     player.play()
 
     #expect(player.load?.id != first?.id)
-    #expect(player.load?.hasPlayed == false)
+    #expect(!player.retry.hasPlayed)
     #expect(player.load?.primedNowPlaying == false)
     #expect(engine.recreateCount == 1)
   }
 
   @Test func aRetryKeepsItsLoad() async throws {
     let (player, engine, _) = try makePlaying()
-    player.retry.shouldRetry = { true }
     let first = player.load
     engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
     await player.retry.pendingTask?.value
@@ -647,7 +762,6 @@ struct PlayerRecoveringTests {
 
   @Test func aRetryAfterTheAVPlayerItselfFailedReloadsOnANewOne_inTheSameLoad() async throws {
     let (player, engine, _) = try makePlaying()
-    player.retry.shouldRetry = { true }
     engine.emit(.audioDidStart)
     let first = player.load
     engine.playerFailed = true
@@ -658,12 +772,12 @@ struct PlayerRecoveringTests {
     #expect(engine.recreateCount == 1)
     #expect(engine.resolveAndLoadCalls.count == 2)
     #expect(player.load?.id == first?.id)
-    #expect(player.load?.hasPlayed == true)
+    #expect(player.retry.hasPlayed)
   }
 
   @Test func aMediaServicesResetDuringABackoffReloadsOnce() async throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+    let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
     engine.hasItem = true
     engine.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
@@ -774,7 +888,7 @@ struct PlayerReviewRegressionTests {
   @Test func aRestartFromAnErrorDuringTheStartSeekKeepsTheStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -794,7 +908,7 @@ struct PlayerReviewRegressionTests {
 
   @Test func aSeekInAnErrorDuringTheStartSeekReplacesTheStart() throws {
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false)
+    let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
     engine.hasItem = true
@@ -884,7 +998,7 @@ struct PlayerReviewRegressionTests {
 
   @Test func aStartPositionIsSavedWithTheTrackChange() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
-    let player = makePlayer(retries: false)
+    let player = makePlayer()
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")], startPositionMs: 30000)
     let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
     #expect(saved?.positionMs == 30000)
@@ -920,7 +1034,7 @@ struct PlayerReviewRegressionTests {
   @Test func playingSavesPeriodically() async throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retries: false, saveInterval: .milliseconds(10))
+    let player = makePlayer(engine: engine, saveInterval: .milliseconds(10))
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
     engine.hasItem = true
     engine.hasLoadedAsset = true
@@ -944,7 +1058,7 @@ struct PlayerReviewRegressionTests {
     )
     PlaybackPersistence(defaults: defaults) { saved }.save()
 
-    let player = makePlayer(retries: false)
+    let player = makePlayer()
     let session = try #require(player.persistedSession())
     player.resume(session, queue: nil)
     #expect(player.currentTrack?.id == "t1")
@@ -962,12 +1076,11 @@ struct PlayerReviewRegressionTests {
       positionMs: nil, repeatMode: "off", shuffleEnabled: false, playbackSpeed: 1,
     )
     PlaybackPersistence(defaults: defaults) { saved }.save()
-    #expect(makePlayer(retries: false).persistedSession() == nil)
+    #expect(makePlayer().persistedSession() == nil)
   }
 
   @Test func aTrackChangeClearsTheRetryingErrorOfTheTrackItLeaves() async throws {
     let (player, engine, callbacks) = try makeLoading()
-    player.retry.shouldRetry = { true }
     player.setPlayWhenReady(true)
     engine.emit(.loadFailed(URLError(.timedOut)))
     #expect(callbacks.playbackChanges.last?.error != nil)

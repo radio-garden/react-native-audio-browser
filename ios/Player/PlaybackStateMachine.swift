@@ -8,9 +8,10 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case .trackLoading: return .loading
   case .trackUnloaded: return PlaybackState.none
   case .trackEndedNaturally: return .ended
-  case .avPlayerWaiting: return .buffering
-  case .avPlayerPlaying: return .playing
-  case .audioFrameDecoded: return .playing
+  // .error holds against the AVPlayer's own events: an item still connecting when the retry gave
+  // up can report them late. Leaving .error takes an explicit reload, through .loading.
+  case .avPlayerWaiting: return current == .error ? nil : .buffering
+  case .avPlayerPlaying, .audioFrameDecoded: return current == .error ? nil : .playing
   case .errorOccurred: return .error
   case .retryCancelled:
     guard current != .stopped, current != .ended, current != .error else { return nil }
