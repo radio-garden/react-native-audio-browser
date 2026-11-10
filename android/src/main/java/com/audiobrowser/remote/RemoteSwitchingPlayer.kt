@@ -135,6 +135,27 @@ internal class RemoteSwitchingPlayer(
   private val remoteRoute: Route.Remote?
     get() = route as? Route.Remote
 
+  /** For the next [getState] to take [titleAtStop]: super.getState() consumes pending events. */
+  private var localStopPending = false
+
+  /**
+   * The phone's metadata as it stopped, reported as none until the phone sends more. The state
+   * emits only a change, and a stream's first title after a reconnect often equals its last.
+   */
+  private var titleAtStop: Metadata? = null
+
+  private fun withoutStoppedTitle(state: State): State {
+    if (localStopPending) {
+      localStopPending = false
+      titleAtStop = state.timedMetadata
+    }
+    if (state.timedMetadata !== titleAtStop) {
+      titleAtStop = null
+      return state
+    }
+    return state.buildUpon().setTimedMetadata(NO_TIMED_METADATA).build()
+  }
+
   private val receiverListener =
     object : MediaPlayer.Listener {
       override fun onMetadata(metadata: Metadata) {
@@ -441,7 +462,7 @@ internal class RemoteSwitchingPlayer(
 
   override fun getState(): State {
     val state = super.getState()
-    val remote = remoteRoute ?: return state
+    val remote = remoteRoute ?: return withoutStoppedTitle(state)
     val load = remote.load
     val holds = load is Load.Playing && receiverHolds(remote, load.item)
     // Duration, seekability and liveness come from the receiver's data for the item it plays.
@@ -541,7 +562,11 @@ internal class RemoteSwitchingPlayer(
   }
 
   override fun handleStop(): ListenableFuture<*> {
-    val remote = remoteRoute ?: return super.handleStop()
+    val remote = remoteRoute
+    if (remote == null) {
+      localStopPending = true
+      return super.handleStop()
+    }
     val positionMs = positionOn(remote)
     cancelLoad(remote)
     stopReceiver(remote.receiver)

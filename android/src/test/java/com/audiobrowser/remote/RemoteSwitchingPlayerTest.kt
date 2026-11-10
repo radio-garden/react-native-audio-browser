@@ -912,6 +912,22 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a play after a local stop shows the stream's title again`() {
+    playLocally(listOf("a"))
+    local.title("Song")
+    idle()
+    val seen = transitionsAndTitles()
+
+    player.stop()
+    player.prepare()
+    idle()
+    local.title("Song")
+    idle()
+
+    assertEquals(listOf("Song"), seen)
+  }
+
+  @Test
   fun `release brings playback back and lets every remote go`() {
     playLocally(listOf("a"))
     remote.startSession()
