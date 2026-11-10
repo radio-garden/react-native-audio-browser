@@ -1,3 +1,30 @@
+## [0.2.0-next.76](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.75...v0.2.0-next.76) (2026-11-10)
+
+### Bug Fixes
+
+* **android:** drop the outgoing stream's metadata that lands after a track change ([0edef07](https://github.com/radio-garden/react-native-audio-browser/commit/0edef07599040c547c041a8c7bee6d1f18fd285b))
+* **android:** end a play-from-search when the service scope is cancelled ([36696da](https://github.com/radio-garden/react-native-audio-browser/commit/36696da11a03c3758b66d536907e213990cf11e5))
+* **android:** end a waiting play-from-search on a task swipe while AudioBrowser is bound ([d09156a](https://github.com/radio-garden/react-native-audio-browser/commit/d09156abe1f914daaf49c3ee07aea7db37edc6f1))
+* **android:** end the JS callbacks that have a fallback at a timeout ([12526d4](https://github.com/radio-garden/react-native-audio-browser/commit/12526d4938b47e9cb15686f8adb841e868164578))
+* **android:** end the other JS-callback awaits when their caller is cancelled ([43138dc](https://github.com/radio-garden/react-native-audio-browser/commit/43138dc6d2256dc3848332076eb7d0db4298969f))
+* **android:** let a cancelled request config transform or resolve end ([fe1aacc](https://github.com/radio-garden/react-native-audio-browser/commit/fe1aacc909882015a653ddd958bdf1adfb56bb19))
+* **android:** let a gate decision's cancelled caller see the cancellation ([0c7c9f3](https://github.com/radio-garden/react-native-audio-browser/commit/0c7c9f3efeb0f474f7c6af0bae2e4727061360a9))
+
+### Code Refactors
+
+* **android:** add a cancellable await for JS callbacks ([95a8215](https://github.com/radio-garden/react-native-audio-browser/commit/95a8215296ecda8909b336cede8141ad797ed977))
+
+### Documentation
+
+* describe the stream server in the contributing guide ([6f0bb11](https://github.com/radio-garden/react-native-audio-browser/commit/6f0bb1111830a62982172a4ff08656fc20d802da))
+
+### Other changes
+
+* add a local stream server that misbehaves on demand ([7760258](https://github.com/radio-garden/react-native-audio-browser/commit/77602583b241c8ea797a9e06095c8ce3a9cc85fd))
+* **example:** play the stream server's cases from the app ([8062c68](https://github.com/radio-garden/react-native-audio-browser/commit/8062c68f72200259a0044fec07ad9bfbb5a6cb01))
+* **example:** turn retry on ([6ed92da](https://github.com/radio-garden/react-native-audio-browser/commit/6ed92da6cfa203244fdf3c74daaf5a536ef10c46))
+* move the stream server's default port to 7385 ([379480d](https://github.com/radio-garden/react-native-audio-browser/commit/379480ddd4ce11de3454df922259d4878dcbb1a7))
+
 ## [0.2.0-next.75](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.74...v0.2.0-next.75) (2026-11-09)
 
 ### Bug Fixes
