@@ -3,6 +3,10 @@ import Foundation
   import NitroModules
 #endif
 
+#if !compiler(>=6.3)
+  #error("react-native-audio-browser needs Swift 6.3 or later (Xcode 26.4 or later): Swift 6.2 compiles this library's nonisolated(nonsending) closures into code that crashes on iOS below 18 (swiftlang/swift#86829)")
+#endif
+
 /// The fields every request config kind (request, browse, media, artwork) has.
 protocol RequestFieldValues<Method> {
   associatedtype Method

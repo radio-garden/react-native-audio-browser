@@ -1,5 +1,5 @@
 PODS:
-  - AudioBrowser (0.2.0-next.75):
+  - AudioBrowser (0.2.0-next.79):
     - hermes-engine
     - Kingfisher (~> 8.6)
     - NitroModules
@@ -69,7 +69,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.37.1):
+  - NitroModules (0.37.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2264,7 +2264,7 @@ EXTERNAL SOURCES:
     :path: build/rncore-facades/Yoga
 
 SPEC CHECKSUMS:
-  AudioBrowser: a909724d8eff110b7a168b0cdb4c070382684314
+  AudioBrowser: e1a503e4e3260f1e155b20783179ccd9d652255b
   boost: 8502bfdc46e2804408af2e163049ece181009af4
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4
@@ -2275,7 +2275,7 @@ SPEC CHECKSUMS:
   Kingfisher: 0bc3e46cbca95dcfb48dedfe8607bdd76ae216d9
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: 1cbda910413acda474751ac9b2522a6d466f74ad
-  NitroModules: c32f969b7c536e0b6b401a9dfdb35bb4eba071ef
+  NitroModules: f1a11047ebbb0202a7d0033d6e99ad0527d34b00
   RCT-Folly: 82921e585c0400eda46fac1068297aa9dfb035e4
   RCTDeprecation: e134f2a2c096a6450f5fcbbe949531f913a2ff04
   RCTRequired: f1a68295837ee8f91e112ed1b5694d12e7ff1784
