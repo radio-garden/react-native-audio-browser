@@ -177,6 +177,31 @@
     var reference: MediaReference
   }
 
+  enum GateReason {
+    case browse
+    case search
+  }
+
+  struct Gate {
+    var title: String
+    var message: String?
+  }
+
+  struct GateDecision {
+    var gated: Bool
+    var gate: Gate?
+  }
+
+  struct NativeGateRequest {
+    var reason: GateReason
+    var path: String?
+    var search: SearchParams?
+  }
+
+  struct GateEvent {
+    var reason: GateReason
+  }
+
   struct ImageContext {
     var width: Double?
     var height: Double?

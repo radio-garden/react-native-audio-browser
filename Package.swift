@@ -16,6 +16,7 @@ let package = Package(
         "Browser/SearchDrillIn.swift",
         "Browser/TabBarEntries.swift",
         "Browser/RequestLayer.swift",
+        "Browser/BrowseGate.swift",
         "Browser/JsonModels.swift",
         "Browser/StyleResolver.swift",
         "Browser/InertStyleDiagnostic.swift",
