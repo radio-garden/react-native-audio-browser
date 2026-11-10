@@ -1,3 +1,14 @@
+## [0.2.0-next.79](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.78...v0.2.0-next.79) (2026-11-10)
+
+### Code Refactors
+
+* add SilenceBudget and ReconnectPacer, tested from one case file ([f2e4b10](https://github.com/radio-garden/react-native-audio-browser/commit/f2e4b101dc5704a51924ec7d44691df528e18e7e))
+* hold the play intent and connectivity in ReconnectPacer, and pin six more cases ([63e9f30](https://github.com/radio-garden/react-native-audio-browser/commit/63e9f306d0ba30f4973ca1b621be9d0884a6a444))
+
+### Documentation
+
+* restate retry as silence bounds, connects pace (ADR 0014) ([3ce62fd](https://github.com/radio-garden/react-native-audio-browser/commit/3ce62fdd335f095947335a1b5533bcda77f0358c))
+
 ## [0.2.0-next.78](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.77...v0.2.0-next.78) (2026-11-10)
 
 ### Bug Fixes
