@@ -55,10 +55,15 @@ final class MockPlayerEngine: PlayerEngine {
 
   func resolveAndLoad(src: String, track _: Track) { resolveAndLoadCalls.append(src) }
   func cancelLoading() { cancelLoadingCount += 1 }
-  func dropAsset() { dropAssetCount += 1 }
+  func dropAsset() {
+    dropAssetCount += 1
+    hasLoadedAsset = false
+  }
+
   func clearItem() {
     clearItemCount += 1
     hasItem = false
+    hasLoadedAsset = false
     resumePosition = nil
   }
 
@@ -163,7 +168,6 @@ final class MockPlayerEngine: PlayerEngine {
 func makePlayer(
   engine: MockPlayerEngine = MockPlayerEngine(),
   retry: RetryLoop = makeRetryLoop(),
-  retries: Bool? = true,
   sleepTimerScheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
   saveInterval: Duration = .seconds(5),
 ) -> Player {
@@ -171,8 +175,8 @@ func makePlayer(
     engine: engine, retry: retry, sleepTimerScheduler: sleepTimerScheduler,
     persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
-  // Player's init installs its own `shouldRetry`; replace it afterwards.
-  if let retries { retry.shouldRetry = { retries } }
+  // The Player reports its play intent to the loop from here on, starting from none.
+  retry.playIntentChanged(false)
   return player
 }
 
@@ -258,16 +262,103 @@ final class MockPlayerCallbacks: PlayerCallbacks {
 
 // MARK: - RetryLoop
 
-/// An enabled RetryLoop with play intent that backs off for `delay` seconds and reloads, or gives
-/// up on the first retry when `givesUp`.
+/// An enabled RetryLoop with play intent that waits `delay` seconds before each reconnect, or gives
+/// up on the first connection that delivers nothing when `givesUp`.
 @MainActor
 func makeRetryLoop(givesUp: Bool = false, delay: TimeInterval = 0) -> RetryLoop {
-  let loop = RetryLoop(sleep: { _ in
+  let clock = SkippingClock()
+  let loop = RetryLoop(clock: clock, sleep: { ms in
     if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+    clock.skip(ms)
   })
   loop.updatePolicy(from: givesUp ? .second(RetryConfig(
     maxRetries: 0, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
   )) : .first(true))
-  loop.shouldRetry = { true }
+  loop.playIntentChanged(true)
   return loop
+}
+
+/// Real time, plus every wait skipped so far: a test need not sit out the waits between connects.
+final class SkippingClock: RetryClock, @unchecked Sendable {
+  private let real = ContinuousRetryClock()
+  private let lock = NSLock()
+  private var skippedMs = 0
+
+  var nowMs: Int { real.nowMs + lock.withLock { skippedMs } }
+  func sleep(ms: Int) async throws { try await real.sleep(ms: ms) }
+  func skip(_ ms: Int) { lock.withLock { skippedMs += ms } }
+}
+
+/// A `RetryClock` that moves only when `run(until:)` moves it, firing what falls due in time order.
+final class VirtualClock: RetryClock, @unchecked Sendable {
+  private struct Timer {
+    let atMs: Int
+    let order: Int
+    var action: (@MainActor () -> Void)?
+    var sleeper: CheckedContinuation<Void, Error>?
+  }
+
+  private let lock = NSLock()
+  private var _nowMs = 0
+  private var timers: [Int: Timer] = [:]
+  private var nextOrder = 0
+
+  var nowMs: Int { lock.withLock { _nowMs } }
+
+  private func allocate() -> Int {
+    lock.withLock {
+      defer { nextOrder += 1 }
+      return nextOrder
+    }
+  }
+
+  /// Runs `action` at `atMs` on this clock.
+  func at(_ atMs: Int, _ action: @escaping @MainActor () -> Void) {
+    let id = allocate()
+    lock.withLock { timers[id] = Timer(atMs: atMs, order: id, action: action) }
+  }
+
+  func sleep(ms: Int) async throws {
+    let id = allocate()
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        let cancelled = lock.withLock {
+          guard !Task.isCancelled else { return true }
+          timers[id] = Timer(atMs: _nowMs + ms, order: id, sleeper: continuation)
+          return false
+        }
+        if cancelled { continuation.resume(throwing: CancellationError()) }
+      }
+    } onCancel: {
+      // Whichever of the cancel and `run` removes the timer resumes it.
+      lock.withLock { timers.removeValue(forKey: id) }?.sleeper?.resume(throwing: CancellationError())
+    }
+  }
+
+  /// Fires every timer due up to `endMs` in time order, letting the tasks each wakes run first.
+  @MainActor
+  func run(until endMs: Int) async {
+    while true {
+      await settle()
+      let next = lock.withLock { () -> Timer? in
+        guard let next = timers.values.min(by: { ($0.atMs, $0.order) < ($1.atMs, $1.order) }),
+              next.atMs <= endMs
+        else { return nil }
+        timers.removeValue(forKey: next.order)
+        _nowMs = max(_nowMs, next.atMs)
+        return next
+      }
+      guard let next else { break }
+      next.action?()
+      next.sleeper?.resume()
+    }
+    lock.withLock { _nowMs = max(_nowMs, endMs) }
+  }
+
+  @MainActor
+  private func settle() async {
+    for _ in 0 ..< 20 {
+      await Task.yield()
+    }
+  }
 }

@@ -44,12 +44,12 @@ final class NetworkMonitor: @unchecked Sendable {
 
     // Seeded before `start`: written after it, a `currentPath` the monitor hasn't finished
     // evaluating could clobber the handler's real update. The handler stays the last writer.
-    let initialStatus = monitor.currentPath.status == .satisfied
+    let initialStatus = monitor.currentPath.status.isOnline
     logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
     _isOnline = initialStatus
 
     monitor.pathUpdateHandler = { [weak self] path in
-      self?.apply(path.status == .satisfied)
+      self?.apply(path.status.isOnline)
     }
 
     monitor.start(queue: queue)

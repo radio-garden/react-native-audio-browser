@@ -5,12 +5,6 @@ import Foundation
 #endif
 import os.log
 
-/// Connectivity as `RetryLoop` sees it; a fake stands in for `NetworkMonitor` in tests. Sendable
-/// because the network-restore wait reads it from a task-group child.
-protocol NetworkStatusProviding: AnyObject, Sendable {
-  var isOnline: Bool { get }
-}
-
 /// Where a failure came from, which decides where the retry resumes and the error reported when
 /// the failure cannot be classified.
 public enum PlaybackErrorContext {
@@ -41,57 +35,54 @@ public enum PlaybackErrorContext {
   }
 }
 
-/// Retries failed loads with exponential backoff until a budget runs out, then reports the error
-/// as terminal; the iOS counterpart of Android's RetryLoadErrorHandlingPolicy.
-///
-/// Two duration budgets apply, chosen by whether the current Load has produced audio (`hasPlayed`,
-/// docs/adr/0004): a short first-connect budget for a stream that never played (usually dead, with
-/// the listener waiting for a verdict), counted only while online, and the full recovery budget for
-/// one that played and dropped. While offline, a
-/// scheduled retry fires as soon as connectivity returns.
+/// Milliseconds on a clock that does not jump, and sleeps on it.
+protocol RetryClock: Sendable {
+  var nowMs: Int { get }
+  func sleep(ms: Int) async throws
+}
+
+/// Counts while the device sleeps, so a silence spans it.
+struct ContinuousRetryClock: RetryClock {
+  private let origin = ContinuousClock.now
+  var nowMs: Int { Int((ContinuousClock.now - origin) / .milliseconds(1)) }
+  func sleep(ms: Int) async throws { try await Task.sleep(for: .milliseconds(ms)) }
+}
+
+/// Reconnects failed loads, paced by `ReconnectPacer`, and gives up when `SilenceBudget`'s
+/// deadline passes (docs/adr/0014), reporting the last failure as terminal; the iOS counterpart
+/// of Android's RetryLoadErrorHandlingPolicy. The play intent and connectivity go to both units.
 @MainActor
 final class RetryLoop {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RetryLoop")
 
-  enum Policy {
-    case disabled
-    case infinite
-    case limited(maxRetries: Int)
-  }
+  private(set) var isEnabled = false
+  private var playIntent = false
+  private var budget: SilenceBudget
+  private var pacer: ReconnectPacer
+  private var connectionStartedAtMs: Int?
+  private var connectionDeliveredAudio = false
+  /// AVFoundation can report one connection's failure more than once; the units hear its end once.
+  private var connectionEndReported = false
+  private var replacedConnectionCounts = false
+  /// True from a connection's start until a cancel or a terminal error, so a give-up reports one
+  /// error, and a stop, or a play with nothing loaded, leaves nothing to give up on.
+  private var deadlineArmed = false
+  private var lastFailure: TrackPlayerError.PlaybackError?
+  private var deadlineTask: Task<Void, Never>?
 
-  private static let defaultMaxRetryDurationMs: Double = 120_000
-  private static let defaultFirstConnectMaxRetryDurationMs: Double = 12_000
-
-  // Bounds everything, offline waits included, so playback does not resume by surprise after a
-  // long time offline.
-  private var maxRetryDuration: TimeInterval = defaultMaxRetryDurationMs / 1000
-  private var firstConnectMaxRetryDuration: TimeInterval = defaultFirstConnectMaxRetryDurationMs / 1000
-
-  /// Whether the current Load has produced audio. Read from the Load, not kept here, because a
-  /// healthy-playback `reset()` must not clear it.
-  var hasPlayed: () -> Bool = { false }
-  /// The play intent; checked before and after the backoff.
-  var shouldRetry: () -> Bool = { true }
   /// Reloads; the argument is true to resume from the current time, false to start over.
   var onRetry: ((Bool) -> Void)?
-  /// Terminal: the retries gave up, or the failure cannot be retried. Not called when the retry
-  /// is cancelled.
+  /// Terminal: the deadline passed, `maxRetries` connections in a row delivered nothing, or the
+  /// failure cannot be retried. Not called when the retry is cancelled.
   var onError: ((TrackPlayerError.PlaybackError) -> Void)?
-  /// A failure a retry is now scheduled for, reported before the backoff while the state stays
+  /// A failure a retry is now scheduled for, reported before the wait while the state stays
   /// non-terminal.
   var onRetryingError: ((TrackPlayerError.PlaybackError) -> Void)?
   /// A retryable failure with no play intent: nothing retries it and nothing reports it.
   var onFailedWithoutIntent: (() -> Void)?
 
-  weak var networkMonitor: (any NetworkStatusProviding)?
-
   /// The retry in flight; session release waits while there is one.
   private(set) var pendingTask: Task<Void, Never>?
-  private(set) var attempts = 0
-
-  /// Continuous audible playback after which the budgets refill (Android's HEALTHY_PLAYBACK_MS).
-  var healthyPlaybackDuration: Duration = .seconds(20)
-  private(set) var healthyPlaybackTask: Task<Void, Never>?
 
   /// How long a stall may go without new data before it counts as a failure; longer than AVPlayer
   /// takes to fail a stalled item itself, so its error, which says more, is the one usually retried.
@@ -100,44 +91,105 @@ final class RetryLoop {
   var bufferedPosition: () -> Double = { 0 }
   private(set) var stallTask: Task<Void, Never>?
 
-  private var policy: Policy = .disabled
-  private var firstRetryTime: Date?
-  // The first-connect budget's clock: never set while offline and wiped by any offline
-  // observation, so an offline stretch cannot burn the short budget.
-  private var firstOnlineRetryTime: Date?
+  private let clock: any RetryClock
+  private let sleep: @Sendable (Int) async throws -> Void
 
-  private let sleep: @Sendable (TimeInterval) async throws -> Void
-
+  /// - Parameters:
+  ///   - online: Connectivity when the loop is made; `onlineChanged` reports each change after.
+  ///   - sleep: The wait before a reconnect, in milliseconds; the clock's sleep by default.
   init(
-    networkMonitor: (any NetworkStatusProviding)? = nil,
-    sleep: @escaping @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) },
+    online: Bool = true,
+    clock: any RetryClock = ContinuousRetryClock(),
+    sleep: (@Sendable (Int) async throws -> Void)? = nil,
   ) {
-    self.networkMonitor = networkMonitor
-    self.sleep = sleep
+    budget = SilenceBudget(online: online)
+    pacer = ReconnectPacer(online: online)
+    self.clock = clock
+    self.sleep = sleep ?? { try await clock.sleep(ms: $0) }
   }
 
-  var isEnabled: Bool {
-    if case .disabled = policy { return false }
-    return true
-  }
+  /// Whether the current Load has produced audio (docs/adr/0004).
+  var hasPlayed: Bool { budget.hasPlayed }
 
   // MARK: - Configuration
 
   func updatePolicy(from config: Variant_Bool_RetryConfig?) {
-    maxRetryDuration = Self.defaultMaxRetryDurationMs / 1000
-    firstConnectMaxRetryDuration = Self.defaultFirstConnectMaxRetryDurationMs / 1000
+    budget.recoveryMs = 120_000
+    budget.firstConnectMs = 12_000
+    pacer.maxRetries = nil
     switch config {
     case nil:
-      policy = .disabled
+      isEnabled = false
     case let .first(enabled):
-      policy = enabled ? .infinite : .disabled
+      isEnabled = enabled
     case let .second(retryConfig):
-      maxRetryDuration = (retryConfig.maxRetryDurationMs ?? Self.defaultMaxRetryDurationMs) / 1000
-      firstConnectMaxRetryDuration =
-        (retryConfig.firstConnectMaxRetryDurationMs ?? Self.defaultFirstConnectMaxRetryDurationMs) / 1000
-      policy = retryConfig.maxRetries.map { .limited(maxRetries: Int($0)) } ?? .infinite
+      isEnabled = true
+      retryConfig.maxRetryDurationMs.map { budget.recoveryMs = Int($0) }
+      retryConfig.firstConnectMaxRetryDurationMs.map { budget.firstConnectMs = Int($0) }
+      pacer.maxRetries = retryConfig.maxRetries.map { Int($0) }
     }
-    logger.debug("Retry policy: \(String(describing: self.policy)), max duration \(self.maxRetryDuration)s")
+    logger.debug("Retry enabled: \(self.isEnabled), max retries \(String(describing: self.pacer.maxRetries))")
+    armDeadline()
+  }
+
+  // MARK: - Inputs
+
+  /// A new Load: a track change, or a restart from the terminal error. Drops the retry in flight.
+  func loadStarted() {
+    cancel()
+    lastFailure = nil
+    replacedConnectionCounts = false
+    budget.loadStarted(atMs: clock.nowMs)
+    pacer.reset()
+  }
+
+  /// A connect going out: the Load's first, a reconnect, or a reload by the Player, which ends the
+  /// connection it replaces. A replaced connection counts only if it delivered audio: one cut off
+  /// while connecting says nothing about the source.
+  func connectionStarted() {
+    let now = clock.nowMs
+    if let startedAtMs = connectionStartedAtMs, replacedConnectionCounts, connectionDeliveredAudio, !connectionEndReported {
+      pacer.connectionEnded(deliveredAudio: true, startedAtMs: startedAtMs, atMs: now)
+    }
+    connectionStartedAtMs = now
+    replacedConnectionCounts = true
+    connectionDeliveredAudio = false
+    connectionEndReported = false
+    deadlineArmed = true
+    armDeadline()
+  }
+
+  func playIntentChanged(_ up: Bool) {
+    guard up != playIntent else { return }
+    playIntent = up
+    if up {
+      lastFailure = nil
+      // The pacer starts over: a reload now does not count the connection it replaces.
+      replacedConnectionCounts = false
+    }
+    budget.playIntentChanged(up, atMs: clock.nowMs)
+    pacer.playIntentChanged(up)
+    armDeadline()
+  }
+
+  func onlineChanged(_ online: Bool) {
+    budget.onlineChanged(online)
+    pacer.onlineChanged(online)
+    armDeadline()
+  }
+
+  /// Audio clears the failure the deadline would report: a silence after it that ends with no
+  /// failure is a stall.
+  func playbackBecameAudible() {
+    connectionDeliveredAudio = true
+    lastFailure = nil
+    budget.audioStarted(atMs: clock.nowMs)
+    armDeadline()
+  }
+
+  func playbackStoppedBeingAudible() {
+    budget.audioStopped(atMs: clock.nowMs)
+    armDeadline()
   }
 
   // MARK: - Failures
@@ -157,45 +209,97 @@ final class RetryLoop {
   }
 
   /// A failure the Player judges from what playback did, with no error to classify: retryable,
-  /// and reported as the context's fallback error. `immediately` skips the backoff, not the budgets.
-  func handleFailure(_ context: PlaybackErrorContext, immediately: Bool = false) {
+  /// and reported as the context's fallback error.
+  func handleFailure(_ context: PlaybackErrorContext) {
     logger.error("[\(String(describing: context))] failure")
-    handle(.init(error: context.fallbackError, retryable: true), context: context, immediately: immediately)
+    handle(.init(error: context.fallbackError, retryable: true), context: context)
   }
 
-  private func handle(
-    _ failure: PlaybackFailure.Classification, context: PlaybackErrorContext, immediately: Bool = false,
-  ) {
+  private func handle(_ failure: PlaybackFailure.Classification, context: PlaybackErrorContext) {
     stopStallWatch()
     guard isEnabled, failure.retryable else {
       let reason = isEnabled ? "Error not retryable" : "Retry disabled"
       logger.warning("\(reason), surfacing \(String(describing: failure.error))")
-      onError?(failure.error)
-      return
+      return giveUp(failure.error)
     }
-    guard shouldRetry() else {
+    guard playIntent else {
       logger.info("No play intent: \(String(describing: failure.error)) is left to the next play")
       onFailedWithoutIntent?()
       return
     }
+    lastFailure = failure.error
+    let now = clock.nowMs
+    if !connectionEndReported {
+      connectionEndReported = true
+      // The Player can stay .playing on a failure, on buffered audio that is about to run out.
+      budget.audioStopped(atMs: now)
+      budget.connectionEnded(atMs: now)
+      pacer.connectionEnded(deliveredAudio: connectionDeliveredAudio, startedAtMs: connectionStartedAtMs ?? now, atMs: now)
+    }
     onRetryingError?(failure.error)
+    armDeadline()
     pendingTask?.cancel()
     pendingTask = Task { [weak self] in
-      guard let self else { return }
-      let retried = await attemptRetry(startFromCurrentTime: context.startFromCurrentTime, immediately: immediately)
-      // Cancelled by a track change or stop: stay silent, or the new track or the stop would
-      // flip to .error. The canceller owns `pendingTask`.
-      if Task.isCancelled { return }
-      if !retried { onError?(failure.error) }
-      pendingTask = nil
+      await self?.reconnect(startFromCurrentTime: context.startFromCurrentTime)
     }
   }
 
-  /// Drops the retry in flight and the stall watch without touching the budgets.
+  /// Asks the pacer again every half second at most, so a change in connectivity or a passed
+  /// deadline is seen without waiting out the whole wait.
+  private func reconnect(startFromCurrentTime: Bool) async {
+    while !Task.isCancelled {
+      if let deadline = budget.deadlineMs, deadline <= clock.nowMs {
+        return giveUp(lastFailure ?? .playbackStalled)
+      }
+      let waitMs: Int
+      switch pacer.wait(atMs: clock.nowMs) {
+      case .giveUp:
+        logger.info("Max retries (\(self.pacer.maxRetries ?? 0)) exceeded, giving up")
+        return giveUp(lastFailure ?? .playbackStalled)
+      case .untilOnline:
+        waitMs = 500
+      case let .after(ms):
+        waitMs = min(ms, 500)
+      }
+      if waitMs == 0 { break }
+      // Cancelled by a track change or stop: stay silent, or the new track or the stop would
+      // flip to .error. The canceller owns `pendingTask`.
+      guard await (try? sleep(waitMs)) != nil else { return }
+    }
+    if Task.isCancelled { return }
+    pendingTask = nil
+    logger.info("Reconnecting")
+    onRetry?(startFromCurrentTime)
+  }
+
+  private func giveUp(_ error: TrackPlayerError.PlaybackError) {
+    cancel()
+    onError?(error)
+  }
+
+  /// Drops the retry in flight, the stall watch and the deadline until the next connection starts.
   func cancel() {
     pendingTask?.cancel()
     pendingTask = nil
     stopStallWatch()
+    deadlineTask?.cancel()
+    deadlineTask = nil
+    deadlineArmed = false
+  }
+
+  // MARK: - Deadline
+
+  private func armDeadline() {
+    deadlineTask?.cancel()
+    deadlineTask = nil
+    guard isEnabled, deadlineArmed, let deadline = budget.deadlineMs else { return }
+    deadlineTask = Task { [weak self, clock] in
+      let remaining = deadline - clock.nowMs
+      if remaining > 0 { guard await (try? clock.sleep(ms: remaining)) != nil else { return } }
+      guard let self, !Task.isCancelled else { return }
+      logger.info("Silent past the deadline, giving up")
+      giveUp(lastFailure ?? .playbackStalled)
+    }
   }
 
   // MARK: - Stalls
@@ -211,7 +315,7 @@ final class RetryLoop {
       guard let self, !Task.isCancelled else { return }
       stallTask = nil
       if bufferedPosition() > buffered { return startStallWatch() }
-      guard pendingTask == nil, shouldRetry() else { return }
+      guard pendingTask == nil, playIntent else { return }
       handleFailure(.stall)
     }
   }
@@ -219,116 +323,5 @@ final class RetryLoop {
   func stopStallWatch() {
     stallTask?.cancel()
     stallTask = nil
-  }
-
-  /// Drops the retry in flight and refills the budgets.
-  func reset() {
-    cancel()
-    attempts = 0
-    firstRetryTime = nil
-    firstOnlineRetryTime = nil
-  }
-
-  // MARK: - Healthy Playback
-
-  /// Starts the healthy-playback window; if it elapses with no retry pending, the budgets refill.
-  func playbackBecameAudible() {
-    healthyPlaybackTask?.cancel()
-    healthyPlaybackTask = Task { [weak self, healthyPlaybackDuration] in
-      try? await Task.sleep(for: healthyPlaybackDuration)
-      guard let self, !Task.isCancelled else { return }
-      // reset() would cancel the pending retry and silently kill an in-flight reconnect.
-      guard pendingTask == nil else { return }
-      reset()
-    }
-  }
-
-  func playbackStoppedBeingAudible() {
-    healthyPlaybackTask?.cancel()
-    healthyPlaybackTask = nil
-  }
-
-  // MARK: - Budgets
-
-  private var isOnline: Bool { networkMonitor?.isOnline ?? true }
-
-  private func exhaustedBudget() -> String? {
-    let now = Date()
-    if let start = firstRetryTime, now.timeIntervalSince(start) >= maxRetryDuration {
-      return "max retry duration (\(maxRetryDuration)s)"
-    }
-    if !hasPlayed(), isOnline, let start = firstOnlineRetryTime,
-       now.timeIntervalSince(start) >= firstConnectMaxRetryDuration
-    {
-      return "first-connect retry duration (\(firstConnectMaxRetryDuration)s)"
-    }
-    return nil
-  }
-
-  private var backoff: TimeInterval {
-    min(1.0 * pow(1.5, Double(attempts)), 5.0)
-  }
-
-  /// Waits out the backoff, or connectivity's return, then calls `onRetry`. False when the policy,
-  /// the play intent or a budget says stop, or the wait was cancelled.
-  func attemptRetry(startFromCurrentTime: Bool, immediately: Bool = false) async -> Bool {
-    guard isEnabled, shouldRetry() else { return false }
-    if case let .limited(maxRetries) = policy, attempts >= maxRetries {
-      logger.info("Max retries (\(maxRetries)) exceeded, giving up")
-      return false
-    }
-
-    if firstRetryTime == nil { firstRetryTime = Date() }
-    if isOnline {
-      if firstOnlineRetryTime == nil { firstOnlineRetryTime = Date() }
-    } else {
-      firstOnlineRetryTime = nil
-    }
-    if let budget = exhaustedBudget() {
-      logger.info("\(budget) exceeded, giving up")
-      return false
-    }
-
-    let delay = immediately ? 0 : backoff
-    logger.info("Scheduling retry after \(delay)s")
-    guard await waitForDelayOrNetworkRestored(delaySeconds: delay), !Task.isCancelled, shouldRetry() else {
-      return false
-    }
-    // The wait for connectivity may have been long.
-    if let budget = exhaustedBudget() {
-      logger.info("\(budget) exceeded after waiting, giving up")
-      return false
-    }
-
-    attempts += 1
-    logger.info("Executing retry #\(self.attempts)")
-    onRetry?(startFromCurrentTime)
-    return true
-  }
-
-  // MARK: - Network-Aware Waiting
-
-  /// True when it is time to retry, false when the wait was cancelled.
-  private func waitForDelayOrNetworkRestored(delaySeconds: TimeInterval) async -> Bool {
-    guard let monitor = networkMonitor, !monitor.isOnline else {
-      return await (try? sleep(delaySeconds)) != nil
-    }
-    logger.debug("Device is offline, will retry immediately when connectivity is restored")
-    let sleep = sleep
-    return await withTaskGroup(of: Bool.self, returning: Bool.self) { group in
-      group.addTask { await (try? sleep(delaySeconds)) != nil }
-      group.addTask { [weak self] in await self?.waitForNetworkRestored(monitor: monitor) ?? false }
-      let result = await group.next() ?? false
-      group.cancelAll()
-      return result
-    }
-  }
-
-  private func waitForNetworkRestored(monitor: any NetworkStatusProviding) async -> Bool {
-    while !monitor.isOnline {
-      guard await (try? sleep(0.5)) != nil else { return false }
-    }
-    logger.info("Network restored, accelerating retry")
-    return true
   }
 }

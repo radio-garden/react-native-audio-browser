@@ -4,65 +4,311 @@ import Testing
 
 @testable import AudioBrowserTestable
 
-private final class MockNetworkStatus: NetworkStatusProviding, @unchecked Sendable {
-  var isOnline: Bool
-  init(isOnline: Bool) { self.isOnline = isOnline }
+/// A source as the stream server serves it, and the loop wired as the Player wires it, on a virtual
+/// clock: each connect runs `connection`, and the terminal error drops the connection in flight.
+@MainActor
+private final class Rig {
+  let clock = VirtualClock()
+  let loop: RetryLoop
+  private(set) var connects: [Int] = []
+  private(set) var errors: [(atMs: Int, error: TrackPlayerError.PlaybackError)] = []
+  private var connection: (Rig) -> Void = { _ in }
+  private var current = 0
+
+  init(maxRetries: Int? = nil) {
+    loop = RetryLoop(clock: clock)
+    loop.updatePolicy(from: .second(RetryConfig(
+      maxRetries: maxRetries.map(Double.init), maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    loop.onRetry = { [unowned self] _ in connect() }
+    loop.onError = { [unowned self] in
+      errors.append((clock.nowMs, $0))
+      current += 1
+    }
+  }
+
+  /// A play with intent: a new Load and its first connect.
+  func play(_ connection: @escaping (Rig) -> Void) {
+    self.connection = connection
+    loop.playIntentChanged(true)
+    load()
+  }
+
+  /// A new Load of the same source, as a track change or a restart from the error makes one.
+  func load() {
+    loop.loadStarted()
+    connect()
+  }
+
+  /// A connect: the loop's reconnect, or a reload the Player starts in place of the connection.
+  func connect() {
+    current += 1
+    connects.append(clock.nowMs)
+    loop.connectionStarted()
+    connection(self)
+  }
+
+  /// Runs `action` `afterMs` from now, unless the connection it belongs to has gone.
+  func later(_ afterMs: Int, _ action: @escaping (RetryLoop) -> Void) {
+    let connection = current
+    clock.at(clock.nowMs + afterMs) { [unowned self] in
+      if connection == current { action(loop) }
+    }
+  }
+
+  func run(untilMs: Int) async { await clock.run(until: untilMs) }
 }
 
-/// Timing-based: these run the real backoff (1s, 1.5s, 2.25s, 3.375s), and the budgets are checked
-/// before and after each wait, so each budget below sits between two points on that ladder.
-@Suite("RetryLoop budgets")
+extension Rig {
+  /// Audio after `connectMs`, then a clean close `closeAfterMs` into it.
+  static func closes(afterMs closeAfterMs: Int, connectMs: Int = 300) -> (Rig) -> Void {
+    { rig in
+      rig.later(connectMs) { $0.playbackBecameAudible() }
+      rig.later(connectMs + closeAfterMs) { loop in
+        loop.playbackStoppedBeingAudible()
+        loop.handleFailure(.liveEnd)
+      }
+    }
+  }
+
+  /// A connection that is refused, or times out, `afterMs` after it starts.
+  static func fails(afterMs: Int, with error: URLError.Code = .cannotConnectToHost) -> (Rig) -> Void {
+    { rig in rig.later(afterMs) { $0.handleError(URLError(error), context: .mediaLoad) } }
+  }
+
+  /// The gaps between each connection's close and the next connect, for one that closes on
+  /// `closeAfterMs` of audio after `connectMs`.
+  func gaps(closeAfterMs: Int, connectMs: Int = 300) -> Set<Int> {
+    Set(zip(connects, connects.dropFirst()).map { $1 - ($0 + connectMs + closeAfterMs) })
+  }
+}
+
+/// The plan's cases (docs/adr/0014), each as the stream server serves it on the simulator.
+@Suite("RetryLoop cases")
 @MainActor
-struct RetryLoopBudgetTests {
-  /// Returns the mock too: `networkMonitor` is weak, so the test must hold it.
-  private func makeManager(
-    firstConnectMs: Double,
-    maxMs: Double = 120_000,
-    online: Bool,
-  ) -> (RetryLoop, MockNetworkStatus) {
-    let manager = RetryLoop()
-    manager.updatePolicy(from: .second(RetryConfig(
-      maxRetries: nil,
-      maxRetryDurationMs: maxMs,
-      firstConnectMaxRetryDurationMs: firstConnectMs,
-    )))
-    let network = MockNetworkStatus(isOnline: online)
-    manager.networkMonitor = network
-    return (manager, network)
+struct RetryLoopCaseTests {
+  @Test func aStreamThatClosesEvery10sPlaysOn_reconnectingAtOnce() async {
+    let rig = Rig()
+    rig.play(Rig.closes(afterMs: 10_000))
+    await rig.run(untilMs: 600_000)
+    #expect(rig.errors.isEmpty)
+    #expect(rig.connects.count > 50)
+    #expect(rig.gaps(closeAfterMs: 10_000) == [0])
   }
 
-  @Test func neverPlayedLoad_givesUpAfterFirstConnectBudget() async {
-    // Above the first backoff (1s), with ~800ms for sleep overshoot; below the 2.5s at which
-    // attempt two's wait ends.
-    let (manager, network) = makeManager(firstConnectMs: 1800, online: true)
-    _ = network
-
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == false)
+  @Test func aStreamThatClosesEvery30sPlaysOn() async {
+    let rig = Rig()
+    rig.play(Rig.closes(afterMs: 30_000))
+    await rig.run(untilMs: 600_000)
+    #expect(rig.errors.isEmpty)
+    #expect(rig.gaps(closeAfterMs: 30_000) == [0])
   }
 
-  @Test func playedLoad_ignoresTheFirstConnectBudget() async {
-    // Below the first backoff: a never-played load would give up on attempt one.
-    let (manager, network) = makeManager(firstConnectMs: 500, online: true)
-    _ = network
-    manager.hasPlayed = { true }
-
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
+  /// No run of audio reaches 5 s, so the silence that began with the play never ends; the burst
+  /// playing at 120 s ends past the deadline, which gives up as it ends.
+  @Test func aStreamThatPlays2sPerConnectionEndsAt120s() async {
+    let rig = Rig()
+    rig.play(Rig.closes(afterMs: 2_000))
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.map(\.error) == [.playbackStalled])
+    let endedAt = rig.errors.first?.atMs ?? 0
+    #expect((120_000 ... 122_300).contains(endedAt))
+    #expect(rig.connects.allSatisfy { $0 < endedAt })
   }
 
-  @Test func offlineTime_doesNotBurnTheFirstConnectBudget() async {
-    // Above the 2.25s wait of the first online attempt (the backoff kept climbing while offline),
-    // below the ~5.6s at which the second one's wait ends.
-    let (manager, network) = makeManager(firstConnectMs: 4000, online: false)
+  @Test func aConnectionOpenWithNoDataEndsAt120s() async {
+    let rig = Rig()
+    rig.play { _ in }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.map(\.atMs) == [120_000])
+    #expect(rig.errors.map(\.error) == [.playbackStalled])
+    #expect(rig.connects == [0])
+  }
 
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
+  @Test func aDeadAddressThatNeverPlayedEnds12sAfterItsFirstFailure() async {
+    let rig = Rig()
+    rig.play(Rig.fails(afterMs: 50))
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.map(\.atMs) == [12_050])
+    #expect(rig.errors.map(\.error) == [.hostUnreachable])
+    // Each wait grows from the failure before it: 1, 1.5, 2.25, 3.375 s.
+    #expect(rig.connects == [0, 1_050, 2_600, 4_900, 8_325])
+  }
 
-    // The first-connect clock starts here, at the first attempt made online.
-    network.isOnline = true
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == true)
-    #expect(await manager.attemptRetry(startFromCurrentTime: false) == false)
+  /// The deadline wins over a connect in flight: it gives up as it passes, and the connect's own
+  /// end, which the Player no longer hears, starts nothing.
+  @Test func theDeadlineGivesUpOnAConnectInFlight() async {
+    let rig = Rig()
+    rig.play(Rig.fails(afterMs: 5_000, with: .timedOut))
+    await rig.run(untilMs: 60_000)
+    #expect(rig.connects == [0, 6_000, 12_500])
+    #expect(rig.errors.map(\.atMs) == [17_000])
+    #expect(rig.errors.map(\.error) == [.hostUnreachable])
+  }
+
+  @Test func timeOfflineDuringAPlayedStreamsSilenceCounts() async {
+    let rig = Rig()
+    rig.play { rig in
+      rig.later(300) { $0.playbackBecameAudible() }
+      // As the Player reports it: the failure arrives while its state still reads .playing.
+      rig.later(60_300) { loop in
+        loop.onlineChanged(false)
+        loop.handleFailure(.playback)
+      }
+    }
+    await rig.run(untilMs: 400_000)
+    #expect(rig.connects == [0])
+    #expect(rig.errors.map(\.atMs) == [180_300])
+  }
+
+  @Test func theNetworkReturningReconnectsWithinHalfASecond() async {
+    let rig = Rig()
+    rig.play { rig in
+      rig.later(300) { $0.playbackBecameAudible() }
+      rig.later(60_300) { loop in
+        loop.onlineChanged(false)
+        loop.handleFailure(.playback)
+      }
+    }
+    rig.clock.at(90_000) { rig.loop.onlineChanged(true) }
+    await rig.run(untilMs: 91_000)
+    // The wait asks the pacer again every half second.
+    #expect(rig.connects.count == 2)
+    #expect((90_000 ... 90_500).contains(rig.connects.last ?? 0))
+  }
+
+  @Test func aRestartAfterTheTerminalErrorStartsFresh() async {
+    let rig = Rig()
+    rig.play(Rig.fails(afterMs: 50))
+    rig.clock.at(20_000) { rig.load() }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.map(\.atMs) == [12_050, 32_050])
+  }
+
+  @Test func aNewLoadStartsFresh() async {
+    let rig = Rig()
+    rig.play(Rig.fails(afterMs: 50))
+    rig.clock.at(8_000) { rig.load() }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.map(\.atMs) == [20_050])
+  }
+
+  @Test func maxRetriesCountsConnectionsInARowThatDeliveredNothing() async {
+    let rig = Rig(maxRetries: 2)
+    rig.play(Rig.fails(afterMs: 50))
+    await rig.run(untilMs: 300_000)
+    #expect(rig.connects == [0, 1_050, 2_600])
+    #expect(rig.errors.map(\.atMs) == [2_650])
+  }
+
+  @Test func aPauseClearsTheDeadline() async {
+    let rig = Rig()
+    rig.play { _ in }
+    rig.clock.at(60_000) { rig.loop.playIntentChanged(false) }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.isEmpty)
+  }
+
+  @Test func aCancelClearsTheDeadline_untilTheNextConnect() async {
+    let rig = Rig()
+    rig.play { _ in }
+    rig.clock.at(60_000) { rig.loop.cancel() }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.isEmpty)
+  }
+
+  /// A media reset or `retryNow` reloads in place of a connection that played: its end starts the
+  /// count over, so the next connection may fail once and still reconnect.
+  @Test func aReloadThePlayerStartsEndsTheConnectionItReplaces() async {
+    let rig = Rig(maxRetries: 1)
+    var connection = 0
+    rig.play { rig in
+      connection += 1
+      if connection == 2 {
+        rig.later(300) { $0.playbackBecameAudible() }
+      } else {
+        rig.later(50) { $0.handleError(URLError(.cannotConnectToHost), context: .mediaLoad) }
+      }
+    }
+    rig.clock.at(60_000) {
+      rig.loop.playbackStoppedBeingAudible()
+      rig.connect()
+    }
+    await rig.run(untilMs: 61_060)
+    #expect(rig.connects == [0, 1_050, 60_000, 61_050])
+    #expect(rig.errors.isEmpty)
+  }
+
+  /// `retryNow` or a seek to the live edge during a reconnect cuts it off before it delivers
+  /// anything: that is the listener's, not the source's failure.
+  @Test func aReloadThatCutsOffAConnectDoesNotCountAgainstTheSource() async {
+    let rig = Rig(maxRetries: 2)
+    var connection = 0
+    rig.play { rig in
+      connection += 1
+      if !(2 ... 4).contains(connection) {
+        rig.later(50) { $0.handleError(URLError(.cannotConnectToHost), context: .mediaLoad) }
+      }
+    }
+    // The second connect hangs: three reloads replace it while it connects.
+    rig.clock.at(2_000) { rig.connect() }
+    rig.clock.at(2_100) { rig.connect() }
+    rig.clock.at(2_200) { rig.connect() }
+    await rig.run(untilMs: 3_760)
+    #expect(rig.connects == [0, 1_050, 2_000, 2_100, 2_200, 3_750])
+    #expect(rig.errors.isEmpty)
+  }
+
+  /// The first-connect clock starts at the first failure seen online.
+  @Test func timeOfflineDoesNotBurnTheFirstConnectBudget() async {
+    let rig = Rig()
+    rig.loop.onlineChanged(false)
+    rig.play(Rig.fails(afterMs: 50))
+    rig.clock.at(60_000) { rig.loop.onlineChanged(true) }
+    await rig.run(untilMs: 300_000)
+    // Offline, the wait asks again every half second from the failure at 50 ms.
+    #expect(rig.connects.prefix(2) == [0, 60_050])
+    #expect(rig.errors.map(\.atMs) == [72_100])
+  }
+
+  /// A silence that ends with no failure after audio played is a stall, not the failure before it.
+  @Test func theDeadlineReportsAStall_notAFailureAudioHasPlayedSince() async {
+    let rig = Rig()
+    var connection = 0
+    rig.play { rig in
+      connection += 1
+      if connection == 1 {
+        rig.later(50) { $0.handleError(nil, context: .mediaLoad, httpStatusCode: 503) }
+      } else {
+        rig.later(300) { $0.playbackBecameAudible() }
+        rig.later(60_000) { $0.playbackStoppedBeingAudible() }
+      }
+    }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.connects == [0, 1_050])
+    #expect(rig.errors.map(\.atMs) == [181_050])
+    #expect(rig.errors.map(\.error) == [.playbackStalled])
+  }
+
+  @Test func aPlayWithNothingLoadedNeverGivesUp() async {
+    let rig = Rig()
+    rig.loop.playIntentChanged(true)
+    await rig.run(untilMs: 300_000)
+    #expect(rig.errors.isEmpty)
+  }
+
+  /// AVFoundation can report one failure through the item, its notification and the player.
+  @Test func aFailureReportedTwiceEndsItsConnectionOnce() async {
+    let rig = Rig(maxRetries: 2)
+    rig.play { rig in
+      rig.later(50) { loop in
+        loop.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+        loop.handleError(URLError(.cannotConnectToHost), context: .playback)
+      }
+    }
+    await rig.run(untilMs: 300_000)
+    #expect(rig.connects == [0, 1_050, 2_600])
+    #expect(rig.errors.map(\.atMs) == [2_650])
   }
 }
 
@@ -115,7 +361,6 @@ struct RetryLoopHandleErrorTests {
     #expect(record.errors.isEmpty)
     // Session release waits on `pendingTask`, so a finished retry must clear it.
     #expect(loop.pendingTask == nil)
-    #expect(loop.attempts == 2)
   }
 
   @Test func theAdvisoryPrecedesTheRetry() async {
@@ -173,20 +418,11 @@ struct RetryLoopHandleErrorTests {
     #expect(record.errors == [.failedToLoadKeyValue])
   }
 
-  @Test func resetRefillsTheBudgets() async {
-    let (loop, _) = makeLoop()
-    loop.handleError(URLError(.timedOut), context: .playback)
-    await loop.pendingTask?.value
-    #expect(loop.attempts == 1)
-    loop.reset()
-    #expect(loop.attempts == 0)
-  }
-
-  @Test func resetDropsTheRetryInFlightSilently() async {
+  @Test func aNewLoadDropsTheRetryInFlightSilently() async {
     let (loop, record) = makeLoop(delay: 0.02)
     loop.handleError(URLError(.timedOut), context: .playback)
     let task = loop.pendingTask
-    loop.reset()
+    loop.loadStarted()
     #expect(loop.pendingTask == nil)
     await task?.value
     #expect(record.errors.isEmpty)
@@ -201,7 +437,7 @@ struct RetryLoopHandleErrorTests {
       try await Task.sleep(for: .seconds(60))
     })
     loop.updatePolicy(from: .first(true))
-    loop.shouldRetry = { true }
+    loop.playIntentChanged(true)
     let record = Record()
     loop.onError = { record.errors.append($0) }
     loop.onRetry = { record.reloads.append($0) }
@@ -229,7 +465,7 @@ struct RetryLoopHandleErrorTests {
     })
     holder.loop = loop
     loop.updatePolicy(from: .first(true))
-    loop.shouldRetry = { true }
+    loop.playIntentChanged(true)
     let record = Record()
     loop.onError = { record.errors.append($0) }
     loop.onRetry = { record.reloads.append($0) }
@@ -241,67 +477,7 @@ struct RetryLoopHandleErrorTests {
   }
 }
 
-@Suite("RetryLoop.handleFailure")
-@MainActor
-struct RetryLoopHandleFailureTests {
-  private final class Sleeps: @unchecked Sendable {
-    var seconds: [TimeInterval] = []
-  }
-
-  @Test func anImmediateFailureSkipsTheBackoff_butSpendsAnAttempt() async {
-    let sleeps = Sleeps()
-    let loop = RetryLoop(sleep: { sleeps.seconds.append($0) })
-    loop.updatePolicy(from: .first(true))
-    var reloads: [Bool] = []
-    loop.onRetry = { reloads.append($0) }
-
-    loop.handleFailure(.stall)
-    await loop.pendingTask?.value
-    loop.handleFailure(.stall, immediately: true)
-    await loop.pendingTask?.value
-
-    #expect(sleeps.seconds == [1, 0])
-    #expect(reloads == [true, true])
-    #expect(loop.attempts == 2)
-  }
-}
-
 @MainActor
 private final class LoopHolder {
   weak var loop: RetryLoop?
-}
-
-@Suite("RetryLoop healthy playback")
-@MainActor
-struct RetryLoopHealthyPlaybackTests {
-  private func makeAfterOneRetry() async -> RetryLoop {
-    let loop = makeRetryLoop()
-    loop.handleError(URLError(.timedOut), context: .playback)
-    await loop.pendingTask?.value
-    return loop
-  }
-
-  @Test func audiblePlaybackForTheWindowRefillsTheBudgets() async {
-    let loop = await makeAfterOneRetry()
-    #expect(loop.attempts == 1)
-    loop.healthyPlaybackDuration = .milliseconds(10)
-
-    loop.playbackBecameAudible()
-    await loop.healthyPlaybackTask?.value
-
-    #expect(loop.attempts == 0)
-  }
-
-  @Test func stoppingBeforeTheWindowKeepsTheBudgets() async {
-    let loop = await makeAfterOneRetry()
-    loop.healthyPlaybackDuration = .milliseconds(500)
-
-    loop.playbackBecameAudible()
-    let refill = loop.healthyPlaybackTask
-    loop.playbackStoppedBeingAudible()
-    await refill?.value
-
-    #expect(loop.attempts == 1)
-    #expect(loop.healthyPlaybackTask == nil)
-  }
 }

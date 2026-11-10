@@ -39,21 +39,21 @@ struct UnconditionalEventTests {
     }
   }
 
-  @Test func avPlayerWaiting_alwaysTransitionsToBuffering() {
+  @Test func avPlayerWaiting_transitionsToBuffering_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == .buffering)
+      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == (state == .error ? nil : .buffering))
     }
   }
 
-  @Test func avPlayerPlaying_alwaysTransitionsToPlaying() {
+  @Test func avPlayerPlaying_transitionsToPlaying_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == .playing)
+      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == (state == .error ? nil : .playing))
     }
   }
 
-  @Test func audioFrameDecoded_alwaysTransitionsToPlaying() {
+  @Test func audioFrameDecoded_transitionsToPlaying_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == .playing)
+      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == (state == .error ? nil : .playing))
     }
   }
 

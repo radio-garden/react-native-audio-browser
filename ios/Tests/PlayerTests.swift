@@ -11,7 +11,7 @@ private func makeCoordinator() -> (
 ) {
   let clock = ManualSleepTimerScheduler()
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retries: false, sleepTimerScheduler: clock)
+  let player = makePlayer(engine: engine, sleepTimerScheduler: clock)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   return (player, engine, callbacks, clock)
@@ -113,6 +113,8 @@ private func makeRetrying() -> (
   let retryHandler = makeRetryLoop()
   let engine = MockPlayerEngine()
   let player = makePlayer(engine: engine, retry: retryHandler)
+  // The loop's intent alone, so a test drives the states without the engine calls a play makes.
+  retryHandler.playIntentChanged(true)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   return (player, retryHandler, callbacks, engine)
@@ -192,6 +194,8 @@ struct RetryingErrorTests {
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
+    // With no track, the reload starts no connection: the second failure needs one of its own.
+    c.retry.connectionStarted()
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
@@ -254,14 +258,12 @@ struct RetryingErrorTests {
       maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
     )))
     let stall = NSError(domain: "CoreMediaErrorDomain", code: -16830)
-    // One retry spent before the pause; the park refills the budget.
+    // One retry spent before the pause; the play after it starts the count over.
     eh.emit(.failed(stall, httpStatusCode: nil))
     await c.retry.pendingTask?.value
-    #expect(c.retry.attempts == 1)
 
     c.pause()
     eh.emit(.failed(stall, httpStatusCode: nil))
-    #expect(c.retry.attempts == 0)
     c.play()
     eh.resolveAndLoadCalls.removeAll()
 
@@ -394,7 +396,7 @@ struct RetryingErrorTests {
 @MainActor
 private func makePlayingWithRetries() throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05), retries: nil)
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try startPlaying(player, engine)
@@ -963,69 +965,6 @@ struct NaturalEndPlayIntentTests {
   }
 }
 
-// MARK: - Healthy playback refills the retry budget
-
-/// Sustained playback proves the stream recovered, so the retry budget refills (as on
-/// Android); otherwise a long-lived stream loses retry after its first recovered blip.
-@Suite("Player - healthy playback resets retry budget")
-struct HealthyPlaybackRetryResetTests {
-  /// A nonzero delay skips the retry, leaving the caller to start one that stays pending.
-  @MainActor
-  private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (Player, RetryLoop, MockPlayerEngine) {
-    let retry = makeRetryLoop(delay: delay)
-    let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retry: retry)
-    if delay == 0 {
-      retry.handleError(URLError(.timedOut), context: .playback)
-      await retry.pendingTask?.value
-    }
-    return (player, retry, engine)
-  }
-
-  @Test @MainActor
-  func sustainedPlayback_resetsRetryBudget() async {
-    let (player, retry, _) = await makeAfterOneRetry()
-    #expect(retry.attempts == 1)
-    retry.healthyPlaybackDuration = .milliseconds(10)
-
-    player.transition(.avPlayerPlaying)
-    await retry.healthyPlaybackTask?.value
-
-    #expect(retry.attempts == 0)
-  }
-
-  /// reset() cancels a pending retry: a refill now would silently kill an in-flight reconnect.
-  @Test @MainActor
-  func refill_skipsWhileRetryIsPending() async {
-    let (player, retry, _) = await makeAfterOneRetry(delay: 1)
-    retry.healthyPlaybackDuration = .milliseconds(10)
-
-    player.transition(.avPlayerPlaying)
-    retry.handleError(URLError(.timedOut), context: .playback)
-    await retry.healthyPlaybackTask?.value
-
-    #expect(retry.pendingTask != nil)
-    retry.cancel()
-  }
-
-  @Test @MainActor
-  func playbackInterruptedBeforeThreshold_doesNotReset() async {
-    let (player, retry, engine) = await makeAfterOneRetry()
-    engine.hasLoadedAsset = true
-    retry.healthyPlaybackDuration = .milliseconds(500)
-
-    player.transition(.avPlayerPlaying)
-    let refill = retry.healthyPlaybackTask
-    player.transition(.avPlayerWaiting)
-
-    // Leaving .playing cancels the refill; awaiting the cancelled task reaches, deterministically,
-    // the point where it would have fired.
-    await refill?.value
-
-    #expect(retry.attempts == 1)
-  }
-}
-
 // MARK: - Sleep Timer Fade
 
 @Suite("Player - sleep timer fade")
@@ -1373,27 +1312,13 @@ struct LoadTests {
     let (c, eh, _, _) = makeCoordinator()
     try c.setQueue([track("a"), track("b")])
     let first = c.load
-    eh.emit(.audioDidStart)
-    #expect(c.load?.hasPlayed == true)
+    c.transition(.avPlayerPlaying)
+    #expect(c.retry.hasPlayed)
 
     c.next()
 
     #expect(c.load != nil && c.load?.id != first?.id)
-    #expect(c.load?.hasPlayed == false)
-  }
-
-  /// The healthy-playback refill resets the retry budget mid-play; the load must survive it.
-  @Test @MainActor
-  func aRetryResetKeepsTheLoad() throws {
-    let (c, eh, _, _) = makeCoordinator()
-    try c.setQueue([track("a")])
-    eh.emit(.audioDidStart)
-    let load = c.load
-
-    c.retry.reset()
-
-    #expect(c.load == load)
-    #expect(c.load?.hasPlayed == true)
+    #expect(!c.retry.hasPlayed)
   }
 
   @Test
@@ -1462,6 +1387,7 @@ struct StopCancelsRetryTests {
     let errorHandler = makeRetryLoop(delay: 0.05)
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retry: errorHandler)
+    errorHandler.playIntentChanged(true)
     let callbacks = MockPlayerCallbacks()
     player.callbacks = callbacks
 

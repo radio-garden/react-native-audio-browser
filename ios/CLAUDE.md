@@ -33,7 +33,7 @@ The playback core is two `@MainActor` types, split by what SwiftPM can compile:
   the current **Load**, runs `transition(_ event:)`, and publishes each change once through
   `publish()` to `PlayerCallbacks` (HybridAudioBrowser), driving the audio-session and
   now-playing effects of each change through its engine. It owns `QueueManager`, `RetryLoop`
-  (with the healthy-playback refill), `SleepTimerManager` with its `VolumeFader`, `DeferredSeek`,
+  (which gives up after a silence and paces reconnects, docs/adr/0014), `SleepTimerManager` with its `VolumeFader`, `DeferredSeek`,
   `PlaybackPersistence` and two `PlaybackTimer`s. Seeking, reloading, stall and network recovery, the end-of-item judgement and
   the cold-start resume are all here, fully SwiftPM-tested against a mock engine.
 - **AVPlayerEngine** (`AVPlayerEngine.swift`) implements `PlayerEngine`, the Player's one seam to
@@ -158,8 +158,10 @@ ios/
 │   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
 │   ├── DeferredSeek.swift            # Pure state: a seek held while the item loads (idle/pending/inFlight)
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track), fade via VolumeFader
-│   ├── RetryLoop.swift               # @MainActor classify, back off and reload, network-aware;
-│   │                                 #   healthy-playback budget refill
+│   ├── RetryLoop.swift               # @MainActor classify, pace reconnects (ReconnectPacer) and
+│   │                                 #   give up after a silence (SilenceBudget)
+│   ├── SilenceBudget.swift           # Pure: when retry gives up (ADR 0014, rules 1-4; tested)
+│   ├── ReconnectPacer.swift          # Pure: the wait before each reconnect (ADR 0014, rules 5-8; tested)
 │   └── AirPlayStallJudgement.swift   # Pure judgement: AirPlay stall classification
 ├── NowPlayingInfo/
 │   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo fields by key
@@ -221,6 +223,7 @@ ios/
 │   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
 │   ├── NetworkMonitor.swift          # NWPathMonitor wrapper; `changed` emitter
+│   ├── Connectivity.swift            # NetworkStatusProviding; which path status counts as online
 │   ├── OutputPicker.swift            # @MainActor system audio route picker
 │   ├── ArtworkImageFetcher.swift     # @MainActor Kingfisher fetch (SVG / headers support)
 │   ├── SFSymbolRenderer.swift        # SF Symbol → file:// image rendering
