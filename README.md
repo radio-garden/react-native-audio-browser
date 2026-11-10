@@ -35,7 +35,7 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 
 ## Requirements
 
-React Native with the **New Architecture** (Fabric + TurboModules), [`react-native-nitro-modules`](https://nitro.margelo.com) as a peer dependency, and on web [`shaka-player`](https://github.com/shaka-project/shaka-player) as an optional peer dependency. The minimum React Native, React, iOS, Android, nitro and shaka-player versions are listed in [Getting Started](https://audiobrowser.dev/guide/getting-started#installation).
+React Native with the **New Architecture** (Fabric + TurboModules), [`react-native-nitro-modules`](https://nitro.margelo.com) as a peer dependency, and on web [`shaka-player`](https://github.com/shaka-project/shaka-player) as an optional peer dependency. The minimum React Native, React, iOS, Android, nitro and shaka-player versions are listed in [Getting Started](https://audiobrowser.dev/guide/getting-started#installation). iOS builds need Xcode 26.4 or later (Swift 6.3).
 
 ## Installation
 

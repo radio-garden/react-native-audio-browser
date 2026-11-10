@@ -61,7 +61,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 26.2
+          xcode-version: 26.4.1
 
       # Pinned, not `brew install`: formatter output shifts between releases, so
       # an unpinned version turns an unrelated PR into a repo-wide reformat. The
