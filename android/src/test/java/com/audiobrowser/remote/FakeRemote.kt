@@ -26,6 +26,16 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
   private var repeat = REPEAT_MODE_OFF
   private var shuffle = false
   private val uids = mutableListOf<Any>()
+  private var metadata = Metadata(C.TIME_UNSET)
+
+  /**
+   * Sends a stream title. ExoPlayer sends each one it decodes; this state emits only a change, so a
+   * stop clears it for the stream's first title after a reconnect to go out again.
+   */
+  fun title(title: String) {
+    metadata = Metadata(0, IcyInfo(title.toByteArray(), title, null))
+    invalidateState()
+  }
 
   override fun getState(): State =
     State.Builder()
@@ -44,6 +54,7 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
       .setPlaybackState(if (items.isEmpty()) STATE_IDLE else readiness)
       .setRepeatMode(repeat)
       .setShuffleModeEnabled(shuffle)
+      .setTimedMetadata(metadata)
       .build()
 
   /** Moves to [index] without a seek, as the player does at an item's end. */
@@ -86,6 +97,7 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
 
   override fun handleStop(): ListenableFuture<*> {
     readiness = STATE_IDLE
+    metadata = Metadata(C.TIME_UNSET)
     stops++
     return done()
   }
