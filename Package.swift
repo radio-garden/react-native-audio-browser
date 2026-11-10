@@ -68,6 +68,7 @@ let package = Package(
         "Util/ConcurrentMap.swift",
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
+        "Util/AwaitCallback.swift",
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
         "Observer/PlayerObserver.swift",
