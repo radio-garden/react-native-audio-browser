@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import android.content.Context
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -27,6 +28,7 @@ import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +37,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -68,8 +71,11 @@ class PlayerRetryTest {
   private val scope = CoroutineScope(Dispatchers.Unconfined)
   private val callbacks = mock(Callbacks::class.java)
 
+  private val servers = mutableListOf<ServerSocket>()
+
   @After
   fun release() {
+    servers.forEach { it.close() }
     scope.cancel()
     player.networkMonitor.destroy()
     player.exoPlayer.release()
@@ -381,6 +387,73 @@ class PlayerRetryTest {
 
     assertTrue("a deadline runs for a track nothing connects", player.retryLoop!!.stopped)
   }
+
+  @Test
+  fun `another app taking the focus during a reconnect wait pauses, and nothing takes it back`() {
+    val connections = holdIdleEngine()
+
+    focusListener().onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+    val after = connections.get()
+    advanceSeconds(10)
+
+    assertFalse(player.playWhenReady)
+    assertEquals("a reconnect took the focus back", after, connections.get())
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+  }
+
+  @Test
+  fun `a transient focus loss during a reconnect wait holds the reconnect until the focus returns`() {
+    val connections = holdIdleEngine()
+
+    focusListener().onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    shadowOf(Looper.getMainLooper()).idle()
+    val after = connections.get()
+    advanceSeconds(10)
+    assertEquals("a reconnect during the loss", after, connections.get())
+    assertTrue(player.playWhenReady)
+
+    focusListener().onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("a reconnect once the focus returned") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      connections.get() > after
+    }
+  }
+
+  /** Plays from a server that ends each connection unanswered, until the loop holds the engine. */
+  private fun holdIdleEngine(): AtomicInteger {
+    goOnline(context)
+    val server = ServerSocket(0)
+    servers += server
+    val connections = AtomicInteger()
+    thread(isDaemon = true) {
+      while (!server.isClosed) {
+        try {
+          server.accept().close()
+          connections.incrementAndGet()
+        } catch (_: IOException) {
+          return@thread
+        }
+      }
+    }
+    play("http://127.0.0.1:${server.localPort}/live", retryPolicy = RetryPolicy.Infinite())
+    idleUntil("the loop holding the engine") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      player.retryLoop!!.reconnecting && player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE
+    }
+    val audio = shadowOf(context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
+    assertNotSame(
+      "no focus held during the wait",
+      audio.lastAbandonedAudioFocusRequest,
+      audio.lastAudioFocusRequest.audioFocusRequest,
+    )
+    return connections
+  }
+
+  /** The listener of the last focus request: the retry loop's, while it holds the engine. */
+  private fun focusListener() =
+    shadowOf(context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
+      .lastAudioFocusRequest
+      .listener
 
   @Test
   fun `a skip while the loop holds the idle engine connects the next track`() {

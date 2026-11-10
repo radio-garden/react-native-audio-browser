@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -92,6 +93,26 @@ internal constructor(
 
   private var options = PlayerUpdateOptions()
   private val mainHandler = Handler(Looper.getMainLooper())
+
+  /** Audio focus while [retryLoop] keeps the engine idle; see [RetryFocus]. */
+  internal val retryFocus: RetryFocus =
+    RetryFocus(
+      RetryFocus.Platform(
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
+        mainHandler,
+      ) {
+        exoPlayer.audioAttributes.audioAttributesV21.audioAttributes
+      },
+      // A permanent loss pauses, as media3 does while playing.
+      onLoss = { playWhenReady = false },
+      onSuppressionChanged = {
+        // Posted: it changes the play intent the loop is reporting from.
+        mainHandler.post {
+          retryLoop?.playIntentChanged(shouldPlayWhenReady)
+          refreshPlayingState()
+        }
+      },
+    )
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
@@ -155,11 +176,14 @@ internal constructor(
 
   private val retryEngine =
     object : RetryLoop.Engine {
-      override fun reconnect() = localEngine.retry(toLiveEdge = isCurrentItemLive)
+      override fun reconnect() =
+        retryFocus.handOver { localEngine.retry(toLiveEdge = isCurrentItemLive) }
 
       // A play after a pause over a retry connects nothing until then: no failure shows it.
-      override fun holdChanged(held: Boolean) {
+      override fun holdChanged(held: Boolean, kept: Boolean) {
         retryLocks?.hold(held)
+        // A suppressed request outlives the intent it dropped: it waits for the focus to return.
+        if (held) retryFocus.hold() else if (!kept || !retryFocus.suppressed) retryFocus.release()
       }
 
       override fun awaitNetwork() =
@@ -409,10 +433,11 @@ internal constructor(
    * False while ExoPlayer suppresses output (a transient audio focus loss) though [playWhenReady]
    * stays raised to resume on; mirrors media3's `ExoPlayerImplInternal.shouldPlayWhenReady`.
    */
-  internal val shouldPlayWhenReady
+  internal val shouldPlayWhenReady: Boolean
     get() =
       sessionPlayer.playWhenReady &&
-        sessionPlayer.playbackSuppressionReason == MediaPlayer.PLAYBACK_SUPPRESSION_REASON_NONE
+        sessionPlayer.playbackSuppressionReason == MediaPlayer.PLAYBACK_SUPPRESSION_REASON_NONE &&
+        !retryFocus.suppressed
 
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(sessionPlayer.repeatMode)

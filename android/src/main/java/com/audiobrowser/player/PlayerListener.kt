@@ -148,6 +148,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Here rather than in Player.pause(): a session pause, a noisy-audio pause and a permanent
     // focus loss all drop the intent without it.
+    if (!playWhenReady) player.retryFocus.release()
     player.retryLoop?.playIntentChanged(player.shouldPlayWhenReady)
     if (!playWhenReady) player.cancelRetry()
     // Deduped: the ENDED path in setPlaybackState may already have emitted it, before queue-ended.

@@ -31,10 +31,11 @@ internal class RetryLoop(
     fun awaitNetwork()
 
     /**
-     * The loop starts or stops keeping the idle engine for a play intent that is up: what keeps the
-     * device awake for its reconnect is the loop's to hold.
+     * The loop starts or stops keeping the idle engine ([kept]), and [held] while the play intent
+     * is up as well: what keeps the device awake and the audio focus for its reconnect is the
+     * loop's to hold.
      */
-    fun holdChanged(held: Boolean)
+    fun holdChanged(held: Boolean, kept: Boolean)
 
     /**
      * Stops the engine and surfaces the terminal error, caused by the last connection's failure, if
@@ -69,6 +70,7 @@ internal class RetryLoop(
 
   private var waitingForNetwork = false
   private var holding = false
+  private var keeping = false
   private var pendingReconnect: (() -> Unit)? = null
   private var cancelDeadline: (() -> Unit)? = null
 
@@ -292,10 +294,12 @@ internal class RetryLoop(
   }
 
   private fun syncHold() {
-    val held = holdsIdleEngine && playIntent && !stopped
-    if (held == holding) return
+    val kept = holdsIdleEngine && !stopped
+    val held = kept && playIntent
+    if (held == holding && kept == keeping) return
     holding = held
-    engine.holdChanged(held)
+    keeping = kept
+    engine.holdChanged(held, kept)
   }
 
   private fun cancelAll() {

@@ -15,6 +15,7 @@ class RetryLoopTest {
   private var reconnects = 0
   private var gaveUp = false
   private var holding = false
+  private var keeping = false
 
   private val loop =
     RetryLoop(
@@ -33,8 +34,9 @@ class RetryLoopTest {
 
           override fun awaitNetwork() {}
 
-          override fun holdChanged(held: Boolean) {
+          override fun holdChanged(held: Boolean, kept: Boolean) {
             holding = held
+            keeping = kept
           }
 
           override fun giveUp(cause: PlaybackException?) {
@@ -153,6 +155,7 @@ class RetryLoopTest {
 
     loop.playIntentChanged(false)
     assertFalse("held over a pause", holding)
+    assertTrue("the idle engine still kept", keeping)
     loop.playIntentChanged(true)
     assertTrue(holding)
 
@@ -165,6 +168,7 @@ class RetryLoopTest {
     advanceTo(200_000)
     assertTrue(gaveUp)
     assertFalse("held after the give-up", holding)
+    assertFalse("kept after the give-up", keeping)
   }
 
   @Test

@@ -210,6 +210,10 @@ duration budgets bound it, it keeps retrying every few seconds while offline,
 it waits out its backoff once the network returns, and its loads can start
 less than 1 s apart.
 
+While it waits to reconnect, the player holds audio focus as it does while
+playing. Another app taking the focus pauses it. A transient loss, a call
+among them, holds the reconnect until the focus returns, then reconnects.
+
 Once a budget is exhausted the state lands on `'error'`, where your
 `PlaybackErrorView` and [`retry()`](#manual-retry) take over.
 

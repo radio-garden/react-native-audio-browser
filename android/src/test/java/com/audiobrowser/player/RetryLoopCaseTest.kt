@@ -55,7 +55,7 @@ class RetryLoopCaseTest(private val name: String, private val case: JsonObject) 
 
           override fun awaitNetwork() {}
 
-          override fun holdChanged(held: Boolean) {}
+          override fun holdChanged(held: Boolean, kept: Boolean) {}
 
           override fun giveUp(cause: PlaybackException?) {
             gaveUp = true
