@@ -1,6 +1,8 @@
 package com.audiobrowser.player
 
 import com.audiobrowser.TestFixtures.track
+import com.audiobrowser.util.JsPromise
+import com.audiobrowser.util.awaitCancellable
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
@@ -9,6 +11,8 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -242,6 +246,27 @@ class NowPlayingUpdaterTest {
 
     assertEquals(listOf("Place", "Song - Artist"), surface.emitted.map { it.artist })
     assertEquals(listOf("Place", "Song - Artist"), surface.stamps.map { it.secondary })
+  }
+
+  @Test
+  fun `a destroyed updater stamps nothing from a formatter still waiting on JS`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
+    val updater = NowPlayingUpdater(surface, backgroundScope + Job())
+    val silent = JsPromise<NowPlayingUpdate?>()
+    var calls = 0
+    updater.formatter = {
+      if (++calls == 1) update(artist = "Song - Artist") else silent.promise.awaitCancellable()
+    }
+    updater.render()
+    runCurrent()
+    updater.render()
+    runCurrent()
+    val stamped = surface.stamps.toList()
+
+    updater.destroy()
+    runCurrent()
+
+    assertEquals(stamped, surface.stamps)
   }
 
   @Test

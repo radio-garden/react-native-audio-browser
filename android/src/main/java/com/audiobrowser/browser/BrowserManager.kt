@@ -8,8 +8,10 @@ import com.audiobrowser.extension.identity
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.FALLBACK_TIMEOUT
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
+import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
@@ -25,6 +27,7 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -1064,14 +1067,17 @@ class BrowserManager {
   /**
    * The title of the "view more" row appended to a pathed section where the header can't be tapped
    * (Android Auto). Re-read once per generation, so invalidateAllContent picks up a new language.
-   * Falls back to [DEFAULT_VIEW_MORE_TITLE] when unset, blank or throwing.
+   * Falls back to [DEFAULT_VIEW_MORE_TITLE] when unset, blank, throwing or outrunning
+   * [FALLBACK_TIMEOUT].
    */
   internal suspend fun viewMoreTitle(): String {
     val generation = layerGeneration
     if (resolvedViewMoreTitleGeneration == generation) return resolvedViewMoreTitle
     val title =
       try {
-        config.viewMoreTitle?.invoke()?.await()?.takeIf { it.isNotBlank() }
+        config.viewMoreTitle?.invoke()?.awaitOrTimeout()?.takeIf { it.isNotBlank() }
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         Timber.e(e, "viewMoreTitle callback failed; falling back to the default")
         null

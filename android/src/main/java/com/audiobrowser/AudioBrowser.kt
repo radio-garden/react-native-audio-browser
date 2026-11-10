@@ -34,6 +34,8 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.OutputMonitor
 import com.audiobrowser.util.OutputSwitcher
 import com.audiobrowser.util.SystemVolumeMonitor
+import com.audiobrowser.util.awaitNestedOrTimeout
+import com.audiobrowser.util.awaitOrTimeout
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
@@ -91,7 +93,6 @@ import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -99,14 +100,12 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 @Keep
@@ -490,7 +489,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   ): FormattedNavigationError {
     val default = defaultFormattedError(error)
     val formatter = _configuration.formatNavigationError ?: return default
-    return formattedOrDefault(mainScope, default) {
+    return formattedOrDefault(default) {
       formatter(
           FormatNavigationErrorParams(
             error,
@@ -499,7 +498,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             BrowserPathHelper.navigationErrorKind(path),
           )
         )
-        .await()
+        .awaitOrTimeout()
     }
   }
 
@@ -757,7 +756,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     val s = gateState
     if (!s.active) return GateOutcome(false, null)
     if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate)
-    val result = runCatching { resolveGate(request).await().await() }
+    val result = runCatching { resolveGate(request).awaitNestedOrTimeout() }
     currentCoroutineContext().ensureActive()
     val decision = result.getOrNull() ?: return GateOutcome(true, s.chrome ?: builtInGate)
     if (!decision.gated) return GateOutcome(false, null)
@@ -1492,9 +1491,6 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
     artwork = artwork?.strippingJSCallbacks(),
   )
 
-// The budget [Player.awaitBrowser] gives JS, the other JS wait a browse serve blocks on.
-private val FORMATTER_TIMEOUT = 10.seconds
-
 /**
  * The navigation error [e] raises, shared by failed navigations, the rejection
  * [AudioBrowser.search] hands JS and the Android Auto browse-error tile, so one failure is named
@@ -1561,23 +1557,18 @@ internal fun defaultFormattedError(error: NavigationError): FormattedNavigationE
   return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
 }
 
-/**
- * The app's formatted error from [format], or [default] when it returns null, throws, or outruns
- * [FORMATTER_TIMEOUT].
- *
- * [format] runs in [scope] and is awaited through the Deferred because Nitro's `Promise.await`
- * parks in a plain `suspendCoroutine` that cancellation does not unpark; awaiting the Deferred is
- * cancellable, so the timeout releases the caller instead of holding it until JS answers, which for
- * a browse serve may be never.
- */
+/** The app's formatted error from [format], or [default] when it returns null or throws. */
 internal suspend fun formattedOrDefault(
-  scope: CoroutineScope,
   default: FormattedNavigationError,
   format: suspend () -> FormattedNavigationError?,
-): FormattedNavigationError {
-  val hop = scope.async { runCatching { format() }.getOrNull() }
-  return withTimeoutOrNull(FORMATTER_TIMEOUT) { hop.await() } ?: default
-}
+): FormattedNavigationError =
+  try {
+    format()
+  } catch (e: CancellationException) {
+    throw e
+  } catch (e: Exception) {
+    null
+  } ?: default
 
 /**
  * Runs [run] in this scope and hands its outcome to [settle] once. Unlike Nitro's `Promise.async`,

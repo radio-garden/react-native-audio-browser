@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -255,6 +256,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
         val formatted =
           try {
             activeFormatter(params)
+          } catch (e: CancellationException) {
+            throw e
           } catch (e: Exception) {
             Timber.e(e, "NowPlaying formatter threw; using default")
             null

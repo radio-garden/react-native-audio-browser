@@ -1,14 +1,21 @@
 package com.audiobrowser
 
+import com.audiobrowser.util.FALLBACK_TIMEOUT
+import com.audiobrowser.util.JsPromise
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateDecision
 import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.core.Promise
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,9 +24,8 @@ import org.mockito.Mockito.mock
 
 class GateDecisionTest {
 
-  // AudioBrowser's constructor and a Nitro Promise both need JNI, so the browser is a mock that
-  // runs its real methods, with an active gate written to the field setGate writes, and the
-  // resolver throws where awaiting its promise would.
+  // AudioBrowser's constructor needs JNI, so the browser is a mock that runs its real methods,
+  // with an active gate written to the field setGate writes.
   private fun gatedBrowser(
     resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>>
   ): AudioBrowser {
@@ -46,7 +52,7 @@ class GateDecisionTest {
     lateinit var caller: Job
     val browser = gatedBrowser {
       caller.cancel()
-      // A Nitro promise's await ignores cancellation, so JS answers anyway; here, by rejecting.
+      // Cancelled while the resolver runs, which then fails.
       throw RuntimeException("Rejected")
     }
 
@@ -62,4 +68,61 @@ class GateDecisionTest {
 
     assertTrue(browser.gateDecision(request).gated)
   }
+
+  /** A gated browser whose resolver's JS promise the test settles. */
+  private fun pendingResolver(): Pair<AudioBrowser, JsPromise<GateDecision>> {
+    val decision = JsPromise<GateDecision>()
+    val bridge = JsPromise<Promise<GateDecision>>().apply { resolve(decision.promise) }
+    return gatedBrowser { bridge.promise } to decision
+  }
+
+  @Test
+  fun `a resolver answering inside the timeout decides`() =
+    runTest(timeout = 5.seconds) {
+      val (browser, decision) = pendingResolver()
+      val outcome = backgroundScope.async { browser.gateDecision(request) }
+      runCurrent()
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      decision.resolve(GateDecision(false, null))
+      runCurrent()
+
+      assertTrue(outcome.isCompleted)
+      assertFalse(outcome.await().gated)
+    }
+
+  @Test
+  fun `a resolver that never answers fails closed at the timeout`() =
+    runTest(timeout = 5.seconds) {
+      val (browser, _) = pendingResolver()
+      val outcome = backgroundScope.async { browser.gateDecision(request) }
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      runCurrent()
+      assertFalse(outcome.isCompleted)
+      advanceTimeBy(2.seconds)
+      runCurrent()
+
+      assertTrue(outcome.isCompleted)
+      assertTrue(outcome.await().gated)
+    }
+
+  @Test
+  fun `a caller cancelled while the resolver is silent stops waiting`() =
+    runTest(timeout = 5.seconds) {
+      val (browser, _) = pendingResolver()
+      var returned = false
+      val outcome =
+        backgroundScope.launch {
+          browser.gateDecision(request)
+          returned = true
+        }
+      runCurrent()
+
+      outcome.cancel()
+      runCurrent()
+
+      assertTrue(outcome.isCompleted)
+      assertFalse(returned)
+    }
 }
