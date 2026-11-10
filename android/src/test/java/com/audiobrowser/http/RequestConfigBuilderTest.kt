@@ -1,9 +1,16 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.TestFixtures
 import com.audiobrowser.TestFixtures.mediaConfig
 import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__
 import com.margelo.nitro.audiobrowser.HttpMethod
 import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.core.Promise
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -301,4 +308,59 @@ class RequestConfigBuilderTest {
     val merged = RequestConfigBuilder.mergeConfig(base, media)
     assertEquals("/stream/123", merged.path)
   }
+
+  @Test
+  fun `a transform cancelled while JS is silent hands back no config`() =
+    runTest(timeout = 5.seconds) {
+      val bridge =
+        JsPromise<Promise<RequestConfig>>().apply { resolve(JsPromise<RequestConfig>().promise) }
+      val override =
+        transformableConfig()
+          .copy(
+            transform =
+              Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
+                _,
+                _ ->
+                bridge.promise
+              }
+          )
+      var returned = false
+      val caller =
+        backgroundScope.launch {
+          RequestConfigBuilder.mergeConfig(
+            RequestConfigBuilder.toRequestConfig(transformableConfig()),
+            override,
+          )
+          returned = true
+        }
+      runCurrent()
+
+      caller.cancel()
+      runCurrent()
+
+      assertTrue(caller.isCompleted)
+      assertFalse(returned)
+    }
+
+  @Test
+  fun `a media resolve cancelled while JS is silent hands back no config`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<RequestConfig>()
+      var returned = false
+      val caller =
+        backgroundScope.launch {
+          RequestConfigBuilder.applyMediaResolve(
+            mediaConfig(resolveSync = { silent.promise }),
+            TestFixtures.track(),
+          )
+          returned = true
+        }
+      runCurrent()
+
+      caller.cancel()
+      runCurrent()
+
+      assertTrue(caller.isCompleted)
+      assertFalse(returned)
+    }
 }
