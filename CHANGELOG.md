@@ -1,3 +1,9 @@
+## [0.2.0-next.80](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.79...v0.2.0-next.80) (2026-11-10)
+
+### Bug Fixes
+
+* **ios:** clear the stream's title on stop ([35cce5f](https://github.com/radio-garden/react-native-audio-browser/commit/35cce5f8a955f06fb7330006cb4b475d5fb4b82f))
+
 ## [0.2.0-next.79](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.78...v0.2.0-next.79) (2026-11-10)
 
 ### Code Refactors
