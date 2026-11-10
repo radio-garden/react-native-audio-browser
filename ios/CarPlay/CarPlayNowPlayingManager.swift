@@ -30,7 +30,7 @@ final class CarPlayNowPlayingManager {
 
   /// Resolved on track change, not on tap, so the album line shows only when a destination exists.
   private var albumArtistDestination: String?
-  private let albumPathResolution = SupersedingTask<String?>()
+  private let albumPathResolution = SupersedingTask<String, String?>()
   /// The tapped track while its load runs, which wins over `currentTrack`: CarPlay reads
   /// `isAlbumArtistButtonEnabled` only when Now Playing is displayed, and that push comes first.
   private var pendingAlbumArtistTrack: Track?
@@ -60,7 +60,11 @@ final class CarPlayNowPlayingManager {
 
     let browserManager = audioBrowser.browserManager
     subscriptions = [
-      browserManager.configChanged.subscribeOnMain { [weak self] _ in self?.refresh() },
+      browserManager.configChanged.subscribeOnMain { [weak self] _ in
+        // A new config may bring a new `resolveAlbumPath`, so the current track is asked again.
+        self?.albumPathResolution.cancel()
+        self?.refresh()
+      },
       audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.refresh() },
       browserManager.favoritesChanged.subscribeOnMain { [weak self] in self?.refreshButtons() },
       audioBrowser.favoriteChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
@@ -181,23 +185,21 @@ final class CarPlayNowPlayingManager {
   // MARK: - Album Line
 
   private func updateAlbumArtistDestination() {
-    albumPathResolution.cancel()
-
     guard let track = pendingAlbumArtistTrack ?? player?.currentTrack else {
       logger.debug("AlbumArtist: no current track → disabled")
-      setAlbumArtistDestination(nil)
+      settleAlbumArtistDestination(nil)
       return
     }
     logger.info("AlbumArtist: track=\(track.title) albumPath=\(track.albumPath ?? "nil") resolver=\(self.config.resolveAlbumPath != nil)")
     if let albumPath = track.albumPath {
-      setAlbumArtistDestination(albumPath)
+      settleAlbumArtistDestination(albumPath)
       return
     }
     guard let resolver = config.resolveAlbumPath else {
-      setAlbumArtistDestination(nil)
+      settleAlbumArtistDestination(nil)
       return
     }
-    albumPathResolution.run {
+    albumPathResolution.run(key: track.identity) {
       try await resolver(track).awaitCancellable()
     } deliver: { [weak self] result in
       guard let self else { return }
@@ -206,6 +208,12 @@ final class CarPlayNowPlayingManager {
       }
       setAlbumArtistDestination(try? result.get())
     }
+  }
+
+  /// Sets the destination without a resolve, ending any in flight so it cannot overwrite this.
+  private func settleAlbumArtistDestination(_ path: String?) {
+    albumPathResolution.cancel()
+    setAlbumArtistDestination(path)
   }
 
   private func setAlbumArtistDestination(_ path: String?) {
