@@ -11,16 +11,19 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.StuckPlayerException
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.File
+import java.io.IOException
 import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -72,19 +75,6 @@ class PlayerRetryTest {
   }
 
   @Test
-  fun `a recovery keeps a load that has played`() {
-    play(Uri.fromFile(silentWav()).toString())
-    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
-
-    player.playerListener.onPlayerError(
-      PlaybackException("behind", null, PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
-    )
-    player.playerListener.onPlayerErrorChanged(null)
-
-    assertTrue(player.hasPlayedCache)
-  }
-
-  @Test
   fun `a terminal error ends the load`() {
     play(Uri.fromFile(silentWav()).toString())
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
@@ -94,7 +84,6 @@ class PlayerRetryTest {
     )
 
     assertEquals(PlaybackState.ERROR, player.playbackState)
-    assertFalse(player.hasPlayedCache)
   }
 
   @Test
@@ -359,47 +348,98 @@ class PlayerRetryTest {
   }
 
   @Test
-  fun `offline, a stuck recovery leaves the recovery budget running`() {
-    stuckRecoveryMidBudget(online = false)
+  fun `a track change on a stopped engine starts no Load until it is prepared`() {
+    goOnline(context)
+    val wav = Uri.fromFile(silentWav()).toString()
+    play(wav, wav, retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    player.exoPlayer.stop()
 
-    assertEquals(PlaybackState.ERROR, player.playbackState)
-    // The load error, not a stuck give-up.
-    assertEquals("not-connected-to-internet", player.playbackError?.code)
+    player.exoPlayer.seekToNextMediaItem()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("a deadline runs for a track nothing connects", player.retryLoop!!.stopped)
   }
 
   @Test
-  fun `online, a stuck recovery refills the recovery budget`() {
-    stuckRecoveryMidBudget(online = true)
+  fun `a skip while the loop holds the idle engine connects the next track`() {
+    goOnline(context)
+    val server = ServerSocket(0)
+    val paths = CopyOnWriteArrayList<String>()
+    // Reads each request line and ends the connection unanswered.
+    thread(isDaemon = true) {
+      while (!server.isClosed) {
+        try {
+          server.accept().use { paths += it.getInputStream().bufferedReader().readLine() }
+        } catch (_: IOException) {
+          return@thread
+        }
+      }
+    }
+    val base = "http://127.0.0.1:${server.localPort}"
+    play("$base/one", "$base/two", retryPolicy = RetryPolicy.Infinite())
+    idleUntil("the loop holding the engine") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      player.retryLoop!!.reconnecting && player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE
+    }
 
-    assertEquals(true, player.playbackError?.retrying)
+    player.forwardingPlayer.seekToNext()
+
+    idleUntil("a request for the next track") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      paths.any { it.contains("/two") }
+    }
+    server.close()
   }
 
-  /**
-   * A load marked as played retries a closed port under a 30 s recovery budget, takes a stuck
-   * report at 25 s, and runs on to 45 s, short of media3's own 60 s stuck detection. The player is
-   * not idle, so the recovery's re-prepare does nothing: this covers the budget refill only.
-   */
-  private fun stuckRecoveryMidBudget(online: Boolean) {
-    connectivity.setNetworkCapabilities(wifi, capabilities(validated = online))
-    connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
-    play(
-      "https://127.0.0.1:9/stream",
-      retryPolicy = RetryPolicy.Infinite(maxRetryDurationMs = 30_000),
-    )
-    awaitRetry("a pending retry")
-    player.hasPlayedCache = true
-    advanceSeconds(25)
-    assertEquals(true, player.playbackError?.retrying)
+  @Test
+  fun `a failure report that arrives after a reconnect is not the new connection's`() {
+    goOnline(context)
+    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
 
-    player.playerListener.onPlayerError(
-      PlaybackException(
-        "stuck",
-        StuckPlayerException(StuckPlayerException.STUCK_BUFFERING_NO_PROGRESS, 60_000),
-        PlaybackException.ERROR_CODE_TIMEOUT,
-      )
-    )
-    advanceSeconds(20)
+    // Posted from the playback thread before the go-live reconnect, run after it.
+    player.onLoadFailure(IOException("closed"), inPlace = false)
+    player.localEngine.reconnectAtLiveEdge()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(player.retryLoop!!.failurePending)
+    assertEquals(null, player.playbackError)
   }
+
+  @Test
+  fun `with retry, a stuck engine reconnects and never ends in an error`() {
+    goOnline(context)
+    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    // As media3 leaves a stuck engine: idle, with the error.
+    player.exoPlayer.stop()
+    player.playerListener.onPlayerError(stuck())
+    advanceSeconds(2)
+
+    assertNotEquals("no reconnect", MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(null, player.playbackError)
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
+  }
+
+  @Test
+  fun `with retry off, a stuck engine ends in the stalled error`() {
+    play(Uri.fromFile(silentWav()).toString())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    player.playerListener.onPlayerError(stuck())
+
+    assertEquals(PlaybackState.ERROR, player.playbackState)
+    assertEquals("playback-stalled", player.playbackError?.code)
+  }
+
+  private fun stuck() =
+    PlaybackException(
+      "stuck",
+      StuckPlayerException(StuckPlayerException.STUCK_BUFFERING_NO_PROGRESS, 60_000),
+      PlaybackException.ERROR_CODE_TIMEOUT,
+    )
 
   private fun advanceSeconds(seconds: Int) =
     repeat(seconds) {

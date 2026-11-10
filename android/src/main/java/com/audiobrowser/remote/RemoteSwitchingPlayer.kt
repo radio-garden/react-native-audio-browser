@@ -38,6 +38,8 @@ internal class RemoteSwitchingPlayer(
   private val resolve: suspend (MediaItem) -> MediaItem,
   private val scope: CoroutineScope,
   private val startTimeoutMs: Long = 30_000,
+  /** Whether [local], though idle, holds a load the retry loop will reconnect. */
+  private val localHeld: () -> Boolean = { false },
 ) : ForwardingSimpleBasePlayer(local) {
 
   var local: MediaPlayer = local
@@ -235,7 +237,7 @@ internal class RemoteSwitchingPlayer(
     playIntent = local.playWhenReady
     repeat = local.repeatMode
     shuffle = local.shuffleModeEnabled
-    val prepared = local.playbackState != STATE_IDLE && items.isNotEmpty()
+    val prepared = (local.playbackState != STATE_IDLE || localHeld()) && items.isNotEmpty()
     val localPositionMs = local.currentPosition
     val live = local.isCurrentMediaItemLive
     val remote = Route.Remote(target, target.player)

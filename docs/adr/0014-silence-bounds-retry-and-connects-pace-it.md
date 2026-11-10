@@ -58,7 +58,7 @@ Both units take the play intent and connectivity, and the wiring feeds them the 
 - **Lower the refill from 20 s to 5 s** — rejected: it fixes the stream that closes every 10 s, but keeps the clock from the first error, the stuck-recovery refill and the check that waits for a failure.
 - **A budget that drains while silent and refills while playing**, with no 5 s threshold — rejected: harder to explain and to test, and a connect burst would refill it.
 - **Its own longer limit for time offline**, for tunnels — rejected: playback resuming minutes later by surprise is worse than a tap.
-- **Move Android's retry loop out of media3**, as on iOS — rejected: media3's in-place retry keeps buffered audio playing through a reconnect, and it handles HLS segments. The deadline bounds the cases where media3's timing differs.
+- **Move Android's retry loop out of media3**, as on iOS — chosen for every failure that ends a connection: a live stream, a stream of unknown length. It was rejected at first, on the belief that media3's in-place retry kept buffered audio playing through a reconnect. It does not need to: media3 surfaces such a failure only once the buffer has played out, the moment its own deferred retry would have reconnected. Measured against the test stream server, the loop loses no audio, and a fresh prepare is never counted as a rebuffer. Where media3 resumes within the connection, an HLS segment or playlist and a file whose length the server declared, it still retries in place, and the loop's deadline gives up on it.
 - **Silence bounds, connects pace (chosen).**
 
 ## Consequences
@@ -68,5 +68,5 @@ Both units take the play intent and connectivity, and the wiring feeds them the 
 - **A working stream that keeps closing keeps playing**, with a short gap at each close.
 - **A stream that only ever sends short bursts ends at 120 s**, choppy until then, on both platforms. That includes one that closes every 5 s and is audible for about 4 s of each: no run reaches 5 s, so its silence never ends.
 - **`maxRetries` counts connections in a row that delivered nothing.** A connection that delivered audio starts the count over, so a stream that played and dropped reconnects once more than `maxRetries` before giving up: with `maxRetries: 0`, a drop still reconnects once. Before, the count ran from the first error.
-- **The terminal error codes stay as they are**: `io-network-connection-failed` on Android, `playback-stalled` on iOS.
+- **The terminal error codes stay as they are**: on Android the error of the connection that ended last (`io-network-connection-failed` when none surfaced, `playback-stalled` when it ended stuck), `playback-stalled` on iOS.
 - **The players adopt the units one at a time**, each with the stream server's cases run before and after.

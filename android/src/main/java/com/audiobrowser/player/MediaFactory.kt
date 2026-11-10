@@ -1,7 +1,9 @@
 package com.audiobrowser.player
 
 import android.content.Context
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
@@ -13,7 +15,6 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.ExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -26,9 +27,13 @@ class MediaFactory(
   private val context: Context,
   private val cache: SimpleCache?,
   private val retryPolicy: RetryPolicy,
-  private val isOnline: () -> Boolean = { true },
-  private val hasPlayed: () -> Boolean = { false },
-  private val onRetryPending: ((exception: IOException) -> Unit)? = null,
+  /**
+   * Each recoverable load failure of the playing item, on ExoPlayer's playback thread; see
+   * [RetryLoadErrorHandlingPolicy].
+   */
+  private val onLoadFailure: (exception: IOException, inPlace: Boolean) -> Unit = { _, _ -> },
+  /** Whether an item is the one playing; read on ExoPlayer's playback thread. */
+  private val isCurrent: (MediaItem) -> Boolean = { true },
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String, track: Track) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
@@ -39,8 +44,8 @@ class MediaFactory(
     /**
      * The client media requests go out on, one per process so connections are reused. Not
      * `HttpClient`'s browse client, whose read timeout is sized for JSON and would cut a long media
-     * read short. The timeouts are media3's own defaults, which stall detection and
-     * [RetryLoadErrorHandlingPolicy] are tuned to.
+     * read short. The timeouts are media3's own defaults, which stall detection and [RetryLoop] are
+     * tuned to.
      */
     private val mediaHttpClient: OkHttpClient by lazy {
       OkHttpClient.Builder()
@@ -53,55 +58,30 @@ class MediaFactory(
 
   private val extractorsFactory = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
 
-  private val customRetryPolicy: RetryLoadErrorHandlingPolicy? =
-    when (retryPolicy) {
-      is RetryPolicy.Default -> null
-      is RetryPolicy.Infinite ->
-        RetryLoadErrorHandlingPolicy(
-          maxRetries = null,
-          maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
-          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
-          isOnline = isOnline,
-          hasPlayed = hasPlayed,
-          onRetryPending = onRetryPending,
-        )
-      is RetryPolicy.Limited ->
-        RetryLoadErrorHandlingPolicy(
-          maxRetries = retryPolicy.maxRetries,
-          maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
-          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
-          isOnline = isOnline,
-          hasPlayed = hasPlayed,
-          onRetryPending = onRetryPending,
-        )
-    }
+  private val mediaFactory = DefaultMediaSourceFactory(context, extractorsFactory)
 
-  private fun mediaSourceFactory(extractors: ExtractorsFactory) =
-    DefaultMediaSourceFactory(context, extractors).apply {
-      customRetryPolicy?.let { setLoadErrorHandlingPolicy(it) }
-    }
+  private val liveMediaFactory =
+    DefaultMediaSourceFactory(context, LiveStreamExtractor.Factory(extractorsFactory))
 
-  private val mediaFactory = mediaSourceFactory(extractorsFactory)
+  /** A policy set from outside, which replaces the retry policy for every item. */
+  private var externalPolicy: LoadErrorHandlingPolicy? = null
 
-  private val liveMediaFactory = mediaSourceFactory(LiveStreamExtractor.Factory(extractorsFactory))
-
-  /** Restarts the retry policy's time budgets. */
-  fun resetRetryTimer() {
-    customRetryPolicy?.reset()
-  }
+  private val factories
+    get() = listOf(mediaFactory, liveMediaFactory)
 
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider
   ): MediaSource.Factory {
-    liveMediaFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
-    return mediaFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
+    factories.forEach { it.setDrmSessionManagerProvider(drmSessionManagerProvider) }
+    return this
   }
 
   override fun setLoadErrorHandlingPolicy(
     loadErrorHandlingPolicy: LoadErrorHandlingPolicy
   ): MediaSource.Factory {
-    liveMediaFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-    return mediaFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+    externalPolicy = loadErrorHandlingPolicy
+    factories.forEach { it.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy) }
+    return this
   }
 
   override fun getSupportedTypes(): IntArray {
@@ -139,8 +119,21 @@ class MediaFactory(
           .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
       } ?: transformingFactory
 
-    return (if (track.live == true) liveMediaFactory else mediaFactory)
-      .setDataSourceFactory(dataSourceFactory)
-      .createMediaSource(mediaItem)
+    val local = mediaItem.localConfiguration
+    val (factory, sources) =
+      when {
+        // As DefaultMediaSourceFactory picks the source, so the policy matches it.
+        local != null &&
+          Util.inferContentTypeForUriAndMimeType(local.uri, local.mimeType) !=
+            C.CONTENT_TYPE_OTHER -> mediaFactory to RetryLoadErrorHandlingPolicy.Sources.ADAPTIVE
+        track.live == true -> liveMediaFactory to RetryLoadErrorHandlingPolicy.Sources.LIVE
+        else -> mediaFactory to RetryLoadErrorHandlingPolicy.Sources.PROGRESSIVE
+      }
+    // One policy per item: it tells the playing item's failures from a preload's.
+    if (externalPolicy == null && retryPolicy != RetryPolicy.Default)
+      factory.setLoadErrorHandlingPolicy(
+        RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, onLoadFailure)
+      )
+    return factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
   }
 }

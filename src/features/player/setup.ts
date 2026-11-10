@@ -270,10 +270,11 @@ export interface AndroidAudioOffloadSettings {
  *   `firstConnectMaxRetryDurationMs`. A stream that fails before ever playing
  *   is usually dead, and the listener is actively waiting for a verdict —
  *   seconds, not minutes.
- * - **Recovery** (the load played, then failed): retries are bounded by
- *   `maxRetryDurationMs`. Playback proved the stream works; drops are usually
- *   transient (tunnels, network handovers, a station's encoder restarting)
- *   and patience is what recovers them unattended.
+ * - **Recovery**: the player gives up once it has been silent for
+ *   `maxRetryDurationMs`; only 5 s of audio in a row ends a silence. Playback
+ *   proved the stream works; drops are usually transient (tunnels, network
+ *   handovers, a station's encoder restarting) and patience is what recovers
+ *   them unattended.
  *
  * While the device is offline, the first-connect budget does not apply: the
  * player waits for connectivity to return (bounded by `maxRetryDurationMs`),
@@ -285,24 +286,28 @@ export interface AndroidAudioOffloadSettings {
  */
 export type RetryConfig = {
   /**
-   * Maximum number of retry attempts before giving up. Omit to retry without an attempt
-   * limit, bounded only by the duration budgets.
+   * The connections in a row that may deliver no audio before the player gives
+   * up. One that delivered audio starts the count over, so a stream that played
+   * and dropped reconnects once more than this. On Android, a failure media3
+   * retries within its connection (an HLS segment, a file of known length) is
+   * not a connection, and only the duration budgets bound it. Omit for no
+   * limit.
    */
   maxRetries?: number
 
   /**
-   * Maximum duration in milliseconds to keep retrying a load that had been
-   * playing before it failed, and any load while the device is offline.
-   * This prevents surprising playback resumption after long periods offline.
+   * How long in milliseconds the player may stay silent, the listener wanting
+   * audio and hearing none, before it gives up. Time offline counts, so
+   * playback never resumes by surprise after a long time offline.
    *
    * @default 120000 (2 minutes)
    */
   maxRetryDurationMs?: number
 
   /**
-   * Maximum duration in milliseconds to keep retrying a load that has never
-   * produced audio, while the device is online. When it runs out, the terminal
-   * error carries the real diagnosis (`unreachable`, `not-found`, …).
+   * How long in milliseconds a load that has never produced audio keeps
+   * retrying after its first failure while online. When it runs out, the
+   * terminal error carries the real diagnosis (`unreachable`, `not-found`, …).
    *
    * @default 12000 (12 seconds)
    */
@@ -609,7 +614,8 @@ export type SetupPlayerOptions = Pick<
    * - `false`/`undefined`: no library retry. Android keeps media3's default
    *   handling, which retries a failed load a few times before surfacing the
    *   error; iOS fails at once.
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
+   * - `{ maxRetries: n }`: give up when a connection delivers no audio after
+   *   n such connections in a row
    * - `RetryConfig`: custom attempt and duration budgets
    *
    * Backoff timing and budgets: see the

@@ -171,50 +171,44 @@ created when a track becomes current (selection, queue advance, skip) _or is
 restarted from a terminal error_ (`retry()`, or any play command while in
 `'error'`), and it survives every automatic retry of that track.
 
-A new load starts fresh budgets. Within a load, the recovery budget refills
-after a stretch of uninterrupted playback, and on Android after a recovery
-(see below).
+A new load starts fresh budgets.
 
 How long the player keeps trying depends on one piece of evidence: **has this
 load ever produced audio?**
 
-| Situation                                     | Budget                                            | Why                                                                                                                                                               |
-| --------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **First connect** — the load has never played | `firstConnectMaxRetryDurationMs`, default **12s** | A stream that fails before ever playing is usually dead, and the listener is actively waiting for a verdict — seconds, not minutes.                               |
-| **Recovery** — the load played, then failed   | `maxRetryDurationMs`, default **2 min**           | Playback proved the stream works. Drops are usually transient (tunnels, network handovers, a station's encoder restarting) and patience recovers them unattended. |
+| Situation                                     | Budget                                                                    | Why                                                                                                                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **First connect** — the load has never played | `firstConnectMaxRetryDurationMs` after its first failure, default **12s** | A stream that fails before ever playing is usually dead, and the listener is actively waiting for a verdict — seconds, not minutes.                               |
+| **Recovery** — any load                       | `maxRetryDurationMs` of silence, default **2 min**                        | Playback proved the stream works. Drops are usually transient (tunnels, network handovers, a station's encoder restarting) and patience recovers them unattended. |
+
+**Silence** is time the listener wants audio and hears none. Only 5 s of audio
+in a row ends it, so a stream that plays a moment between failures stays
+silent, and a stream that closes every 10 s but plays in between keeps playing
+however long it runs. The player gives up when the deadline passes, without
+waiting for another failure.
 
 While the device is **offline**, the first-connect budget does not apply: the
-player parks and retries the moment connectivity returns, so a stream started
-in a tunnel still plays when the network comes back.
+player makes no connection and connects the moment connectivity returns, so a
+stream started in a tunnel still plays when the network comes back. Any offline
+observation resets the first-connect clock, which only ever measures a
+contiguous online stretch.
 
-Any offline observation resets the first-connect clock entirely — after
-restoration the load gets another full first-connect window, because the
-clock only ever measures a contiguous online stretch.
+Time offline **counts** toward `maxRetryDurationMs`, so playback can't surprise
+the listener by resuming after a long time offline.
 
-`maxRetryDurationMs` is different: it is a wall-clock ceiling that
-**includes** offline time. It exists so playback can't surprise the listener
-by resuming after a long time offline.
+After a connection that delivered audio, the player reconnects at once; after
+one that delivered nothing, it waits 1 s, then 1.5, 2.25 and 3.375, capped at
+5 s, starting at 1 s again once a connection delivers audio. Connections start
+at least 1 s apart. `maxRetries` counts the connections in a row that delivered
+nothing, so a stream that played and dropped reconnects once more than it.
 
-`maxRetries` additionally caps the retry attempts, counted across both budgets
-and across offline/online transitions.
+On Android, a failure that media3 can resume within its connection, an HLS
+segment or playlist and a file whose length the server declared, is retried in
+place with the same backoff and keeps the buffered audio playing. It is not a
+connection: only the duration budgets bound it.
 
-One Android caveat: for segmented formats like HLS, ExoPlayer counts attempts
-per internal loadable — playlist and segments separately — so an attempt cap
-is less predictable there. Prefer the duration budgets as the bound you rely
-on.
-
-After 20 seconds of uninterrupted audible playback, the stream counts as
-recovered and the recovery budget refills (on iOS, the attempt count too), so
-each later dropout of a long-lived stream gets a full window. On Android, a
-recovery from falling behind a live window refills it too, and so does one
-from a stalled player while the device is online.
-
-The load stays the same, and so does its evidence that it has played: the
-first-connect budget does not come back.
-
-Backoff delays grow exponentially from 1 s, capped at 5 s. Once a budget is
-exhausted the state lands on `'error'`, where your `PlaybackErrorView` and
-[`retry()`](#manual-retry) take over.
+Once a budget is exhausted the state lands on `'error'`, where your
+`PlaybackErrorView` and [`retry()`](#manual-retry) take over.
 
 Restarting from `'error'` — via `retry()` or any play command — begins a
 **new load** of the same track: fresh budgets, starting with the

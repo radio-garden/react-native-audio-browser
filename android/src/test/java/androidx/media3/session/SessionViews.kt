@@ -8,3 +8,12 @@ internal fun MediaSession.legacyState() =
 
 /** The current title media3 controllers were last told. */
 internal fun MediaSession.controllerTitle() = impl.playerInfo.mediaMetadata.title?.toString()
+
+/** The playback state media3 controllers (the notification among them) were last told. */
+internal fun MediaSession.controllerState() = impl.playerInfo.playbackState
+
+/** The player error media3 controllers were last told. */
+internal fun MediaSession.controllerError() = impl.playerInfo.playerError
+
+/** Whether media3 controllers were last told it plays. */
+internal fun MediaSession.controllerPlaying() = impl.playerInfo.isPlaying

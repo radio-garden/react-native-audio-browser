@@ -4,10 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -26,6 +28,7 @@ import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.remote.RemoteOutputsController
 import com.audiobrowser.remote.RemotePlayback
 import com.audiobrowser.remote.RemoteUrls
@@ -123,19 +126,54 @@ internal constructor(
   internal lateinit var forwardingPlayer: InterceptingPlayer
 
   private val remoteOutputs =
-    RemoteOutputsController(context, ::resolveRemoteUrls, castRemote, sonosRemote)
+    RemoteOutputsController(
+      context,
+      ::resolveRemoteUrls,
+      castRemote,
+      sonosRemote,
+      localHeld = { retryLoop?.reconnecting == true },
+    )
 
   internal val localEngine =
     LocalEngine({ exoPlayer }, isRemote = { remoteOutputs.player?.isRemote == true })
 
   private var keepSessionAliveOnError = true
 
-  /**
-   * Whether the current load has produced audio: picks the retry policy's first-connect or recovery
-   * budget. Read on ExoPlayer's loader thread. Cleared on a media-item transition; retry reloads of
-   * the same load keep it.
-   */
-  @Volatile internal var hasPlayedCache = false
+  /** Automatic retry for the local engine; null when the setup turns retry off. */
+  internal var retryLoop: RetryLoop? = null
+    private set
+
+  /** The playing item's id, for the load error policy on ExoPlayer's playback thread. */
+  @Volatile internal var playingMediaId: String? = null
+
+  /** The last recoverable load failure, the cause of a give-up that has no player error in hand. */
+  @Volatile private var lastLoadFailure: IOException? = null
+
+  private val retryEngine =
+    object : RetryLoop.Engine {
+      override fun reconnect() = localEngine.retry(toLiveEdge = isCurrentItemLive)
+
+      // A play after a pause over a retry connects nothing until then: no failure shows it.
+      override fun awaitNetwork() =
+        showRetryingError(
+          PlaybackErrorClassifier.retryingLoadError(lastLoadFailure ?: IOException(), false)
+        )
+
+      override fun giveUp(cause: PlaybackException?) {
+        // A remote output took over before the listener heard it: the loop is done either way.
+        if (!localEngine.isActive) return
+        // ERROR first: the state machine holds it through the IDLE the stop brings.
+        playerListener.surfaceTerminal(
+          cause
+            ?: PlaybackException(
+              "No audio within the retry budget",
+              lastLoadFailure,
+              PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            )
+        )
+        exoPlayer.stop()
+      }
+    }
 
   private var lastEmittedPlayWhenReady: Boolean? = null
 
@@ -311,8 +349,13 @@ internal constructor(
       sessionPlayer.playWhenReady = value
       // No-op unless the engine is idle, so this reconnects only after a stop, an error, a
       // cancelled retry or a rebuild, and never re-buffers a healthy stream. Reconnecting is also
-      // how a live stream rejoins its live edge.
-      if (value && currentTrack != null) sessionPlayer.prepare()
+      // how a live stream rejoins its live edge. Not while the retry loop paces the reconnect.
+      if (
+        value &&
+          currentTrack != null &&
+          retryView(sessionPlayer.playbackState) == MediaPlayer.STATE_IDLE
+      )
+        sessionPlayer.prepare()
     }
 
   /**
@@ -504,14 +547,16 @@ internal constructor(
         context,
         setupOptions,
         cache,
-        isOnline = { networkMonitor.getOnline() },
-        hasPlayed = { hasPlayedCache },
-        onRetryPending = ::reportRetryingError,
+        onLoadFailure = ::onLoadFailure,
+        isCurrent = { it.mediaId == playingMediaId },
         resolveMediaConfig = { url, track -> browser?.getMediaRequestConfig(url, track) },
       )
     loadControl = engine.loadControl
     mediaFactory = engine.mediaFactory
     exoPlayer = engine.exoPlayer
+    // A reconnect the old loop held between connections: the engine is carried idle and unprepared.
+    val heldIdle = retryLoop?.reconnecting == true && localEngine.isActive
+    retryLoop?.suspend()
     // Before the listener and the session are attached, so neither hears the playback replayed.
     carried?.restoreTo(exoPlayer)
     remoteOutputs.setLocal(exoPlayer)
@@ -519,6 +564,11 @@ internal constructor(
 
     if (isInitialSetup) playerListener = PlayerListener(this)
     attachSessionPlayer()
+    if (heldIdle && exoPlayer.playbackState == ExoPlayer.STATE_IDLE && exoPlayer.mediaItemCount > 0)
+      exoPlayer.prepare()
+    playerListener.engineAttached()
+    retryLoop = newRetryLoop(setupOptions.retryPolicy)
+    playingMediaId = exoPlayer.currentMediaItem?.mediaId
 
     if (isInitialSetup) {
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
@@ -545,10 +595,12 @@ internal constructor(
         { options },
         keepSessionAliveOnError,
         playerState = { playbackState },
+        engineView = ::retryView,
+        masksPlaying = { retryMasksPlaying },
         playPlayer = ::play,
         stopPlayer = ::stop,
       )
-    forwardingPlayer.addListener(playerListener)
+    forwardingPlayer.addEngineListener(playerListener)
     if (::mediaSession.isInitialized) mediaSession.player = forwardingPlayer
   }
 
@@ -578,6 +630,7 @@ internal constructor(
   fun observeNetworkConnectivity(scope: kotlinx.coroutines.CoroutineScope) {
     networkMonitor.observeOnline(scope) { isOnline ->
       callbacks?.onOnlineChanged(isOnline)
+      retryLoop?.onlineChanged(isOnline)
 
       // The formatter tells a stall from being offline, so it renders on a connectivity change too.
       nowPlaying.render()
@@ -827,19 +880,83 @@ internal constructor(
       .setTag(track)
       .build()
 
-  /**
-   * Fresh retry budgets and unproven playback (ADR 0004): when the track changes, and when an error
-   * goes terminal, since whatever restarts playback from it starts a new load and nothing loads
-   * until then.
-   */
-  internal fun resetForNewLoad() {
-    resetRetryTimer()
-    hasPlayedCache = false
+  private fun newRetryLoop(policy: RetryPolicy): RetryLoop? {
+    val (maxRetries, recoveryMs, firstConnectMs) =
+      when (policy) {
+        RetryPolicy.Default -> return null
+        is RetryPolicy.Infinite ->
+          Triple(null, policy.maxRetryDurationMs, policy.firstConnectMaxRetryDurationMs)
+        is RetryPolicy.Limited ->
+          Triple(
+            policy.maxRetries,
+            policy.maxRetryDurationMs,
+            policy.firstConnectMaxRetryDurationMs,
+          )
+      }
+    return RetryLoop(
+        clock = SystemClock::elapsedRealtime,
+        timer = { delayMs, action ->
+          val runnable = Runnable(action)
+          mainHandler.postDelayed(runnable, delayMs)
+          val cancel: () -> Unit = { mainHandler.removeCallbacks(runnable) }
+          cancel
+        },
+        engine = retryEngine,
+        maxRetries = maxRetries,
+        recoveryMs = recoveryMs ?: 120_000,
+        firstConnectMs = firstConnectMs ?: 12_000,
+        online = networkMonitor.getOnline(),
+      )
+      .also {
+        it.playIntentChanged(shouldPlayWhenReady)
+        if (localEngine.isActive && exoPlayer.playbackState != MediaPlayer.STATE_IDLE) {
+          it.loadStarted()
+          it.isPlayingChanged(exoPlayer.isPlaying)
+        } else {
+          it.suspend()
+        }
+      }
   }
 
-  internal fun resetRetryTimer() {
-    mediaFactory.resetRetryTimer()
+  /**
+   * A new Load for the retry loop (ADR 0014): a track change, or the phone taking over playback.
+   */
+  internal fun startRetryLoad() {
+    playingMediaId = exoPlayer.currentMediaItem?.mediaId
+    val loop = retryLoop ?: return
+    if (!localEngine.isActive) return loop.suspend()
+    lastLoadFailure = null
+    if (exoPlayer.playbackState == MediaPlayer.STATE_IDLE) {
+      // Nothing connects an idle engine's new track but a prepare, and leaving idle starts its
+      // Load.
+      val held = loop.reconnecting
+      loop.suspend()
+      if (held) exoPlayer.prepare()
+      return
+    }
+    loop.loadStarted()
+    loop.isPlayingChanged(exoPlayer.isPlaying)
   }
+
+  /**
+   * The engine state the listener and the session are shown: the retry loop's idle engine reads
+   * buffering, and so does a READY blip before a failed connection's error surfaces.
+   */
+  internal fun retryView(@MediaPlayer.State engineState: Int): Int {
+    val loop = retryLoop?.takeIf { localEngine.isActive } ?: return engineState
+    return RetryView.engineState(
+      engineState,
+      loop.reconnecting,
+      loop.failurePending,
+      exoPlayer.totalBufferedDuration,
+    )
+  }
+
+  /** Whether the engine's playing is a blip the retry loop hides; see [retryView]. */
+  internal val retryMasksPlaying: Boolean
+    get() =
+      localEngine.isActive &&
+        RetryView.isBlip(retryLoop?.failurePending == true, exoPlayer.totalBufferedDuration)
 
   /** Main thread only (ExoPlayer access). */
   private fun findQueueTrackByArtworkUri(uri: String): Track? {
@@ -978,6 +1095,8 @@ internal constructor(
     setPlaybackState(PlaybackState.STOPPED)
     val ended = sessionPlayer.playbackState == MediaPlayer.STATE_ENDED
     playWhenReady = false
+    // The next play is a new Load.
+    retryLoop?.suspend()
     sessionPlayer.stop()
     // Idle at its end, the next prepare would end it again at once.
     if (ended) sessionPlayer.seekToDefaultPosition()
@@ -1023,44 +1142,52 @@ internal constructor(
   }
 
   /**
-   * Bumped on track change so a [reportRetryingError] post for the outgoing track is dropped.
-   * Written on main, read on ExoPlayer's loader thread.
+   * Bumped on track change so an [onLoadFailure] post for the outgoing track is dropped. Written on
+   * main, read on ExoPlayer's playback thread.
    */
   @Volatile private var retryingErrorGeneration = 0
 
   /**
-   * Attaches a load failure the retry policy is still working on to the current state, for UIs to
-   * show over the spinner. Not an ERROR and not [Callbacks.onPlaybackError], which stays terminal.
-   * Called on ExoPlayer's loader thread.
+   * A recoverable load failure, on ExoPlayer's playback thread. Posted to main ahead of the state
+   * changes it causes, so the retry loop holds the engine before its READY blip or error arrives.
+   * It also attaches the failure to the current state, for UIs to show over the spinner: not an
+   * ERROR and not [Callbacks.onPlaybackError], which stays terminal.
    */
-  private fun reportRetryingError(exception: IOException) {
+  internal fun onLoadFailure(exception: IOException, inPlace: Boolean) {
+    val atMs = SystemClock.elapsedRealtime()
+    lastLoadFailure = exception
     val error = PlaybackErrorClassifier.retryingLoadError(exception, networkMonitor.getOnline())
     val generation = retryingErrorGeneration
     mainHandler.post {
       if (generation != retryingErrorGeneration) return@post
-      // Paused, the retry would run unseen and its failure be terminal. STOPPED, ERROR and ENDED
-      // reach here only from a post that raced them.
-      if (
-        !playWhenReady &&
-          playbackState !in setOf(PlaybackState.STOPPED, PlaybackState.ERROR, PlaybackState.ENDED)
-      ) {
-        return@post stopRetrying()
-      }
-      // Only over a spinner: while PLAYING, buffered audio still plays and ExoPlayer's in-place
-      // retry can succeed with no state change, so an error attached there would never clear.
-      if (
-        playbackState != PlaybackState.LOADING &&
-          playbackState != PlaybackState.BUFFERING &&
-          playbackState != PlaybackState.PAUSED
-      ) {
-        return@post
-      }
-      // Each backoff tick re-reports the same error.
-      if (playbackError == error) return@post
-      playbackError = error
-      callbacks?.onPlaybackChanged(Playback(playbackState, error))
-      nowPlaying.render()
+      if (localEngine.isActive) retryLoop?.connectionFailed(inPlace, atMs)
+      showRetryingError(error)
     }
+  }
+
+  private fun showRetryingError(error: PlaybackError) {
+    // Paused, the retry would run unseen and its failure be terminal. STOPPED, ERROR and ENDED
+    // reach here only from a post that raced them.
+    if (
+      !playWhenReady &&
+        playbackState !in setOf(PlaybackState.STOPPED, PlaybackState.ERROR, PlaybackState.ENDED)
+    ) {
+      return stopRetrying()
+    }
+    // Only over a spinner: while PLAYING, buffered audio still plays and ExoPlayer's in-place
+    // retry can succeed with no state change, so an error attached there would never clear.
+    if (
+      playbackState != PlaybackState.LOADING &&
+        playbackState != PlaybackState.BUFFERING &&
+        playbackState != PlaybackState.PAUSED
+    ) {
+      return
+    }
+    // Each backoff tick re-reports the same error.
+    if (playbackError == error) return
+    playbackError = error
+    callbacks?.onPlaybackChanged(Playback(playbackState, error))
+    nowPlaying.render()
   }
 
   /**
@@ -1081,7 +1208,8 @@ internal constructor(
     setPlaybackState(PlaybackState.PAUSED)
     clearRetryingError()
     exoPlayer.stop()
-    resetRetryTimer()
+    // An engine the loop already holds idle leaves no IDLE for the listener to see.
+    retryLoop?.engineStopped()
   }
 
   /**
@@ -1102,9 +1230,9 @@ internal constructor(
       val oldState = playbackState
       playbackState = state
 
-      if (state == PlaybackState.PLAYING) hasPlayedCache = true
       forwardingPlayer.onStateChanged(oldState)
-      if (state == PlaybackState.ERROR) resetForNewLoad()
+      // Whatever restarts playback from it starts a new Load.
+      if (state == PlaybackState.ERROR) retryLoop?.suspend()
 
       // A natural end exhausts the play intent; held, it inverts the toggle, keeps audio focus and
       // the periodic save. Emitted before the state and queue-ended callbacks, matching iOS. The

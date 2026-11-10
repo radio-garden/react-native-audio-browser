@@ -55,20 +55,33 @@ internal class InterceptingPlayer(
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
   private val playerState: () -> PlaybackState,
+  /** The engine state shown for the engine's own; see [Player.retryView]. */
+  private val engineView: (Int) -> Int,
+  /** Whether the engine's playing is a blip the retry loop hides. */
+  private val masksPlaying: () -> Boolean,
   private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
   private val listeners = mutableSetOf<MediaPlayer.Listener>()
 
-  override fun addListener(listener: MediaPlayer.Listener) {
+  /** Each listener the session added, and the [SessionViewListener] it hears the engine through. */
+  private val views = mutableMapOf<MediaPlayer.Listener, MediaPlayer.Listener>()
+
+  /** Adds the player's own listener, which hears the engine's events as they are. */
+  fun addEngineListener(listener: MediaPlayer.Listener) {
     listeners += listener
     super.addListener(listener)
   }
 
+  override fun addListener(listener: MediaPlayer.Listener) {
+    listeners += listener
+    super.addListener(views.getOrPut(listener) { SessionViewListener(listener, this) })
+  }
+
   override fun removeListener(listener: MediaPlayer.Listener) {
     listeners -= listener
-    super.removeListener(listener)
+    super.removeListener(views.remove(listener) ?: listener)
   }
 
   /**
@@ -79,7 +92,7 @@ internal class InterceptingPlayer(
     val view = playbackState
     val was =
       SessionView.playbackState(
-        super.getPlaybackState(),
+        engineView(super.getPlaybackState()),
         old,
         engineFailed,
         keepSessionAliveOnError,
@@ -94,16 +107,36 @@ internal class InterceptingPlayer(
   private val engineFailed: Boolean
     get() = super.getPlayerError() != null
 
+  /**
+   * Sends every listener but [except] the view of the state and of playing, as the engine's own
+   * events just told them otherwise.
+   */
+  fun republishView(except: MediaPlayer.Listener) {
+    val view = playbackState
+    val playing = isPlaying
+    listeners.toList().forEach {
+      if (it === except) return@forEach
+      it.onPlaybackStateChanged(view)
+      it.onIsPlayingChanged(playing)
+    }
+  }
+
+  override fun isPlaying(): Boolean = super.isPlaying() && !masksPlaying()
+
   override fun getPlaybackState(): Int =
     SessionView.playbackState(
-      super.getPlaybackState(),
+      engineView(super.getPlaybackState()),
       playerState(),
       engineFailed,
       keepSessionAliveOnError,
     )
 
   override fun getPlayWhenReady(): Boolean =
-    SessionView.playWhenReady(super.getPlayWhenReady(), super.getPlaybackState(), playbackState)
+    SessionView.playWhenReady(
+      super.getPlayWhenReady(),
+      engineView(super.getPlaybackState()),
+      playbackState,
+    )
 
   // After a terminal error, a cancelled retry or a rebuild in ENDED the engine is idle, and the
   // default skips only move the index. An ended queue that stayed put stays ended, as on an ended

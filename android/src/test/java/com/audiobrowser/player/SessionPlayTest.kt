@@ -7,6 +7,7 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.Util
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
@@ -173,6 +174,7 @@ class SessionPlayTest {
   }
 
   private fun load(src: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
+    goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
     player.exoPlayer.trackSelectionParameters =

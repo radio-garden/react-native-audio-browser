@@ -10,6 +10,7 @@ import androidx.media3.session.legacy.PlaybackStateCompat
 import androidx.media3.session.legacyState
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
@@ -136,6 +137,7 @@ class SessionViewTest {
   }
 
   private fun play(retryPolicy: RetryPolicy, src: String = "https://127.0.0.1:9/stream") {
+    goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
     session = MediaSession.Builder(context, player.forwardingPlayer).build()

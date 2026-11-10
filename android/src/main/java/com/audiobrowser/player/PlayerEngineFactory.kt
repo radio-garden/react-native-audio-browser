@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -49,9 +50,8 @@ internal fun buildPlayerEngine(
   context: Context,
   options: PlayerSetupOptions,
   cache: SimpleCache?,
-  isOnline: () -> Boolean,
-  hasPlayed: () -> Boolean,
-  onRetryPending: (exception: IOException) -> Unit,
+  onLoadFailure: (exception: IOException, inPlace: Boolean) -> Unit,
+  isCurrent: (MediaItem) -> Boolean,
   resolveMediaConfig: (url: String, track: Track) -> MediaRequestConfig?,
 ): PlayerEngine {
   val renderer = DefaultRenderersFactory(context)
@@ -66,9 +66,8 @@ internal fun buildPlayerEngine(
       context,
       cache,
       options.retryPolicy,
-      isOnline = isOnline,
-      hasPlayed = hasPlayed,
-      onRetryPending = onRetryPending,
+      onLoadFailure = onLoadFailure,
+      isCurrent = isCurrent,
       transferListener = bandwidthMeter,
       getRequestConfig = resolveMediaConfig,
     )

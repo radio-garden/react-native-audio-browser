@@ -29,6 +29,8 @@ internal class RemoteOutputsController(
   private val resolveUrls: suspend (Track) -> RemoteUrls,
   private val castRemote: (Context, String?) -> RemotePlayback?,
   private val sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+  /** Whether the phone's idle engine is the retry loop's, between connections of a load. */
+  private val localHeld: () -> Boolean = { false },
 ) {
   private val scope = MainScope()
   private var options: RemoteOutputsOptions? = null
@@ -67,7 +69,8 @@ internal class RemoteOutputsController(
     player =
       when {
         remotes.isEmpty() -> null.also { previous?.release() }
-        previous == null -> RemoteSwitchingPlayer(local, remotes, ::resolve, scope)
+        previous == null ->
+          RemoteSwitchingPlayer(local, remotes, ::resolve, scope, localHeld = localHeld)
         else -> previous.also { it.setRemotes(remotes) }
       }
     return player !== previous

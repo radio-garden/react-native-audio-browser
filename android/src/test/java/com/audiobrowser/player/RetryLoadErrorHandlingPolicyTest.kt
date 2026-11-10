@@ -1,5 +1,6 @@
 package com.audiobrowser.player
 
+import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
 import androidx.media3.datasource.DataSourceException
@@ -9,32 +10,48 @@ import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.Loader
+import com.audiobrowser.player.RetryLoadErrorHandlingPolicy.Sources
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import java.time.Duration
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.shadows.ShadowSystemClock
 
 @RunWith(RobolectricTestRunner::class)
 class RetryLoadErrorHandlingPolicyTest {
-  // LoadEventInfo needs an Android Uri to construct; the policy reads only the exception and the
-  // error count.
-  private val loadEventInfo = mock(LoadEventInfo::class.java)
-  private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
+  private val failures = mutableListOf<Boolean>()
+  private var current = true
 
-  private fun errorInfo(exception: IOException, errorCount: Int = 1) =
-    LoadErrorHandlingPolicy.LoadErrorInfo(loadEventInfo, mediaLoadData, exception, errorCount)
+  private fun policy(sources: Sources) =
+    RetryLoadErrorHandlingPolicy(sources, { current }) { _, inPlace -> failures += inPlace }
 
-  private fun httpError(responseCode: Int): HttpDataSource.InvalidResponseCodeException =
+  private fun errorInfo(
+    exception: IOException = UnknownHostException("dead host"),
+    errorCount: Int = 1,
+    headers: Map<String, List<String>> = emptyMap(),
+    loadTaskId: Long = 1,
+  ) =
+    LoadErrorHandlingPolicy.LoadErrorInfo(
+      LoadEventInfo(
+        loadTaskId,
+        DataSpec(Uri.parse("https://example.com/stream")),
+        Uri.parse("https://example.com/stream"),
+        headers,
+        /* elapsedRealtimeMs= */ 0,
+        /* loadDurationMs= */ 0,
+        /* bytesLoaded= */ 0,
+      ),
+      MediaLoadData(C.DATA_TYPE_MEDIA),
+      exception,
+      errorCount,
+    )
+
+  private fun httpError(responseCode: Int) =
     HttpDataSource.InvalidResponseCodeException(
       responseCode,
       "response message",
@@ -44,180 +61,101 @@ class RetryLoadErrorHandlingPolicyTest {
       ByteArray(0),
     )
 
-  private fun assertNonRecoverable(exception: IOException) {
-    var retryPending = false
-    val policy = RetryLoadErrorHandlingPolicy(onRetryPending = { retryPending = true })
-    val delay = policy.getRetryDelayMsFor(errorInfo(exception))
-    assertEquals(C.TIME_UNSET, delay)
-    assertFalse(retryPending)
+  @Test
+  fun `an adaptive stream retries in place with the backoff, without end`() {
+    val policy = policy(Sources.ADAPTIVE)
+
+    val delays = (1..8).map { policy.getRetryDelayMsFor(errorInfo(errorCount = it)) }
+
+    assertEquals(listOf(1000L, 1500, 2250, 3375, 5000, 5000, 5000, 5000), delays)
+    assertEquals(List(8) { true }, failures)
   }
 
   @Test
-  fun `offline network IOException is retried and reports the pending retry`() {
-    var retryPending = false
-    val policy =
-      RetryLoadErrorHandlingPolicy(
-        maxRetries = null,
-        isOnline = { false },
-        onRetryPending = { retryPending = true },
-      )
-
-    val delay = policy.getRetryDelayMsFor(errorInfo(UnknownHostException("Unable to resolve host")))
-
-    assertNotEquals(C.TIME_UNSET, delay)
-    // The offline delay.
-    assertEquals(1000L, delay)
-    assertTrue(retryPending)
+  fun `a live stream's failure ends the connection for the loop`() {
+    assertEquals(C.TIME_UNSET, policy(Sources.LIVE).getRetryDelayMsFor(errorInfo()))
+    assertEquals(listOf(false), failures)
   }
 
   @Test
-  fun `socket timeout is classified as a recoverable network error`() {
-    var retryPending = false
-    val policy =
-      RetryLoadErrorHandlingPolicy(isOnline = { true }, onRetryPending = { retryPending = true })
+  fun `a progressive response of known length retries in place`() {
+    val policy = policy(Sources.PROGRESSIVE)
 
-    val delay = policy.getRetryDelayMsFor(errorInfo(SocketTimeoutException("timeout")))
+    val length = errorInfo(headers = mapOf("Content-Length" to listOf("1234")))
+    val range = errorInfo(headers = mapOf("content-range" to listOf("bytes 0-99/1234")))
 
-    assertNotEquals(C.TIME_UNSET, delay)
-    assertTrue("expected a positive retry delay, got $delay", delay > 0)
-    assertTrue(retryPending)
+    assertEquals(1000L, policy.getRetryDelayMsFor(length))
+    assertEquals(1000L, policy.getRetryDelayMsFor(range))
+    assertEquals(listOf(true, true), failures)
   }
 
   @Test
-  fun `retry stops once max retries is exceeded`() {
-    val policy = RetryLoadErrorHandlingPolicy(maxRetries = 3)
-    val delay =
-      policy.getRetryDelayMsFor(errorInfo(UnknownHostException("offline"), errorCount = 4))
-    assertEquals(C.TIME_UNSET, delay)
+  fun `a file of known length stays in place when a reopen fails without headers`() {
+    val policy = policy(Sources.PROGRESSIVE)
+
+    policy.getRetryDelayMsFor(errorInfo(headers = mapOf("Content-Length" to listOf("1234"))))
+    val reopen = policy.getRetryDelayMsFor(errorInfo(errorCount = 2))
+    val another = policy.getRetryDelayMsFor(errorInfo(loadTaskId = 2))
+
+    assertEquals(1500L, reopen)
+    assertEquals(C.TIME_UNSET, another)
+    assertEquals(listOf(true, true, false), failures)
   }
 
   @Test
-  fun `retryable HTTP status (503) is recoverable and reports the pending retry`() {
-    var retryPending = false
-    val policy =
-      RetryLoadErrorHandlingPolicy(isOnline = { true }, onRetryPending = { retryPending = true })
+  fun `an item that only preloads retries in place and reports nothing`() {
+    current = false
 
-    val delay = policy.getRetryDelayMsFor(errorInfo(httpError(503)))
-
-    assertNotEquals(C.TIME_UNSET, delay)
-    assertTrue(retryPending)
+    assertEquals(1000L, policy(Sources.LIVE).getRetryDelayMsFor(errorInfo()))
+    assertTrue(failures.isEmpty())
   }
 
   @Test
-  fun `non-retryable HTTP status (404) is not retried`() {
-    var retryPending = false
-    val policy = RetryLoadErrorHandlingPolicy(onRetryPending = { retryPending = true })
+  fun `a progressive response of unknown length ends the connection`() {
+    val policy = policy(Sources.PROGRESSIVE)
 
-    val delay = policy.getRetryDelayMsFor(errorInfo(httpError(404)))
+    val none = errorInfo(SocketTimeoutException("timeout"))
+    val unknownTotal = errorInfo(headers = mapOf("Content-Range" to listOf("bytes 0-99/*")))
 
-    assertEquals(C.TIME_UNSET, delay)
-    assertFalse(retryPending)
+    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(none))
+    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(unknownTotal))
+    assertEquals(listOf(false, false), failures)
   }
 
   @Test
-  fun `parser errors are non-recoverable`() {
-    assertNonRecoverable(ParserException.createForMalformedContainer("bad container", null))
+  fun `a retryable HTTP status (503) is recoverable`() {
+    assertEquals(1000L, policy(Sources.ADAPTIVE).getRetryDelayMsFor(errorInfo(httpError(503))))
+    assertEquals(listOf(true), failures)
   }
 
   @Test
-  fun `file-not-found errors are non-recoverable`() {
-    assertNonRecoverable(FileNotFoundException("missing"))
-  }
-
-  @Test
-  fun `unexpected loader errors are non-recoverable`() {
-    assertNonRecoverable(Loader.UnexpectedLoaderException(IllegalStateException("boom")))
-  }
-
-  @Test
-  @Suppress("DEPRECATION") // DataSourceException(reason) is the only way to build this in a test
-  fun `reads past the available position are non-recoverable`() {
-    assertNonRecoverable(DataSourceException(DataSourceException.POSITION_OUT_OF_RANGE))
-  }
-}
-
-@RunWith(RobolectricTestRunner::class)
-class RetryLoadErrorHandlingPolicyBudgetTest {
-  private val loadEventInfo = org.mockito.Mockito.mock(LoadEventInfo::class.java)
-  private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
-
-  private fun errorInfo(errorCount: Int = 1) =
-    LoadErrorHandlingPolicy.LoadErrorInfo(
-      loadEventInfo,
-      mediaLoadData,
-      UnknownHostException("dead host"),
-      errorCount,
+  fun `media3 never gives up on a loadable itself`() {
+    assertEquals(
+      Int.MAX_VALUE,
+      policy(Sources.ADAPTIVE).getMinimumLoadableRetryCount(C.DATA_TYPE_MEDIA),
     )
-
-  @Test
-  fun `never-played load gives up after the first-connect budget`() {
-    val policy =
-      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
-
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
   }
 
   @Test
-  fun `played load ignores the first-connect budget`() {
-    val policy =
-      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { true })
-
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
-  }
-
-  @Test
-  fun `offline time does not burn the first-connect budget`() {
-    var online = false
-    val policy =
-      RetryLoadErrorHandlingPolicy(
-        firstConnectMaxRetryDurationMs = 100,
-        isOnline = { online },
-        hasPlayed = { false },
+  fun `fatal errors surface and reach no one`() {
+    @Suppress("DEPRECATION") // DataSourceException(reason) is the only way to build this in a test
+    val fatal =
+      listOf(
+        httpError(404),
+        ParserException.createForMalformedContainer("bad container", null),
+        FileNotFoundException("missing"),
+        Loader.UnexpectedLoaderException(IllegalStateException("boom")),
+        DataSourceException(DataSourceException.POSITION_OUT_OF_RANGE),
       )
-
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
-
-    online = true
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
-  }
-
-  @Test
-  fun `offline stretch mid-budget restarts the first-connect clock`() {
-    var online = true
-    val policy =
-      RetryLoadErrorHandlingPolicy(
-        firstConnectMaxRetryDurationMs = 100,
-        isOnline = { online },
-        hasPlayed = { false },
-      )
-
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    online = false
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
-
-    online = true
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
-  }
-
-  @Test
-  fun `reset restarts the first-connect clock`() {
-    val policy =
-      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
-
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
-    ShadowSystemClock.advanceBy(Duration.ofMillis(150))
-    policy.reset()
-    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    for (sources in Sources.entries) {
+      for (exception in fatal) {
+        assertEquals(
+          "$sources: $exception",
+          C.TIME_UNSET,
+          policy(sources).getRetryDelayMsFor(errorInfo(exception)),
+        )
+      }
+    }
+    assertTrue(failures.isEmpty())
   }
 }
