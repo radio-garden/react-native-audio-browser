@@ -204,7 +204,7 @@ final class BrowserManager {
     let params = FormatNavigationErrorParams(
       error: error, defaultFormatted: fallback, path: path, kind: NavigationErrorKind(path: path),
     )
-    return await (try? formatter(params).await()) ?? fallback
+    return await (try? formatter(params).awaitOrTimeout()) ?? fallback
   }
 
   // MARK: - Search
