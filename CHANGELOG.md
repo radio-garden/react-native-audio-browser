@@ -1,3 +1,13 @@
+## [0.2.0-next.81](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.80...v0.2.0-next.81) (2026-11-10)
+
+### Bug Fixes
+
+* **ios:** refuse Swift compilers older than 6.3 ([53464a6](https://github.com/radio-garden/react-native-audio-browser/commit/53464a60caf2890ff9673d28e820a152a892b2a8)), closes [swiftlang/swift#86829](https://github.com/swiftlang/swift/issues/86829) [#86852](https://github.com/radio-garden/react-native-audio-browser/issues/86852) [#error](https://github.com/radio-garden/react-native-audio-browser/issues/error) [#error](https://github.com/radio-garden/react-native-audio-browser/issues/error)
+
+### Documentation
+
+* say Xcode 27 needs Nitro's [#1824](https://github.com/radio-garden/react-native-audio-browser/issues/1824) fix to launch on iOS below 18 ([39d773b](https://github.com/radio-garden/react-native-audio-browser/commit/39d773b83294c3664b16650c5c728f79b3bf5fa2)), closes [margelo/nitro#1652](https://github.com/margelo/nitro/issues/1652) [margelo/nitro#2052](https://github.com/margelo/nitro/issues/2052)
+
 ## [0.2.0-next.80](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.79...v0.2.0-next.80) (2026-11-10)
 
 ### Bug Fixes
