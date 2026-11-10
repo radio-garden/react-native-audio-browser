@@ -1,5 +1,5 @@
 PODS:
-  - AudioBrowser (0.2.0-next.24):
+  - AudioBrowser (0.2.0-next.75):
     - hermes-engine
     - Kingfisher (~> 8.6)
     - NitroModules
@@ -1500,7 +1500,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-slider (5.1.2):
+  - react-native-slider (5.2.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1514,7 +1514,7 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-slider/common (= 5.1.2)
+    - react-native-slider/common (= 5.2.2)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1524,7 +1524,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-slider/common (5.1.2):
+  - react-native-slider/common (5.2.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2264,7 +2264,7 @@ EXTERNAL SOURCES:
     :path: build/rncore-facades/Yoga
 
 SPEC CHECKSUMS:
-  AudioBrowser: f2ea499a4750921db4feb5d94b24d2d538a1729e
+  AudioBrowser: a909724d8eff110b7a168b0cdb4c070382684314
   boost: 8502bfdc46e2804408af2e163049ece181009af4
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4
@@ -2317,7 +2317,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 8b3aaa5f3b907ecf071b105589868d9f027a448d
   React-mutationobservernativemodule: 11d77d3f7360578f07847843544ada23cc473049
   react-native-safe-area-context: b1c9f15a36e597e9cef4c5526e209ef2645bc2e0
-  react-native-slider: bf634a896c9ab8408c7c4bc98dbd6a018c1399e3
+  react-native-slider: 5f655882a4ec96c21d705abb305419c257a2f12b
   react-native-vector-icons-fontawesome6: 1a73ea16a698f70851ad47e94521a99499e8e974
   React-NativeModulesApple: 52f3def085f129de1307e3eb78e26729ff70f421
   React-networking: 1e6441349ac72bfd4f7a79c300c3dd76993a7058

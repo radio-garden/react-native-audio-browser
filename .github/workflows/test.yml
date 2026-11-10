@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck
         run: yarn types
 
+      - name: Typecheck the example app
+        run: yarn example types
+
       - name: Lint
         run: yarn ci:lint
 
