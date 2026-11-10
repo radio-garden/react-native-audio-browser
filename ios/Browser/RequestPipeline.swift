@@ -37,8 +37,8 @@ final class RequestPipeline {
       let config = self.config
       // Double await: the TS side wraps a sync-or-async thunk in a JS promise, behind the
       // bridge's promise.
-      let request = try await config.requestResolver?().await().await() ?? config.request
-      let browse = try await config.browseResolver?().await().await() ?? config.browse
+      let request = try await config.requestResolver?().awaitNested() ?? config.request
+      let browse = try await config.browseResolver?().awaitNested() ?? config.browse
       return ResolvedLayers(request: request, browse: browse)
     }
   }
@@ -258,12 +258,12 @@ final class RequestPipeline {
   /// bridge hop, then the JS promise): a single await hands a `Promise` downstream. Copies the
   /// result out.
   func awaitAsyncConfig(_ promise: Promise<Promise<RequestConfig>>) async throws -> RequestConfig {
-    try await extractConfig(promise.await().await())
+    try await extractConfig(promise.awaitNested())
   }
 
   /// Awaits a sync config callback (one bridge await) and copies the result out.
   func awaitSyncConfig(_ promise: Promise<RequestConfig>) async throws -> RequestConfig {
-    try await extractConfig(promise.await())
+    try await extractConfig(promise.awaitCancellable())
   }
 
   /// A copy of `config`, so nothing reads the Nitro bridge's value after its Promise is gone.

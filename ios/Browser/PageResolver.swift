@@ -57,7 +57,7 @@ final class PageResolver {
       throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
     }
     if let callback = searchEntry.searchCallback {
-      return try await callback(params).await().await()
+      return try await callback(params).awaitNested()
     }
     if let searchConfig = searchEntry.searchConfig {
       return try await requests.fetchSearch(searchConfig, params: params)
@@ -76,13 +76,13 @@ final class PageResolver {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
       // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms:
       // a sync track, a sync error, or a promise of the same two.
-      switch try await callback(callbackParam).await() {
+      switch try await callback(callbackParam).awaitCancellable() {
       case let .first(resolvedTrack):
         return resolvedTrack
       case let .second(browseError):
         throw BrowserError.callbackError(browseError.error)
       case let .third(promise):
-        switch try await promise.await() {
+        switch try await promise.awaitCancellable() {
         case let .first(resolvedTrack):
           return resolvedTrack
         case let .second(browseError):
@@ -115,23 +115,18 @@ final class PageResolver {
   ) async throws -> [Section] {
     let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: parentPath)
     let artworkConfig = routeEntry?.artwork
-    let artworkLoads = stamped.map { section in
-      section.children.map { track in
-        Task<ImageSource?, Never> { @MainActor in
-          await self.requests.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
-        }
-      }
+    let tracks = stamped.flatMap(\.children)
+    let artwork = await Array(tracks.indices).concurrentMap { index in
+      await self.requests.resolveArtworkUrl(track: tracks[index], perRouteConfig: artworkConfig)
     }
-
-    var transformed: [Section] = []
-    for (section, loads) in zip(stamped, artworkLoads) {
-      var children: [Track] = []
-      for (track, load) in zip(section.children, loads) {
-        let artwork = await load.value
-        children.append(artwork.map { track.copying(artworkSource: $0) } ?? track)
-      }
-      transformed.append(section.copying(children: children))
+    // A cancelled resolve gives no artwork; that page must not reach the cache.
+    try Task.checkCancellation()
+    var next = 0
+    return stamped.map { section in
+      section.copying(children: section.children.map { track in
+        defer { next += 1 }
+        return artwork[next].map { track.copying(artworkSource: $0) } ?? track
+      })
     }
-    return transformed
   }
 }

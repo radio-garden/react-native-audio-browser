@@ -87,7 +87,7 @@ final class BrowserManager {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     guard let handler = config.handleTrackLoad else { return false }
     do {
-      try await handler(event).await().await()
+      try await handler(event).awaitNested()
     } catch {
       logger.error("handleTrackLoad failed: \(error.localizedDescription)")
     }
