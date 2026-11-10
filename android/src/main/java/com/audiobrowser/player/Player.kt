@@ -928,7 +928,8 @@ internal constructor(
       }
     val recovery = recoveryMs ?: 120_000
     val firstConnect = firstConnectMs ?: 12_000
-    retryLocks = RetryLocks(context, options.wakeMode, maxHoldMs = recovery + firstConnect)
+    retryLocks =
+      RetryLocks(context, options.wakeMode, maxHoldMs = recovery + firstConnect, mainHandler)
     return RetryLoop(
         clock = SystemClock::elapsedRealtime,
         timer = { delayMs, action ->

@@ -37,8 +37,7 @@ internal class RetryFocus(
     val ours = ++generation
     val listener =
       AudioManager.OnAudioFocusChangeListener { change ->
-        // A change for a request since abandoned, as ExoPlayer's own request at the reconnect
-        // causes.
+        // A change for a request since abandoned: at the reconnect, see [handOver].
         if (ours == generation) changed(change)
       }
     when (port.request(listener)) {
@@ -57,8 +56,9 @@ internal class RetryFocus(
   }
 
   /**
-   * Runs the reconnect's [prepare], in which ExoPlayer requests focus for the engine, then lets
-   * this request go: in that order, no other app's request falls between the two.
+   * Runs the reconnect's [prepare], then lets this request go. ExoPlayer requests the engine's
+   * focus on its playback thread a few milliseconds later: another app's request in that gap is
+   * overridden by the engine's, as by a tap on play, and its loss to this request is dropped.
    */
   fun handOver(prepare: () -> Unit) {
     prepare()

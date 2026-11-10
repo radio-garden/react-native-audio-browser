@@ -212,7 +212,10 @@ less than 1 s apart.
 
 While it waits to reconnect, the player holds audio focus as it does while
 playing. Another app taking the focus pauses it. A transient loss, a call
-among them, holds the reconnect until the focus returns, then reconnects.
+among them, holds the reconnect until the focus returns, then reconnects. At
+the reconnect, the focus passes to the playing engine with a gap of a few
+milliseconds: an app that asks for focus within it loses it again to the
+reconnect, as it would to a tap on play.
 
 Once a budget is exhausted the state lands on `'error'`, where your
 `PlaybackErrorView` and [`retry()`](#manual-retry) take over.

@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import android.os.Handler
 import android.os.PowerManager
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 
@@ -15,6 +16,7 @@ internal class RetryLocks(
   private val wakeMode: AndroidPlayerWakeMode,
   /** A backstop past the loop's deadline, which releases the locks first. */
   private val maxHoldMs: Long,
+  private val handler: Handler,
 ) {
   private val wakeLock =
     (context.applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -27,13 +29,24 @@ internal class RetryLocks(
       ?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "AudioBrowser:retry")
       ?.apply { setReferenceCounted(false) }
 
+  /** The Wi-Fi lock has no timeout of its own. */
+  private val releaseWifiLock = Runnable { if (wifiLock?.isHeld == true) wifiLock.release() }
+
   val wakeLockHeld: Boolean
     get() = wakeLock.isHeld
+
+  val wifiLockHeld: Boolean
+    get() = wifiLock?.isHeld == true
 
   fun hold(held: Boolean) {
     if (held && wakeMode != AndroidPlayerWakeMode.NONE) wakeLock.acquire(maxHoldMs)
     else if (wakeLock.isHeld) wakeLock.release()
-    if (held && wakeMode == AndroidPlayerWakeMode.NETWORK) wifiLock?.acquire()
-    else if (wifiLock?.isHeld == true) wifiLock.release()
+    handler.removeCallbacks(releaseWifiLock)
+    if (held && wakeMode == AndroidPlayerWakeMode.NETWORK) {
+      wifiLock?.acquire()
+      handler.postDelayed(releaseWifiLock, maxHoldMs)
+    } else {
+      releaseWifiLock.run()
+    }
   }
 }
