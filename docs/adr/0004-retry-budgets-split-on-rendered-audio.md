@@ -1,6 +1,6 @@
 # Retry budgets split on whether the load ever rendered audio
 
-**Status:** accepted
+**Status:** accepted, amended by [ADR 0014](0014-silence-bounds-retry-and-connects-pace-it.md): the recovery budget measures silence, not time since the first error.
 
 Automatic retry uses two **duration** budgets, selected per load by a single piece of evidence: has this load ever produced audio?
 
