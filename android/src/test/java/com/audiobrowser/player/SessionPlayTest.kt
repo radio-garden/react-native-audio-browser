@@ -1,6 +1,5 @@
 package com.audiobrowser.player
 
-import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
@@ -10,12 +9,10 @@ import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -55,7 +52,7 @@ class SessionPlayTest {
 
   @Test
   fun `an app's play handler takes a session play once and nothing plays`() {
-    load(Uri.fromFile(silentWav()).toString())
+    load(folder.silentWavUri(Duration.ofMillis(500)))
     player.stop()
     `when`(callbacks.handleRemotePlay()).thenReturn(true)
 
@@ -70,7 +67,7 @@ class SessionPlayTest {
 
   @Test
   fun `a session play after a stop loads once and plays`() {
-    load(Uri.fromFile(silentWav()).toString())
+    load(folder.silentWavUri(Duration.ofMillis(500)))
     player.stop()
     val before = states().size
 
@@ -82,7 +79,7 @@ class SessionPlayTest {
 
   @Test
   fun `setPlayWhenReady(true) after a stop loads`() {
-    load(Uri.fromFile(silentWav()).toString())
+    load(folder.silentWavUri(Duration.ofMillis(500)))
     player.stop()
 
     // As JS setPlayWhenReady(true) does: the setter alone.
@@ -106,7 +103,7 @@ class SessionPlayTest {
 
   @Test
   fun `a setup's raised intent over a stop loads nothing`() {
-    load(Uri.fromFile(silentWav()).toString())
+    load(folder.silentWavUri(Duration.ofMillis(500)))
     player.stop()
 
     val before = states().size
@@ -168,7 +165,7 @@ class SessionPlayTest {
         .build()
     player.applySetupPlayWhenReady(true)
 
-    player.setQueue(arrayOf(TestFixtures.track(src = Uri.fromFile(silentWav()).toString())))
+    player.setQueue(arrayOf(TestFixtures.track(src = folder.silentWavUri(Duration.ofMillis(500)))))
 
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
   }
@@ -210,29 +207,6 @@ class SessionPlayTest {
       ShadowSystemClock.advanceBy(Duration.ofMillis(100))
       Thread.sleep(10)
       shadowOf(Looper.getMainLooper()).idle()
-    }
-  }
-
-  /** Half a second of 8 kHz mono 8-bit silence. */
-  private fun silentWav(): File {
-    val samples = 4_000
-    val header =
-      ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-        put("RIFF".toByteArray())
-        putInt(36 + samples)
-        put("WAVEfmt ".toByteArray())
-        putInt(16)
-        putShort(1)
-        putShort(1)
-        putInt(8_000)
-        putInt(8_000)
-        putShort(1)
-        putShort(8)
-        put("data".toByteArray())
-        putInt(samples)
-      }
-    return folder.newFile("silence.wav").apply {
-      writeBytes(header.array() + ByteArray(samples) { 0x80.toByte() })
     }
   }
 }

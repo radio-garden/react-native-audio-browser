@@ -1,7 +1,5 @@
 package com.audiobrowser
 
-import android.content.ComponentName
-import android.os.Binder
 import android.os.Bundle
 import android.os.Looper
 import androidx.media3.common.HeartRating
@@ -13,9 +11,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
 /**
@@ -26,15 +22,7 @@ import org.robolectric.Shadows.shadowOf
 @RunWith(RobolectricTestRunner::class)
 class LegacyRatingTest {
 
-  private val controller = run {
-    val application = RuntimeEnvironment.getApplication()
-    shadowOf(application)
-      .setComponentNameAndServiceForBindService(
-        ComponentName(application, HeadlessTaskService::class.java),
-        Binder(),
-      )
-    Robolectric.buildService(Service::class.java).create()
-  }
+  private val controller = buildService()
   private val service = controller.get()
   private val player = service.player
   private val legacyController =
@@ -48,7 +36,6 @@ class LegacyRatingTest {
       Bundle.EMPTY,
       false,
     )
-  private val session = service.onGetSession(legacyController)!!
 
   @After
   fun destroy() {
@@ -62,13 +49,13 @@ class LegacyRatingTest {
     val result =
       player
         .getMediaSessionCallback()
-        .onSetRating(session, legacyController, mediaId, HeartRating(heart))
+        .onSetRating(service.session, legacyController, mediaId, HeartRating(heart))
         .get()
     idle()
     return result.resultCode
   }
 
-  private fun currentMediaId() = session.player.currentMediaItem!!.mediaId
+  private fun currentMediaId() = service.session.player.currentMediaItem!!.mediaId
 
   private fun loadTrack() {
     controller.bind()
@@ -85,11 +72,11 @@ class LegacyRatingTest {
 
     assertEquals(SessionResult.RESULT_SUCCESS, rate(currentMediaId(), true))
     assertEquals(true, player.currentTrack?.favorited)
-    assertEquals(HeartRating(true), session.player.mediaMetadata.userRating)
+    assertEquals(HeartRating(true), service.session.player.mediaMetadata.userRating)
 
     assertEquals(SessionResult.RESULT_SUCCESS, rate(currentMediaId(), false))
     assertEquals(false, player.currentTrack?.favorited)
-    assertEquals(HeartRating(false), session.player.mediaMetadata.userRating)
+    assertEquals(HeartRating(false), service.session.player.mediaMetadata.userRating)
   }
 
   @Test
@@ -98,6 +85,6 @@ class LegacyRatingTest {
 
     assertEquals(SessionResult.RESULT_ERROR_NOT_SUPPORTED, rate("b", true))
     assertEquals(false, player.currentTrack?.favorited)
-    assertEquals(HeartRating(false), session.player.mediaMetadata.userRating)
+    assertEquals(HeartRating(false), service.session.player.mediaMetadata.userRating)
   }
 }

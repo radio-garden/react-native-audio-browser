@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Metadata
@@ -17,15 +16,14 @@ import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.silentWavBytes
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
-import java.io.File
 import java.io.IOException
 import java.net.ServerSocket
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -85,7 +83,7 @@ class PlayerRetryTest {
 
   @Test
   fun `a terminal error ends the load`() {
-    play(Uri.fromFile(silentWav()).toString())
+    play(folder.silentWavUri(Duration.ofMinutes(1)))
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
 
     player.playerListener.onPlayerError(
@@ -170,7 +168,7 @@ class PlayerRetryTest {
 
   @Test
   fun `removing a failed current track plays the next`() {
-    failTerminally(Uri.fromFile(silentWav()).toString())
+    failTerminally(folder.silentWavUri(Duration.ofMinutes(1)))
 
     player.remove(listOf(0))
 
@@ -179,7 +177,7 @@ class PlayerRetryTest {
 
   @Test
   fun `removing another track keeps a terminal error`() {
-    failTerminally(Uri.fromFile(silentWav()).toString())
+    failTerminally(folder.silentWavUri(Duration.ofMinutes(1)))
 
     player.remove(listOf(1))
     shadowOf(Looper.getMainLooper()).idle()
@@ -190,7 +188,7 @@ class PlayerRetryTest {
 
   @Test
   fun `removing the current track after a cancelled retry stays idle and paused`() {
-    pauseDuringRetry(Uri.fromFile(silentWav()).toString()) { player.pause() }
+    pauseDuringRetry(folder.silentWavUri(Duration.ofMinutes(1))) { player.pause() }
 
     player.remove(listOf(0))
     shadowOf(Looper.getMainLooper()).idle()
@@ -202,7 +200,7 @@ class PlayerRetryTest {
 
   @Test
   fun `removing a failed current track while paused is paused`() {
-    failTerminally(Uri.fromFile(silentWav()).toString())
+    failTerminally(folder.silentWavUri(Duration.ofMinutes(1)))
     player.pause()
     shadowOf(Looper.getMainLooper()).idle()
 
@@ -217,7 +215,7 @@ class PlayerRetryTest {
   fun `adding a track after a cancelled retry stays idle and paused`() {
     pauseDuringRetry { player.pause() }
 
-    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    player.add(TestFixtures.track(src = folder.silentWavUri(Duration.ofMinutes(1))))
     shadowOf(Looper.getMainLooper()).idle()
 
     assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
@@ -228,7 +226,7 @@ class PlayerRetryTest {
   fun `adding to an empty queue loads`() {
     player.setup(PlayerSetupOptions())
 
-    player.add(TestFixtures.track(src = Uri.fromFile(silentWav()).toString()))
+    player.add(TestFixtures.track(src = folder.silentWavUri(Duration.ofMinutes(1))))
     shadowOf(Looper.getMainLooper()).idle()
 
     assertNotEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
@@ -276,7 +274,7 @@ class PlayerRetryTest {
   @Test
   fun `a load failing while paused stays paused and the next play reloads`() {
     val server = ServerSocket(0)
-    val wav = silentWav().readBytes()
+    val wav = silentWavBytes(Duration.ofMinutes(1))
     val sent = CountDownLatch(1)
     val drop = CountDownLatch(1)
     // Serves five seconds of the minute, holds the connection until the drop, then refuses.
@@ -379,7 +377,7 @@ class PlayerRetryTest {
   @Test
   fun `a track change on a stopped engine starts no Load until it is prepared`() {
     goOnline(context)
-    val wav = Uri.fromFile(silentWav()).toString()
+    val wav = folder.silentWavUri(Duration.ofMinutes(1))
     play(wav, wav, retryPolicy = RetryPolicy.Infinite())
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
     player.exoPlayer.stop()
@@ -491,7 +489,7 @@ class PlayerRetryTest {
   @Test
   fun `a failure report that arrives after a reconnect is not the new connection's`() {
     goOnline(context)
-    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
 
     // Posted from the playback thread before the go-live reconnect, run after it.
@@ -506,7 +504,7 @@ class PlayerRetryTest {
   @Test
   fun `with retry, a stuck engine reconnects and never ends in an error`() {
     goOnline(context)
-    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
 
     // As media3 leaves a stuck engine: idle, with the error.
@@ -522,7 +520,7 @@ class PlayerRetryTest {
   @Test
   fun `a title after a reconnect inside the retry loop shows`() {
     goOnline(context)
-    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
     player.exoPlayer.stop()
     player.playerListener.onPlayerError(stuck())
@@ -536,7 +534,7 @@ class PlayerRetryTest {
 
   @Test
   fun `with retry off, a stuck engine ends in the stalled error`() {
-    play(Uri.fromFile(silentWav()).toString())
+    play(folder.silentWavUri(Duration.ofMinutes(1)))
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
 
     player.playerListener.onPlayerError(stuck())
@@ -604,29 +602,6 @@ class PlayerRetryTest {
         )
       Thread.sleep(10)
       shadowOf(Looper.getMainLooper()).idle()
-    }
-  }
-
-  /** A minute of 8 kHz mono 8-bit silence, long enough that no test reaches its end. */
-  private fun silentWav(): File {
-    val samples = 8_000 * 60
-    val header =
-      ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-        put("RIFF".toByteArray())
-        putInt(36 + samples)
-        put("WAVEfmt ".toByteArray())
-        putInt(16)
-        putShort(1)
-        putShort(1)
-        putInt(8_000)
-        putInt(8_000)
-        putShort(1)
-        putShort(8)
-        put("data".toByteArray())
-        putInt(samples)
-      }
-    return folder.newFile("silence.wav").apply {
-      writeBytes(header.array() + ByteArray(samples) { 0x80.toByte() })
     }
   }
 }

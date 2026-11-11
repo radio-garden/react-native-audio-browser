@@ -1,18 +1,12 @@
 package com.audiobrowser
 
 import android.app.SearchManager
-import android.content.ComponentName
 import android.content.ContextWrapper
 import android.content.Intent
-import android.os.Binder
-import android.os.Bundle
 import android.os.Looper
 import android.os.Process
-import androidx.annotation.OptIn
 import androidx.media3.common.C
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
-import androidx.media3.session.MediaSession
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.PlaybackStateStore
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
@@ -26,7 +20,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -34,17 +27,7 @@ import org.robolectric.Shadows.shadowOf
 @RunWith(RobolectricTestRunner::class)
 class ServiceTaskRemovedTest {
 
-  private val controller = run {
-    // Robolectric connects an unregistered binding with a null ComponentName, which the
-    // HeadlessTaskService connection's non-null parameter rejects.
-    val application = RuntimeEnvironment.getApplication()
-    shadowOf(application)
-      .setComponentNameAndServiceForBindService(
-        ComponentName(application, HeadlessTaskService::class.java),
-        Binder(),
-      )
-    Robolectric.buildService(Service::class.java).create()
-  }
+  private val controller = buildService()
   private val service = controller.get()
   private val player = service.player
 
@@ -61,7 +44,6 @@ class ServiceTaskRemovedTest {
     idle()
   }
 
-  @OptIn(UnstableApi::class)
   private fun connectController(packageName: String) {
     val application = RuntimeEnvironment.getApplication()
     shadowOf(application.packageManager)
@@ -70,21 +52,7 @@ class ServiceTaskRemovedTest {
       object : ContextWrapper(application) {
         override fun getPackageName() = packageName
       }
-    // Only to reach the private session: onGetSession ignores its argument.
-    val session =
-      service.onGetSession(
-        MediaSession.ControllerInfo.createTestOnlyControllerInfo(
-          packageName,
-          0,
-          Process.myUid(),
-          0,
-          0,
-          false,
-          Bundle.EMPTY,
-          false,
-        )
-      )
-    val future = MediaController.Builder(context, session!!.token).buildAsync()
+    val future = MediaController.Builder(context, service.session.token).buildAsync()
     idle()
     // Throws if the session refused the controller.
     future.get()
