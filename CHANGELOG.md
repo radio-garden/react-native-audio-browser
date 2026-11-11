@@ -1,3 +1,9 @@
+## [0.2.0-next.89](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.88...v0.2.0-next.89) (2026-11-11)
+
+### Bug Fixes
+
+* **android:** keep a seek right after a load when remote outputs are on ([bf58217](https://github.com/radio-garden/react-native-audio-browser/commit/bf58217b037fe015ecf3850ec61be04429cc8907))
+
 ## [0.2.0-next.88](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.87...v0.2.0-next.88) (2026-11-11)
 
 ### Bug Fixes
