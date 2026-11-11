@@ -8,7 +8,10 @@
       "Bash(git commit:*--no-verify:*)"
     ]
   },
-  "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "env": {
     "DISABLE_TELEMETRY": "1"
   }
