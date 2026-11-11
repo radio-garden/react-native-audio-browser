@@ -2,7 +2,6 @@ package com.audiobrowser.player
 
 import android.content.Context
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
@@ -10,14 +9,13 @@ import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.remote.FakeRemote
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -65,7 +63,7 @@ class PlayerSuppressionTest {
   fun play() {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
-    val src = Uri.fromFile(silentWav()).toString()
+    val src = folder.silentWavUri(Duration.ofMinutes(1))
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters
         .buildUpon()
@@ -351,29 +349,6 @@ class PlayerSuppressionTest {
         )
       Thread.sleep(10)
       shadowOf(Looper.getMainLooper()).idle()
-    }
-  }
-
-  /** A minute of 8 kHz mono 8-bit silence, long enough that no test reaches its end. */
-  private fun silentWav(): File {
-    val samples = 8_000 * 60
-    val header =
-      ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-        put("RIFF".toByteArray())
-        putInt(36 + samples)
-        put("WAVEfmt ".toByteArray())
-        putInt(16)
-        putShort(1)
-        putShort(1)
-        putInt(8_000)
-        putInt(8_000)
-        putShort(1)
-        putShort(8)
-        put("data".toByteArray())
-        putInt(samples)
-      }
-    return folder.newFile("silence.wav").apply {
-      writeBytes(header.array() + ByteArray(samples) { 0x80.toByte() })
     }
   }
 }

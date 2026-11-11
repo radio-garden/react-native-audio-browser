@@ -1,6 +1,5 @@
 package com.audiobrowser.player
 
-import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
@@ -8,12 +7,10 @@ import androidx.media3.common.util.Util
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import org.junit.After
@@ -152,7 +149,7 @@ class PlayerSetupEndedTest {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
     disableAudio()
-    val src = Uri.fromFile(silentWav()).toString()
+    val src = folder.silentWavUri(Duration.ofMillis(500))
     player.exoPlayer.setMediaItems(
       List(tracks) { TrackFactory.toMedia3(TestFixtures.track(title = "$it", src = src)) }
     )
@@ -193,29 +190,6 @@ class PlayerSetupEndedTest {
       ShadowSystemClock.advanceBy(Duration.ofMillis(100))
       Thread.sleep(10)
       shadowOf(Looper.getMainLooper()).idle()
-    }
-  }
-
-  /** Half a second of 8 kHz mono 8-bit silence. */
-  private fun silentWav(): File {
-    val samples = 4_000
-    val header =
-      ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-        put("RIFF".toByteArray())
-        putInt(36 + samples)
-        put("WAVEfmt ".toByteArray())
-        putInt(16)
-        putShort(1)
-        putShort(1)
-        putInt(8_000)
-        putInt(8_000)
-        putShort(1)
-        putShort(8)
-        put("data".toByteArray())
-        putInt(samples)
-      }
-    return folder.newFile("silence.wav").apply {
-      writeBytes(header.array() + ByteArray(samples) { 0x80.toByte() })
     }
   }
 }

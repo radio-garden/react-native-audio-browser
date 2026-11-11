@@ -17,11 +17,10 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.silentWavBytes
 import com.audiobrowser.util.TrackFactory
 import java.io.IOException
 import java.net.ServerSocket
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -97,7 +96,11 @@ class LiveStreamEndTest {
 
   @Test
   fun `a live stream whose container declares its end ends there`() {
-    serve(framesFor = { 0 }, contentType = "audio/wav", body = { silentWav() })
+    serve(
+      framesFor = { 0 },
+      contentType = "audio/wav",
+      body = { silentWavBytes(Duration.ofSeconds(1)) },
+    )
 
     val outcome = play(live = true, RetryPolicy.Infinite())
 
@@ -286,27 +289,6 @@ class LiveStreamEndTest {
     const val FRAME_NS = 1152 * 1_000_000_000L / 44_100
     const val SECONDS_1_5 = 57
     const val SECONDS_60 = 2_297
-
-    /** A WAV of a second of 8 kHz mono 8-bit silence, its data size in its header. */
-    fun silentWav(): ByteArray {
-      val samples = 8_000
-      val header =
-        ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-          put("RIFF".toByteArray())
-          putInt(36 + samples)
-          put("WAVEfmt ".toByteArray())
-          putInt(16)
-          putShort(1)
-          putShort(1)
-          putInt(8_000)
-          putInt(8_000)
-          putShort(1)
-          putShort(8)
-          put("data".toByteArray())
-          putInt(samples)
-        }
-      return header.array() + ByteArray(samples) { 0x80.toByte() }
-    }
 
     /** [frames] ADTS frames of AAC LC at 44.1 kHz, mono, with 100 zero bytes of payload each. */
     fun silentAdts(frames: Int): ByteArray {
