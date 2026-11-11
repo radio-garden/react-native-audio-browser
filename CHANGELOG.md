@@ -1,3 +1,9 @@
+## [0.2.0-next.88](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.87...v0.2.0-next.88) (2026-11-11)
+
+### Bug Fixes
+
+* **android:** stop telling the session the same state, queue and position on each reconnect ([588a83e](https://github.com/radio-garden/react-native-audio-browser/commit/588a83e3a4e95cd69531cf20581b0d148c4521ac))
+
 ## [0.2.0-next.87](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.86...v0.2.0-next.87) (2026-11-11)
 
 ### Bug Fixes
