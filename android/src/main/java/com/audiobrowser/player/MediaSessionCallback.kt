@@ -808,13 +808,17 @@ class MediaSessionCallback(private val player: Player) :
     return scope.future {
       val audioBrowser = player.awaitBrowser()
 
-      // Returning the current state unchanged is how handleTrackLoad tells Media3 to do nothing.
+      // Media3 sets whatever this returns: the controller's position would undo the handler's seek.
       // Reads hop to Main: ExoPlayer is main-thread confined and this runs on IO.
       suspend fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition =
         withContext(Dispatchers.Main) {
           val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
           val currentIndex = player.currentIndex ?: 0
-          MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
+          MediaSession.MediaItemsWithStartPosition(
+            currentItems,
+            currentIndex,
+            player.restorablePositionMs,
+          )
         }
 
       val browserManager = audioBrowser.browserManager
