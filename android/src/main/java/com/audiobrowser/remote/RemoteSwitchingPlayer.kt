@@ -8,6 +8,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.common.Timeline
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlin.math.roundToInt
@@ -458,7 +459,7 @@ internal class RemoteSwitchingPlayer(
 
   override fun getState(): State {
     val state = super.getState()
-    val remote = remoteRoute ?: return withEachBlockOnce(state)
+    val remote = remoteRoute ?: return withEachBlockOnce(seekableWhilePreparing(state))
     val load = remote.load
     val holds = load is Load.Playing && receiverHolds(remote, load.item)
     // Duration, seekability and liveness come from the receiver's data for the item it plays.
@@ -505,6 +506,18 @@ internal class RemoteSwitchingPlayer(
         }
       }
       .build()
+  }
+
+  /**
+   * The local player withholds seeking from an item until it has prepared, yet keeps a seek made
+   * meanwhile; without the command, [seekTo] here would drop it.
+   */
+  private fun seekableWhilePreparing(state: State): State {
+    val index = state.currentMediaItemIndex
+    if (index !in 0 until state.timeline.windowCount) return state
+    if (!state.timeline.getWindow(index, Timeline.Window()).isPlaceholder) return state
+    val commands = state.availableCommands.buildUpon().add(COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+    return state.buildUpon().setAvailableCommands(commands.build()).build()
   }
 
   private fun position(positionMs: Long) = if (positionMs == C.TIME_UNSET) 0 else positionMs
