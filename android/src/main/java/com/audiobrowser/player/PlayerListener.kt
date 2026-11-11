@@ -31,17 +31,17 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   @MediaPlayer.State private var lastEngineState = MediaPlayer.STATE_IDLE
 
   /**
-   * Set from an app-started track change until the playback thread has handled it. Until then every
-   * metadata delivery is the outgoing item's: its renderer posted them to the main looper before
-   * the change, and nothing removes them.
+   * Set from an app-started command that ends the stream until the playback thread has handled it.
+   * Until then every metadata delivery is the outgoing stream's: its renderer posted them to the
+   * main looper before the command, and nothing removes them.
    */
   private var metadataFence: Any? = null
 
   /**
-   * Its target runs on the playback thread right after the command that changed the item. A
-   * main-looper target goes to the back of that thread's queue, where a release would drop it.
+   * Call right after the command. Its target runs on the playback thread right after that command.
+   * A main-looper target goes to the back of that thread's queue, where a release would drop it.
    */
-  private fun fenceOutgoingMetadata() {
+  internal fun fenceOutgoingMetadata() {
     val fence = Any()
     metadataFence = fence
     player.exoPlayer

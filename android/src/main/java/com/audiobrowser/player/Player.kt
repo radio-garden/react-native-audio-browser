@@ -1135,6 +1135,7 @@ internal constructor(
     // The next play is a new Load.
     retryLoop?.suspend()
     sessionPlayer.stop()
+    playerListener.fenceOutgoingMetadata()
     // Idle at its end, the next prepare would end it again at once.
     if (ended) sessionPlayer.seekToDefaultPosition()
   }

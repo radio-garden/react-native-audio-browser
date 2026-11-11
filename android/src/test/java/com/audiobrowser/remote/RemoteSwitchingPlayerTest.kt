@@ -928,6 +928,43 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `each title the phone sends after a stop goes out, though it equals the last`() {
+    playLocally(listOf("a"))
+    local.title("Song")
+    idle()
+    val seen = transitionsAndTitles()
+
+    player.stop()
+    idle()
+    // A title that runs after the stop: passed on here, and dropped by the player's listener.
+    local.title("Song")
+    idle()
+    player.prepare()
+    idle()
+    local.title("Song")
+    idle()
+
+    assertEquals(listOf("Song", "Song"), seen)
+  }
+
+  @Test
+  fun `a title after the phone reconnects without a stop goes out, though it equals the last`() {
+    playLocally(listOf("a"))
+    local.title("Song")
+    idle()
+    val seen = transitionsAndTitles()
+
+    // As the retry loop reconnects: on the phone, not through this player.
+    local.stop()
+    local.prepare()
+    idle()
+    local.title("Song")
+    idle()
+
+    assertEquals(listOf("Song"), seen)
+  }
+
+  @Test
   fun `release brings playback back and lets every remote go`() {
     playLocally(listOf("a"))
     remote.startSession()
