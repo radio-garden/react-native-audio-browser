@@ -1,3 +1,9 @@
+## [0.2.0-next.85](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.84...v0.2.0-next.85) (2026-11-11)
+
+### Bug Fixes
+
+* **android:** keep a stream title posted before a stop off the stopped player ([3791cf1](https://github.com/radio-garden/react-native-audio-browser/commit/3791cf1d559244e3efed6cce9b4242e57ee9a57a)), closes [#270](https://github.com/radio-garden/react-native-audio-browser/issues/270)
+
 ## [0.2.0-next.84](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.83...v0.2.0-next.84) (2026-11-11)
 
 ### Bug Fixes
