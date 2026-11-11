@@ -1,3 +1,9 @@
+## [0.2.0-next.86](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.85...v0.2.0-next.86) (2026-11-11)
+
+### Features
+
+* **android:** let a live-only app turn off media3's periodic position update ([f523e83](https://github.com/radio-garden/react-native-audio-browser/commit/f523e83277d15bba94200bada1686360a05af573))
+
 ## [0.2.0-next.85](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.84...v0.2.0-next.85) (2026-11-11)
 
 ### Bug Fixes
