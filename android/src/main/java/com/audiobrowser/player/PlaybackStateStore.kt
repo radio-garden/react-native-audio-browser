@@ -109,9 +109,7 @@ class PlaybackStateStore(private val player: Player) {
   /** Saves the current track and its position; does nothing without a current track. */
   fun save() {
     val track = player.currentTrack ?: return
-    // A live item reports 0 until it has loaded, so 0 is saved unset too.
-    val positionMs =
-      player.position.takeUnless { player.isCurrentItemLive || it == 0L } ?: C.TIME_UNSET
+    val positionMs = player.restorablePositionMs
 
     prefs.edit {
       putLong(KEY_POSITION_MS, positionMs)

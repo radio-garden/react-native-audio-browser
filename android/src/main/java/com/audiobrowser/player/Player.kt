@@ -1455,6 +1455,17 @@ internal constructor(
   val isCurrentItemLive: Boolean
     get() = sessionPlayer.isCurrentMediaItemLive
 
+  /**
+   * [position] to set the queue at again, or [C.TIME_UNSET], where Media3 starts at the default
+   * position: for a live item, for 0, which a live item also reports before it has loaded, and
+   * after the end, so the track plays again.
+   */
+  internal val restorablePositionMs: Long
+    get() =
+      position.takeUnless {
+        isCurrentItemLive || it == 0L || sessionPlayer.playbackState == MediaPlayer.STATE_ENDED
+      } ?: C.TIME_UNSET
+
   // MARK: - Buffer Configuration
 
   /** Takes effect for future buffering; what is buffered stays. */
