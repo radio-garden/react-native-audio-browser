@@ -54,7 +54,6 @@ graph TD
         PSS[PlaybackStateStore.kt<br/>- SharedPreferences resumption]
         PT[PlaybackTimer.kt<br/>- progress + interval timers]
         NPU[NowPlayingUpdater.kt<br/>- flash/override/formatter<br/>- artwork resolution]
-        SRP[StuckRecoveryPolicy.kt]
     end
 
     subgraph "Engine / Buffer / Retry"
@@ -63,7 +62,8 @@ graph TD
         ABM[AutomaticBufferManager.kt<br/>- Adaptive rebuffer threshold]
         MF[MediaFactory.kt<br/>- MediaSource.Factory<br/>- DataSource chain]
         TDS[TransformingDataSource.kt<br/>- IO-thread URL transform]
-        RLEHP[RetryLoadErrorHandlingPolicy.kt<br/>- Exponential backoff]
+        RLEHP[RetryLoadErrorHandlingPolicy.kt<br/>- In place, or to the loop]
+        RL[RetryLoop.kt<br/>- SilenceBudget + ReconnectPacer<br/>- Reconnect, give up]
     end
 
     subgraph "Media Session"
@@ -196,7 +196,8 @@ graph TD
 
     %% Listener fan-out
     PL --> PSM
-    PL --> SRP
+    PL --> RL
+    RL --> P
     PL --> PSS
     PL --> NPU
     PL --> STM
@@ -261,8 +262,8 @@ graph TD
     class BM,BC,SR,RM,JM,BUR,TLH,ARR,BAR,EX browser
     class HC,RCB http
     class AT,ACTM,ACC,CCF tls
-    class P,IP,PL,PSM,PSS,PT,NPU,SRP player
-    class PEF,DLC,ABM,MF,TDS,RLEHP engine
+    class P,IP,PL,PSM,PSS,PT,NPU player
+    class PEF,DLC,ABM,MF,TDS,RLEHP,RL engine
     class MSC,MSCM,CC session
     class STM,ST,VF,EC,EM,NCM,SVM audio
     class S,HTS service
@@ -349,9 +350,10 @@ trust anchors, so they cannot weaken trust.
   (`HeartRating`), buffer config, and exposes all transport/queue operations called by AudioBrowser.
 - **InterceptingPlayer.kt**: `ForwardingPlayer` wrapping the ExoPlayer used by the MediaSession. It
   offers remote transport commands to the app's `handleRemote*` callbacks first and masks terminal
-  errors from the platform session (`SessionErrorMask`).
+  errors from the platform session (`SessionErrorMask`), and the retry loop's idle engine, its
+  errors and a READY blip from the session's listeners.
 - **PlayerListener.kt**: Single ExoPlayer `Player.Listener`. Feeds events to `PlaybackStateMachine`,
-  drives `StuckRecoveryPolicy`, persists via `PlaybackStateStore`, re-renders `NowPlayingUpdater`,
+  feeds `RetryLoop`, persists via `PlaybackStateStore`, re-renders `NowPlayingUpdater`,
   notifies `SleepTimerManager`, and extracts timed metadata via `MetadataAdapter`.
 - **PlaybackStateMachine.kt**: Pure `(state, event) → next states` transition logic (testable, no
   side effects).
@@ -362,8 +364,6 @@ trust anchors, so they cannot weaken trust.
 - **NowPlayingUpdater.kt**: Owns now-playing rendering — flash > override > formatter > track
   precedence, publish dedupe, stale-result guards, and artwork resolution. Talks to the player only
   through the `NowPlayingSurface` seam.
-- **StuckRecoveryPolicy.kt**: Caps auto-recoveries from Media3 stuck-player detection before
-  surfacing a terminal error.
 
 ### Engine / Buffer / Retry
 
@@ -378,8 +378,12 @@ trust anchors, so they cannot weaken trust.
 - **TransformingDataSource.kt**: DataSource wrapper that resolves the media URL on ExoPlayer's IO
   thread (where blocking on the JS callback is safe), via `AudioBrowser.getMediaRequestConfig` →
   `BrowserManager.resolveMediaUrl`.
-- **RetryLoadErrorHandlingPolicy.kt**: Custom error handling with exponential backoff, network-aware
-  delays, and configurable max retries / infinite mode (respects `playWhenReady`).
+- **RetryLoadErrorHandlingPolicy.kt**: On the playback thread, sorts a recoverable load failure:
+  media3 retries an HLS segment or playlist, or a file of known length, in place with the backoff;
+  any other failure ends the connection. It never gives up on a recoverable failure itself.
+- **RetryLoop.kt**: Automatic retry on main (ADR 0014): owns `SilenceBudget` and `ReconnectPacer`,
+  prepares the engine again after a connection ends, and gives up when the silence deadline passes.
+  Suspended while a remote output plays.
 
 ### Media Session
 
@@ -492,7 +496,7 @@ Two distinct artwork paths share `CoilArtworkLoader` as the URL→Bitmap core:
 3. **MediaFactory.kt** builds the DataSource chain; **TransformingDataSource.kt** resolves media URLs on
    the IO thread via `AudioBrowser.getMediaRequestConfig` → `BrowserManager.resolveMediaUrl`.
 4. **DynamicLoadControl.kt** (optionally adapted by **AutomaticBufferManager.kt**) governs buffering;
-   **RetryLoadErrorHandlingPolicy.kt** handles load errors.
+   **RetryLoadErrorHandlingPolicy.kt** sorts load errors, and **RetryLoop.kt** reconnects.
 5. **PlayerListener.kt** drives **PlaybackStateMachine.kt**, persists via **PlaybackStateStore.kt**,
    re-renders **NowPlayingUpdater.kt**, and emits events through **Callbacks.kt** back to **JS**.
 
@@ -563,10 +567,11 @@ Two distinct artwork paths share `CoilArtworkLoader` as the URL→Bitmap core:
 
 - **Navigation errors**: Browser exceptions map to `NavigationError`s, optionally formatted by a JS
   callback; surfaced to both JS and (for offline) Android Auto.
-- **Media load errors**: `RetryLoadErrorHandlingPolicy` with backoff + network awareness; terminal
-  errors surface through `PlayerListener` (and are masked from the platform session by
-  `InterceptingPlayer` when `keepSessionAliveOnError` is set).
-- **Stuck playback**: Budgeted recovery via `StuckRecoveryPolicy` before surfacing an error.
+- **Media load errors**: `RetryLoadErrorHandlingPolicy` retries in place or ends the connection;
+  `RetryLoop` reconnects it, paced, until 120 s of silence; terminal errors surface through
+  `PlayerListener` (and are masked from the platform session by `InterceptingPlayer` when
+  `keepSessionAliveOnError` is set).
+- **Stuck playback**: a plain reconnect through `RetryLoop`; with retry off, a terminal error.
 - **Gate failures**: Fail closed — a gated surface never serves content when the decision can't be
   computed.
 
@@ -575,8 +580,8 @@ Two distinct artwork paths share `CoilArtworkLoader` as the URL→Bitmap core:
 - **Unit tests** (`android/src/test/...`): route matching (`SimpleRouterTest`), browser resolution and
   API building (`BrowserManager*Test`, `BrowserUrlResolutionTest`), config merging
   (`RequestConfigBuilderTest`), buffer/retry/state logic (`DynamicLoadControlTest`,
-  `RetryLoadErrorHandlingPolicyTest`, `PlaybackStateMachineTest`, `PlaybackTimerTest`,
-  `StuckRecoveryPolicyTest`, `SessionErrorMaskTest`), capability rules (`CapabilityControlsTest`),
+  `RetryLoadErrorHandlingPolicyTest`, `RetryLoopCaseTest`, `RetryMaskingTest`,
+  `PlaybackStateMachineTest`, `PlaybackTimerTest`, `SessionErrorMaskTest`), capability rules (`CapabilityControlsTest`),
   engine construction (`PlayerEngineFactoryTest`), now-playing (`NowPlayingUpdaterTest`), the artwork
   pipeline (`ArtworkContentProviderTest`, `ArtworkUrisTest`, `Coil*Test`, `*ArtworkRegistryTest`), TLS
   AIA chasing (`tls/*Test`), and factories/extensions (`TrackFactory*Test`, `RatingFavoritesTest`,

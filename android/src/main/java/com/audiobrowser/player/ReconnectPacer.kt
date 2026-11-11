@@ -28,9 +28,13 @@ sealed interface ReconnectWait {
 class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
   companion object {
     const val MIN_CONNECT_INTERVAL_MS = 1_000L
-    const val FIRST_BACKOFF_MS = 1_000L
-    const val MAX_BACKOFF_MS = 5_000L
-    const val BACKOFF_GROWTH = 1.5
+    private const val FIRST_BACKOFF_MS = 1_000L
+    private const val MAX_BACKOFF_MS = 5_000L
+    private const val BACKOFF_GROWTH = 1.5
+
+    /** The backoff before [attempt], counted from 1. */
+    fun backoffMs(attempt: Int): Long =
+      min(FIRST_BACKOFF_MS * BACKOFF_GROWTH.pow(attempt - 1), MAX_BACKOFF_MS.toDouble()).toLong()
   }
 
   private var playIntent = false
@@ -79,7 +83,7 @@ class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
       deliveredNothingInARow = 0
     } else if (online) {
       deliveredNothingInARow++
-      next = maxOf(next, atMs + backoffMs())
+      next = maxOf(next, atMs + backoffMs(deliveredNothingInARow))
     }
     nextConnectMs = next
   }
@@ -88,10 +92,5 @@ class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
     maxRetries?.let { if (deliveredNothingInARow > it) return ReconnectWait.GiveUp }
     if (!online) return ReconnectWait.UntilOnline
     return ReconnectWait.After(maxOf(0, (nextConnectMs ?: atMs) - atMs))
-  }
-
-  private fun backoffMs(): Long {
-    val grown = FIRST_BACKOFF_MS * BACKOFF_GROWTH.pow(deliveredNothingInARow - 1)
-    return min(grown, MAX_BACKOFF_MS.toDouble()).toLong()
   }
 }

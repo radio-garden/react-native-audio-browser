@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.decoder.DecoderInputBuffer
 import androidx.media3.exoplayer.FormatHolder
 import androidx.media3.exoplayer.LoadingInfo
@@ -26,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -56,42 +56,15 @@ class LiveStreamEndTest {
   }
 
   @Test
-  fun `a live stream that closes before it has played reconnects`() {
-    serve(framesFor = { request -> if (request == 1) SECONDS_1_5 else SECONDS_60 })
-
-    val outcome =
-      play(
-        live = true,
-        RetryPolicy.Infinite(),
-        stopAfterFrames = SECONDS_1_5 * 3,
-        hasPlayed = false,
-      )
-
-    assertNull(outcome.error)
-    assertEquals(2, requests.get())
-  }
-
-  @Test
-  fun `a live stream that closes once reconnects once and plays on`() {
-    serve(framesFor = { request -> if (request == 1) SECONDS_1_5 else SECONDS_60 })
-
-    val outcome = play(live = true, RetryPolicy.Infinite(), stopAfterFrames = SECONDS_1_5 * 3)
-
-    assertNull(outcome.error)
-    assertTrue("the stream played on", !outcome.ended)
-    assertEquals(2, requests.get())
-  }
-
-  @Test
-  fun `a live stream that closes after every second and a half ends in an error`() {
+  fun `a live stream's close surfaces once its audio has been read`() {
     serve(framesFor = { SECONDS_1_5 })
 
     val outcome = play(live = true, RetryPolicy.Infinite())
 
-    assertNotNull("the retries never ran out", outcome.error)
-    // The 120 s recovery budget starts at the first close, at 1.49 s: closes come every 1.49 s,
-    // and the first at or past 120 s after it, the 82nd, is not retried.
-    assertEquals(82, requests.get())
+    assertTrue("not the close: ${outcome.error}", outcome.error is DataSourceException)
+    assertEquals(SECONDS_1_5, played.get())
+    // The retry loop reconnects, not media3.
+    assertEquals(1, requests.get())
   }
 
   @Test
@@ -219,20 +192,9 @@ class LiveStreamEndTest {
 
   private class Outcome(val ended: Boolean, val error: IOException?)
 
-  private fun play(
-    live: Boolean,
-    retryPolicy: RetryPolicy,
-    stopAfterFrames: Int = Int.MAX_VALUE,
-    hasPlayed: Boolean = true,
-  ): Outcome {
+  private fun play(live: Boolean, retryPolicy: RetryPolicy): Outcome {
     val factory =
-      MediaFactory(
-        context,
-        cache = null,
-        retryPolicy,
-        hasPlayed = { hasPlayed },
-        getRequestConfig = { _, _ -> null },
-      )
+      MediaFactory(context, cache = null, retryPolicy, getRequestConfig = { _, _ -> null })
     val item =
       TrackFactory.toMedia3(
         track(src = "http://127.0.0.1:${server.localPort}/stream.mp3")
@@ -286,14 +248,9 @@ class LiveStreamEndTest {
       val stream = checkNotNull(streams[0])
       val buffer = DecoderInputBuffer(DecoderInputBuffer.BUFFER_REPLACEMENT_MODE_DISABLED)
       val deadline = System.currentTimeMillis() + 60_000
-      while (played.get() < stopAfterFrames) {
+      while (true) {
         if (System.currentTimeMillis() > deadline)
           fail("still playing after ${played.get()} frames")
-        try {
-          stream.maybeThrowError()
-        } catch (e: IOException) {
-          return Outcome(ended = false, error = e)
-        }
         buffer.clear()
         val result = stream.readData(FormatHolder(), buffer, SampleStream.FLAG_OMIT_SAMPLE_DATA)
         period.readDiscontinuity()
@@ -304,13 +261,18 @@ class LiveStreamEndTest {
             ShadowSystemClock.advanceBy(Duration.ofNanos(FRAME_NS))
           }
           C.RESULT_NOTHING_READ -> {
+            // As a renderer that has run out does: an error surfaces once the buffer is empty.
+            try {
+              stream.maybeThrowError()
+            } catch (e: IOException) {
+              return Outcome(ended = false, error = e)
+            }
             period.continueLoading(LoadingInfo.Builder().build())
             Thread.sleep(1)
           }
         }
         shadowOf(Looper.getMainLooper()).idle()
       }
-      return Outcome(ended = false, error = null)
     } finally {
       source.releasePeriod(period)
       source.releaseSource { _, _ -> }

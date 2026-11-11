@@ -55,20 +55,32 @@ internal class InterceptingPlayer(
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
   private val playerState: () -> PlaybackState,
+  /** The engine state shown for the engine's own; see [Player.retryView]. */
+  private val engineView: (Int) -> Int,
+  /** Whether the engine's playing is a blip the retry loop hides. */
+  private val masksPlaying: () -> Boolean,
   private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
 
-  private val listeners = mutableSetOf<MediaPlayer.Listener>()
+  private val engineListeners = mutableSetOf<MediaPlayer.Listener>()
 
-  override fun addListener(listener: MediaPlayer.Listener) {
-    listeners += listener
+  /** Each listener the session added, and the [SessionViewListener] it hears the engine through. */
+  private val views = mutableMapOf<MediaPlayer.Listener, SessionViewListener>()
+
+  /** Adds the player's own listener, which hears the engine's events as they are. */
+  fun addEngineListener(listener: MediaPlayer.Listener) {
+    engineListeners += listener
     super.addListener(listener)
   }
 
+  override fun addListener(listener: MediaPlayer.Listener) {
+    super.addListener(views.getOrPut(listener) { SessionViewListener(listener, this) })
+  }
+
   override fun removeListener(listener: MediaPlayer.Listener) {
-    listeners -= listener
-    super.removeListener(listener)
+    engineListeners -= listener
+    super.removeListener(views.remove(listener) ?: listener)
   }
 
   /**
@@ -79,12 +91,13 @@ internal class InterceptingPlayer(
     val view = playbackState
     val was =
       SessionView.playbackState(
-        super.getPlaybackState(),
+        engineView(super.getPlaybackState()),
         old,
         engineFailed,
         keepSessionAliveOnError,
       )
-    if (view != was) listeners.toList().forEach { it.onPlaybackStateChanged(view) }
+    if (view != was) engineListeners.toList().forEach { it.onPlaybackStateChanged(view) }
+    refreshViews()
   }
 
   // Media3 maps a player error to the legacy STATE_ERROR, which Android Auto and the notification
@@ -94,16 +107,25 @@ internal class InterceptingPlayer(
   private val engineFailed: Boolean
     get() = super.getPlayerError() != null
 
+  /** Tells the session's listeners where the view moved with no event of the engine's. */
+  fun refreshViews() = views.values.toList().forEach { it.refresh() }
+
+  override fun isPlaying(): Boolean = super.isPlaying() && !masksPlaying()
+
   override fun getPlaybackState(): Int =
     SessionView.playbackState(
-      super.getPlaybackState(),
+      engineView(super.getPlaybackState()),
       playerState(),
       engineFailed,
       keepSessionAliveOnError,
     )
 
   override fun getPlayWhenReady(): Boolean =
-    SessionView.playWhenReady(super.getPlayWhenReady(), super.getPlaybackState(), playbackState)
+    SessionView.playWhenReady(
+      super.getPlayWhenReady(),
+      engineView(super.getPlaybackState()),
+      playbackState,
+    )
 
   // After a terminal error, a cancelled retry or a rebuild in ENDED the engine is idle, and the
   // default skips only move the index. An ended queue that stayed put stays ended, as on an ended

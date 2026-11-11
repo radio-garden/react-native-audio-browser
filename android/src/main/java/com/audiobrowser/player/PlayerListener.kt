@@ -21,28 +21,14 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 import timber.log.Timber
 
-// Continuous playback that refills the stuck-recovery and load-retry budgets. Shorter lets a
-// stream that keeps re-stalling look alive between stalls; longer stops forgiving a single hiccup.
-private const val HEALTHY_PLAYBACK_MS = 20_000L
-
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {
-  private val stuckRecoveryPolicy = StuckRecoveryPolicy()
-
   // Main looper: Player.Listener callbacks arrive on the main thread.
   private val mainHandler = Handler(Looper.getMainLooper())
-  private val healthyPlaybackRunnable =
-    object : Runnable {
-      override fun run() {
-        stuckRecoveryPolicy.reset()
-        // The load-retry window otherwise restarts only on a track change, leaving a
-        // long-lived stream no retries for its next outage.
-        player.resetRetryTimer()
-        // Re-arm while playing: errors the buffer absorbs never flip isPlaying.
-        if (player.isPlaying) {
-          mainHandler.postDelayed(this, HEALTHY_PLAYBACK_MS)
-        }
-      }
-    }
+
+  /** Whether the phone's engine played at the last event, so a hand-over starts a new Load. */
+  private var localActive = true
+
+  @MediaPlayer.State private var lastEngineState = MediaPlayer.STATE_IDLE
 
   /**
    * Set from an app-started track change until the playback thread has handled it. Until then every
@@ -91,6 +77,16 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     reason: Int,
   ) {
     player.oldPosition = oldPosition.positionMs
+    // A seek opens a new connection without passing through idle, clearing a failed one's error.
+    val loop = player.retryLoop
+    if (
+      reason == MediaPlayer.DISCONTINUITY_REASON_SEEK &&
+        loop?.failurePending == true &&
+        player.localEngine.isActive
+    ) {
+      player.clearRetryingError()
+      loop.connectionStarted()
+    }
   }
 
   override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -123,23 +119,24 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // It also emits onNowPlayingChanged.
     player.nowPlaying.render()
 
-    player.resetForNewLoad()
+    player.startRetryLoad()
 
     // Emits on its own: the incoming track may hold LOADING/BUFFERING and emit no state change.
     player.clearRetryingError()
-
-    mainHandler.removeCallbacks(healthyPlaybackRunnable)
-    stuckRecoveryPolicy.reset()
 
     player.playbackStateStore.save()
     player.playbackStateStore.resetPeriodicSave()
   }
 
   override fun onIsPlayingChanged(isPlaying: Boolean) {
-    mainHandler.removeCallbacks(healthyPlaybackRunnable)
-    if (isPlaying) {
-      mainHandler.postDelayed(healthyPlaybackRunnable, HEALTHY_PLAYBACK_MS)
-    }
+    if (player.localEngine.isActive)
+      player.retryLoop?.isPlayingChanged(isPlaying && !player.retryMasksPlaying)
+  }
+
+  /** A new engine or session player is attached: what this listener knew of the old one is gone. */
+  internal fun engineAttached() {
+    lastEngineState = player.exoPlayer.playbackState
+    localActive = player.localEngine.isActive
   }
 
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -151,6 +148,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Here rather than in Player.pause(): a session pause, a noisy-audio pause and a permanent
     // focus loss all drop the intent without it.
+    if (!playWhenReady) player.retryFocus.release()
+    player.retryLoop?.playIntentChanged(player.shouldPlayWhenReady)
     if (!playWhenReady) player.cancelRetry()
     // Deduped: the ENDED path in setPlaybackState may already have emitted it, before queue-ended.
     player.emitPlayWhenReadyChanged(playWhenReady)
@@ -165,15 +164,40 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+    player.retryLoop?.playIntentChanged(player.shouldPlayWhenReady)
     player.refreshPlayingState()
     player.rebuildIfDueLater()
   }
 
   override fun onPlaybackStateChanged(playbackState: Int) {
+    // The engine's own state: InterceptingPlayer also sends its view here.
+    val engineState = player.sessionPlayer.playbackState
+    val left = lastEngineState == MediaPlayer.STATE_IDLE && engineState != MediaPlayer.STATE_IDLE
+    lastEngineState = engineState
+    val loop = player.retryLoop
+    // A prepare: the retry's reconnect, or the listener's play, which after a give-up or a stop is
+    // a new Load.
+    if (loop != null && player.localEngine.isActive) {
+      if (left) {
+        if (loop.stopped) player.startRetryLoad() else loop.connectionStarted()
+      } else if (
+        engineState == MediaPlayer.STATE_IDLE && player.sessionPlayer.playerError == null
+      ) {
+        // A failure report still on its way belongs to the stopped connection, not the next.
+        player.clearRetryingError()
+        loop.engineStopped()
+      }
+    }
     player.rebuildIfDueLater()
   }
 
   override fun onEvents(media3Player: MediaPlayer, events: MediaPlayer.Events) {
+    val local = player.localEngine.isActive
+    if (local != localActive) {
+      localActive = local
+      // The retry loop never acts on a remote output; the phone taking over is a new Load.
+      if (local) player.startRetryLoad() else player.retryLoop?.suspend()
+    }
     // In event-constant order, not the order the events happened; the transitions rely on it.
     // Each setPlaybackState emits.
     for (i in 0 until events.size()) {
@@ -183,7 +207,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
             // The session player's state, not the forwarding player's: InterceptingPlayer masks
             // IDLE as READY after a terminal error, which would clear our ERROR state here.
             PlaybackEvent.ExoPlaybackStateChanged(
-              player.sessionPlayer.playbackState,
+              player.retryView(player.sessionPlayer.playbackState),
               media3Player.mediaItemCount,
               player.shouldPlayWhenReady,
             )
@@ -198,9 +222,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           MediaPlayer.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED ->
             PlaybackEvent.ShouldPlayWhenReadyChanged(
               player.shouldPlayWhenReady,
-              player.sessionPlayer.playbackState,
+              player.retryView(player.sessionPlayer.playbackState),
             )
-          MediaPlayer.EVENT_IS_PLAYING_CHANGED -> PlaybackEvent.IsPlayingChanged(player.isPlaying)
+          MediaPlayer.EVENT_IS_PLAYING_CHANGED ->
+            PlaybackEvent.IsPlayingChanged(player.isPlaying && !player.retryMasksPlaying)
           else -> null
         } ?: continue
 
@@ -208,6 +233,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         player.setPlaybackState(state)
       }
     }
+    // The retry loop's state moved with these events, after the session's listeners heard them.
+    player.forwardingPlayer.refreshViews()
   }
 
   override fun onPlayerError(error: PlaybackException) {
@@ -219,25 +246,35 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   private fun recoverLocally(error: PlaybackException): Boolean {
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
       Timber.d("Playback fell behind live window, recovering to live edge")
-      player.resetRetryTimer()
       player.localEngine.retry(toLiveEdge = true)
       return true
     }
 
     // media3 1.9+ stuck-player detection wraps a StuckPlayerException (not a PlaybackException) in
     // the cause chain, and the wrapper's errorCode varies by stuck type: match the cause.
-    val stuck =
-      generateSequence(error.cause) { it.cause }
-        .filterIsInstance<StuckPlayerException>()
-        .firstOrNull()
+    val stuck = stuckCause(error)
     if (stuck != null) {
-      handleStuckPlayer(stuck)
+      Timber.w("Stuck player: type=${stuck.stuckType} timeoutMs=${stuck.timeoutMs}")
+      // media3 detects stuck only while playWhenReady, but a paused player never gets recovery
+      // work.
+      if (!player.playWhenReady) return true
+      if (player.retryLoop?.onPlayerError(error, stuck = true) == true) return true
+      surfaceStalled(error)
       return true
     }
-    return false
+    return player.retryLoop?.onPlayerError(error, stuck = false) == true
   }
 
-  private fun surface(error: PlaybackException) {
+  private fun stuckCause(error: PlaybackException) =
+    generateSequence(error.cause) { it.cause }
+      .filterIsInstance<StuckPlayerException>()
+      .firstOrNull()
+
+  /** The retry loop's give-up: stalled when the last connection ended stuck, as without a loop. */
+  internal fun surfaceTerminal(error: PlaybackException) =
+    if (stuckCause(error) != null) surfaceStalled(error) else surface(error)
+
+  internal fun surface(error: PlaybackException) {
     val online = player.networkMonitor.getOnline()
     // `code` keeps ExoPlayer's name for telemetry; consumers branch on the classified kind. Offline
     // is the one case ExoPlayer's codes can't tell, so it overrides the code too.
@@ -263,41 +300,19 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.setPlaybackState(PlaybackState.ERROR)
   }
 
-  /**
-   * Retries until [stuckRecoveryPolicy] gives up, then surfaces a STALLED error. Live items rejoin
-   * the live edge (a stale live window is the usual cause); on-demand items re-prepare in place,
-   * keeping their position.
-   */
-  private fun handleStuckPlayer(error: StuckPlayerException) {
-    // media3 detects stuck only while playWhenReady, but a paused player never gets recovery work.
-    if (!player.playWhenReady) return
-
-    when (stuckRecoveryPolicy.onStuck()) {
-      StuckRecoveryPolicy.Decision.RECOVER -> {
-        Timber.w(
-          "Stuck player recovery: type=${error.stuckType} timeoutMs=${error.timeoutMs} " +
-            "live=${player.isCurrentItemLive}"
-        )
-        // Offline time counts against the recovery budget, and offline media3 reports stuck every
-        // minute: a refill here would keep the budget from ever running out.
-        if (player.networkMonitor.getOnline()) player.resetRetryTimer()
-        player.localEngine.retry(toLiveEdge = player.isCurrentItemLive)
-      }
-      StuckRecoveryPolicy.Decision.GIVE_UP -> {
-        Timber.w("Stuck player recovery exhausted (type=${error.stuckType}), surfacing error")
-        val playbackError =
-          PlaybackError(
-            PlaybackErrorKind.STALLED,
-            "playback-stalled",
-            error.message ?: "Playback stalled",
-            null,
-            retrying = null,
-          )
-        player.callbacks?.onPlaybackError(playbackError)
-        player.playbackError = playbackError
-        player.setPlaybackState(PlaybackState.ERROR)
-      }
-    }
+  /** No retry loop takes the stuck engine: it is terminal. */
+  private fun surfaceStalled(error: PlaybackException) {
+    val playbackError =
+      PlaybackError(
+        PlaybackErrorKind.STALLED,
+        "playback-stalled",
+        error.message ?: "Playback stalled",
+        null,
+        retrying = null,
+      )
+    player.callbacks?.onPlaybackError(playbackError)
+    player.playbackError = playbackError
+    player.setPlaybackState(PlaybackState.ERROR)
   }
 
   override fun onRepeatModeChanged(repeatMode: Int) {
