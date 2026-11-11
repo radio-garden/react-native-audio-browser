@@ -1,3 +1,9 @@
+## [0.2.0-next.87](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.86...v0.2.0-next.87) (2026-11-11)
+
+### Bug Fixes
+
+* **android:** keep a handleTrackLoad's seek when a controller starts a track ([802c1dd](https://github.com/radio-garden/react-native-audio-browser/commit/802c1dd4011efc4b6399e4a42b77d3955179332f)), closes [#273](https://github.com/radio-garden/react-native-audio-browser/issues/273)
+
 ## [0.2.0-next.86](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.85...v0.2.0-next.86) (2026-11-11)
 
 ### Features
