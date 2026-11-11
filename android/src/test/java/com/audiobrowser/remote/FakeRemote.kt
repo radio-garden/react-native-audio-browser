@@ -30,7 +30,7 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
 
   /**
    * Sends a stream title. ExoPlayer sends each one it decodes; this state emits only a change, so a
-   * stop clears it for the stream's first title after a reconnect to go out again.
+   * stop and a prepare clear it for the first title of each connection to go out.
    */
   fun title(title: String) {
     metadata = Metadata(0, IcyInfo(title.toByteArray(), title, null))
@@ -91,6 +91,7 @@ internal class FakeLocalPlayer(looper: Looper) : SimpleBasePlayer(looper) {
 
   override fun handlePrepare(): ListenableFuture<*> {
     readiness = STATE_READY
+    metadata = Metadata(C.TIME_UNSET)
     prepares++
     return done()
   }

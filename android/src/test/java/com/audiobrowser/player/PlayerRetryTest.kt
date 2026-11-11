@@ -7,9 +7,11 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.StuckPlayerException
+import androidx.media3.extractor.metadata.icy.IcyInfo
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
@@ -515,6 +517,21 @@ class PlayerRetryTest {
     assertNotEquals("no reconnect", MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
     assertEquals(null, player.playbackError)
     assertNotEquals(PlaybackState.ERROR, player.playbackState)
+  }
+
+  @Test
+  fun `a title after a reconnect inside the retry loop shows`() {
+    goOnline(context)
+    play(Uri.fromFile(silentWav()).toString(), retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    player.exoPlayer.stop()
+    player.playerListener.onPlayerError(stuck())
+    advanceSeconds(2)
+    assertNotEquals("no reconnect", MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+
+    player.playerListener.onMetadata(Metadata(IcyInfo(ByteArray(0), "Song", null)))
+
+    assertEquals("Song", player.nowPlaying.timedMetadata?.title)
   }
 
   @Test

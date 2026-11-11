@@ -183,6 +183,29 @@ class PlayerTrackChangeTest {
   }
 
   @Test
+  fun `a title the stream had already posted does not survive a stop`() {
+    playStationWithTitle()
+    val heard = mutableListOf<TimedMetadata>()
+    player.callbacks =
+      mock(Callbacks::class.java) { invocation ->
+        if (invocation.method.name == "onTimedMetadata") heard.add(invocation.getArgument(0))
+        Answers.RETURNS_DEFAULTS.answer(invocation)
+      }
+    val playbackLooper = shadowOf(player.exoPlayer.playbackLooper)
+    playbackLooper.pause()
+    Handler(player.exoPlayer.playbackLooper).post {
+      Handler(Looper.getMainLooper()).post { player.playerListener.onMetadata(icy("A song 1")) }
+    }
+    player.stop()
+    playbackLooper.unPause()
+    idle()
+
+    assertEquals(emptyList<TimedMetadata>(), heard)
+    assertNull(player.nowPlaying.timedMetadata)
+    assertEquals(listOf("A's city", "A's city"), shownSecondLines())
+  }
+
+  @Test
   fun `a play after a stop shows the track's own lines until the stream sends a title`() {
     playStationWithTitle()
     player.stop()
