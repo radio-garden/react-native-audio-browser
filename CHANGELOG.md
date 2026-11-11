@@ -1,3 +1,15 @@
+## [0.2.0-next.84](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.83...v0.2.0-next.84) (2026-11-11)
+
+### Bug Fixes
+
+* **android:** give the retry Wi-Fi lock a backstop and say what the focus hand-over leaves open ([1cff464](https://github.com/radio-garden/react-native-audio-browser/commit/1cff4640cf783741a88dfc5b4c9f84e926a419c1))
+* **android:** hold audio focus while the retry loop waits to reconnect ([b65f133](https://github.com/radio-garden/react-native-audio-browser/commit/b65f13365b1da20bd0490554d5df7345fe168630))
+* **android:** settle the session after a give-up, keep the device awake and count any network with internet as online during a reconnect wait ([38359ff](https://github.com/radio-garden/react-native-audio-browser/commit/38359ff78db897e82c56f56c31f9bbdb9bbd9d65))
+
+### Code Refactors
+
+* **android:** bound retry by silence and pace reconnects in the library's own loop ([87b0aa2](https://github.com/radio-garden/react-native-audio-browser/commit/87b0aa238d6a999061332207b261d2ae73efc93a))
+
 ## [0.2.0-next.83](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.82...v0.2.0-next.83) (2026-11-10)
 
 ### Bug Fixes
