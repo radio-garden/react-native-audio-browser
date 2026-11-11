@@ -1,5 +1,5 @@
 ---
-description: 'The map for live audio: stream formats, missing durations, dropped connections, expiring URLs, and song titles carried in-band.'
+description: "The map for live audio: stream formats, missing durations, dropped connections, expiring URLs, song titles carried in-band, and Android's periodic position updates."
 ---
 
 # Live Streams
@@ -144,13 +144,46 @@ resolved URL, so an expired one re-resolves only after that first attempt
 fails (see [Fresh URLs on reconnect](#fresh-urls-on-reconnect)).
 General seeking is in [Playback](/guide/playback).
 
+## Periodic position updates (Android)
+
+While the player plays or loads, Media3's media session sends External
+Surfaces the playback state again every 3 seconds: the notification, the lock
+screen, Android Auto, Bluetooth, and Media3 controllers in other apps (a
+watch, say). The update carries the current and buffered position, so a
+surface that extrapolates the position corrects any drift.
+
+A live track has no progress bar, so a drifting position never shows, and the
+update only refreshes the state's timestamp. Android 16's Bluetooth service
+logs each one as `tried to update with no new data`.
+
+If your app plays only live streams, turn the update off with a literal
+`false` in your app's manifest:
+
+```xml
+<!-- android/app/src/main/AndroidManifest.xml, inside <application> -->
+<meta-data
+  android:name="com.audiobrowser.PERIODIC_POSITION_UPDATES"
+  android:value="false" />
+```
+
+Every real change still reaches the surfaces at once: state, play and pause,
+seeks, speed, Now Playing and the queue. Surfaces extrapolate an on-demand
+position from the last state, so their progress bars keep moving. What stops
+is the correction: a position that drifts with no state change (a Sonos
+speaker that slips while it still reports playing, say) stays wrong on the
+surfaces until the next change.
+
+Leave it on, the default, if your app plays on-demand audio. The flag is
+Android-only: iOS and web have no such update.
+
 ## API summary
 
-| API                                                          | Purpose                                                       |
-| ------------------------------------------------------------ | ------------------------------------------------------------- |
-| [`Track.live`](/api/types/browser-nodes/#live)               | Declare a live track: iOS live indicator, arms the live edge. |
-| [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge) | Jump to the newest audio (no-op for non-live tracks).         |
-| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)    | Automatic retry with first-connect and recovery budgets.      |
-| [`retry()`](/guide/errors#manual-retry)                      | Restart from `'error'` with fresh budgets.                    |
-| [`media.resolve`](/guide/browser#media-and-artwork)          | Build the stream request — signed / short-lived URLs.         |
-| [`useOnline()`](/guide/network)                              | Connectivity for your own UI; playback reacts on its own.     |
+| API                                                               | Purpose                                                                 |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`Track.live`](/api/types/browser-nodes/#live)                    | Declare a live track: iOS live indicator, arms the live edge.           |
+| [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge)      | Jump to the newest audio (no-op for non-live tracks).                   |
+| [`setupPlayer({ retry })`](/guide/errors#automatic-retry)         | Automatic retry with first-connect and recovery budgets.                |
+| [`retry()`](/guide/errors#manual-retry)                           | Restart from `'error'` with fresh budgets.                              |
+| [`media.resolve`](/guide/browser#media-and-artwork)               | Build the stream request — signed / short-lived URLs.                   |
+| [`useOnline()`](/guide/network)                                   | Connectivity for your own UI; playback reacts on its own.               |
+| [`PERIODIC_POSITION_UPDATES`](#periodic-position-updates-android) | Android manifest flag: stop the 3 s position update for live-only apps. |

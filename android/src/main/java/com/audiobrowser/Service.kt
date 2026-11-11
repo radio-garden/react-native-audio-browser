@@ -5,6 +5,7 @@ import android.app.SearchManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.provider.MediaStore
@@ -152,6 +153,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     mediaSession =
       MediaLibrarySession.Builder(this, player.forwardingPlayer, player.getMediaSessionCallback())
         .setBitmapLoader(CacheBitmapLoader(coilBitmapLoader))
+        .setPeriodicPositionUpdateEnabled(periodicPositionUpdatesEnabled())
         // https://github.com/androidx/media/issues/1218
         .setSessionActivity(
           PendingIntent.getActivity(
@@ -172,6 +174,13 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       Timber.d("HeadlessTaskService bind result: $headlessBound")
     }
   }
+
+  /** The app's [PERIODIC_POSITION_UPDATES] manifest meta-data; true when it declares none. */
+  private fun periodicPositionUpdatesEnabled(): Boolean =
+    packageManager
+      .getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+      .metaData
+      ?.getBoolean(PERIODIC_POSITION_UPDATES, true) ?: true
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Timber.d("onStartCommand: action=${intent?.action}")
@@ -359,5 +368,13 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   inner class LocalBinder : Binder() {
     val service = this@Service
+  }
+
+  companion object {
+    /**
+     * Application meta-data that, set to false, stops media3's periodic position update: the
+     * session re-sending External Surfaces the playback state every 3 s while playing or loading.
+     */
+    const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
   }
 }
