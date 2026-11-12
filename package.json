@@ -70,6 +70,7 @@
     "ios:test": "swift test --disable-sandbox",
     "lint": "oxlint --fix",
     "release": "semantic-release",
+    "stream-cases": "node scripts/stream-cases/index.ts",
     "stream-server": "node scripts/stream-server/index.ts",
     "test": "vitest run",
     "types": "tsc --noEmit",

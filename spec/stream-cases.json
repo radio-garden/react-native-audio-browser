@@ -1,0 +1,66 @@
+{
+  "about": "What docs/adr/0014's rule promises for the stream server's cases on a real player, checked by scripts/stream-cases. Each case plays `path` on the stream server (or `url`, where {dead} is a port nothing listens on) for `seconds`, and expects one of two outcomes. `plays`: no terminal error, and no silence after the first audio longer than `maxGapSeconds`, and with `network`, audio again within `resumesWithinSeconds` of JS hearing the device online after the last step that turns the network on. `error`: the terminal error `atSeconds` from play, give or take `toleranceSeconds`. A limit given per platform is an object keyed by platform. `network` turns the device offline and online at seconds from play; such a case needs a device whose network the script controls. `platforms` limits a case to some platforms; the default is all.",
+  "cases": [
+    {
+      "name": "a stream that closes after 10 s of audio plays on",
+      "path": "/live.mp3?close=10",
+      "seconds": 150,
+      "expect": {
+        "outcome": "plays",
+        "maxGapSeconds": { "android": 1.5, "ios": 4 }
+      }
+    },
+    {
+      "name": "a stream that closes after 4 s of audio plays most of the time and gives up 120 s after its load",
+      "path": "/live.mp3?close=4",
+      "seconds": 140,
+      "expect": { "outcome": "error", "atSeconds": 121, "toleranceSeconds": 4 }
+    },
+    {
+      "name": "a stream that closes after 2 s of audio gives up 120 s into its silence",
+      "path": "/live.mp3?close=2",
+      "seconds": 140,
+      "expect": { "outcome": "error", "atSeconds": 121, "toleranceSeconds": 4 }
+    },
+    {
+      "name": "a connection that sends its burst and then nothing gives up: at 120 s of silence, or 12 s after its first failure where the burst never plays",
+      "path": "/live.mp3?stall=2",
+      "seconds": 145,
+      "expect": {
+        "outcome": "error",
+        "atSeconds": { "android": 122, "ios": 27 },
+        "toleranceSeconds": { "android": 6, "ios": 4 }
+      }
+    },
+    {
+      "name": "a connection that stops sending after 10 s of audio, on every connection, plays on",
+      "path": "/live.mp3?stall=10",
+      "seconds": 150,
+      "expect": {
+        "outcome": "plays",
+        "maxGapSeconds": { "android": 8, "ios": 15 }
+      }
+    },
+    {
+      "name": "a dead address gives up 12 s after its first failure",
+      "url": "http://127.0.0.1:{dead}/live.mp3",
+      "seconds": 25,
+      "expect": {
+        "outcome": "error",
+        "atSeconds": 12.5,
+        "toleranceSeconds": 1.5
+      }
+    },
+    {
+      "name": "a stream offline for 40 s plays again once the network returns",
+      "path": "/live.mp3",
+      "seconds": 90,
+      "platforms": ["android"],
+      "network": [
+        { "at": 20, "online": false },
+        { "at": 60, "online": true }
+      ],
+      "expect": { "outcome": "plays", "resumesWithinSeconds": 6 }
+    }
+  ]
+}
