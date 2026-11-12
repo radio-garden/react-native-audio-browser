@@ -50,6 +50,7 @@ final class MockPlayerEngine: PlayerEngine {
   var cancelLoadingCount = 0
   var dropAssetCount = 0
   var clearItemCount = 0
+  var carrierCount = 0
   var stopObservingItemCount = 0
   var recreateCount = 0
 
@@ -63,6 +64,13 @@ final class MockPlayerEngine: PlayerEngine {
   func clearItem() {
     clearItemCount += 1
     hasItem = false
+    hasLoadedAsset = false
+    resumePosition = nil
+  }
+
+  func replaceItemWithNowPlayingCarrier() {
+    carrierCount += 1
+    hasItem = true
     hasLoadedAsset = false
     resumePosition = nil
   }

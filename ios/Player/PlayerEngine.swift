@@ -61,6 +61,9 @@ enum EngineEvent {
   func dropAsset()
   /// Drops the asset and removes the item.
   func clearItem()
+  /// Drops the asset and its connection, leaving in the item's place one with no media that carries
+  /// the now-playing info: auto-publishing reads it only from the current item (docs/adr/0005).
+  func replaceItemWithNowPlayingCarrier()
   func stopObservingItem()
   /// Whether the AVPlayer itself has failed, not only its item: it plays nothing until recreated.
   var playerFailed: Bool { get }

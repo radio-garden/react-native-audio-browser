@@ -157,6 +157,13 @@ final class AVPlayerEngine: PlayerEngine {
     avPlayer.replaceCurrentItem(with: nil)
   }
 
+  func replaceItemWithNowPlayingCarrier() {
+    dropAsset()
+    let carrier = AVPlayerItem(asset: AVMutableComposition())
+    nowPlayingInfoController.prepareItem(carrier)
+    avPlayer.replaceCurrentItem(with: carrier)
+  }
+
   func stopObservingItem() {
     itemObserver?.invalidate()
     itemObserver = nil
