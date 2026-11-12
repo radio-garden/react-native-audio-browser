@@ -28,6 +28,7 @@ class TrackLoadHandlerTest {
             station,
             arrayOf(station),
             0.0,
+            startPosition = null,
             intercepted = { ran = true },
             defaultBehavior = { ran = true },
           )

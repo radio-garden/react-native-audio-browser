@@ -26,7 +26,10 @@ data class TrackLoadEvent(
   val queue: Array<Track>,
   @DoNotStrip
   @Keep
-  val startIndex: Double
+  val startIndex: Double,
+  @DoNotStrip
+  @Keep
+  val startPosition: Double?
 ) {
   /* primary constructor */
 
@@ -36,13 +39,15 @@ data class TrackLoadEvent(
     return Objects.deepEquals(this.track, other.track)
       && Objects.deepEquals(this.queue, other.queue)
       && Objects.deepEquals(this.startIndex, other.startIndex)
+      && Objects.deepEquals(this.startPosition, other.startPosition)
   }
 
   override fun hashCode(): Int {
     return arrayOf<Any?>(
       track,
       queue,
-      startIndex
+      startIndex,
+      startPosition
     ).contentDeepHashCode()
   }
 
@@ -54,8 +59,8 @@ data class TrackLoadEvent(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(track: Track, queue: Array<Track>, startIndex: Double): TrackLoadEvent {
-      return TrackLoadEvent(track, queue, startIndex)
+    private fun fromCpp(track: Track, queue: Array<Track>, startIndex: Double, startPosition: Double?): TrackLoadEvent {
+      return TrackLoadEvent(track, queue, startIndex, startPosition)
     }
   }
 }

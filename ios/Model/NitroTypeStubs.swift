@@ -74,6 +74,7 @@
     var track: Track
     var queue: [Track]
     var startIndex: Double
+    var startPosition: Double?
   }
 
   enum RepeatMode {

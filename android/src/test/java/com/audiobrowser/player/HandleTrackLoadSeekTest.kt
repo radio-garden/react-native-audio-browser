@@ -22,6 +22,8 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +38,10 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 
-/** A controller's set of media items keeps where a handleTrackLoad left the player. */
+/**
+ * A controller's set of media items reaches handleTrackLoad with the position it asked for, and
+ * keeps where the handler left the player.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class HandleTrackLoadSeekTest {
@@ -57,13 +62,13 @@ class HandleTrackLoadSeekTest {
     service.destroy()
   }
 
-  private fun handlingTrackLoadWith(onLoad: (Track) -> Unit) {
+  private fun handlingTrackLoadWith(onLoad: (TrackLoadEvent) -> Unit) {
     // JS runs the handler's player calls on the main thread before its promise settles.
     val handler: (TrackLoadEvent) -> Promise<Promise<Unit>> = { event ->
       val inner = JsPromise<Unit>()
       val outer = JsPromise<Promise<Unit>>()
       Handler(Looper.getMainLooper()).post {
-        onLoad(event.track)
+        onLoad(event)
         setsAfterHandler = 0
         inner.resolve(Unit)
         outer.resolve(inner.promise)
@@ -105,10 +110,10 @@ class HandleTrackLoadSeekTest {
   }
 
   /**
-   * As a controller starts a track: media3 passes no index or position on a reset. Returns once
-   * media3 has set the items the callback returned, after the handler.
+   * As a controller starts a track, at [positionMs] when given; without one media3 passes no index
+   * or position. Returns once media3 has set the items the callback returned, after the handler.
    */
-  private fun setFromController(track: Track) {
+  private fun setFromController(track: Track, positionMs: Long? = null) {
     player.exoPlayer.addListener(
       object : MediaPlayer.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -122,7 +127,9 @@ class HandleTrackLoadSeekTest {
       MediaController.Builder(RuntimeEnvironment.getApplication(), service.get().session.token)
         .buildAsync()
     idleUntil("the controller to connect") { future.isDone }
-    future.get().setMediaItem(TrackFactory.toMedia3(track))
+    val item = TrackFactory.toMedia3(track)
+    if (positionMs == null) future.get().setMediaItem(item)
+    else future.get().setMediaItem(item, positionMs)
     idleUntil("media3 to set the items") { (setsAfterHandler ?: 0) >= 1 }
   }
 
@@ -143,7 +150,7 @@ class HandleTrackLoadSeekTest {
   fun `a load then a seek in the handler holds the seek`() {
     val track = silentTrack(Duration.ofMinutes(2))
     handlingTrackLoadWith {
-      player.load(it)
+      player.load(it.track)
       player.seekTo(60, TimeUnit.SECONDS)
     }
 
@@ -155,11 +162,52 @@ class HandleTrackLoadSeekTest {
   @Test
   fun `a setQueue at a position in the handler holds the position`() {
     val track = silentTrack(Duration.ofMinutes(2))
-    handlingTrackLoadWith { player.setQueue(arrayOf(it), 0, 60_000) }
+    handlingTrackLoadWith { player.setQueue(arrayOf(it.track), 0, 60_000) }
 
     setFromController(track)
 
     assertEquals(60_000L, player.exoPlayer.currentPosition)
+  }
+
+  @Test
+  fun `a controller's start position reaches the handler in seconds`() {
+    var startPosition: Double? = null
+    handlingTrackLoadWith {
+      startPosition = it.startPosition
+      player.load(it.track)
+    }
+
+    setFromController(silentTrack(Duration.ofMinutes(2)), positionMs = 45_500)
+
+    assertEquals(45.5, startPosition)
+  }
+
+  @Test
+  fun `a controller that asks for no position leaves the start position absent`() {
+    var event: TrackLoadEvent? = null
+    handlingTrackLoadWith {
+      event = it
+      player.load(it.track)
+    }
+
+    setFromController(silentTrack(Duration.ofMinutes(2)))
+
+    assertNotNull(event)
+    assertNull(event?.startPosition)
+  }
+
+  @Test
+  fun `a handler that seeks to the start position starts playback there`() {
+    handlingTrackLoadWith {
+      player.load(it.track)
+      it.startPosition?.let { position ->
+        player.seekTo((position * 1000).toLong(), TimeUnit.MILLISECONDS)
+      }
+    }
+
+    setFromController(silentTrack(Duration.ofMinutes(2)), positionMs = 45_000)
+
+    assertEquals(45_000L, player.exoPlayer.currentPosition)
   }
 
   @Test

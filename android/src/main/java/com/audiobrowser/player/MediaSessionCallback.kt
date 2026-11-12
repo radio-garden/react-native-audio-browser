@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.os.Bundle
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
@@ -805,6 +806,8 @@ class MediaSessionCallback(private val player: Player) :
       )
     }
 
+    val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
+
     return scope.future {
       val audioBrowser = player.awaitBrowser()
 
@@ -847,6 +850,7 @@ class MediaSessionCallback(private val player: Player) :
               track,
               queueTracks,
               index.toDouble(),
+              startPosition,
               ::currentPlayerState,
             ) {
               val existingItems = queueTracks.map { TrackFactory.toMedia3(it) }
@@ -867,6 +871,7 @@ class MediaSessionCallback(private val player: Player) :
         selectedTrack,
         tracks,
         result.startIndex.toDouble(),
+        startPosition,
         ::currentPlayerState,
       ) {
         // Only on handleTrackLoad's default branch: a consumer that handles the load owns the
