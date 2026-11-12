@@ -702,6 +702,173 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  /// A short drop leaves the connection dead with audio still buffered: the stall comes after the
+  /// network is back, and AVPlayer never fails it.
+  @Test func aStallAfterAShortDropReconnectsAtOnce() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    engine.bufferedPosition = 20
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.networkStatusDidChange(isOnline: false)
+    await clock.run(until: 13_000)
+    player.networkStatusDidChange(isOnline: true)
+    await clock.run(until: 15_000)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 15_000)
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aConnectionThatBuffersAfterTheDropWaitsOutTheWatch() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    engine.bufferedPosition = 20
+    player.transition(.avPlayerPlaying)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+    await clock.run(until: 5_000)
+    engine.bufferedPosition = 25
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 34_999)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    await clock.run(until: 35_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aConnectionStartedAfterTheDropWaitsOutTheWatch() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+    player.retryNow()
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 5_000)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 34_999)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    await clock.run(until: 35_000)
+    #expect(engine.resolveAndLoadCalls.count == 3)
+  }
+
+  /// What arrives after the drop is reported was on its way before it.
+  @Test func audioDrainingInDuringTheDropLeavesTheConnectionDead() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    engine.bufferedPosition = 20
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.networkStatusDidChange(isOnline: false)
+    engine.bufferedPosition = 20.4
+    player.networkStatusDidChange(isOnline: true)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 10_000)
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aSecondDropKillsAConnectionThatLivedThroughTheFirst() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    engine.bufferedPosition = 20
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+    engine.bufferedPosition = 80
+    await clock.run(until: 60_000)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 60_000)
+
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aSeekAfterTheDropWaitsForItsData_andPlayingAgainClearsTheDrop() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    player.transition(.avPlayerPlaying)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+    player.transition(.avPlayerWaiting)
+    // The 1 s floor from the first connect's start.
+    await clock.run(until: 1_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    player.transition(.avPlayerPlaying)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+    player.seek(to: 300)
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 2_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 5_000)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 34_999)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    await clock.run(until: 35_000)
+    #expect(engine.resolveAndLoadCalls.count == 3)
+  }
+
+  /// A connect that delivered nothing ends online, and counts toward `maxRetries`: only the watch
+  /// gives it up, as without the drop.
+  @Test func aSilentConnectFromBeforeTheDropWaitsOutTheWatch() async throws {
+    let clock = VirtualClock()
+    let retry = RetryLoop(online: false, clock: clock)
+    retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 0, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: retry)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)])
+    player.networkStatusDidChange(isOnline: true)
+
+    player.play()
+    await clock.run(until: 29_999)
+
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aStallAfterAShortDropWithRetryOffIsLeftToAVPlayer() async throws {
+    let (player, engine, callbacks, clock) = try makeVirtual()
+    player.retry.updatePolicy(from: nil)
+    player.transition(.avPlayerPlaying)
+    player.networkStatusDidChange(isOnline: false)
+    player.networkStatusDidChange(isOnline: true)
+
+    player.transition(.avPlayerWaiting)
+    await clock.run(until: 1_000)
+
+    #expect(player.state == .buffering)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(callbacks.errorEvents.isEmpty)
+  }
+
+  /// The stall that follows a short drop ends at the deadline, 120 s into its silence, when no
+  /// connection after it delivers audio.
+  @Test func aStallAfterAShortDropStillEndsAtTheDeadline() async throws {
+    let (player, engine, callbacks, clock) = try makeVirtual()
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.networkStatusDidChange(isOnline: false)
+    await clock.run(until: 13_000)
+    player.networkStatusDidChange(isOnline: true)
+    await clock.run(until: 15_000)
+    player.transition(.avPlayerWaiting)
+
+    await clock.run(until: 134_999)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count > 1)
+    await clock.run(until: 135_000)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+    #expect(callbacks.errorEvents.count == 1)
+  }
+
   /// The watch replaces the stall at 40 s at once, having played, then each silent connect 30 s
   /// after it starts, 1 s and then 1.5 s later: the deadline still falls 120 s into the silence.
   @Test func playbackThatStopsWithNoFailureEndsAtTheDeadline() async throws {
@@ -774,6 +941,7 @@ struct PlayerRecoveringTests {
     )))
     for _ in 1 ... 5 {
       player.transition(.avPlayerWaiting)
+      player.networkStatusDidChange(isOnline: false)
       player.networkStatusDidChange(isOnline: true)
       await player.retry.pendingTask?.value
       engine.emit(.itemPrepared(likelyToKeepUp: true))
@@ -788,6 +956,7 @@ struct PlayerRecoveringTests {
     let (player, engine, callbacks) = try makePlaying()
     player.retry.updatePolicy(from: nil)
     player.transition(.avPlayerWaiting)
+    player.networkStatusDidChange(isOnline: false)
     player.networkStatusDidChange(isOnline: true)
     #expect(player.state == .buffering)
     #expect(engine.resolveAndLoadCalls.count == 1)
@@ -796,8 +965,10 @@ struct PlayerRecoveringTests {
 
   @Test func theNetworkReturningLeavesAPausedOrPlayingStreamAlone() throws {
     let (player, engine, _) = try makePlaying()
+    player.networkStatusDidChange(isOnline: false)
     player.networkStatusDidChange(isOnline: true)
     player.pause()
+    player.networkStatusDidChange(isOnline: false)
     player.networkStatusDidChange(isOnline: true)
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
@@ -812,6 +983,7 @@ struct PlayerRecoveringTests {
     let retrying = player.retry.pendingTask
     let loadsBefore = engine.resolveAndLoadCalls.count
 
+    player.networkStatusDidChange(isOnline: false)
     player.networkStatusDidChange(isOnline: true)
     await retrying?.value
 
@@ -833,6 +1005,7 @@ struct PlayerRecoveringTests {
   @Test func theNetworkReturningReRendersBeforeReconnecting() async throws {
     let (player, engine, _) = try makePlaying()
     player.transition(.avPlayerWaiting)
+    player.networkStatusDidChange(isOnline: false)
     var order: [String] = []
     engine.onSeamCall = { order.append($0) }
     let loadsBefore = engine.resolveAndLoadCalls.count
