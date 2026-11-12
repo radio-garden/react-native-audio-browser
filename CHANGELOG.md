@@ -1,3 +1,9 @@
+## [0.2.0-next.90](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.89...v0.2.0-next.90) (2026-11-12)
+
+### Bug Fixes
+
+* **ios:** reconnect at once when a stream stalls on a connection the drop killed ([86dd40b](https://github.com/radio-garden/react-native-audio-browser/commit/86dd40b3750aaa9d476546eef9587b224811f1e0))
+
 ## [0.2.0-next.89](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.88...v0.2.0-next.89) (2026-11-11)
 
 ### Bug Fixes
