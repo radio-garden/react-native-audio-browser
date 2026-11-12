@@ -133,6 +133,42 @@ class PlayerRetryTest {
     awaitRetry("the reload's retry")
   }
 
+  @Test
+  fun `a live pause idles the engine paused, and the next play reconnects`() {
+    play(folder.silentWavUri(Duration.ofMinutes(1)), live = true)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    player.pause()
+    assertStaysPausedAndIdle()
+    player.prepare()
+    player.seekToLiveEdge()
+    assertStaysPausedAndIdle()
+    // A seek while paused, as far into a live window as the reconnect must not resume.
+    player.seekTo(30, TimeUnit.SECONDS)
+    // Masked as paused and ready, so the session shows the station paused.
+    assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
+
+    player.play()
+    idleUntil("the reconnect") {
+      player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE &&
+        player.playbackState in
+          setOf(PlaybackState.LOADING, PlaybackState.BUFFERING, PlaybackState.PLAYING)
+    }
+    assertTrue(player.exoPlayer.currentPosition < 30_000)
+  }
+
+  @Test
+  fun `an on-demand pause keeps the engine loaded`() {
+    play(folder.silentWavUri(Duration.ofMinutes(1)))
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
   /** Pauses with a retry pending and runs past every backoff it would have taken. */
   private fun pauseDuringRetry(vararg next: String, pause: () -> Unit) {
     play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Infinite())
@@ -570,6 +606,7 @@ class PlayerRetryTest {
     vararg srcs: String,
     retryPolicy: RetryPolicy = RetryPolicy.Default,
     wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
+    live: Boolean? = null,
   ) {
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy, wakeMode = wakeMode))
     player.setCallbacks(callbacks)
@@ -580,7 +617,7 @@ class PlayerRetryTest {
         .build()
     player.exoPlayer.setMediaItems(
       srcs.mapIndexed { i, src ->
-        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = src))
+        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = src, live = live))
       }
     )
     player.exoPlayer.prepare()
