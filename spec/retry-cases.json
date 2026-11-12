@@ -760,6 +760,35 @@
       ]
     },
     {
+      "name": "a stall that no connection end follows still gives up 120 s into its silence",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 60000, "event": "audioStops", "deadline": 180000 }
+      ]
+    },
+    {
+      "name": "after an offline gap shorter than the buffer, the end of a connection that played reconnects at once, and the silence counts from its stall",
+      "steps": [
+        { "at": 0, "event": "load", "deadline": null },
+        { "at": 0, "event": "intentUp", "deadline": 120000 },
+        { "at": 800, "event": "audioStarts", "deadline": null },
+        { "at": 10000, "event": "offline", "deadline": null, "wait": "online" },
+        { "at": 13000, "event": "online", "deadline": null },
+        { "at": 15000, "event": "audioStops", "deadline": 135000 },
+        {
+          "at": 15000,
+          "event": "ended",
+          "delivered": "audio",
+          "startedAt": 0,
+          "deadline": 135000,
+          "wait": 0
+        },
+        { "at": 15600, "event": "audioStarts", "deadline": null }
+      ]
+    },
+    {
       "name": "a network frozen for 40 s plays again, and the silence ends",
       "steps": [
         { "at": 0, "event": "load", "deadline": null },

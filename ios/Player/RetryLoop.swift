@@ -57,6 +57,7 @@ final class RetryLoop {
 
   private(set) var isEnabled = false
   private var playIntent = false
+  private var online: Bool
   private var budget: SilenceBudget
   private var pacer: ReconnectPacer
   private var connectionStartedAtMs: Int?
@@ -64,6 +65,13 @@ final class RetryLoop {
   /// AVFoundation can report one connection's failure more than once; the units hear its end once.
   private var connectionEndReported = false
   private var replacedConnectionCounts = false
+  /// The current connection was open while offline, and the network has not returned since.
+  /// Offline can kill a connection without AVFoundation ever failing it.
+  private var connectionWentOffline = false
+  /// The buffered position when the network last returned to a connection that went offline; nil
+  /// once it plays again online. Audio still draining in from before the drop must not count as
+  /// the connection being alive.
+  private var bufferedAtReturn: Double?
   /// True from a connection's start until a cancel or a terminal error, so a give-up reports one
   /// error, and a stop, or a play with nothing loaded, leaves nothing to give up on.
   private var deadlineArmed = false
@@ -103,6 +111,7 @@ final class RetryLoop {
     clock: any RetryClock = ContinuousRetryClock(),
     sleep: (@Sendable (Int) async throws -> Void)? = nil,
   ) {
+    self.online = online
     budget = SilenceBudget(online: online)
     pacer = ReconnectPacer(online: online)
     self.clock = clock
@@ -157,6 +166,8 @@ final class RetryLoop {
     replacedConnectionCounts = true
     connectionDeliveredAudio = false
     connectionEndReported = false
+    connectionWentOffline = !online
+    bufferedAtReturn = nil
     deadlineArmed = true
     armDeadline()
     if playIntent { startStallWatch() }
@@ -175,10 +186,32 @@ final class RetryLoop {
     armDeadline()
   }
 
+  /// A connection that went offline and awaits data when the network returns is given up before
+  /// the units hear of the return: it ended offline.
   func onlineChanged(_ online: Bool) {
+    guard online != self.online else { return }
+    if !online, connectionStartedAtMs != nil, !connectionEndReported {
+      connectionWentOffline = true
+    }
+    if online, connectionWentOffline {
+      connectionWentOffline = false
+      if stallTask != nil, pendingTask == nil, playIntent, isEnabled {
+        logger.info("Back online on a stalled connection that was offline: reconnecting now")
+        handleFailure(.stall)
+      } else {
+        bufferedAtReturn = bufferedPosition()
+      }
+    }
+    self.online = online
     budget.onlineChanged(online)
     pacer.onlineChanged(online)
     armDeadline()
+  }
+
+  /// A seek's wait for data is the seek's, not the drop's: its data lies outside the range the drop
+  /// was judged by.
+  func seekStarted() {
+    bufferedAtReturn = nil
   }
 
   /// Audio clears the failure the deadline would report: a silence after it that ends with no
@@ -186,6 +219,7 @@ final class RetryLoop {
   func playbackBecameAudible() {
     stopStallWatch()
     connectionDeliveredAudio = true
+    if online { bufferedAtReturn = nil }
     lastFailure = nil
     budget.audioStarted(atMs: clock.nowMs)
     armDeadline()
@@ -308,14 +342,23 @@ final class RetryLoop {
 
   // MARK: - Stalls
 
+  private var offlineKilledConnection: Bool {
+    guard let bufferedAtReturn else { return false }
+    return bufferedPosition() <= bufferedAtReturn
+  }
+
   /// Starts the stall watch, over a connect or a stall: a `stallTimeout` in which `bufferedPosition`
   /// does not advance makes it a `.stall` failure, provided the play intent holds and no retry is
-  /// pending; one in which it advances starts another. Any failure ends it.
+  /// pending; one in which it advances starts another. Any failure ends it. Online, a connection
+  /// the drop killed gets no timeout, unless it delivered nothing: that end counts toward
+  /// `maxRetries`, so it waits as any connect does.
   func startStallWatch() {
     stallTask?.cancel()
     let buffered = bufferedPosition()
-    stallTask = Task { [weak self, clock, stallTimeout] in
-      guard await (try? clock.sleep(ms: Int(stallTimeout / .milliseconds(1)))) != nil else { return }
+    let killed = online && isEnabled && connectionDeliveredAudio && offlineKilledConnection
+    let timeout = killed ? .zero : stallTimeout
+    stallTask = Task { [weak self, clock] in
+      guard await (try? clock.sleep(ms: Int(timeout / .milliseconds(1)))) != nil else { return }
       guard let self, !Task.isCancelled else { return }
       stallTask = nil
       if bufferedPosition() > buffered { return startStallWatch() }

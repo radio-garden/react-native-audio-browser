@@ -704,6 +704,7 @@ final class Player {
   /// without touching the new one's deferred seek.
   private func seekItem(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void) {
     let generation = deferredSeek.generation
+    retry.seekStarted()
     engine.seek(to: seconds) { [weak self] finished in
       guard let self, deferredSeek.generation == generation else {
         completion(false)
@@ -925,17 +926,9 @@ final class Player {
   // MARK: - Connectivity
 
   /// Re-renders the now-playing lines, whose stall line tells offline from buffering, and passes
-  /// the change to the retry loop. When connectivity returns to a stalled stream, its connection
-  /// is given up first, as one that ended offline, so the reconnect goes out at once rather than
-  /// wait for AVPlayer to fail it. Only while stalled (.buffering) with play intent, so a pause or
-  /// a retry that gave up isn't resumed; not while a retry is pending, which the loop paces itself;
-  /// and not with retry off, which leaves the stall to AVPlayer.
+  /// the change to the retry loop.
   func networkStatusDidChange(isOnline: Bool) {
     engine.renderNowPlaying()
-    if isOnline, playWhenReady, state == .buffering, retry.isEnabled, retry.pendingTask == nil {
-      logger.info("Connectivity restored while stalled — retrying now")
-      retry.handleFailure(.stall)
-    }
     retry.onlineChanged(isOnline)
   }
 

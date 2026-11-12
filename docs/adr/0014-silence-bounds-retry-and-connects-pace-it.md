@@ -27,7 +27,7 @@ Two questions are now kept apart: when to give up, and when to connect.
 6. **After a connection that delivered nothing, wait.** The wait grows 1, 1.5, 2.25, 3.375, then 5 s, and starts again at 1 s once a connection delivers audio. `maxRetries` counts these connections, in a row.
 7. **Connects start at least 1 s apart**, whatever ended the last one, so a server that sends a moment of audio and closes is never hit in a tight loop. A new Load or a play intent that comes up again starts over without it: those are the listener's, not the retry's.
 8. **Offline, no connects.** The first goes out when the network returns: its return drops what remains of the pending wait, keeping only the 1 s floor. The backoff's growth stays, so if that connect delivers nothing, the next waits 1.5 s, not 1 s. A connection that ends while offline says nothing about the source, so it does not grow the wait. A report that the network is up while it already was changes nothing.
-9. **A connection that is open but silent** is given up for a new one after a fixed watch, and paced by what it delivered before it went silent. Rule 2 bounds how long that can repeat.
+9. **A connection that is open but silent** is given up for a new one after a fixed watch, and paced by what it delivered before it went silent. Rule 2 bounds how long that can repeat. A connection that was open while offline is given up without the watch when it is silent as the network returns, or, if it delivered audio, when it goes silent having received nothing since: going offline can end a connection without the player ever failing it.
 
 ## Buffers follow the cause
 
