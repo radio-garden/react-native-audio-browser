@@ -23,7 +23,10 @@ export const streamServerSection: Section = {
     track('ICY titles, then a stall', '/live.mp3?icy=5&stall=20'),
     track('503', '/live.mp3?status=503'),
     track('Slow start', '/live.mp3?delay=5'),
-    track('Missing Range', '/live.mp3?requireRange')
+    track('Missing Range', '/live.mp3?requireRange'),
+    track('Slow stream', '/live.mp3?rate=0.8'),
+    track('HLS', '/live.m3u8'),
+    track('HLS, a segment that fails 6 times', '/live.m3u8?drop=30&drops=6')
   ]
 }
 

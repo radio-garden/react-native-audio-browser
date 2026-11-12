@@ -14,6 +14,8 @@ import {
   AUDIO,
   answersHere,
   AUDIO_BYTES_PER_SECOND,
+  HLS_SEGMENT_DURATION,
+  hlsSegment,
   ICY_METAINT,
   startStreamServer,
   type StreamServer
@@ -179,6 +181,113 @@ describe('the live stream', () => {
     })
     expect(reply.status).toBe(200)
     expect(reply.body.equals(AUDIO.subarray(0, 100))).toBe(true)
+  })
+})
+
+describe('a slow stream', () => {
+  it('sends at the rate after its burst', async () => {
+    const reply = await get('/live.mp3?rate=0.5', { waitMs: 1000 })
+    // A 2 s burst, then 1 s at ten times real time, halved: 7 s of audio, not 12.
+    expect(reply.body.length).toBeGreaterThanOrEqual(6 * AUDIO_BYTES_PER_SECOND)
+    expect(reply.body.length).toBeLessThanOrEqual(7.1 * AUDIO_BYTES_PER_SECOND)
+  })
+
+  it('refuses a rate of 0', async () => {
+    expect((await get('/live.mp3?rate=0')).status).toBe(400)
+  })
+})
+
+describe('live HLS', () => {
+  it('serves the rest of a segment from a Range', async () => {
+    const reply = await get('/live/3.mp3', {
+      headers: { Range: 'bytes=4000-' }
+    })
+    expect(reply.status).toBe(206)
+    expect(reply.body.equals(hlsSegment(3).subarray(4000))).toBe(true)
+  })
+
+  it('resumes a dropped segment from where it dropped, and drops it again', async () => {
+    const path = '/live/2.mp3?drop=5&drops=2'
+    const first = await get(path)
+    const second = await get(path, {
+      headers: { Range: `bytes=${first.body.length}-` }
+    })
+    expect(second.ending).toBe('aborted')
+    expect(second.body.length).toBe(0)
+    const third = await get(path, {
+      headers: { Range: `bytes=${first.body.length}-` }
+    })
+    expect(Buffer.concat([first.body, third.body]).equals(hlsSegment(2))).toBe(
+      true
+    )
+  })
+
+  const segments = (playlist: Buffer) =>
+    playlist
+      .toString()
+      .split('\n')
+      .filter((line) => line.startsWith('live/'))
+
+  it('lists the first segments, then one more each segment', async () => {
+    const first = await get('/live.m3u8')
+    expect(first.headers['content-type']).toBe('application/vnd.apple.mpegurl')
+    expect(first.body.toString()).toContain('#EXT-X-MEDIA-SEQUENCE:0')
+    expect(first.body.toString()).not.toContain('#EXT-X-ENDLIST')
+    expect(segments(first.body)).toEqual([
+      'live/0.mp3',
+      'live/1.mp3',
+      'live/2.mp3'
+    ])
+    // Ten times real time: two segments later.
+    await new Promise((done) =>
+      setTimeout(done, (HLS_SEGMENT_DURATION * 2 * 1000) / LIVE_SPEED + 50)
+    )
+    const later = await get('/live.m3u8')
+    expect(later.body.toString()).toContain('#EXT-X-MEDIA-SEQUENCE:1')
+    expect(segments(later.body)).toEqual([
+      'live/1.mp3',
+      'live/2.mp3',
+      'live/3.mp3',
+      'live/4.mp3'
+    ])
+  })
+
+  it('carries the query to its segments', async () => {
+    const playlist = await get('/live.m3u8?drop=4')
+    expect(segments(playlist.body)[0]).toBe('live/0.mp3?drop=4')
+  })
+
+  it('serves each segment whole, with its timestamp ahead of the audio', async () => {
+    const reply = await get('/live/3.mp3')
+    expect(reply.ending).toBe('end')
+    expect(reply.body.equals(hlsSegment(3))).toBe(true)
+    expect(reply.body.subarray(0, 3).toString()).toBe('ID3')
+    const ownerEnd = reply.body.indexOf(0, 20)
+    expect(reply.body.subarray(20, ownerEnd).toString()).toBe(
+      'com.apple.streaming.transportStreamTimestamp'
+    )
+    const ticks = reply.body.readBigUInt64BE(ownerEnd + 1)
+    expect(Number(ticks)).toBe(Math.round(3 * HLS_SEGMENT_DURATION * 90_000))
+    // The audio starts on a frame.
+    expect(reply.body[73]).toBe(0xff)
+  })
+
+  it('cuts the segment at the drop off halfway, on its first requests only', async () => {
+    // 5 s plays in the third segment.
+    const path = '/live/2.mp3?drop=5&drops=2'
+    const replies = [await get(path), await get(path), await get(path)]
+    expect(replies.map((reply) => reply.ending)).toEqual([
+      'aborted',
+      'aborted',
+      'end'
+    ])
+    expect(replies[0]!.body.length).toBe(hlsSegment(2).length >> 1)
+    expect(stream.log.map((entry) => entry.outcome)).toEqual([
+      'closed',
+      'closed',
+      'complete'
+    ])
+    expect((await get('/live/1.mp3?drop=5&drops=2')).ending).toBe('end')
   })
 })
 
