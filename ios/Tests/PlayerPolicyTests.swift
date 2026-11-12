@@ -6,9 +6,10 @@ import Testing
 private func makeLoading(
   src: String? = "https://example.com/a.mp3",
   live: Bool = false,
+  scheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
 ) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine)
+  let player = makePlayer(engine: engine, sleepTimerScheduler: scheduler)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
@@ -16,8 +17,11 @@ private func makeLoading(
 }
 
 @MainActor
-private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
-  let (player, engine, callbacks) = try makeLoading(live: live)
+private func makePlaying(
+  live: Bool = false,
+  scheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
+) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let (player, engine, callbacks) = try makeLoading(live: live, scheduler: scheduler)
   player.setPlayWhenReady(true)
   engine.hasItem = true
   engine.hasLoadedAsset = true
@@ -1437,12 +1441,92 @@ struct PlayerLivePauseTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
-  @Test func aLiveStreamLoadedPausedDoesNotConnect() throws {
-    let (player, engine, _) = try makeLoading(live: true)
+  @Test func aLiveStreamLoadedWithoutIntentOpensNoConnection() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
     #expect(engine.resolveAndLoadCalls.isEmpty)
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .loading)
+
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.isEmpty)
+    #expect(engine.carrierCount == 1)
     #expect(player.state == .paused)
     player.play()
     #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// A station started from paused as two calls, the way a consumer without `playWhenReady` does.
+  @Test func aLiveStreamQueuedThenPlayedFromPausedNeverReportsPaused() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, callbacks) = try makePlaying(live: true, scheduler: scheduler)
+    player.pause()
+    let carriers = engine.carrierCount
+    callbacks.playbackChanges.removeAll()
+
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
+    player.play()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierCount == carriers)
+    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
+    #expect(player.state == .loading)
+  }
+
+  @Test func aPlayArriving100msAfterTheQueueNeverReportsPaused() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true, scheduler: MainQueueSleepTimerScheduler())
+    player.pause()
+    let carriers = engine.carrierCount
+    callbacks.playbackChanges.removeAll()
+
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
+    try await Task.sleep(for: .milliseconds(100))
+    player.play()
+    try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierCount == carriers)
+    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
+    #expect(player.state == .loading)
+  }
+
+  @Test func withNoPlayTheDeferredParkFiresOnTheMainQueue() async throws {
+    let (player, engine, _) = try makeLoading(live: true, scheduler: MainQueueSleepTimerScheduler())
+    try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))
+    #expect(engine.carrierCount == 1)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aStopDuringTheDeferredParkClosesTheItemAndStaysStopped() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.stop()
+    #expect(engine.carrierCount == 1)
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(player.state == .stopped)
+    #expect(engine.carrierCount == 1)
+  }
+
+  @Test func aPauseDuringTheDeferredParkStillParksAtTheDeadline() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.pause()
+    #expect(player.state == .loading)
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(player.state == .paused)
+    #expect(engine.resolveAndLoadCalls.isEmpty)
+  }
+
+  @Test func aPlayPauseAndPlayInsideTheDelayIsNotParkedByIt() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.play()
+    player.pause()
+    player.play()
+    let carriers = engine.carrierCount
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.carrierCount == carriers)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
   @Test func aLiveStreamQueuedToPlayConnectsWithoutParking() throws {
@@ -1457,18 +1541,22 @@ struct PlayerLivePauseTests {
   }
 
   @Test func skippingToALiveStreamWhilePausedDoesNotConnect() throws {
-    let (player, engine, _) = try makePlaying()
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makePlaying(scheduler: scheduler)
     try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
     player.pause()
     player.next()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
     #expect(engine.resolveAndLoadCalls.count == 1)
     #expect(player.state == .paused)
   }
 
   @Test func aMediaServicesResetWhileParkedDoesNotConnect() throws {
-    let (player, engine, _) = try makePlaying(live: true)
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makePlaying(live: true, scheduler: scheduler)
     player.pause()
     player.mediaServicesWereReset()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
     #expect(engine.resolveAndLoadCalls.count == 1)
     #expect(player.state == .paused)
   }
