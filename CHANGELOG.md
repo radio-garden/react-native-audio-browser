@@ -1,3 +1,23 @@
+## [0.2.0-next.91](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.90...v0.2.0-next.91) (2026-11-13)
+
+### Features
+
+* give handleTrackLoad the start position a controller asks for ([a5b5961](https://github.com/radio-garden/react-native-audio-browser/commit/a5b596128b47869099c6d8519f1d60e18675f11f))
+* **stream-server:** add a slow live stream and live HLS with a dropped segment ([297d1b2](https://github.com/radio-garden/react-native-audio-browser/commit/297d1b2592befd9f5a4b4de60568995a4e7882be))
+
+### Bug Fixes
+
+* **android:** don't report a Sonos room that another app's provider serves ([17f9d5f](https://github.com/radio-garden/react-native-audio-browser/commit/17f9d5fceaadb16faece1f43c59831eed3ce919b))
+* **android:** give handleTrackLoad the first index when a request leaves it unset ([b740920](https://github.com/radio-garden/react-native-audio-browser/commit/b74092024c4a6e3f928dc10e0aadd26f28566111))
+* **android:** keep the retry loop's give-up out of RetryMaskingTest's reconnect test ([5697ad0](https://github.com/radio-garden/react-native-audio-browser/commit/5697ad0c86bddf3ef3fa9fb9e99ad2e324284437)), closes [#295](https://github.com/radio-garden/react-native-audio-browser/issues/295)
+* **android:** raise the rebuffer threshold only after a real underrun ([e5da73c](https://github.com/radio-garden/react-native-audio-browser/commit/e5da73c925d1adcd85b7ca9d3f2df0eaa1980ef2))
+* **android:** serve and report only this app's own remote output routes ([124d78b](https://github.com/radio-garden/react-native-audio-browser/commit/124d78b5ee25d1c63f2188fb389f06a1d086fc51))
+
+### Documentation
+
+* **adr:** say what close=N sends in 0014's short-burst consequence ([7030c8d](https://github.com/radio-garden/react-native-audio-browser/commit/7030c8dbf3406a090fd7fdf21719d1bab3c04baf))
+* **android:** say only a hidden-API bypass reaches a Sonos room's volume ([0822741](https://github.com/radio-garden/react-native-audio-browser/commit/0822741d1eddfdaaf9839c6504383de734a1e17d))
+
 ## [0.2.0-next.90](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.89...v0.2.0-next.90) (2026-11-12)
 
 ### Bug Fixes
