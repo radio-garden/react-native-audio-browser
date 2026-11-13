@@ -312,7 +312,8 @@ Cast and Sonos play the queue the same way:
 The library's Sonos route provider service is exported, as the Output Switcher
 needs to bind it: another app on the phone can bind it too and list the rooms,
 but the provider serves only the app's own sessions, so another app can't
-select a room. It may still reach the volume of a room the app plays to.
+select a room. Only an app that bypasses Android's hidden-API restrictions can
+still set the volume of a room the app plays to.
 
 When a Sonos room that another app's provider serves is selected, the library
 unselects it: the output stays the phone, and the switcher stops offering
