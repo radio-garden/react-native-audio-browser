@@ -266,7 +266,7 @@ final class Player {
     }
     retry.onRetryingError = { [weak self] in self?.reportRetryingError($0) }
     retry.onFailedWithoutIntent = { [weak self] in self?.parkForReloadOnPlay() }
-    retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0) }
+    retry.onRetry = { [weak self] in self?.reloadResolving(startFromCurrentTime: $0, shortStartBuffer: true) }
     // Until the connect's item is prepared, the engine still holds the item it replaces.
     retry.bufferedPosition = { [weak self] in
       guard let self, connectionItemPrepared else { return 0 }
@@ -761,23 +761,25 @@ final class Player {
   /// Loads the current track again, re-running the media-URL resolver, so a consumer whose
   /// resolver mints short-lived URLs or tokens recovers once they expire. A track without a `src`
   /// fails as an invalid source; with no current track, nothing loads.
-  func reloadResolving(startFromCurrentTime: Bool) {
+  /// - Parameter shortStartBuffer: For the retry loop's reconnects, which would otherwise be silent
+  ///   for seconds each: see `PlayerEngine.resolveAndLoad`.
+  func reloadResolving(startFromCurrentTime: Bool, shortStartBuffer: Bool = false) {
     guard let track = currentTrack else { return }
     guard let src = track.src else {
       transition(.errorOccurred(.invalidSourceUrl("nil")))
       return
     }
     prepareForReload(resumingAt: startFromCurrentTime ? reloadPosition : nil)
-    connect(src: src, track: track)
+    connect(src: src, track: track, shortStartBuffer: shortStartBuffer)
   }
 
   private var connectionItemPrepared = false
 
-  private func connect(src: String, track: Track) {
+  private func connect(src: String, track: Track, shortStartBuffer: Bool = false) {
     if track.live == true, !toPlay { return deferIdleLivePark() }
     connectionItemPrepared = false
     retry.connectionStarted()
-    engine.resolveAndLoad(src: src, track: track)
+    engine.resolveAndLoad(src: src, track: track, shortStartBuffer: shortStartBuffer)
   }
 
   /// The caller's retry: reloads now, resuming where it was, in place of any retry pending. A parked

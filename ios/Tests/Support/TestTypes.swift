@@ -47,6 +47,7 @@ final class MockPlayerEngine: PlayerEngine {
   var volume: Float = 1
 
   var resolveAndLoadCalls: [String] = []
+  var shortStartBufferRequests: [Bool] = []
   var cancelLoadingCount = 0
   var dropAssetCount = 0
   var clearItemCount = 0
@@ -54,7 +55,11 @@ final class MockPlayerEngine: PlayerEngine {
   var stopObservingItemCount = 0
   var recreateCount = 0
 
-  func resolveAndLoad(src: String, track _: Track) { resolveAndLoadCalls.append(src) }
+  func resolveAndLoad(src: String, track _: Track, shortStartBuffer: Bool) {
+    resolveAndLoadCalls.append(src)
+    shortStartBufferRequests.append(shortStartBuffer)
+  }
+
   func cancelLoading() { cancelLoadingCount += 1 }
   func dropAsset() {
     dropAssetCount += 1
