@@ -1,10 +1,8 @@
 package com.audiobrowser.sonos
 
 import android.content.Context
-import android.content.IntentFilter
 import android.net.wifi.WifiManager
 import androidx.annotation.VisibleForTesting
-import androidx.mediarouter.media.MediaRouteDescriptor
 import androidx.mediarouter.media.MediaRouteDiscoveryRequest
 import androidx.mediarouter.media.MediaRouteProvider
 import androidx.mediarouter.media.MediaRouteProviderDescriptor
@@ -86,7 +84,18 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     scope.cancel()
   }
 
-  override fun onCreateRouteController(routeId: String): RouteController? {
+  /**
+   * Serves only this app's own sessions: [SonosOutputs.selected] moves this app's playback, so
+   * another app's session would play this app's queue in its place.
+   */
+  override fun onCreateRouteController(
+    routeId: String,
+    options: RouteControllerOptions,
+  ): RouteController? {
+    if (options.clientPackageName != context.packageName) {
+      Timber.d("Sonos: refusing a session for %s", options.clientPackageName)
+      return null
+    }
     val room = rooms.firstOrNull { it.id == routeId } ?: return null
     return SonosRouteController(room)
   }
@@ -158,17 +167,11 @@ internal fun sonosRouteDescriptors(
   selectedId: String?,
   volumeOf: (String) -> Int?,
 ): MediaRouteProviderDescriptor {
-  val filter =
-    IntentFilter().apply {
-      addCategory(RemoteOutputs.CATEGORY)
-      addCategory(SonosOutputs.CATEGORY)
-    }
   val builder = MediaRouteProviderDescriptor.Builder()
   for (room in rooms) {
     builder.addRoute(
-      MediaRouteDescriptor.Builder(room.id, room.name)
+      RemoteOutputs.routeDescriptorBuilder(room.id, room.name, SonosOutputs.CATEGORY)
         .setDescription("Sonos")
-        .addControlFilter(filter)
         .setPlaybackType(MediaRouter.RouteInfo.PLAYBACK_TYPE_REMOTE)
         .setDeviceType(MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER)
         .setVolumeHandling(MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE)
@@ -179,9 +182,6 @@ internal fun sonosRouteDescriptors(
           else MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED
         )
         .setEnabled(true)
-        // Visible only to this app, from Android 14: another app on the library publishes the same
-        // rooms, and its provider, not this app's, would play to them.
-        .setVisibilityRestricted(emptySet())
         .build()
     )
   }

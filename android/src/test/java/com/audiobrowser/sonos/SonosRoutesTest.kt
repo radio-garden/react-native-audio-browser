@@ -3,6 +3,7 @@ package com.audiobrowser.sonos
 import android.Manifest
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import androidx.mediarouter.media.MediaRouteProvider
 import androidx.mediarouter.media.MediaRouter
 import com.audiobrowser.RemoteOutputs
 import org.junit.After
@@ -98,6 +99,27 @@ class SonosRoutesTest {
     val provider = SonosRouteProvider(RuntimeEnvironment.getApplication())
 
     assertEquals(listOf("RINCON_C"), provider.descriptor?.routes?.map { it.id })
+    provider.release()
+  }
+
+  @Test
+  fun `serves a session for this app, and refuses one for another app`() {
+    val context = RuntimeEnvironment.getApplication()
+    SonosOutputs.select(living)
+    val provider = SonosRouteProvider(context)
+    SonosOutputs.unselect(living)
+
+    fun controllerFor(packageName: String) =
+      provider.onCreateRouteController(
+        "RINCON_C",
+        MediaRouteProvider.RouteControllerOptions.Builder()
+          .setClientPackageName(packageName)
+          .build(),
+      )
+
+    assertNull(controllerFor("com.example.other"))
+    controllerFor(context.packageName)!!.onSelect()
+    assertEquals(living, SonosOutputs.selected)
     provider.release()
   }
 

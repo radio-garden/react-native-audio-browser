@@ -2,9 +2,13 @@ package com.audiobrowser
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.MainThread
 import androidx.annotation.VisibleForTesting
+import androidx.mediarouter.media.MediaRouteDescriptor
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaTransferReceiver
@@ -27,7 +31,29 @@ object RemoteOutputs {
   /** The control category a media route provider's routes declare to be offered as outputs. */
   const val CATEGORY = "com.audiobrowser.CATEGORY_REMOTE_OUTPUT"
 
+  /**
+   * A descriptor for a route offered as a remote output, in [CATEGORY] and each of [categories],
+   * visible from Android 14 only to this app: another app on the library would list it too, and
+   * selecting it there would leave that app's playback local.
+   */
+  @JvmStatic
+  fun routeDescriptorBuilder(
+    id: String,
+    name: String,
+    vararg categories: String,
+  ): MediaRouteDescriptor.Builder =
+    MediaRouteDescriptor.Builder(id, name)
+      .addControlFilter(
+        IntentFilter().apply {
+          addCategory(CATEGORY)
+          categories.forEach(::addCategory)
+        }
+      )
+      .setVisibilityRestricted(emptySet())
+
   private var types: Map<String, OutputType> = emptyMap()
+
+  private val mainHandler = Handler(Looper.getMainLooper())
 
   private var selector = selectorFor(types)
 
@@ -138,14 +164,22 @@ object RemoteOutputs {
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
-    setCurrent(
-      remoteOutputOf(
-        route.name,
-        types,
-        sonosSelected = SonosOutputs.selected != null,
-        route::supportsControlCategory,
-      )
-    )
+    val sonosSelected = SonosOutputs.selected != null
+    setCurrent(remoteOutputOf(route.name, types, sonosSelected, route::supportsControlCategory))
+    // Posted: this runs inside the router's callbacks, which unselect would re-enter.
+    if (isUnservedSonosRoute(sonosSelected, route::supportsControlCategory)) {
+      mainHandler.post(::releaseUnservedSonosRoute)
+    }
+  }
+
+  // Unselecting ends the system's session on another app's provider, which plays nothing of ours
+  // but keeps the switcher offering Stop casting.
+  private fun releaseUnservedSonosRoute() {
+    val router = router ?: return
+    val route = router.selectedRoute
+    if (!isUnservedSonosRoute(SonosOutputs.selected != null, route::supportsControlCategory)) return
+    Timber.d("RemoteOutputs: releasing %s, which another app's provider serves", route.name)
+    router.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
   }
 
   @VisibleForTesting
@@ -161,9 +195,7 @@ object RemoteOutputs {
 /**
  * The [Output] a selected route stands for, typed by the first category in [types] it [supports],
  * else [OutputType.REMOTE] for [RemoteOutputs.CATEGORY]; null for a route the outputs don't offer.
- * A Sonos room's route, even with Sonos off here, counts only while this app's provider has a room
- * selected: another app on the library publishes the same rooms, and selecting one of its routes
- * leaves playback here.
+ * A Sonos room's route [another app's provider serves][isUnservedSonosRoute] is not an output.
  */
 internal fun remoteOutputOf(
   name: String,
@@ -171,10 +203,20 @@ internal fun remoteOutputOf(
   sonosSelected: Boolean,
   supports: (category: String) -> Boolean,
 ): Output? {
-  if (supports(SonosOutputs.CATEGORY) && !sonosSelected) return null
+  if (isUnservedSonosRoute(sonosSelected, supports)) return null
   val type =
     types.entries.firstOrNull { supports(it.key) }?.value
       ?: OutputType.REMOTE.takeIf { supports(RemoteOutputs.CATEGORY) }
       ?: return null
   return Output(type = type, name = name, external = true)
 }
+
+/**
+ * Whether a selected route is a Sonos room's that this app's provider doesn't serve, as it has no
+ * room selected: another app on the library publishes the same rooms, and selecting one of its
+ * routes leaves playback here. Holds even while this app has Sonos turned off.
+ */
+internal fun isUnservedSonosRoute(
+  sonosSelected: Boolean,
+  supports: (category: String) -> Boolean,
+): Boolean = supports(SonosOutputs.CATEGORY) && !sonosSelected
