@@ -805,6 +805,14 @@ final class Player {
   }
 
   static let idleLiveParkDelaySeconds: TimeInterval = 1
+  /// The window behind its live edge that lets a live item pause in place, as on-demand does (a
+  /// DVR window). A shorter one is a stream that can't be rewound: a pause closes it.
+  static let pausableLiveWindowSeconds: TimeInterval = 30
+
+  private var liveItemPausable: Bool {
+    (engine.liveWindowSeconds ?? 0) >= Self.pausableLiveWindowSeconds
+  }
+
   private var pendingIdleLivePark: (any SleepTimerJob)?
 
   /// A live track loaded without play intent opens no connection and stays .loading, so a play
@@ -830,12 +838,13 @@ final class Player {
 
   /// A retry that gave up leaves its item in place, connected still: .error holds one too.
   private var holdsLiveConnection: Bool {
-    currentTrack?.live == true && (playbackActive || state == .error) && load?.reloadOnPlay != true
+    currentTrack?.live == true && !liveItemPausable && (playbackActive || state == .error)
+      && load?.reloadOnPlay != true
   }
 
   /// Parked or stopped: its next play is at the live edge, so a seek has no position to go to.
   private var liveStreamClosed: Bool {
-    currentTrack?.live == true && (load?.reloadOnPlay == true || state == .stopped)
+    currentTrack?.live == true && (load?.reloadOnPlay == true || state == .stopped && !liveItemPausable)
   }
 
   private func closeLiveConnection() {

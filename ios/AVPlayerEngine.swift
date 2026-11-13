@@ -123,6 +123,14 @@ final class AVPlayerEngine: PlayerEngine {
     return range.end.seconds
   }
 
+  var liveWindowSeconds: Double? {
+    guard let item = avPlayer.currentItem, item.duration.isIndefinite,
+          let seconds = item.seekableTimeRanges.last?.timeRangeValue.duration.seconds,
+          seconds.isFinite, seconds > 0
+    else { return nil }
+    return seconds
+  }
+
   var isPlaybackLikelyToKeepUp: Bool {
     avPlayer.currentItem?.isPlaybackLikelyToKeepUp ?? false
   }

@@ -41,6 +41,7 @@ final class MockPlayerEngine: PlayerEngine {
   var bufferedPosition: Double = 0
   var resumePosition: Double?
   var liveEdge: Double?
+  var liveWindowSeconds: Double?
   var isPlaybackLikelyToKeepUp = false
   var isAirPlayRoute = false
   var playerFailed = false
@@ -73,6 +74,8 @@ final class MockPlayerEngine: PlayerEngine {
     hasItem = true
     hasLoadedAsset = false
     resumePosition = nil
+    liveEdge = nil
+    liveWindowSeconds = nil
   }
 
   func stopObservingItem() { stopObservingItemCount += 1 }

@@ -1421,6 +1421,56 @@ struct PlayerLivePauseTests {
     #expect(engine.seekCalls.isEmpty)
   }
 
+  /// A live HLS stream with a DVR window, playing 2 minutes behind its edge.
+  @MainActor private func makePlayingSeekableLive(window: Double = 600) throws -> (Player, MockPlayerEngine) {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveWindowSeconds = window
+    engine.liveEdge = 1000
+    engine.currentTime = 880
+    engine.resumePosition = 880
+    return (player, engine)
+  }
+
+  @Test func aSeekableLivePauseKeepsItsPositionAndResumesFromIt() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    let plays = engine.startPlaybackCallCount
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .paused)
+    #expect(player.load?.reloadOnPlay == false)
+    #expect(engine.currentTime == 880)
+
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(engine.startPlaybackCallCount == plays + 1)
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aJumpToTheLiveEdgeWhileASeekableLiveTrackIsPausedSeeksToTheWindowEnd() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    player.pause()
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [1000])
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aSeekableLiveStopKeepsItsItem() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    player.stop()
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .stopped)
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [1000])
+  }
+
+  @Test func aLiveWindowShorterThanAPauseIsWorthClosesLikeAStreamWithNone() throws {
+    let (player, engine) = try makePlayingSeekableLive(window: Player.pausableLiveWindowSeconds - 1)
+    player.pause()
+    #expect(engine.carrierCount == 1)
+    #expect(player.load?.reloadOnPlay == true)
+  }
+
   @Test func anOnDemandPauseKeepsTheItem() throws {
     let (player, engine, _) = try makePlaying()
     player.pause()

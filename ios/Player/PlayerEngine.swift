@@ -46,6 +46,8 @@ enum EngineEvent {
   var resumePosition: Double? { get }
   /// The end of the seekable window; nil when there is none.
   var liveEdge: Double? { get }
+  /// How far back a live item can seek from its live edge; nil for an on-demand item or none.
+  var liveWindowSeconds: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
   var isAirPlayRoute: Bool { get }
   /// 0–1.
