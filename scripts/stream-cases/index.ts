@@ -13,6 +13,7 @@ import {
   type Platform,
   type StreamCase
 } from './judge.ts'
+import { pointAppAtMetro, type Adb } from './metro-host.ts'
 
 const APP_ID = 'com.audiobrowserexample'
 const TARGET_WAIT_MS = 60_000
@@ -61,15 +62,13 @@ if (cases.length === 0) {
   process.exit(2)
 }
 
-const adb = (...args: string[]) =>
+const runAdb: Adb = (args, input) =>
   execFileSync(
     'adb',
     [...(values.device ? ['-s', values.device] : []), ...args],
-    {
-      encoding: 'utf8',
-      stdio: 'pipe'
-    }
+    { encoding: 'utf8', stdio: 'pipe', input }
   )
+const adb = (...args: string[]) => runAdb(args)
 
 async function freePort(): Promise<number> {
   const server = createServer()
@@ -212,39 +211,6 @@ const stream = await startStreamServer({
 const deadPort = await freePort()
 const host = platform === 'android' ? '127.0.0.1' : 'localhost'
 
-if (platform === 'android') {
-  // A Debug build asks for its build's RCT_METRO_PORT, 8081 when unset.
-  for (const appPort of new Set([8081, metroPort])) {
-    adb('reverse', `tcp:${appPort}`, `tcp:${metroPort}`)
-  }
-  adb('reverse', `tcp:${stream.port}`, `tcp:${stream.port}`)
-  adb('shell', 'am', 'force-stop', APP_ID)
-  adb(
-    'shell',
-    'monkey',
-    '-p',
-    APP_ID,
-    '-c',
-    'android.intent.category.LAUNCHER',
-    '1'
-  )
-} else {
-  // The argument outranks a bundler address saved in the app's settings.
-  execFileSync(
-    'xcrun',
-    [
-      'simctl',
-      'launch',
-      '--terminate-running-process',
-      values.device ?? 'booted',
-      APP_ID,
-      '-RCT_jsLocation',
-      `localhost:${metroPort}`
-    ],
-    { stdio: 'pipe' }
-  )
-}
-
 const setOnline = (online: boolean) =>
   adb(
     'shell',
@@ -261,15 +227,53 @@ const results: {
   failures: string[]
 }[] = []
 const started = Date.now()
-if (networkCases && platform === 'android') {
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.once(signal, () => {
-      setOnline(true)
-      process.exit(1)
-    })
+const undo: (() => void)[] = []
+if (networkCases && platform === 'android') undo.push(() => setOnline(true))
+const tidyDevice = () => {
+  for (const step of undo.splice(0).reverse()) {
+    try {
+      step()
+    } catch (error) {
+      console.error(`Could not tidy the device: ${(error as Error).message}`)
+    }
   }
 }
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+  process.once(signal, () => {
+    tidyDevice()
+    process.exit(1)
+  })
+}
 try {
+  if (platform === 'android') {
+    adb('reverse', `tcp:${metroPort}`, `tcp:${metroPort}`)
+    adb('reverse', `tcp:${stream.port}`, `tcp:${stream.port}`)
+    pointAppAtMetro(runAdb, APP_ID, `localhost:${metroPort}`, undo)
+    adb(
+      'shell',
+      'monkey',
+      '-p',
+      APP_ID,
+      '-c',
+      'android.intent.category.LAUNCHER',
+      '1'
+    )
+  } else {
+    // The argument outranks a Metro address saved in the app's settings.
+    execFileSync(
+      'xcrun',
+      [
+        'simctl',
+        'launch',
+        '--terminate-running-process',
+        values.device ?? 'booted',
+        APP_ID,
+        '-RCT_jsLocation',
+        `localhost:${metroPort}`
+      ],
+      { stdio: 'pipe' }
+    )
+  }
   await appTarget()
   await new Promise((done) => setTimeout(done, SETTLE_MS))
   for (const streamCase of cases) {
@@ -332,7 +336,7 @@ try {
     }
   }
 } finally {
-  if (networkCases && platform === 'android') setOnline(true)
+  tidyDevice()
   await stream.close()
 }
 
