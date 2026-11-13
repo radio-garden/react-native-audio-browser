@@ -502,6 +502,37 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a seek over a held connection failure is a new connection for the loop`() {
+    goOnline(context)
+    play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    player.onLoadFailure(IOException("dropped"), inPlace = false)
+    shadowOf(Looper.getMainLooper()).idle()
+    assertTrue("the failure is held", player.retryLoop!!.failurePending)
+
+    player.seekTo(10, TimeUnit.SECONDS)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(player.retryLoop!!.failurePending)
+    assertFalse(player.retryLoop!!.reconnecting)
+  }
+
+  @Test
+  fun `a failure report that arrives after a seek is not the new connection's`() {
+    goOnline(context)
+    play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    // Posted from the playback thread before the seek, run after it.
+    player.onLoadFailure(IOException("dropped"), inPlace = false)
+    player.seekTo(10, TimeUnit.SECONDS)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(player.retryLoop!!.failurePending)
+    assertEquals(null, player.playbackError)
+  }
+
+  @Test
   fun `with retry, a stuck engine reconnects and never ends in an error`() {
     goOnline(context)
     play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())

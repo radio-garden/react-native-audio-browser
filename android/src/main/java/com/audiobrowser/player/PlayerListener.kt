@@ -79,13 +79,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.oldPosition = oldPosition.positionMs
     // A seek opens a new connection without passing through idle, clearing a failed one's error.
     val loop = player.retryLoop
-    if (
-      reason == MediaPlayer.DISCONTINUITY_REASON_SEEK &&
-        loop?.failurePending == true &&
-        player.localEngine.isActive
-    ) {
-      player.clearRetryingError()
-      loop.connectionStarted()
+    if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK && player.localEngine.isActive) {
+      if (loop?.failurePending == true) {
+        player.clearRetryingError()
+        loop.connectionStarted()
+      } else {
+        player.dropFailureReports()
+      }
     }
   }
 
