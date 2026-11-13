@@ -151,6 +151,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     if (!playWhenReady) player.retryFocus.release()
     player.retryLoop?.playIntentChanged(player.shouldPlayWhenReady)
     if (!playWhenReady) player.cancelRetry()
+    if (!playWhenReady) player.dropLiveConnection()
     // Deduped: the ENDED path in setPlaybackState may already have emitted it, before queue-ended.
     player.emitPlayWhenReadyChanged(playWhenReady)
     player.refreshPlayingState()

@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
@@ -78,6 +79,25 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
+
+/**
+ * The window behind its live edge that lets a live item pause in place, as on-demand does (a DVR
+ * window). A shorter one is a stream that can't be rewound: a pause closes it.
+ */
+private const val PAUSABLE_LIVE_WINDOW_MS = 30_000L
+
+/**
+ * STOPPED stays out: stop() idles the engine itself, and [Player.stopRetrying] would make it
+ * PAUSED.
+ */
+private val LIVE_CONNECTION_STATES =
+  setOf(
+    PlaybackState.LOADING,
+    PlaybackState.READY,
+    PlaybackState.BUFFERING,
+    PlaybackState.PLAYING,
+    PlaybackState.PAUSED,
+  )
 
 @SuppressLint("RestrictedApi")
 class Player
@@ -386,8 +406,12 @@ internal constructor(
         value &&
           currentTrack != null &&
           retryView(sessionPlayer.playbackState) == MediaPlayer.STATE_IDLE
-      )
+      ) {
+        // An idle engine keeps its position, a seek's while parked included: within a live
+        // window, the reconnect would resume there.
+        if (currentTrack?.live == true && !liveItemPausable) sessionPlayer.seekToDefaultPosition()
         sessionPlayer.prepare()
+      }
     }
 
   /**
@@ -1061,7 +1085,7 @@ internal constructor(
    * stream is the live edge.
    */
   fun seekToLiveEdge() {
-    if (currentTrack?.live != true) return
+    if (currentTrack?.live != true || liveStreamParked) return
     // A receiver loads a live stream again on a seek to its default position.
     if (!localEngine.reconnectAtLiveEdge()) sessionPlayer.seekToDefaultPosition()
   }
@@ -1108,6 +1132,7 @@ internal constructor(
 
   /** An ended queue stays ended, as on an ended engine. */
   fun prepare() {
+    if (liveStreamParked) return
     if (currentTrack != null && playbackState != PlaybackState.ENDED) sessionPlayer.prepare()
   }
 
@@ -1236,6 +1261,38 @@ internal constructor(
     if (playbackError?.retrying != true || playbackState == PlaybackState.ENDED) return
     stopRetrying()
   }
+
+  /**
+   * A paused engine goes on loading a live stream until its buffer is full, and a resume plays what
+   * it buffered, behind the stream. The engine idles in PAUSED instead, closing the connection, and
+   * the next play's prepare() reconnects at the live edge.
+   */
+  internal fun dropLiveConnection() {
+    if (currentTrack?.live != true || !localEngine.isActive || liveItemPausable) return
+    if (playbackState !in LIVE_CONNECTION_STATES) return
+    if (exoPlayer.playbackState == ExoPlayer.STATE_IDLE) return
+    stopRetrying()
+  }
+
+  /** A live window that seeks at least [PAUSABLE_LIVE_WINDOW_MS] behind its live edge. */
+  private val liveItemPausable: Boolean
+    get() {
+      val timeline = exoPlayer.currentTimeline
+      if (timeline.isEmpty) return false
+      val window = timeline.getWindow(exoPlayer.currentMediaItemIndex, Timeline.Window())
+      return window.isDynamic &&
+        window.isSeekable &&
+        !window.isPlaceholder &&
+        window.defaultPositionMs >= PAUSABLE_LIVE_WINDOW_MS
+    }
+
+  /** A live track paused on an idle engine: it reconnects only to play, at the live edge. */
+  private val liveStreamParked: Boolean
+    get() =
+      currentTrack?.live == true &&
+        !playWhenReady &&
+        localEngine.isActive &&
+        exoPlayer.playbackState == ExoPlayer.STATE_IDLE
 
   /**
    * Gives up a load ExoPlayer would retry. The engine idles in PAUSED, where the next prepare()

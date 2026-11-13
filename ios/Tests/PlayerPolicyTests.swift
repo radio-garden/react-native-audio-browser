@@ -6,9 +6,10 @@ import Testing
 private func makeLoading(
   src: String? = "https://example.com/a.mp3",
   live: Bool = false,
+  scheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
 ) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine)
+  let player = makePlayer(engine: engine, sleepTimerScheduler: scheduler)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try player.setQueue([Track(id: "t1", src: src, title: "T", live: live)])
@@ -16,8 +17,11 @@ private func makeLoading(
 }
 
 @MainActor
-private func makePlaying(live: Bool = false) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
-  let (player, engine, callbacks) = try makeLoading(live: live)
+private func makePlaying(
+  live: Bool = false,
+  scheduler: any SleepTimerScheduling = ManualSleepTimerScheduler(),
+) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let (player, engine, callbacks) = try makeLoading(live: live, scheduler: scheduler)
   player.setPlayWhenReady(true)
   engine.hasItem = true
   engine.hasLoadedAsset = true
@@ -68,6 +72,7 @@ private func makeVirtual(online: Bool = true) throws -> (Player, MockPlayerEngin
 private func makeConnecting(
   playWhenReady: Bool = true,
   previousBuffered: Double = 0,
+  live: Bool = true,
 ) throws -> (Player, MockPlayerEngine, VirtualClock) {
   let clock = VirtualClock()
   let retry = RetryLoop(clock: clock)
@@ -75,7 +80,7 @@ private func makeConnecting(
   let engine = MockPlayerEngine()
   engine.bufferedPosition = previousBuffered
   let player = makePlayer(engine: engine, retry: retry)
-  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)], playWhenReady: playWhenReady)
+  try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: live)], playWhenReady: playWhenReady)
   return (player, engine, clock)
 }
 
@@ -210,6 +215,7 @@ struct PlayerSeekingTests {
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.m3u8", title: "T", live: true)], startPositionMs: 25000)
+    player.play()
     engine.seekResult = nil
     engine.hasItem = true
     engine.hasLoadedAsset = true
@@ -540,8 +546,8 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 3)
   }
 
-  @Test func aPauseDuringAConnectHoldsItPastTheTimeout() async throws {
-    let (player, engine, clock) = try makeConnecting()
+  @Test func aPauseDuringAnOnDemandConnectHoldsItPastTheTimeout() async throws {
+    let (player, engine, clock) = try makeConnecting(live: false)
     await clock.run(until: 10_000)
     player.pause()
     await clock.run(until: 200_000)
@@ -561,8 +567,9 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
+  /// On demand: a live stream queued without play intent does not connect.
   @Test func aPlayWhileConnectingWatchesTheConnect() async throws {
-    let (player, engine, clock) = try makeConnecting(playWhenReady: false)
+    let (player, engine, clock) = try makeConnecting(playWhenReady: false, live: false)
     await clock.run(until: 10_000)
     player.play()
     await clock.run(until: 41_000)
@@ -815,6 +822,7 @@ struct PlayerRecoveringTests {
 
   /// A connect that delivered nothing ends online, and counts toward `maxRetries`: only the watch
   /// gives it up, as without the drop.
+  /// On demand: a live stream queued without play intent does not connect.
   @Test func aSilentConnectFromBeforeTheDropWaitsOutTheWatch() async throws {
     let clock = VirtualClock()
     let retry = RetryLoop(online: false, clock: clock)
@@ -823,7 +831,7 @@ struct PlayerRecoveringTests {
     )))
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retry: retry)
-    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)])
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")])
     player.networkStatusDidChange(isOnline: true)
 
     player.play()
@@ -1382,5 +1390,322 @@ struct PlayerReviewRegressionTests {
     try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
     #expect(!callbacks.playbackChanges.contains { $0.state == .error })
     #expect(callbacks.errorEvents.count == 1)
+  }
+}
+
+@Suite("Player - pausing a live stream")
+@MainActor
+struct PlayerLivePauseTests {
+  @Test func aLivePauseClosesTheConnection() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    let carriers = engine.carrierCount
+    player.pause()
+    #expect(engine.carrierCount == carriers + 1)
+    #expect(player.state == .paused)
+    #expect(player.load?.reloadOnPlay == true)
+  }
+
+  /// A skip back from the lock screen while paused, then a play.
+  @Test func aPlayAfterALivePauseReconnectsAtTheLiveEdge() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.pause()
+    engine.resumePosition = 120
+    player.seek(by: -15)
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+
+    engine.hasItem = true
+    engine.hasLoadedAsset = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  /// A live HLS stream with a DVR window, playing 2 minutes behind its edge.
+  @MainActor private func makePlayingSeekableLive(window: Double = 600) throws -> (Player, MockPlayerEngine) {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveWindowSeconds = window
+    engine.liveEdge = 1000
+    engine.currentTime = 880
+    engine.resumePosition = 880
+    return (player, engine)
+  }
+
+  @Test func aSeekableLivePauseKeepsItsPositionAndResumesFromIt() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    let plays = engine.startPlaybackCallCount
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .paused)
+    #expect(player.load?.reloadOnPlay == false)
+    #expect(engine.currentTime == 880)
+
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(engine.startPlaybackCallCount == plays + 1)
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aJumpToTheLiveEdgeWhileASeekableLiveTrackIsPausedSeeksToTheWindowEnd() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    player.pause()
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [1000])
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aPausedSeekableLiveItemCapsItsBufferUntilPlay() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    engine.forwardBufferCaps.removeAll()
+    player.pause()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds])
+    player.play()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds, nil])
+  }
+
+  @Test func aStoppedSeekableLiveItemCapsItsBuffer() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    engine.forwardBufferCaps.removeAll()
+    player.stop()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds])
+  }
+
+  @Test func aPausedOnDemandItemKeepsItsBuffer() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.forwardBufferCaps.removeAll()
+    player.pause()
+    #expect(!engine.forwardBufferCaps.contains { $0 != nil })
+  }
+
+  @Test func aSeekableLiveStopKeepsItsItem() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    player.stop()
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .stopped)
+    player.seekToLiveEdge()
+    #expect(engine.seekCalls == [1000])
+  }
+
+  @Test func aLiveWindowShorterThanAPauseIsWorthClosesLikeAStreamWithNone() throws {
+    let (player, engine) = try makePlayingSeekableLive(window: Player.pausableLiveWindowSeconds - 1)
+    player.pause()
+    #expect(engine.carrierCount == 1)
+    #expect(player.load?.reloadOnPlay == true)
+  }
+
+  @Test func anOnDemandPauseKeepsTheItem() throws {
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .paused)
+    #expect(player.load?.reloadOnPlay == false)
+  }
+
+  @Test func aLiveStopClosesTheConnectionWithoutPassingThroughPaused() throws {
+    let (player, engine, callbacks) = try makePlaying(live: true)
+    let carriers = engine.carrierCount
+    callbacks.playbackChanges.removeAll()
+    player.stop()
+    #expect(engine.carrierCount == carriers + 1)
+    #expect(callbacks.playbackChanges.map(\.state) == [.stopped])
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aLiveStreamLoadedWithoutIntentOpensNoConnection() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    #expect(engine.resolveAndLoadCalls.isEmpty)
+    #expect(engine.carrierCount == 0)
+    #expect(player.state == .loading)
+
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.isEmpty)
+    #expect(engine.carrierCount == 1)
+    #expect(player.state == .paused)
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// A station started from paused as two calls, the way a consumer without `playWhenReady` does.
+  @Test func aLiveStreamQueuedThenPlayedFromPausedNeverReportsPaused() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, callbacks) = try makePlaying(live: true, scheduler: scheduler)
+    player.pause()
+    let carriers = engine.carrierCount
+    callbacks.playbackChanges.removeAll()
+
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
+    player.play()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierCount == carriers)
+    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
+    #expect(player.state == .loading)
+  }
+
+  @Test func aPlayArriving100msAfterTheQueueNeverReportsPaused() async throws {
+    let (player, engine, callbacks) = try makePlaying(live: true, scheduler: MainQueueSleepTimerScheduler())
+    player.pause()
+    let carriers = engine.carrierCount
+    callbacks.playbackChanges.removeAll()
+
+    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
+    try await Task.sleep(for: .milliseconds(100))
+    player.play()
+    try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierCount == carriers)
+    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
+    #expect(player.state == .loading)
+  }
+
+  @Test func withNoPlayTheDeferredParkFiresOnTheMainQueue() async throws {
+    let (player, engine, _) = try makeLoading(live: true, scheduler: MainQueueSleepTimerScheduler())
+    try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))
+    #expect(engine.carrierCount == 1)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aStopDuringTheDeferredParkClosesTheItemAndStaysStopped() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.stop()
+    #expect(engine.carrierCount == 1)
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(player.state == .stopped)
+    #expect(engine.carrierCount == 1)
+  }
+
+  @Test func aPauseDuringTheDeferredParkStillParksAtTheDeadline() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.pause()
+    #expect(player.state == .loading)
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(player.state == .paused)
+    #expect(engine.resolveAndLoadCalls.isEmpty)
+  }
+
+  @Test func aPlayPauseAndPlayInsideTheDelayIsNotParkedByIt() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makeLoading(live: true, scheduler: scheduler)
+    player.play()
+    player.pause()
+    player.play()
+    let carriers = engine.carrierCount
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.carrierCount == carriers)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aLiveStreamQueuedToPlayConnectsWithoutParking() throws {
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine)
+    let callbacks = MockPlayerCallbacks()
+    player.callbacks = callbacks
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)], playWhenReady: true)
+    #expect(engine.carrierCount == 0)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
+  }
+
+  @Test func skippingToALiveStreamWhilePausedDoesNotConnect() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makePlaying(scheduler: scheduler)
+    try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
+    player.pause()
+    player.next()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aMediaServicesResetWhileParkedDoesNotConnect() throws {
+    let scheduler = ManualSleepTimerScheduler()
+    let (player, engine, _) = try makePlaying(live: true, scheduler: scheduler)
+    player.pause()
+    player.mediaServicesWereReset()
+    scheduler.advance(to: Player.idleLiveParkDelaySeconds)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(player.state == .paused)
+  }
+
+  /// The carrier item has no asset: the AVPlayer reports a pause without one.
+  @Test func thePausedStatusOfTheEmptiedPlayerKeepsItPaused() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(player.state == .paused)
+  }
+
+  /// The dropped item's first audio, reported after the pause that dropped it.
+  @Test func audioReportedAfterTheDropKeepsItPaused() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.pause()
+    engine.emit(.audioDidStart)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aLivePauseDuringAConnectClosesIt() async throws {
+    let (player, engine, clock) = try makeConnecting()
+    await clock.run(until: 10_000)
+    player.pause()
+    await clock.run(until: 200_000)
+    #expect(engine.carrierCount == 1)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aLivePauseDuringAStallLeavesNoReconnect() async throws {
+    let (player, engine, _, clock) = try makeVirtual()
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.transition(.avPlayerWaiting)
+    #expect(player.retry.stallTask != nil)
+
+    player.pause()
+    #expect(player.retry.stallTask == nil)
+    #expect(player.retry.pendingTask == nil)
+    await clock.run(until: 600_000)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+    #expect(player.state == .paused)
+  }
+
+  @Test func aLivePauseAfterTheRetryGaveUpClosesTheConnection() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.transition(.errorOccurred(.playbackStalled))
+    let carriers = engine.carrierCount
+    player.pause()
+    #expect(engine.carrierCount == carriers + 1)
+    #expect(player.state == .error)
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aJumpToTheLiveEdgeAfterAStopStaysStopped() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.stop()
+    player.seekToLiveEdge()
+    player.retryNow()
+    #expect(player.state == .stopped)
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  /// Paused longer than any silence the loop tolerates: the reconnect gets a whole budget.
+  @Test func aPlayAfterAPauseLongerThanTheBudgetReconnectsWithoutError() async throws {
+    let (player, engine, callbacks, clock) = try makeVirtual()
+    player.transition(.avPlayerPlaying)
+    await clock.run(until: 10_000)
+    player.pause()
+    await clock.run(until: 610_000)
+    player.play()
+    await clock.run(until: 615_000)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(player.state == .loading)
+    #expect(callbacks.errorEvents.isEmpty)
   }
 }

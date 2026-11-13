@@ -41,6 +41,7 @@ final class MockPlayerEngine: PlayerEngine {
   var bufferedPosition: Double = 0
   var resumePosition: Double?
   var liveEdge: Double?
+  var liveWindowSeconds: Double?
   var isPlaybackLikelyToKeepUp = false
   var isAirPlayRoute = false
   var playerFailed = false
@@ -50,6 +51,7 @@ final class MockPlayerEngine: PlayerEngine {
   var cancelLoadingCount = 0
   var dropAssetCount = 0
   var clearItemCount = 0
+  var carrierCount = 0
   var stopObservingItemCount = 0
   var recreateCount = 0
 
@@ -67,6 +69,15 @@ final class MockPlayerEngine: PlayerEngine {
     resumePosition = nil
   }
 
+  func replaceItemWithNowPlayingCarrier() {
+    carrierCount += 1
+    hasItem = true
+    hasLoadedAsset = false
+    resumePosition = nil
+    liveEdge = nil
+    liveWindowSeconds = nil
+  }
+
   func stopObservingItem() { stopObservingItemCount += 1 }
   func recreate() {
     recreateCount += 1
@@ -82,6 +93,8 @@ final class MockPlayerEngine: PlayerEngine {
   var seekResult: Bool? = true
 
   func play() { startPlaybackCallCount += 1 }
+  var forwardBufferCaps: [Double?] = []
+  func capForwardBuffer(_ seconds: Double?) { forwardBufferCaps.append(seconds) }
   func pause() { pausePlaybackCallCount += 1 }
   func setRate(_ rate: Float, playing: Bool) { rates.append((rate, playing)) }
   private var seeksInFlight: [@MainActor (Bool) -> Void] = []

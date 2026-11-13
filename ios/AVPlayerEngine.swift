@@ -123,6 +123,14 @@ final class AVPlayerEngine: PlayerEngine {
     return range.end.seconds
   }
 
+  var liveWindowSeconds: Double? {
+    guard let item = avPlayer.currentItem, item.duration.isIndefinite,
+          let seconds = item.seekableTimeRanges.last?.timeRangeValue.duration.seconds,
+          seconds.isFinite, seconds > 0
+    else { return nil }
+    return seconds
+  }
+
   var isPlaybackLikelyToKeepUp: Bool {
     avPlayer.currentItem?.isPlaybackLikelyToKeepUp ?? false
   }
@@ -155,6 +163,13 @@ final class AVPlayerEngine: PlayerEngine {
   func clearItem() {
     dropAsset()
     avPlayer.replaceCurrentItem(with: nil)
+  }
+
+  func replaceItemWithNowPlayingCarrier() {
+    dropAsset()
+    let carrier = AVPlayerItem(asset: AVMutableComposition())
+    nowPlayingInfoController.prepareItem(carrier)
+    avPlayer.replaceCurrentItem(with: carrier)
   }
 
   func stopObservingItem() {
@@ -190,6 +205,10 @@ final class AVPlayerEngine: PlayerEngine {
 
   func pause() {
     avPlayer.pause()
+  }
+
+  func capForwardBuffer(_ seconds: Double?) {
+    avPlayer.currentItem?.preferredForwardBufferDuration = seconds ?? bufferDuration / 1000
   }
 
   func setRate(_ rate: Float, playing: Bool) {

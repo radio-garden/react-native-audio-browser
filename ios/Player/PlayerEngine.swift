@@ -46,6 +46,8 @@ enum EngineEvent {
   var resumePosition: Double? { get }
   /// The end of the seekable window; nil when there is none.
   var liveEdge: Double? { get }
+  /// How far back a live item can seek from its live edge; nil for an on-demand item or none.
+  var liveWindowSeconds: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
   var isAirPlayRoute: Bool { get }
   /// 0–1.
@@ -61,6 +63,9 @@ enum EngineEvent {
   func dropAsset()
   /// Drops the asset and removes the item.
   func clearItem()
+  /// Drops the asset and its connection, leaving in the item's place one with no media that carries
+  /// the now-playing info: auto-publishing reads it only from the current item (docs/adr/0005).
+  func replaceItemWithNowPlayingCarrier()
   func stopObservingItem()
   /// Whether the AVPlayer itself has failed, not only its item: it plays nothing until recreated.
   var playerFailed: Bool { get }
@@ -71,6 +76,8 @@ enum EngineEvent {
 
   func play()
   func pause()
+  /// Caps how far ahead the current item loads, in seconds; nil restores the configured buffer.
+  func capForwardBuffer(_ seconds: Double?)
   /// Stages `rate` for the next play; applies it now only when `playing`, since a nonzero
   /// AVPlayer rate starts playback.
   func setRate(_ rate: Float, playing: Bool)

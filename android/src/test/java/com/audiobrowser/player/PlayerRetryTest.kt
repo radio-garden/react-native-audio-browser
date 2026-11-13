@@ -9,11 +9,13 @@ import androidx.media3.common.C
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.StuckPlayerException
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
+import com.audiobrowser.liveHlsUri
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentWavBytes
@@ -131,6 +133,103 @@ class PlayerRetryTest {
     assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
     player.forwardingPlayer.play()
     awaitRetry("the reload's retry")
+  }
+
+  @Test
+  fun `a live pause idles the engine paused, and the next play reconnects`() {
+    play(folder.silentWavUri(Duration.ofMinutes(1)), live = true)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    player.pause()
+    assertStaysPausedAndIdle()
+    player.prepare()
+    player.seekToLiveEdge()
+    assertStaysPausedAndIdle()
+    // A seek while paused, as far into a live window as the reconnect must not resume.
+    player.seekTo(30, TimeUnit.SECONDS)
+    // Masked as paused and ready, so the session shows the station paused.
+    assertEquals(MediaPlayer.STATE_READY, player.forwardingPlayer.playbackState)
+
+    player.play()
+    idleUntil("the reconnect") {
+      player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE &&
+        player.playbackState in
+          setOf(PlaybackState.LOADING, PlaybackState.BUFFERING, PlaybackState.PLAYING)
+    }
+    assertTrue(player.exoPlayer.currentPosition < 30_000)
+  }
+
+  @Test
+  fun `a seekable live pause keeps its position, and play resumes from it`() {
+    playLiveHls(segments = 12)
+    player.seekTo(30, TimeUnit.SECONDS)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+    assertPausedInPlace()
+    assertEquals(30_000L, player.exoPlayer.currentPosition)
+
+    player.play()
+    shadowOf(Looper.getMainLooper()).idle()
+    assertNotEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    assertEquals(30_000L, player.exoPlayer.currentPosition)
+  }
+
+  @Test
+  fun `a jump to the live edge while a seekable live track is paused moves to the window end`() {
+    val edge = playLiveHls(segments = 12)
+    player.seekTo(0, TimeUnit.SECONDS)
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    player.seekToLiveEdge()
+    shadowOf(Looper.getMainLooper()).idle()
+    assertEquals(edge, player.exoPlayer.currentPosition)
+    assertPausedInPlace()
+  }
+
+  @Test
+  fun `a live window shorter than a pause is worth idles the engine like a stream with none`() {
+    playLiveHls(segments = 3)
+    player.pause()
+    assertStaysPausedAndIdle()
+  }
+
+  /** Not playing, the engine loaded: READY once a load finishes while paused. */
+  private fun assertPausedInPlace() {
+    assertTrue(player.playbackState in setOf(PlaybackState.PAUSED, PlaybackState.READY))
+    assertNotEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  /**
+   * Plays a live HLS playlist of 10-second segments until its window is known, its media unloaded
+   * as the audio track is disabled.
+   *
+   * @return the window's default position, the live edge it starts at.
+   */
+  private fun playLiveHls(segments: Int): Long {
+    play(folder.liveHlsUri(segments), live = true)
+    idleUntil("the live window") { liveWindow()?.isPlaceholder == false }
+    return liveWindow()!!.defaultPositionMs
+  }
+
+  private fun liveWindow(): Timeline.Window? {
+    val timeline = player.exoPlayer.currentTimeline
+    if (timeline.isEmpty) return null
+    return timeline.getWindow(player.exoPlayer.currentMediaItemIndex, Timeline.Window())
+  }
+
+  @Test
+  fun `an on-demand pause keeps the engine loaded`() {
+    play(folder.silentWavUri(Duration.ofMinutes(1)))
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
   }
 
   /** Pauses with a retry pending and runs past every backoff it would have taken. */
@@ -570,6 +669,7 @@ class PlayerRetryTest {
     vararg srcs: String,
     retryPolicy: RetryPolicy = RetryPolicy.Default,
     wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
+    live: Boolean? = null,
   ) {
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy, wakeMode = wakeMode))
     player.setCallbacks(callbacks)
@@ -580,7 +680,7 @@ class PlayerRetryTest {
         .build()
     player.exoPlayer.setMediaItems(
       srcs.mapIndexed { i, src ->
-        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = src))
+        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = src, live = live))
       }
     )
     player.exoPlayer.prepare()
