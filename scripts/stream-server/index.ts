@@ -26,6 +26,68 @@ const LIVE_BURST_SECONDS = 2
 const LIVE_TICK_MS = 100
 const MISSING_RANGE_CLOSE_BYTES = 32 * 1024
 const MAX_DELAY_SECONDS = 3600
+const MAX_RATE = 100
+const HLS_SEGMENT_SECONDS = 2
+const HLS_WINDOW = 4
+const HLS_FIRST_AVAILABLE = 3
+const HLS_DEFAULT_DROPS = 3
+const HLS_TIMESTAMP_OWNER = 'com.apple.streaming.transportStreamTimestamp'
+
+/** Where each MP3 frame of {@link AUDIO} starts, and how long one plays. */
+function mp3Frames(audio: Buffer): { starts: number[]; seconds: number } {
+  const MPEG1 = [
+    0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320
+  ]
+  const MPEG2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+  const starts: number[] = []
+  let seconds = 0
+  for (let at = 0; at < audio.length; ) {
+    if (audio[at] !== 0xff || (audio[at + 1]! & 0xe6) !== 0xe2) {
+      throw new Error(`tone.mp3: no Layer III frame at byte ${at}`)
+    }
+    const mpeg1 = (audio[at + 1]! & 0x18) === 0x18
+    const rates = mpeg1 ? [44100, 48000, 32000] : [22050, 24000, 16000]
+    const sampleRate = rates[(audio[at + 2]! >> 2) & 3]!
+    const kbps = (mpeg1 ? MPEG1 : MPEG2)[audio[at + 2]! >> 4]!
+    const padding = (audio[at + 2]! >> 1) & 1
+    starts.push(at)
+    seconds = (mpeg1 ? 1152 : 576) / sampleRate
+    at += Math.floor(((mpeg1 ? 144 : 72) * kbps * 1000) / sampleRate) + padding
+  }
+  return { starts, seconds }
+}
+
+const FRAMES = mp3Frames(AUDIO)
+const FRAMES_PER_SEGMENT = Math.round(HLS_SEGMENT_SECONDS / FRAMES.seconds)
+/** How long each HLS segment plays: whole frames, so it is not exactly {@link HLS_SEGMENT_SECONDS}. */
+export const HLS_SEGMENT_DURATION = FRAMES_PER_SEGMENT * FRAMES.seconds
+
+/** Live HLS segment `sequence`: the tone's frames from where the previous one ended, looping, after the ID3 timestamp packed audio carries. */
+export function hlsSegment(sequence: number): Buffer {
+  const parts: Buffer[] = []
+  for (let i = 0; i < FRAMES_PER_SEGMENT; i++) {
+    const frame = (sequence * FRAMES_PER_SEGMENT + i) % FRAMES.starts.length
+    const end = FRAMES.starts[frame + 1] ?? AUDIO.length
+    parts.push(AUDIO.subarray(FRAMES.starts[frame], end))
+  }
+  const timestamp = Buffer.alloc(8)
+  timestamp.writeBigUInt64BE(
+    BigInt(Math.round(sequence * HLS_SEGMENT_DURATION * 90_000)) &
+      0x1_ffff_ffffn
+  )
+  const priv = Buffer.concat([
+    Buffer.from(`${HLS_TIMESTAMP_OWNER}\0`, 'latin1'),
+    timestamp
+  ])
+  // Every size here is under 128, where a synchsafe integer is the plain one.
+  const frame = Buffer.concat([
+    Buffer.from('PRIV', 'latin1'),
+    Buffer.from([0, 0, 0, priv.length, 0, 0]),
+    priv
+  ])
+  const header = Buffer.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, frame.length])
+  return Buffer.concat([header, frame, ...parts])
+}
 
 export type LogEntry = {
   id: number
@@ -58,6 +120,10 @@ type Behaviour = {
   icySeconds?: number
   charset: 'utf-8' | 'latin1'
   delaySeconds?: number
+  rate: number
+  /** The live HLS segment cut off mid-transfer, and on how many of its first requests. */
+  dropSegment?: number
+  drops: number
 }
 
 class BadRequest extends Error {}
@@ -126,7 +192,16 @@ function behaviour(params: URLSearchParams, hasRange: boolean): Behaviour {
     nth,
     icySeconds: number(params, 'icy', { min: Number.MIN_VALUE }),
     charset,
-    delaySeconds: number(params, 'delay', { max: MAX_DELAY_SECONDS })
+    delaySeconds: number(params, 'delay', { max: MAX_DELAY_SECONDS }),
+    rate: number(params, 'rate', { min: Number.MIN_VALUE, max: MAX_RATE }) ?? 1,
+    dropSegment: (() => {
+      const at = number(params, 'drop')
+      return at === undefined
+        ? undefined
+        : Math.floor(at / HLS_SEGMENT_DURATION)
+    })(),
+    drops:
+      number(params, 'drops', { integer: true, min: 1 }) ?? HLS_DEFAULT_DROPS
   }
 }
 
@@ -189,6 +264,8 @@ export function startStreamServer({
   const log: LogEntry[] = []
   let nextId = 1
   const attempts = new Map<string, number>()
+  /** When each live HLS URL's playlist was first asked for: its stream starts then. */
+  const hlsStarts = new Map<string, number>()
   const timers = new Set<NodeJS.Timeout>()
 
   const later = (ms: number, run: () => void) => {
@@ -328,16 +405,89 @@ export function startStreamServer({
       const due =
         AUDIO_BYTES_PER_SECOND *
         (LIVE_BURST_SECONDS +
-          ((performance.now() - started) / 1000) * liveSpeed)
+          ((performance.now() - started) / 1000) * liveSpeed * b.rate)
       if (send(Math.floor(due) - entry.sent)) later(LIVE_TICK_MS, tick)
     }
     tick()
+  }
+
+  function serveHlsPlaylist(
+    res: ServerResponse,
+    entry: LogEntry,
+    search: string
+  ) {
+    const started = hlsStarts.get(search) ?? performance.now()
+    hlsStarts.set(search, started)
+    const elapsed = ((performance.now() - started) / 1000) * liveSpeed
+    const newest =
+      HLS_FIRST_AVAILABLE - 1 + Math.floor(elapsed / HLS_SEGMENT_DURATION)
+    const first = Math.max(0, newest - HLS_WINDOW + 1)
+    const lines = [
+      '#EXTM3U',
+      '#EXT-X-VERSION:3',
+      `#EXT-X-TARGETDURATION:${Math.round(HLS_SEGMENT_DURATION)}`,
+      `#EXT-X-MEDIA-SEQUENCE:${first}`
+    ]
+    for (let sequence = first; sequence <= newest; sequence++) {
+      lines.push(
+        `#EXTINF:${HLS_SEGMENT_DURATION.toFixed(5)},`,
+        `live/${sequence}.mp3${search}`
+      )
+    }
+    const body = `${lines.join('\n')}\n`
+    entry.status = 200
+    res.writeHead(200, { 'Content-Type': 'application/vnd.apple.mpegurl' })
+    res.end(body)
+    entry.sent = body.length
+    settle(entry, 'complete')
+  }
+
+  function serveHlsSegment(
+    req: IncomingMessage,
+    res: ServerResponse,
+    entry: LogEntry,
+    b: Behaviour,
+    sequence: number
+  ) {
+    const segment = hlsSegment(sequence)
+    const range = parseRange(req.headers.range, segment.length)
+    if (range === null) {
+      entry.status = 416
+      res.writeHead(416, { 'Content-Range': `bytes */${segment.length}` })
+      res.end()
+      settle(entry, 'complete')
+      return
+    }
+    const { start, end } = range ?? { start: 0, end: segment.length - 1 }
+    entry.status = range ? 206 : 200
+    res.writeHead(entry.status, {
+      'Content-Type': 'audio/mpeg',
+      'Accept-Ranges': 'bytes',
+      'Content-Length': end - start + 1,
+      ...(range && {
+        'Content-Range': `bytes ${start}-${end}/${segment.length}`
+      })
+    })
+    if (sequence === b.dropSegment && entry.attempt <= b.drops) {
+      // A dropped connection: a reset halfway through the segment, as a lost
+      // network leaves it, not a clean end the client would wait out.
+      const sent = segment.subarray(start, Math.max(start, segment.length >> 1))
+      res.write(sent)
+      entry.sent = sent.length
+      settle(entry, 'closed')
+      later(50, () => res.socket?.destroy())
+      return
+    }
+    res.end(segment.subarray(start, end + 1))
+    entry.sent = end - start + 1
+    settle(entry, 'complete')
   }
 
   function serveLog(req: IncomingMessage, res: ServerResponse) {
     if (req.method === 'DELETE') {
       log.length = 0
       attempts.clear()
+      hlsStarts.clear()
       res.writeHead(204).end()
       return
     }
@@ -358,7 +508,13 @@ export function startStreamServer({
       res.end(usage(`http://${req.headers.host ?? 'localhost'}`))
       return
     }
-    if (url.pathname !== '/file.mp3' && url.pathname !== '/live.mp3') {
+    const hlsSequence = url.pathname.match(/^\/live\/(\d+)\.mp3$/)?.[1]
+    if (
+      url.pathname !== '/file.mp3' &&
+      url.pathname !== '/live.mp3' &&
+      url.pathname !== '/live.m3u8' &&
+      hlsSequence === undefined
+    ) {
       res.writeHead(404).end()
       return
     }
@@ -410,6 +566,10 @@ export function startStreamServer({
         settle(entry, 'status')
       } else if (url.pathname === '/file.mp3') {
         serveFile(req, res, entry, b)
+      } else if (url.pathname === '/live.m3u8') {
+        serveHlsPlaylist(res, entry, url.search)
+      } else if (hlsSequence !== undefined) {
+        serveHlsSegment(req, res, entry, b, Number(hlsSequence))
       } else {
         serveLive(req, res, entry, b)
       }
@@ -449,6 +609,8 @@ export function usage(base: string): string {
 
   ${base}/file.mp3      the file, with Content-Length and Range support
   ${base}/live.mp3      the tone looped without end, sent in real time, no Content-Length
+  ${base}/live.m3u8     the tone as live HLS: ${HLS_SEGMENT_DURATION.toFixed(2)} s MP3 segments, ${HLS_FIRST_AVAILABLE} available at the
+                        first request, one more each segment, ${HLS_WINDOW} in the playlist
 
 Behaviours, as query parameters on either URL. S is seconds of audio (from
 the start of the file, or of the live response); N is bytes.
@@ -462,12 +624,18 @@ the start of the file, or of the live response); N is bytes.
                              S seconds, for a client that sends Icy-MetaData: 1 (charset
                              utf-8 by default); N and S count audio, not the titles
   delay=S                    waits S seconds (at most ${MAX_DELAY_SECONDS}) before answering
+  rate=R                     live only: after the burst, sends R times as fast as the audio
+                             plays (at most ${MAX_RATE}); below 1 the player runs dry
+  drop=S [&drops=K]          HLS only: the segment that plays at S seconds drops its
+                             connection halfway through on its first K requests (default ${HLS_DEFAULT_DROPS})
   requireRange[=N]           closes after N bytes (default ${MISSING_RANGE_CLOSE_BYTES}) when the request
                              has no Range header
 
   ${base}/live.mp3?icy=5&stall=20     ICY titles, then a stall
   ${base}/live.mp3?close=10           a live stream that closes cleanly every 10 s
   ${base}/file.mp3?close=4            a file that ends at 4 s of its 10
+  ${base}/live.mp3?rate=0.8           a stream that arrives slower than it plays
+  ${base}/live.m3u8?drop=20&drops=5   a live HLS segment that fails 5 times
 
   GET ${base}/log       every request: attempt, headers, Range, bytes sent, outcome
   DELETE ${base}/log    clears the log and the attempt counts
