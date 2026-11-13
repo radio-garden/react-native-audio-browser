@@ -129,11 +129,16 @@ class MediaFactory(
         track.live == true -> liveMediaFactory to RetryLoadErrorHandlingPolicy.Sources.LIVE
         else -> mediaFactory to RetryLoadErrorHandlingPolicy.Sources.PROGRESSIVE
       }
+    val retrying = externalPolicy == null && retryPolicy != RetryPolicy.Default
     // One policy per item: it tells the playing item's failures from a preload's.
-    if (externalPolicy == null && retryPolicy != RetryPolicy.Default)
+    if (retrying)
       factory.setLoadErrorHandlingPolicy(
         RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, onLoadFailure)
       )
-    return factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+    val source = factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+    // Adaptive sources retry in place: the policy never ends their connection.
+    return if (retrying && sources != RetryLoadErrorHandlingPolicy.Sources.ADAPTIVE)
+      ConnectionEndSource(source)
+    else source
   }
 }
