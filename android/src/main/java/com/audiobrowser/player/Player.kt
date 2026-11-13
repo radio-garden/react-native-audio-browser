@@ -496,6 +496,26 @@ internal constructor(
   val isLastInPlaybackOrder: Boolean
     get() = sessionPlayer.nextMediaItemIndex == C.INDEX_UNSET
 
+  /**
+   * Changes whenever the queue's tracks or their order change, whoever changed them, and never
+   * repeats in the process, so equal readings mean the same queue even across players.
+   */
+  var queueVersion = 0
+    private set
+
+  private var versionedMediaIds = emptyList<String>()
+
+  /**
+   * Compares media ids: an engine rebuild sets the same items again and reports a playlist change.
+   */
+  internal fun onPlaylistChanged() {
+    val mediaIds =
+      (0 until sessionPlayer.mediaItemCount).map { sessionPlayer.getMediaItemAt(it).mediaId }
+    if (mediaIds == versionedMediaIds) return
+    versionedMediaIds = mediaIds
+    queueVersion = ++lastQueueVersion
+  }
+
   /** The path the queue was expanded from, so selecting from the same source skips re-expanding. */
   var queueSourcePath: String? = null
     internal set
@@ -1541,5 +1561,9 @@ internal constructor(
 
   fun resetBufferConfig() {
     loadControl.resetToDefaults()
+  }
+
+  private companion object {
+    var lastQueueVersion = 0
   }
 }

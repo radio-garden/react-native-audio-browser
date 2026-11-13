@@ -32,7 +32,18 @@ class QueueManager {
   /// The path the queue was expanded from, if any.
   private(set) var queueSourcePath: String?
 
-  private(set) var tracks: [Track] = []
+  private(set) var tracks: [Track] = [] {
+    didSet {
+      Self.lastVersion += 1
+      version = Self.lastVersion
+    }
+  }
+
+  private static var lastVersion = 0
+
+  /// Changes with every change to `tracks` and never repeats in the process, so equal readings
+  /// mean the same queue even across players.
+  private(set) var version = 0
 
   private(set) var shuffleOrder = ShuffleOrder()
 

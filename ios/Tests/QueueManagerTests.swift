@@ -953,6 +953,46 @@ struct QueueChangeTests {
   }
 }
 
+// MARK: - version
+
+@Suite("version")
+@MainActor
+struct QueueVersionTests {
+  private func changes(_ mutate: (QueueManager) throws -> Void) rethrows -> Bool {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
+    let before = q.version
+    try mutate(q)
+    return q.version != before
+  }
+
+  @Test func everyChangeToTheTracksChangesIt() throws {
+    #expect(changes { $0.setQueue(tracks("a", "b", "c")) })
+    #expect(changes { $0.add(tracks("d")) })
+    #expect(try changes { try $0.addAt(tracks("d"), at: 1) })
+    #expect(try changes { try $0.remove(1) })
+    #expect(try changes { try $0.move(fromIndex: 0, toIndex: 2) })
+    #expect(try changes { try $0.replace(1, Track(id: "x")) })
+    #expect(changes { $0.removeUpcomingTracks() })
+    #expect(changes { $0.clear() })
+  }
+
+  @Test func navigationLeavesIt() throws {
+    #expect(try !changes { try $0.skipTo(2) })
+    #expect(!changes { _ = $0.next() })
+    #expect(!changes { _ = $0.previous() })
+    #expect(!changes { $0.shuffleEnabled = true })
+  }
+
+  @Test func neverRepeatsAcrossQueueManagers() {
+    let first = QueueManager()
+    first.setQueue(tracks("a"))
+    let second = QueueManager()
+    second.setQueue(tracks("a"))
+    #expect(first.version != second.version)
+  }
+}
+
 // MARK: - canNext / canPrevious
 
 @Suite("canNext / canPrevious")

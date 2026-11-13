@@ -861,8 +861,11 @@ export class NativeAudioBrowser
    * live array defeats React's reference-equality change detection.
    */
   private emitQueueChanged(): void {
+    this.queueVersion++
     this.onPlaybackQueueChanged([...this.queue.tracks])
   }
+
+  private queueVersion = 0
 
   // Queue mutations must reach onPlaybackQueueChanged (the contract covers
   // added/removed/reordered; Android emits via onTimelineChanged).
@@ -1085,6 +1088,10 @@ export class NativeAudioBrowser
   getQueue(): Track[] {
     // Copy — see emitQueueChanged.
     return [...this.queue.tracks]
+  }
+
+  getQueueVersion(): number {
+    return this.queueVersion
   }
 
   getActiveTrackIndex(): number | undefined {

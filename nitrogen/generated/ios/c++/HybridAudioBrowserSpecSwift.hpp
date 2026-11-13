@@ -1137,6 +1137,14 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline double getQueueVersion() override {
+      auto __result = _swiftPart.getQueueVersion();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
     inline std::optional<Track> getTrack(double index) override {
       auto __result = _swiftPart.getTrack(std::forward<decltype(index)>(index));
       if (__result.hasError()) [[unlikely]] {

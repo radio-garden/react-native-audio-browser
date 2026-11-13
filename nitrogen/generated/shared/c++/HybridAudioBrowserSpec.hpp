@@ -350,6 +350,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void toggleActiveTrackFavorited() = 0;
       virtual void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) = 0;
       virtual std::vector<Track> getQueue() = 0;
+      virtual double getQueueVersion() = 0;
       virtual std::optional<Track> getTrack(double index) = 0;
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;

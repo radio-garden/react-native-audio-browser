@@ -251,6 +251,39 @@ describe('NativeAudioBrowser queue reference freshness', () => {
   })
 })
 
+describe('NativeAudioBrowser getQueueVersion', () => {
+  class QueueBrowser extends TestBrowser {
+    load(): void {}
+  }
+
+  it('changes with every change to the queue', () => {
+    const browser = new QueueBrowser()
+    const versions = [browser.getQueueVersion()]
+    const changes = [
+      () => browser.setQueue([track, { ...track, id: 't2' }], 0),
+      () => browser.add([{ ...track, id: 't3' }]),
+      () => browser.move(0, 1),
+      () => browser.remove([2]),
+      () => browser.removeUpcomingTracks()
+    ]
+    for (const change of changes) {
+      change()
+      versions.push(browser.getQueueVersion())
+    }
+    expect(new Set(versions).size).toBe(versions.length)
+  })
+
+  it('stays while the queue does', () => {
+    const browser = new QueueBrowser()
+    browser.setQueue([track, { ...track, id: 't2' }], 0)
+    const version = browser.getQueueVersion()
+
+    browser.skip(1)
+
+    expect(browser.getQueueVersion()).toBe(version)
+  })
+})
+
 // Halting must precede the fade-cancel volume restore — the reverse lets
 // full-volume audio slip out while the element is still playing.
 describe('NativeAudioBrowser sleep-fade halt order', () => {
