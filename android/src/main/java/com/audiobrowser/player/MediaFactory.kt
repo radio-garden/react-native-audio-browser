@@ -133,7 +133,7 @@ class MediaFactory(
     // One policy per item: it tells the playing item's failures from a preload's.
     if (retrying)
       factory.setLoadErrorHandlingPolicy(
-        RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, onLoadFailure)
+        RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, cache, onLoadFailure)
       )
     val source = factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
     // Adaptive sources retry in place: the policy never ends their connection.
