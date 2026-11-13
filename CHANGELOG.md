@@ -1,3 +1,20 @@
+## [0.2.0-next.93](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.92...v0.2.0-next.93) (2026-11-13)
+
+### Bug Fixes
+
+* **android:** pause a live track with a DVR window in place ([d6072c1](https://github.com/radio-garden/react-native-audio-browser/commit/d6072c1ee9236dee4502c6525cb4912f2e4fa774))
+* **android:** release a live stream's source on pause ([a964078](https://github.com/radio-garden/react-native-audio-browser/commit/a9640780e5e6175d88ff727675271e8f8be41f0a))
+* **ios:** a paused live stream holds no connection ([175443e](https://github.com/radio-garden/react-native-audio-browser/commit/175443efe2f55c446b53969b1e4c86920420b9a5))
+* **ios:** cap a paused seekable live item's forward buffer ([f7f2b64](https://github.com/radio-garden/react-native-audio-browser/commit/f7f2b64aab0badb068e1b71e9c6a73b35002bcda))
+* **ios:** connect a live track queued, then played, without a paused between ([5378209](https://github.com/radio-garden/react-native-audio-browser/commit/537820965089494acc64bba47dc36711cca0bfb6))
+* **ios:** pause a live track with a DVR window in place ([f70fb9c](https://github.com/radio-garden/react-native-audio-browser/commit/f70fb9cd6e1a2d2eb79e2c3472180e11b7f21cf8))
+* **ios:** start a retry's reconnect on a short forward buffer ([cb5fe6e](https://github.com/radio-garden/react-native-audio-browser/commit/cb5fe6e506c299138b501b8dd08162863670b748)), closes [#286](https://github.com/radio-garden/react-native-audio-browser/issues/286)
+
+### Documentation
+
+* describe how a live track pauses ([7546799](https://github.com/radio-garden/react-native-audio-browser/commit/7546799f1bd0e95db013e7dbf86fc4282df04750))
+* say how a paused seekable live track buffers ([8a4f794](https://github.com/radio-garden/react-native-audio-browser/commit/8a4f7948735587427b2abaf5433317062b95c013))
+
 ## [0.2.0-next.92](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.91...v0.2.0-next.92) (2026-11-13)
 
 ### Features
