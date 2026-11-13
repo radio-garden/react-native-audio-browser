@@ -14,6 +14,7 @@ import {
   type StreamCase
 } from './judge.ts'
 import { pointAppAtMetro, type Adb } from './metro-host.ts'
+import { selectCases } from './select.ts'
 
 const APP_ID = 'com.audiobrowserexample'
 const TARGET_WAIT_MS = 60_000
@@ -27,10 +28,11 @@ const usage = `Plays each case of spec/stream-cases.json in the example app and 
 Needs Metro (corepack yarn example start) and a Debug build of the example app
 on the device: an iOS simulator, or an Android device or emulator. --device
 names it (a simulator's UDID, an adb serial) when several are running. The
-script starts its own stream server. --only runs the cases whose name contains
-the text. A case with network steps runs on Android only, against the stream
-server over the LAN (--lan, else this Mac's first address) while the device's
-network goes off and on; the device must be on the same network.`
+script starts its own stream server. --only runs the cases whose name, path
+or url contains the text. A case with network steps runs on Android only,
+against the stream server over the LAN (--lan, else this Mac's first address)
+while the device's network goes off and on; the device must be on the same
+network.`
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -52,11 +54,7 @@ const metroPort = Number(process.env.RCT_METRO_PORT ?? 8081)
 const spec = JSON.parse(
   readFileSync(new URL('../../spec/stream-cases.json', import.meta.url), 'utf8')
 ) as { cases: StreamCase[] }
-const cases = spec.cases.filter(
-  (c) =>
-    (c.platforms ?? [platform]).includes(platform) &&
-    (values.only === undefined || c.name.includes(values.only))
-)
+const cases = selectCases(spec.cases, platform, values.only)
 if (cases.length === 0) {
   console.error('No case matches.')
   process.exit(2)
