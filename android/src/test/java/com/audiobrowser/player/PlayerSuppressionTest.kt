@@ -38,7 +38,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 // Robolectric's clock stands still, so a delayed message on ExoPlayer's playback thread never
-// runs: the audio track is disabled because an audio renderer can wait in BUFFERING on one.
+// runs: the audio track is disabled because an audio renderer can wait in BUFFERING on one. A
+// rebuild builds an engine with it enabled, so idle() disables it on each new engine.
 // SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes, which Robolectric 4.11
 // answers with null.
 @RunWith(RobolectricTestRunner::class)
@@ -64,11 +65,7 @@ class PlayerSuppressionTest {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
     val src = folder.silentWavUri(Duration.ofMinutes(1))
-    player.exoPlayer.trackSelectionParameters =
-      player.exoPlayer.trackSelectionParameters
-        .buildUpon()
-        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
-        .build()
+    disableAudio()
     player.exoPlayer.setMediaItems(
       listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = src)))
     )
@@ -131,7 +128,7 @@ class PlayerSuppressionTest {
     audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
 
     player.togglePlayback()
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
     assertEquals(PlaybackState.PAUSED, player.playbackState)
     focus(AudioManager.AUDIOFOCUS_GAIN)
 
@@ -157,7 +154,7 @@ class PlayerSuppressionTest {
     val engine = player.exoPlayer
 
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertSame(engine, player.exoPlayer)
     assertSuppressed()
@@ -175,7 +172,7 @@ class PlayerSuppressionTest {
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
     // ExoPlayer requests focus on its playback thread and posts a refusal back.
     Thread.sleep(200)
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertSuppressed()
     audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
@@ -200,7 +197,7 @@ class PlayerSuppressionTest {
         assertSame(engine, player.exoPlayer)
         drop()
 
-        shadowOf(Looper.getMainLooper()).idle()
+        idle()
 
         assertNotSame(engine, player.exoPlayer)
         assertFalse(player.exoPlayer.playWhenReady)
@@ -219,7 +216,7 @@ class PlayerSuppressionTest {
     player.play()
     // The rebuild follows the play: it is posted, never run inside it.
     assertSame(engine, player.exoPlayer)
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertNotSame(engine, player.exoPlayer)
     idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
@@ -230,7 +227,7 @@ class PlayerSuppressionTest {
     focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
     // As a handover to a remote output does: the engine stops but keeps the intent.
     player.exoPlayer.stop()
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
     val engine = player.exoPlayer
 
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
@@ -259,7 +256,7 @@ class PlayerSuppressionTest {
 
     remote.startSession()
     idleUntil("remote") { !player.localEngine.isActive }
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertNotSame(engine, player.exoPlayer)
     assertFalse(player.localEngine.isActive)
@@ -274,7 +271,7 @@ class PlayerSuppressionTest {
 
     // As a terminal error does: the engine idles with the intent and the suppression unchanged.
     player.exoPlayer.stop()
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertNotSame(engine, player.exoPlayer)
   }
@@ -319,7 +316,7 @@ class PlayerSuppressionTest {
     player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
 
     player.destroy()
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
 
     assertSame(engine, player.exoPlayer)
   }
@@ -348,7 +345,21 @@ class PlayerSuppressionTest {
             "exo ${player.exoPlayer.playbackState}, ${player.exoPlayer.playerError}"
         )
       Thread.sleep(10)
-      shadowOf(Looper.getMainLooper()).idle()
+      idle()
     }
+  }
+
+  private fun idle() {
+    shadowOf(Looper.getMainLooper()).idle()
+    if (C.TRACK_TYPE_AUDIO !in player.exoPlayer.trackSelectionParameters.disabledTrackTypes)
+      disableAudio()
+  }
+
+  private fun disableAudio() {
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+        .build()
   }
 }
