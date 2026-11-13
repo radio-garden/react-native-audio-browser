@@ -592,6 +592,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                     track,
                     player.tracks,
                     index.toDouble(),
+                    startPosition = null,
                     intercepted = {},
                     defaultBehavior = {
                       player.skipTo(index)
@@ -614,6 +615,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   track,
                   tracks,
                   startIndex.toDouble(),
+                  startPosition = null,
                   intercepted = {},
                   defaultBehavior = {
                     // The Player itself: this class's overrides block on main, where this runs.
@@ -629,6 +631,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   track,
                   arrayOf(track),
                   0.0,
+                  startPosition = null,
                   intercepted = {},
                   defaultBehavior = { player.load(track) },
                 )
@@ -645,6 +648,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 track,
                 arrayOf(track),
                 0.0,
+                startPosition = null,
                 intercepted = {},
                 defaultBehavior = { player.load(track) },
               )

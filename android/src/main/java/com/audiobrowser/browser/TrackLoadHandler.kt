@@ -19,11 +19,12 @@ suspend fun <T> handleTrackLoad(
   track: Track,
   queue: Array<Track>,
   startIndex: Double,
+  startPosition: Double?,
   intercepted: suspend () -> T,
   defaultBehavior: suspend () -> T,
 ): T {
   if (handler != null) {
-    val event = TrackLoadEvent(track, queue, startIndex)
+    val event = TrackLoadEvent(track, queue, startIndex, startPosition)
     try {
       handler(event).awaitNested()
     } catch (e: CancellationException) {

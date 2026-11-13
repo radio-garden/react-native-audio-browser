@@ -12,6 +12,12 @@ export interface TrackLoadEvent {
   queue: Track[]
   /** The index of the track in the queue */
   startIndex: number
+  /**
+   * Where an Android media controller asked playback to start, in seconds: the
+   * player's current position when it asked to keep it, absent when it asked to
+   * reset or sent none.
+   */
+  startPosition?: number
 }
 
 /**

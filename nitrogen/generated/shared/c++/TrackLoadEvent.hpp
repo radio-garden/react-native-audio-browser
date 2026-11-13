@@ -33,6 +33,7 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 
 #include "Track.hpp"
 #include <vector>
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -44,10 +45,11 @@ namespace margelo::nitro::audiobrowser {
     Track track     SWIFT_PRIVATE;
     std::vector<Track> queue     SWIFT_PRIVATE;
     double startIndex     SWIFT_PRIVATE;
+    std::optional<double> startPosition     SWIFT_PRIVATE;
 
   public:
     TrackLoadEvent() = default;
-    explicit TrackLoadEvent(Track track, std::vector<Track> queue, double startIndex): track(track), queue(queue), startIndex(startIndex) {}
+    explicit TrackLoadEvent(Track track, std::vector<Track> queue, double startIndex, std::optional<double> startPosition): track(track), queue(queue), startIndex(startIndex), startPosition(startPosition) {}
 
   public:
     friend bool operator==(const TrackLoadEvent& lhs, const TrackLoadEvent& rhs) = default;
@@ -65,7 +67,8 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::TrackLoadEvent(
         JSIConverter<margelo::nitro::audiobrowser::Track>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "track"))),
         JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "queue"))),
-        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "startIndex")))
+        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "startIndex"))),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "startPosition")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::TrackLoadEvent& arg) {
@@ -73,6 +76,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "track"), JSIConverter<margelo::nitro::audiobrowser::Track>::toJSI(runtime, arg.track));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "queue"), JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::toJSI(runtime, arg.queue));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "startIndex"), JSIConverter<double>::toJSI(runtime, arg.startIndex));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "startPosition"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.startPosition));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -86,6 +90,7 @@ namespace margelo::nitro {
       if (!JSIConverter<margelo::nitro::audiobrowser::Track>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "track")))) return false;
       if (!JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "queue")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "startIndex")))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "startPosition")))) return false;
       return true;
     }
   };
