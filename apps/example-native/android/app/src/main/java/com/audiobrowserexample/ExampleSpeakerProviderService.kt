@@ -1,8 +1,6 @@
 package com.audiobrowserexample
 
 import android.content.Context
-import android.content.IntentFilter
-import androidx.mediarouter.media.MediaRouteDescriptor
 import androidx.mediarouter.media.MediaRouteProvider
 import androidx.mediarouter.media.MediaRouteProviderDescriptor
 import androidx.mediarouter.media.MediaRouteProviderService
@@ -21,8 +19,7 @@ private class ExampleSpeakerProvider(context: Context) : MediaRouteProvider(cont
 
   private fun publish(connectionState: Int) {
     val speaker =
-      MediaRouteDescriptor.Builder(ROUTE_ID, "Example speaker")
-        .addControlFilter(IntentFilter().apply { addCategory(RemoteOutputs.CATEGORY) })
+      RemoteOutputs.routeDescriptorBuilder(ROUTE_ID, "Example speaker")
         .setPlaybackType(MediaRouter.RouteInfo.PLAYBACK_TYPE_REMOTE)
         .setDeviceType(MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER)
         .setVolumeHandling(MediaRouter.RouteInfo.PLAYBACK_VOLUME_FIXED)
@@ -32,13 +29,19 @@ private class ExampleSpeakerProvider(context: Context) : MediaRouteProvider(cont
     descriptor = MediaRouteProviderDescriptor.Builder().addRoute(speaker).build()
   }
 
-  override fun onCreateRouteController(routeId: String): RouteController =
-    object : RouteController() {
+  // Below Android 14 every app lists the speaker: serve only this app's sessions.
+  override fun onCreateRouteController(
+    routeId: String,
+    options: RouteControllerOptions,
+  ): RouteController? {
+    if (options.clientPackageName != context.packageName) return null
+    return object : RouteController() {
       override fun onSelect() = publish(MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED)
 
       override fun onUnselect(reason: Int) =
         publish(MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED)
     }
+  }
 
   private companion object {
     const val ROUTE_ID = "example-speaker"

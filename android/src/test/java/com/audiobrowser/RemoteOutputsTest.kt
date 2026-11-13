@@ -4,7 +4,9 @@ import com.audiobrowser.sonos.SonosOutputs
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RemoteOutputsTest {
@@ -52,6 +54,17 @@ class RemoteOutputsTest {
         it == RemoteOutputs.CATEGORY || it == SonosOutputs.CATEGORY
       }
     )
+  }
+
+  @Test
+  fun `a Sonos route is unserved while this app's provider has no room selected`() {
+    assertTrue(isUnservedSonosRoute(sonosSelected = false) { it == SonosOutputs.CATEGORY })
+  }
+
+  @Test
+  fun `a Sonos route while this app's provider has a room selected, and any other route, are served`() {
+    assertFalse(isUnservedSonosRoute(sonosSelected = true) { it == SonosOutputs.CATEGORY })
+    assertFalse(isUnservedSonosRoute(sonosSelected = false) { it == RemoteOutputs.CATEGORY })
   }
 
   @Test
