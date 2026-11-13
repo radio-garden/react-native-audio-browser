@@ -268,6 +268,10 @@ public extension HybridAudioBrowser {
     onMainActor { player?.tracks ?? [] }
   }
 
+  func getQueueVersion() throws -> Double {
+    onMainActor { Double(player?.queueVersion ?? -1) }
+  }
+
   func getTrack(index: Double) throws -> Track? {
     onMainActor {
       guard let tracks = player?.tracks else { return nil }

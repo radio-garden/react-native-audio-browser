@@ -332,6 +332,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   override fun onTimelineChanged(timeline: Timeline, reason: Int) {
     if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+      player.onPlaylistChanged()
       player.callbacks?.onPlaybackQueueChanged(player.tracks)
       // Replacing the current item with one of the same URL updates it in place, without a
       // transition, so a changed `live` arrives only here.

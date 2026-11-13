@@ -977,6 +977,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getQueue(): Array<Track> = readPlayer(emptyArray()) { it.tracks }
 
+  override fun getQueueVersion(): Double = readPlayer(-1.0) { it.queueVersion.toDouble() }
+
   override fun getTrack(index: Double): Track? =
     readPlayer(null) { player ->
       try {

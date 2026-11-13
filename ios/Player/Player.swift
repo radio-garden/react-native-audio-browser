@@ -135,6 +135,7 @@ final class Player {
   // MARK: - TrackSelectionPlayer and NowPlayingSource
 
   var tracks: [Track] { queue.tracks }
+  var queueVersion: Int { queue.version }
   var queueSourcePath: String? { queue.queueSourcePath }
   var currentTrack: Track? { queue.currentTrack }
   var currentTime: Double { engine.currentTime }

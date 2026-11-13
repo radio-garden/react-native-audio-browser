@@ -124,6 +124,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func toggleActiveTrackFavorited() throws -> Void
   func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws -> Void
   func getQueue() throws -> [Track]
+  func getQueueVersion() throws -> Double
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
