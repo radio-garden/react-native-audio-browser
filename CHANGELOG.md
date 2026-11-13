@@ -1,3 +1,13 @@
+## [0.2.0-next.92](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.91...v0.2.0-next.92) (2026-11-13)
+
+### Features
+
+* **stream-server:** add a DVR window to live HLS ([72e1a77](https://github.com/radio-garden/react-native-audio-browser/commit/72e1a771069e9a235fd0564bc3a7e3b51b7030ed))
+
+### Bug Fixes
+
+* **android:** play the audio a connection delivered before its end surfaces ([7e01127](https://github.com/radio-garden/react-native-audio-browser/commit/7e01127551dc6016c4e6bfa73d609a2d2452a35c)), closes [#301](https://github.com/radio-garden/react-native-audio-browser/issues/301)
+
 ## [0.2.0-next.91](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.90...v0.2.0-next.91) (2026-11-13)
 
 ### Features
