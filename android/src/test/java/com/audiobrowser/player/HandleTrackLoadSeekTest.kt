@@ -197,6 +197,19 @@ class HandleTrackLoadSeekTest {
   }
 
   @Test
+  fun `a controller that resets the position gives the handler the first index`() {
+    var startIndex: Double? = null
+    handlingTrackLoadWith {
+      startIndex = it.startIndex
+      player.load(it.track)
+    }
+
+    setFromController(silentTrack(Duration.ofMinutes(2)))
+
+    assertEquals(0.0, startIndex)
+  }
+
+  @Test
   fun `a handler that seeks to the start position starts playback there`() {
     handlingTrackLoadWith {
       player.load(it.track)

@@ -864,13 +864,16 @@ class MediaSessionCallback(private val player: Player) :
         browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
-      val selectedTrack = tracks.getOrElse(result.startIndex) { tracks.first() }
+      // setQueue reads an unset index as "keep the current one". Media3 still gets it unset on the
+      // default branch, where it means a reset.
+      val handlerIndex = result.startIndex.takeIf { it != C.INDEX_UNSET } ?: 0
+      val selectedTrack = tracks.getOrElse(handlerIndex) { tracks.first() }
 
       handleTrackLoad(
         audioBrowser.configuration.handleTrackLoad,
         selectedTrack,
         tracks,
-        result.startIndex.toDouble(),
+        handlerIndex.toDouble(),
         startPosition,
         ::currentPlayerState,
       ) {
