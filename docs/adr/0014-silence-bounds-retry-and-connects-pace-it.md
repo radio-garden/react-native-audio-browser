@@ -66,7 +66,7 @@ Both units take the play intent and connectivity, and the wiring feeds them the 
 - **The two-minute promise is kept**: 120 s of silence, whatever happens in between.
 - **A network frozen for longer than 120 s ends in the error on Android.** Before, a stuck report refilled the budget and playback came back by itself, at about 171 s for a 150 s freeze. Now the listener taps play.
 - **A working stream that keeps closing keeps playing**, with a short gap at each close.
-- **A stream that only ever sends short bursts ends at 120 s**, choppy until then, on both platforms. That includes one that closes every 5 s and is audible for about 4 s of each: no run reaches 5 s, so its silence never ends.
+- **A stream that only ever sends short bursts ends at 120 s**, choppy until then, on both platforms. With 4 s of audio per connection (the stream server's `close=4`), no run reaches 5 s: its silence never ends. With 5 s, each run passes 5 s and it plays on.
 - **`maxRetries` counts connections in a row that delivered nothing.** A connection that delivered audio starts the count over, so a stream that played and dropped reconnects once more than `maxRetries` before giving up: with `maxRetries: 0`, a drop still reconnects once. Before, the count ran from the first error.
 - **The terminal error codes stay as they are**: on Android the error of the connection that ended last (`io-network-connection-failed` when none surfaced, `playback-stalled` when it ended stuck), `playback-stalled` on iOS.
 - **The players adopt the units one at a time**, each with the stream server's cases run before and after.
