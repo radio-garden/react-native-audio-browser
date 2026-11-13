@@ -5,6 +5,7 @@ import {
   judge,
   reloadVerdict,
   silences,
+  type HeardState,
   type StreamCase
 } from './judge'
 
@@ -165,6 +166,63 @@ describe('judge', () => {
     expect(judge(offline, 'android', heard).failures).toEqual([
       'audio 7 s after the network returned; expected within 6 s'
     ])
+  })
+})
+
+/**
+ * A run of the stream that closes after 2 s of audio, whose bursts start 2.2 s apart and play
+ * where `played` says, ending in the error at `errorAt`.
+ */
+function bursts(
+  played: (index: number) => boolean,
+  count: number,
+  errorAt: number
+) {
+  const heard: HeardState[] = [{ at: 0, state: 'loading' }]
+  for (let index = 0; index < count; index++) {
+    const at = index * 2.2
+    if (played(index)) {
+      heard.push(
+        { at: at + 0.1, state: 'playing' },
+        { at: at + 2.1, state: 'buffering' }
+      )
+    }
+  }
+  return [...heard, { at: errorAt, state: 'error' }]
+}
+
+describe('the stream that closes after 2 s of audio', () => {
+  const close2 = JSON.parse(
+    readFileSync(
+      new URL('../../spec/stream-cases.json', import.meta.url),
+      'utf8'
+    )
+  ).cases.find((c: StreamCase) => c.path === '/live.mp3?close=2') as StreamCase
+
+  it('passes when every burst plays', () => {
+    const verdict = judge(
+      close2,
+      'android',
+      bursts(() => true, 55, 120.7)
+    )
+    expect(verdict.failures).toEqual([])
+  })
+
+  it('fails when most bursts are lost, though the error comes on time', () => {
+    expect(
+      judge(
+        close2,
+        'android',
+        bursts((index) => index % 3 === 0, 61, 120)
+      ).failures
+    ).toEqual(['audible for 35% of the run; expected at least 90%'])
+    expect(
+      judge(
+        close2,
+        'android',
+        bursts((index) => index === 0, 27, 120)
+      ).failures
+    ).toEqual(['audible for 2% of the run; expected at least 90%'])
   })
 })
 

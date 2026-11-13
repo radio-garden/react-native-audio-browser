@@ -1,5 +1,5 @@
 {
-  "about": "What docs/adr/0014's rule promises for the stream server's cases on a real player, checked by scripts/stream-cases. Each case plays `path` on the stream server (or `url`, where {dead} is a port nothing listens on) for `seconds`, and expects one of two outcomes. `plays`: no terminal error, and no silence after the first audio longer than `maxGapSeconds`, and with `network`, audio again within `resumesWithinSeconds` of JS hearing the device online after the last step that turns the network on. `error`: the terminal error `atSeconds` from play, give or take `toleranceSeconds`. A limit given per platform is an object keyed by platform. `network` turns the device offline and online at seconds from play; such a case needs a device whose network the script controls. `platforms` limits a case to some platforms; the default is all.",
+  "about": "What docs/adr/0014's rule promises for the stream server's cases on a real player, checked by scripts/stream-cases. Each case plays `path` on the stream server (or `url`, where {dead} is a port nothing listens on) for `seconds`, and expects one of two outcomes. `plays`: no terminal error, and no silence after the first audio longer than `maxGapSeconds`, and with `network`, audio again within `resumesWithinSeconds` of JS hearing the device online after the last step that turns the network on. `error`: the terminal error `atSeconds` from play, give or take `toleranceSeconds`. Either outcome may also set `minAudibleShare`: the least share of the run, up to the error or the end, that is audible. A limit given per platform is an object keyed by platform. `network` turns the device offline and online at seconds from play; such a case needs a device whose network the script controls. `platforms` limits a case to some platforms; the default is all.",
   "cases": [
     {
       "name": "a stream that closes after 10 s of audio plays on",
@@ -20,7 +20,12 @@
       "name": "a stream that closes after 2 s of audio gives up 120 s into its silence",
       "path": "/live.mp3?close=2",
       "seconds": 140,
-      "expect": { "outcome": "error", "atSeconds": 121, "toleranceSeconds": 4 }
+      "expect": {
+        "outcome": "error",
+        "atSeconds": 121,
+        "toleranceSeconds": 4,
+        "minAudibleShare": 0.9
+      }
     },
     {
       "name": "a connection that sends its burst and then nothing gives up: at 120 s of silence, or 12 s after its first failure where the burst never plays",
