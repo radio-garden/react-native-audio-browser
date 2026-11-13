@@ -83,6 +83,15 @@ export function audibleSeconds(
 
 const round = (seconds: number) => Math.round(seconds * 10) / 10
 
+/** The verdict on a run the app reloaded during: the reload takes the listeners, so what was heard stops there. */
+export function reloadVerdict(heard: Heard[]): Verdict {
+  return {
+    pass: false,
+    observed: `the app reloaded; last heard at ${round(heard.at(-1)?.at ?? 0)} s`,
+    failures: ['the app reloaded during the case']
+  }
+}
+
 /** Whether what JS heard during a run of `streamCase` on `platform` is what the case expects. */
 export function judge(
   streamCase: StreamCase,

@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { audibleSeconds, judge, silences, type StreamCase } from './judge'
+import {
+  audibleSeconds,
+  judge,
+  reloadVerdict,
+  silences,
+  type StreamCase
+} from './judge'
 
 const plays: StreamCase = {
   name: 'plays',
@@ -85,6 +91,15 @@ describe('judge', () => {
       'error at 40 s',
       'a gap of 3 s; expected at most 1.5 s'
     ])
+  })
+
+  it('fails a run the app reloaded during, naming when it last heard', () => {
+    const heard = [{ at: 0.1, state: 'loading' }]
+    expect(reloadVerdict(heard)).toEqual({
+      pass: false,
+      observed: 'the app reloaded; last heard at 0.1 s',
+      failures: ['the app reloaded during the case']
+    })
   })
 
   it('reads a limit per platform', () => {

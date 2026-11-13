@@ -6,7 +6,13 @@ import { networkInterfaces } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { startStreamServer } from '../stream-server/index.ts'
-import { judge, type Heard, type Platform, type StreamCase } from './judge.ts'
+import {
+  judge,
+  reloadVerdict,
+  type Heard,
+  type Platform,
+  type StreamCase
+} from './judge.ts'
 
 const APP_ID = 'com.audiobrowserexample'
 const TARGET_WAIT_MS = 60_000
@@ -153,15 +159,21 @@ async function inspector(
     })
   await send('Runtime.enable')
   return {
-    evaluate: async (expression: string) =>
-      (
-        (await send('Runtime.evaluate', {
-          expression,
-          returnByValue: true
-        })) as {
-          result?: { value?: unknown }
-        }
-      )?.result?.value,
+    evaluate: async (expression: string) => {
+      const answer = (await send('Runtime.evaluate', {
+        expression,
+        returnByValue: true
+      })) as {
+        result?: { value?: unknown }
+        exceptionDetails?: { exception?: { description?: string } }
+      }
+      if (answer.exceptionDetails) {
+        throw new Error(
+          `The app threw: ${answer.exceptionDetails.exception?.description}`
+        )
+      }
+      return answer.result?.value
+    },
     close: () => socket.close()
   }
 }
@@ -171,6 +183,7 @@ const play = (src: string, live: boolean, run: string) => `(() => {
   if (!ab) return 'no globalThis.AudioBrowser: a Debug build of the example app?'
   for (const stop of globalThis.__streamCase ?? []) stop()
   ab.stop()
+  globalThis.__streamCaseRun = ${JSON.stringify(run)}
   const t0 = Date.now()
   const trace = (what) => console.log('TRACE ${run} ' + JSON.stringify({ at: (Date.now() - t0) / 1000, ...what }))
   globalThis.__streamCase = [
@@ -182,10 +195,12 @@ const play = (src: string, live: boolean, run: string) => `(() => {
   return 'ok'
 })()`
 
-const finish = `(() => {
+/** Ends the run; answers whether its JS runtime is the one `play` started it in. */
+const finish = (run: string) => `(() => {
   for (const stop of globalThis.__streamCase ?? []) stop()
   globalThis.__streamCase = []
   globalThis.AudioBrowser?.stop()
+  return globalThis.__streamCaseRun === ${JSON.stringify(run)}
 })()`
 
 const networkCases = cases.some((c) => c.network)
@@ -198,8 +213,12 @@ const deadPort = await freePort()
 const host = platform === 'android' ? '127.0.0.1' : 'localhost'
 
 if (platform === 'android') {
-  adb('reverse', `tcp:${metroPort}`, `tcp:${metroPort}`)
+  // A Debug build asks for its build's RCT_METRO_PORT, 8081 when unset.
+  for (const appPort of new Set([8081, metroPort])) {
+    adb('reverse', `tcp:${appPort}`, `tcp:${metroPort}`)
+  }
   adb('reverse', `tcp:${stream.port}`, `tcp:${stream.port}`)
+  adb('shell', 'am', 'force-stop', APP_ID)
   adb(
     'shell',
     'monkey',
@@ -210,12 +229,19 @@ if (platform === 'android') {
     '1'
   )
 } else {
+  // The argument outranks a bundler address saved in the app's settings.
   execFileSync(
     'xcrun',
-    ['simctl', 'launch', values.device ?? 'booted', APP_ID],
-    {
-      stdio: 'pipe'
-    }
+    [
+      'simctl',
+      'launch',
+      '--terminate-running-process',
+      values.device ?? 'booted',
+      APP_ID,
+      '-RCT_jsLocation',
+      `localhost:${metroPort}`
+    ],
+    { stdio: 'pipe' }
   )
 }
 
@@ -272,12 +298,14 @@ try {
     const replay = await inspector(await appTarget(), run, (text) =>
       lines.add(text)
     )
-    await replay.evaluate(finish)
+    const reloaded = (await replay.evaluate(finish(run))) !== true
     replay.close()
     const heard = [...lines]
       .map((line) => JSON.parse(line) as Heard)
       .sort((a, b) => a.at - b.at)
-    const verdict = judge(streamCase, platform, heard)
+    const verdict = reloaded
+      ? reloadVerdict(heard)
+      : judge(streamCase, platform, heard)
     const connections = stream.log.filter(
       (entry) => entry.method === 'GET'
     ).length
