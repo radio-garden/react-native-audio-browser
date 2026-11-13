@@ -124,6 +124,8 @@ type Behaviour = {
   /** The live HLS segment cut off mid-transfer, and on how many of its first requests. */
   dropSegment?: number
   drops: number
+  /** How many live HLS segments the playlist lists, every one available from the first request. */
+  windowSegments?: number
 }
 
 class BadRequest extends Error {}
@@ -201,7 +203,13 @@ function behaviour(params: URLSearchParams, hasRange: boolean): Behaviour {
         : Math.floor(at / HLS_SEGMENT_DURATION)
     })(),
     drops:
-      number(params, 'drops', { integer: true, min: 1 }) ?? HLS_DEFAULT_DROPS
+      number(params, 'drops', { integer: true, min: 1 }) ?? HLS_DEFAULT_DROPS,
+    windowSegments: (() => {
+      const seconds = number(params, 'window', { min: Number.MIN_VALUE })
+      return seconds === undefined
+        ? undefined
+        : Math.ceil(seconds / HLS_SEGMENT_DURATION)
+    })()
   }
 }
 
@@ -414,14 +422,16 @@ export function startStreamServer({
   function serveHlsPlaylist(
     res: ServerResponse,
     entry: LogEntry,
+    b: Behaviour,
     search: string
   ) {
     const started = hlsStarts.get(search) ?? performance.now()
     hlsStarts.set(search, started)
     const elapsed = ((performance.now() - started) / 1000) * liveSpeed
-    const newest =
-      HLS_FIRST_AVAILABLE - 1 + Math.floor(elapsed / HLS_SEGMENT_DURATION)
-    const first = Math.max(0, newest - HLS_WINDOW + 1)
+    const window = b.windowSegments ?? HLS_WINDOW
+    const available = b.windowSegments ?? HLS_FIRST_AVAILABLE
+    const newest = available - 1 + Math.floor(elapsed / HLS_SEGMENT_DURATION)
+    const first = Math.max(0, newest - window + 1)
     const lines = [
       '#EXTM3U',
       '#EXT-X-VERSION:3',
@@ -567,7 +577,7 @@ export function startStreamServer({
       } else if (url.pathname === '/file.mp3') {
         serveFile(req, res, entry, b)
       } else if (url.pathname === '/live.m3u8') {
-        serveHlsPlaylist(res, entry, url.search)
+        serveHlsPlaylist(res, entry, b, url.search)
       } else if (hlsSequence !== undefined) {
         serveHlsSegment(req, res, entry, b, Number(hlsSequence))
       } else {
@@ -628,6 +638,8 @@ the start of the file, or of the live response); N is bytes.
                              plays (at most ${MAX_RATE}); below 1 the player runs dry
   drop=S [&drops=K]          HLS only: the segment that plays at S seconds drops its
                              connection halfway through on its first K requests (default ${HLS_DEFAULT_DROPS})
+  window=S                   HLS only: a DVR window, S seconds of segments in the playlist,
+                             all available at the first request
   requireRange[=N]           closes after N bytes (default ${MISSING_RANGE_CLOSE_BYTES}) when the request
                              has no Range header
 
@@ -636,6 +648,7 @@ the start of the file, or of the live response); N is bytes.
   ${base}/file.mp3?close=4            a file that ends at 4 s of its 10
   ${base}/live.mp3?rate=0.8           a stream that arrives slower than it plays
   ${base}/live.m3u8?drop=20&drops=5   a live HLS segment that fails 5 times
+  ${base}/live.m3u8?window=120        live HLS with a 2-minute DVR window
 
   GET ${base}/log       every request: attempt, headers, Range, bytes sent, outcome
   DELETE ${base}/log    clears the log and the attempt counts

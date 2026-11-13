@@ -252,6 +252,14 @@ describe('live HLS', () => {
     ])
   })
 
+  it('lists a DVR window of segments from the first request', async () => {
+    const playlist = await get('/live.m3u8?window=60')
+    const listed = segments(playlist.body)
+    expect(listed).toHaveLength(Math.ceil(60 / HLS_SEGMENT_DURATION))
+    expect(listed[0]).toBe('live/0.mp3?window=60')
+    expect(playlist.body.toString()).not.toContain('#EXT-X-ENDLIST')
+  })
+
   it('carries the query to its segments', async () => {
     const playlist = await get('/live.m3u8?drop=4')
     expect(segments(playlist.body)[0]).toBe('live/0.mp3?drop=4')
