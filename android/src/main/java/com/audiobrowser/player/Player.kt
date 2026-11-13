@@ -1205,8 +1205,8 @@ internal constructor(
   }
 
   /**
-   * Bumped on track change so an [onLoadFailure] post for the outgoing track is dropped. Written on
-   * main, read on ExoPlayer's playback thread.
+   * Bumped on track change and seek so an [onLoadFailure] post for an earlier connection is
+   * dropped. Written on main, read on ExoPlayer's playback thread.
    */
   @Volatile private var retryingErrorGeneration = 0
 
@@ -1226,6 +1226,11 @@ internal constructor(
       if (localEngine.isActive) retryLoop?.connectionFailed(inPlace, atMs)
       showRetryingError(error)
     }
+  }
+
+  /** Drops the [onLoadFailure] reports still on their way: they belong to an earlier connection. */
+  internal fun dropFailureReports() {
+    retryingErrorGeneration++
   }
 
   private fun showRetryingError(error: PlaybackError) {
@@ -1312,7 +1317,7 @@ internal constructor(
    * with no state change to emit the clear.
    */
   internal fun clearRetryingError() {
-    retryingErrorGeneration++
+    dropFailureReports()
     if (playbackError?.retrying != true) return
     playbackError = null
     callbacks?.onPlaybackChanged(Playback(playbackState, null))
