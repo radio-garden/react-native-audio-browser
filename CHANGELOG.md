@@ -1,3 +1,10 @@
+## [0.2.0-next.94](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.93...v0.2.0-next.94) (2026-11-13)
+
+### Bug Fixes
+
+* **android:** drop a connection failure report that a seek overtakes ([bc5cdb8](https://github.com/radio-garden/react-native-audio-browser/commit/bc5cdb8d8ef1ea25b59bfd3c8bf289c51a0d8e78)), closes [#311](https://github.com/radio-garden/react-native-audio-browser/issues/311)
+* **android:** retry in place a cached file of known length that fails going upstream ([01276d2](https://github.com/radio-garden/react-native-audio-browser/commit/01276d26a8d53d8fc684ad3cc77629ace2cc975b)), closes [#312](https://github.com/radio-garden/react-native-audio-browser/issues/312)
+
 ## [0.2.0-next.93](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.92...v0.2.0-next.93) (2026-11-13)
 
 ### Bug Fixes
