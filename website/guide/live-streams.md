@@ -144,6 +144,32 @@ resolved URL, so an expired one re-resolves only after that first attempt
 fails (see [Fresh URLs on reconnect](#fresh-urls-on-reconnect)).
 General seeking is in [Playback](/guide/playback).
 
+## Pausing a live stream
+
+On iOS and Android, how a live track pauses depends on whether it can be
+rewound.
+
+A stream that can't be rewound holds no connection while paused or stopped.
+That covers progressive (ICY/Icecast) radio, and live HLS whose seekable
+window is under 30 seconds. Left open, a paused player goes on downloading
+it (on macOS for as long as it stays paused), and a resume plays what it
+buffered, behind the stream. So pause and stop close the connection. The
+now-playing surfaces go on showing the track, paused, and play reconnects at
+the live edge.
+
+A stream with a seekable window of 30 seconds or more (HLS with a DVR window)
+pauses as an on-demand track does. It keeps its position, and play resumes
+from there. [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge)
+while paused moves it to the window's end. A shorter window doesn't count:
+a short pause would carry the position out of it.
+
+A live track loaded without play intent (`load` or `setQueue` without
+`playWhenReady`) opens no connection. It stays `loading` for a second, so a
+`play()` that follows connects at once, with no `paused` in between. With no
+play by then it reports `paused`. On iOS this holds for a seekable window too,
+since a window isn't known before the stream connects. On Android a live
+track loaded or skipped to while paused still connects and buffers.
+
 ## Periodic position updates (Android)
 
 While the player plays or loads, Media3's media session sends External
