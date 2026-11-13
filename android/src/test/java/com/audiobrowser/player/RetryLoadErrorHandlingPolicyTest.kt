@@ -3,9 +3,14 @@ package com.audiobrowser.player
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
+import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.ContentMetadataMutations
+import androidx.media3.datasource.cache.NoOpCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -15,20 +20,22 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class RetryLoadErrorHandlingPolicyTest {
   private val failures = mutableListOf<Boolean>()
   private var current = true
 
-  private fun policy(sources: Sources) =
-    RetryLoadErrorHandlingPolicy(sources, { current }) { _, inPlace -> failures += inPlace }
+  private fun policy(sources: Sources, cache: Cache? = null) =
+    RetryLoadErrorHandlingPolicy(sources, { current }, cache) { _, inPlace -> failures += inPlace }
 
   private fun errorInfo(
     exception: IOException = UnknownHostException("dead host"),
@@ -100,6 +107,28 @@ class RetryLoadErrorHandlingPolicyTest {
     assertEquals(1500L, reopen)
     assertEquals(C.TIME_UNSET, another)
     assertEquals(listOf(true, true, false), failures)
+  }
+
+  @Test
+  fun `a file of known length read from the cache stays in place when the switch upstream fails`() {
+    val cache =
+      SimpleCache(
+        Files.createTempDirectory("cache").toFile(),
+        NoOpCacheEvictor(),
+        StandaloneDatabaseProvider(RuntimeEnvironment.getApplication()),
+      )
+    try {
+      cache.applyContentMetadataMutations(
+        "https://example.com/stream",
+        ContentMetadataMutations().also { ContentMetadataMutations.setContentLength(it, 1234) },
+      )
+      val policy = policy(Sources.PROGRESSIVE, cache)
+
+      assertEquals(1000L, policy.getRetryDelayMsFor(errorInfo()))
+      assertEquals(listOf(true), failures)
+    } finally {
+      cache.release()
+    }
   }
 
   @Test

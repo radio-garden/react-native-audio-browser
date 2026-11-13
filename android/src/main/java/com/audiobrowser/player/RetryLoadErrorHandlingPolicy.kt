@@ -3,7 +3,11 @@ package com.audiobrowser.player
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
 import androidx.media3.datasource.DataSourceException
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.CacheKeyFactory
+import androidx.media3.datasource.cache.ContentMetadata
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -20,11 +24,13 @@ import java.io.IOException
  * loop's silence deadline does. Called on ExoPlayer's playback thread.
  *
  * @param isCurrent whether the item is the one playing; read on the playback thread
+ * @param cache the cache the item's loads read through, if any
  * @param onFailure each recoverable failure of the current item, and whether it is retried in place
  */
 class RetryLoadErrorHandlingPolicy(
   private val sources: Sources,
   private val isCurrent: () -> Boolean,
+  private val cache: Cache? = null,
   private val onFailure: (exception: IOException, inPlace: Boolean) -> Unit,
 ) : DefaultLoadErrorHandlingPolicy() {
 
@@ -67,8 +73,20 @@ class RetryLoadErrorHandlingPolicy(
   private val knownLength = mutableSetOf<Long>()
 
   private fun hasKnownLength(info: LoadEventInfo): Boolean {
-    if (declaresLength(info.responseHeaders)) knownLength += info.loadTaskId
+    if (
+      declaresLength(info.responseHeaders) ||
+        (info.responseHeaders.isEmpty() && cachedLengthKnown(info.dataSpec))
+    )
+      knownLength += info.loadTaskId
     return info.loadTaskId in knownLength
+  }
+
+  /** A load reading from the cache has no response: the cache keeps the length one declared. */
+  private fun cachedLengthKnown(dataSpec: DataSpec): Boolean {
+    val cache = cache ?: return false
+    val key = CacheKeyFactory.DEFAULT.buildCacheKey(dataSpec)
+    return ContentMetadata.getContentLength(cache.getContentMetadata(key)) !=
+      C.LENGTH_UNSET.toLong()
   }
 
   /** Never media3's verdict: the in-place path retries until the loop gives up on it. */
