@@ -160,8 +160,11 @@ the live edge.
 A stream with a seekable window of 30 seconds or more (HLS with a DVR window)
 pauses as an on-demand track does. It keeps its position, and play resumes
 from there. [`seekToLiveEdge()`](/api/features/playback/#seektoliveedge)
-while paused moves it to the window's end. A shorter window doesn't count:
-a short pause would carry the position out of it.
+while paused moves it to the window's end. On iOS a paused one keeps what it
+has buffered but loads no more than 10 seconds ahead, where it would otherwise
+go on loading toward the live edge; on Android the buffer limit (`maxBuffer`)
+bounds it. A shorter window doesn't count: a short pause would carry the
+position out of it.
 
 A live track loaded without play intent (`load` or `setQueue` without
 `playWhenReady`) opens no connection. It stays `loading` for a second, so a
