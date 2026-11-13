@@ -82,7 +82,9 @@ class RetryMaskingTest {
 
   @Test
   fun `the loop reconnects, and its idle engine and error reach no surface`() {
-    play("http://127.0.0.1:${server.localPort}/live.mp3")
+    // The clock outruns a connection's real I/O: a slow one would bring a give-up into the test.
+    val noGiveUp = Duration.ofHours(1).toMillis()
+    play("http://127.0.0.1:${server.localPort}/live.mp3", RetryPolicy.Infinite(noGiveUp, noGiveUp))
     var held = 0
     stepUntil("the loop holding the idle engine a while") {
       if (player.exoPlayer.playbackState == MediaPlayer.STATE_IDLE) {
