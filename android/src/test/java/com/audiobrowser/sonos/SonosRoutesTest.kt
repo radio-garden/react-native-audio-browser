@@ -58,6 +58,16 @@ class SonosRoutesTest {
   }
 
   @Test
+  fun `publishes the rooms with restricted visibility`() {
+    val routes = sonosRouteDescriptors(listOf(dining, living), null) { null }.routes
+
+    for (route in routes) {
+      assertFalse(route.isVisibilityPublic)
+      assertEquals(emptySet<String>(), route.allowedPackages)
+    }
+  }
+
+  @Test
   fun `reports the selected room connected, and only that one`() {
     val routes = sonosRouteDescriptors(listOf(dining, living), "RINCON_C") { null }.routes
 

@@ -179,6 +179,9 @@ internal fun sonosRouteDescriptors(
           else MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED
         )
         .setEnabled(true)
+        // Visible only to this app, from Android 14: another app on the library publishes the same
+        // rooms, and its provider, not this app's, would play to them.
+        .setVisibilityRestricted(emptySet())
         .build()
     )
   }

@@ -8,6 +8,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaTransferReceiver
+import com.audiobrowser.sonos.SonosOutputs
 import com.audiobrowser.util.OutputSwitcher
 import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.OutputType
@@ -35,6 +36,8 @@ object RemoteOutputs {
   private var router: MediaRouter? = null
 
   private val listeners = CopyOnWriteArraySet<() -> Unit>()
+
+  private val onSonosSelectionChanged: () -> Unit = { router?.let(::update) }
 
   /** The selected remote output, or null while playback stays local. Read from any thread. */
   @Volatile
@@ -97,6 +100,7 @@ object RemoteOutputs {
     warnWithoutTransferReceiver(context)
     val router = MediaRouter.getInstance(context.applicationContext)
     this.router = router
+    SonosOutputs.addListener(onSonosSelectionChanged)
     listen(router)
   }
 
@@ -109,6 +113,7 @@ object RemoteOutputs {
   private fun stop() {
     val router = router ?: return
     router.removeCallback(callback)
+    SonosOutputs.removeListener(onSonosSelectionChanged)
     if (router.selectedRoute.matchesSelector(selector)) {
       router.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
     }
@@ -133,7 +138,14 @@ object RemoteOutputs {
 
   private fun update(router: MediaRouter) {
     val route = router.selectedRoute
-    setCurrent(remoteOutputOf(route.name, types, route::supportsControlCategory))
+    setCurrent(
+      remoteOutputOf(
+        route.name,
+        types,
+        sonosSelected = SonosOutputs.selected != null,
+        route::supportsControlCategory,
+      )
+    )
   }
 
   @VisibleForTesting
@@ -149,12 +161,17 @@ object RemoteOutputs {
 /**
  * The [Output] a selected route stands for, typed by the first category in [types] it [supports],
  * else [OutputType.REMOTE] for [RemoteOutputs.CATEGORY]; null for a route the outputs don't offer.
+ * A Sonos room's route, even with Sonos off here, counts only while this app's provider has a room
+ * selected: another app on the library publishes the same rooms, and selecting one of its routes
+ * leaves playback here.
  */
 internal fun remoteOutputOf(
   name: String,
   types: Map<String, OutputType>,
+  sonosSelected: Boolean,
   supports: (category: String) -> Boolean,
 ): Output? {
+  if (supports(SonosOutputs.CATEGORY) && !sonosSelected) return null
   val type =
     types.entries.firstOrNull { supports(it.key) }?.value
       ?: OutputType.REMOTE.takeIf { supports(RemoteOutputs.CATEGORY) }
