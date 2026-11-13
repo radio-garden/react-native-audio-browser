@@ -841,6 +841,26 @@ struct PlayerRecoveringTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
+  /// A live stream queued, then played, as a separate call: its connect is dropped and the engine
+  /// reports nothing about it, ever. The stall watch fails it at 30 s, and a Load that never played
+  /// gives up 12 s after its first failure.
+  @Test func aConnectThatEndsUnreportedStillEndsInTheError() async throws {
+    let clock = VirtualClock()
+    let retry = RetryLoop(clock: clock)
+    retry.updatePolicy(from: .first(true))
+    let engine = MockPlayerEngine()
+    let player = makePlayer(engine: engine, retry: retry)
+    try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)])
+    player.play()
+
+    await clock.run(until: 41_999)
+    #expect(player.state == .loading)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    await clock.run(until: 42_000)
+    #expect(player.state == .error)
+    #expect(player.errorStatus.error == .playbackStalled)
+  }
+
   @Test func aStallAfterAShortDropWithRetryOffIsLeftToAVPlayer() async throws {
     let (player, engine, callbacks, clock) = try makeVirtual()
     player.retry.updatePolicy(from: nil)
