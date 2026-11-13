@@ -146,9 +146,9 @@ final class AVPlayerEngine: PlayerEngine {
 
   // MARK: - Loading
 
-  func resolveAndLoad(src: String, track: Track) {
+  func resolveAndLoad(src: String, track: Track, shortStartBuffer: Bool) {
     icyCharset = track.icyCharset
-    mediaLoader.resolveAndLoad(src: src, track: track)
+    mediaLoader.resolveAndLoad(src: src, track: track, shortStartBuffer: shortStartBuffer)
   }
 
   func cancelLoading() {
@@ -308,6 +308,9 @@ final class AVPlayerEngine: PlayerEngine {
 
   private func itemDidEmit(_ event: ItemObserver.Event) {
     switch event {
+    case .readyToPlay:
+      // Ends the short start buffer `MediaLoader.resolveAndLoad` may have given the item.
+      avPlayer.currentItem?.preferredForwardBufferDuration = bufferDuration / 1000
     case let .likelyToKeepUp(isLikely): onEvent?(.likelyToKeepUp(isLikely))
     case let .failed(error), let .failedToPlayToEnd(error): reportFailure(error)
     case .playedToEnd: onEvent?(.playedToEnd)

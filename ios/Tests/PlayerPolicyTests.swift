@@ -240,6 +240,7 @@ struct PlayerSeekingTests {
     engine.liveEdge = nil
     player.seekToLiveEdge()
     #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.shortStartBufferRequests == [false, false])
     #expect(player.state == .loading)
   }
 
@@ -329,6 +330,16 @@ struct PlayerEngineEventTests {
     await live.retry.pendingTask?.value
     #expect(live.state == .loading)
     #expect(liveEngine.resolveAndLoadCalls.count == 2)
+  }
+
+  /// docs/adr/0014: a stream that keeps closing keeps playing, with a short gap at each close.
+  @Test func aLiveEndsReconnectStartsOnAShortBuffer_theListenersConnectsDoNot() async throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    player.retryNow()
+    #expect(engine.shortStartBufferRequests == [false, true, false])
   }
 
   /// AVPlayer pauses an item at its end, so a seek within its window would leave it silent.
@@ -443,6 +454,7 @@ struct PlayerRecoveringTests {
     #expect(callbacks.playbackChanges.last?.error?.retrying == true)
     await player.retry.pendingTask?.value
     #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.shortStartBufferRequests == [false, true])
     #expect(player.state == .loading)
   }
 

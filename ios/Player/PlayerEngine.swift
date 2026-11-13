@@ -57,7 +57,9 @@ enum EngineEvent {
 
   /// Resolves `src` for `track` afresh, so a short-lived URL is minted anew, and loads it. The
   /// outcome arrives as `itemPrepared`, `loadFailed`, `unplayable` or `invalidSource`.
-  func resolveAndLoad(src: String, track: Track)
+  /// - Parameter shortStartBuffer: The item is ready once about 1 s is buffered, not the several
+  ///   seconds AVPlayer otherwise waits for, then buffers as configured.
+  func resolveAndLoad(src: String, track: Track, shortStartBuffer: Bool)
   func cancelLoading()
   /// Drops the asset and stops observing the item, leaving the item in place for the reload.
   func dropAsset()

@@ -51,7 +51,10 @@ final class MediaLoader {
   /// Resolves `src` and loads the result, reporting through `onEvent`. Cancels a resolve in
   /// flight; the previous asset's loads stay current, and can still report, until the new
   /// resolve loads an asset (an invalid source leaves them current).
-  func resolveAndLoad(src: String, track: Track? = nil) {
+  /// - Parameter shortStartBuffer: The item's forward buffer is 1 s, or the configured one when
+  ///   shorter, until its owner restores `bufferDuration`. An item becomes ready only once its
+  ///   forward buffer is filled: by default about 4.5 s of a progressive stream, whatever the bitrate.
+  func resolveAndLoad(src: String, track: Track? = nil, shortStartBuffer: Bool = false) {
     mediaResolverTask?.cancel()
     // `self` stays weak across the await: a consumer resolver that never settles must not pin
     // the loader.
@@ -60,11 +63,11 @@ final class MediaLoader {
       guard !Task.isCancelled else { return }
       let resolved = await resolveUrl(src, track)
       guard !Task.isCancelled, let self else { return }
-      loadWithResolvedUrl(resolved)
+      loadWithResolvedUrl(resolved, shortStartBuffer: shortStartBuffer)
     }
   }
 
-  private func loadAsset(url: URL, options: [String: Any]?) {
+  private func loadAsset(url: URL, options: [String: Any]?, shortStartBuffer: Bool) {
     let pendingAsset = AVURLAsset(url: url, options: options)
     asset = pendingAsset
 
@@ -124,7 +127,9 @@ final class MediaLoader {
           return
         }
         let avItem = AVPlayerItem(asset: pendingAsset)
-        avItem.preferredForwardBufferDuration = bufferDuration / 1000.0
+        avItem.preferredForwardBufferDuration = shortStartBuffer
+          ? min(1, bufferDuration > 0 ? bufferDuration / 1000 : 1)
+          : bufferDuration / 1000
         onEvent?(.prepared(avItem))
       } catch {
         guard isCurrent(pendingAsset) else { return }
@@ -177,7 +182,7 @@ final class MediaLoader {
 
   // MARK: - Private
 
-  private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl) {
+  private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl, shortStartBuffer: Bool) {
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")
       onEvent?(.invalidSource(resolved.url))
@@ -187,6 +192,7 @@ final class MediaLoader {
     loadAsset(
       url: mediaUrl.isFileURL ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl,
       options: Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent),
+      shortStartBuffer: shortStartBuffer,
     )
   }
 }
