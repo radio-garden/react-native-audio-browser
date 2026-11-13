@@ -2,13 +2,14 @@ export type Platform = 'android' | 'ios'
 
 type Limit = number | Partial<Record<Platform, number>>
 
-export type Expectation =
+export type Expectation = (
   | {
       outcome: 'plays'
       maxGapSeconds?: Limit
       resumesWithinSeconds?: Limit
     }
   | { outcome: 'error'; atSeconds: Limit; toleranceSeconds: Limit }
+) & { minAudibleShare?: Limit }
 
 export type StreamCase = {
   name: string
@@ -106,6 +107,13 @@ export function judge(
   const audible = audibleSeconds(states, end)
   const failures: string[] = []
   const expect = streamCase.expect
+  const minShare = limit(expect.minAudibleShare, platform)
+  const share = audible / (errorAt ?? end)
+  if (minShare !== undefined && share < minShare) {
+    failures.push(
+      `audible for ${Math.round(share * 100)}% of the run; expected at least ${Math.round(minShare * 100)}%`
+    )
+  }
   const observed =
     errorAt === undefined
       ? `played ${round(audible)} s of ${end}, longest gap ${round(longest)} s`
