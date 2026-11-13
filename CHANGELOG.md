@@ -1,3 +1,9 @@
+## [0.2.0-next.95](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.94...v0.2.0-next.95) (2026-11-13)
+
+### Features
+
+* **queue:** add getQueueVersion() ([47ee90c](https://github.com/radio-garden/react-native-audio-browser/commit/47ee90ce72c2f35c7aaaab67225b018d17f5d87b))
+
 ## [0.2.0-next.94](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.93...v0.2.0-next.94) (2026-11-13)
 
 ### Bug Fixes
