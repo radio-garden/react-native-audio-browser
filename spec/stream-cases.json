@@ -7,7 +7,7 @@
       "seconds": 150,
       "expect": {
         "outcome": "plays",
-        "maxGapSeconds": { "android": 1.5, "ios": 4 }
+        "maxGapSeconds": 1.5
       }
     },
     {
@@ -23,13 +23,13 @@
       "expect": { "outcome": "error", "atSeconds": 121, "toleranceSeconds": 4 }
     },
     {
-      "name": "a connection that sends its burst and then nothing gives up: at 120 s of silence, or 12 s after its first failure where the burst never plays",
+      "name": "a connection that sends its burst and then nothing gives up at 120 s of silence",
       "path": "/live.mp3?stall=2",
       "seconds": 145,
       "expect": {
         "outcome": "error",
-        "atSeconds": { "android": 122, "ios": 27 },
-        "toleranceSeconds": { "android": 6, "ios": 4 }
+        "atSeconds": 122,
+        "toleranceSeconds": 6
       }
     },
     {
