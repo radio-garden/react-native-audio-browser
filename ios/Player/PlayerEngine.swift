@@ -76,6 +76,8 @@ enum EngineEvent {
 
   func play()
   func pause()
+  /// Caps how far ahead the current item loads, in seconds; nil restores the configured buffer.
+  func capForwardBuffer(_ seconds: Double?)
   /// Stages `rate` for the next play; applies it now only when `playing`, since a nonzero
   /// AVPlayer rate starts playback.
   func setRate(_ rate: Float, playing: Bool)

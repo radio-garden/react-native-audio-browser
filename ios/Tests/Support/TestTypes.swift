@@ -93,6 +93,8 @@ final class MockPlayerEngine: PlayerEngine {
   var seekResult: Bool? = true
 
   func play() { startPlaybackCallCount += 1 }
+  var forwardBufferCaps: [Double?] = []
+  func capForwardBuffer(_ seconds: Double?) { forwardBufferCaps.append(seconds) }
   func pause() { pausePlaybackCallCount += 1 }
   func setRate(_ rate: Float, playing: Bool) { rates.append((rate, playing)) }
   private var seeksInFlight: [@MainActor (Bool) -> Void] = []

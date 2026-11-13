@@ -207,6 +207,10 @@ final class AVPlayerEngine: PlayerEngine {
     avPlayer.pause()
   }
 
+  func capForwardBuffer(_ seconds: Double?) {
+    avPlayer.currentItem?.preferredForwardBufferDuration = seconds ?? bufferDuration / 1000
+  }
+
   func setRate(_ rate: Float, playing: Bool) {
     self.rate = rate
     avPlayer.defaultRate = rate

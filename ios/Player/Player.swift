@@ -193,6 +193,9 @@ final class Player {
     // While loading, the engine may still hold the previous track's item: a play waits for the new one.
     if !newValue { engine.pause() } else if state != .loading { engine.play() }
     if changed, !newValue { parkIdleLiveStream() }
+    if changed, currentTrack?.live == true, liveItemPausable {
+      engine.capForwardBuffer(newValue ? nil : Self.pausedLiveBufferSeconds)
+    }
 
     guard changed else { return }
     // A resume can find the state still .buffering (a pause near the end leaves it) or .loading,
@@ -808,6 +811,9 @@ final class Player {
   /// The window behind its live edge that lets a live item pause in place, as on-demand does (a
   /// DVR window). A shorter one is a stream that can't be rewound: a pause closes it.
   static let pausableLiveWindowSeconds: TimeInterval = 30
+  /// A paused live item with a window goes on loading toward its edge at the stream's rate for as
+  /// long as it stays paused: capped while paused, so it stops this far ahead of the paused position.
+  static let pausedLiveBufferSeconds: TimeInterval = 10
 
   private var liveItemPausable: Bool {
     (engine.liveWindowSeconds ?? 0) >= Self.pausableLiveWindowSeconds

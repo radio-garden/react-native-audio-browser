@@ -1455,6 +1455,29 @@ struct PlayerLivePauseTests {
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
 
+  @Test func aPausedSeekableLiveItemCapsItsBufferUntilPlay() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    engine.forwardBufferCaps.removeAll()
+    player.pause()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds])
+    player.play()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds, nil])
+  }
+
+  @Test func aStoppedSeekableLiveItemCapsItsBuffer() throws {
+    let (player, engine) = try makePlayingSeekableLive()
+    engine.forwardBufferCaps.removeAll()
+    player.stop()
+    #expect(engine.forwardBufferCaps == [Player.pausedLiveBufferSeconds])
+  }
+
+  @Test func aPausedOnDemandItemKeepsItsBuffer() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.forwardBufferCaps.removeAll()
+    player.pause()
+    #expect(!engine.forwardBufferCaps.contains { $0 != nil })
+  }
+
   @Test func aSeekableLiveStopKeepsItsItem() throws {
     let (player, engine) = try makePlayingSeekableLive()
     player.stop()
