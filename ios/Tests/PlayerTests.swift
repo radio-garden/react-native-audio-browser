@@ -969,11 +969,11 @@ struct NaturalEndPlayIntentTests {
 
 @Suite("Player - sleep timer fade")
 struct SleepTimerFadeTests {
-  /// A 20 s timer whose 10 s fade has begun.
+  /// A 20 s timer whose 10 s fade is half done.
   @MainActor
   private func startFade(_ c: Player, _ clock: ManualSleepTimerScheduler) {
     c.sleepTimerManager.set(seconds: 20, fadeDuration: 10)
-    clock.advance(to: 10)
+    clock.advance(to: 15)
   }
 
   @Test @MainActor
@@ -982,7 +982,7 @@ struct SleepTimerFadeTests {
     eh.volume = 0.8
 
     startFade(c, clock)
-    eh.volume = 0.1 // mid-fade
+    #expect(eh.volume < 0.8)
 
     #expect(c.sleepTimerManager.isFading)
     c.sleepTimerManager.clear()
@@ -998,7 +998,7 @@ struct SleepTimerFadeTests {
     eh.pausePlaybackCallCount = 0
 
     startFade(c, clock)
-    eh.volume = 0.2 // mid-fade
+    #expect(eh.volume < 1.0)
 
     clock.advance(to: 20)
 
@@ -1028,7 +1028,7 @@ struct SleepTimerFadeTests {
     eh.volume = 0.8
 
     startFade(c, clock)
-    eh.volume = 0.1 // mid-fade
+    #expect(eh.volume < 0.8)
 
     c.sleepTimerManager.set(seconds: 60)
 

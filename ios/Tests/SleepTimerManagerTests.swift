@@ -11,7 +11,7 @@ private final class Volume {
 private func makeManager() -> (SleepTimerManager, ManualSleepTimerScheduler, Volume, VolumeFader) {
   let clock = ManualSleepTimerScheduler()
   let volume = Volume()
-  let fader = VolumeFader(getVolume: { volume.level }, setVolume: { volume.level = $0 })
+  let fader = VolumeFader(getVolume: { volume.level }, setVolume: { volume.level = $0 }, scheduler: clock)
   return (SleepTimerManager(fader: fader, scheduler: clock), clock, volume, fader)
 }
 
@@ -36,15 +36,43 @@ struct SleepTimerManagerTests {
     #expect(manager.isFading)
     #expect(fader.duration == 0.15)
     #expect(fader.originalVolume == 0.8)
+    #expect(volume.level < 0.8)
     #expect(completes == 0)
-    volume.level = 0.1 // stands in for the fade lowering it
 
     clock.advance(to: 0.4)
     #expect(completes == 1)
-    #expect(volumeAtHalt == 0.1) // halted before the restore
+    #expect(volumeAtHalt.map { $0 < 0.8 } == true) // halted before the restore
     #expect(volume.level == 0.8)
     #expect(!manager.isFading)
     #expect(manager.get() == nil)
+  }
+
+  @Test @MainActor
+  func lateFadeStart_joinsTheRampWhereItWouldBe() {
+    let (manager, clock, volume, _) = makeManager()
+    manager.set(seconds: 20, fadeDuration: 10)
+
+    clock.advance(to: 15) // the fade, due at 10, runs 5 s late
+
+    #expect(volume.level == 0.8 * VolumeFader.gain(at: 0.5))
+  }
+
+  @Test @MainActor
+  func fadeFallsByEqualDecibelsEachStep() {
+    let (manager, clock, volume, _) = makeManager()
+    manager.set(seconds: 20, fadeDuration: 10)
+
+    var decibels: [Float] = []
+    for second in 10 ... 19 {
+      clock.advance(to: TimeInterval(second))
+      decibels.append(20 * log10(volume.level / 0.8))
+    }
+
+    let drops = zip(decibels, decibels.dropFirst()).map { $0 - $1 }
+    for drop in drops {
+      #expect(abs(drop + VolumeFader.floorDecibels / 10) < 0.01)
+    }
+    #expect(abs(decibels.last! - 0.9 * VolumeFader.floorDecibels) < 0.01)
   }
 
   @Test @MainActor
