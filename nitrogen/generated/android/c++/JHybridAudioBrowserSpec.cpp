@@ -1693,9 +1693,9 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result->toCpp();
   }
-  void JHybridAudioBrowserSpec::setSleepTimer(double seconds, std::optional<double> fadeDuration) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* seconds */, jni::alias_ref<jni::JDouble> /* fadeDuration */)>("setSleepTimer");
-    method(_javaPart, seconds, fadeDuration.has_value() ? jni::JDouble::valueOf(fadeDuration.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setSleepTimer(double seconds, std::optional<double> fadeDuration, std::optional<bool> timelineFade) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* seconds */, jni::alias_ref<jni::JDouble> /* fadeDuration */, jni::alias_ref<jni::JBoolean> /* timelineFade */)>("setSleepTimer");
+    method(_javaPart, seconds, fadeDuration.has_value() ? jni::JDouble::valueOf(fadeDuration.value()) : nullptr, timelineFade.has_value() ? jni::JBoolean::valueOf(timelineFade.value()) : nullptr);
   }
   void JHybridAudioBrowserSpec::setSleepTimerToEndOfTrack() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("setSleepTimerToEndOfTrack");

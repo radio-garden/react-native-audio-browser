@@ -1049,8 +1049,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void setSleepTimer(double seconds, std::optional<double> fadeDuration) override {
-      auto __result = _swiftPart.setSleepTimer(std::forward<decltype(seconds)>(seconds), fadeDuration);
+    inline void setSleepTimer(double seconds, std::optional<double> fadeDuration, std::optional<bool> timelineFade) override {
+      auto __result = _swiftPart.setSleepTimer(std::forward<decltype(seconds)>(seconds), fadeDuration, timelineFade);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

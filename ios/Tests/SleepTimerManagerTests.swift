@@ -189,7 +189,7 @@ struct SleepTimerTimelineFadeTests {
   @Test @MainActor
   func placedAheadOfTheFadeWindow_endingAtTheDeadline() {
     let (manager, clock, _, timeline) = makeTimelineManager()
-    manager.set(seconds: 300, fadeDuration: 30)
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
 
     clock.advance(to: 209)
     #expect(timeline.placed.isEmpty)
@@ -203,7 +203,7 @@ struct SleepTimerTimelineFadeTests {
   @Test @MainActor
   func placed_leavesTheVolumeAlone_andCountsAsFading() {
     let (manager, clock, volume, timeline) = makeTimelineManager()
-    manager.set(seconds: 300, fadeDuration: 30)
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
 
     clock.advance(to: 285)
 
@@ -217,7 +217,7 @@ struct SleepTimerTimelineFadeTests {
     let (manager, clock, _, timeline) = makeTimelineManager()
     var cancelsAtHalt: Int?
     manager.onComplete = { cancelsAtHalt = timeline.cancels }
-    manager.set(seconds: 300, fadeDuration: 30)
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
 
     clock.advance(to: 300)
 
@@ -229,7 +229,7 @@ struct SleepTimerTimelineFadeTests {
   @Test @MainActor
   func clear_removesThePlacedFade() {
     let (manager, clock, _, timeline) = makeTimelineManager()
-    manager.set(seconds: 300, fadeDuration: 30)
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
     clock.advance(to: 250)
 
     manager.clear()
@@ -242,7 +242,7 @@ struct SleepTimerTimelineFadeTests {
   func unavailable_fadesTheVolumeInstead() {
     let (manager, clock, volume, timeline) = makeTimelineManager()
     timeline.available = false
-    manager.set(seconds: 300, fadeDuration: 30)
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
 
     clock.advance(to: 285)
 
@@ -254,10 +254,77 @@ struct SleepTimerTimelineFadeTests {
   @Test @MainActor
   func shortTimer_placesTheFadeAtOnce() {
     let (manager, clock, _, timeline) = makeTimelineManager()
-    manager.set(seconds: 60, fadeDuration: 30)
+    manager.set(seconds: 60, fadeDuration: 30, timelineFade: true)
 
     clock.advance(to: 0)
 
     #expect(timeline.placed.first?.secondsAhead == 60)
+  }
+
+  @Test @MainActor
+  func off_byDefault_fadesTheVolume() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30)
+
+    clock.advance(to: 285)
+
+    #expect(timeline.placed.isEmpty)
+    #expect(volume.level < 0.8)
+  }
+
+  @Test @MainActor
+  func resumeAfterAStall_placesItAgainAgainstThePositionNowPlaying() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 210)
+
+    clock.advance(to: 250) // stalled since 210; the item's timeline fell behind the clock
+    manager.onPlaybackBecameAudible()
+
+    #expect(timeline.placed.count == 2)
+    #expect(timeline.placed.last?.secondsAhead == 50)
+    #expect(timeline.placed.last?.duration == 30)
+  }
+
+  @Test @MainActor
+  func playbackBeforeItIsDue_placesNothing() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 100)
+
+    manager.onPlaybackBecameAudible()
+
+    #expect(timeline.placed.isEmpty)
+  }
+
+  @Test @MainActor
+  func stationChangeDuringTheFade_fadesTheVolumeUntilTheNewItemPlays() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 285)
+
+    manager.onTrackChanged() // the fade left with the old item
+    #expect(volume.level == 0.8 * VolumeFader.gain(at: 0.5))
+    #expect(manager.isFading)
+
+    clock.advance(to: 290)
+    manager.onPlaybackBecameAudible()
+    #expect(timeline.placed.last?.secondsAhead == 10)
+    #expect(volume.level == 0.8)
+    #expect(manager.isFading)
+  }
+
+  @Test @MainActor
+  func stationChangeBeforeTheFade_placesItOnTheNewItem() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 220)
+
+    manager.onTrackChanged()
+    #expect(volume.level == 0.8)
+    manager.onPlaybackBecameAudible()
+
+    #expect(timeline.placed.count == 2)
+    #expect(timeline.placed.last?.secondsAhead == 80)
   }
 }

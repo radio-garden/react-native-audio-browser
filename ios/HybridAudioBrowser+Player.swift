@@ -143,9 +143,13 @@ public extension HybridAudioBrowser {
     }
   }
 
-  func setSleepTimer(seconds: Double, fadeDuration: Double?) throws {
+  func setSleepTimer(seconds: Double, fadeDuration: Double?, timelineFade: Bool?) throws {
     onMainActor {
-      player?.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
+      player?.sleepTimerManager.set(
+        seconds: seconds,
+        fadeDuration: fadeDuration,
+        timelineFade: timelineFade ?? false,
+      )
     }
   }
 

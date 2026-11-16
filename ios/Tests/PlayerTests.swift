@@ -1037,6 +1037,26 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
+  func timelineFade_isPlacedAgainWhenPlaybackResumesAfterAStall() throws {
+    let (c, eh, _, clock) = makeCoordinator()
+    try loadTrack(c)
+    c.setPlayWhenReady(true)
+    c.transition(.bufferingSufficient)
+    c.transition(.avPlayerPlaying)
+    eh.timelineFadeAvailable = true
+    c.sleepTimerManager.set(seconds: 120, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 30) // due: 30 s fade + 60 s lead before the deadline
+    #expect(eh.timelineFades.count == 1)
+
+    c.transition(.avPlayerWaiting)
+    clock.advance(to: 40)
+    c.transition(.avPlayerPlaying)
+
+    #expect(eh.timelineFades.count == 2)
+    #expect(eh.timelineFades.last?.secondsAhead == 80)
+  }
+
+  @Test @MainActor
   func pauseDuringFade_clearsSleepTimer() throws {
     let (c, _, _, clock) = makeCoordinator()
     try loadTrack(c)

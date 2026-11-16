@@ -86,8 +86,12 @@ final class SleepTimerManager {
   private nonisolated(unsafe) var timelineFadeJob: (any SleepTimerJob)?
 
   private weak var timelineFader: (any TimelineFading)?
+  /// Set once the timeline fade is due to be placed, until the timer ends: its deadline on the
+  /// scheduler's clock and its duration.
+  private var timelineFade: (deadline: TimeInterval, duration: TimeInterval)?
+  /// Whether the current item carries the timeline fade.
   private var timelineFadePlaced = false
-  private var timelineFadeRunning = false
+  private var fadeWindowOpen = false
 
   /// Seconds before the fade window the timeline fade is placed: AirPlay 2 renders this far ahead
   /// at most, so the fade is in place before the audio it covers.
@@ -103,7 +107,7 @@ final class SleepTimerManager {
     self.scheduler = scheduler
   }
 
-  var isFading: Bool { fader.isActive || timelineFadeRunning }
+  var isFading: Bool { fader.isActive || (timelineFadePlaced && fadeWindowOpen) }
 
   /// The deadline in seconds since 1970, or -1 when there is none.
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -164,8 +168,9 @@ final class SleepTimerManager {
 
   /// Stops playback `seconds` from now. With `fadeDuration`, the volume fades over that many
   /// seconds (clamped to `seconds`) so silence lands at the deadline, also when the fade starts
-  /// late.
-  func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
+  /// late. With `timelineFade`, the fade is placed on the item's timeline where the route allows
+  /// (`TimelineFading`), and the volume fades where it doesn't.
+  func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil, timelineFade: Bool = false) {
     cancelSleepTimerJob()
     cancelFades()
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
@@ -175,22 +180,19 @@ final class SleepTimerManager {
     }
     if let fadeDuration, fadeDuration > 0 {
       let fade = min(fadeDuration, seconds)
-      timelineFadeJob = scheduler.schedule(
-        after: max(0, seconds - fade - Self.timelineFadeLeadSeconds),
-      ) { [weak self] in
-        guard let self, let timelineFader else { return }
-        timelineFadePlaced = timelineFader.startTimelineFade(
-          endingIn: deadline - scheduler.now,
-          duration: fade,
-        )
+      if timelineFade {
+        timelineFadeJob = scheduler.schedule(
+          after: max(0, seconds - fade - Self.timelineFadeLeadSeconds),
+        ) { [weak self] in
+          guard let self else { return }
+          self.timelineFade = (deadline, fade)
+          placeTimelineFade()
+        }
       }
       fadeJob = scheduler.schedule(after: seconds - fade) { [weak self] in
         guard let self else { return }
-        if timelineFadePlaced {
-          timelineFadeRunning = true
-        } else {
-          fader.start(endingAt: deadline, duration: fade)
-        }
+        fadeWindowOpen = true
+        if !timelineFadePlaced { fader.start(endingAt: deadline, duration: fade) }
       }
     }
     if let state = get() { onChanged?(state) }
@@ -205,12 +207,23 @@ final class SleepTimerManager {
     }
   }
 
-  /// Clears an end-of-track timer: it applies to the track it was set on, not the next.
+  /// Clears an end-of-track timer: it applies to the track it was set on, not the next. A timeline
+  /// fade leaves with its item: the volume fades until the next item plays and carries it again.
   func onTrackChanged() {
+    if timelineFadePlaced, let timelineFade {
+      timelineFadePlaced = false
+      if fadeWindowOpen { fader.start(endingAt: timelineFade.deadline, duration: timelineFade.duration) }
+    }
     if willSleepWhenCurrentItemReachesEnd {
       willSleepWhenCurrentItemReachesEnd = false
       onChanged?(.first(NullType.null))
     }
+  }
+
+  /// Places the timeline fade again against the position now playing: a stall or a new item moves
+  /// the timeline against the clock.
+  func onPlaybackBecameAudible() {
+    placeTimelineFade()
   }
 
   func onTrackPlayedToEnd() {
@@ -235,10 +248,20 @@ final class SleepTimerManager {
     endTimelineFade()
   }
 
+  private func placeTimelineFade() {
+    guard let timelineFade, let timelineFader else { return }
+    timelineFadePlaced = timelineFader.startTimelineFade(
+      endingIn: timelineFade.deadline - scheduler.now,
+      duration: timelineFade.duration,
+    )
+    if timelineFadePlaced { fader.cancel(restoringVolume: true) }
+  }
+
   private func endTimelineFade() {
     if timelineFadePlaced { timelineFader?.cancelTimelineFade() }
+    timelineFade = nil
     timelineFadePlaced = false
-    timelineFadeRunning = false
+    fadeWindowOpen = false
   }
 
   private func complete() {

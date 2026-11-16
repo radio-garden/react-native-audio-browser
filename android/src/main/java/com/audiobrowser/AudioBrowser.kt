@@ -1062,7 +1062,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun getSleepTimer(): SleepTimer =
     readPlayer(SleepTimer.create(NullType.NULL)) { it.sleepTimer.get() }
 
-  override fun setSleepTimer(seconds: Double, fadeDuration: Double?) =
+  // A timeline fade answers AirPlay's buffering, which an Android route doesn't have.
+  override fun setSleepTimer(seconds: Double, fadeDuration: Double?, timelineFade: Boolean?) =
     commandPlayer("setSleepTimer") { player -> player.sleepTimer.setAfter(seconds, fadeDuration) }
 
   override fun setSleepTimerToEndOfTrack() =

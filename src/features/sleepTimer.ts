@@ -56,6 +56,13 @@ export type SleepTimerOptions = {
    * clearing/replacing the timer cancels it.
    */
   fadeDuration?: number
+  /**
+   * iOS 27 and later, over AirPlay: fades the audio at positions on the
+   * current item's timeline, which AirPlay sends ahead of what plays, so the
+   * fade is heard rather than lost when the timer pauses. Elsewhere the
+   * volume fades as without it. Off by default while it is tried on devices.
+   */
+  timelineFade?: boolean
 }
 
 /**
@@ -67,7 +74,11 @@ export function setSleepTimer(
   seconds: number,
   options?: SleepTimerOptions
 ): void {
-  nativeBrowser.setSleepTimer(seconds, options?.fadeDuration)
+  nativeBrowser.setSleepTimer(
+    seconds,
+    options?.fadeDuration,
+    options?.timelineFade
+  )
 }
 
 /**

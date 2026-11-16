@@ -997,7 +997,11 @@ export class NativeAudioBrowser
     return null
   }
 
-  setSleepTimer(seconds: number, fadeDuration?: number): void {
+  setSleepTimer(
+    seconds: number,
+    fadeDuration?: number,
+    _timelineFade?: boolean
+  ): void {
     this.sleepTimer.sleepAfter(seconds, fadeDuration)
     this.onSleepTimerChanged(this.getSleepTimer())
   }

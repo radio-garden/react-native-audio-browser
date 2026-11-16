@@ -260,7 +260,11 @@ export interface AudioBrowser extends HybridObject<{
    * ramps down over the final `fadeDuration` seconds so silence lands exactly
    * at the deadline; the pre-fade volume is restored after pausing.
    */
-  setSleepTimer(seconds: number, fadeDuration?: number): void
+  setSleepTimer(
+    seconds: number,
+    fadeDuration?: number,
+    timelineFade?: boolean
+  ): void
   setSleepTimerToEndOfTrack(): void
   clearSleepTimer(): boolean
 
