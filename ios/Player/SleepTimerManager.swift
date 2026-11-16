@@ -58,6 +58,19 @@ struct MainQueueSleepTimerScheduler: SleepTimerScheduling {
   }
 }
 
+/// A fade placed on the current item's timeline, so the listener hears it at those positions
+/// however far ahead the route takes the audio: AirPlay 2 sends seconds ahead of what plays, and
+/// a fade of the player's volume lands in audio a pause then drops.
+@MainActor
+protocol TimelineFading: AnyObject {
+  /// Fades the item's audio to silence over `duration` seconds of its timeline, ending
+  /// `secondsAhead` after the position heard now. False when the route or OS can't; the caller
+  /// then fades the volume.
+  func startTimelineFade(endingIn secondsAhead: TimeInterval, duration: TimeInterval) -> Bool
+  /// Removes the fade, restoring the item's audio.
+  func cancelTimelineFade()
+}
+
 /// Holds one sleep timer at a time: a deadline, optionally faded out, or the end of the current
 /// track. Setting one replaces the other.
 @MainActor
@@ -70,13 +83,27 @@ final class SleepTimerManager {
   // nonisolated(unsafe) so deinit, always nonisolated in Swift 6, can cancel them.
   private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
   private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
+  private nonisolated(unsafe) var timelineFadeJob: (any SleepTimerJob)?
 
-  init(fader: VolumeFader, scheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler()) {
+  private weak var timelineFader: (any TimelineFading)?
+  private var timelineFadePlaced = false
+  private var timelineFadeRunning = false
+
+  /// Seconds before the fade window the timeline fade is placed: AirPlay 2 renders this far ahead
+  /// at most, so the fade is in place before the audio it covers.
+  static let timelineFadeLeadSeconds: TimeInterval = 60
+
+  init(
+    fader: VolumeFader,
+    timelineFader: (any TimelineFading)? = nil,
+    scheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler(),
+  ) {
     self.fader = fader
+    self.timelineFader = timelineFader
     self.scheduler = scheduler
   }
 
-  var isFading: Bool { fader.isActive }
+  var isFading: Bool { fader.isActive || timelineFadeRunning }
 
   /// The deadline in seconds since 1970, or -1 when there is none.
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -112,7 +139,7 @@ final class SleepTimerManager {
     if !hasSleepTimer { return false }
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
-    fader.cancel(restoringVolume: true)
+    cancelFades()
     onChanged?(.first(NullType.null))
     return true
   }
@@ -140,7 +167,7 @@ final class SleepTimerManager {
   /// late.
   func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
-    fader.cancel(restoringVolume: true)
+    cancelFades()
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
     let deadline = scheduler.now + seconds
     sleepTimerJob = scheduler.schedule(after: seconds) { [weak self] in
@@ -148,8 +175,22 @@ final class SleepTimerManager {
     }
     if let fadeDuration, fadeDuration > 0 {
       let fade = min(fadeDuration, seconds)
+      timelineFadeJob = scheduler.schedule(
+        after: max(0, seconds - fade - Self.timelineFadeLeadSeconds),
+      ) { [weak self] in
+        guard let self, let timelineFader else { return }
+        timelineFadePlaced = timelineFader.startTimelineFade(
+          endingIn: deadline - scheduler.now,
+          duration: fade,
+        )
+      }
       fadeJob = scheduler.schedule(after: seconds - fade) { [weak self] in
-        self?.fader.start(endingAt: deadline, duration: fade)
+        guard let self else { return }
+        if timelineFadePlaced {
+          timelineFadeRunning = true
+        } else {
+          fader.start(endingAt: deadline, duration: fade)
+        }
       }
     }
     if let state = get() { onChanged?(state) }
@@ -159,7 +200,7 @@ final class SleepTimerManager {
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
     if changed {
-      fader.cancel(restoringVolume: true)
+      cancelFades()
       if let state = get() { onChanged?(state) }
     }
   }
@@ -185,6 +226,19 @@ final class SleepTimerManager {
     sleepTimerJob = nil
     fadeJob?.cancel()
     fadeJob = nil
+    timelineFadeJob?.cancel()
+    timelineFadeJob = nil
+  }
+
+  private func cancelFades() {
+    fader.cancel(restoringVolume: true)
+    endTimelineFade()
+  }
+
+  private func endTimelineFade() {
+    if timelineFadePlaced { timelineFader?.cancelTimelineFade() }
+    timelineFadePlaced = false
+    timelineFadeRunning = false
   }
 
   private func complete() {
@@ -192,10 +246,13 @@ final class SleepTimerManager {
     willSleepWhenCurrentItemReachesEnd = false
     onChanged?(.first(NullType.null))
     fader.resolve { onComplete?() }
+    // After the halt, so the restored audio is never heard.
+    endTimelineFade()
   }
 
   deinit {
     sleepTimerJob?.cancel()
     fadeJob?.cancel()
+    timelineFadeJob?.cancel()
   }
 }

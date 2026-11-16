@@ -31,7 +31,7 @@ enum EngineEvent {
 /// The media stack under the Player: the AVPlayer and its items, loading, now playing, remote
 /// commands and the audio session. It carries out what the Player decides and reports what it
 /// observes through `onEvent`; it holds no playback policy (ADR 0012). Tests use a mock.
-@MainActor protocol PlayerEngine: AnyObject {
+@MainActor protocol PlayerEngine: TimelineFading {
   var onEvent: (@MainActor (EngineEvent) -> Void)? { get set }
 
   // MARK: The current item

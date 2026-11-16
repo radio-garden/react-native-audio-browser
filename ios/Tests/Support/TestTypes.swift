@@ -47,6 +47,20 @@ final class MockPlayerEngine: PlayerEngine {
   var playerFailed = false
   var volume: Float = 1
 
+  var timelineFadeAvailable = false
+  var timelineFades: [(secondsAhead: TimeInterval, duration: TimeInterval)] = []
+  var cancelTimelineFadeCount = 0
+
+  func startTimelineFade(endingIn secondsAhead: TimeInterval, duration: TimeInterval) -> Bool {
+    guard timelineFadeAvailable else { return false }
+    timelineFades.append((secondsAhead, duration))
+    return true
+  }
+
+  func cancelTimelineFade() {
+    cancelTimelineFadeCount += 1
+  }
+
   var resolveAndLoadCalls: [String] = []
   var shortStartBufferRequests: [Bool] = []
   var cancelLoadingCount = 0

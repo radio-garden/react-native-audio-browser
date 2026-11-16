@@ -252,6 +252,7 @@ final class Player {
         setVolume: { [weak engine] in engine?.volume = $0 },
         scheduler: sleepTimerScheduler,
       ),
+      timelineFader: engine,
       scheduler: sleepTimerScheduler,
     )
     self.persistenceDefaults = persistenceDefaults

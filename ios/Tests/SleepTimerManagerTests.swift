@@ -154,3 +154,110 @@ struct SleepTimerManagerTests {
     #expect(volume.level == 0.8)
   }
 }
+
+@MainActor
+private final class FakeTimelineFader: TimelineFading {
+  var available = true
+  var placed: [(secondsAhead: TimeInterval, duration: TimeInterval)] = []
+  var cancels = 0
+
+  func startTimelineFade(endingIn secondsAhead: TimeInterval, duration: TimeInterval) -> Bool {
+    guard available else { return false }
+    placed.append((secondsAhead, duration))
+    return true
+  }
+
+  func cancelTimelineFade() {
+    cancels += 1
+  }
+}
+
+@MainActor
+private func makeTimelineManager() -> (
+  SleepTimerManager, ManualSleepTimerScheduler, Volume, FakeTimelineFader,
+) {
+  let clock = ManualSleepTimerScheduler()
+  let volume = Volume()
+  let timeline = FakeTimelineFader()
+  let fader = VolumeFader(getVolume: { volume.level }, setVolume: { volume.level = $0 }, scheduler: clock)
+  let manager = SleepTimerManager(fader: fader, timelineFader: timeline, scheduler: clock)
+  return (manager, clock, volume, timeline)
+}
+
+@Suite("SleepTimerManager - timeline fade")
+struct SleepTimerTimelineFadeTests {
+  @Test @MainActor
+  func placedAheadOfTheFadeWindow_endingAtTheDeadline() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30)
+
+    clock.advance(to: 209)
+    #expect(timeline.placed.isEmpty)
+
+    clock.advance(to: 210) // 30 s fade + 60 s lead before the deadline
+    #expect(timeline.placed.count == 1)
+    #expect(timeline.placed.first?.secondsAhead == 90)
+    #expect(timeline.placed.first?.duration == 30)
+  }
+
+  @Test @MainActor
+  func placed_leavesTheVolumeAlone_andCountsAsFading() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30)
+
+    clock.advance(to: 285)
+
+    #expect(timeline.placed.count == 1)
+    #expect(volume.level == 0.8)
+    #expect(manager.isFading)
+  }
+
+  @Test @MainActor
+  func completion_haltsThenRemovesTheFade() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    var cancelsAtHalt: Int?
+    manager.onComplete = { cancelsAtHalt = timeline.cancels }
+    manager.set(seconds: 300, fadeDuration: 30)
+
+    clock.advance(to: 300)
+
+    #expect(cancelsAtHalt == 0)
+    #expect(timeline.cancels == 1)
+    #expect(!manager.isFading)
+  }
+
+  @Test @MainActor
+  func clear_removesThePlacedFade() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30)
+    clock.advance(to: 250)
+
+    manager.clear()
+
+    #expect(timeline.cancels == 1)
+    #expect(!manager.isFading)
+  }
+
+  @Test @MainActor
+  func unavailable_fadesTheVolumeInstead() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    timeline.available = false
+    manager.set(seconds: 300, fadeDuration: 30)
+
+    clock.advance(to: 285)
+
+    #expect(volume.level < 0.8)
+    clock.advance(to: 300)
+    #expect(timeline.cancels == 0)
+  }
+
+  @Test @MainActor
+  func shortTimer_placesTheFadeAtOnce() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 60, fadeDuration: 30)
+
+    clock.advance(to: 0)
+
+    #expect(timeline.placed.first?.secondsAhead == 60)
+  }
+}
