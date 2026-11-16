@@ -258,7 +258,9 @@ export interface AudioBrowser extends HybridObject<{
   /**
    * Stops playback after `seconds`. When `fadeDuration` is given, the volume
    * ramps down over the final `fadeDuration` seconds so silence lands exactly
-   * at the deadline; the pre-fade volume is restored after pausing.
+   * at the deadline; the pre-fade volume is restored after pausing. With
+   * `timelineFade` (iOS 27, over AirPlay) the fade is placed on the item's
+   * timeline instead, so AirPlay's buffering doesn't drop it.
    */
   setSleepTimer(
     seconds: number,

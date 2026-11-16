@@ -365,7 +365,7 @@ final class Player {
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
     if new == .playing {
       retry.playbackBecameAudible()
-      if old != .playing { sleepTimerManager.onPlaybackBecameAudible() }
+      if old != .playing { sleepTimerManager.onItemTimelineMoved() }
     } else if old == .playing {
       retry.playbackStoppedBeingAudible()
     }
@@ -761,6 +761,7 @@ final class Player {
     case .none:
       break
     }
+    if finished, state == .playing { sleepTimerManager.onItemTimelineMoved() }
   }
 
   // MARK: - Reloading

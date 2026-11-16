@@ -235,26 +235,27 @@ final class AVPlayerEngine: PlayerEngine {
   private static let timelineFadeSegments = 20
 
   /// Only over AirPlay, and from iOS 27, where an audio mix can apply to a streamed item's mix of
-  /// tracks. Elsewhere the volume fade lands as heard.
+  /// tracks. Elsewhere the volume fade lands as heard. Removes any earlier timeline fade first, so
+  /// false leaves the item's audio as it was before any.
   func startTimelineFade(endingIn secondsAhead: TimeInterval, duration: TimeInterval) -> Bool {
+    cancelTimelineFade()
     guard isAirPlayRoute, duration > 0, let item = avPlayer.currentItem else { return false }
     guard #available(iOS 27.0, macOS 27.0, tvOS 27.0, visionOS 27.0, *) else { return false }
     let now = item.currentTime()
     guard now.isNumeric else { return false }
-    let end = now.seconds + secondsAhead
+    // The item's time runs at the playback rate.
+    let itemRate = Double(rate)
     let parameters = AVMutableAudioMixInputParameters()
     parameters.trackID = AVAudioMixInputParametersTrackID.mixID.rawValue
-    let segments = Self.timelineFadeSegments
-    for index in 0 ..< segments {
-      let from = Double(index) / Double(segments)
-      let to = Double(index + 1) / Double(segments)
+    for ramp in VolumeFader.ramps(
+      endingAt: now.seconds + secondsAhead * itemRate,
+      duration: duration * itemRate,
+      segments: Self.timelineFadeSegments,
+    ) {
       parameters.setVolumeRamp(
-        fromStartVolume: VolumeFader.gain(at: from),
-        toEndVolume: VolumeFader.gain(at: to),
-        timeRange: CMTimeRange(
-          start: Self.cmTime(end - duration * (1 - from)),
-          end: Self.cmTime(end - duration * (1 - to)),
-        ),
+        fromStartVolume: ramp.fromGain,
+        toEndVolume: ramp.toGain,
+        timeRange: CMTimeRange(start: Self.cmTime(ramp.start), end: Self.cmTime(ramp.end)),
       )
     }
     let mix = AVMutableAudioMix()

@@ -247,8 +247,6 @@ struct SleepTimerTimelineFadeTests {
     clock.advance(to: 285)
 
     #expect(volume.level < 0.8)
-    clock.advance(to: 300)
-    #expect(timeline.cancels == 0)
   }
 
   @Test @MainActor
@@ -279,7 +277,7 @@ struct SleepTimerTimelineFadeTests {
     clock.advance(to: 210)
 
     clock.advance(to: 250) // stalled since 210; the item's timeline fell behind the clock
-    manager.onPlaybackBecameAudible()
+    manager.onItemTimelineMoved()
 
     #expect(timeline.placed.count == 2)
     #expect(timeline.placed.last?.secondsAhead == 50)
@@ -292,7 +290,7 @@ struct SleepTimerTimelineFadeTests {
     manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
     clock.advance(to: 100)
 
-    manager.onPlaybackBecameAudible()
+    manager.onItemTimelineMoved()
 
     #expect(timeline.placed.isEmpty)
   }
@@ -308,7 +306,7 @@ struct SleepTimerTimelineFadeTests {
     #expect(manager.isFading)
 
     clock.advance(to: 290)
-    manager.onPlaybackBecameAudible()
+    manager.onItemTimelineMoved()
     #expect(timeline.placed.last?.secondsAhead == 10)
     #expect(volume.level == 0.8)
     #expect(manager.isFading)
@@ -322,9 +320,61 @@ struct SleepTimerTimelineFadeTests {
 
     manager.onTrackChanged()
     #expect(volume.level == 0.8)
-    manager.onPlaybackBecameAudible()
+    manager.onItemTimelineMoved()
 
     #expect(timeline.placed.count == 2)
     #expect(timeline.placed.last?.secondsAhead == 80)
+  }
+
+  @Test @MainActor
+  func replacementFailing_removesTheEarlierFade() {
+    let (manager, clock, _, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 220)
+
+    timeline.available = false // e.g. the route left AirPlay
+    manager.onItemTimelineMoved()
+    clock.advance(to: 300)
+
+    #expect(timeline.cancels >= 1)
+  }
+
+  @Test @MainActor
+  func replacementFailingInTheWindow_fadesTheVolume() {
+    let (manager, clock, volume, timeline) = makeTimelineManager()
+    manager.set(seconds: 300, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 285)
+
+    timeline.available = false
+    manager.onItemTimelineMoved()
+
+    #expect(volume.level == 0.8 * VolumeFader.gain(at: 0.5))
+    #expect(manager.isFading)
+  }
+}
+
+@Suite("VolumeFader - timeline ramps")
+struct VolumeFaderRampTests {
+  @Test @MainActor
+  func rampsFollowTheCurve_endingSilentAtTheEnd() {
+    let ramps = VolumeFader.ramps(endingAt: 100, duration: 30, segments: 3)
+
+    #expect(ramps.count == 3)
+    #expect(ramps.first?.start == 70)
+    #expect(ramps.first?.fromGain == 1)
+    #expect(ramps.last?.end == 100)
+    #expect(ramps.last?.toGain == 0)
+    #expect(ramps[1].fromGain == VolumeFader.gain(at: 1.0 / 3))
+    #expect(ramps[1].start == ramps[0].end)
+  }
+
+  @Test @MainActor
+  func rampsBeforeTheTimelineStarts_areClippedAtZero() {
+    let ramps = VolumeFader.ramps(endingAt: 10, duration: 30, segments: 3)
+
+    #expect(ramps.count == 1)
+    #expect(ramps.first?.start == 0)
+    #expect(ramps.first?.fromGain == VolumeFader.gain(at: 2.0 / 3))
+    #expect(ramps.first?.end == 10)
   }
 }

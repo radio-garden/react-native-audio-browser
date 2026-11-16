@@ -89,12 +89,11 @@ final class SleepTimerManager {
   /// Set once the timeline fade is due to be placed, until the timer ends: its deadline on the
   /// scheduler's clock and its duration.
   private var timelineFade: (deadline: TimeInterval, duration: TimeInterval)?
-  /// Whether the current item carries the timeline fade.
   private var timelineFadePlaced = false
   private var fadeWindowOpen = false
 
-  /// Seconds before the fade window the timeline fade is placed: AirPlay 2 renders this far ahead
-  /// at most, so the fade is in place before the audio it covers.
+  /// Seconds before the fade window the timeline fade is placed, so it is in place before the
+  /// audio it covers is sent: a margin over the 10–30 s a HomePod has been seen to render ahead.
   static let timelineFadeLeadSeconds: TimeInterval = 60
 
   init(
@@ -220,9 +219,9 @@ final class SleepTimerManager {
     }
   }
 
-  /// Places the timeline fade again against the position now playing: a stall or a new item moves
-  /// the timeline against the clock.
-  func onPlaybackBecameAudible() {
+  /// Places the timeline fade again against the position now playing: a stall, a seek or a new
+  /// item moves the item's timeline against the clock.
+  func onItemTimelineMoved() {
     placeTimelineFade()
   }
 
@@ -254,11 +253,15 @@ final class SleepTimerManager {
       endingIn: timelineFade.deadline - scheduler.now,
       duration: timelineFade.duration,
     )
-    if timelineFadePlaced { fader.cancel(restoringVolume: true) }
+    if timelineFadePlaced {
+      fader.cancel(restoringVolume: true)
+    } else if fadeWindowOpen, !fader.isActive {
+      fader.start(endingAt: timelineFade.deadline, duration: timelineFade.duration)
+    }
   }
 
   private func endTimelineFade() {
-    if timelineFadePlaced { timelineFader?.cancelTimelineFade() }
+    if timelineFade != nil { timelineFader?.cancelTimelineFade() }
     timelineFade = nil
     timelineFadePlaced = false
     fadeWindowOpen = false

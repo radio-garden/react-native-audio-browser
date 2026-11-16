@@ -1057,6 +1057,23 @@ struct SleepTimerFadeTests {
   }
 
   @Test @MainActor
+  func timelineFade_isPlacedAgainWhenASeekLandsWhilePlaying() throws {
+    let (c, eh, _, clock) = makeCoordinator()
+    try loadTrack(c)
+    c.setPlayWhenReady(true)
+    c.transition(.bufferingSufficient)
+    c.transition(.avPlayerPlaying)
+    eh.timelineFadeAvailable = true
+    eh.hasItem = true
+    c.sleepTimerManager.set(seconds: 120, fadeDuration: 30, timelineFade: true)
+    clock.advance(to: 30)
+
+    c.seek(to: 5)
+
+    #expect(eh.timelineFades.count == 2)
+  }
+
+  @Test @MainActor
   func pauseDuringFade_clearsSleepTimer() throws {
     let (c, _, _, clock) = makeCoordinator()
     try loadTrack(c)

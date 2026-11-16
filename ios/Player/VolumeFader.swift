@@ -39,6 +39,24 @@ final class VolumeFader {
     return pow(10, floorDecibels * Float(max(0, progress)) / 20)
   }
 
+  /// The fade as linear segments in gain between `segments + 1` points of `gain(at:)`, on a
+  /// timeline where it reaches silence at `end`. Clipped at 0: a timeline has nothing before it.
+  static func ramps(
+    endingAt end: TimeInterval,
+    duration: TimeInterval,
+    segments: Int,
+  ) -> [(fromGain: Float, toGain: Float, start: TimeInterval, end: TimeInterval)] {
+    guard duration > 0, segments > 0 else { return [] }
+    let time = { (progress: Double) in end - duration * (1 - progress) }
+    return (0 ..< segments).compactMap { index in
+      let from = Double(index) / Double(segments)
+      let to = Double(index + 1) / Double(segments)
+      guard time(to) > 0 else { return nil }
+      if time(from) < 0 { return (gain(at: 1 - end / duration), gain(at: to), 0, time(to)) }
+      return (gain(at: from), gain(at: to), time(from), time(to))
+    }
+  }
+
   /// Starts a fade that reaches silence at `end` on the scheduler's clock, `duration` seconds
   /// after it would have begun. Started late, it joins the ramp where it would be by now.
   /// Restarts from the pre-fade volume if one is running. A `duration` of zero or less marks the
