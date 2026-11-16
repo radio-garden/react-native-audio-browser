@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 
 /**
  * A sleep timer whose hooks run on the main looper: [onComplete] at the deadline, and with a fade,
@@ -31,19 +32,20 @@ open class SleepTimer {
     onFadeCancel()
     sleepWhenPlayedToEnd = false
 
+    val deadlineUptimeMs = SystemClock.uptimeMillis() + (seconds * 1000).toLong()
     val runnable = Runnable { complete() }
     this.runnable = runnable
-    handler.postDelayed(runnable, (seconds * 1000).toLong())
+    handler.postAtTime(runnable, deadlineUptimeMs)
     time = System.currentTimeMillis() + (seconds * 1000)
 
     if (fadeDuration != null && fadeDuration > 0) {
       val fade = minOf(fadeDuration, seconds)
       val fadeRunnable = Runnable {
         this.fadeRunnable = null
-        onFadeStart(fade)
+        onFadeStart(deadlineUptimeMs, fade)
       }
       this.fadeRunnable = fadeRunnable
-      handler.postDelayed(fadeRunnable, ((seconds - fade) * 1000).toLong())
+      handler.postAtTime(fadeRunnable, deadlineUptimeMs - (fade * 1000).toLong())
     }
   }
 
@@ -70,7 +72,8 @@ open class SleepTimer {
 
   open fun onComplete() {}
 
-  open fun onFadeStart(durationSeconds: Double) {}
+  /** [deadlineUptimeMs] is the deadline on [SystemClock.uptimeMillis]. */
+  open fun onFadeStart(deadlineUptimeMs: Long, durationSeconds: Double) {}
 
   /** Called on every re-arm or clear, whether or not a fade is running; not on completion. */
   open fun onFadeCancel() {}

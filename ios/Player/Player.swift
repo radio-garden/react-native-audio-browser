@@ -250,6 +250,7 @@ final class Player {
       fader: VolumeFader(
         getVolume: { [weak engine] in engine?.volume ?? 1 },
         setVolume: { [weak engine] in engine?.volume = $0 },
+        scheduler: sleepTimerScheduler,
       ),
       scheduler: sleepTimerScheduler,
     )
