@@ -1,3 +1,9 @@
+## [0.2.0-next.96](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.95...v0.2.0-next.96) (2026-11-16)
+
+### Bug Fixes
+
+* **sleep-timer:** land the fade's silence on the deadline, and make it audible throughout ([0a3b9c1](https://github.com/radio-garden/react-native-audio-browser/commit/0a3b9c1e47c8e4caf635d5a01eaa9a08478487c2))
+
 ## [0.2.0-next.95](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.94...v0.2.0-next.95) (2026-11-13)
 
 ### Features
