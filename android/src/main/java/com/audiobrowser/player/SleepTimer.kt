@@ -6,10 +6,10 @@ import android.os.SystemClock
 
 /**
  * A sleep timer whose hooks run on the main looper: [onComplete] at the deadline, and with a fade,
- * [onFadeStart] early enough that the fade ends at the deadline. Subclass it to act on the hooks.
+ * [onFadeStart] early enough that the fade ends at the deadline.
  */
 open class SleepTimer {
-  // Deadline in epoch milliseconds; null when idle or in end-of-track mode.
+  /** The deadline in epoch milliseconds; null when idle or in end-of-track mode. */
   var time: Double? = null
     private set
 
@@ -72,7 +72,7 @@ open class SleepTimer {
 
   open fun onComplete() {}
 
-  /** [deadlineUptimeMs] is the deadline on [SystemClock.uptimeMillis]. */
+  /** [deadlineUptimeMs] is on [SystemClock.uptimeMillis]. */
   open fun onFadeStart(deadlineUptimeMs: Long, durationSeconds: Double) {}
 
   /** Called on every re-arm or clear, whether or not a fade is running; not on completion. */
@@ -80,7 +80,6 @@ open class SleepTimer {
 
   private fun complete() {
     if (!isRunning) return
-    // No onFadeCancel: onComplete pauses first, then restores the volume itself.
     stopTimer()
     time = null
     sleepWhenPlayedToEnd = false

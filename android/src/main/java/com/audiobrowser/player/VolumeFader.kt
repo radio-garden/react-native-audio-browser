@@ -6,9 +6,9 @@ import android.os.SystemClock
 import kotlin.math.pow
 
 /**
- * Ramps the player volume to silence by a deadline (the sleep timer's fade), on the main looper.
- * The gain falls linearly in decibels to [FLOOR_DECIBELS], so every second of the fade is heard as
- * one; a gain that falls linearly or squared spends its last seconds inaudible.
+ * Ramps the player volume to silence by a deadline, on the main looper. The gain falls linearly in
+ * decibels to [FLOOR_DECIBELS], so every second of the fade is heard; a gain that falls linearly
+ * spends its last seconds inaudible.
  */
 class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Float) -> Unit) {
   private val handler = Handler(Looper.getMainLooper())
@@ -22,12 +22,10 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
     get() = originalVolume != null
 
   /**
-   * Starts a fade that reaches silence at [endUptimeMs] ([SystemClock.uptimeMillis]),
-   * [durationSeconds] after it would have begun. Started late, it joins the ramp where it would be
-   * by now.
+   * Starts a fade that reaches silence at [endUptimeMs] ([SystemClock.uptimeMillis]). Started late,
+   * it joins the ramp where it would be by now; restarted, it keeps the first fade's baseline.
    */
   fun start(endUptimeMs: Long, durationSeconds: Double) {
-    // Restarting mid-fade keeps the first fade's baseline, not the partly faded current volume.
     val baseVolume = originalVolume ?: getVolume()
     cancel(restoreVolume = false)
     originalVolume = baseVolume
@@ -51,8 +49,8 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
   }
 
   /**
-   * Stops the ramp. With [restoreVolume] the pre-fade volume comes back at once; without it the
-   * volume stays where the ramp left it and the pre-fade volume is forgotten.
+   * Stops the ramp. Without [restoreVolume] the volume stays where the ramp left it and the
+   * pre-fade volume is forgotten.
    */
   fun cancel(restoreVolume: Boolean) {
     stepRunnable?.let { handler.removeCallbacks(it) }
@@ -63,8 +61,8 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
   }
 
   /**
-   * Stops the ramp, runs [halt], then restores the pre-fade volume, in that order so no audio plays
-   * at full volume before the halt. Restores nothing when no fade was running.
+   * Stops the ramp, runs [halt], then restores the pre-fade volume, so no audio plays at full
+   * volume before the halt.
    */
   fun resolve(halt: () -> Unit) {
     val preFadeVolume = originalVolume
