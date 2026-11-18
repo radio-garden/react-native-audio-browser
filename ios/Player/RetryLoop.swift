@@ -8,15 +8,14 @@ import os.log
 /// Where a failure came from, which decides where the retry resumes and the error reported when
 /// the failure cannot be classified.
 public enum PlaybackErrorContext {
-  /// An AVPlayer/AVPlayerItem failure: retries resume from the current time.
+  /// An AVPlayer or AVPlayerItem failure.
   case playback
-  /// A MediaLoader key-value load failure: retries start from the beginning.
+  /// A MediaLoader key-value load failure.
   case mediaLoad
-  /// Playback that stopped receiving data without AVFoundation failing it: retries resume from
-  /// the current time.
+  /// Playback stopped receiving data without AVFoundation failing it.
   case stall
-  /// A live stream that reported played-to-end, as a cleanly closed connection does: retries
-  /// reconnect, since AVPlayer will not play on from an item it has ended.
+  /// A live stream reported played-to-end, as a cleanly closed connection does. AVPlayer will not
+  /// play on from an item it has ended, so it reconnects.
   case liveEnd
 
   var startFromCurrentTime: Bool {
@@ -35,7 +34,6 @@ public enum PlaybackErrorContext {
   }
 }
 
-/// Milliseconds on a clock that does not jump, and sleeps on it.
 protocol RetryClock: Sendable {
   var nowMs: Int { get }
   func sleep(ms: Int) async throws
@@ -49,8 +47,8 @@ struct ContinuousRetryClock: RetryClock {
 }
 
 /// Reconnects failed loads, paced by `ReconnectPacer`, and gives up when `SilenceBudget`'s
-/// deadline passes (docs/adr/0014), reporting the last failure as terminal; the iOS counterpart
-/// of Android's RetryLoadErrorHandlingPolicy. The play intent and connectivity go to both units.
+/// deadline passes (ADR 0014), reporting the last failure as terminal. Counterpart of Android's
+/// `RetryLoop`.
 @MainActor
 final class RetryLoop {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RetryLoop")
@@ -65,26 +63,24 @@ final class RetryLoop {
   /// AVFoundation can report one connection's failure more than once; the units hear its end once.
   private var connectionEndReported = false
   private var replacedConnectionCounts = false
-  /// The current connection was open while offline, and the network has not returned since.
-  /// Offline can kill a connection without AVFoundation ever failing it.
+  /// The current connection was open while offline, and the network has not returned since:
+  /// offline can kill a connection without AVFoundation ever failing it.
   private var connectionWentOffline = false
-  /// The buffered position when the network last returned to a connection that went offline; nil
-  /// once it plays again online. Audio still draining in from before the drop must not count as
-  /// the connection being alive.
+  /// The buffered position when the network returned to a connection that went offline; nil once
+  /// it plays again online. Audio still draining in from before the drop does not show the
+  /// connection alive.
   private var bufferedAtReturn: Double?
-  /// True from a connection's start until a cancel or a terminal error, so a give-up reports one
-  /// error, and a stop, or a play with nothing loaded, leaves nothing to give up on.
+  /// From a connection's start until a cancel or a terminal error, so a give-up reports one error,
+  /// and a stop, or a play with nothing loaded, leaves nothing to give up on.
   private var deadlineArmed = false
   private var lastFailure: TrackPlayerError.PlaybackError?
   private var deadlineTask: Task<Void, Never>?
 
-  /// Reloads; the argument is true to resume from the current time, false to start over.
+  /// Reloads: true resumes from the current time, false starts over.
   var onRetry: ((Bool) -> Void)?
-  /// Terminal: the deadline passed, `maxRetries` connections in a row delivered nothing, or the
-  /// failure cannot be retried. Not called when the retry is cancelled.
+  /// Terminal. Not called when the retry is cancelled.
   var onError: ((TrackPlayerError.PlaybackError) -> Void)?
-  /// A failure a retry is now scheduled for, reported before the wait while the state stays
-  /// non-terminal.
+  /// A failure a retry is now scheduled for, while the state stays non-terminal.
   var onRetryingError: ((TrackPlayerError.PlaybackError) -> Void)?
   /// A retryable failure with no play intent: nothing retries it and nothing reports it.
   var onFailedWithoutIntent: (() -> Void)?
@@ -94,7 +90,7 @@ final class RetryLoop {
 
   /// How long a connect or a stall may go without new data before it counts as a failure. Longer
   /// than AVPlayer takes to fail a stalled item itself, so its error, which says more, is usually
-  /// the one retried; a connect's request can outlast it.
+  /// the one retried.
   var stallTimeout: Duration = .seconds(30)
   /// The end of the current connection's loaded range; the stall watch reads progress off it.
   var bufferedPosition: () -> Double = { 0 }
@@ -103,9 +99,7 @@ final class RetryLoop {
   private let clock: any RetryClock
   private let sleep: @Sendable (Int) async throws -> Void
 
-  /// - Parameters:
-  ///   - online: Connectivity when the loop is made; `onlineChanged` reports each change after.
-  ///   - sleep: The wait before a reconnect, in milliseconds; the clock's sleep by default.
+  /// - Parameter sleep: The wait before a reconnect, in milliseconds; the clock's sleep by default.
   init(
     online: Bool = true,
     clock: any RetryClock = ContinuousRetryClock(),
@@ -118,7 +112,6 @@ final class RetryLoop {
     self.sleep = sleep ?? { try await clock.sleep(ms: $0) }
   }
 
-  /// Whether the current Load has produced audio (docs/adr/0004).
   var hasPlayed: Bool { budget.hasPlayed }
 
   // MARK: - Configuration
@@ -144,7 +137,7 @@ final class RetryLoop {
 
   // MARK: - Inputs
 
-  /// A new Load: a track change, or a restart from the terminal error. Drops the retry in flight.
+  /// A new Load: a track change, or a restart from the terminal error.
   func loadStarted() {
     cancel()
     lastFailure = nil
@@ -156,7 +149,7 @@ final class RetryLoop {
   /// A connect going out: the Load's first, a reconnect, or a reload by the Player, which ends the
   /// connection it replaces. A replaced connection counts only if it delivered audio: one cut off
   /// while connecting says nothing about the source. With the play intent up, the stall watch runs
-  /// from the start, so a connect that opens and sends nothing is replaced (docs/adr/0014, rule 9).
+  /// from the start, so a connect that sends nothing is replaced (ADR 0014, rule 9).
   func connectionStarted() {
     let now = clock.nowMs
     if let startedAtMs = connectionStartedAtMs, replacedConnectionCounts, connectionDeliveredAudio, !connectionEndReported {
@@ -186,7 +179,7 @@ final class RetryLoop {
     armDeadline()
   }
 
-  /// A connection that went offline and awaits data when the network returns is given up before
+  /// A connection that went offline and is stalled when the network returns is given up before
   /// the units hear of the return: it ended offline.
   func onlineChanged(_ online: Bool) {
     guard online != self.online else { return }
@@ -208,14 +201,13 @@ final class RetryLoop {
     armDeadline()
   }
 
-  /// A seek's wait for data is the seek's, not the drop's: its data lies outside the range the drop
-  /// was judged by.
+  /// A seek's data lies outside the range the drop was judged by.
   func seekStarted() {
     bufferedAtReturn = nil
   }
 
-  /// Audio clears the failure the deadline would report: a silence after it that ends with no
-  /// failure is a stall.
+  /// Clears the failure the deadline would report: a silence after it that ends with no failure is
+  /// a stall.
   func playbackBecameAudible() {
     stopStallWatch()
     connectionDeliveredAudio = true
@@ -246,8 +238,8 @@ final class RetryLoop {
     handle(PlaybackFailure.classify(error, httpStatusCode: httpStatusCode, fallback: context.fallbackError), context: context)
   }
 
-  /// A failure the Player judges from what playback did, with no error to classify: retryable,
-  /// and reported as the context's fallback error.
+  /// A failure judged from what playback did, with no error to classify: retryable, and reported
+  /// as the context's fallback error.
   func handleFailure(_ context: PlaybackErrorContext) {
     logger.error("[\(String(describing: context))] failure")
     handle(.init(error: context.fallbackError, retryable: true), context: context)
@@ -300,8 +292,8 @@ final class RetryLoop {
         waitMs = min(ms, 500)
       }
       if waitMs == 0 { break }
-      // Cancelled by a track change or stop: stay silent, or the new track or the stop would
-      // flip to .error. The canceller owns `pendingTask`.
+      // Cancelled by a track change or stop: stay silent, or the new track or the stop would flip
+      // to .error. The canceller owns `pendingTask`.
       guard await (try? sleep(waitMs)) != nil else { return }
     }
     if Task.isCancelled { return }
@@ -347,11 +339,10 @@ final class RetryLoop {
     return bufferedPosition() <= bufferedAtReturn
   }
 
-  /// Starts the stall watch, over a connect or a stall: a `stallTimeout` in which `bufferedPosition`
-  /// does not advance makes it a `.stall` failure, provided the play intent holds and no retry is
-  /// pending; one in which it advances starts another. Any failure ends it. Online, a connection
-  /// the drop killed gets no timeout, unless it delivered nothing: that end counts toward
-  /// `maxRetries`, so it waits as any connect does.
+  /// A `stallTimeout` in which `bufferedPosition` does not advance makes a `.stall` failure,
+  /// provided the play intent holds and no retry is pending; one in which it advances starts
+  /// another. Online, a connection the drop killed gets no timeout unless it delivered nothing:
+  /// that end counts toward `maxRetries`, so it waits as any connect does.
   func startStallWatch() {
     stallTask?.cancel()
     let buffered = bufferedPosition()

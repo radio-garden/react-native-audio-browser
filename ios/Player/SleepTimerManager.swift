@@ -6,13 +6,10 @@ import Foundation
 
 typealias SleepTimerState = SleepTimer
 
-/// A scheduled job not yet run. `cancel()` is nonisolated so `deinit`, always nonisolated in
-/// Swift 6, can tear pending work down.
 protocol SleepTimerJob: AnyObject {
   func cancel()
 }
 
-/// Runs work after a delay; injected so tests advance the clock by hand instead of racing it.
 @MainActor
 protocol SleepTimerScheduling {
   /// Seconds on the clock `schedule` counts delays on.
@@ -24,15 +21,14 @@ protocol SleepTimerScheduling {
   ) -> any SleepTimerJob
 }
 
-/// Fires on the main queue at the deadline. Strict and without leeway: `asyncAfter` lets the
-/// system fire up to 5–10% of the delay late, seconds on a timer of minutes.
+/// Strict and without leeway: `asyncAfter` lets the system fire up to 5–10% of the delay late,
+/// seconds on a timer of minutes.
 private final class StrictTimerJob: SleepTimerJob {
   private let source: DispatchSourceTimer
 
   init(after delay: TimeInterval, _ work: @escaping @Sendable @MainActor () -> Void) {
     source = DispatchSource.makeTimerSource(flags: .strict, queue: .main)
     source.schedule(deadline: .now() + delay, leeway: .nanoseconds(0))
-    // The handler holds the source until it fires or is cancelled.
     source.setEventHandler { [source] in
       source.cancel()
       MainActor.assumeIsolated { work() }
@@ -67,7 +63,6 @@ final class SleepTimerManager {
   private let scheduler: any SleepTimerScheduling
   private let fader: VolumeFader
 
-  // nonisolated(unsafe) so deinit, always nonisolated in Swift 6, can cancel them.
   private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
   private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
 
@@ -104,8 +99,8 @@ final class SleepTimerManager {
 
   // MARK: - Public Methods
 
-  /// Clears whichever timer is set and cancels any fade, restoring the volume. False, with no `onChanged`, when none
-  /// was set.
+  /// Clears whichever timer is set and cancels any fade, restoring the volume. False, with no
+  /// `onChanged`, when none was set.
   @discardableResult
   func clear() -> Bool {
     let hasSleepTimer = sleepTimerTime > -1 || willSleepWhenCurrentItemReachesEnd
@@ -117,7 +112,6 @@ final class SleepTimerManager {
     return true
   }
 
-  /// The active timer, its deadline in milliseconds since 1970; nil when none is set.
   func get() -> SleepTimerState? {
     let sleepOnEnd = willSleepWhenCurrentItemReachesEnd
     let hasSleepTimerTime = sleepTimerTime > -1
@@ -136,8 +130,7 @@ final class SleepTimerManager {
   }
 
   /// Stops playback `seconds` from now. With `fadeDuration`, the volume fades over that many
-  /// seconds (clamped to `seconds`) so silence lands at the deadline, also when the fade starts
-  /// late.
+  /// seconds, at most `seconds`, so silence lands at the deadline.
   func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
     fader.cancel(restoringVolume: true)
