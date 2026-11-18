@@ -8,7 +8,7 @@ import android.media.AudioManager
 
 /**
  * The music stream's volume as 0.0–1.0. Registers its receiver on construction; the owner must call
- * [destroy].
+ * [destroy], or the receiver leaks across JS runtime reloads.
  */
 class SystemVolumeMonitor(private val context: Context) {
   private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -49,10 +49,6 @@ class SystemVolumeMonitor(private val context: Context) {
     context.registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
   }
 
-  /**
-   * Unregisters the receiver. Without it the receiver leaks across JS runtime reloads. Safe to call
-   * more than once.
-   */
   fun destroy() {
     try {
       context.unregisterReceiver(volumeReceiver)

@@ -24,9 +24,9 @@ import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Persists the current track, position and player settings so a media button (a Bluetooth play
- * press) can resume playback after process death. The settings properties write through on set;
- * track and position persist only through the save calls.
+ * Persists the current track, position and player settings so playback can resume after process
+ * death. The settings properties write through on set; track and position persist only through the
+ * save calls.
  */
 class PlaybackStateStore(private val player: Player) {
   private val prefs: SharedPreferences =
@@ -65,10 +65,7 @@ class PlaybackStateStore(private val player: Player) {
   private val scope = MainScope()
   private var periodicSaveJob: Job? = null
 
-  /**
-   * Calls [save] every [PERIODIC_SAVE_INTERVAL_MS] while playing. A no-op when already running or
-   * when the player is not set to play.
-   */
+  /** Calls [save] periodically; a no-op when already running or the player is not set to play. */
   fun startPeriodicSave() {
     if (periodicSaveJob != null) return
     launchPeriodicSave()
@@ -96,17 +93,14 @@ class PlaybackStateStore(private val player: Player) {
     periodicSaveJob = null
   }
 
-  /** Stops the periodic save and calls [save] once more. */
   fun stopPeriodicSave() {
     cancelPeriodicSave()
-    // After a natural end, setPlaybackState(ENDED) has saved position 0; a save here, from the
-    // dropped intent or a teardown, would make resumption start at the end of the track.
+    // A natural end has saved position 0; saving now would resume at the end of the track.
     if (player.playbackState != PlaybackState.ENDED) {
       save()
     }
   }
 
-  /** Saves the current track and its position; does nothing without a current track. */
   fun save() {
     val track = player.currentTrack ?: return
     val positionMs = player.restorablePositionMs
@@ -131,8 +125,7 @@ class PlaybackStateStore(private val player: Player) {
     get()?.also { state ->
       player.repeatMode = state.repeatMode
       player.shuffleMode = state.shuffleEnabled
-      // ExoPlayer throws on a non-positive speed; a corrupted prefs file holding one would fail
-      // every resume for good, since the value stays persisted.
+      // ExoPlayer throws on a non-positive speed, which a corrupted prefs file would hold for good.
       if (state.playbackSpeed > 0f) player.playbackSpeed = state.playbackSpeed
 
       Timber.d(
@@ -140,7 +133,7 @@ class PlaybackStateStore(private val player: Player) {
       )
     }
 
-  /** The persisted state, read without touching the player; null if none or it won't parse. */
+  /** The persisted state, without touching the player; null if none or it won't parse. */
   fun get(): PersistedState? {
     val trackJson = prefs.getString(KEY_TRACK, null) ?: return null
     val track = trackFromJson(trackJson) ?: return null
@@ -170,7 +163,6 @@ class PlaybackStateStore(private val player: Player) {
           put("description", track.description)
           put("genre", track.genre)
           put("duration", track.duration)
-          // Persisted in its wire shape so a restored queue keeps its styling (ADR 0011).
           put(
             "style",
             track.style?.let { style ->
@@ -204,14 +196,14 @@ class PlaybackStateStore(private val player: Player) {
             albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
             album = obj.optString("album").takeIf { it.isNotEmpty() },
             artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
-            artworkSource = null, // Not persisted: re-derived on the next browse
+            // Not persisted: re-derived on the next browse.
+            artworkSource = null,
             description = obj.optString("description").takeIf { it.isNotEmpty() },
             genre = obj.optString("genre").takeIf { it.isNotEmpty() },
             duration =
               if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration")
               else null,
-            // optJSONObject, not getJSONObject: a snapshot from before the block model holds
-            // `style` as a string, and its track restores without a style (ADR 0011).
+            // A snapshot from before ADR 0011 holds `style` as a string, and restores without one.
             style =
               obj
                 .optJSONObject("style")

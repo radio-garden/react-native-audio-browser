@@ -21,8 +21,8 @@ internal suspend fun <T> Promise<T>.awaitCancellable(): T = settled()
 internal suspend fun <T> Promise<Promise<T>>.awaitNested(): T = settled().settled()
 
 /**
- * [awaitCancellable], failing with a [TimeoutException], which is not a cancellation, after
- * [FALLBACK_TIMEOUT].
+ * [awaitCancellable], failing after [FALLBACK_TIMEOUT] with a [TimeoutException], which is not a
+ * cancellation.
  */
 internal suspend fun <T> Promise<T>.awaitOrTimeout(): T = withTimeoutAsFailure { settled() }
 

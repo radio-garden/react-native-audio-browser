@@ -13,13 +13,10 @@ import java.net.URLEncoder
 object BrowserPathHelper {
   const val ROOT_PATH = "/__root"
 
-  /** Full search paths are `/__search?q=<query>`; see [createSearchPath]. */
   const val SEARCH_PATH_PREFIX = "/__search"
 
-  /** Placeholder media ID for the offline tile. */
   const val OFFLINE_PATH = "/__offline"
 
-  /** Placeholder media ID for a generic browse error tile. */
   const val ERROR_PATH = "/__error"
 
   /** Placeholder media ID for a Browse Gate tile (subscription, login or region block). */
@@ -96,7 +93,6 @@ object BrowserPathHelper {
     return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}$indexParam"
   }
 
-  /** The decoded `__trackId`, or null when [path] is not contextual. */
   fun extractTrackId(path: String): String? {
     if (!isContextual(path)) {
       return null
@@ -106,7 +102,6 @@ object BrowserPathHelper {
     return uri.getQueryParameter(CONTEXTUAL_TRACK_PARAM)
   }
 
-  /** The `__index`, or null when [path] is not contextual or its index is missing or negative. */
   fun extractIndex(path: String): Int? {
     if (!isContextual(path)) {
       return null

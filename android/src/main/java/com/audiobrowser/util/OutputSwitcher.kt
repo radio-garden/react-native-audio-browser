@@ -17,7 +17,6 @@ object OutputSwitcher {
   fun open(context: Context) {
     when {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-        // False when it cannot be shown, e.g. no eligible routes.
         val shown =
           runCatching { MediaRouter2.getInstance(context).showSystemOutputSwitcher() }
             .getOrDefault(false)
