@@ -13,7 +13,9 @@ import timber.log.Timber
 
 /**
  * Whether a surface draws this button itself from the standard PlaybackState: Previous in BACK and
- * Next in FORWARD everywhere, and the favorite on Android Automotive OS (its rating control).
+ * Next in FORWARD everywhere, and the favorite on Android Automotive OS (its rating control). Sent
+ * as a button instead, it arrives as a custom action, which Automotive's media app places by its
+ * own rules rather than beside play/pause.
  */
 private fun SlottedButton.isDrawnBySurface(automotive: Boolean): Boolean =
   (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
@@ -21,11 +23,9 @@ private fun SlottedButton.isDrawnBySurface(automotive: Boolean): Boolean =
     (automotive && button == RemoteButton.FAVORITE)
 
 /**
- * The slot, then OVERFLOW. Media3 reads `slots` as a preference order and places a button in the
- * first that exists, is free and allows it; every surface's flattening
- * (`CommandButton.getCustomLayoutFromMediaButtonPreferences`, `DefaultMediaNotificationProvider`)
- * keeps only a button that won BACK or FORWARD or lists OVERFLOW, so without the fallback a button
- * that loses its slot disappears instead of demoting.
+ * The slot, then OVERFLOW. Media3 places a button in the first of its `slots` that is free, and the
+ * surfaces keep only a button that won BACK or FORWARD or lists OVERFLOW, so without the fallback a
+ * button that loses its slot disappears instead of demoting.
  */
 internal fun media3SlotsFor(slot: ButtonSlot): IntArray =
   when (slot) {
@@ -35,13 +35,9 @@ internal fun media3SlotsFor(slot: ButtonSlot): IntArray =
   }
 
 /**
- * Maps player capabilities to the session's available commands and its one button layout.
- *
- * Capabilities decide what works; the layout only decides where buttons sit, so a control left out
- * of the layout still works from a Bluetooth remote or headset. The layout is published
- * session-wide via `setMediaButtonPreferences`, which Media3 turns into the notification and the
- * legacy PlaybackState that Android Auto and the Android 13+ media controls read. A per-controller
- * layout would reach neither: Android Auto connects as a legacy controller.
+ * Maps player capabilities to the session's available commands and its one button layout. The
+ * layout is published session-wide: Android Auto connects as a legacy controller, which a
+ * per-controller layout never reaches.
  */
 class MediaSessionCommandManager(private val automotive: Boolean) {
 
@@ -54,11 +50,8 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     private const val DEFAULT_JUMP_INTERVAL = 15.0
   }
 
-  /**
-   * Media3 has numbered icons only for 5, 10, 15 and 30 seconds. The match is exact: a numbered
-   * icon promises how far the button seeks, so 14.6 gets the plain arrow, not "15". Android Auto
-   * draws from this icon constant, not from an icon resource set with `setIconResId`.
-   */
+  // A numbered icon promises how far the button seeks, so the match is exact. Android Auto draws
+  // from this icon constant, not from a resource set with `setIconResId`.
   private fun jumpForwardIcon(seconds: Double): Int =
     when (seconds) {
       5.0 -> CommandButton.ICON_SKIP_FORWARD_5
@@ -107,11 +100,8 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
-  /**
-   * FAVORITE is a session command, so it is absent here. Skip maps to two commands: Media3
-   * advertises the platform skip action for either, and its notification uses the media-item one,
-   * so a disabled skip must remove both.
-   */
+  // A disabled skip must remove both commands: Media3 advertises the platform skip action for
+  // either, and its notification uses the media-item one.
   private val capabilityPlayerCommands: Map<Capability, List<@MediaPlayer.Command Int>> =
     mapOf(
       Capability.PLAY_PAUSE to listOf(MediaPlayer.COMMAND_PLAY_PAUSE),
@@ -128,8 +118,8 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
       Capability.JUMP_BACKWARD to listOf(MediaPlayer.COMMAND_SEEK_BACK),
     )
 
-  // capabilityPlayerCommands must stay above `init`: properties initialize in textual order, and
-  // `init` reads it through buildPlayerCommands.
+  // Stays below capabilityPlayerCommands: properties initialize in textual order, and this reads
+  // it.
   init {
     val defaultCapabilities = currentCapabilities
 
@@ -143,9 +133,8 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   }
 
   /**
-   * Rebuilds and publishes commands and layout. A null [remoteButtonLayout] derives the layout from
-   * [capabilities]. The favorite and live states set by [updateFavoriteState] and [updateLiveState]
-   * carry over.
+   * Rebuilds and publishes commands and layout; a null [remoteButtonLayout] derives the layout from
+   * [capabilities]. The favorite and live states carry over.
    */
   fun updateMediaSession(
     mediaSession: MediaSession,
@@ -182,21 +171,16 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     publishAvailableCommands(mediaSession)
   }
 
-  // [buildConnectionResult] only reaches controllers that connect later; an Android Auto connection
-  // lasts until the car shuts down.
+  // [buildConnectionResult] reaches only controllers that connect later, and an Android Auto
+  // connection lasts until the car shuts down.
   private fun publishAvailableCommands(mediaSession: MediaSession) {
     mediaSession.connectedControllers.forEach {
       mediaSession.setAvailableCommands(it, sessionCommands, playerCommands)
     }
   }
 
-  /**
-   * Both calls are needed. Only the session-wide one reaches Android Auto, a legacy controller, but
-   * it re-broadcasts only when the slot-reservation flags change, never the PlaybackState carrying
-   * the custom actions. The notification-controller overload calls
-   * `updateLegacySessionPlaybackState`; without it a reordered layout stays unseen until some
-   * playback event republishes the state.
-   */
+  // Both calls are needed. Only the session-wide one reaches Android Auto, but it doesn't republish
+  // the legacy PlaybackState carrying the custom actions; the notification controller's does.
   private fun publishButtonPreferences(mediaSession: MediaSession) {
     Timber.Forest.d(
       "Publishing ${buttonPreferences.size} button preferences: " +
@@ -284,8 +268,8 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     return playerCommandsBuilder.build()
   }
 
-  // Registers the command of every capability-allowed button, placed or not: Media3 disables a
-  // button whose command is missing.
+  // Registers the command of every allowed button, placed or not: Media3 disables a button whose
+  // command is missing.
   private fun buildSessionCommands(
     capabilities: PlayerCapabilities,
     searchAvailable: Boolean,
@@ -312,8 +296,6 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     return sessionCommandsBuilder.build()
   }
 
-  // The one source for both the command a button carries and the registry in buildSessionCommands,
-  // so a published button cannot lack its command.
   private fun customCommandFor(button: RemoteButton): SessionCommand? =
     when (button) {
       RemoteButton.JUMP_BACKWARD -> SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
@@ -360,11 +342,6 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
       ?: builder
   }
 
-  /**
-   * Leaves out the buttons a surface draws itself, so Media3 keeps the standard skip actions and
-   * reserves their slots. Sent as buttons they arrive as custom actions, which Android Automotive
-   * OS's car media app places by its own rules rather than beside play/pause.
-   */
   private fun buildButtonPreferences(
     slots: List<SlottedButton>,
     favorited: Boolean?,

@@ -12,10 +12,9 @@ import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
  * What the platform session reads of an idle engine. Android Auto takes STATE_IDLE for "nothing
- * playing": it closes the now-playing screen and its next/previous buttons with it. So an ended
- * queue reads ended, as on an ended engine (a rebuild carries an ended engine idle), and with
- * `keepAlive` a terminal error (the engine's, or ERROR once a rebuild dropped it) and a pause that
- * cancelled a retry (PAUSED) read as paused and ready.
+ * playing" and closes the now-playing screen with its next/previous buttons. So an ended queue
+ * reads ended, as a rebuild carries an ended engine idle, and with `keepAlive` a terminal error or
+ * a pause that cancelled a retry reads ready and paused.
  */
 internal object SessionView {
   private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
@@ -32,8 +31,8 @@ internal object SessionView {
       state == PlaybackState.ENDED -> MediaPlayer.STATE_ENDED
       !keepAlive -> engineState
       state in PARKED_STATES -> MediaPlayer.STATE_READY
-      // The engine keeps its error through a stop or an emptied queue, until its next prepare. It
-      // counts until the player's state reaches ERROR, which follows the engine's IDLE event.
+      // The engine keeps its error through a stop or an emptied queue until its next prepare; the
+      // player's state reaches ERROR only after the engine's IDLE event.
       engineFailed && state !in SETTLED_STATES -> MediaPlayer.STATE_READY
       else -> engineState
     }
@@ -44,10 +43,9 @@ internal object SessionView {
 }
 
 /**
- * The player the MediaSession sees. Offers each transport command from an external surface (lock
- * screen, notification, Bluetooth, Android Auto) to the app's `handleRemote*` callback first: true
- * consumes it, anything else runs the default. Shows the session the [SessionView] of an idle
- * engine; the error still reaches JS through `onPlaybackError` and `playbackState`.
+ * The player the MediaSession sees. Offers each transport command from an external surface to the
+ * app's `handleRemote*` callback first: true consumes it, anything else runs the default. Shows the
+ * session the [SessionView] of an idle engine; the error still reaches JS.
  */
 internal class InterceptingPlayer(
   player: MediaPlayer,
@@ -55,7 +53,7 @@ internal class InterceptingPlayer(
   private val optionsProvider: () -> PlayerUpdateOptions,
   private val keepSessionAliveOnError: Boolean,
   private val playerState: () -> PlaybackState,
-  /** The engine state shown for the engine's own; see [Player.retryView]. */
+  /** The engine state shown in place of the engine's own; see [Player.retryView]. */
   private val engineView: (Int) -> Int,
   /** Whether the engine's playing is a blip the retry loop hides. */
   private val masksPlaying: () -> Boolean,
@@ -65,10 +63,9 @@ internal class InterceptingPlayer(
 
   private val engineListeners = mutableSetOf<MediaPlayer.Listener>()
 
-  /** Each listener the session added, and the [SessionViewListener] it hears the engine through. */
   private val views = mutableMapOf<MediaPlayer.Listener, SessionViewListener>()
 
-  /** Adds the player's own listener, which hears the engine's events as they are. */
+  /** Adds a listener that hears the engine's events as they are, not the session's view. */
   fun addEngineListener(listener: MediaPlayer.Listener) {
     engineListeners += listener
     super.addListener(listener)
@@ -83,10 +80,7 @@ internal class InterceptingPlayer(
     super.removeListener(views.remove(listener) ?: listener)
   }
 
-  /**
-   * Call when the player's state changes from [old]: on an idle engine the view can move with no
-   * engine event.
-   */
+  /** Call when the player's state changes from [old]: on an idle engine the view moves with it. */
   fun onStateChanged(old: PlaybackState) {
     val view = playbackState
     val was =
@@ -107,7 +101,6 @@ internal class InterceptingPlayer(
   private val engineFailed: Boolean
     get() = super.getPlayerError() != null
 
-  /** Tells the session's listeners where the view moved with no event of the engine's. */
   fun refreshViews() = views.values.toList().forEach { it.refresh() }
 
   override fun isPlaying(): Boolean = super.isPlaying() && !masksPlaying()
@@ -128,8 +121,7 @@ internal class InterceptingPlayer(
     )
 
   // After a terminal error, a cancelled retry or a rebuild in ENDED the engine is idle, and the
-  // default skips only move the index. An ended queue that stayed put stays ended, as on an ended
-  // engine.
+  // default skips only move the index.
   private fun loadIdleEngine(fromIndex: Int) {
     if (super.getPlaybackState() != MediaPlayer.STATE_IDLE) return
     val view = playbackState
@@ -156,8 +148,7 @@ internal class InterceptingPlayer(
 
   override fun pause() = intercept({ it.handleRemotePause() }) { super.pause() }
 
-  // Media3 controllers can send play/pause as setPlayWhenReady, which would bypass the handlers and
-  // the recovery.
+  // Media3 controllers can send play/pause as setPlayWhenReady, which would bypass the handlers.
   override fun setPlayWhenReady(playWhenReady: Boolean) = if (playWhenReady) play() else pause()
 
   override fun stop() = intercept({ it.handleRemoteStop() }) { stopPlayer() }
