@@ -18,10 +18,9 @@ import androidx.media3.exoplayer.source.ForwardingTimeline
 
 /**
  * A session listener hearing the engine's events with [view]'s state and playing, and never its
- * errors, which [InterceptingPlayer.getPlayerError] hides: the session copies an event's own
- * arguments, so the view has to be in them. A state, playing, timeline or position it was already
- * told is not told again: the session pushes each one to legacy controllers whether or not it
- * changed. Every other event passes as it is.
+ * errors: the session copies an event's own arguments, so the view has to be in them. A state,
+ * playing, timeline or position already told is not told again, as the session pushes each one to
+ * legacy controllers whether or not it changed.
  */
 internal class SessionViewListener(
   private val target: MediaPlayer.Listener,
@@ -31,10 +30,7 @@ internal class SessionViewListener(
   private var toldPlaying = view.isPlaying
   private var toldTimeline = view.currentTimeline
 
-  /**
-   * Tells the session the view's state and playing where they moved since it was last told: the
-   * view can move with no engine event, as when the retry loop lets go of an idle engine.
-   */
+  /** Tells the session where the view moved with no engine event, as when a retry lets go. */
   fun refresh() {
     onPlaybackStateChanged(view.playbackState)
     onIsPlayingChanged(view.isPlaying)

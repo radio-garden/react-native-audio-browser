@@ -153,9 +153,8 @@ await setupPlayer({
 })
 ```
 
-Which failures qualify is nearly the same on iOS and Android. HTTP 408 and
-429 qualify, and so do server errors: every 5xx on iOS, the common four (500,
-502, 503, 504) on Android.
+Which failures qualify is the same on iOS and Android. HTTP 408 and 429
+qualify, and so does every server error (5xx).
 
 Transport failures qualify too (DNS, timeouts, a dropped connection), and so
 does anything the platform couldn't classify, which is assumed transient

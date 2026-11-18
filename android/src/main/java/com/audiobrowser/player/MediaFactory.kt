@@ -27,10 +27,7 @@ class MediaFactory(
   private val context: Context,
   private val cache: SimpleCache?,
   private val retryPolicy: RetryPolicy,
-  /**
-   * Each recoverable load failure of the playing item, on ExoPlayer's playback thread; see
-   * [RetryLoadErrorHandlingPolicy].
-   */
+  /** Each recoverable load failure of the playing item, on ExoPlayer's playback thread. */
   private val onLoadFailure: (exception: IOException, inPlace: Boolean) -> Unit = { _, _ -> },
   /** Whether an item is the one playing; read on ExoPlayer's playback thread. */
   private val isCurrent: (MediaItem) -> Boolean = { true },
@@ -41,12 +38,8 @@ class MediaFactory(
   companion object {
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
 
-    /**
-     * The client media requests go out on, one per process so connections are reused. Not
-     * `HttpClient`'s browse client, whose read timeout is sized for JSON and would cut a long media
-     * read short. The timeouts are media3's own defaults, which stall detection and [RetryLoop] are
-     * tuned to.
-     */
+    // Not HttpClient's client, whose timeouts are sized for browse requests. These are media3's
+    // own defaults, which stall detection and [RetryLoop] are tuned to.
     private val mediaHttpClient: OkHttpClient by lazy {
       OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -89,19 +82,16 @@ class MediaFactory(
   }
 
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-    // The URL is resolved in TransformingDataSource.open(), on ExoPlayer's IO thread, not here:
-    // the request config callback needs the JS thread, which a synchronous Nitro call (seekTo)
-    // can be blocking while it waits on the player, a deadlock.
+    // The URL is resolved in TransformingDataSource.open(), on ExoPlayer's IO thread, not here: the
+    // request config callback needs the JS thread, which a synchronous Nitro call (seekTo) can be
+    // blocking while it waits on the player.
 
-    // OkHttp rather than DefaultHttpDataSource, for redirects: DefaultHttpDataSource re-applies the
-    // request headers on every hop, handing an Authorization header to whatever host the first one
-    // names. OkHttp drops that header itself, and [CrossOriginHeaderStripper] drops the rest.
+    // OkHttp, not DefaultHttpDataSource, which re-applies every request header on each redirect
+    // hop, Authorization included. [CrossOriginHeaderStripper] drops what OkHttp keeps.
     val httpFactory =
       OkHttpDataSource.Factory(mediaHttpClient).apply {
-        // Not setUserAgent(): it is applied last with addHeader(), which appends, so a request
-        // already carrying one would send two. As a default request property it is merged under
-        // dataSpec.httpRequestHeaders and applied with header(), so TransformingDataSource's
-        // per-request override wins.
+        // Not setUserAgent(), which appends a second User-Agent to a request that has one. A
+        // default request property yields to TransformingDataSource's per-request header.
         setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
         transferListener?.let { setTransferListener(it) }
       }

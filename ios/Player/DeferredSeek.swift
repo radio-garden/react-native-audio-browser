@@ -1,8 +1,8 @@
 import Foundation
 
-/// A seek that arrives while an item loads. AVPlayer ignores `seek(to:)` without a loaded item,
-/// so the target is held until the item is ready, and the ready transition waits until it lands.
-/// Pure state: the caller issues the seek this hands out and reports when it lands.
+/// A seek target held while the item loads, since AVPlayer ignores `seek(to:)` without a loaded
+/// item; the ready transition waits until it lands. The caller issues the seek this hands out and
+/// reports when it lands.
 struct DeferredSeek {
   enum State: Equatable {
     case idle
@@ -10,23 +10,18 @@ struct DeferredSeek {
     case inFlight(TimeInterval)
   }
 
-  /// What to do once an issued seek lands.
   enum Landing: Equatable {
-    /// The target is reached: the load may become ready.
     case done
-    /// A newer target arrived meanwhile: issue it.
     case reseek(TimeInterval)
-    /// No deferred seek was in flight.
     case none
   }
 
   private(set) var state: State = .idle
 
-  /// The item a seek was issued against. `reset()` bumps it, so the completion of a seek against
-  /// the previous item can tell it is stale.
+  /// Bumped by `reset()`, so the completion of a seek against the previous item can tell it is
+  /// stale.
   private(set) var generation = 0
 
-  /// The target, pending or in flight; `seekBy` offsets from it.
   var target: TimeInterval? {
     switch state {
     case let .pending(time), let .inFlight(time): time
@@ -38,20 +33,18 @@ struct DeferredSeek {
     state != .idle
   }
 
-  /// Holds `position` as the target, replacing a pending one or one in flight.
   mutating func capture(_ position: TimeInterval) {
     state = .pending(position)
   }
 
-  /// Hands out the pending target to issue, marking it in flight; nil when none is pending.
+  /// Marks the pending target in flight and returns it to issue; nil when none is pending.
   mutating func begin() -> TimeInterval? {
     guard case let .pending(time) = state else { return nil }
     state = .inFlight(time)
     return time
   }
 
-  /// A seek cut short, as when its item fails, keeps the target for the reload; a seek that cut it
-  /// short lands in its place.
+  /// A seek cut short keeps the target, for the reload or for the seek that cut it short.
   mutating func land(finished: Bool) -> Landing {
     guard finished else { return .none }
     switch state {

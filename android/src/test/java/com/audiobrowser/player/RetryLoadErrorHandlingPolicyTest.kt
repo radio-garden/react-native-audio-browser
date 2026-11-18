@@ -158,6 +158,17 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 
   @Test
+  fun `every 5xx is recoverable, not only the common four`() {
+    for (status in listOf(501, 520, 599)) {
+      assertEquals(
+        "HTTP $status",
+        1000L,
+        policy(Sources.ADAPTIVE).getRetryDelayMsFor(errorInfo(httpError(status))),
+      )
+    }
+  }
+
+  @Test
   fun `media3 never gives up on a loadable itself`() {
     assertEquals(
       Int.MAX_VALUE,

@@ -13,8 +13,8 @@ import os.log
   var queueSourcePath: String? { get }
 }
 
-/// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession;
-/// each caller carries out the returned `SelectionResult` its own way.
+/// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession; each
+/// caller carries out the returned `SelectionResult` its own way.
 @MainActor
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
@@ -28,7 +28,7 @@ class TrackSelector {
 
   enum SelectionResult {
     case play(PlaybackIntent)
-    /// The app's `handleTrackLoad` took the selection; the caller plays nothing.
+    /// `handleTrackLoad` took the selection; the caller plays nothing.
     case intercepted
     /// The track has no `src`; the caller navigates to `path`.
     case browse(path: String)
@@ -43,10 +43,10 @@ class TrackSelector {
 
   // MARK: - Selection
 
-  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within
-  /// the current queue when it came from the same parent, else the parent expanded into a queue
-  /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
-  /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
+  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within the
+  /// current queue when it came from the same parent, else the parent expanded into a queue (the
+  /// track alone if expansion fails); a single track for a `src`; browse for a bare `path`. A
+  /// playback is first offered to `handleTrackLoad`, which can intercept it.
   func select(
     track: Track,
     player: some TrackSelectionPlayer,
@@ -100,11 +100,9 @@ class TrackSelector {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
-    // Exact path first: its `__index` pins the tapped copy when the page holds the same identity
-    // more than once. Identity matching is only for index-less paths (e.g. from persisted state
-    // without one); an indexed path with no exact match expands instead, re-scoping
-    // the queue to the tapped section.
     if parentPath == player.queueSourcePath {
+      // Exact path first: its index pins the tapped copy when the page holds the same identity
+      // more than once (ADR 0009). An indexed path with no exact match expands instead.
       var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
       if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {
         skipIndex = player.tracks.firstIndex(where: { $0.identity == trackId })

@@ -7,7 +7,8 @@ import org.w3c.dom.Document
 
 /**
  * Parses XML from a device on the network, or null if it isn't XML. A document type declaration,
- * which a speaker never sends, is refused, so no entity it declares can expand.
+ * which a speaker never sends, is refused so no entity can expand. Not namespace-aware: names keep
+ * their prefix (`r:streamContent`).
  */
 internal fun parseSpeakerXml(xml: String): Document? {
   if (xml.contains("<!DOCTYPE", ignoreCase = true)) return null
@@ -20,7 +21,7 @@ internal fun parseSpeakerXml(xml: String): Document? {
     .getOrNull()
 }
 
-/** The response's body, cut at [MAX_SPEAKER_BODY_BYTES]: a longer one fails to parse. */
+/** The body, cut at [MAX_SPEAKER_BODY_BYTES]: a longer one fails to parse. */
 internal fun Response.speakerBody(): String = peekBody(MAX_SPEAKER_BODY_BYTES).string()
 
 internal const val MAX_SPEAKER_BODY_BYTES = 1L shl 20

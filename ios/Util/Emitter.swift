@@ -36,19 +36,18 @@ public final class Emitter<T>: @unchecked Sendable {
   }
 
   public func emit(_ event: T) {
-    // Listeners run outside the lock, so one may add or remove listeners; a listener removed
-    // during an emit still receives that event.
     lock.lock()
     let current = snapshot
     lock.unlock()
 
+    // Outside the lock, so a listener may add or remove listeners; one removed during an emit
+    // still receives that event.
     for entry in current {
       entry.handler(event)
     }
   }
 }
 
-/// A listener registration that ends when cancelled or released.
 final class Subscription {
   private var cancelHandler: (() -> Void)?
 
@@ -76,7 +75,7 @@ extension Emitter {
 
 extension Emitter {
   /// Like `subscribe`, but `handler` runs later on the main actor, in a Task, whichever thread
-  /// emitted. Off main it may run before the emit returns.
+  /// emitted.
   func subscribeOnMain(_ handler: @escaping @MainActor (T) -> Void) -> Subscription {
     subscribe { value in
       let event = MainActorHop(value: value)

@@ -15,7 +15,6 @@ public extension HybridAudioBrowser {
         // Sets the category only; the session activates when playback produces output.
         self.audioSession.configure(options.ios)
 
-        // A re-setup replaces the player, so the outgoing one is torn down first. No-op on first setup.
         let oldPlayer = player
         oldPlayer?.sleepTimerManager.clear()
         destroyPlayer()
@@ -39,8 +38,8 @@ public extension HybridAudioBrowser {
         // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
         // info, and next/previous follow the queue, not the state.
 
-        // Stage the state before applying it, so setup options and pre-setup setter calls
-        // resolve by strict last-write-wins.
+        // Staged before applying, so setup options and pre-setup setter calls resolve by strict
+        // last-write-wins.
         if let bundled = options.options { updateOptions(options: bundled) }
         if let mode = options.repeatMode { pendingRepeatMode = mode }
         if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
@@ -64,8 +63,6 @@ public extension HybridAudioBrowser {
     }
   }
 
-  /// Applies state staged before the player existed, by setup options or pre-setup setters.
-  /// Consumed on apply so a later re-setup doesn't replay it.
   @MainActor
   private func applyPendingPlayerState() {
     guard let player else { return }
@@ -88,10 +85,8 @@ public extension HybridAudioBrowser {
     }
   }
 
-  /// Applies the stored options to the browser, the player and its engine. Idempotent.
   @MainActor
   private func applyOptions() {
-    // The `favorite` capability is the one favoriting switch: it also drives the row hearts.
     browserManager.setFavoriteEnabled(playerOptions.capabilities.favoriteEnabled)
     engine?.remoteCommandController.enable(
       commands: playerOptions.capabilities.remoteCommands,

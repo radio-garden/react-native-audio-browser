@@ -2,7 +2,6 @@ import Foundation
 import Intents
 import os.log
 
-/// Siri's play-media intent, from the phone or CarPlay voice: plays through `MediaIntentPlayback`.
 final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "MediaIntentHandler")
 
@@ -33,9 +32,8 @@ final class MediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     }
   }
 
-  /// The `SearchMode` name of a container vertical; a name `SearchMode(fromString:)` does not
-  /// know silently drops the mode. Nil for unclassified types and for album, artist and genre,
-  /// which are filters, not verticals.
+  /// The `SearchMode` name of a container vertical; a name `SearchMode(fromString:)` does not know
+  /// silently drops the mode. Nil for album, artist and genre, which are filters.
   private static func mediaTypeMode(_ type: INMediaItemType) -> String? {
     switch type {
     case .station, .radioStation, .algorithmicRadioStation, .musicStation: "station"

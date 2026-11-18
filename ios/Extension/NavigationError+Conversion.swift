@@ -1,8 +1,8 @@
 import Foundation
 
 extension NavigationError {
-  /// Maps any thrown error to a NavigationError. `BrowserError.invalidConfiguration`,
-  /// and any error that is not a BrowserError, HttpException or URLError, becomes `.unknownError`.
+  /// Maps any thrown error to a NavigationError. `BrowserError.invalidConfiguration`, and any
+  /// error that is not a BrowserError, HttpException or URLError, becomes `.unknownError`.
   static func from(_ error: Error) -> NavigationError {
     if let browserError = error as? BrowserError {
       switch browserError {

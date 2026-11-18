@@ -2,28 +2,23 @@ package com.audiobrowser.sonos
 
 import org.w3c.dom.Element
 
-/** Sonos rooms playing together, controlled through their [coordinator]. */
 internal data class SonosGroup(
-  /** The coordinator's `RINCON_…` UUID. */
+  /** The coordinator's `RINCON_…` UUID: its UDN without `uuid:`. */
   val coordinator: String,
   /** The coordinator's device description URL. */
   val location: String,
   val name: String,
 )
 
-/** A [SonosGroup], with its coordinator's control URLs: what a route stands for. */
 internal data class SonosRoom(val id: String, val name: String, val device: SonosDevice)
 
 /**
- * Reads a `ZoneGroupTopology.GetZoneGroupState` response into the groups a user can play to, each
- * listed once at its coordinator: the only member that accepts transport commands. The hidden half
- * of a stereo pair answers SSDP but refuses them. A group of several rooms is named as the Sonos
- * app names it: `Kitchen + 2`.
+ * Reads `GetZoneGroupState` into the groups a user can play to, each at its coordinator: the only
+ * member that accepts transport commands. A group of several rooms is named `Kitchen + 2`.
  */
 internal object ZoneGroupState {
   /**
-   * Whether [uuid] is reported hidden (the hidden half of a stereo pair), whose own topology can
-   * leave out its pair's group. False when [xml] cannot be read.
+   * Whether [uuid] is hidden, as a stereo pair's second half is; false when [xml] can't be read.
    */
   fun isHidden(xml: String, uuid: String): Boolean {
     val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return false
@@ -33,10 +28,6 @@ internal object ZoneGroupState {
       .any { it.getAttribute("UUID") == uuid && it.getAttribute("Invisible") == "1" }
   }
 
-  /**
-   * The groups, or null when [xml] holds no readable `ZoneGroupState`. Skips a group whose
-   * coordinator is missing or hidden.
-   */
   fun parse(xml: String): List<SonosGroup>? {
     val doc = SoapResponseParser.embeddedDocument(xml, "ZoneGroupState") ?: return null
     val groups = doc.getElementsByTagName("ZoneGroup")

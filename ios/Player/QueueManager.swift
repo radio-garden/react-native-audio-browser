@@ -3,10 +3,8 @@ import Foundation
   import NitroModules
 #endif
 
-/// What a queue mutation changed.
 struct QueueChange: Equatable {
   var tracks = false
-  /// A different track became current, or the current track was cleared.
   var currentTrack = false
 
   static let none = QueueChange()
@@ -21,7 +19,6 @@ enum QueueNavigationResult {
   case noChange
 }
 
-/// The queue's tracks, current index, shuffle and repeat, with no knowledge of playback.
 @MainActor
 class QueueManager {
   // MARK: - Stored Properties
@@ -29,7 +26,6 @@ class QueueManager {
   /// -1 when there is no current track.
   private(set) var currentIndex: Int = -1
 
-  /// The path the queue was expanded from, if any.
   private(set) var queueSourcePath: String?
 
   private(set) var tracks: [Track] = [] {
@@ -41,8 +37,7 @@ class QueueManager {
 
   private static var lastVersion = 0
 
-  /// Changes with every change to `tracks` and never repeats in the process, so equal readings
-  /// mean the same queue even across players.
+  /// Never repeats in the process, so equal readings mean the same queue even across players.
   private(set) var version = 0
 
   private(set) var shuffleOrder = ShuffleOrder()
@@ -51,9 +46,8 @@ class QueueManager {
 
   var shuffleEnabled: Bool = false {
     didSet {
-      // Re-pin on enable: the current track can sit anywhere in the old order, and near its end
-      // turning shuffle on would end the queue at once.
       guard shuffleEnabled, shuffleEnabled != oldValue else { return }
+      // Left where the old order put it, a current track near its end would end the queue at once.
       shuffleOrder.reshuffle(keepingFirst: currentIndex)
     }
   }
@@ -108,10 +102,8 @@ class QueueManager {
     return currentIndex == tracks.count - 1
   }
 
-  /// Whether `next()` moves to a different track; drives the remote next button.
   var canNext: Bool { nextIndex != nil }
 
-  /// Whether `previous()` moves to a different track; drives the remote previous button.
   var canPrevious: Bool { previousIndex != nil }
 
   // MARK: - Validation
@@ -138,8 +130,8 @@ class QueueManager {
 
   // MARK: - Navigation (returns QueueNavigationResult)
 
-  // Shared by `next()` and `canNext` so the button and the navigation agree. Shuffle wraps
-  // whatever the repeat mode, as Media3 does; sequential order wraps only on repeat-queue.
+  // Shuffle wraps whatever the repeat mode, as Media3 does; sequential order wraps only on
+  // repeat-queue.
   private var nextIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
@@ -195,7 +187,6 @@ class QueueManager {
 
   // MARK: - Mutations
 
-  /// Clamps `initialIndex` into the new tracks.
   @discardableResult
   func setQueue(_ newTracks: [Track], initialIndex: Int = 0, sourcePath: String? = nil) -> QueueChange {
     let clampedIndex = max(0, min(initialIndex, newTracks.count - 1))
@@ -237,8 +228,8 @@ class QueueManager {
     return .tracksOnly
   }
 
-  // Also pins the current track first in the shuffle order, shuffle on or not: an inserted index
-  // lands at a random shuffle position, and landing last would end the queue after one track.
+  // Pins the current track first in the shuffle order, shuffle on or not: inserted at random, it
+  // could land last and end the queue after one track.
   private func adoptInitialCurrent(_ index: Int) -> QueueChange {
     currentIndex = max(0, min(index, tracks.count - 1))
     shuffleOrder = ShuffleOrder(length: tracks.count, firstIndex: currentIndex)
@@ -261,7 +252,7 @@ class QueueManager {
     return .tracksOnly
   }
 
-  /// A `toIndex` past the end moves the track to the end. The current track stays current.
+  /// A `toIndex` past the end moves the track to the end.
   @discardableResult
   func move(fromIndex: Int, toIndex: Int) throws -> QueueChange {
     try throwIfQueueEmpty()
@@ -270,8 +261,7 @@ class QueueManager {
     let track = tracks.remove(at: fromIndex)
     let insertion = min(tracks.count, toIndex)
     tracks.insert(track, at: insertion)
-    // Keep the moved track's shuffle position: a plain insert lands it at random, reordering
-    // shuffled playback and possibly putting the playing track last.
+    // Keeps the moved track's shuffle position: inserted at random, it reorders shuffled playback.
     let shufflePosition = shuffleOrder.shufflePosition(of: fromIndex)
     shuffleOrder.remove(from: fromIndex, to: fromIndex + 1)
     shuffleOrder.insert(
@@ -287,7 +277,6 @@ class QueueManager {
     return .tracksOnly
   }
 
-  /// Does nothing when `currentIndex` is already -1.
   @discardableResult
   func clear() -> QueueChange {
     guard currentIndex != -1 else { return .none }

@@ -3,7 +3,6 @@ import Foundation
 import NitroModules
 
 extension Track {
-  /// `artworkSource` if set, else `artwork.url`; nil when that names an SF Symbol rather than an image.
   var artworkImageSource: ImageSource? {
     if let source = artworkSource {
       source

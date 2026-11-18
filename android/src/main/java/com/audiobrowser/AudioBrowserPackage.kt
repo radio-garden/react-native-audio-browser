@@ -19,7 +19,7 @@ public class AudioBrowserPackage : TurboReactPackage() {
           AudioBrowserLifecycleModule.NAME,
           AudioBrowserLifecycleModule::class.java.name,
           false, // canOverrideExistingModule
-          // Must stay eager: see AudioBrowserLifecycleModule for why it is never created otherwise.
+          // Must stay eager: see AudioBrowserLifecycleModule.
           true, // needsEagerInit
           false, // isCxxModule
           ReactModuleInfo.classIsTurboModule(AudioBrowserLifecycleModule::class.java),

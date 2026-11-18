@@ -14,7 +14,7 @@ extension CarPlaySession {
       await showTabBar(tabs)
       return
     }
-    // The first loading root predates the config; re-show it with the app's loading title.
+    // The first loading root predates the config; re-show it with the loading title.
     if let loadingTitle = config.carPlayLoadingTitle {
       interfaceController.safeSetRoot(CPListTemplate.loading(title: nil, path: nil, loadingTitle: loadingTitle), animated: false)
     }
@@ -28,16 +28,13 @@ extension CarPlaySession {
     }
   }
 
-  /// Builds the tab bar. While the Browse Gate is active each tab is decided on its own: a
-  /// gated tab becomes its gate page, an allowed one shows content.
   func showTabBar(_ allTabs: [Track]) async {
     let build = beginRootBuild()
     builtTabs = allTabs
     let tabs = Array(Self.visibleTabs(allTabs).prefix(CPTabBarTemplate.maximumTabCount))
     let gated = audioBrowser.browseGate.isActive
 
-    // An empty tab bar renders blank: show the gate's page, or else the empty-content error
-    // (ADR 0001).
+    // An empty tab bar renders blank (ADR 0001).
     guard !tabs.isEmpty else {
       if gated, let chrome = await browseGates(for: [nil])[0] {
         guard isCurrent(build) else { return }
@@ -74,8 +71,6 @@ extension CarPlaySession {
     }
   }
 
-  /// Restamps the tab entries in place when the paths are unchanged; otherwise rebuilds the tab
-  /// bar, deferred until the user is back at the root.
   func tabsChanged(_ tabs: [Track]) {
     guard !TabBarEntries.same(builtTabs, tabs) else { return }
     let visible = Self.visibleTabs(tabs)
@@ -95,8 +90,7 @@ extension CarPlaySession {
     _ = rebuildTabsIfAtRoot()
   }
 
-  /// Rebuilds the tab bar if a rebuild is due and the user is at the root. True when it did, so
-  /// the caller can skip work on a template about to be replaced.
+  /// True when it rebuilt, so the caller can skip work on a template about to be replaced.
   func rebuildTabsIfAtRoot() -> Bool {
     guard needsTabRebuild, interfaceController.templates.count <= 1 else { return false }
     needsTabRebuild = false
@@ -123,8 +117,8 @@ extension CarPlaySession {
     }
   }
 
-  /// One decision per path, made concurrently, in path order. Reports nothing: the caller
-  /// reports once it knows its build is still current.
+  /// One decision per path, in path order. Reports nothing: the caller reports once it knows its
+  /// build is still current.
   private func browseGates(for paths: [String?]) async -> [Gate?] {
     let browseGate = audioBrowser.browseGate
     return await paths.concurrentMap { path in
@@ -145,7 +139,7 @@ extension CarPlaySession {
   }
 
   /// A list template, as the audio entitlement does not allow `CPInformationTemplate` (the tab
-  /// bar raises on one). No action button: the app offers any "subscribe" in its own UI.
+  /// bar raises on one).
   func makeGatePage(_ chrome: Gate, path: String?, tab: Track?) -> CPListTemplate {
     let template = CPListTemplate.message(
       chrome.title, subtitle: chrome.message, listTitle: chrome.title,
@@ -176,7 +170,6 @@ extension CarPlaySession {
     }
   }
 
-  /// Shows the app's formatting of `error` at path "/" as the root (ADR 0001).
   func showRootError(_ error: NavigationError, build: UInt) async {
     let formatted = await audioBrowser.browserManager.formatted(error, path: "/")
     guard isCurrent(build) else { return }
