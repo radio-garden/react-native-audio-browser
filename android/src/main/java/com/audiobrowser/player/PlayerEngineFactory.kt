@@ -16,9 +16,8 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import java.io.IOException
 
-// media3's no-progress stuck-buffering check (STUCK_BUFFERING_NO_PROGRESS); its 600s default
-// would be ten minutes of dead air on a live stream. The not-loading check is a fixed 4s and not
-// configurable.
+// media3's no-progress stuck-buffering check; its 600s default would be ten minutes of dead air
+// on a live stream. The not-loading check is a fixed 4s and not configurable.
 private const val STUCK_BUFFERING_DETECTION_TIMEOUT_MS = 60_000
 
 internal class PlayerEngine(
@@ -41,10 +40,8 @@ internal fun bufferConfig(options: PlayerSetupOptions): BufferConfig =
   )
 
 /**
- * Constructs the load control, media factory and ExoPlayer for one `setup()` generation, and
- * nothing else: tearing down the previous engine and wiring listeners stay with [Player.setup]. The
- * lambdas run on ExoPlayer's background threads (playback and loader), never main, so they must
- * read thread-safe state.
+ * Builds the load control, media factory and ExoPlayer for one setup. The lambdas run on
+ * ExoPlayer's playback and loader threads, never main, so they must read thread-safe state.
  */
 internal fun buildPlayerEngine(
   context: Context,

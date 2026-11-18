@@ -6,7 +6,6 @@ import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 
-/** Content-style extras for media items on Android Auto and AAOS. */
 object MediaExtrasBuilder {
 
   /**
@@ -35,13 +34,12 @@ object MediaExtrasBuilder {
   }
 
   /**
-   * Extras for [track] on a browse surface. The owning [section] supplies the group-title hint and,
-   * from its page-folded style, the item's display hint: these extras are all of a section the flat
+   * Content-style extras for [track] on a browse surface. [section] supplies the group title and,
+   * from its style, the item's display hint: these extras are all of a section the flat
    * MediaBrowser protocol carries (ADR 0010). The track's own `display` never sets its item hint,
-   * since display is positional (ADR 0011). For a browsable track (no `src`), its declared
-   * `display` is the promise for the page it opens, sent as the parent-level BROWSABLE/PLAYABLE
-   * hint, the only below-root hint AOSP-derived AAOS media UIs honor. A promise is only ever
-   * declared, never derived from resolved pages.
+   * since display is positional (ADR 0011). A browsable track's declared `display` is the promise
+   * for the page it opens, sent as the parent-level BROWSABLE/PLAYABLE hint, the only below-root
+   * hint AOSP-derived AAOS media UIs honor.
    */
   fun build(track: Track, section: Section? = null): Bundle =
     build(

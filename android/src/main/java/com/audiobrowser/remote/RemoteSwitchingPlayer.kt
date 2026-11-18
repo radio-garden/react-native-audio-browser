@@ -20,18 +20,13 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * The session's player while remote outputs are on: the local player while none of the remotes has
- * a session, else the receiver of the first that has, carrying the queue, position, play intent,
- * repeat and shuffle across each move.
- * - The phone plays on until the current item is resolved for the receiver ([resolve]).
- * - While remote, this side owns the queue: it shows edits at once, and sends the receiver one item
- *   at a time, moving on at the receiver's end. An edit that leaves the current item in place
- *   doesn't reach the receiver. Shuffle is kept, but the queue plays in list order
- *   (radio-garden/react-native-audio-browser#210).
- * - Moving between remotes, or to a remote's new session, goes from receiver to receiver.
- * - A receiver's failure, or an item it hasn't started within [startTimeoutMs] of being sent or
- *   played, is the player error until [prepare] loads the item again. [stop] stops the receiver.
- * - [setVolume] sets the receiver's device volume while remote.
+ * The session's player while remote outputs are on: [local] until one of [remotes] has a session,
+ * then that remote's receiver, carrying the queue, position, play intent, repeat and shuffle across
+ * each move. While remote it keeps the queue itself and sends the receiver one item at a time (ADR
+ * 0013); shuffle is kept but the queue plays in list order.
+ *
+ * A receiver's failure, or an item it hasn't started within [startTimeoutMs] of being sent or
+ * played, is the player error until [prepare] loads the item again.
  */
 internal class RemoteSwitchingPlayer(
   local: MediaPlayer,
@@ -58,13 +53,14 @@ internal class RemoteSwitchingPlayer(
   private var repeat = MediaPlayer.REPEAT_MODE_OFF
   private var shuffle = false
 
-  /** Set as the receiver moves on at an item's end; the next [getState] reports it as automatic. */
+  /**
+   * Set when the receiver's end moves the queue on; the next [getState] reports it as automatic.
+   */
   private var pendingAutoTransition = false
 
   private sealed interface Route {
     data object Local : Route
 
-    /** The phone plays on while the current item resolves for [target]'s receiver. */
     class HandingOver(val target: RemotePlayback, val job: Job) : Route
 
     class Remote(val output: RemotePlayback, val receiver: MediaPlayer) : Route {
@@ -74,36 +70,30 @@ internal class RemoteSwitchingPlayer(
       /** Whether the receiver reported the current item playing since the start timeout armed. */
       var reportedPlaying = false
 
-      /** The receiver's last timed metadata for the current item; none until it holds that item. */
       var timedMetadata = NO_TIMED_METADATA
     }
   }
 
-  /** Where the receiver is with the current item. */
   private sealed interface Load {
-    /** Nothing loaded there: unprepared, stopped, or no queue. Prepare loads from [positionMs]. */
+    /** Nothing loaded on the receiver; prepare loads from [positionMs]. */
     class Idle(val positionMs: Long) : Load
 
-    /** The item resolves for the receiver; until then, its reports are the last item's. */
+    /** The item resolves; until then the receiver's reports are the last item's. */
     class Resolving(val job: Job, val positionMs: Long) : Load
 
-    /** [item] went to the receiver, which doesn't report holding it yet. */
+    /** [item] went to the receiver, which doesn't show it yet. */
     class Sent(val item: MediaItem, val positionMs: Long) : Load
 
-    /** The receiver holds [item]: what it reports is the current item's. */
+    /** The receiver holds [item], playing or not. */
     class Playing(val item: MediaItem) : Load
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
-    /** The last item played to its end, at [positionMs]. */
     class Ended(val positionMs: Long) : Load
   }
 
-  /**
-   * The phone's metadata last reported. A block is reported once, and as none from the next state
-   * on, so that an equal block after it goes out as ExoPlayer sends it: the state emits only a
-   * change, and a stream's first title after a reconnect often equals its last.
-   */
+  // A block goes out once, then as none, so an equal block after it goes out again: the state
+  // emits only a change, and a stream's first title after a reconnect often equals its last.
   private var reportedMetadata: Metadata? = null
 
   init {
@@ -115,7 +105,6 @@ internal class RemoteSwitchingPlayer(
     if (!isRemote) setPlayer(newLocal)
   }
 
-  /** A remote that stays keeps its session and what it plays; one that goes is released. */
   fun setRemotes(newRemotes: List<RemotePlayback>) {
     val gone = remotes.filter { it !in newRemotes }
     remotes = newRemotes
@@ -214,7 +203,7 @@ internal class RemoteSwitchingPlayer(
       Route.HandingOver(
         target,
         scope.launch {
-          // The phone plays on meanwhile, and may move to another item: resolve that one instead.
+          // The phone plays on meanwhile and may move to another item: resolve that one instead.
           var item: MediaItem?
           var resolved: Result<MediaItem>?
           do {
@@ -247,7 +236,6 @@ internal class RemoteSwitchingPlayer(
     invalidateState()
   }
 
-  /** Goes straight from [from]'s receiver to [to]'s, without the phone in between. */
   private fun moveTo(from: Route.Remote, to: RemotePlayback) {
     val positionMs = positionOn(from)
     val load = from.load
@@ -261,7 +249,7 @@ internal class RemoteSwitchingPlayer(
 
   private fun handOverToLocal(from: Route.Remote) {
     val positionMs = positionOn(from)
-    // After a receiver's failure the phone still plays the item.
+    // A failed item still plays on the phone.
     val prepared = from.load !is Load.Idle && from.load !is Load.Ended
     local.repeatMode = repeat
     local.shuffleModeEnabled = shuffle
@@ -292,7 +280,6 @@ internal class RemoteSwitchingPlayer(
     disarmStart(remote)
   }
 
-  /** Fails the current item unless the receiver has [started] it within [startTimeoutMs]. */
   private fun armStart(remote: Route.Remote) {
     disarmStart(remote)
     remote.reportedPlaying = false
@@ -317,7 +304,7 @@ internal class RemoteSwitchingPlayer(
     remote.startTimeout = null
   }
 
-  /** A receiver whose session already ended refuses commands; it has stopped by itself. */
+  // A receiver whose session already ended throws, and has stopped by itself.
   private fun stopReceiver(receiver: MediaPlayer) {
     try {
       receiver.stop()
@@ -353,11 +340,11 @@ internal class RemoteSwitchingPlayer(
     remote.load = Load.Sent(item, positionMs)
     armStart(remote)
     try {
-      // Before the load, which autoplays as this says. Told again, a receiver plays what it holds.
+      // Before the load, which autoplays as this says; set again, a receiver plays what it holds.
       if (remote.receiver.playWhenReady != playIntent) remote.receiver.playWhenReady = playIntent
       remote.receiver.setMediaItem(item, positionMs)
     } catch (e: IllegalStateException) {
-      // The session ended under it: the move, already on its way, takes the item along.
+      // The session ended under it; the move that follows takes the item along.
       Timber.e(e, "Remote output: could not load the item on the receiver")
     }
   }
@@ -385,8 +372,8 @@ internal class RemoteSwitchingPlayer(
     }
 
   /**
-   * Whether the receiver holds the item sent and has started it: reported it playing, or holds it
-   * ready while paused.
+   * Whether the receiver holds the item sent and has started it: reported it playing, holds it
+   * ready while paused, or ended it.
    */
   private fun started(remote: Route.Remote): Boolean {
     val load = remote.load as? Load.Playing ?: return false
@@ -406,8 +393,8 @@ internal class RemoteSwitchingPlayer(
         remote.reportedPlaying = true
         disarmStart(remote)
       }
-      // Cast reports the item sent playing before its player shows it, and only once. A receiver
-      // still showing the last item reports that one.
+      // Cast reports the item sent playing once, before its player shows it. A report while it
+      // still shows the last item is that item's.
       is Load.Sent -> if (remote.receiver.currentMediaItem == null) remote.reportedPlaying = true
       else -> Unit
     }
@@ -417,7 +404,7 @@ internal class RemoteSwitchingPlayer(
   private fun onReceiverEnded() {
     val remote = remoteRoute ?: return
     followReceiver(remote)
-    // An end reported before the receiver holds the item sent is the last item's.
+    // An end before the receiver holds the item sent is the last item's.
     if (remote.load !is Load.Playing) return
     val next = queue.nextAtEnd(repeat)
     if (next == C.INDEX_UNSET) {
@@ -449,7 +436,7 @@ internal class RemoteSwitchingPlayer(
   private fun receiverHolds(remote: Route.Remote, item: MediaItem) =
     remote.receiver.currentMediaItem === item
 
-  /** Counts [Load.Sent] too: a receiver's onMetadata comes before onEvents moves it to Playing. */
+  // Counts Sent too: a receiver's onMetadata comes before onEvents moves it to Playing.
   private fun holdsCurrent(remote: Route.Remote): Boolean =
     when (val load = remote.load) {
       is Load.Sent -> receiverHolds(remote, load.item)
@@ -462,7 +449,7 @@ internal class RemoteSwitchingPlayer(
     val remote = remoteRoute ?: return withEachBlockOnce(seekableWhilePreparing(state))
     val load = remote.load
     val holds = load is Load.Playing && receiverHolds(remote, load.item)
-    // Duration, seekability and liveness come from the receiver's data for the item it plays.
+    // Duration, seekability and liveness come from the receiver's data for the item it holds.
     val playing = state.playlist.getOrNull(state.currentMediaItemIndex).takeIf { holds }
     val playlist =
       queue.items.indices.map { i ->
@@ -508,10 +495,8 @@ internal class RemoteSwitchingPlayer(
       .build()
   }
 
-  /**
-   * The local player withholds seeking from an item until it has prepared, yet keeps a seek made
-   * meanwhile; without the command, [seekTo] here would drop it.
-   */
+  // The local player withholds seeking until an item has prepared, yet keeps a seek made meanwhile;
+  // without the command, a seek here would be dropped.
   private fun seekableWhilePreparing(state: State): State {
     val index = state.currentMediaItemIndex
     if (index !in 0 until state.timeline.windowCount) return state
@@ -523,7 +508,7 @@ internal class RemoteSwitchingPlayer(
   private fun position(positionMs: Long) = if (positionMs == C.TIME_UNSET) 0 else positionMs
 
   /**
-   * Catches up with the receiver: the item arriving there, or a pause or play from elsewhere.
+   * Catches up with the receiver: the item sent arriving there, or a pause or play from elsewhere.
    * Returns whether anything changed.
    */
   private fun followReceiver(remote: Route.Remote): Boolean {
@@ -549,8 +534,7 @@ internal class RemoteSwitchingPlayer(
     val remote = remoteRoute ?: return super.handleSetPlayWhenReady(playWhenReady)
     val resumes = playWhenReady && !playIntent
     playIntent = playWhenReady
-    // A receiver that played on after failing still hears a pause; one still holding the last
-    // item while the next resolves is not told to play it.
+    // While the next item resolves, the receiver still holds the last one: a play isn't passed on.
     if (!playWhenReady || remote.load !is Load.Resolving)
       remote.receiver.playWhenReady = playWhenReady
     if (remote.load is Load.Playing) {
@@ -632,7 +616,7 @@ internal class RemoteSwitchingPlayer(
   override fun handleRemoveMediaItems(fromIndex: Int, toIndex: Int): ListenableFuture<*> {
     val remote = remoteRoute ?: return super.handleRemoveMediaItems(fromIndex, toIndex)
     if (!queue.remove(fromIndex, toIndex)) return done()
-    // As the local player does: the current item gone with nothing after it, playback ends there,
+    // As the local player does: with the current item gone and nothing after it, playback ends
     // unless the queue repeats.
     val nothingAfter = fromIndex >= queue.items.size && !queue.isEmpty
     val playing = remote.load !is Load.Idle && remote.load !is Load.Failed
@@ -694,7 +678,7 @@ internal class RemoteSwitchingPlayer(
     }
   }
 
-  /** Brings playback back to the local player, which stays unreleased, and releases the remotes. */
+  /** Brings playback back to [local], which stays unreleased, and releases the remotes. */
   override fun handleRelease(): ListenableFuture<*> {
     (route as? Route.HandingOver)?.job?.cancel()
     if (route is Route.HandingOver) route = Route.Local
@@ -710,7 +694,7 @@ internal class RemoteSwitchingPlayer(
   private companion object {
     val NO_TIMED_METADATA = Metadata(C.TIME_UNSET)
 
-    // Served from the queue this side keeps, whatever the receiver offers.
+    // Served from the queue kept here, whatever the receiver offers.
     val QUEUE_COMMANDS =
       intArrayOf(
         MediaPlayer.COMMAND_PLAY_PAUSE,
@@ -733,7 +717,7 @@ internal class RemoteSwitchingPlayer(
       )
   }
 
-  /** Stands in once released, so this player stops listening to the local one. */
+  // Stands in once released, so this player stops listening to the local one.
   private class ReleasedPlayer(looper: Looper) : SimpleBasePlayer(looper) {
     override fun getState(): State = State.Builder().build()
   }

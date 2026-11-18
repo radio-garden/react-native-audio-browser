@@ -4,10 +4,10 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.Track
 
 /**
- * The queue index of the tapped track, for skipping in place, or -1. An exact path match wins,
- * since the path's `__index` tells apart copies of the same identity. Only an index-less path falls
- * back to matching [trackId]; an index-stamped path with no exact match returns -1, so the caller
- * re-expands the queue to the tapped section (ADR 0009).
+ * The index a tap on [contextualPath] lands on, or -1. The exact path wins, pinning the tapped copy
+ * when a page lists one track twice; [trackId] is matched by identity only when the path carries no
+ * `__index`, because an indexed path with no exact match came from another section and needs the
+ * queue rebuilt (ADR 0009).
  */
 fun Array<Track>.indexOfTappedTrack(contextualPath: String, trackId: String?): Int {
   val index = indexOfFirst { it.path == contextualPath }

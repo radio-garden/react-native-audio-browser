@@ -2,12 +2,12 @@ package com.audiobrowser.extension
 
 class NumberExt {
   companion object {
-    /** Reads the receiver as milliseconds. */
+    /** Milliseconds to seconds. */
     fun Number.toSeconds(): Double {
       return this.toDouble() / 1000
     }
 
-    /** Reads the receiver as seconds; truncates toward zero. */
+    /** Seconds to milliseconds, truncated. */
     fun Number.toMilliseconds(): Long {
       return (this.toDouble() * 1000).toLong()
     }

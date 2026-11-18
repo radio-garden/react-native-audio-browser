@@ -3,7 +3,6 @@ package com.audiobrowser.util
 import android.net.Uri
 import java.security.MessageDigest
 
-/** Builds and parses the `content://<pkg>.audiobrowser.artwork/art/<token>` artwork URIs. */
 object ArtworkUris {
   // Must match the provider's `android:authorities` in AndroidManifest.xml.
   const val AUTHORITY_SUFFIX = "audiobrowser.artwork"
@@ -11,7 +10,7 @@ object ArtworkUris {
 
   fun authorityFor(packageName: String): String = "$packageName.$AUTHORITY_SUFFIX"
 
-  /** A stable token for [url] that does not reveal it to whoever sees the URI (SHA-256 hex). */
+  /** A stable SHA-256 hex token for [url] that does not reveal it to whoever sees the URI. */
   fun tokenFor(url: String): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
     return digest.joinToString("") { "%02x".format(it) }

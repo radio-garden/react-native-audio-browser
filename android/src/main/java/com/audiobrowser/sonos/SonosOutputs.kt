@@ -10,19 +10,13 @@ import java.util.concurrent.CopyOnWriteArraySet
 import timber.log.Timber
 
 /**
- * Sonos rooms as remote outputs, shared by [SonosRouteProviderService], which the system binds, and
- * the player's [SonosRemote]: whether the service may be bound, the room selected in the Output
- * Switcher, and room volumes. While a session plays on a room, its volume goes through that
- * session, which reads it back.
+ * Shared by [SonosRouteProviderService], which the system binds, and the player's [SonosRemote]:
+ * the selected room and room volumes. A room a session plays on takes its volume through the
+ * session.
  */
 internal object SonosOutputs {
-  /**
-   * The control category a Sonos room's route declares beside
-   * [com.audiobrowser.RemoteOutputs.CATEGORY].
-   */
   const val CATEGORY = "com.audiobrowser.CATEGORY_SONOS"
 
-  /** The room playback goes to, or null. Written on the main thread, read from any. */
   @Volatile
   var selected: SonosRoom? = null
     private set
@@ -36,8 +30,8 @@ internal object SonosOutputs {
   private var session: Session? = null
 
   /**
-   * Enables or disables [SonosRouteProviderService]. The component state persists, so the system
-   * can bind the service before the app has set up its player. Disabling forgets the selected room.
+   * Turns [SonosRouteProviderService] on or off. The state persists, so the system can bind the
+   * service before the app sets up its player. Turning it off forgets the selected room.
    */
   @MainThread
   fun setEnabled(context: Context, enabled: Boolean) {
@@ -59,7 +53,7 @@ internal object SonosOutputs {
     )
   }
 
-  /** Calls [listener] on the main thread whenever [selected] changes. */
+  /** Calls [listener] on the main thread when [selected] changes. */
   fun addListener(listener: () -> Unit) {
     listeners.add(listener)
   }
@@ -68,7 +62,6 @@ internal object SonosOutputs {
     listeners.remove(listener)
   }
 
-  /** [roomId]'s volume as last read or set, from 0 to 100, or null before either. */
   fun volumeOf(roomId: String): Int? = volumes[roomId]
 
   @MainThread
@@ -77,7 +70,7 @@ internal object SonosOutputs {
     volumeListeners.forEach { it() }
   }
 
-  /** Calls [listener] on the main thread whenever a room's volume changes. */
+  /** Calls [listener] on the main thread when a room's volume changes. */
   fun addVolumeListener(listener: () -> Unit) {
     volumeListeners.add(listener)
   }
@@ -87,8 +80,8 @@ internal object SonosOutputs {
   }
 
   /**
-   * While a session plays on [roomId], [setVolume] sets its volume; null when it ends, which leaves
-   * another room's session in place.
+   * While a session plays on [roomId], its volume goes through [setVolume]; null ends it, unless
+   * another room's session has replaced it.
    */
   @MainThread
   fun setSession(roomId: String, setVolume: ((Int) -> Unit)?) {
@@ -98,7 +91,7 @@ internal object SonosOutputs {
 
   fun hasSession(roomId: String): Boolean = session?.roomId == roomId
 
-  /** Sets [roomId]'s volume through the session playing there: false when none does. */
+  /** False when no session plays on [roomId]. */
   @MainThread
   fun setVolumeThroughSession(roomId: String, volume: Int): Boolean {
     val session = session ?: return false
@@ -118,7 +111,6 @@ internal object SonosOutputs {
     listeners.forEach { it() }
   }
 
-  /** Clears the selection, unless another room was selected since [room]. */
   @MainThread
   internal fun unselect(room: SonosRoom) {
     if (selected?.id != room.id) return

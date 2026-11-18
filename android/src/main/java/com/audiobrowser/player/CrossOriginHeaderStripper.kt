@@ -6,28 +6,20 @@ import okhttp3.Request
 import okhttp3.Response
 
 /**
- * Drops the caller's headers from a redirect hop that leaves the origin the call addressed.
+ * Drops the caller's headers from a redirect hop that leaves the origin the call addressed, as iOS
+ * and web do. OkHttp's redirect follow-up removes only `Authorization`.
  *
- * OkHttp's redirect follow-up removes only `Authorization`; every other configured header (an
- * `X-Api-Key`, a cookie) would reach whichever host the redirect names. iOS and web forward none.
+ * Install it as a network interceptor: an application interceptor sees only the first request, not
+ * each hop. Each hop is compared with the call's original URL, not with the hop before it.
  *
- * Must be installed as a network interceptor: an application interceptor sees only the first
- * request, not each hop. `chain.call().request()` is the call's original request, so each hop is
- * compared against the URL the caller addressed, not the hop before it.
- *
- * Covers redirects only. An HLS segment or key fetch is its own call to the CDN URL, and
- * [TransformingDataSource] applies the config's headers to it on purpose.
+ * Covers redirects only: an HLS segment or key fetch is its own call, and [TransformingDataSource]
+ * applies the config's headers to it on purpose.
  */
 internal object CrossOriginHeaderStripper : Interceptor {
 
-  /**
-   * Lowercase names of headers OkHttp and media3 set per hop, which the request breaks without:
-   * `range` carries the seek, so dropping it restarts the read from zero.
-   *
-   * `icy-metadata` is media3's request for Shoutcast metadata, arriving on the DataSpec alongside
-   * the config's headers. Dropping it loses `icy-metaint`: "now playing" stops on redirected
-   * streams and the interleaved metadata bytes play as audible chirps.
-   */
+  // Set per hop by OkHttp and media3, and needed by the request: dropping `range` restarts the read
+  // from zero, and dropping `icy-metadata` loses `icy-metaint`, so metadata stops and its bytes
+  // play as audio.
   private val TRANSPORT_HEADERS =
     setOf(
       "accept",
@@ -49,7 +41,7 @@ internal object CrossOriginHeaderStripper : Interceptor {
     )
   }
 
-  /** Scheme, host and port: the same test web's `followMediaRedirect` applies. */
+  /** Scheme, host and port: the same test as web's `followMediaRedirect`. */
   internal fun sameOrigin(a: HttpUrl, b: HttpUrl): Boolean =
     a.scheme == b.scheme && a.host == b.host && a.port == b.port
 

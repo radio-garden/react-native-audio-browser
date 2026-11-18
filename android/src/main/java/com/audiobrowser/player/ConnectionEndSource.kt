@@ -18,10 +18,10 @@ import java.io.IOException
 /**
  * A progressive source whose fatal load error, such as a connection's end that
  * [RetryLoadErrorHandlingPolicy] does not retry in place, surfaces only once the audio the
- * connection delivered has been read. media3 surfaces a load error whenever it is buffering or a
- * renderer is not ready, and before it has handled the period's preparation, so a burst that
- * arrives with its close would otherwise never play. Once the connection has ended, the period has
- * nothing more to load: playback starts on what it holds, short of the play buffer.
+ * connection delivered has been read. media3 throws a load error whenever it is buffering or a
+ * renderer is not ready, so a burst that arrives with its close would otherwise never play. Once
+ * the connection has ended the period has nothing more to load, so playback starts on what it
+ * holds, short of the play buffer.
  */
 class ConnectionEndSource(source: MediaSource) : WrappingMediaSource(source) {
 
@@ -36,7 +36,6 @@ class ConnectionEndSource(source: MediaSource) : WrappingMediaSource(source) {
   }
 
   private class Period(val period: MediaPeriod) : MediaPeriod {
-    /** Read on the playback thread only, where media3 calls back. */
     private var prepared = false
 
     private val connectionEnded: Boolean

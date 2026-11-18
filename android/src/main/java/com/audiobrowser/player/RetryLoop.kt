@@ -3,11 +3,11 @@ package com.audiobrowser.player
 import androidx.media3.common.PlaybackException
 
 /**
- * Automatic retry for the local engine (docs/adr/0014): reconnects after a connection ends, paced
- * by [ReconnectPacer], and gives up once [SilenceBudget]'s deadline passes. Main thread only.
+ * Automatic retry for the local engine (ADR 0014): reconnects after a connection ends, paced by
+ * [ReconnectPacer], and gives up once [SilenceBudget]'s deadline passes. Main thread only.
  *
- * A connection the load error policy retries in place (an HLS segment, a file of known length) is
- * never paced here: its failures only reach the budget, whose deadline gives up on it as well.
+ * A connection the load error policy retries in place is never paced here: its failures only reach
+ * the budget, whose deadline gives up on it as well.
  */
 internal class RetryLoop(
   private val clock: () -> Long,

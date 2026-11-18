@@ -7,10 +7,6 @@ import com.audiobrowser.remote.RemotePlayback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
-/**
- * Plays on the room selected in the Output Switcher ([SonosOutputs.selected]): a session with its
- * own [SonosPlayer] while one is selected. Selecting another room replaces it, so playback moves.
- */
 internal class SonosRemote(
   private val context: Context,
   private val scope: CoroutineScope,

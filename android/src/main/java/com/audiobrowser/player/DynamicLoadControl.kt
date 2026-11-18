@@ -19,13 +19,7 @@ data class BufferConfig(
   val backBufferMs: Int = 0,
 )
 
-/**
- * A LoadControl whose buffer thresholds change during playback through [updateBufferConfig], which
- * DefaultLoadControl fixes at construction.
- *
- * ExoPlayer calls the LoadControl methods on its playback thread; the other methods may run on any
- * thread, so shared state is @Volatile.
- */
+/** A LoadControl whose buffer thresholds change during playback, through [updateBufferConfig]. */
 class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadControl {
 
   private val allocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
@@ -35,10 +29,9 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
 
   @Volatile private var rebuffering: Boolean = false
 
-  /**
-   * Whether ExoPlayer reports a stall after playback had started, as opposed to an initial connect,
-   * a seek or a track change.
-   */
+  @Volatile private var loading: Boolean = false
+
+  /** Whether playback stalled after it had started, not on a connect, a seek or a track change. */
   val isRebuffering: Boolean
     get() = rebuffering
 
@@ -83,7 +76,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     updateBufferConfig(BufferConfig())
   }
 
-  // Each instance serves a single ExoPlayer, so the one allocator is returned for any playerId.
+  // One instance per ExoPlayer, so the one allocator serves any playerId.
   override fun getAllocator(playerId: PlayerId): Allocator = allocator
 
   override fun getBackBufferDurationUs(): Long = backBufferUs
@@ -94,7 +87,10 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     // ExoPlayer polls this in every playback state, unlike shouldStartPlayback, so this is where
     // the flag clears once a rebuffer recovers.
     rebuffering = parameters.rebuffering
-    return parameters.bufferedDurationUs < maxBufferUs
+    val bufferedDurationUs = parameters.bufferedDurationUs
+    if (bufferedDurationUs >= maxBufferUs) loading = false
+    else if (bufferedDurationUs < minBufferUs) loading = true
+    return loading
   }
 
   override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
@@ -133,6 +129,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     prepareStartTimeMs = System.currentTimeMillis()
     playbackStarted = false
     rebuffering = false
+    loading = false
   }
 
   override fun onTracksSelected(
@@ -140,7 +137,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     trackGroups: TrackGroupArray,
     trackSelections: Array<out ExoTrackSelection?>,
   ) {
-    // No byte target from the selected tracks: loading is bounded by maxBufferUs alone.
+    // No byte target from the selected tracks: loading is bounded by duration alone.
   }
 
   override fun onStopped() {}

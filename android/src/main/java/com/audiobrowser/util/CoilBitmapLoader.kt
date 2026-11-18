@@ -16,14 +16,9 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * Media3 [BitmapLoader] that fetches artwork through Coil, with request headers, SVG and
- * downsampling to the media browser's size hint.
- *
- * @param resolveDisplayArtwork maps a URI Media3 hands over to the source to fetch (see
- *   Player.resolveDisplayArtwork); null means the URI is not the library's to rewrite and is
- *   fetched as-is. If it throws, the URI is also fetched as-is.
- * @param getArtworkSizeHint the size in pixels the connected media browser (e.g. Android Auto) asks
- *   for, or null for none.
+ * @param resolveDisplayArtwork maps a URI Media3 hands over to the source to fetch; null means the
+ *   URI is not the library's to rewrite, and it is fetched as-is, as it is when this throws.
+ * @param getArtworkSizeHint the size in pixels the connected media browser asks for, or null.
  */
 @UnstableApi
 class CoilBitmapLoader(

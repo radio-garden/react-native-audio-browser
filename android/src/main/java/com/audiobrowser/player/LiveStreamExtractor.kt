@@ -15,10 +15,9 @@ import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 
 /**
- * Extracts a live track's progressive stream, which never ends: once its format is recognised, an
- * end of a stream with neither a length nor a duration (media3's own test for live) is a dropped
- * connection, thrown for the load error policy to reconnect. An end during the sniff stays the
- * unrecognised format error, and a stream with a length or a declared end ends there.
+ * Extracts a live progressive stream, which never ends: an end of input with neither a length nor a
+ * duration, media3's own test for live, is a dropped connection, thrown for the load error policy
+ * to reconnect. A stream with a length or a declared duration ends there.
  */
 class LiveStreamExtractor(extractor: Extractor) : ForwardingExtractor(extractor) {
   @Volatile private var durationKnown = false
@@ -50,7 +49,6 @@ class LiveStreamExtractor(extractor: Extractor) : ForwardingExtractor(extractor)
     return result
   }
 
-  /** Wraps every extractor [factory] makes. */
   class Factory(factory: ExtractorsFactory) : ForwardingExtractorsFactory(factory) {
     override fun createExtractors(): Array<Extractor> = wrap(super.createExtractors())
 

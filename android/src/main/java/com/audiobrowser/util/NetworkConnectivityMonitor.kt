@@ -26,7 +26,6 @@ class NetworkConnectivityMonitor(private val context: Context) {
 
   fun getOnline(): Boolean = _isOnline.value
 
-  /** Calls [onStateChanged] with the current state and on each change, on [scope]'s dispatcher. */
   fun observeOnline(scope: CoroutineScope, onStateChanged: (Boolean) -> Unit) {
     isOnline.onEach { isOnline -> onStateChanged(isOnline) }.launchIn(scope)
   }
@@ -73,7 +72,6 @@ class NetworkConnectivityMonitor(private val context: Context) {
     }
   }
 
-  /** Stops monitoring. A failed unregister leaves it running, so a later call retries. */
   fun destroy() {
     if (destroyed) {
       return

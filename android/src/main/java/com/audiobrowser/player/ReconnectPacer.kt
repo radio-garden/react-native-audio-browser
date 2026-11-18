@@ -14,13 +14,11 @@ sealed interface ReconnectWait {
 }
 
 /**
- * When the next connect goes out after one ends (docs/adr/0014, rules 5 to 8), for one sequence of
- * connections made one at a time. Pure and not thread-safe: time comes in as milliseconds on one
- * monotonic clock.
+ * When the next connect goes out after one ends (ADR 0014, rules 5 to 8), for one sequence of
+ * connections made one at a time. Pure and not thread-safe; times are on one monotonic clock.
  *
- * The 1 s floor counts from when the last connection started and the backoff from when it ended, so
- * the floor binds only where no backoff applies: after a connection that delivered audio or ended
- * offline, and once the network returns.
+ * The floor counts from when the last connection started and the backoff from when it ended, so the
+ * floor binds only where no backoff applies.
  *
  * @param maxRetries connections in a row that may deliver nothing before giving up; null for no
  *   limit
@@ -42,28 +40,21 @@ class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
   private var lastStartedAtMs: Long? = null
   private var nextConnectMs: Long? = null
 
-  /**
-   * Starts the count and the waits over on a new Load: a track change, or a restart from the
-   * terminal error. Never on a retry's reload.
-   */
+  /** Starts over on a new Load, never on a retry's reload. */
   fun reset() {
     deliveredNothingInARow = 0
     lastStartedAtMs = null
     nextConnectMs = null
   }
 
-  /**
-   * A play intent that comes up starts the count and the waits over; a repeat while up does not.
-   */
   fun playIntentChanged(up: Boolean) {
     if (up && !playIntent) reset()
     playIntent = up
   }
 
   /**
-   * The network returning drops what remains of the wait, keeping the floor, so the next connect
-   * goes out at once; the backoff still grows from where it was. A repeat while online does
-   * nothing.
+   * The network returning drops what remains of the wait, keeping the floor; the backoff still
+   * grows from where it was.
    */
   fun onlineChanged(online: Boolean) {
     if (online && !this.online)
@@ -72,9 +63,8 @@ class ReconnectPacer(var maxRetries: Int? = null, private var online: Boolean) {
   }
 
   /**
-   * Records how a connection ended. One that ends while offline does not grow the backoff: it
-   * delivered nothing for want of a network, not of a source. A stall the watch gives up on reports
-   * what its connection delivered.
+   * Records how a connection ended. One that ends offline does not grow the backoff: it delivered
+   * nothing for want of a network, not of a source.
    */
   fun connectionEnded(deliveredAudio: Boolean, startedAtMs: Long, atMs: Long) {
     lastStartedAtMs = startedAtMs

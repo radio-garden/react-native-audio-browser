@@ -1,12 +1,7 @@
 package com.audiobrowser.sonos
 
-/**
- * UPnP control of one Sonos room. Every call blocks on a SOAP round-trip, so call it off the main
- * thread, and throws [SoapException] when the speaker answers with an error.
- */
 internal class SonosTransport(private val device: SonosDevice, private val soap: SoapClient) :
   SonosControl {
-  /** Loads the stream on the room (`SetAVTransportURI`) without starting playback. */
   override fun setUri(
     streamUrl: String,
     title: String,
@@ -35,7 +30,6 @@ internal class SonosTransport(private val device: SonosDevice, private val soap:
 
   override fun seek(positionMs: Long) = avt(SoapEnvelopes.seek(positionMs))
 
-  /** The room's UPnP `CurrentTransportState`, such as `PLAYING`, or null if unreadable. */
   override fun getTransportState(): String? =
     SoapResponseParser.transportState(
       soap.execute(device.avTransportControlUrl, SoapEnvelopes.getTransportInfo())
@@ -51,7 +45,6 @@ internal class SonosTransport(private val device: SonosDevice, private val soap:
       soap.execute(device.avTransportControlUrl, SoapEnvelopes.getMediaInfo())
     )
 
-  /** Sets the volume of every speaker in the group this device coordinates, not of one speaker. */
   override fun setVolume(volume: Int) {
     soap.execute(device.groupRenderingControlUrl, SoapEnvelopes.setGroupVolume(volume))
   }
