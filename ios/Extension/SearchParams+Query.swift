@@ -17,8 +17,8 @@ extension SearchParams {
     return query
   }
 
-  /// `queryParams` sorted so key order is stable, and joined with `\u{1}` rather than a
-  /// printable separator so two different param sets don't serialize alike.
+  /// `queryParams` in stable key order, joined with `\u{1}` rather than a printable separator so
+  /// two different param sets don't serialize alike.
   var cacheKey: String {
     queryParams
       .sorted { $0.key < $1.key }

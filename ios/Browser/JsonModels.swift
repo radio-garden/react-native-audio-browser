@@ -3,8 +3,8 @@ import Foundation
   import NitroModules
 #endif
 
-/// A track's `artwork` on the wire: a URL string, or `{ light, dark }`. Encodes back to the
-/// shape it came from, so a persisted snapshot round-trips.
+/// A track's `artwork` on the wire: a URL string, or `{ light, dark }`. Encodes back to the shape
+/// it came from, so a persisted snapshot round-trips.
 enum JsonArtwork: Codable, Equatable {
   case single(String)
   case variants(light: String, dark: String)
@@ -50,11 +50,9 @@ extension JsonArtwork {
   }
 }
 
-/// A style block on the wire (ADR 0011), for both the track and the section position.
-///
-/// Decoding never throws: a non-object value, a wrong-typed field or an unknown enum value
-/// degrades to no declaration, because the decoders above are strict and a throw here fails
-/// the whole page or the persisted playback state.
+/// A style block on the wire (ADR 0011), for both the track and the section position. Decoding
+/// never throws: a non-object value or a wrong-typed field is no declaration, since a throw here
+/// fails the whole page or the persisted playback state.
 struct JsonStyle: Codable, Equatable {
   var display: String? = nil
   var gridWrap: Bool? = nil
@@ -86,13 +84,15 @@ extension JsonStyle {
 }
 
 extension JsonStyle {
-  /// Maps the wire strings case-insensitively; an unknown value or an empty string is no
-  /// declaration, and a block left with none is nil, as Android's mapper does.
+  /// The live block. Wire strings map case-insensitively; an unknown value or an empty string is
+  /// no declaration, and a block left with none is nil, as Android's mapper does.
   func toTrackStyle() -> TrackStyle? {
     let declarations = trackDeclarations
     return Self.declaresAnything(declarations) ? declarations : nil
   }
 
+  /// The live block. Wire strings map case-insensitively; an unknown value or an empty string is
+  /// no declaration, and a block left with none is nil, as Android's mapper does.
   func toSectionStyle() -> SectionStyle? {
     let declarations = trackDeclarations
     let gridTile = gridTile.flatMap { GridTile(fromString: $0.lowercased()) }
@@ -114,7 +114,7 @@ extension JsonStyle {
       display: display.flatMap { StyleDisplay(fromString: $0.lowercased()) },
       artworkRendering: artworkRendering.flatMap { ArtworkRendering(fromString: $0.lowercased()) },
       imageShape: imageShape.flatMap { ImageShape(fromString: $0.lowercased()) },
-      // 'none' is a legitimate symbol; only an empty string collapses.
+      // 'none' is a symbol the renderers draw as no accessory; only an empty string collapses.
       accessorySymbol: accessorySymbol?.isEmpty == false ? accessorySymbol : nil,
       cardTint: cardTint?.isEmpty == false ? cardTint : nil,
       cardImage: cardImage.flatMap { CardImage(fromString: $0.lowercased()) },
@@ -240,7 +240,8 @@ extension JsonTrackRequest {
 }
 
 extension JsonTrack {
-  /// Snapshots the persistable subset of a live Track. Its style is the track's own block; section- and page-inherited style re-resolves at render.
+  /// Snapshots the persistable subset of a live Track. Its style is the track's own block; style
+  /// inherited from the section and page re-resolves at render.
   init(from track: Track) {
     self.init(
       id: track.id,

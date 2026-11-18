@@ -3,8 +3,8 @@ import Foundation
 /// How long a JS callback with a fallback may stay silent before its caller falls back.
 let callbackFallbackTimeout: Duration = .seconds(10)
 
-/// Thrown when a JS callback stays silent past its timeout. Not a `CancellationError`: the
-/// caller is still running and falls back.
+/// A JS callback stayed silent past its timeout. Not a `CancellationError`: the caller is still
+/// running and falls back.
 struct CallbackTimeoutError: Error {}
 
 /// Hands the subscriber the closure to call with the callback's result. Calls after the first,
@@ -33,9 +33,9 @@ nonisolated(nonsending) func awaitCallback<T>(timeout: Duration? = nil, _ subscr
   }
 }
 
-/// Resumes its continuation with the first result only, whichever thread sends it and whether it
-/// comes before or after the continuation exists. A result is handed over once and never read
-/// again, hence `nonisolated(unsafe)`.
+/// Resumes its continuation with the first result only, from any thread, whether it comes before
+/// or after the continuation exists. A result is handed over once and never read again, hence
+/// `nonisolated(unsafe)`.
 private final class ResumeOnce<T>: @unchecked Sendable {
   private enum State {
     case waiting

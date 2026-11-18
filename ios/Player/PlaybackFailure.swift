@@ -1,23 +1,16 @@
 import AVFoundation
 import Foundation
 
-/// Reads the error reported to JS and the retry decision off the same evidence.
 enum PlaybackFailure {
   struct Classification: Equatable {
-    /// The narrowest error the evidence supports, else the caller's `fallback`.
     let error: TrackPlayerError.PlaybackError
     let retryable: Bool
   }
 
-  /// Classifies a failure. `httpStatusCode` comes from the item's error log: AVFoundation reports
-  /// HTTP failures as opaque CoreMedia errors.
-  ///
-  /// The two answers rank the evidence differently, on purpose:
-  /// - The error: a transport failure first (no response arrived, so a logged status belongs to
-  ///   an earlier attempt), then a non-2xx status, then undecodable media.
-  /// - Retrying: a non-2xx status first (a retry cannot change what the server refused), then the
-  ///   error chain. An unrecognized failure counts as retryable, bounded by the retry budgets, as on
-  ///   Android: AVFoundation reports most stream failures opaquely.
+  /// What a failure reports and whether the retry loop tries again. The reported error is the first
+  /// that applies: a connectivity `URLError` in the underlying-error chain, a non-2xx
+  /// `httpStatusCode`, an unplayable AVFoundation code, else `fallback`. Retrying ranks a non-2xx
+  /// status first; a failure it cannot recognise counts as retryable, as on Android.
   static func classify(
     _ error: Error?,
     httpStatusCode: Int?,
@@ -29,9 +22,8 @@ enum PlaybackFailure {
     )
   }
 
-  /// The HTTP status among an `AVPlayerItem` error log's status codes. Negative OSStatus values
-  /// share the field, so only 100–599 counts, and the newest wins: a live stream reconnects, and
-  /// older entries describe earlier attempts.
+  /// The newest HTTP status in an item's error log, or nil. Negative OSStatus codes share the
+  /// field, and older entries belong to earlier attempts.
   static func httpStatusCode(fromErrorStatusCodes codes: [Int]) -> Int? {
     codes.last { (100 ... 599).contains($0) }
   }
@@ -44,7 +36,7 @@ enum PlaybackFailure {
     fallback: TrackPlayerError.PlaybackError,
   ) -> TrackPlayerError.PlaybackError {
     let chain = error.map(errorChain) ?? []
-    // `as` also bridges a plain NSError in NSURLErrorDomain, AVFoundation's usual form.
+    // `as` also matches a plain NSError in NSURLErrorDomain.
     for case let urlError as URLError in chain {
       switch urlError.code {
       case .notConnectedToInternet:
@@ -66,7 +58,6 @@ enum PlaybackFailure {
     return unplayable ? .trackWasUnplayable : fallback
   }
 
-  /// The stream arrived but cannot be decoded.
   private static let unplayableAVErrorCodes: Set<Int> = [
     AVError.fileFormatNotRecognized.rawValue,
     AVError.failedToParse.rawValue,
@@ -78,12 +69,11 @@ enum PlaybackFailure {
 
   // MARK: - Retrying
 
-  /// Retried besides 500–599. Android shares 408/429 but retries only 500/502/503/504 of 5xx.
+  /// Retried besides 500–599. Android retries only 500, 502, 503 and 504 of the 5xx.
   private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
 
-  /// Failures a retry cannot fix. Every unplayable code but the temporary decoder shortage is
-  /// here, so a failure reported as unplayable is never also retried. `AVError.unknown` stays out:
-  /// it wraps opaque CoreMedia transport failures.
+  // A temporary decoder shortage is reported as unplayable but still retried (ADR 0012).
+  // `AVError.unknown` stays out: it wraps opaque transport failures.
   private static let fatalAVErrorCodes: Set<Int> = unplayableAVErrorCodes
     .subtracting([AVError.decoderTemporarilyUnavailable.rawValue])
     .union([
@@ -97,7 +87,6 @@ enum PlaybackFailure {
       return retryableHTTPStatusCodes.contains(status) || (500 ... 599).contains(status)
     }
     guard let error else { return false }
-    // AVFoundation routinely wraps the real cause (a URLError, a CoreMedia code) in an AVError.
     for candidate in errorChain(error) {
       if let urlError = candidate as? URLError { return urlError.isConnectivity }
       let nsError = candidate as NSError
@@ -108,10 +97,10 @@ enum PlaybackFailure {
     return true
   }
 
-  /// The error and its `NSUnderlyingError` ancestors, outermost first; capped so a cycle cannot spin.
   private static func errorChain(_ error: Error) -> [Error] {
     var chain: [Error] = []
     var current: Error? = error
+    // Capped: an underlying-error chain can cycle.
     while let error = current, chain.count < 8 {
       chain.append(error)
       current = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error

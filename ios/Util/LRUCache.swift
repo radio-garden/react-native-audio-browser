@@ -1,10 +1,9 @@
-/// A cache of at most `maxSize` entries that evicts the least recently used one.
-/// Sized for a handful of entries: a use moves the key within an array.
+/// A cache of at most `maxSize` entries that evicts the least recently used one. Sized for a
+/// handful of entries: a use moves the key within an array.
 @MainActor
 final class LRUCache<Key: Hashable, Value> {
   private let maxSize: Int
   private var entries: [Key: Value] = [:]
-  /// Least recently used first.
   private var order: [Key] = []
 
   nonisolated init(maxSize: Int) {

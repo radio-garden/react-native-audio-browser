@@ -2,7 +2,6 @@ import AVKit
 import os.log
 import UIKit
 
-/// Presents the system audio route picker over the topmost view controller.
 @MainActor
 enum OutputPicker {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "OutputPicker")

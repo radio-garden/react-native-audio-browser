@@ -2,7 +2,6 @@ import CarPlay
 import NitroModules
 
 extension CarPlaySession {
-  /// Re-resolves `path`, bypassing the cache, into every displayed template showing it.
   func refreshContent(for path: String) async {
     do {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: false)
@@ -19,8 +18,6 @@ extension CarPlaySession {
     }
   }
 
-  /// Re-resolves every displayed template concurrently, bypassing the cache, for when all
-  /// content was invalidated (e.g. a locale change).
   func refreshAllDisplayedTemplates() async {
     let browserManager = audioBrowser.browserManager
     let targets = displayedListTemplates().compactMap { template in template.contentPath.map { (template, $0) } }
