@@ -1,18 +1,14 @@
-// Queue scope is the tapped section, not the whole page: ADR 0006.
+/// Queue scope is the tapped section, not the whole page (ADR 0006).
 enum SectionScope {
-  /// `tappedOffset` is the tapped child's offset in `section`, non-nil only when the stamped
-  /// index pinned that exact copy.
   struct Scoped {
     let section: Section
+    /// The tapped child's offset in `section`; set only when the stamped index pinned that copy.
     let tappedOffset: Int?
   }
 
-  /// The section containing the track identity `trackId`, or nil when none does.
-  ///
-  /// `tappedIndex` is the flat page position (children concatenated in section order) and only
-  /// breaks ties: when the child there still has `trackId`, it pins the section and copy; otherwise
-  /// the first section containing `trackId` wins. A stale index can at worst pick another copy of
-  /// the same track, never a different track.
+  /// The section containing the track identity `trackId`, or nil when none does. `tappedIndex`, the
+  /// flat page position, only breaks ties: when the child there still has `trackId`, it pins the
+  /// section and copy; otherwise the first section containing `trackId` wins (ADR 0009).
   static func scoped(
     in sections: [Section],
     containing trackId: String,
@@ -41,8 +37,7 @@ enum SectionScope {
 
   /// The queue a tap on the contextual `path` plays: the tapped section's playable tracks, at the
   /// pinned copy, else the first identity match; only that track when `singleTrack`. Nil when the
-  /// identity is gone from the page or the tapped track is not playable, so the caller falls back
-  /// to the stored track.
+  /// section holds no playable track with that identity, or the identity is gone from the page.
   static func queue(
     in sections: [Section],
     path: String,
@@ -68,14 +63,14 @@ enum SectionScope {
 // MARK: - Page shape helpers (ADR 0010)
 
 extension ResolvedTrack {
-  /// `sections` when present, else plain `children` as one untitled section.
+  /// `sections` when present, else `children` as one untitled section.
   var normalizedSections: [Section]? {
     if let sections { return sections }
     guard let children else { return nil }
     return [.untitled(children)]
   }
 
-  /// Children concatenated in section order: the order contextual `__index` positions count in.
+  /// Children concatenated in section order: the order a Contextual Path's `__index` counts in.
   var flattenedChildren: [Track]? {
     normalizedSections.map { $0.flatMap(\.children) }
   }

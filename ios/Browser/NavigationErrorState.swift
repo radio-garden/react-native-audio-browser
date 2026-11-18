@@ -1,6 +1,5 @@
 import NitroModules
 
-/// The browser's last navigation error and its formatted display, as JS sees them.
 @MainActor
 final class NavigationErrorState {
   private(set) var error: NavigationError? {
@@ -29,8 +28,8 @@ final class NavigationErrorState {
     formatted = nil
   }
 
-  /// Publishes `error` at once and its formatted display once `format` returns, unless a
-  /// later `report` or `clear` superseded it meanwhile.
+  /// Publishes `error` at once and its formatted display once `format` returns, unless a later
+  /// `report` or `clear` superseded it meanwhile.
   func report(_ error: NavigationError, format: (NavigationError) async -> FormattedNavigationError) async {
     generation &+= 1
     let reported = generation

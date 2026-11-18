@@ -1,7 +1,6 @@
 import Foundation
 
 struct RouteMatch {
-  /// `{name}` segments by name; a tail wildcard's remaining path under `tail`, absent when nothing remains.
   let params: [String: String]
 
   let specificity: Int
@@ -12,13 +11,12 @@ protocol RouteEntry {
 }
 
 /// Route pattern matching: `/artists` exact, `/artists/{id}` a parameter, `/artists/*` any one
-/// segment, `/files/**` the remaining segments (zero or more), captured as `tail` when there is
-/// at least one.
-///
-/// The most specific route wins, the first on a tie: constant segments over parameters over
-/// wildcards over the tail wildcard, then more segments.
+/// segment, `/files/**` the remaining segments (zero or more), captured as `tail` when there is at
+/// least one. The most specific route wins, scored as on Android: constant segments over parameters
+/// over wildcards, then a tail wildcard and more segments, so `/a/**` outranks `/a` even on `/a`.
+/// The first route wins a tie.
 enum SimpleRouter {
-  /// The route the top-level `browse:` source is flattened into.
+  // Must match the route keys `src/features/browser-config.ts` writes.
   static let defaultRoutePath = "__default__"
   static let tabsRoutePath = "__tabs__"
   static let searchRoutePath = "__search__"
@@ -36,7 +34,6 @@ enum SimpleRouter {
     return (defaultRoute, RouteMatch(params: ["path": path], specificity: 0))
   }
 
-  /// The most specific of `routes` matching `path`, the first on a tie; nil when none matches.
   static func findBestMatch<T: RouteEntry>(path: String, routes: [T]) -> (route: T, match: RouteMatch)? {
     var best: (route: T, match: RouteMatch)?
     for route in routes {
@@ -63,7 +60,6 @@ enum SimpleRouter {
       }
     }
 
-    // 10x apart, so one stronger segment outweighs up to nine weaker ones.
     var specificity: Int {
       switch self {
       case .constant: 1000

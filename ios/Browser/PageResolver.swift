@@ -2,8 +2,6 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Turns a path into its page: matches the route, resolves its source, then stamps contextual
-/// paths and browse-time artwork. Also resolves the tabs and search routes.
 @MainActor
 final class PageResolver {
   let logger = Logger(subsystem: "com.audiobrowser", category: "PageResolver")
@@ -32,7 +30,6 @@ final class PageResolver {
     }
 
     if let sections = resolvedTrack.normalizedSections {
-      // Before the sections transform, while each level is still attributable (ADR 0011).
       InertStyleDiagnostic.warn(path: path, pageStyle: resolvedTrack.style, sections: sections)
       let transformed = try await transformSections(
         sections, parentPath: path, routeEntry: routeEntry?.0,
@@ -43,15 +40,15 @@ final class PageResolver {
     return resolvedTrack
   }
 
-  /// The `__tabs__` route's page, flattened. Nil when there is no such route.
+  /// The `__tabs__` route's page, flattened; nil when there is no such route.
   func tabs() async throws -> [Track]? {
     guard let tabsEntry = config.routes?.first(where: { $0.path == SimpleRouter.tabsRoutePath }) else { return nil }
     let resolved = try await resolveRouteEntry(tabsEntry, path: SimpleRouter.tabsRoutePath, params: [:])
     return resolved.flattenedChildren ?? []
   }
 
-  /// The `__search__` route's results for `params`, unhydrated. Throws `contentNotFound` when
-  /// that route is missing or has neither a callback nor a config.
+  /// The `__search__` route's results for `params`, unhydrated. Throws `contentNotFound` when that
+  /// route is missing or has neither a callback nor a config.
   func search(_ params: SearchParams) async throws -> [Track] {
     guard let searchEntry = config.routes?.first(where: { $0.path == SimpleRouter.searchRoutePath }) else {
       throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
@@ -74,8 +71,8 @@ final class PageResolver {
   ) async throws -> ResolvedTrack {
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms:
-      // a sync track, a sync error, or a promise of the same two.
+      // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms: a
+      // sync track, a sync error, or a promise of the same two.
       switch try await callback(callbackParam).awaitCancellable() {
       case let .first(resolvedTrack):
         return resolvedTrack
@@ -106,8 +103,6 @@ final class PageResolver {
 
   // MARK: - Stamping
 
-  /// `sections` with contextual paths stamped and every track's browse-time artwork (no size
-  /// context) resolved, all tracks at once.
   private func transformSections(
     _ sections: [Section],
     parentPath: String,
@@ -119,7 +114,8 @@ final class PageResolver {
     let artwork = await Array(tracks.indices).concurrentMap { index in
       await self.requests.resolveArtworkUrl(track: tracks[index], perRouteConfig: artworkConfig)
     }
-    // A cancelled resolve gives no artwork; that page must not reach the cache.
+    // `resolveArtworkUrl` gives nil when cancelled; a page missing its artwork must not reach the
+    // cache.
     try Task.checkCancellation()
     var next = 0
     return stamped.map { section in
