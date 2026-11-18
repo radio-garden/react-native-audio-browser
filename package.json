@@ -1,12 +1,21 @@
 {
   "name": "react-native-audio-browser",
   "version": "0.2.0-next.96",
-  "description": "react-native-audio-browser is a react native package built with Nitro",
+  "description": "React Native audio playback with a browsable media tree, CarPlay, Android Auto and lock-screen controls, built on Nitro Modules.",
   "keywords": [
-    "react-native",
-    "react-native-audio-browser"
+    "android",
+    "android-auto",
+    "audio",
+    "audio-library",
+    "audio-player",
+    "carplay",
+    "ios",
+    "media-browser",
+    "media3",
+    "nitro-modules",
+    "react-native"
   ],
-  "homepage": "https://github.com/radio-garden/react-native-audio-browser#readme",
+  "homepage": "https://audiobrowser.dev",
   "bugs": "https://github.com/radio-garden/react-native-audio-browser/issues",
   "license": "MIT",
   "author": "puckey",
