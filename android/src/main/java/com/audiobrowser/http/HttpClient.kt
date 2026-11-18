@@ -29,10 +29,9 @@ class HttpClient {
   }
 
   /**
-   * Debug builds only: Timber is an `api` dependency, so these lines reach the host app's trees
-   * (crash-reporter breadcrumbs included), and `BODY` buffers every response whether or not
-   * anything logs it. The credential headers below are redacted even in debug, as logcat ends up in
-   * bug reports; add any new one to the list.
+   * Debug builds only: Timber is an `api` dependency, so these lines reach the host app's trees,
+   * and `BODY` buffers every response. Redact every credential header, since logcat ends up in bug
+   * reports.
    */
   private fun loggingInterceptor() =
     HttpLoggingInterceptor { message -> Timber.d(message) }
@@ -65,14 +64,17 @@ class HttpClient {
     val code: Int,
     val body: String,
     val headers: Map<String, String>,
-    /** HTTP reason phrase, e.g. "Not Found"; OkHttp leaves it empty over HTTP/2. */
+    /** The reason phrase, which OkHttp leaves empty over HTTP/2. */
     val message: String,
   ) {
     val isSuccessful: Boolean
       get() = code in 200..299
   }
 
-  /** A non-2xx response is a success; check [HttpResponse.isSuccessful]. */
+  /**
+   * Fails only on an invalid URL, an unsupported method or a transport error: a non-2xx response is
+   * a success carrying its [HttpResponse.code].
+   */
   suspend fun request(httpRequest: HttpRequest): Result<HttpResponse> =
     withContext(Dispatchers.IO) {
       try {
@@ -158,7 +160,7 @@ class HttpClient {
     }
   }
 
-  /** Its message is the JSON body's `error` field when there is one, else [reasonPhrase]. */
+  /** Its message is the response body's JSON `error` field when it has one, else [reasonPhrase]. */
   class HttpException(val code: Int, val responseBody: String, val reasonPhrase: String) :
     Exception(formatMessage(code, responseBody, reasonPhrase)) {
     companion object {
@@ -170,7 +172,7 @@ class HttpClient {
             return errorMessage
           }
         } catch (_: Exception) {
-          // Not JSON: fall back to the reason phrase.
+          // Not JSON: the reason phrase stands.
         }
         return reasonPhrase
       }

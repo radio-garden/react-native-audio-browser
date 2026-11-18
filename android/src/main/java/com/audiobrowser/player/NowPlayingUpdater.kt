@@ -19,8 +19,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * What [NowPlayingUpdater] needs from the platform; [Player] implements it, tests fake it. Mirrors
- * iOS's NowPlayingUpdater / NowPlayingInfoController split.
+ * What [NowPlayingUpdater] needs from the platform; [Player] implements it. Mirrors iOS's
+ * NowPlayingUpdater / NowPlayingInfoController split.
  */
 interface NowPlayingSurface {
   val currentIndex: Int?
@@ -29,9 +29,8 @@ interface NowPlayingSurface {
   val playbackError: PlaybackError?
 
   /**
-   * The underlying ExoPlayer's real play intent, false during a transient audio focus loss — not
-   * the InterceptingPlayer-masked value, which reads false through a masked terminal error. The
-   * formatter gets this, so the masked value breaks its output in exactly that error case.
+   * The engine's own play intent, not InterceptingPlayer's, which reads false through a masked
+   * terminal error and would break the formatter's output there.
    */
   val playWhenReady: Boolean
   val isRebuffering: Boolean
@@ -45,8 +44,7 @@ interface NowPlayingSurface {
   fun stampArtwork(index: Int, track: Track, uri: String)
 
   /**
-   * Resolves [track]'s artwork through the `nowPlayingArtwork` config. Returns null when it
-   * produced nothing; logs its own errors rather than throwing.
+   * Resolves through the `nowPlayingArtwork` config: null when it produced nothing; never throws.
    */
   suspend fun resolveNowPlayingArtwork(track: Track, sizePx: Double): String?
 
@@ -54,13 +52,13 @@ interface NowPlayingSurface {
 }
 
 /**
- * Renders the now-playing lines with the precedence flash > override > formatter > track, reaching
- * the platform only through [NowPlayingSurface]. Mirrors iOS's NowPlayingUpdater.
+ * Renders the now-playing lines with the precedence flash > override > formatter > track. Mirrors
+ * iOS's NowPlayingUpdater.
  */
 class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scope: CoroutineScope) {
 
   /**
-   * When false, the surface gets the raw track fields, while the event and [getNowPlaying] still
+   * When false the surface gets the raw track fields, while the event and [getNowPlaying] still
    * report the flash and override.
    */
   var enabled = true
@@ -137,8 +135,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   }
 
   /**
-   * The lines on the surface for the current track, formatter output included. Before the track's
-   * first render, and while [enabled] is false, the flash, override or track fields instead.
+   * The lines on the surface for the current track. Before its first render, and while [enabled] is
+   * false, the flash, override or track fields instead.
    */
   fun getNowPlaying(): NowPlayingMetadata? {
     val track = surface.currentTrack ?: return null
@@ -174,7 +172,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
   /**
    * Makes the next [render] stamp lines and artwork in full. Call when a media item becomes current
-   * or is replaced in place: it carries its own default lines and artwork.
+   * or is replaced in place, as it carries its own default lines and artwork.
    */
   fun forgetPublished() {
     lastPublished = null

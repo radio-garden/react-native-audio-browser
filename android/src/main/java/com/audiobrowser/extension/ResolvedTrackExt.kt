@@ -4,10 +4,6 @@ import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 
-/**
- * The Track fields of a ResolvedTrack; the page-only fields (`sections`, `children`,
- * `carPlaySiriListButton`) drop.
- */
 fun ResolvedTrack.toTrack(): Track =
   Track(
     id = id,
@@ -24,8 +20,6 @@ fun ResolvedTrack.toTrack(): Track =
     description = description,
     genre = genre,
     duration = duration,
-    // SectionStyle narrows to TrackStyle by hand, dropping the page-wide `gridWrap`: Nitro
-    // flattens the spec's `extends`, so there is no upcast (ADR 0011).
     style =
       style?.let {
         TrackStyle(

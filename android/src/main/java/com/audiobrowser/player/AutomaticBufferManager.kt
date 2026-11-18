@@ -15,9 +15,8 @@ import timber.log.Timber
  * [maxRebufferBufferMs], until a playlist change or a seek to another item resets it to
  * [defaultConfig].
  *
- * An underrun is a rebuffer while every load delivers, however slowly: a connection that stays open
- * and stalls counts. A rebuffer while media3 retries a failed load in place does not, nor does a
- * reconnect's first buffering, which starts from idle.
+ * A rebuffer while media3 retries a failed load in place is an outage, not an underrun, and leaves
+ * the threshold alone.
  */
 class AutomaticBufferManager(
   private val loadControl: DynamicLoadControl,
@@ -33,11 +32,8 @@ class AutomaticBufferManager(
   /** When each of the current item's loads last failed or retried, until it completes. */
   private val failingLoads = mutableMapOf<Long, Long>()
 
-  /**
-   * How long a load counts as failing after its last error or retry: longer than one attempt can
-   * take to fail, a connect and then a read, each with an 8 s timeout. A progressive load that
-   * recovers never completes until its file ends.
-   */
+  // Longer than one attempt takes to fail: a connect, then a read, each with MediaFactory's 8 s
+  // timeout. A progressive load that recovers never completes until its file ends.
   private val failingLoadWindowMs = 20_000L
 
   private var playbackStartTimeMs: Long = 0
@@ -45,7 +41,6 @@ class AutomaticBufferManager(
   private var bufferingStartTimeMs: Long = 0
 
   private val maxRebufferBufferMs = 8_000
-  // How long playback should run without stalling once the raised threshold is met.
   private val targetPlaybackDurationMs = 60_000L
 
   fun attach(player: ExoPlayer) {
@@ -55,7 +50,6 @@ class AutomaticBufferManager(
     Timber.d("AutomaticBufferManager attached to player")
   }
 
-  /** Call before releasing the player. */
   fun detach() {
     stopBufferMonitoring()
     bufferMonitorHandler = null
@@ -65,10 +59,7 @@ class AutomaticBufferManager(
     Timber.d("AutomaticBufferManager detached from player")
   }
 
-  /**
-   * Restores [defaultConfig] — the setup's buffer tuning, not Media3's defaults, which would wipe a
-   * fast-start configuration — and clears the rebuffer tracking.
-   */
+  /** Restores [defaultConfig], the setup's tuning rather than media3's defaults. */
   fun reset() {
     loadControl.updateBufferConfig(defaultConfig)
     wasReady = false
@@ -95,7 +86,6 @@ class AutomaticBufferManager(
         }
       }
       Player.STATE_READY -> {
-        // Playing again: the loads that failed deliver.
         failingLoads.clear()
         if (!wasReady) {
           playbackStartTimeMs = clock()
@@ -132,8 +122,8 @@ class AutomaticBufferManager(
     error: IOException,
     wasCanceled: Boolean,
   ) {
-    // A preload of the next item failing does not starve this one. A canceled load counts too:
-    // media3 cancels the load of an HLS variant it excludes, and loads another.
+    // A preload of the next item failing does not starve this one. A canceled load counts: media3
+    // cancels the load of an HLS variant it excludes, and loads another.
     if (eventTime.windowIndex != eventTime.currentWindowIndex) return
     failingLoads[loadEventInfo.loadTaskId] = clock()
   }
@@ -269,8 +259,8 @@ class AutomaticBufferManager(
   }
 
   /**
-   * Assumes the buffer held at ready drained to empty over [playbackDurationMs], and returns the
-   * threshold that would last [targetPlaybackDurationMs]: 1000ms lasting 30s needs 2000ms.
+   * Assumes the buffer held at ready drained to empty over [playbackDurationMs]: 1000 ms that
+   * lasted 30 s needs 2000 ms for [targetPlaybackDurationMs].
    */
   private fun calculateOptimalRebufferBuffer(playbackDurationMs: Long, initialBufferMs: Long): Int {
     val currentConfig = loadControl.getBufferConfig()
@@ -292,7 +282,7 @@ class AutomaticBufferManager(
       neededBufferMs,
     )
 
-    // The current threshold as the floor: it never drops within an item.
+    // The current threshold is the floor: it never drops within an item.
     return neededBufferMs
       .toInt()
       .coerceIn(currentConfig.bufferForPlaybackAfterRebufferMs, maxRebufferBufferMs)

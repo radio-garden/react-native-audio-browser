@@ -23,9 +23,7 @@ internal interface EqualizerEffect {
 
 /**
  * Keeps one equalizer effect on the player's current audio session. An effect binds to a single
- * session, so there is none before the first audio output and a fresh one after a session change;
- * settings asked for meanwhile apply to the next effect, and each new effect reports its settings
- * through [onSettingsChanged].
+ * session, so settings asked for while there is none apply to the next effect.
  */
 internal class EqualizerController(
   private val onSettingsChanged: (EqualizerSettings) -> Unit,
@@ -34,13 +32,10 @@ internal class EqualizerController(
 
   private var effect: EqualizerEffect? = null
 
-  // For the next effect. A preset and custom levels exclude each other: the last one set wins, as
-  // on a live effect.
   private var pendingPreset: String? = null
   private var pendingLevels: DoubleArray? = null
   private var pendingEnabled: Boolean? = null
 
-  /** An unset session defers the effect to the first [onAudioSessionChanged]. */
   fun initialize(audioSessionId: Int) {
     if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
       Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
@@ -50,9 +45,8 @@ internal class EqualizerController(
   }
 
   /**
-   * Moves the settings to a fresh effect on [newAudioSessionId]; the same session is a no-op. An
-   * unset session (playback on a remote output) keeps the effect on the local session, which it
-   * equalizes again on the way back: an effect on session 0 would equalize the whole device.
+   * Moves the settings to a fresh effect on [newAudioSessionId]. An unset session (playback on a
+   * remote output) keeps the current effect: one on session 0 would equalize the whole device.
    */
   fun onAudioSessionChanged(newAudioSessionId: Int) {
     if (newAudioSessionId == C.AUDIO_SESSION_ID_UNSET) return
@@ -108,7 +102,6 @@ internal class EqualizerController(
         createEffect(audioSessionId)
       } catch (e: Exception) {
         Timber.e(e, "Failed to initialize equalizer")
-        // The pending settings stay for the next attempt.
         return
       }
     effect = created
@@ -123,8 +116,7 @@ internal class EqualizerController(
 
     // Wired after the restore, so its intermediate steps never reach the caller.
     created.setOnSettingsChanged(onSettingsChanged)
-    // Always announced: the caller reads the settings once at startup, often before any effect
-    // exists, and nothing else tells it one does now.
+    // The caller may have read the settings before any effect existed.
     created.getSettings()?.let(onSettingsChanged)
   }
 

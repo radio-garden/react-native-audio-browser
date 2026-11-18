@@ -1,6 +1,5 @@
 package com.audiobrowser.sonos
 
-/** The fields of an SSDP search response that discovery reads. */
 internal data class SsdpResponse(
   val location: String,
   val usn: String,
@@ -12,12 +11,11 @@ internal object SsdpMessages {
   const val MULTICAST_HOST = "239.255.255.250"
   const val MULTICAST_PORT = 1900
 
-  /** Sonos players answer M-SEARCH for the ZonePlayer device type. */
   const val SONOS_SEARCH_TARGET = "urn:schemas-upnp-org:device:ZonePlayer:1"
 
   private const val USER_AGENT = "AudioBrowser/1.0 UPnP/1.1"
 
-  /** Builds the `M-SEARCH` datagram; `mx` is the seconds a device may wait before replying. */
+  /** [mx] is the seconds a device may delay its reply: keep it under the search's timeout. */
   fun buildMSearch(searchTarget: String = SONOS_SEARCH_TARGET, mx: Int = 2): ByteArray =
     ("M-SEARCH * HTTP/1.1\r\n" +
         "HOST: $MULTICAST_HOST:$MULTICAST_PORT\r\n" +
@@ -28,11 +26,6 @@ internal object SsdpMessages {
         "\r\n")
       .toByteArray(Charsets.UTF_8)
 
-  /**
-   * Returns null unless [raw] is an HTTP `200` reply with a non-empty `LOCATION` (the device
-   * description URL) and `USN` (its identity). NOTIFY announcements are refused. Header names are
-   * case-insensitive, the first of a repeated header wins, and bare-LF framing is accepted.
-   */
   fun parseResponse(raw: String): SsdpResponse? {
     val lines = raw.replace("\r\n", "\n").split("\n")
     val statusLine = lines.firstOrNull()?.trim() ?: return null

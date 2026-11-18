@@ -3,10 +3,9 @@ package com.audiobrowser.player
 import androidx.media3.common.Player as MediaPlayer
 
 /**
- * What the listener and the session are shown of the local engine while [RetryLoop] holds it: its
- * idle engine reads buffering, and so does media3's READY blip. Once a load fails, media3 stops
- * loading, and with audio still in the sink it reads ready for a moment before the error surfaces,
- * with nothing buffered. A READY with buffered audio is real.
+ * What the listener and the session are shown of the engine while [RetryLoop] holds it: its idle
+ * engine reads buffering, and so does media3's READY blip. Once a load fails, media3 reads ready
+ * for a moment before the error surfaces, with audio still in the sink and nothing buffered.
  */
 internal object RetryView {
   /** Buffered audio below which a READY over a failed connection is the blip. */
