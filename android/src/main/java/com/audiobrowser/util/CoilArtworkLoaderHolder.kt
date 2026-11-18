@@ -3,7 +3,6 @@ package com.audiobrowser.util
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import kotlinx.coroutines.CoroutineScope
 
-/** What [ArtworkContentProvider] needs to serve artwork; the media Service builds it. */
 data class ArtworkProviderDeps(
   val loader: CoilArtworkLoader,
   val registry: BrowseArtworkRegistry,

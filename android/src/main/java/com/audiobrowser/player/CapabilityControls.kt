@@ -4,14 +4,9 @@ import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 
-/*
- * The one rule for whether a Capability is enabled and the one derivation of the button layout.
- * Every Media3 assembly in MediaSessionCommandManager consumes these instead of deciding for itself.
- */
-
 /**
- * A control a Capability gates. `shuffleMode`, `repeatMode` and `playbackRate` exist on
- * [PlayerCapabilities] but drive only CarPlay, so they have no entry.
+ * A control a [PlayerCapabilities] flag gates. `shuffleMode`, `repeatMode` and `playbackRate` drive
+ * only CarPlay, so they have no entry.
  */
 enum class Capability {
   PLAY_PAUSE,
@@ -25,8 +20,8 @@ enum class Capability {
 }
 
 /**
- * Everything is enabled unless explicitly `false` — except FAVORITE, which is opt-in, and
- * PLAY_PAUSE, one control that goes away only when both `play` and `pause` are `false`.
+ * Enabled unless explicitly `false`, except FAVORITE, which is opt-in, and PLAY_PAUSE, disabled
+ * only when both `play` and `pause` are `false`.
  */
 fun PlayerCapabilities.isEnabled(capability: Capability): Boolean =
   when (capability) {
@@ -41,10 +36,9 @@ fun PlayerCapabilities.isEnabled(capability: Capability): Boolean =
   }
 
 /**
- * The positions every Android system surface renders, mapped to `CommandButton.SLOT_*` at assembly.
- * Media3's SLOT_BACK_SECONDARY and SLOT_FORWARD_SECONDARY are left out: `DisplayConstraints` allows
- * them 0 buttons unless a controller opts in with `setMaxButtonsForSlot`, which no system surface
- * does.
+ * The positions every Android system surface renders. Media3's SLOT_BACK_SECONDARY and
+ * SLOT_FORWARD_SECONDARY get 0 buttons unless a controller calls `setMaxButtonsForSlot`, which no
+ * system surface does.
  */
 enum class ButtonSlot {
   BACK,
@@ -67,9 +61,8 @@ private val RemoteButton.capability: Capability
 fun PlayerCapabilities.allows(button: RemoteButton): Boolean = isEnabled(button.capability)
 
 /**
- * Layout equality with `overflow` compared by content. Data-class `==` compares the array by
- * reference, and every options update brings a fresh array across the bridge, so `==` would
- * republish the layout to Android Auto on every unrelated `updateOptions`.
+ * Layout equality with `overflow` compared by content: `==` compares the array by reference, and
+ * every options update brings a fresh one across the bridge.
  */
 internal fun RemoteButtonLayout?.sameAs(other: RemoteButtonLayout?): Boolean =
   if (this == null || other == null) {
@@ -79,18 +72,15 @@ internal fun RemoteButtonLayout?.sameAs(other: RemoteButtonLayout?): Boolean =
   }
 
 /**
- * The buttons and their positions. [capabilities] decides which buttons may exist; [layout] only
- * arranges them, and can never add one: an entry whose Capability is disabled drops out, leaving
- * its position empty rather than promoting another button into it.
+ * The buttons and their positions. [layout] only arranges what [capabilities] allows: a disabled
+ * entry drops out and leaves its position empty. A [layout] is never merged with the defaults, as
+ * Nitro maps an omitted and a null field to the same `null`.
  *
  * Without a [layout], skip takes BACK and FORWARD, jump takes a primary position when its skip is
- * disabled and otherwise goes to OVERFLOW, and favorite goes to OVERFLOW.
+ * disabled and OVERFLOW otherwise, and favorite takes OVERFLOW.
  *
- * A [layout] is never merged with those defaults: Nitro maps an omitted and a null enum field to
- * the same `null`, so native cannot tell "leave empty" from "derive this one".
- *
- * Placement is cosmetic: [capabilities] also drives the session commands, so a button left out of
- * the layout disappears from every screen but still answers a headset.
+ * Placement is cosmetic: a button left out still answers a headset, as [capabilities] also drives
+ * the session commands.
  */
 fun deriveButtonSlots(
   capabilities: PlayerCapabilities,

@@ -83,24 +83,22 @@ data class JsonTrack(
   val icyCharset: String? = null,
 )
 
-// `style` stays a raw JsonElement and maps leniently here (ADR 0011): a stale, wrong-typed or
-// unknown value is no declaration. A typed field would fail the whole page, as the decoder is
-// otherwise strict.
+// `style` stays a raw JsonElement and maps leniently (ADR 0011): a wrong-typed or unknown value is
+// no declaration, where a typed field would fail the whole page.
 private fun JsonObject.stringField(key: String): String? =
   (get(key) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
-// booleanOrNull alone accepts a quoted "false"; that is wrong-typed, so no declaration.
+// booleanOrNull alone accepts a quoted "false".
 private fun JsonObject.booleanField(key: String): Boolean? =
   (get(key) as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
 
-// A block with no declarations maps to null, as on iOS, so "no declaration" has one shape.
+// A block with no declarations maps to null, as on iOS.
 private fun JsonElement?.toTrackStyle(): TrackStyle? =
   (this as? JsonObject)?.let { obj ->
     TrackStyle(
         display = obj.stringField("display").toStyleDisplay(),
         artworkRendering = obj.stringField("artworkRendering").toArtworkRendering(),
         imageShape = obj.stringField("imageShape").toImageShape(),
-        // 'none' is a real value (the inheritance escape); only emptiness collapses.
         accessorySymbol = obj.stringField("accessorySymbol")?.takeIf { it.isNotEmpty() },
         cardTint = obj.stringField("cardTint")?.takeIf { it.isNotEmpty() },
         cardImage = obj.stringField("cardImage").toCardImage(),
@@ -151,7 +149,6 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     subtitle = subtitle,
     artwork = artwork?.toNitro(),
     artworkSource = null,
-    // Containers carry no per-track request override, as on iOS.
     request = null,
     artist = artist,
     albumPath = albumPath,

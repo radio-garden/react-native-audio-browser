@@ -81,8 +81,8 @@ import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 /**
- * The window behind its live edge that lets a live item pause in place, as on-demand does (a DVR
- * window). A shorter one is a stream that can't be rewound: a pause closes it.
+ * The window behind its live edge that lets a live item pause in place, as on-demand does. A
+ * shorter one is a stream that can't be rewound: a pause closes it.
  */
 private const val PAUSABLE_LIVE_WINDOW_MS = 30_000L
 
@@ -155,15 +155,14 @@ internal constructor(
     private set
 
   /**
-   * What plays: [exoPlayer], or while a remote output is on, the remote-switching player around it.
-   * Every playback read and command goes here. Local-only work that would disturb a remote (retry,
-   * reconnect, stuck recovery, the shuffle order) goes through [localEngine]; the equalizer,
-   * skip-silence, buffering and the volume fade act on [exoPlayer] alone.
+   * What plays: [exoPlayer], or while a remote output is on, the remote-switching player around it
+   * (ADR 0013). Every playback read and command goes here. Local-only work that would disturb a
+   * remote (retry, reconnect, stuck recovery, the shuffle order) goes through [localEngine]; the
+   * equalizer, skip-silence, buffering and the volume fade act on [exoPlayer] alone.
    */
   lateinit var sessionPlayer: MediaPlayer
     private set
 
-  /** [sessionPlayer] behind the remote-command seam: what the MediaSession wraps. */
   internal lateinit var forwardingPlayer: InterceptingPlayer
 
   private val remoteOutputs =
@@ -180,18 +179,15 @@ internal constructor(
 
   private var keepSessionAliveOnError = true
 
-  /** Automatic retry for the local engine; null when the setup turns retry off. */
   internal var retryLoop: RetryLoop? = null
     private set
 
-  /** What the wake mode holds while [retryLoop] keeps the engine idle; see [RetryLocks]. */
   internal var retryLocks: RetryLocks? = null
     private set
 
-  /** The playing item's id, for the load error policy on ExoPlayer's playback thread. */
+  /** The playing item's id, read by the load error policy on ExoPlayer's playback thread. */
   @Volatile internal var playingMediaId: String? = null
 
-  /** The last recoverable load failure, the cause of a give-up that has no player error in hand. */
   @Volatile private var lastLoadFailure: IOException? = null
 
   private val retryEngine =
@@ -199,7 +195,6 @@ internal constructor(
       override fun reconnect() =
         retryFocus.handOver { localEngine.retry(toLiveEdge = isCurrentItemLive) }
 
-      // A play after a pause over a retry connects nothing until then: no failure shows it.
       override fun holdChanged(held: Boolean, kept: Boolean) {
         retryLocks?.hold(held)
         // A suppressed request outlives the intent it dropped: it waits for the focus to return.
@@ -230,9 +225,8 @@ internal constructor(
   private var lastEmittedPlayWhenReady: Boolean? = null
 
   /**
-   * Emits a playWhenReady change to JS once per value. Both the synchronous clear at ENDED in
-   * [setPlaybackState] and the media3 listener (changes ExoPlayer makes itself, e.g. audio focus)
-   * call it; their overlap is dropped.
+   * Emits a playWhenReady change once per value: the ENDED clear in [setPlaybackState] and the
+   * media3 listener both call it.
    */
   internal fun emitPlayWhenReadyChanged(value: Boolean) {
     if (lastEmittedPlayWhenReady == value) return
@@ -250,9 +244,7 @@ internal constructor(
   /** For SVG pre-rendering of Android Auto browse items. Set by the service. */
   var imageLoader: coil3.ImageLoader? = null
 
-  /**
-   * Called on the main thread when a resumption meant to start playback fails. Set by the service.
-   */
+  /** Called on the main thread when a resumption meant to start playback fails. */
   var onPlaybackResumptionFailed: () -> Unit = {}
 
   /** Maps the browse content provider's content:// tokens to artwork URLs. */
@@ -392,16 +384,14 @@ internal constructor(
   var playWhenReady: Boolean
     get() = sessionPlayer.playWhenReady
     set(value) {
-      // ExoPlayer's setPlayWhenReady(true) neither restarts an ended engine (media3 replays only on
-      // its media-button path) nor loads an idle one. Here in the setter so every writer plays
-      // alike: play(), togglePlayback(), JS, the session.
+      // ExoPlayer's setPlayWhenReady(true) neither restarts an ended engine nor loads an idle one;
+      // here in the setter, every writer plays alike: play(), togglePlayback(), JS, the session.
       if (value && sessionPlayer.playbackState == MediaPlayer.STATE_ENDED) {
         sessionPlayer.seekToDefaultPosition()
       }
       sessionPlayer.playWhenReady = value
-      // No-op unless the engine is idle, so this reconnects only after a stop, an error, a
-      // cancelled retry or a rebuild, and never re-buffers a healthy stream. Reconnecting is also
-      // how a live stream rejoins its live edge. Not while the retry loop paces the reconnect.
+      // Reconnects only an idle engine, never re-buffering a healthy stream. retryView shows the
+      // retry loop's idle engine as buffering, so this leaves its paced reconnect alone.
       if (
         value &&
           currentTrack != null &&
@@ -416,7 +406,7 @@ internal constructor(
 
   /**
    * The intent a setup carries, raised without loading: a setup repeats, as on a JS reload, and
-   * would otherwise start a stopped or failed queue. A play loads.
+   * would otherwise start a stopped or failed queue.
    */
   internal fun applySetupPlayWhenReady(value: Boolean) {
     sessionPlayer.playWhenReady = value
@@ -567,8 +557,8 @@ internal constructor(
    */
   internal fun rebuildIfDue() {
     val options = deferredSetup ?: return
-    // A stopped engine keeps the suppression but holds no focus, and is carried unprepared.
     if (
+      // A stopped engine keeps the suppression but holds no focus, and is carried unprepared.
       engineOptions != null &&
         exoPlayer.playbackState != MediaPlayer.STATE_IDLE &&
         exoPlayer.playWhenReady &&
@@ -796,8 +786,8 @@ internal constructor(
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
-    // While remote, the queue plays in list order.
     if (mediaItems.isNotEmpty()) {
+      // While remote, the queue plays in list order.
       localEngine.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
     }
     queueSourcePath = sourcePath
@@ -846,7 +836,6 @@ internal constructor(
 
   // MARK: - Now Playing Metadata
 
-  /** [NowPlayingUpdater] does the rendering; this is its platform surface. */
   val nowPlaying: NowPlayingUpdater =
     NowPlayingUpdater(
       object : NowPlayingSurface {
@@ -970,6 +959,7 @@ internal constructor(
             policy.firstConnectMaxRetryDurationMs,
           )
       }
+    // The defaults src/features/player/setup.ts documents, and iOS's SilenceBudget uses (ADR 0004).
     val recovery = recoveryMs ?: 120_000
     val firstConnect = firstConnectMs ?: 12_000
     retryLocks =
@@ -1177,7 +1167,6 @@ internal constructor(
     setPlaybackState(PlaybackState.STOPPED)
     val ended = sessionPlayer.playbackState == MediaPlayer.STATE_ENDED
     playWhenReady = false
-    // The next play is a new Load.
     retryLoop?.suspend()
     sessionPlayer.stop()
     playerListener.fenceOutgoingMetadata()
@@ -1190,7 +1179,6 @@ internal constructor(
     queueSourcePath = null
   }
 
-  /** Idempotent. */
   fun destroy() {
     if (destroyed) return
     destroyed = true
@@ -1248,7 +1236,6 @@ internal constructor(
     }
   }
 
-  /** Drops the [onLoadFailure] reports still on their way: they belong to an earlier connection. */
   internal fun dropFailureReports() {
     retryingErrorGeneration++
   }
@@ -1299,7 +1286,6 @@ internal constructor(
     stopRetrying()
   }
 
-  /** A live window that seeks at least [PAUSABLE_LIVE_WINDOW_MS] behind its live edge. */
   private val liveItemPausable: Boolean
     get() {
       val timeline = exoPlayer.currentTimeline
@@ -1372,9 +1358,9 @@ internal constructor(
         callbacks?.onPlaybackError(null)
       }
 
-      // A retrying error rides through LOADING, BUFFERING and PAUSED; any other state proves
-      // recovery or abandons the attempt.
       if (
+        // A retrying error rides through LOADING, BUFFERING and PAUSED; any other state proves
+        // recovery or abandons the attempt.
         playbackError?.retrying == true &&
           state != PlaybackState.LOADING &&
           state != PlaybackState.BUFFERING &&

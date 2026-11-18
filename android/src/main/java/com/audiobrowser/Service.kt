@@ -44,10 +44,8 @@ import timber.log.Timber
 
 /**
  * The MediaLibraryService behind background playback, Android Auto and other external controllers.
- *
  * As a [MediaSessionService.Listener] it records when Android 12+ refuses a foreground service
- * start from the background (a Bluetooth resume while the app is killed, under battery
- * restrictions), so the user can be warned on their next session.
+ * start from the background, so the user can be warned on their next session.
  */
 @MainThread
 class Service : MediaLibraryService(), MediaSessionService.Listener {
@@ -62,8 +60,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   private var artworkProviderDeps: ArtworkProviderDeps? = null
 
   /**
-   * Whether AudioBrowser holds its [LocalBinder] binding. While it does, [stopSelf] cannot end the
-   * service, so a task removal keeps the player.
+   * Whether AudioBrowser holds its [LocalBinder]; while it does, [stopSelf] cannot end the service.
    */
   private var moduleBound = false
 
@@ -105,7 +102,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     player = Player(this)
     player.setup(PlayerSetupOptions())
 
-    // The disk cache keeps Coil's default size limit: 2% of the disk, at most 250 MB.
     imageLoader =
       ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
@@ -124,8 +120,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     player.imageLoader = imageLoader
     player.onPlaybackResumptionFailed = { releasePlaceholder() }
 
-    // ArtworkContentProvider reads the holder to serve browse artwork to Android Auto and AAOS over
-    // content:// URIs.
+    // ArtworkContentProvider reads the holder to serve browse artwork to cars over content:// URIs.
     val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     artworkProviderDeps =
       ArtworkProviderDeps(
@@ -135,8 +130,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         artworkSizeHint = { player.artworkSizeHintPixels },
       )
     CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
-    // Best-effort: the previous process's files are stale, and keeping them grows the disk across
-    // restarts. The provider fetches again on demand.
+    // The previous process's files are stale, and kept they grow across restarts; the provider
+    // fetches again on demand.
     runCatching {
       java.io
         .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
@@ -190,8 +185,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       ?.let { searchIntent ->
         val searchParams = parseSearchIntent(searchIntent)
         Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: $searchParams")
-        // A search that plays has waited for AudioBrowser, whose MediaBrowser connecting hands
-        // the notification to Media3.
+        // A search that plays has waited for AudioBrowser, whose MediaBrowser connecting hands the
+        // notification to Media3.
         playInForeground(scope, startId, hasMedia = { player.currentTrack != null }) {
           player.playFromSearch(searchParams)
         }
@@ -209,9 +204,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
     // The focus picks a vertical. Genre, artist and album focuses are filters, carried by the
-    // extras
-    // below, so they yield no mode. Android has no station or podcast focus: those verticals are
-    // iOS-only.
+    // extras below, so they yield no mode. Android has no station or podcast focus.
     val mode =
       when (mediaFocus) {
         "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
@@ -309,8 +302,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
-    // Cancelled with the session's release. A client still bound keeps the service alive after
-    // a swipe's shutdown, and Media3 throws on adding a released session.
+    // Cancelled with the session's release: a client still bound keeps the service alive after a
+    // swipe's shutdown, and Media3 throws on adding a released session.
     if (!scope.isActive) return null
 
     // No setup() here: default options would replace the ones setupPlayer applied.
@@ -325,8 +318,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     Timber.d("onUnbind called - action: ${intent?.action}, package: ${intent?.`package`}")
     if (intent?.action == null) {
       moduleBound = false
-      // Android calls onBind once per distinct Intent while the service lives and caches the
-      // binder, so only onRebind tells of the next binding, and only when this returns true.
+      // Android calls onBind once per distinct Intent and caches the binder, so only onRebind tells
+      // of the next binding, and only when this returns true.
       return true
     }
     return super.onUnbind(intent)
@@ -355,7 +348,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Unbinding a connection that never bound throws IllegalArgumentException.
+    // Unbinding a connection that never bound throws.
     if (headlessBound) {
       unbindService(headlessConnection)
       headlessBound = false
@@ -372,8 +365,9 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   companion object {
     /**
-     * Application meta-data that, set to false, stops media3's periodic position update: the
-     * session re-sending External Surfaces the playback state every 3 s while playing or loading.
+     * Application meta-data that, set to false, stops Media3's periodic position update: the
+     * session re-sending external controllers the playback state every 3 s while playing or
+     * loading.
      */
     const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
   }

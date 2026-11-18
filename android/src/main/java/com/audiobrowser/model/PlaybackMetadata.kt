@@ -14,9 +14,8 @@ data class PlaybackMetadata(
 ) {
   companion object {
     /**
-     * The ICY title when [metadata] holds one, otherwise what media3 maps from the other entries
-     * (ID3, Vorbis, QuickTime…); null when neither yields a field. [icyCharset] re-decodes ICY
-     * titles media3 decoded as Latin-1 ([IcyTitle.redecode]); it never touches other metadata.
+     * The ICY title when [metadata] holds one, otherwise what media3 maps from the other entries;
+     * null when neither yields a field. [icyCharset] applies to ICY titles only.
      */
     fun from(metadata: Metadata, icyCharset: String? = null): PlaybackMetadata? {
       fromIcy(metadata, icyCharset)?.let {
@@ -30,7 +29,6 @@ data class PlaybackMetadata(
       return fromMediaMetadata(builder.build())
     }
 
-    // ICY (Shoutcast / Icecast): https://cast.readme.io/docs/icy
     private fun fromIcy(metadata: Metadata, icyCharset: String?): PlaybackMetadata? {
       for (i in 0 until metadata.length()) {
         when (val entry = metadata[i]) {

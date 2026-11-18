@@ -7,7 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Runs [onTick] on the main thread every interval seconds while the latest playback state passed to
+ * Runs [onTick] on the main thread every interval while the latest playback state passed to
  * [onPlaybackStateChanged] satisfies [isActive]. Starts inactive until the first state arrives.
  */
 class PlaybackTimer(
@@ -16,13 +16,12 @@ class PlaybackTimer(
 ) {
   private val scope = MainScope()
   private var job: Job? = null
-  // Seconds.
-  private var interval: Double? = null
+  private var interval: Double? = null // seconds
   private var active = false
 
   /**
-   * Sets the tick interval in seconds; null or <= 0 stops the timer. A new value restarts the
-   * timer, so the next tick comes a full new interval later.
+   * Sets the interval in seconds; null or <= 0 stops the timer. A new value restarts it, so the
+   * next tick comes a full interval later.
    */
   fun setInterval(value: Double?) {
     val normalized = if (value != null && value > 0) value else null

@@ -4,7 +4,6 @@ import android.net.Uri
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 
-/** Routes artwork URLs through the [ArtworkContentProvider] at [authority], via its [registry]. */
 class ArtworkRoutes(val registry: BrowseArtworkRegistry, val authority: String) {
   /**
    * Registers http(s) [url] and returns the `content://` URI the provider serves it at; any other

@@ -143,7 +143,7 @@ object TrackFactory {
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
     // Android Auto marks the now-playing browse row by exact mediaId equality with the player's
     // current item, and a loaded track's `src` can differ textually from the row's, so a playable
-    // track uses its `id`, then `path`, deliberately not Track.identity (ADR 0008). The id is also
+    // track uses its `id`, then `path`, deliberately not Track identity (ADR 0008). The id is also
     // context-free: the same item gets the same mediaId in every tab. Browsable tracks keep `path`
     // so navigation parentIds stay resolvable.
     val stableId = if (track.src != null) track.id?.takeUnless { it.isBlank() } else null

@@ -2,7 +2,6 @@ package com.audiobrowser.sonos
 
 import java.util.Locale
 
-/** A UPnP SOAP request; [soapAction] is the SOAPACTION header value, `service#action`, unquoted. */
 internal data class SoapAction(val soapAction: String, val body: String)
 
 internal object SoapEnvelopes {
@@ -10,7 +9,7 @@ internal object SoapEnvelopes {
   const val GROUP_RENDERING_CONTROL = "urn:schemas-upnp-org:service:GroupRenderingControl:1"
   const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
-  /** [metadata] is the DIDL-Lite document as raw XML; it is escaped here into the element text. */
+  /** [metadata] is raw DIDL-Lite XML; it is escaped here. */
   fun setAvTransportUri(currentUri: String, metadata: String): SoapAction =
     action(
       AV_TRANSPORT,
@@ -27,7 +26,6 @@ internal object SoapEnvelopes {
 
   fun stop(): SoapAction = action(AV_TRANSPORT, "Stop", "<InstanceID>0</InstanceID>")
 
-  /** Seeks within the current track to [positionMs], rounded down to the second; negative is 0. */
   fun seek(positionMs: Long): SoapAction {
     val seconds = positionMs.coerceAtLeast(0) / 1000
     val target =
@@ -50,10 +48,6 @@ internal object SoapEnvelopes {
 
   fun getZoneGroupState(): SoapAction = action(ZONE_GROUP_TOPOLOGY, "GetZoneGroupState", "")
 
-  /**
-   * Sets the volume of the coordinator's whole group, which is the room's own when it plays alone.
-   * [volume] is clamped to 0..100.
-   */
   fun setGroupVolume(volume: Int): SoapAction =
     action(
       GROUP_RENDERING_CONTROL,
@@ -77,15 +71,14 @@ internal object SoapEnvelopes {
     )
 }
 
-/** [s] as XML text or attribute content, less the characters XML 1.0 cannot hold even escaped. */
+/** [s] as XML text or attribute content, less the characters XML 1.0 can't hold even escaped. */
 internal fun xmlEscape(s: String): String =
   s.replace(XML_FORBIDDEN, "")
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
     .replace("\"", "&quot;")
-    // &#39; rather than &apos;, which some older XML readers, older Sonos firmware among them,
-    // mishandle.
+    // Not &apos;, which older Sonos firmware mishandles.
     .replace("'", "&#39;")
 
 private val XML_FORBIDDEN = Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\uFFFE\\uFFFF]")

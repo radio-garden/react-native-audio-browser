@@ -22,7 +22,6 @@ import java.util.Locale
 import timber.log.Timber
 
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {
-  // Main looper: Player.Listener callbacks arrive on the main thread.
   private val mainHandler = Handler(Looper.getMainLooper())
 
   /** Whether the phone's engine played at the last event, so a hand-over starts a new Load. */
@@ -38,8 +37,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   private var metadataFence: Any? = null
 
   /**
-   * Call right after the command. Its target runs on the playback thread right after that command.
-   * A main-looper target goes to the back of that thread's queue, where a release would drop it.
+   * Call right after the command. Its target runs on the playback thread right after that command;
+   * a main-looper target would go to the back of that thread's queue, where a release drops it.
    */
   internal fun fenceOutgoingMetadata() {
     val fence = Any()
@@ -116,7 +115,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // The browse MediaItem's artist is the list subtitle; render() restamps the playing item with
     // the canonical artist for the now-playing surfaces (Android Auto reads both from that field).
-    // It also emits onNowPlayingChanged.
     player.nowPlaying.render()
 
     player.startRetryLoad()
@@ -141,7 +139,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
     // A pause during the sleep fade ends the timer early; clearing it restores the pre-fade volume.
-    // The timer's own completion stops the fader before pausing, so it never lands here.
     if (!playWhenReady && player.volumeFader.isActive) {
       player.sleepTimer.clear()
     }
@@ -176,8 +173,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     val left = lastEngineState == MediaPlayer.STATE_IDLE && engineState != MediaPlayer.STATE_IDLE
     lastEngineState = engineState
     val loop = player.retryLoop
-    // A prepare: the retry's reconnect, or the listener's play, which after a give-up or a stop is
-    // a new Load.
+    // Leaving idle is a prepare: the retry's reconnect, or a play, which after a give-up or a stop
+    // is a new Load.
     if (loop != null && player.localEngine.isActive) {
       if (left) {
         if (loop.stopped) player.startRetryLoad() else loop.connectionStarted()
@@ -200,7 +197,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       if (local) player.startRetryLoad() else player.retryLoop?.suspend()
     }
     // In event-constant order, not the order the events happened; the transitions rely on it.
-    // Each setPlaybackState emits.
     for (i in 0 until events.size()) {
       val event =
         when (events[i]) {
@@ -251,8 +247,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       return true
     }
 
-    // media3 1.9+ stuck-player detection wraps a StuckPlayerException (not a PlaybackException) in
-    // the cause chain, and the wrapper's errorCode varies by stuck type: match the cause.
+    // media3 1.9+ stuck-player detection puts a StuckPlayerException in the cause chain, and the
+    // wrapper's errorCode varies by stuck type: match the cause.
     val stuck = stuckCause(error)
     if (stuck != null) {
       Timber.w("Stuck player: type=${stuck.stuckType} timeoutMs=${stuck.timeoutMs}")
@@ -301,7 +297,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.setPlaybackState(PlaybackState.ERROR)
   }
 
-  /** No retry loop takes the stuck engine: it is terminal. */
   private fun surfaceStalled(error: PlaybackException) {
     val playbackError =
       PlaybackError(
