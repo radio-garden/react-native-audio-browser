@@ -36,9 +36,8 @@ internal val EMPTY_SECTION_STYLE =
   )
 
 /**
- * The style block's wire strings (ADR 0011) ↔ Nitro enums, shared by the browse decoder and the
- * playback-state store. Inbound is lenient: an unknown or empty value is "no declaration", never an
- * error.
+ * The style block's wire strings (ADR 0011) ↔ Nitro enums. Inbound is lenient: an unknown or empty
+ * value is "no declaration", never an error.
  */
 internal fun StyleDisplay.toWireString(): String =
   when (this) {

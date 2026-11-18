@@ -3,8 +3,8 @@
 #endif
 
 extension Section {
-  /// Returns a copy with the given fields replaced. An omitted argument keeps the field;
-  /// `.some(nil)` clears it. `children` is required, so it can only be replaced.
+  /// A copy with only the given fields changed: an omitted argument keeps the field, `.some(nil)`
+  /// clears it. `children` is required, so it can only be replaced.
   func copying(
     title: String?? = nil,
     style: SectionStyle?? = nil,

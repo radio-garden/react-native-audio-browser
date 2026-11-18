@@ -16,9 +16,9 @@ final class CarPlayNowPlayingManager {
   private var subscriptions: [Subscription] = []
   private var nowPlayingObserver: NowPlayingObserver?
   private weak var upNextTemplate: CPListTemplate?
-  /// A rebuild is skipped while this is unchanged: every `updateNowPlayingButtons` re-renders
-  /// all buttons. Shuffle and repeat carry `isSelected` because CarPlay draws a re-render from
-  /// the serialized state first: a button built unselected while its mode is on flashes off.
+  /// A rebuild is skipped while this is unchanged: every `updateNowPlayingButtons` re-renders all
+  /// buttons. Shuffle and repeat carry `isSelected` because CarPlay draws a re-render from the
+  /// serialized state first: a button built unselected while its mode is on flashes off.
   private struct BuiltButtonRow: Equatable {
     let types: [CarPlayNowPlayingButton]
     let favorited: Bool?
@@ -61,7 +61,6 @@ final class CarPlayNowPlayingManager {
     let browserManager = audioBrowser.browserManager
     subscriptions = [
       browserManager.configChanged.subscribeOnMain { [weak self] _ in
-        // A new config may bring a new `resolveAlbumPath`, so the current track is asked again.
         self?.albumPathResolution.cancel()
         self?.refresh()
       },
@@ -73,7 +72,6 @@ final class CarPlayNowPlayingManager {
       audioBrowser.queueChangedEmitter.subscribeOnMain { [weak self] in self?.queueChanged($0) },
       audioBrowser.showNowPlayingRequestedEmitter.subscribeOnMain { [weak self] in self?.showNowPlaying() },
       audioBrowser.activeTrackChangedEmitter.subscribeOnMain { [weak self] _ in
-        // The player's current track is authoritative again.
         self?.pendingAlbumArtistTrack = nil
         self?.refresh()
       },
@@ -96,8 +94,8 @@ final class CarPlayNowPlayingManager {
     updateAlbumArtistDestination()
   }
 
-  /// Call before pushing Now Playing for a just-tapped track: enabling the album line after
-  /// the push renders no chevron.
+  /// Call before pushing Now Playing for a just-tapped track: enabling the album line after the
+  /// push renders no chevron.
   func prepare(for track: Track) {
     pendingAlbumArtistTrack = track
     updateAlbumArtistDestination()
@@ -106,7 +104,6 @@ final class CarPlayNowPlayingManager {
   // MARK: - Buttons
 
   private func refreshButtons() {
-    // A gate hides the custom buttons; the transport controls stay, as a gate never blocks playback.
     let buttons = NowPlayingButtonRules.buttons(
       audioBrowser.browseGate.isActive ? [] : audioBrowser.playerOptions.carPlayNowPlayingButtons,
     )
@@ -133,7 +130,6 @@ final class CarPlayNowPlayingManager {
         let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
           self?.handleShuffleButtonTapped()
         }
-        // Pre-stamped: see BuiltButtonRow.
         shuffleButton.isSelected = row.shuffleSelected ?? false
         nowPlayingButtons.append(shuffleButton)
 
@@ -141,7 +137,6 @@ final class CarPlayNowPlayingManager {
         let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
           self?.handleRepeatButtonTapped()
         }
-        // Pre-stamped: see BuiltButtonRow.
         repeatButton.isSelected = row.repeatSelected ?? false
         nowPlayingButtons.append(repeatButton)
 
@@ -167,9 +162,8 @@ final class CarPlayNowPlayingManager {
 
   // MARK: - Show Now Playing
 
-  /// Pushes Now Playing, or pops back to it when it is buried under Up Next or a browse page,
-  /// unless `popToFront` is false: a call seconds after the tap must not yank away a screen the
-  /// user opened since.
+  /// Pushes Now Playing, or pops back to it when it is buried, unless `popToFront` is false: a
+  /// call seconds after the tap must not yank away a screen the user opened since.
   func showNowPlaying(popToFront: Bool = true) {
     refresh()
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
@@ -210,7 +204,6 @@ final class CarPlayNowPlayingManager {
     }
   }
 
-  /// Sets the destination without a resolve, ending any in flight so it cannot overwrite this.
   private func settleAlbumArtistDestination(_ path: String?) {
     albumPathResolution.cancel()
     setAlbumArtistDestination(path)
@@ -284,7 +277,6 @@ final class CarPlayNowPlayingManager {
   fileprivate func handleAlbumArtistButtonTapped() {
     guard let destination = albumArtistDestination else { return }
     let track = pendingAlbumArtistTrack ?? player?.currentTrack
-    // The album line is what was tapped, so it titles the destination; artist may be unset.
     let title = track?.album ?? track?.artist ?? track?.title ?? ""
     logger.info("Album/Artist button tapped, navigating to \(destination)")
     navigate(destination, title)
@@ -304,7 +296,6 @@ final class CarPlayNowPlayingManager {
 
     logger.info("Showing Up Next queue with \(tracks.count) tracks")
 
-    // System-localized, or what the app set.
     let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
     let template = CPListTemplate(
       title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,

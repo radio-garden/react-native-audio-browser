@@ -5,8 +5,6 @@ import os.log
 /// The library's Siri handlers, vended to the host app through `RNABAudioBrowser.handlerForIntent:`.
 @objc(RNABIntentHandlers)
 public final class IntentHandlers: NSObject {
-  /// A handler for `INPlayMediaIntent`, `INUpdateMediaAffinityIntent` and `INAddMediaIntent`;
-  /// nil for any other intent.
   @objc(handlerForIntent:)
   public static func handler(for intent: INIntent) -> Any? {
     switch intent {
@@ -17,9 +15,8 @@ public final class IntentHandlers: NSObject {
   }
 }
 
-/// "Add this to my favorites" and "I like / don't like this": sets the favorite state of the
-/// playing track, as the CarPlay favorite button does. A named item that is not playing is
-/// out of scope.
+/// Sets the favorite state of the playing track, as the CarPlay favorite button does; a named
+/// item that is not playing is out of scope.
 final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateMediaAffinityIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "FavoriteIntentHandler")
 
@@ -48,8 +45,7 @@ final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateM
   }
 
   // Siri fails an intent whose handler has no resolution method. They are optional @objc
-  // requirements, so each is pinned to the selector SiriKit calls. The handlers act on the
-  // playing track, so the spoken item passes through.
+  // requirements, so each is pinned to the selector SiriKit calls.
 
   @objc(resolveMediaItemsForAddMedia:withCompletion:)
   func resolveMediaItems(
@@ -59,7 +55,6 @@ final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateM
     completion([.success(with: Self.spokenItem(intent.mediaSearch))])
   }
 
-  // Favorites are one flat collection: always the user's library.
   @objc(resolveMediaDestinationForAddMedia:withCompletion:)
   func resolveMediaDestination(
     for _: INAddMediaIntent,

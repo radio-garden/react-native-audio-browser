@@ -8,9 +8,8 @@ import android.os.Handler
 
 /**
  * Audio focus while [RetryLoop] keeps the engine idle between connections: media3 abandons the
- * engine's focus in IDLE, so the library holds its own and answers a change as media3 answers one
- * while playing. A permanent loss, or a request refused, is a pause; a transient loss, or a request
- * that waits (a call), suppresses the play intent until focus returns.
+ * engine's focus in IDLE. A permanent loss or a refused request is a pause; a transient loss or a
+ * delayed grant (a call) suppresses the play intent until focus returns.
  */
 internal class RetryFocus(
   private val port: Port,
@@ -27,7 +26,6 @@ internal class RetryFocus(
   private var requested = false
   private var generation = 0
 
-  /** Whether focus is lost for now, or not yet granted: the play intent stays down until it is. */
   var suppressed = false
     private set
 
@@ -37,7 +35,7 @@ internal class RetryFocus(
     val ours = ++generation
     val listener =
       AudioManager.OnAudioFocusChangeListener { change ->
-        // A change for a request since abandoned: at the reconnect, see [handOver].
+        // Drops a change for a request since abandoned, as at [handOver].
         if (ours == generation) changed(change)
       }
     when (port.request(listener)) {
@@ -57,8 +55,8 @@ internal class RetryFocus(
 
   /**
    * Runs the reconnect's [prepare], then lets this request go. ExoPlayer requests the engine's
-   * focus on its playback thread a few milliseconds later: another app's request in that gap is
-   * overridden by the engine's, as by a tap on play, and its loss to this request is dropped.
+   * focus a few milliseconds later; another app's request in that gap is overridden by it, as by a
+   * tap on play.
    */
   fun handOver(prepare: () -> Unit) {
     prepare()
@@ -84,7 +82,6 @@ internal class RetryFocus(
     onSuppressionChanged()
   }
 
-  /** [Port] on the platform's AudioManager, its changes delivered on [handler]. */
   class Platform(
     private val audioManager: AudioManager,
     private val handler: Handler,

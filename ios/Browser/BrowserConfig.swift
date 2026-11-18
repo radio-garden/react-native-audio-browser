@@ -1,44 +1,36 @@
 import Foundation
 import NitroModules
 
-/// Copied out of `NativeBrowserConfiguration` once per `configureBrowser`: the generated getters
-/// convert from C++ on every read, and routes are read on every resolve. Matches Kotlin's
-/// BrowserConfig.
+/// The browser configuration, copied out of `NativeBrowserConfiguration` once per configure: the
+/// generated getters convert from C++ on every read, and routes are read on every resolve.
 struct BrowserConfig {
   var request: TransformableRequestConfig?
 
-  /// Layered request → browse → route.
   var browse: TransformableRequestConfig?
 
-  /// Resolved once per content generation.
   var requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
 
-  /// Resolved once per content generation.
   var browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
 
   var media: MediaRequestConfig?
 
   var artwork: ArtworkRequestConfig?
 
-  /// Lock screen, CarPlay and Android Auto now playing; falls back to `artwork` when nil.
+  /// Falls back to `artwork` when nil.
   var nowPlayingArtwork: ArtworkRequestConfig?
 
-  /// Includes the `__tabs__`, `__search__` and `__default__` special routes.
+  /// Includes the `__tabs__`, `__search__` and `__default__` routes (`SimpleRouter`).
   var routes: [NativeRouteEntry]?
 
-  /// Plays only the selected track instead of expanding its siblings into the queue.
+  /// Plays only the tapped track instead of queueing its section (ADR 0006).
   var singleTrack: Bool = false
 
   // MARK: - CarPlay Options
 
-  /// The empty state shown while CarPlay content resolves; nil leaves it blank.
   var carPlayLoadingTitle: String?
 
-  /// The browse path for the Now Playing album line when the track has no `albumPath`. Called on
-  /// track change, not at tap, so the line is tappable only when a destination exists.
   var resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?
 
-  /// Replaces the default track load behaviour.
   var handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
 
   var formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?
@@ -61,11 +53,11 @@ struct BrowserConfig {
     formatNavigationError = config.formatNavigationError
   }
 
-  /// A copy with every JS function dropped, nested ones included, keeping the static fields.
-  /// Safe to hold after its JS runtime is gone, where invoking a callback aborts the process
-  /// (see `HybridAudioBrowser.dropStaleJSCallbacks`); callers take their static fallbacks.
+  /// A copy with every JS function dropped, nested ones included, keeping the static fields. Safe
+  /// to hold once its JS runtime is gone, where invoking a callback aborts the process
+  /// (`HybridAudioBrowser.dropStaleJSCallbacks`).
   func strippingJSCallbacks() -> BrowserConfig {
-    // Built from empty: a field added later is dropped unless it is copied here.
+    // Built from empty: a static field added later is dropped unless it is copied here.
     var stripped = BrowserConfig()
     stripped.request = request?.strippingJSCallbacks()
     stripped.browse = browse?.strippingJSCallbacks()
@@ -84,9 +76,6 @@ struct BrowserConfig {
 extension NativeRouteEntry: RouteEntry {}
 
 // MARK: - Deep JS-callback stripping
-
-// The generated structs are get-only from Swift, so each strip rebuilds the value through the
-// memberwise initializer with the function fields nil.
 
 private extension TransformableRequestConfig {
   func strippingJSCallbacks() -> TransformableRequestConfig {

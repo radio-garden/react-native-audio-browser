@@ -3,12 +3,11 @@ import Foundation
   import NitroModules
 #endif
 
-/// A repeating timer gated on playback state: runs `onTick` every `interval` seconds while
-/// `isActive` holds for the current state. A nil or non-positive interval turns it off.
+/// Calls `onTick` every interval while `isActive` holds for the last playback state. A nil or
+/// non-positive interval turns it off.
 @MainActor
 final class PlaybackTimer {
-  // nonisolated(unsafe) so the nonisolated deinit (Swift 6) can invalidate it; the run loop
-  // retains a timer until it is invalidated.
+  // So the nonisolated deinit can invalidate it: the run loop retains a timer until then.
   private nonisolated(unsafe) var timer: Timer?
   private var interval: TimeInterval?
   private var active = false
@@ -28,7 +27,7 @@ final class PlaybackTimer {
     let normalized = (interval ?? 0) > 0 ? interval : nil
     if normalized == self.interval { return }
     self.interval = normalized
-    stop() // start() keeps a running timer, so drop it for the new interval
+    stop() // start() keeps a running timer
     reconcile()
   }
 
@@ -47,13 +46,11 @@ final class PlaybackTimer {
 
   private func start(_ interval: TimeInterval) {
     guard timer == nil else { return }
-    // `.common`, not the `.default` mode `Timer.scheduledTimer` uses: while a list is dragged the
-    // main run loop is in tracking mode, where a default-mode timer does not fire and its missed
-    // repeats are dropped, freezing progress events and losing interval ticks.
     let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated { self?.onTick() }
     }
     self.timer = timer
+    // `.common`: in the default mode a timer does not fire while a list is dragged.
     RunLoop.main.add(timer, forMode: .common)
   }
 

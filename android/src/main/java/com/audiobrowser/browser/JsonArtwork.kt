@@ -16,10 +16,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A track's `artwork` in a browse response: a URL string, or `{ light, dark }` URLs.
- *
- * Android Auto renders only the dark variant, but both are kept: the JS side reads the same
- * payload.
+ * A track's `artwork` in a browse response: a URL, or `{ light, dark }` URLs. Android Auto renders
+ * only the dark variant, but both are kept: the JS side reads the same payload.
  */
 @Serializable(with = JsonArtworkSerializer::class)
 sealed class JsonArtwork {
@@ -35,9 +33,8 @@ sealed class JsonArtwork {
 }
 
 /**
- * Decodes by JSON shape, as the wire has no type tag: a primitive is a URL, an object must hold
- * both `light` and `dark`. Anything else throws, which fails the whole response, not just the
- * artwork.
+ * Decodes by JSON shape, as the wire has no type tag. An object without both `light` and `dark`
+ * throws, which fails the whole response, not just the artwork.
  */
 object JsonArtworkSerializer : KSerializer<JsonArtwork> {
   override val descriptor: SerialDescriptor = buildClassSerialDescriptor("JsonArtwork")

@@ -4,16 +4,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
 
-/** Runs an SSDP M-SEARCH and returns the raw responses. Blocking. */
+/** Runs an SSDP M-SEARCH and returns the replies, one per USN. Blocks; never throws. */
 internal interface SsdpScanner {
   fun search(timeoutMs: Int = 3000, repeats: Int = 3): List<SsdpResponse>
 }
 
-/**
- * Finds the Sonos rooms on the local network: the first speaker that answers the SSDP search with
- * its topology lists the household's groups, and each group's coordinator gives its control URLs.
- * Blocking: run off the main thread.
- */
 internal class SonosDiscoverer(
   private val httpClient: OkHttpClient,
   private val scanner: SsdpScanner,
@@ -21,8 +16,8 @@ internal class SonosDiscoverer(
   private val soap = SoapClient(httpClient)
 
   /**
-   * The rooms, each at its coordinator; empty when no speaker gives its topology, as when the
-   * speakers refuse UPnP (HTTP 403, a switch in the Sonos app).
+   * Blocks. Any one speaker's topology lists the household's groups, each found at its coordinator;
+   * empty when none gives it, as when UPnP is switched off on the speakers (HTTP 403).
    */
   fun discover(timeoutMs: Int = 3000): List<SonosRoom> {
     val locations = scanner.search(timeoutMs).map { it.location }.distinct()
@@ -52,7 +47,6 @@ internal class SonosDiscoverer(
     }
   }
 
-  /** The device description at [location], or null on any HTTP or parse failure. */
   fun fetchDevice(location: String): SonosDevice? {
     val xml =
       try {

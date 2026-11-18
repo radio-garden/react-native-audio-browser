@@ -4,13 +4,8 @@ import org.w3c.dom.Document
 
 internal data class SoapFault(val errorCode: Int?, val errorDescription: String?)
 
-/**
- * Reads the UPnP SOAP responses the speakers send. Apart from [fault], each reader returns null for
- * a fault and for XML [parseSpeakerXml] refuses; for a field that is absent or empty, [position]
- * nulls that field and the others return null.
- */
+/** Apart from [fault], each reader returns null for a fault response or unreadable XML. */
 internal object SoapResponseParser {
-  /** The UPnP error in a fault response, or null when the response is not a fault. */
   fun fault(xml: String): SoapFault? {
     val doc = parse(xml) ?: return null
     return faultOf(doc)
@@ -28,10 +23,6 @@ internal object SoapResponseParser {
     return firstText(doc, "CurrentVolume")?.toIntOrNull()
   }
 
-  /**
-   * The title the speaker reads from the stream (ICY `StreamTitle`, or an HLS stream's ID3), as
-   * `r:streamContent` in a `GetPositionInfo` response's `TrackMetaData`.
-   */
   fun streamContent(xml: String): String? {
     val metadata = embeddedDocument(xml, "TrackMetaData") ?: return null
     return firstText(metadata, "r:streamContent")
@@ -39,7 +30,7 @@ internal object SoapResponseParser {
 
   /**
    * Reads a `GetPositionInfo` response. A time the speaker doesn't report (`NOT_IMPLEMENTED`, or a
-   * live stream's `0:00:00` duration) is null.
+   * stream's `0:00:00` duration) is null.
    */
   fun position(xml: String): SonosPosition? {
     val doc = parse(xml) ?: return null
@@ -66,7 +57,6 @@ internal object SoapResponseParser {
     return (hours * 3600 + minutes * 60) * 1000 + (seconds * 1000).toLong()
   }
 
-  /** Parses the text of [tag], an XML document escaped inside the SOAP response. */
   internal fun embeddedDocument(xml: String, tag: String): Document? {
     val doc = parse(xml) ?: return null
     if (faultOf(doc) != null) return null
@@ -78,7 +68,6 @@ internal object SoapResponseParser {
     return SoapFault(firstText(doc, "errorCode")?.toIntOrNull(), firstText(doc, "errorDescription"))
   }
 
-  // The parser is not namespace-aware, so a name keeps its prefix (`s:Fault`).
   private fun hasElement(doc: Document, localName: String): Boolean {
     val all = doc.getElementsByTagName("*")
     for (i in 0 until all.length) {

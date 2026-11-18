@@ -6,14 +6,11 @@ import com.facebook.react.turbomodule.core.interfaces.TurboModule
 import timber.log.Timber
 
 /**
- * Disposes the live [AudioBrowser] when the React instance goes away, e.g. on reload.
+ * Disposes the live [AudioBrowser] when the React instance goes away, e.g. on reload: Nitro runs
+ * `dispose()` only when JS calls it, never on runtime teardown.
  *
- * Nitro runs `dispose()` only when JS calls it, not when the runtime is destroyed; without this the
- * old instance stays registered with the service, the process lifecycle and the car-connection
- * observer, and keeps receiving player callbacks over a dead JSI runtime.
- *
- * It exposes nothing to JS, so JS never asks for it: React only invalidates modules it has created,
- * and under bridgeless creates one unasked only if it is both `needsEagerInit` and a [TurboModule]
+ * JS never asks for this module, so under bridgeless React creates it, and later invalidates it,
+ * only because it is both `needsEagerInit` and a [TurboModule]
  * (`ReactPackageTurboModuleManagerDelegate.getEagerInitModuleNames`). Dropping either leaves
  * [invalidate] uncalled.
  */

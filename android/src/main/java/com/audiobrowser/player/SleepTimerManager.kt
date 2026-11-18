@@ -8,8 +8,8 @@ import timber.log.Timber
 
 /**
  * Runs the sleep timer's volume fade and emits each state change through [onChanged]. Completion
- * pauses rather than stops, and restores the pre-fade volume so the listener resumes at full
- * volume. Mirrors iOS's SleepTimerManager.
+ * pauses rather than stops, and restores the pre-fade volume for the next play. Mirrors iOS's
+ * SleepTimerManager.
  */
 internal class SleepTimerManager(
   private val volumeFader: VolumeFader,
@@ -44,8 +44,7 @@ internal class SleepTimerManager(
     }
 
   /**
-   * Pauses after [seconds]. A [fadeDuration] (seconds) fades out over the last part of that
-   * interval, clamped to [seconds].
+   * Pauses after [seconds], fading out over the last [fadeDuration] seconds, clamped to [seconds].
    */
   fun setAfter(seconds: Double, fadeDuration: Double? = null) {
     timer.sleepAfter(seconds, fadeDuration)
@@ -57,14 +56,13 @@ internal class SleepTimerManager(
     onChanged(get())
   }
 
-  /** @return true when a timer was armed and is now cleared. */
   fun clear(): Boolean {
     val wasRunning = timer.clear()
     if (wasRunning) onChanged(none())
     return wasRunning
   }
 
-  /** Call when a track plays to its end; pauses only if an end-of-track sleep is armed. */
+  /** Pauses only if an end-of-track sleep is armed. */
   fun onTrackEnd() {
     if (timer.sleepWhenPlayedToEnd) {
       Timber.d("Sleep timer triggered on track end, pausing playback")

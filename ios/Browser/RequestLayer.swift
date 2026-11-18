@@ -7,7 +7,6 @@ import Foundation
   #error("react-native-audio-browser needs Swift 6.3 or later (Xcode 26.4 or later): Swift 6.2 compiles this library's nonisolated(nonsending) closures into code that crashes on iOS below 18 (swiftlang/swift#86829)")
 #endif
 
-/// The fields every request config kind (request, browse, media, artwork) has.
 protocol RequestFieldValues<Method> {
   associatedtype Method
   var method: Method? { get }
@@ -35,7 +34,6 @@ protocol RequestFields: RequestFieldValues {
 }
 
 extension RequestFields {
-  /// The config a layer stack starts from: only `path` set.
   static func base(path: String?) -> Self {
     Self(method: nil, path: path, baseUrl: nil, headers: nil, query: nil, body: nil, contentType: nil, userAgent: nil)
   }
@@ -48,8 +46,7 @@ extension RequestFields {
   }
 }
 
-/// How Request-Config Layers compose (GLOSSARY.md). Android and the web stub follow the same
-/// rules.
+/// How Request-Config Layers compose (GLOSSARY.md); Android and the web follow the same rules.
 enum RequestLayer {
   /// `override` over `base`, field by field; headers and query merge by key.
   static func merge<C: RequestFields>(_ base: C, _ override: C) -> C {
@@ -65,8 +62,8 @@ enum RequestLayer {
     )
   }
 
-  /// `layer`'s fields over `base`, except the path, which stays `base`'s: only a transform
-  /// changes the path.
+  /// `layer`'s fields over `base`, except the path, which stays `base`'s: only a transform changes
+  /// the path.
   static func applyStatic<C: RequestFields>(_ layer: C, to base: C) -> C {
     let merged = merge(base, layer)
     return C(
@@ -75,8 +72,8 @@ enum RequestLayer {
     )
   }
 
-  /// Applies one layer. With transforms, they replace its static fields entirely, each handed
-  /// the one before's result; without, its static fields apply over `base`.
+  /// Applies one layer. Its transforms, when it has any, replace its static fields entirely, each
+  /// handed the one before's result; without, its static fields apply over `base`.
   nonisolated(nonsending) static func apply<C: RequestFields>(
     _ layer: C,
     transforms: [nonisolated(nonsending)(C) async throws -> C],
@@ -97,7 +94,6 @@ enum RequestLayer {
     return merge(asyncResolved, syncResolved)
   }
 
-  /// Base URL, then path (or `defaultPath` when it has none), then query.
   static func buildUrl(_ config: some RequestFields, defaultPath: String = "") -> String {
     let url = BrowserPathHelper.buildUrl(baseUrl: config.baseUrl, path: config.path ?? defaultPath)
     guard let query = config.query, !query.isEmpty else { return url }
@@ -163,15 +159,14 @@ enum RequestLayer {
     return query
   }
 
-  /// Whether `request` still carries an `{id}` token, which means the track had no id.
   static func hasUnfilledIdToken(_ request: some RequestFieldValues) -> Bool {
     TrackIdTemplate.containsToken(request.path)
       || TrackIdTemplate.containsToken(request.query)
       || TrackIdTemplate.containsToken(request.headers)
   }
 
-  /// `request.headers` plus `userAgent` and `contentType` as headers, unless a header already
-  /// sets them. Nil when there are none.
+  /// `request.headers` plus `userAgent` and `contentType` as headers, unless a header already sets
+  /// them; nil when there are none.
   static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
     var headers = request.headers ?? [:]
     if let userAgent = request.userAgent, headers["User-Agent"] == nil {

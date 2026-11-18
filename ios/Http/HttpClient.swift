@@ -19,12 +19,10 @@ final class HttpClient: @unchecked Sendable {
     let userAgent: String
   }
 
-  /// A non-2xx response.
   struct HttpException: LocalizedError {
     let code: Int
     let responseBody: String
 
-    /// The API's `{ "error": "message" }`, else the localized HTTP status.
     var errorDescription: String? {
       if let data = responseBody.data(using: .utf8),
          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -56,7 +54,6 @@ final class HttpClient: @unchecked Sendable {
     self.session = session
   }
 
-  /// Sends `httpRequest` and returns the status code and body, whatever the status.
   private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
     guard let url = URL(string: httpRequest.url) else { throw HttpClientError.invalidUrl(httpRequest.url) }
 
@@ -98,8 +95,8 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
-  /// Sends `httpRequest` and decodes a 2xx body as `T`; any other status throws `HttpException`.
-  /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
+  /// Decodes a 2xx body as `T`; any other status throws `HttpException`. A GET sends no body;
+  /// HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
     let (code, data) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {

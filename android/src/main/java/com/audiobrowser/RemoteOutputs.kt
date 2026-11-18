@@ -58,20 +58,20 @@ object RemoteOutputs {
   private var selector = selectorFor(types)
 
   // MediaRouter holds routers weakly: let this one go and the Output Switcher stops listing the
-  // category's routes, as the app's discovery preference empties on the next GC.
+  // category's routes once the next GC empties the app's discovery preference.
   private var router: MediaRouter? = null
 
   private val listeners = CopyOnWriteArraySet<() -> Unit>()
 
   private val onSonosSelectionChanged: () -> Unit = { router?.let(::update) }
 
-  /** The selected remote output, or null while playback stays local. Read from any thread. */
   @Volatile
+  /** The selected remote output, or null while playback stays local. Read from any thread. */
   internal var current: Output? = null
     private set
 
-  // A callback with a selector only hears of routes in the category: going back to the phone
-  // arrives as the remote route's unselect, not as the phone's select.
+  // With a selector it hears only of routes in the category: going back to the phone arrives as the
+  // remote route's unselect, not as the phone's select.
   private val callback =
     object : MediaRouter.Callback() {
       override fun onRouteSelected(
@@ -194,8 +194,8 @@ object RemoteOutputs {
 
 /**
  * The [Output] a selected route stands for, typed by the first category in [types] it [supports],
- * else [OutputType.REMOTE] for [RemoteOutputs.CATEGORY]; null for a route the outputs don't offer.
- * A Sonos room's route [another app's provider serves][isUnservedSonosRoute] is not an output.
+ * else [OutputType.REMOTE] for [RemoteOutputs.CATEGORY]; null for a route the outputs don't offer,
+ * including an [unserved Sonos route][isUnservedSonosRoute].
  */
 internal fun remoteOutputOf(
   name: String,

@@ -12,29 +12,22 @@ import java.io.IOException
 import timber.log.Timber
 
 /**
- * Wraps an upstream [DataSource] and resolves each track's media URL through its request config
- * (which may call into JS) in [open], on ExoPlayer's IO thread. Resolving on the main thread, in
- * `createMediaSource`, deadlocks while a synchronous Nitro call such as `seekTo` holds the JS
- * thread.
- *
- * The first open resolves the media URL and caches the result on the [Factory]; later opens of
- * other URLs (HLS segments, keys) keep their own URL and reuse the cached headers and user agent.
+ * Resolves a track's media URL through its request config, which may call into JS, in [open] on
+ * ExoPlayer's IO thread. The first open caches the result on the [Factory]; opens of other URLs
+ * (HLS segments, keys) keep their own URL and reuse the cached headers and user agent.
  */
 class TransformingDataSource(private val upstream: DataSource, private val factory: Factory) :
   DataSource {
 
   companion object {
-    // Matches the default request property MediaFactory sets upstream; a config with this user
-    // agent adds no User-Agent header of its own.
+    // MediaFactory's default request property: a config with this user agent adds no header.
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
 
     private const val OPEN_ENDED_RANGE = "bytes=0-"
 
-    /**
-     * Whether to send `Range: bytes=0-` on a progressive read from the start, where media3 sends
-     * none, as a browser does: some live servers cut a browser User-Agent without it off after a
-     * few seconds. Media3 marks every progressive read with `Icy-MetaData`; HLS reads go without.
-     */
+    // A progressive read from the start sends `Range: bytes=0-`, as a browser does: some live
+    // servers cut a browser User-Agent off after a few seconds without it. Media3 marks every
+    // progressive read with `Icy-MetaData`; HLS reads go without.
     private fun wantsOpenEndedRange(dataSpec: DataSpec, headers: Map<String, String>): Boolean =
       dataSpec.position == 0L &&
         dataSpec.length == C.LENGTH_UNSET.toLong() &&
@@ -51,9 +44,9 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     val (finalUrl, headers, userAgent) =
       when {
         cached == null -> resolveAndCache(originalUrl)
-        // Re-open of the media URL (a retry) reuses the resolved URL: the original may be
-        // schemeless ("/listen/<id>/x.mp3"), which DefaultDataSource routes to a file and fails.
-        // After a failed load it re-resolves once instead, since the URL or token may have expired.
+        // A reopen of the media URL reuses the resolved URL, as the original may be a schemeless
+        // path DefaultDataSource reads as a file. After a failed open it re-resolves once, for an
+        // expired URL or token.
         originalUrl == factory.cachedOriginalUrl ->
           if (factory.reresolveOnNextMediaOpen) {
             factory.reresolveOnNextMediaOpen = false
@@ -61,7 +54,6 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
           } else {
             cached
           }
-        // An already-absolute segment or key URL: keep it, reuse the headers.
         else -> Triple(originalUrl, cached.second, cached.third)
       }
 
@@ -86,7 +78,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     return try {
       upstream.open(transformedSpec)
     } catch (e: IOException) {
-      // Only a media-URL failure refreshes the URL; a failed segment or key leaves it alone.
+      // A failed segment or key leaves the media URL alone.
       if (originalUrl == factory.cachedOriginalUrl) {
         factory.reresolveOnNextMediaOpen = true
       }
@@ -114,12 +106,8 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     return resolvedUri ?: upstream.uri
   }
 
-  /**
-   * Upstream's response headers. Media3's `ProgressiveMediaPeriod` reads `icy-metaint` from them to
-   * install `IcyDataSource`; the `DataSource` default of an empty map would lose ICY song metadata
-   * (`onMetadata` never fires) and leave the metadata bytes in the stream, decoded as audible
-   * chirps.
-   */
+  // Media3 reads `icy-metaint` from these to strip ICY metadata from the stream; without it the
+  // metadata is lost and its bytes play as audio.
   override fun getResponseHeaders(): Map<String, List<String>> {
     return upstream.responseHeaders
   }
@@ -129,11 +117,8 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     resolvedUri = null
   }
 
-  /**
-   * Runs the request config callback for [originalUrl], blocking on JS if needed; call only off the
-   * main thread. Returns (finalUrl, headers, userAgent); without a config, or when the callback
-   * throws, the original URL with no headers and the default user agent.
-   */
+  // Blocks on JS: never call it on the main thread. Without a config, or when the callback throws,
+  // the original URL with no headers and the default user agent.
   private fun resolveRequestConfig(
     originalUrl: String
   ): Triple<String, Map<String, String>, String> {
@@ -159,12 +144,11 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     internal val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
   ) : DataSource.Factory {
 
-    // One Factory per track (MediaFactory.createMediaSource), so the cache resets on track change.
+    // One Factory per track, so the cache resets on track change.
     @Volatile internal var cachedTransform: Triple<String, Map<String, String>, String>? = null
 
     @Volatile internal var cachedOriginalUrl: String? = null
 
-    // Set by a failed media-URL open; the next media-URL open re-resolves and clears it.
     @Volatile internal var reresolveOnNextMediaOpen: Boolean = false
 
     override fun createDataSource(): DataSource {

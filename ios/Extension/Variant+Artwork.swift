@@ -3,7 +3,6 @@ import Foundation
 // Foundation only: this file is in the SPM test target, which also builds for macOS, so it
 // cannot use UIKit to pick an appearance. CarPlay registers both URLs and lets UIKit choose.
 extension Variant_String_ArtworkVariants {
-  /// Both URLs when the artwork is a light/dark pair; `nil` for a single URL.
   var variants: ArtworkVariants? {
     switch self {
     case .first: nil
@@ -11,9 +10,9 @@ extension Variant_String_ArtworkVariants {
     }
   }
 
-  /// The URL for where appearance is unknown or does not apply (now-playing metadata, values
-  /// sent to JS, the artwork transform). A pair resolves to its dark URL: CarPlay is usually
-  /// dark, Android Auto is dark-only, and it is the image a single-URL track ships.
+  /// The URL for where appearance is unknown or does not apply (now-playing metadata, values sent
+  /// to JS, the artwork transform). A pair resolves to its dark URL: CarPlay is usually dark,
+  /// Android Auto is dark-only, and it is the image a single-URL track ships.
   var url: String {
     switch self {
     case let .first(url): url

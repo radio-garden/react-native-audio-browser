@@ -15,7 +15,7 @@ data class PlayerUpdateOptions(
   var backwardJumpInterval: Double = 15.0,
   var progressUpdateEventInterval: Double? = null,
 
-  // A null capability is enabled; only false disables. Jumps are off until enabled.
+  // A null capability is enabled; only false disables.
   var capabilities: PlayerCapabilities =
     PlayerCapabilities(
       play = null,
@@ -42,7 +42,6 @@ data class PlayerUpdateOptions(
     options.forwardJumpInterval?.let { forwardJumpInterval = it }
     options.backwardJumpInterval?.let { backwardJumpInterval = it }
 
-    // The variants tell an explicit null (First), which clears, from an absent value, which keeps.
     options.progressUpdateEventInterval?.let { variant ->
       progressUpdateEventInterval =
         when (variant) {
@@ -68,7 +67,6 @@ data class PlayerUpdateOptions(
     }
   }
 
-  /** The resolved options in their wire shape, as getOptions and onOptionsChanged report them. */
   fun toNitro(): Options {
     return Options(
       android =

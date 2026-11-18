@@ -5,9 +5,8 @@ import AVFoundation
 #endif
 
 extension TimedMetadata {
-  /// Reads the ICY items if there are any, else the ID3 items, else the common identifiers;
-  /// nil when the chosen set yields no field. `icyCharset` re-decodes an ICY title AVFoundation
-  /// decoded as Latin-1 and never applies to ID3 or common metadata.
+  /// Reads the ICY items if there are any, else the ID3 items, else the common identifiers; nil
+  /// when the chosen set yields no field. `icyCharset` applies to an ICY title only.
   static func from(items: [AVMetadataItem], icyCharset: String? = nil) -> TimedMetadata? {
     let icyItems = items.filter { $0.keySpace == .icy }
     if !icyItems.isEmpty {
@@ -56,7 +55,7 @@ extension TimedMetadata {
         artist = item.stringValue
       case .id3MetadataAlbumTitle, .id3MetadataOriginalAlbumTitle:
         album = item.stringValue
-      // TDRC (ID3v2.4) wins over TYER (ID3v2.3) whichever comes first.
+      // TDRC (ID3v2.4) wins over TYER (ID3v2.3), whichever comes first.
       case .id3MetadataRecordingTime:
         date = item.stringValue
       case .id3MetadataYear:

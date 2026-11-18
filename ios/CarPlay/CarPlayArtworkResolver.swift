@@ -6,21 +6,19 @@ struct ArtworkResolvedImage: Equatable, Sendable {
 }
 
 enum ArtworkLoadAction: Equatable, Sendable {
-  /// `width` and `height` are the canvas size in points.
   case sfSymbol(artwork: String, width: Double, height: Double)
   case fetch(uri: String, headers: [String: String]?, shouldTint: Bool, isSvg: Bool)
   case none
 }
 
 enum CarPlayArtworkResolver {
-  /// False for an `sf:` symbol, which CarPlay renders itself.
   static func needsResolve(artwork: String?) -> Bool {
     !isSFSymbol(artwork)
   }
 
-  /// An `sf:` symbol renders locally. Otherwise the resolved URL is fetched; if it is missing or does not
-  /// parse, `artwork` is used, or `artworkSource` with its headers when `artwork` is nil. A direct URI
-  /// that does not parse yields `.none`. `stencil` tints the fetched image to the appearance.
+  /// An `sf:` symbol renders locally. Otherwise `resolved` is fetched; when it is nil or does not
+  /// parse, `artwork`, else `artworkSource` with its headers. `stencil` tints the fetched image to
+  /// the appearance.
   static func action(
     artwork: String?,
     artworkSource: ArtworkResolvedImage?,

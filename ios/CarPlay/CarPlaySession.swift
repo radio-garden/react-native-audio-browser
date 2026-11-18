@@ -2,9 +2,8 @@ import CarPlay
 import NitroModules
 import os.log
 
-/// One CarPlay run, from the moment the player and a configured browser exist until the scene
-/// stops or the bridge is replaced. `end()` cancels its subscriptions and tasks, so nothing a
-/// stopped run started paints over the next one.
+/// One CarPlay run, until the scene stops or the bridge is replaced. `end()` cancels its
+/// subscriptions and tasks, so nothing a stopped run started paints over the next one.
 @MainActor
 final class CarPlaySession {
   let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlaySession")
@@ -33,20 +32,17 @@ final class CarPlaySession {
   /// catches a double tap.
   var navigatingPaths: Set<String> = []
 
-  /// Templates with a load in flight, so a re-appearing one does not start another.
   var loadingTemplates: Set<ObjectIdentifier> = []
 
   /// Rebuilding the tab bar tears down the pushed stack, so a tab change waits for the root.
   var needsTabRebuild = false
 
-  /// The tabs the current root was built from; their change event, which arrives after the
-  /// build began, has nothing left to change.
+  /// The tabs the current root was built from, so their change event, which arrives after the
+  /// build began, changes nothing.
   var builtTabs: [Track]?
 
-  /// Bumped by every root build; a suspended build that finds it bumped leaves the root alone.
   private var rootBuildGeneration: UInt = 0
 
-  /// How long a destination may spin before it shows an error.
   let resolveTimeout: Duration = .seconds(15)
 
   var config: BrowserConfig {
@@ -105,9 +101,9 @@ final class CarPlaySession {
     nowPlaying.end()
   }
 
-  /// Runs `work` as a task this session owns, cancelled by `end()`.
+  /// Runs `work` as a task this session owns, cancelled by `end()`. A no-op once ended: a handler
+  /// queued before `end()` can still call in, and the next run owns the screen.
   func spawn(_ work: @escaping @MainActor (CarPlaySession) async -> Void) {
-    // A handler queued before `end()` can still call in; the next run owns the screen.
     guard !ended else { return }
     let id = UUID()
     tasks[id] = Task { [weak self] in
@@ -189,7 +185,6 @@ final class CarPlaySession {
     }
   }
 
-  /// The list templates on screen or one tap away: the tab roots, then the pushed stack.
   func displayedListTemplates() -> [CPListTemplate] {
     var templates: [CPListTemplate] = []
     let tabRoots = (interfaceController.rootTemplate as? CPTabBarTemplate)?.templates ?? []

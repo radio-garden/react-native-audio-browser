@@ -17,8 +17,6 @@ final class CarPlayImageLoader {
 
   // MARK: - SF Symbols
 
-  /// Renders an `sf:` artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff"). With `fg` it is
-  /// drawn in that color; without, black or white by appearance over a grey tile.
   private func sfSymbolImage(forArtwork artwork: String, canvasSize: CGSize) -> UIImage? {
     let (name, background, tint) = SFSymbolRenderer.parseArtwork(artwork)
     let scale = carTraitCollection.displayScale
@@ -43,7 +41,6 @@ final class CarPlayImageLoader {
 
   private var placeholders: [String: UIImage] = [:]
 
-  /// An empty image that reserves a `size`-point slot while artwork loads.
   func placeholderImage(size: CGSize) -> UIImage? {
     let key = "\(size.width)×\(size.height)"
     if let cached = placeholders[key] { return cached }
@@ -57,13 +54,9 @@ final class CarPlayImageLoader {
   // MARK: - Artwork Loading
 
   /// A track's artwork at `size` points, through the artwork resolve transform when one is
-  /// configured; nil when it has none or the load fails.
-  /// - Parameter style: the track's resolved style; nil uses the track's own, for places with
-  ///   no section to inherit from (tabs, Up Next).
+  /// configured; nil when it has none or the load fails. A nil `style` uses the track's own.
   func artwork(for track: Track, style: TrackStyle? = nil, size: CGSize) async -> UIImage? {
     if let variants = track.artwork?.variants {
-      // Each variant runs the whole single-URL path (route config, headers, SVG, the resolve
-      // transform), so the pair cannot drift from it.
       return await artwork(for: track, style: style, variants: variants, size: size)
     }
 
@@ -98,8 +91,6 @@ final class CarPlayImageLoader {
 
   // MARK: - Private
 
-  /// Both images of an `ArtworkVariants` pair as one adaptive image, which CarPlay re-resolves
-  /// in place when the appearance changes. When one half fails, the other is used alone.
   private func artwork(for track: Track, style: TrackStyle?, variants: ArtworkVariants, size: CGSize) async -> UIImage? {
     async let light = artwork(for: track.copying(artwork: .some(.first(variants.light))), style: style, size: size)
     async let dark = artwork(for: track.copying(artwork: .some(.first(variants.dark))), style: style, size: size)
@@ -108,8 +99,6 @@ final class CarPlayImageLoader {
     return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
   }
 
-  /// Rasters downsample to `size` points at the car's display scale (CPListItem.h: "size them
-  /// to the display scale of the car screen"); SVGs already rasterize at car scale.
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
     let scale = carTraitCollection.displayScale

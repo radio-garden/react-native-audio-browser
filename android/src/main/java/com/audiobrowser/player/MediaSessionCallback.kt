@@ -57,15 +57,14 @@ import timber.log.Timber
 /**
  * Everything the MediaLibrarySession serves except transport, which reaches the player through
  * [InterceptingPlayer]; Assistant's play-from-search arrives as an intent in the service. Callbacks
- * answering through [scope] run on IO, so anything touching ExoPlayer hops to [Dispatchers.Main];
- * the rest answer on the Media3 application thread.
+ * answering through [scope] run on IO, so anything touching ExoPlayer hops to [Dispatchers.Main].
  */
 class MediaSessionCallback(private val player: Player) :
   MediaLibraryService.MediaLibrarySession.Callback {
   internal val commandManager = MediaSessionCommandManager(player.context.isAutomotive)
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-  // Written on the Media3 application thread, read from the network observer and JS-triggered
+  // Written on the Media3 application thread and read from the network observer and JS-triggered
   // notifies: every access goes through synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
@@ -81,13 +80,12 @@ class MediaSessionCallback(private val player: Player) :
   init {
     player.networkMonitor.observeOnline(scope) { online ->
       notifySubscribedChildrenChanged()
-      // A browse level is re-queried through its subscription; a search has none, so its offline
-      // tile leaves the screen only when the query runs again.
+      // A browse level is re-queried through its subscription; a search has none.
       if (online) scope.launch { reannounceOfflineSearches() }
     }
   }
 
-  /** Media3's legacy browse bridge asks for a whole list with pageSize [Int.MAX_VALUE]. */
+  // Media3's legacy browse bridge asks for a whole list with pageSize Int.MAX_VALUE.
   private fun <T> List<T>.paginate(page: Int, pageSize: Int): List<T> {
     return if (pageSize in 1 until Int.MAX_VALUE) {
       this.drop(page * pageSize).take(pageSize)
@@ -183,8 +181,6 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    // A heart rating sets the now-playing favorite, as the favorite button does; INVALID_STATE when
-    // there is no current track.
     RatingFavorites.favoritedFor(rating)?.let { favorited ->
       val applied = player.setActiveTrackFavorited(favorited)
       return Futures.immediateFuture(
@@ -196,10 +192,8 @@ class MediaSessionCallback(private val player: Player) :
     return super.onSetRating(session, controller, rating)
   }
 
-  /**
-   * A legacy controller's setRating names the current item; a Media3 controller's can name any
-   * item. Only the current one can be rated.
-   */
+  // A legacy controller's setRating names the current item; a Media3 controller's can name any
+  // item. Only the current one can be rated.
   override fun onSetRating(
     session: MediaSession,
     controller: MediaSession.ControllerInfo,
@@ -225,9 +219,9 @@ class MediaSessionCallback(private val player: Player) :
       }
     }
 
+    // Media3 answers System UI's recent root itself, through onPlaybackResumption (ADR 0002), so
+    // this is another browser asking; there is no browsable recents tree.
     if (params?.isRecent == true) {
-      // Media3 answers System UI's EXTRA_RECENT root itself, through onPlaybackResumption, so this
-      // is another browser asking; there is no browsable recents tree.
       return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED))
     }
 
@@ -265,10 +259,8 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
-  /**
-   * The tile the root last served in place of its tabs, or null. Android Automotive OS shows such a
-   * root as one tab that drills into the tile's sentinel path (see [deadEndChildren]).
-   */
+  // The tile the root last served in place of its tabs. Android Automotive OS shows such a root as
+  // one tab that drills into the tile's sentinel path (see deadEndChildren).
   @Volatile private var rootTile: MediaItem? = null
 
   private suspend fun children(
@@ -283,10 +275,9 @@ class MediaSessionCallback(private val player: Player) :
       player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
     val browserManager = audioBrowser.browserManager
 
-    // While a gate is active the root keeps its tabs; a gated level, the gate tile's own sentinel
-    // included, serves the gate tile, so drilling into it re-shows the message, and an allowed one
-    // falls through. No SessionError: a gate is app state, not a failure. Before the offline
-    // guard: connectivity does not ungate content.
+    // A gated level, the gate tile's own sentinel included, serves the gate tile; the root keeps
+    // its tabs. No SessionError: a gate is app state, not a failure. Before the offline guard, as
+    // connectivity does not ungate content.
     if (parentId != BrowserPathHelper.ROOT_PATH) {
       val outcome =
         audioBrowser.gateDecision(
@@ -294,7 +285,6 @@ class MediaSessionCallback(private val player: Player) :
         )
       if (outcome.gated) {
         audioBrowser.onGate(GateEvent(GateReason.BROWSE))
-        // gateDecision always sets chrome on a gated outcome.
         return LibraryResult.ofItemList(
           ImmutableList.of(createGateMediaItem(outcome.chrome!!)),
           params,
@@ -302,9 +292,8 @@ class MediaSessionCallback(private val player: Player) :
       }
     }
 
-    // A tap on the offline tile re-sends the alert, but only while still offline:
-    // notifyChildrenChanged re-queries these paths with no user action, e.g. when connectivity
-    // returns.
+    // A tap on the offline tile re-sends the alert only while still offline: notifyChildrenChanged
+    // re-queries these paths with no user action.
     if (BrowserPathHelper.isDeadEndPath(parentId)) {
       val offline = !player.networkMonitor.isOnline.value
       if (parentId == BrowserPathHelper.OFFLINE_PATH && offline) {
@@ -332,7 +321,7 @@ class MediaSessionCallback(private val player: Player) :
     return try {
       val children =
         if (parentId == BrowserPathHelper.ROOT_PATH) {
-          // Filtered before the four-tab cap so a disabled tab never costs an available one its
+          // Filtered before the four-tab cap, so a disabled tab never takes an available one's
           // slot.
           val tabs = browserManager.queryTabs().filterNot { it.disabled == true }
           if (tabs.size > 4) {
@@ -348,8 +337,7 @@ class MediaSessionCallback(private val player: Player) :
             resolvedTrack.styleResolvedSections()
               ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
           browserManager.warnIfGridPageLacksPromise(parentId, sections)
-          // An empty page resolved fine, so no SessionError: these paths are re-queried by
-          // notifyChildrenChanged without user action.
+          // An empty page resolved fine, so no SessionError.
           browseLevelItems(toMediaItems(sections)) {
             audioBrowser.resolveFormattedError(emptyContentError(), parentId)
           }
@@ -360,8 +348,7 @@ class MediaSessionCallback(private val player: Player) :
       // A cancelled browse (the controller left) is not a failure; awaitBrowser's timeout is.
       if (e is CancellationException && e !is TimeoutCancellationException) throw e
       Timber.e(e, "Error getting children for parentId: $parentId")
-      // A tile, not ofError(): see createErrorMediaItem and
-      // https://github.com/androidx/media/issues/2901
+      // A tile, not ofError(): see createErrorMediaItem.
       sendBrowseError(session, browser, offline = false)
       LibraryResult.ofItemList(
         ImmutableList.of(
@@ -375,10 +362,9 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Sends [browser] a non-fatal [SessionError] alongside the error tile. Current Android Auto
-   * renders nothing for it (https://github.com/androidx/media/issues/2901); it is the correct
-   * Media3 signal and shows if Android Auto starts reading it. Dispatched to Main: the session and
-   * its legacy stub are application-thread bound.
+   * Sends [browser] a non-fatal [SessionError] alongside the error tile. Android Auto renders
+   * nothing for it yet (https://github.com/androidx/media/issues/2901). Dispatched to Main: the
+   * session and its legacy stub are application-thread bound.
    */
   @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   private fun sendBrowseError(
@@ -396,22 +382,17 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Flattens sections to browse items (ADR 0010): the MediaBrowser protocol has no section node, so
-   * each item carries its section's title and style hints. A section with a `path` gains a "view
-   * more" row at every `display`: no Android Auto header is tappable, so it is the only way to the
-   * whole section.
+   * Flattens sections to browse items (ADR 0010): each item carries its section's title and style
+   * hints. A section with a `path` gains a "view more" row, as no Android Auto header is tappable.
    */
   private suspend fun toMediaItems(sections: List<Section>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
     val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
     return sections.flatMap { section ->
-      // Android Auto has no disabled affordance, so a disabled track hides.
+      // Android Auto has no disabled affordance.
       val children = section.children.filter { it.disabled != true }
       val items = children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
-      // A lone "view more" row under a header is a dead end.
       if (section.path == null || children.isEmpty()) return@flatMap items
-      // Free after the first row: the browser is already up, and viewMoreTitle is memoized per
-      // content generation.
       val title = player.awaitBrowser().browserManager.viewMoreTitle()
       items +
         TrackFactory.toBrowseMediaItem(
@@ -423,7 +404,6 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
-  // One untitled section, so a single Track→MediaItem conversion exists.
   private suspend fun toFlatMediaItems(tracks: List<Track>): List<MediaItem> =
     toMediaItems(listOf(untitledSection(tracks.toTypedArray())))
 
@@ -564,7 +544,6 @@ class MediaSessionCallback(private val player: Player) :
     return super.onUnsubscribe(session, browser, parentId)
   }
 
-  /** Safe from any thread. */
   private fun notifySubscribedChildrenChanged() {
     val session = mediaLibrarySession ?: return
     val parentIds = synchronized(this) { parentIdSubscriptions.keys.toList() }
@@ -617,7 +596,7 @@ class MediaSessionCallback(private val player: Player) :
           NativeGateRequest(reason = GateReason.SEARCH, path = null, search = searchParams(query))
         )
       // Search is gated with the browse tree, or it would route around the gate. One result: the
-      // gate tile (see onGetSearchResult).
+      // gate tile.
       if (searchOutcome.gated) {
         audioBrowser.onGate(GateEvent(GateReason.SEARCH))
         session.notifySearchResultChanged(browser, query, 1, params)
@@ -637,7 +616,7 @@ class MediaSessionCallback(private val player: Player) :
 
   /**
    * Tells [browser] how many items [onGetSearchResult] will serve for [query]: its hits, or the one
-   * tile standing in for them, since a controller told zero never asks. Offline keeps the query for
+   * tile standing in for them, as a controller told zero never asks. Offline keeps the query for
    * [reannounceOfflineSearches]; any other outcome drops it.
    */
   private suspend fun announceSearch(
@@ -669,17 +648,12 @@ class MediaSessionCallback(private val player: Player) :
     } catch (e: Exception) {
       if (e is CancellationException && e !is TimeoutCancellationException) throw e
       Timber.e(e, "Error during search for query: $query")
-      // Announces the browse-error tile: an ofError renders as nothing, and without the slot the
-      // failure reads as "no results" by the time onGetSearchResult arrives.
+      // Announces the error tile: an ofError renders as nothing.
       failedSearch.record(query, navigationErrorFor(e))
       session.notifySearchResultChanged(browser, query, 1, params)
     }
   }
 
-  /**
-   * Re-runs each search served the offline tile, so the announced count matches what
-   * [onGetSearchResult] then serves from the cache this fills.
-   */
   private suspend fun reannounceOfflineSearches() {
     val pending = offlineSearches.drain()
     if (pending.isEmpty()) return
@@ -732,8 +706,7 @@ class MediaSessionCallback(private val player: Player) :
         )
       }
 
-      // Before the failure slot, as in onGetChildren: a search that never reached the network is
-      // fixed by connectivity, not a server failure.
+      // Before the failure slot: a search that never reached the network is fixed by connectivity.
       if (
         !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
       ) {
@@ -752,7 +725,6 @@ class MediaSessionCallback(private val player: Player) :
         )
       }
 
-      // The search failed: the same tile and SessionError as a failed browse, not the empty page.
       failedSearch.errorFor(query)?.let { error ->
         sendBrowseError(session, browser, offline = false)
         return@future LibraryResult.ofItemList(
@@ -768,8 +740,7 @@ class MediaSessionCallback(private val player: Player) :
       try {
         val tracks = browserManager.getCachedSearchResults(query)
         if (tracks == null) Timber.w("No cached search results for query: $query")
-        // No hits, all disabled, or nothing cached: the app's empty copy (ADR 0001). Something must
-        // come back: onSearch announced at least one item.
+        // Something must come back: onSearch announced at least one item.
         val mediaItems =
           browseLevelItems(toFlatMediaItems(tracks?.toList().orEmpty())) {
             audioBrowser.resolveFormattedError(
@@ -812,7 +783,6 @@ class MediaSessionCallback(private val player: Player) :
       val audioBrowser = player.awaitBrowser()
 
       // Media3 sets whatever this returns: the controller's position would undo the handler's seek.
-      // Reads hop to Main: ExoPlayer is main-thread confined and this runs on IO.
       suspend fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition =
         withContext(Dispatchers.Main) {
           val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
@@ -838,7 +808,6 @@ class MediaSessionCallback(private val player: Player) :
         val parentPath = BrowserPathHelper.stripTrackId(singleContextualPath)
         val trackId = BrowserPathHelper.extractTrackId(singleContextualPath)
 
-        // A tap within the queue's own source list skips rather than rebuilds.
         if (trackId != null && parentPath == player.queueSourcePath) {
           val queueTracks = withContext(Dispatchers.Main) { player.tracks }
           val index = queueTracks.indexOfTappedTrack(singleContextualPath, trackId)
@@ -864,7 +833,7 @@ class MediaSessionCallback(private val player: Player) :
         browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
-      // setQueue reads an unset index as "keep the current one". Media3 still gets it unset on the
+      // setQueue reads an unset index as "keep the current one"; Media3 still gets it unset on the
       // default branch, where it means a reset.
       val handlerIndex = result.startIndex.takeIf { it != C.INDEX_UNSET } ?: 0
       val selectedTrack = tracks.getOrElse(handlerIndex) { tracks.first() }
@@ -892,8 +861,6 @@ class MediaSessionCallback(private val player: Player) :
    * Rebuilds the persisted queue for a system request (Bluetooth play, a head unit). With
    * [isForPlayback] false it is the boot-time resumption notification asking: no network, stored
    * track only.
-   *
-   * @see https://developer.android.com/media/media3/session/background-playback#resumption
    */
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
@@ -931,8 +898,6 @@ class MediaSessionCallback(private val player: Player) :
             throw IllegalStateException("No playback state to resume")
           }
 
-      // A track disabled since it was saved never plays; failing the future refuses it without
-      // touching the player.
       if (state.track.disabled == true) {
         Timber.w("Refusing resumption of disabled track: ${state.track.title}")
         throw IllegalStateException("Persisted track is disabled")
@@ -1006,16 +971,14 @@ internal fun deadEndChildren(
     }
   )
 
-/** The single tile of a level that serves one in place of its items, or null. */
 internal fun deadEndTileOf(items: List<MediaItem>): MediaItem? =
   items.singleOrNull()?.takeIf { BrowserPathHelper.isDeadEndPath(it.mediaId) }
 
 /**
  * A non-playable item that stands in for a browse list's items: the only in-browse error signal.
- * Media3 drops [LibraryResult.ofError] on the legacy browse bridge, leaving "No items", and Android
- * Auto's browse list shows no text for a transient or replicated [SessionError]. Fatal replication
- * shows it on the playback screen only by putting the session in STATE_ERROR, which hides
- * now-playing and transport. https://github.com/androidx/media/issues/2901
+ * Media3 drops [LibraryResult.ofError] on the legacy browse bridge, and Android Auto shows no text
+ * for a non-fatal [SessionError]; a fatal one hides now-playing and transport.
+ * https://github.com/androidx/media/issues/2901
  */
 internal fun createErrorMediaItem(mediaId: String, title: String, subtitle: String): MediaItem =
   MediaItem.Builder()
@@ -1040,10 +1003,7 @@ private fun createErrorMediaItem(mediaId: String, formatted: FormattedNavigation
     subtitle = formatted.message?.replace('\n', ' ') ?: "",
   )
 
-/**
- * From the app's path-aware empty copy (ADR 0001). No SessionError goes with it: an empty page
- * resolved fine.
- */
+/** From the app's path-aware empty copy (ADR 0001). No SessionError goes with it. */
 internal fun createEmptyMediaItem(formatted: FormattedNavigationError): MediaItem =
   createErrorMediaItem(BrowserPathHelper.EMPTY_PATH, formatted)
 
@@ -1052,16 +1012,13 @@ internal fun createOfflineMediaItem(formatted: FormattedNavigationError): MediaI
   createErrorMediaItem(BrowserPathHelper.OFFLINE_PATH, formatted)
 
 /**
- * For a request that failed while online; offline is caught earlier by the networkMonitor guards,
- * so this must not say "no internet connection".
+ * For a request that failed while online; offline is caught earlier, so this must not say "no
+ * internet connection".
  */
 internal fun createBrowseErrorMediaItem(formatted: FormattedNavigationError): MediaItem =
   createErrorMediaItem(BrowserPathHelper.ERROR_PATH, formatted)
 
-/**
- * A non-root level's or a search's items, or the lone empty tile. [formatted] is a JS hop, run only
- * when there are none. The root is not served through here.
- */
+/** [children], or the lone empty tile; [formatted] is a JS hop, run only when there are none. */
 internal suspend fun browseLevelItems(
   children: List<MediaItem>,
   formatted: suspend () -> FormattedNavigationError,
@@ -1079,17 +1036,16 @@ internal fun browseFailureError(): NavigationError =
   NavigationError(NavigationErrorType.UNKNOWN_ERROR, "", null, null)
 
 /**
- * Disabled tracks hide, so they do not count. Never zero: a controller told zero never asks for
- * items, and the empty tile [MediaSessionCallback.onGetSearchResult] serves stands in.
+ * Disabled tracks hide, so they do not count. Never zero: a controller told zero never asks, and
+ * the empty tile stands in.
  */
 internal fun announcedSearchCount(sections: List<Section>?): Int =
   (sections?.sumOf { section -> section.children.count { it.disabled != true } } ?: 0)
     .coerceAtLeast(1)
 
 /**
- * The search each controller was last served the offline tile for. Media3 keeps no record of a
- * search and it has no subscription, so without this the offline tile stays until the user searches
- * again. Written from the IO scope and read from the connectivity observer.
+ * The search each controller was last served the offline tile for. A search has no subscription, so
+ * without this the offline tile stays until the user searches again.
  */
 internal class OfflineSearchRegistry {
   private val searches = mutableMapOf<MediaSession.ControllerInfo, OfflineSearch>()
@@ -1120,9 +1076,8 @@ internal data class OfflineSearch(
 )
 
 /**
- * The query whose search threw, so [MediaSessionCallback.onGetSearchResult] serves the error tile
- * rather than the empty one. One slot, like BrowserManager's single-entry result cache: a late
- * fetch of an earlier failed query serves the empty tile.
+ * The query whose search threw, so onGetSearchResult serves the error tile rather than the empty
+ * one. One slot, like BrowserManager's single-entry result cache.
  */
 internal class FailedSearchSlot {
   @Volatile private var failed: Pair<String, NavigationError>? = null
