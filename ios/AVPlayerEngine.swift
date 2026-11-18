@@ -4,7 +4,8 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-/// Carries out what the `Player` decides; holds no playback policy.
+/// The `PlayerEngine` over AVFoundation: it carries out what the `Player` decides and holds no
+/// playback policy (ADR 0012).
 @MainActor
 final class AVPlayerEngine: PlayerEngine {
   let logger = Logger(subsystem: "com.audiobrowser", category: "AVPlayerEngine")
@@ -28,7 +29,7 @@ final class AVPlayerEngine: PlayerEngine {
   private let bufferDuration: Double
 
   /// - Parameters:
-  ///   - bufferDuration: 0 lets AVPlayer choose, minimising stalls.
+  ///   - bufferDuration: In milliseconds; 0 lets AVPlayer choose, minimising stalls.
   ///   - nowPlayingEnabled: When false the now-playing surface ignores the override and formatter.
   init(
     callbacks: AVPlayerEngineCallbacks?,
@@ -91,12 +92,10 @@ final class AVPlayerEngine: PlayerEngine {
     return seconds.isNaN ? 0 : seconds
   }
 
-  /// The item's duration; for a live stream, the length of its seekable window (an HLS playlist or
-  /// DVR window), or 0 when it has none (e.g. Icecast) or there is no item.
-  // Not `item.asset.duration`: deprecated since iOS 16, and it blocks the main actor fetching a
-  // remote asset's duration.
   var duration: Double {
     guard let item = avPlayer.currentItem else { return 0 }
+    // Not `item.asset.duration`: deprecated since iOS 16, and it blocks the main actor fetching a
+    // remote asset's duration.
     if !item.duration.seconds.isNaN {
       return item.duration.seconds
     }
@@ -309,7 +308,7 @@ final class AVPlayerEngine: PlayerEngine {
   private func itemDidEmit(_ event: ItemObserver.Event) {
     switch event {
     case .readyToPlay:
-      // Ends the short start buffer `MediaLoader.resolveAndLoad` may have given the item.
+      // Ends the short start buffer `resolveAndLoad(shortStartBuffer:)` may have given the item.
       avPlayer.currentItem?.preferredForwardBufferDuration = bufferDuration / 1000
     case let .likelyToKeepUp(isLikely): onEvent?(.likelyToKeepUp(isLikely))
     case let .failed(error), let .failedToPlayToEnd(error): reportFailure(error)
@@ -364,11 +363,9 @@ final class AVPlayerEngine: PlayerEngine {
     }
   }
 
-  // `MPNowPlayingSession` publishes only through the linked player's current item, so a load that
-  // fails before an item exists (a dead host on a cold start) shows nothing on the lock screen or
-  // CarPlay. The failed asset's item carries the publishing, unobserved so its `.failed` status
-  // cannot re-report the loader's error. A successful load replaces it; a retry leaves it in
-  // place, so the surface doesn't flicker.
+  // A load that fails before an item exists would leave the lock screen and CarPlay blank, since
+  // `MPNowPlayingSession` publishes only through the current item. The failed asset's item carries
+  // the publishing, unobserved so it cannot re-report the loader's error (ADR 0005).
   private func attachPublishingCarrierItemIfNeeded() {
     guard avPlayer.currentItem == nil, let asset = mediaLoader.asset else { return }
     logger.notice("Attaching publishing-carrier item for failed load")

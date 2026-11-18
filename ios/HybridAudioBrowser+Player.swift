@@ -130,8 +130,6 @@ public extension HybridAudioBrowser {
   }
 
   func retry() throws {
-    // Re-resolves rather than replaying the cached URL: short-lived URLs or tokens may have
-    // expired since the failure.
     onMainActor { player?.retryNow() }
   }
 
@@ -183,7 +181,6 @@ public extension HybridAudioBrowser {
   func remove(indexes: [Double]) throws {
     try onMainActor {
       guard let player else { return }
-      // Highest index first, so earlier removals don't shift the ones still to go.
       for index in indexes.sorted().reversed() {
         try player.remove(Int(index))
       }
@@ -225,9 +222,8 @@ public extension HybridAudioBrowser {
     try favoriteActiveTrack(favorited)
   }
 
-  /// Sets the active track's favorite state: in the favorite set first, so the now-playing
-  /// heart (hydrated from it) flips at once, then on the queued track. False when nothing is
-  /// playing or the track has no identity.
+  /// Sets the active track's favorite state, in the favorite set first so the now-playing heart
+  /// flips at once. False when nothing is playing or the track has no identity.
   @discardableResult
   internal func favoriteActiveTrack(_ favorited: Bool) throws -> Bool {
     try onMainActor {
@@ -236,8 +232,7 @@ public extension HybridAudioBrowser {
       // Hydration never overrides a track's own flag, so the queued copy must carry it.
       let updated = track.copying(favorited: favorited)
       try player.replace(player.queue.currentIndex, updated)
-      // The only emit: a favorite toggle mutates the active track in place, so
-      // onPlaybackActiveTrackChanged stays transition-only.
+      // The only emit: onPlaybackActiveTrackChanged stays transition-only.
       let event = FavoriteChangedEvent(track: updated, favorited: favorited)
       onFavoriteChanged(event)
       favoriteChangedEmitter.emit(event)
@@ -289,8 +284,6 @@ public extension HybridAudioBrowser {
   }
 
   func getActiveTrack() throws -> Track? {
-    // The now-playing track is loaded outside the browse cache: a missing `favorited` is filled
-    // from the favorite set, but a track's own value wins, so writers must update the queued copy too.
     onMainActor { player?.currentTrack.map(browserManager.hydrateFavorite) }
   }
 
@@ -319,8 +312,7 @@ public extension HybridAudioBrowser {
   // MARK: - Network
 
   func getOnline() throws -> Bool {
-    // No `onMainActor` hop: `isOnline` is lock-protected, so this stays a cheap read on the
-    // JS thread instead of blocking on the main queue.
+    // No `onMainActor` hop: `isOnline` is lock-protected, so this stays a cheap read on the JS thread.
     networkMonitor.isOnline
   }
 
@@ -341,7 +333,6 @@ public extension HybridAudioBrowser {
   }
 
   func supportsOutputSwitcher() throws -> Bool {
-    // iOS can always present the system route picker (AVRoutePickerView).
     true
   }
 

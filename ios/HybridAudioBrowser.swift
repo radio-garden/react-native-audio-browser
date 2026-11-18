@@ -5,8 +5,8 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-/// The shared browser and its player, ready once the browser is configured and the player is
-/// set up; CarPlay and Siri wait on it.
+/// The shared browser and its player, ready once the browser is configured and the player is set
+/// up; CarPlay and Siri wait on it.
 @MainActor let playerAndConfiguredBrowser = ReadyValue<(HybridAudioBrowser, Player)> {
   guard let browser = HybridAudioBrowser.shared,
         browser.browserManager.isConfigured,
@@ -18,9 +18,9 @@ import os.log
 /// blocks until the main-actor work completes.
 private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
 
-/// `@unchecked Sendable` because the spec's requirements are nonisolated and Nitro calls them
-/// synchronously on the JS thread, so the class can't be `@MainActor`. Isolation is per-property,
-/// and the compiler won't say when a new property needs it.
+/// `@unchecked Sendable` because Nitro calls the spec's nonisolated requirements synchronously on
+/// the JS thread, so the class can't be `@MainActor`. Isolation is per property, and the compiler
+/// won't say when a new property needs it.
 public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
 
@@ -33,8 +33,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   static let instanceChangedEmitter = Emitter<Void>()
 
   // React Native posts this when a JS reload starts, before the old runtime is destroyed: the
-  // earliest sign this instance's JS callbacks go stale (the replacement's `init` drops them only
-  // once the new runtime is up). Observed by name, so the library needs no React-Core dependency.
+  // earliest sign this instance's JS callbacks go stale. Observed by name, so the library needs no
+  // React-Core dependency.
   @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
     forName: Notification.Name("RCTTriggerReloadCommandNotification"),
     object: nil,
@@ -57,8 +57,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let trackSelector: TrackSelector
   @MainActor private(set) var initialNavigation: Task<Void, Never>?
   @MainActor private(set) lazy var audioSession = AudioSessionController()
-  // Player state set before the player exists, by setup options or the setters; last write wins,
-  // consumed when the player comes up.
+  // Set before the player exists, by setup options or the setters; consumed when it comes up.
   @MainActor var pendingPlayWhenReady: Bool?
   @MainActor var pendingRepeatMode: RepeatMode?
   @MainActor let playerOptions = PlayerUpdateOptions()
@@ -79,8 +78,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Fires when a voice intent starts playback, so CarPlay shows the Now Playing template rather
   /// than the screen Siri was invoked from.
   public let showNowPlayingRequestedEmitter = Emitter<Void>()
-  /// Fires after `updateOptions` applies a change, so CarPlay refreshes its now-playing buttons and
-  /// Up Next.
   public let playerOptionsChangedEmitter = Emitter<Void>()
 
   // MARK: - Thread Safety
@@ -120,7 +117,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   ) {
     didSet {
       // Copied on the setter's thread: the Task below outlives this call, and Nitro can reassign
-      // `configuration` (a C++ struct holding std::string/std::function) from the JS thread.
+      // `configuration` (a C++ struct) from the JS thread.
       let configuredPath = configuration.path
       onMainActor {
         browserManager.config = BrowserConfig(from: configuration)
@@ -147,13 +144,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
   public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
 
-  /// Whether a browse path or search interaction is gated, and with what gate; set by JS. The
-  /// outer Promise resolves to JS's Promise, the inner to the decision.
+  /// Whether a browse path or search interaction is gated, and with what gate; set by JS. The outer
+  /// Promise resolves to JS's Promise, the inner to the decision.
   ///
-  /// The default fails closed (`gated: true`). It answers only in the window where the gate is
-  /// resolved but JS has not (re)bound its resolver (a JS reload, CarPlay deciding its tabs at
-  /// scene connect); serving content there would leak, like the resolver-error path in
-  /// `BrowseGate.decide`. Android defaults the same way.
+  /// The default fails closed (`gated: true`): it answers only while JS has not (re)bound its
+  /// resolver, and serving content there would leak. Android defaults the same way.
   public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = HybridAudioBrowser.defaultResolveGate
 
   static var defaultResolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> {
@@ -217,7 +212,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onNowPlayingChanged: (NowPlayingMetadata) -> Void = { _ in }
   public var onOnlineChanged: (Bool) -> Void = { _ in } {
     didSet {
-      // A new subscriber hears the current state at once.
       onOnlineChanged(networkMonitor.isOnline)
     }
   }
@@ -231,8 +225,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public var onCarConnectedChanged: (Bool) -> Void = { _ in } {
     didSet {
-      // A new subscriber hears the current state at once: the scene may have connected before
-      // this JS runtime subscribed.
       onCarConnectedChanged(HybridAudioBrowser.carPlayConnected)
     }
   }
@@ -245,14 +237,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     // Stops the previous instance's player (a JS reload) so two streams never play at once.
     onMainActor {
-      // Statics are lazy: touching the observer installs it from the first instance on.
+      // Statics are lazy: touching the observer installs it.
       _ = HybridAudioBrowser.reloadObserver
       HybridAudioBrowser.shared?.destroyPlayer()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
       audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
       audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
-      // Registered whether or not JS subscribes: the player needs it too.
       networkMonitor.changed.addListener { [weak self] isOnline in
         guard let self else { return }
         MainActor.assumeIsolated {
@@ -273,19 +264,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   @MainActor private var didDropJSCallbacks = false
 
-  /// Drops every JS callback native code can invoke on its own (browse resolvers,
-  /// `handleTrackLoad`, `resolveAlbumPath`, `formatNavigationError`, `resolveGate`, the now-playing
-  /// formatter): calling into a dead runtime aborts the process (Nitro throws across a `noexcept`
-  /// boundary). Native code still bound here (CarPlay mid-reload) keeps the data-only config, and
-  /// `resolveGate` reverts to its fail-closed default. One-shot: the reload notification and the
-  /// replacement's `init` both reach the dying instance, and a second strip would re-run the
-  /// config setter's cascade.
+  /// Drops every JS callback native code can invoke on its own: calling into a dead runtime aborts
+  /// the process. Native code still bound here (CarPlay mid-reload) keeps the data-only config.
+  /// One-shot: the reload notification and the replacement's `init` both reach the dying
+  /// instance, and a second strip would re-run the config setter's cascade.
   @MainActor
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }
     didDropJSCallbacks = true
     // Assigning `config` marks the browser configured, and a never-configured browser must keep
-    // CarPlay and Siri waiting on `playerAndConfiguredBrowser`, not serve them an empty config.
+    // CarPlay and Siri waiting on `playerAndConfiguredBrowser`.
     if browserManager.isConfigured {
       browserManager.config = browserManager.config.strippingJSCallbacks()
     }
@@ -294,8 +282,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   deinit {
-    // Safety net: the AVPlayer must not outlive this instance. `self` can't reach the main actor
-    // from here, so the teardown captures what it releases.
+    // The AVPlayer must not outlive this instance. `self` can't reach the main actor from here,
+    // so the teardown captures what it releases.
     let player = self.player, engine = self.engine
     let tearDown: @Sendable () -> Void = { MainActor.assumeIsolated { Self.destroy(player, engine) } }
     if Thread.isMainThread { tearDown() } else { DispatchQueue.main.async(execute: tearDown) }
