@@ -85,7 +85,6 @@ internal class EqualizerManager(override val audioSessionId: Int) : EqualizerEff
     }
   }
 
-  /** Matches [presetName] case-insensitively; an unknown name is logged and changes nothing. */
   override fun setPreset(presetName: String) {
     val eq = equalizer ?: return
 
@@ -96,8 +95,8 @@ internal class EqualizerManager(override val audioSessionId: Int) : EqualizerEff
         }
 
       if (presetIndex != null) {
-        // Applied even when it is already the current preset: usePreset costs nothing then,
-        // and the caller gets an event whatever the effect reports as current.
+        // Applied even when already current, so the caller gets an event whatever the effect
+        // reports as current.
         eq.usePreset(presetIndex.toShort())
         Timber.d("Applied equalizer preset: $presetName")
         notifySettingsChanged()

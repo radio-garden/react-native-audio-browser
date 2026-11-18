@@ -16,13 +16,13 @@ import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 /**
- * Serves browse artwork to Android Auto and AAOS as PNG files. It is exported because both run in
- * another uid and Media3 issues no URI grant. So it never fetches a URL the caller supplies: the
- * URI carries an opaque token, and only a token in [com.audiobrowser.browser.BrowseArtworkRegistry]
- * whose URL is http(s) resolves; anything else returns null.
+ * Serves browse artwork to Android Auto and AAOS as PNG files. Exported, because both run in
+ * another uid and Media3 issues no URI grant, so it never fetches a URL the caller supplies: only a
+ * token registered in [com.audiobrowser.browser.BrowseArtworkRegistry] with an http(s) URL
+ * resolves; anything else returns null.
  *
- * The response is an on-disk file in [ARTWORK_SUBDIR], not a pipe: the car's image loader seeks and
- * reads statSize, which a pipe reports as -1. The file doubles as the cache, keyed by token.
+ * It answers with a file in [ARTWORK_SUBDIR], never a pipe: the car's image loader seeks and reads
+ * statSize, which a pipe reports as -1. The file doubles as the cache, keyed by token.
  */
 class ArtworkContentProvider : ContentProvider() {
 
@@ -51,7 +51,7 @@ class ArtworkContentProvider : ContentProvider() {
       }
     }
 
-    // openFile runs on a binder thread, which may block; the gate keeps loads from taking them all.
+    // openFile runs on a binder thread and may block; the gate keeps loads from taking them all.
     if (!gate.tryAcquire(1, GATE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
       Timber.w("Artwork gate timeout for token=$token — returning null")
       return null
