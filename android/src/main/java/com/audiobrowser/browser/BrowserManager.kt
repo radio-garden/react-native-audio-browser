@@ -81,25 +81,21 @@ class BrowserManager {
       }
     }
 
-  // Keyed by id, path and src (see cacheTrack), so one track takes up to three entries.
   private val trackCache = LruCache<String, Track>(3000)
 
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
-  // Moves on clearContentCache, so a fetch that outlives one caches nothing; [pageGenerations]
-  // does the same for one path, and is cleared only together with a move of this. Separate from
-  // layerGeneration, which also moves on every path change. Car browses run on IO threads and
-  // the clear on the JS thread: each check and its write hold [cacheLock].
+  // Moves on clearContentCache, and [pageGenerations] on invalidateContentCache, so a fetch that
+  // outlives either caches nothing. Browses run on IO threads and clears on the JS thread: each
+  // check and its write hold [cacheLock].
   @Volatile private var contentGeneration = 0
   private val pageGenerations = HashMap<String, Int>()
   private var tabsGeneration = -1
   private val cacheLock = Any()
 
-  // Query and results stored as one pair, so a concurrent reader never matches one query with
-  // another query's results.
+  // One pair, so a concurrent reader never matches one query with another query's results.
   @Volatile private var lastSearch: Pair<String, Array<Track>>? = null
 
-  // Track identities: id when non-blank, else src (ADR 0008).
   private var favoriteIds = setOf<String>()
 
   private var favoriteEnabled: Boolean = false
@@ -107,9 +103,9 @@ class BrowserManager {
   @Volatile private var currentNavigationId = 0
 
   /**
-   * Setting a new config re-resolves the request/browse resolver layers and the "view more" title
-   * on the next request, and clears the artwork registries: their registrations pin the previous
-   * config's JS callback handles.
+   * Setting a new config re-resolves the request/browse layers and the "view more" title on the
+   * next request, and clears the artwork registries, whose entries hold the previous config's JS
+   * callbacks.
    */
   var config: BrowserConfig = BrowserConfig()
     set(value) {
@@ -119,15 +115,11 @@ class BrowserManager {
       onArtworkRegistriesCleared?.invoke()
     }
 
-  // Request/browse resolver layers, resolved once per generation and merged per request. The
-  // generation moves on a new config or clearContentCache (invalidateAllContent).
   private var layerGeneration = 0
   private var resolvedLayerGeneration = -1
   private var resolvedRequestLayer: TransformableRequestConfig? = null
   private var resolvedBrowseLayer: TransformableRequestConfig? = null
 
-  // Cached on the same generation, but resolved lazily: only a browse that appends a "view more"
-  // row asks for it.
   private var resolvedViewMoreTitleGeneration = -1
   private var resolvedViewMoreTitle = DEFAULT_VIEW_MORE_TITLE
 
@@ -143,14 +135,8 @@ class BrowserManager {
   internal val resolvedBrowseLayerForTest: TransformableRequestConfig?
     get() = resolvedBrowseLayer
 
-  /**
-   * Maps produced artwork URIs back to the track and config that made them, so display-time loading
-   * (which gets only a URI from Media3) can re-resolve with a size. See
-   * [ArtworkResolutionRegistry].
-   */
   val artworkResolutions = ArtworkResolutionRegistry()
 
-  /** Sets the favorited track identities (id when non-blank, else src). */
   fun setFavorites(favorites: List<String>) {
     favoriteIds = favorites.toSet()
     Timber.d("Set ${favoriteIds.size} favorite IDs")
@@ -170,10 +156,6 @@ class BrowserManager {
     Timber.d("Updated favorite for '$identity' to $favorited (total: ${favoriteIds.size})")
   }
 
-  /**
-   * Sets `favorited` to true or false, so a track that isn't a favorite still shows an empty heart.
-   * A value the source already set wins; a track without an identity is left unset.
-   */
   private fun hydrateFavorite(track: Track): Track {
     if (!favoriteEnabled) return track
     if (track.favorited != null) return track
@@ -208,21 +190,17 @@ class BrowserManager {
     resolvedTrack.flattenedChildren?.forEach { cacheTrack(it) }
   }
 
-  // Warns once per page: the check runs again on every onGetChildren serve. Concurrent: those
-  // serves run several at once on the IO pool.
   private val promiseWarnedPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
   /**
-   * Dev diagnostic (ADR 0011): an all-grid page under a browsable handle that declares no
-   * `style.display` renders as a list on Android Auto, which takes the layout from the parent-level
-   * hint, emitted only when the handle declares it. A handle missing from the cache (cold start
-   * straight into the page) skips the check. A mixed page never warns: the parent hint lays out the
-   * whole page, so grid would tile its list sections too.
+   * Dev diagnostic (ADR 0011): Android Auto takes a page's layout from the parent-level hint, which
+   * is emitted only when the browsable handle declares `style.display`, so an all-grid page under a
+   * handle without one renders as a list. A handle missing from the cache skips the check.
    */
   fun warnIfGridPageLacksPromise(path: String, sections: List<Section>) {
     if (sections.isEmpty() || !sections.all { it.style?.display == StyleDisplay.GRID }) return
     val handle = trackCache.get(path) ?: return
-    if (handle.src != null) return // rendered playable: opens no page
+    if (handle.src != null) return
     if (handle.style?.display == null && promiseWarnedPaths.add(path)) {
       Timber.w(
         "Page '%s' serves grid sections, but its browsable handle declares no style.display — " +
@@ -234,8 +212,8 @@ class BrowserManager {
   }
 
   /**
-   * Returns the cached track for a mediaId (id, path or src, or a contextual path's trackId), with
-   * favorites re-hydrated, or null when it isn't cached.
+   * The cached track for a mediaId (id, path or src, or a contextual path's track id), with
+   * favorites re-hydrated, or null.
    */
   fun getCachedTrack(mediaId: String): Track? {
     trackCache.get(mediaId)?.let { track ->
@@ -260,7 +238,7 @@ class BrowserManager {
   /**
    * The contextual path to expand a queue from, or null. A stable-id mediaId resolves through the
    * track cache to the container it was most recently browsed in: a legacy car controller
-   * round-trips only the mediaId, so the cache is what remembers which list the row came from.
+   * round-trips only the mediaId.
    */
   fun contextualPathFor(mediaId: String): String? {
     if (BrowserPathHelper.isContextual(mediaId)) return mediaId
@@ -268,10 +246,8 @@ class BrowserManager {
   }
 
   /**
-   * A cache miss is reachable: a controller can replay a mediaId this process never browsed (a
-   * search result after process death). When the mediaId is a playable URL, or the item's
-   * requestMetadata carries the playable uri (stamped by TrackFactory), it builds a minimal track
-   * from the item's metadata.
+   * A cache miss is reachable: a controller can replay a mediaId this process never browsed. When
+   * the mediaId or the item's requestMetadata carries a playable URL, it builds a minimal track.
    *
    * @throws IllegalStateException when the mediaId is not cached and no playable URL is available
    */
@@ -294,8 +270,7 @@ class BrowserManager {
       val metadata = mediaItem.mediaMetadata
       return hydrateFavorite(
         Track(
-          // A mediaId distinct from the playable uri is the stable id; keeping it lets the car's
-          // now-playing row match.
+          // The stable id, so the car's now-playing row matches.
           id = mediaId.takeIf { it != fallbackSrc },
           path = null,
           src = fallbackSrc,
@@ -374,9 +349,8 @@ class BrowserManager {
         }
       }
 
-      // A failed search match falls through to plain resolution, never to browse expansion: the
-      // user asked for that one result, not a browsed list.
       val mediaId = mediaItems[0].mediaId
+      // A search request asked for that one result, never for the browsed list around it.
       val contextualPath = if (searchQuery == null) contextualPathFor(mediaId) else null
 
       if (contextualPath != null) {
@@ -400,10 +374,10 @@ class BrowserManager {
 
     val resolvedTracks = mediaItems.map { resolveMediaItemToTrack(it) }
 
-    // Refusal fails the future: Media3 surfaces an error to the controller and current playback
-    // stays untouched, where an empty item list would clear the timeline. Android Auto and
-    // Assistant request playback through Media3's legacy path, which passes C.INDEX_UNSET for
-    // "the first item": normalize before the guard, or the refusal misses the cars.
+    // Refusal fails the future, so Media3 reports an error and current playback stays; an empty
+    // item
+    // list would clear the timeline. Media3's legacy path (Android Auto, Assistant) passes
+    // C.INDEX_UNSET for the first item: normalize before the guard, or the refusal misses it.
     val effectiveStartIndex = if (startIndex == C.INDEX_UNSET) 0 else startIndex
     val startTrack = resolvedTracks.getOrNull(effectiveStartIndex)
     if (startTrack != null && startTrack.disabled == true) {
@@ -415,11 +389,11 @@ class BrowserManager {
       Timber.w("Refusing playback: every requested track is disabled")
       throw IllegalStateException("Refusing playback: every requested track is disabled")
     }
-    // Positional, not indexOf: value equality would map a duplicated track to its first copy.
     val adjustedStartIndex =
       when {
         startIndex == C.INDEX_UNSET -> C.INDEX_UNSET
         startTrack == null -> 0
+        // Positional: indexOf would map a duplicated track to its first copy.
         else -> resolvedTracks.take(effectiveStartIndex).count { it.disabled != true }
       }
 
@@ -452,8 +426,7 @@ class BrowserManager {
     if (useCache) {
       contentCache.get(normalizedPath)?.let { cached ->
         Timber.d("Content cache HIT for path='$normalizedPath'")
-        // Re-key the track cache on a hit too: contextualPathFor must see the most recently
-        // browsed container.
+        // Re-keys the track cache, so contextualPathFor sees the most recently browsed container.
         cacheChildren(cached)
         return hydrateChildren(cached)
       }
@@ -489,9 +462,8 @@ class BrowserManager {
   private fun pageGeneration(path: String) = contentGeneration to pageGenerations[path]
 
   /**
-   * Clears every cached page and the last search, which nothing else evicts, and re-resolves the
-   * tabs, resolver layers and "view more" title on the next request. A fetch in flight caches
-   * nothing.
+   * Clears every cached page and the last search, and re-resolves the tabs, request layers and
+   * "view more" title on the next request. A fetch in flight caches nothing.
    */
   fun clearContentCache() {
     synchronized(cacheLock) {
@@ -507,7 +479,6 @@ class BrowserManager {
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
-    // With no route matched, the implicit default fetches the path via the request + browse config.
     val match = config.routes?.let { findBestRouteMatch(path, it) }
 
     val resolvedTrack: ResolvedTrack
@@ -524,12 +495,10 @@ class BrowserManager {
     }
 
     val sections = resolvedTrack.normalizedSections ?: return resolvedTrack
-    // Before the sections are folded, while each level is still attributable.
+    // Before the sections are folded, while each declaration is still attributable to its level.
     InertStyleDiagnostic.warn(path, resolvedTrack.style, sections)
-    // The contextual index is the flat page position: children in section order (ADR 0009).
+    // The contextual index is the flat page position, children in section order (ADR 0009).
     var flatIndex = 0
-    // One scope for the page: every child's artwork transform launches up front, so a slow section
-    // doesn't hold up the ones after it.
     val transformedSections = coroutineScope {
       sections
         .map { section ->
@@ -544,8 +513,6 @@ class BrowserManager {
                 var transformedTrack = track
 
                 val trackIdentity = track.identity
-                // Regenerated on every browse so the path names the container it was browsed in;
-                // the flat position breaks ties between duplicate identities.
                 if (track.src != null && trackIdentity != null) {
                   val contextualPath = BrowserPathHelper.build(path, trackIdentity, index)
                   transformedTrack = transformedTrack.copy(path = contextualPath)
@@ -559,7 +526,6 @@ class BrowserManager {
                   )
                 }
 
-                // No display size at browse time.
                 transformArtworkUrl(
                   transformedTrack,
                   effectiveArtworkConfig,
@@ -601,11 +567,10 @@ class BrowserManager {
         }
         else -> {
           Timber.d("[$path] Child[$index] '${track.title}': artworkSource set: ${imageSource.uri}")
-          // Registers a per-route config only, so display-time resolution reads the current
-          // config.artwork rather than a stale global.
           artworkResolutions.register(
             imageSource.uri,
             track,
+            // Only a per-route config, so display-time resolution reads the current config.artwork.
             artworkConfig?.takeIf { it !== config.artwork },
           )
           track.copy(artworkSource = imageSource)
@@ -641,9 +606,6 @@ class BrowserManager {
         return null
       }
 
-      // The stamped flat index pins which section and which copy was tapped; a stale index falls
-      // back to the first identity match. A vanished identity aborts: queueing the changed list
-      // would resume the wrong station.
       val tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
       val scoped = SectionScope.scoped(sections, trackId, tappedIndex) ?: return null
       val sectionTracks = scoped.section.children.toList()
@@ -728,7 +690,6 @@ class BrowserManager {
     }
   }
 
-  /** Returns the results of the most recent search when [query] matches it, else null. */
   fun getCachedSearchResults(query: String): Array<Track>? {
     val (cachedQuery, cachedResults) = lastSearch ?: return null
     if (query != cachedQuery) return null
@@ -751,14 +712,14 @@ class BrowserManager {
   }
 
   /**
-   * Returns the playable results, or null when there are none. A browsable first result plays its
-   * children instead.
+   * The playable results, or null when there are none. A browsable first result plays its children
+   * instead.
    *
    * @throws Exception when the search callback fails; a failed API search returns null
    */
   suspend fun searchPlayable(params: SearchParams): Array<Track>? {
     val searchResults = search(params)
-    // Disabled tracks go before the first result is picked, so one can't capture the play.
+    // Disabled tracks go first, so one can't become the first result.
     val tracks = searchResults.flattenedChildren?.filter { it.disabled != true }?.toTypedArray()
 
     if (tracks.isNullOrEmpty()) {
@@ -810,10 +771,9 @@ class BrowserManager {
     val generation = contentGeneration
 
     try {
-      // Search results skip validateTrack, so one without a path or src is dropped here:
-      // TrackFactory.toMedia3 needs one.
       val searchResults =
         resolveSearch(params)
+          // Search results skip validateTrack, and TrackFactory.toMedia3 needs a path or src.
           .filter { track ->
             val valid = track.path != null || track.src != null
             if (!valid) {
@@ -860,8 +820,8 @@ class BrowserManager {
 
       return searchResolvedTrack
     } catch (e: Exception) {
-      // Propagates, like iOS `search`: a caller must tell a failed search from an empty one.
       Timber.e(e, "Error during search for query: ${params.query}")
+      // Like iOS: a caller must tell a failed search from an empty one.
       throw e
     }
   }
@@ -890,10 +850,7 @@ class BrowserManager {
     onTabsChanged = callback
   }
 
-  /**
-   * Called whenever [artworkResolutions] and the browse-artwork registry are cleared. The caller
-   * clears any [BrowseArtworkRegistry] it owns.
-   */
+  /** The caller clears any [BrowseArtworkRegistry] it owns. */
   fun setOnArtworkRegistriesCleared(callback: () -> Unit) {
     onArtworkRegistriesCleared = callback
   }
@@ -934,7 +891,7 @@ class BrowserManager {
 
     internal const val SEARCH_ROUTE_PATH = "__search__"
 
-    // English, like defaultFormattedError's copy: it still resolves when the JS runtime is gone.
+    // English: it must resolve when the JS runtime is gone.
     internal const val DEFAULT_VIEW_MORE_TITLE = "View more"
   }
 
@@ -966,7 +923,6 @@ class BrowserManager {
     entry.browseCallback?.let { callback ->
       Timber.d("Resolving route via callback")
       val param = BrowserSourceCallbackParam(path, routeParams)
-      // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms.
       return callback
         .invoke(param)
         .awaitCancellable()
@@ -1040,12 +996,9 @@ class BrowserManager {
     resolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?,
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
-    // The TS layer wraps the thunk in Promise.resolve: await the bridge promise, then the JS one.
     return resolver.invoke().awaitNested()
   }
 
-  // No in-flight dedupe: concurrent first requests may both resolve, which is harmless, and a
-  // resolver that throws caches nothing, so the next request retries.
   internal suspend fun ensureLayersResolved() {
     if (resolvedLayerGeneration == layerGeneration) return
     val generation = layerGeneration
@@ -1067,8 +1020,8 @@ class BrowserManager {
   }
 
   /**
-   * The title of the "view more" row appended to a pathed section where the header can't be tapped
-   * (Android Auto). Re-read once per generation, so invalidateAllContent picks up a new language.
+   * The title of the "view more" row appended to a pathed section whose header can't be tapped
+   * (Android Auto). Re-read once per generation, so clearContentCache picks up a new language.
    * Falls back to [DEFAULT_VIEW_MORE_TITLE] when unset, blank, throwing or outrunning
    * [FALLBACK_TIMEOUT].
    */
@@ -1092,9 +1045,8 @@ class BrowserManager {
 
   /**
    * Layers request → kind (browse/search) → route; each transform receives the previous output.
-   * [path] seeds the base because no layer's static path ever applies; [initialQuery] seeds it
-   * because a layer with a transform receives only the base, so its static query never applies.
-   * Mirrors iOS `buildApiRequest`.
+   * [path] and [initialQuery] seed the base, as no layer's static path ever applies and a layer
+   * with a transform receives only the base. Mirrors iOS `buildApiRequest`.
    *
    * @throws ContentNotFoundException when no layer supplies a baseUrl
    */
@@ -1138,7 +1090,6 @@ class BrowserManager {
   ): ResolvedTrack {
     return withContext(Dispatchers.IO) {
       ensureLayersResolved()
-      // apiConfig is null for the implicit default.
       val httpRequest = buildApiRequest(resolvedBrowseLayer, apiConfig, path, routeParams)
       val response = httpClient.request(httpRequest)
 
@@ -1179,12 +1130,10 @@ class BrowserManager {
           params.playlist?.let { put("playlist", it) }
         }
 
-        // No browse layer and no route: search is its own kind.
         val httpRequest =
           buildApiRequest(
             kindConfig = apiConfig,
             routeConfig = null,
-            // A layer's static path never applies, so the search config's path seeds the base.
             path = apiConfig.path,
             params = emptyMap(),
             initialQuery = searchQueryParams,
@@ -1194,7 +1143,6 @@ class BrowserManager {
         response.fold(
           onSuccess = { httpResponse ->
             if (httpResponse.isSuccessful) {
-              // A bare Track array, unlike browse's page object.
               val jsonTracks = json.decodeFromString<List<JsonTrack>>(httpResponse.body)
               jsonTracks.map { it.toNitro() }.toTypedArray()
             } else {
@@ -1225,11 +1173,10 @@ class NetworkException(message: String, cause: Throwable? = null) : Exception(me
 
 class CallbackException(message: String) : Exception(message)
 
-/** Mirrors NativeBrowserConfiguration from JS. */
+/** Mirrors `NativeBrowserConfiguration` from TS. */
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
-  // Resolved once per content generation and merged per request. When set, it replaces `request`,
-  // which is then ignored (the JS bridge sets only one of the two).
+  // When set, replaces `request`: the bridge sets only one of the two.
   val requestResolver:
     Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____? =
     null,
@@ -1239,9 +1186,7 @@ data class BrowserConfig(
     null,
   val media: MediaRequestConfig? = null,
   val artwork: ArtworkRequestConfig? = null,
-  // Falls back to `artwork` when null.
   val nowPlayingArtwork: ArtworkRequestConfig? = null,
-  // Includes the special __tabs__, __search__ and __default__ routes.
   val routes: Array<NativeRouteEntry>? = null,
   val singleTrack: Boolean = false,
   val androidControllerOfflineError: Boolean = true,

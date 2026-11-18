@@ -9,12 +9,9 @@ import timber.log.Timber
 
 /**
  * Runs [defaultBehavior] when no [handler] is configured. Otherwise awaits the handler and runs
- * [intercepted], even when the handler throws or rejects (the failure is logged, not rethrown).
+ * [intercepted], even when the handler throws or rejects: the failure is logged, not rethrown.
  */
 suspend fun <T> handleTrackLoad(
-  // Nitro wraps a value-returning JS callback in a Promise, so a JS callback returning
-  // Promise<void> arrives as Promise<Promise<Unit>>; both layers must be awaited for the JS work
-  // to finish.
   handler: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?,
   track: Track,
   queue: Array<Track>,
