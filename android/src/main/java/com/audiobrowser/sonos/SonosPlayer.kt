@@ -27,7 +27,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-/** Where a room is in what it plays, from `GetPositionInfo`; a field it doesn't report is null. */
 internal data class SonosPosition(
   val streamContent: String?,
   val positionMs: Long?,
@@ -36,6 +35,7 @@ internal data class SonosPosition(
 
 /** The UPnP control of one Sonos room. Every call blocks; a refused one throws [SoapException]. */
 internal interface SonosControl {
+  /** Loads the stream on the room without starting it. */
   fun setUri(
     streamUrl: String,
     title: String,
@@ -62,23 +62,22 @@ internal interface SonosControl {
 
   fun getVolume(): Int?
 
+  /** Sets the volume of the room's whole group, 0 to 100. */
   fun setVolume(volume: Int)
 }
 
 /**
- * Plays one item at a time on a Sonos room: Media3 commands go out as UPnP calls, and the room's
- * transport state, position, stream title and volume are polled back. Setting the item loads it on
- * the speaker from the given position, without [prepare]. Each poll that reads it playing calls
- * [onPlaying]; a track that plays to its end calls [onEnded], one stopped early reads as paused.
- * Once another app plays on the room, the player reads as paused and leaves the room alone. A title
- * the speaker reads from the stream arrives as an [IcyInfo] in the timed metadata. The volume is
- * read at start and with each poll, and goes to [onVolume].
+ * Plays one item at a time on a Sonos room, polling back its state, position, stream title (as
+ * [IcyInfo] timed metadata) and volume. Setting the item loads it, without [prepare]. Each poll
+ * that reads it playing calls [onPlaying]; a track played to its end calls [onEnded], one stopped
+ * early reads as paused. Once another controller plays on the room, the player reads as paused and
+ * leaves it alone.
  *
- * Commands run one at a time, in order, off the main thread, and run to the end even after release,
- * so a last stop reaches the speaker. A failed command that no later one replaced goes to [onError]
- * and leaves the player idle; so does a speaker that misses [unreachableAfterPolls] polls in a row.
- * An item the speaker never starts is [com.audiobrowser.remote.RemoteSwitchingPlayer]'s to time
- * out. A failed seek or volume change is only logged.
+ * Commands run one at a time, in order, and to the end even after release, so a last stop reaches
+ * the speaker. A failed command no later one replaced, or [unreachableAfterPolls] failed polls in a
+ * row, go to [onError] and leave the player idle. An item the speaker never starts is
+ * [com.audiobrowser.remote.RemoteSwitchingPlayer]'s to time out. A failed seek or volume change is
+ * only logged.
  */
 internal class SonosPlayer(
   looper: Looper,
@@ -286,7 +285,7 @@ internal class SonosPlayer(
     startPolling()
   }
 
-  /** A radio stream often refuses Pause (UPnP 701): it is stopped instead, and Play restarts it. */
+  // A radio stream often refuses Pause (UPnP 701): it is stopped instead, and Play restarts it.
   private fun pauseOrStop() {
     try {
       control.pause()
@@ -297,7 +296,6 @@ internal class SonosPlayer(
 
   /**
    * Runs [block] off the main thread after the commands before it, even once [scope] is cancelled.
-   * A [fatal] command's failure is the player's while no later fatal command has been made.
    */
   private fun command(fatal: Boolean = true, block: () -> Unit) {
     val issued = if (fatal) ++generation else generation
@@ -320,7 +318,7 @@ internal class SonosPlayer(
     }
   }
 
-  /** Idle, with the room still held, so what plays on there still hears pause and stop. */
+  // Idle with the room still held, so what plays there still hears pause and stop.
   private fun fail(e: PlaybackException) {
     playbackState = Player.STATE_IDLE
     ready = false
@@ -436,7 +434,7 @@ internal class SonosPlayer(
     }
   }
 
-  /** Another app plays on the room: this player reads as paused and leaves the room alone. */
+  // Another controller plays on the room.
   private fun onTakenOver() {
     loadedUrl = null
     ready = false
@@ -452,7 +450,7 @@ internal class SonosPlayer(
     playingSinceReadAtMs = null
   }
 
-  /** The speaker is stopped: not started yet, done with the item, or stopped from elsewhere. */
+  // Stopped: not started yet, done with the item, or stopped from elsewhere.
   private fun onStopped() {
     if (playbackState == Player.STATE_ENDED) return
     if (!playWhenReady) {
@@ -506,7 +504,6 @@ internal class SonosPlayer(
           Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
         )
         .build()
-    // Reading and stepping the volume wait for it to be known.
     val COMMANDS_WITH_VOLUME: Player.Commands =
       COMMANDS.buildUpon()
         .addAll(Player.COMMAND_GET_DEVICE_VOLUME, Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS)
@@ -517,7 +514,7 @@ internal class SonosPlayer(
 /**
  * The song line in a speaker's `streamContent`: an ICY title as it is, or an HLS stream's ID3 form,
  * `TYPE=SNG|TITLE <title>|ARTIST <artist>|…`, as `<artist> - <title>`. Null when blank, or for the
- * speaker's own status (`ZPSTR_CONNECTING`, `ZPSTR_BUFFERING`) while it connects.
+ * speaker's own status (`ZPSTR_CONNECTING`, `ZPSTR_BUFFERING`).
  */
 internal fun streamTitle(streamContent: String): String? {
   val content = streamContent.trim()

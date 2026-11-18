@@ -3,7 +3,6 @@ package com.audiobrowser.sonos
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 
-/** A discovered Sonos speaker; its control URLs are absolute. */
 internal data class SonosDevice(
   val udn: String,
   val name: String,
@@ -20,15 +19,13 @@ internal object DeviceDescriptionParser {
   private const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 
   /**
-   * Parses a UPnP device description fetched from an SSDP `LOCATION` header, which is [location].
-   * Returns null for malformed XML, a non-Sonos device, or one without a UDN, `AVTransport` or
-   * `GroupRenderingControl`; `ZoneGroupTopology` is optional. The name is `roomName`, falling back
-   * to `friendlyName`.
+   * Reads the device description fetched from [location], an SSDP `LOCATION`. Null unless it is a
+   * Sonos speaker with a UDN, `AVTransport` and `GroupRenderingControl`; `ZoneGroupTopology` is
+   * optional.
    */
   fun parse(xml: String, location: String): SonosDevice? {
     val doc = parseSpeakerXml(xml) ?: return null
 
-    // The root <device> is the direct child of <root>, not the first <device> in the document.
     val docElement = doc.documentElement ?: return null
     val root = directChildElement(docElement, "device") ?: return null
     if (!childText(root, "manufacturer").equals(SONOS_MANUFACTURER, ignoreCase = true)) return null
@@ -38,7 +35,6 @@ internal object DeviceDescriptionParser {
       }
     val name = childText(root, "roomName").ifBlank { childText(root, "friendlyName") }
 
-    // A <URLBase>, when present, overrides [location] for resolving relative control URLs.
     val baseUrl =
       childText(docElement, "URLBase").ifBlank { "" }.trimEnd('/').ifBlank { baseUrlOf(location) }
         ?: return null
