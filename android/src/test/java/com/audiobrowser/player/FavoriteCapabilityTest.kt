@@ -1,11 +1,13 @@
 package com.audiobrowser.player
 
+import android.os.Bundle
 import android.os.Looper
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -49,6 +51,14 @@ class FavoriteCapabilityTest {
   private fun rating(index: Int) = player.exoPlayer.getMediaItemAt(index).mediaMetadata.userRating
 
   private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+
+  @Test
+  fun `the command manager leaves the favorite to the session callback`() {
+    val favorite = SessionCommand(MediaSessionCommandManager.CUSTOM_ACTION_FAVORITE, Bundle.EMPTY)
+    assertFalse(
+      MediaSessionCommandManager(automotive = false).handleCustomCommand(favorite, player)
+    )
+  }
 
   @Test
   fun `turning favoriting on and off restamps each queued item's own heart rating`() {
