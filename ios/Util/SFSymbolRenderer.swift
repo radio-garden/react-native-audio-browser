@@ -10,9 +10,8 @@ final class SFSymbolRenderer: @unchecked Sendable {
   @MainActor static let shared = SFSymbolRenderer()
   static let defaultCanvasSize = CGSize(width: 200, height: 200)
 
-  // Part of the cache filename: bump it whenever the rendering changes. The caches
-  // directory survives app updates and the existence check is the only validation,
-  // so without a bump devices keep serving the old pixels.
+  // Part of the cache file name: bump it whenever the drawing changes. Cached files survive app
+  // updates and only their existence is checked, so without a bump devices keep the old pixels.
   private static let renderVersion = 1
 
   private let logger = Logger(subsystem: "com.audiobrowser", category: "SFSymbolRenderer")
@@ -28,9 +27,9 @@ final class SFSymbolRenderer: @unchecked Sendable {
     try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
   }
 
-  /// Returns the `file://` URI of the PNG for `artworkValue` (with or without the `sf:`
-  /// prefix), rendering it only when no file for it exists yet. `canvasSize` is in points,
-  /// drawn at device scale. Nil when there is no such symbol or the file can't be written.
+  /// The `file://` URI of the PNG for `artworkValue` (`sf:` prefix optional), rendering it only
+  /// when no file for it exists yet. `canvasSize` is in points, drawn at device scale. Nil when
+  /// there is no such symbol or the file can't be written.
   func render(_ artworkValue: String, canvasSize: CGSize = defaultCanvasSize) -> String? {
     let safeArtwork = artworkValue.unicodeScalars
       .filter { CharacterSet.alphanumerics.contains($0) || $0 == "_" }
@@ -59,8 +58,6 @@ final class SFSymbolRenderer: @unchecked Sendable {
     return fileURL.absoluteString
   }
 
-  /// Draws the symbol at 45% of the canvas, centred and tinted, over `background` (nil leaves it
-  /// transparent). Nil when there is no symbol of that name.
   static func image(
     name: String,
     canvasSize: CGSize,
@@ -93,8 +90,7 @@ final class SFSymbolRenderer: @unchecked Sendable {
     artwork.hasPrefix("sf:")
   }
 
-  /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", black, white)`; a colour that is
-  /// absent is nil, one that is not 3 or 6 characters long is black.
+  /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", black, white)`; an absent colour is nil.
   static func parseArtwork(_ value: String) -> (symbolName: String, backgroundColor: UIColor?, symbolColor: UIColor?) {
     let (symbolName, params) = parseArtworkValue(value)
     let bg = params["bg"].map { UIColor(hex: $0) }

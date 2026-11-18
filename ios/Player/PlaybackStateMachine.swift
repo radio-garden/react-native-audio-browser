@@ -1,15 +1,14 @@
-/// The state an event leads to, or nil to leave the state as it is.
-///
-/// Guards here depend only on the current state. Guards on context (`asset != nil`,
-/// `nearTrackEnd`, `!playWhenReady`) live at the call site, which decides whether to send the event.
+/// The state `event` moves `current` to, or nil when the event does not apply in `current`.
+/// Same table as `nextPlaybackState` on web and `PlaybackStateMachine.transitions` on Android
+/// (ADR 0003): change all three together. Guards here read only the state; guards on context
+/// belong at the call site that sends the event.
 func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> PlaybackState? {
   switch event {
   case .stopped: return .stopped
   case .trackLoading: return .loading
   case .trackUnloaded: return PlaybackState.none
   case .trackEndedNaturally: return .ended
-  // .error holds against the AVPlayer's own events: an item still connecting when the retry gave
-  // up can report them late. Leaving .error takes an explicit reload, through .loading.
+  // An item still connecting when the retry gave up can report late; leaving .error takes a reload.
   case .avPlayerWaiting: return current == .error ? nil : .buffering
   case .avPlayerPlaying, .audioFrameDecoded: return current == .error ? nil : .playing
   case .errorOccurred: return .error
@@ -22,14 +21,11 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case let .avPlayerPaused(hasAsset):
     guard current != .stopped else { return nil }
     if !hasAsset { return PlaybackState.none }
-    // .error and .ended hold against stray pause observations; .ended sees them because the
-    // natural-end intent clear opens the call site's `!playWhenReady` gate.
+    // Reaches .ended too: the natural end clears the play intent, opening the call site's gate.
     guard current != .error, current != .ended else { return nil }
     return .paused
   case .bufferingSufficient:
-    // A buffer refill must not move a terminal state back to .ready: .ended would restart the
-    // finished track (playWhenReady is still true), and .stopped/.error would skip reload-on-play,
-    // which starts only from those states. Leaving them takes an explicit load or reload.
+    // From .ended, .ready would restart the finished track; .stopped and .error reload on play.
     guard current != .playing, current != .ended, current != .stopped, current != .error
     else { return nil }
     return .ready

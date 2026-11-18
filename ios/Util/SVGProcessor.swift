@@ -2,11 +2,9 @@ import Kingfisher
 import SwiftDraw
 import UIKit
 
-/// Kingfisher processor that rasterizes SVG data with SwiftDraw.
 struct SVGProcessor: ImageProcessor {
-  // Kingfisher keys its cache on the URL and this identifier only (`.scaleFactor` is
-  // not in the key), so every render parameter must be here or different
-  // rasterizations of one URL collide.
+  // Kingfisher keys its cache on the URL and this identifier only (`.scaleFactor` is not in the
+  // key), so every render parameter must be here or rasterizations of one URL collide.
   var identifier: String {
     "com.audiobrowser.svgprocessor(\(size?.width ?? -1)x\(size?.height ?? -1)@\(scale))"
   }

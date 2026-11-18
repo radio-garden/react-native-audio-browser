@@ -65,13 +65,13 @@ class NowPlayingInfoController {
     MPNowPlayingInfoPropertyPlaybackRate,
   ]
 
-  // Values of any other type (artwork) always count as changed.
   private func valueUnchanged(_ key: String, _ newValue: Any?) -> Bool {
     switch (_info[key], newValue) {
     case (nil, nil): true
     case let (a as String, b as String): a == b
     case let (a as Bool, b as Bool): a == b
     case let (a as NSNumber, b as NSNumber): a == b
+    // Values of any other type (artwork) always count as changed.
     default: false
     }
   }

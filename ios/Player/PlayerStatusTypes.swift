@@ -1,4 +1,4 @@
-/// AVPlayer's time-control status, mirrored so the Player and its tests stay free of AVFoundation.
+/// AVPlayer's time-control status, so the PlayerEngine seam carries no AVFoundation type.
 enum PlayerTimeControlStatus {
   case paused, waitingToPlayAtSpecifiedRate, playing
 }

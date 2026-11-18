@@ -27,8 +27,8 @@ extension Bool {
   }
 }
 
-/// Enables the remote commands (lock screen, Control Center, CarPlay, headset) and routes
-/// each event to `RemoteCommandCallbacks`.
+/// Enables the remote commands (lock screen, Control Center, CarPlay, headset) and routes each
+/// event to `RemoteCommandCallbacks`.
 @MainActor
 final class RemoteCommandController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
@@ -41,8 +41,8 @@ final class RemoteCommandController {
   private var backwardJumpInterval: Double = 15
   private var playbackRates: [Double] = []
 
-  /// Whether the queue has a next / previous track; read whenever those commands are enabled
-  /// and by `refreshSkipAvailability`.
+  /// Whether the queue has a next / previous track; read whenever those commands are enabled and
+  /// by `refreshSkipAvailability`.
   var skipAvailability: @MainActor () -> (canNext: Bool, canPrevious: Bool) = { (true, true) }
 
   // Kept to restore on a new command center, which starts with shuffle and repeat off.
@@ -70,8 +70,8 @@ final class RemoteCommandController {
     logger.info("Switched command center, re-enabled \(commands.count) commands")
   }
 
-  /// Enables exactly `commands`, disabling any enabled command not among them. Intervals are
-  /// in seconds.
+  /// Enables exactly `commands`, disabling any enabled command not among them. Intervals are in
+  /// seconds.
   func enable(
     commands: Set<RemoteCommand>,
     forwardJumpInterval: Double = 15,

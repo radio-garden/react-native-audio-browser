@@ -125,8 +125,6 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     }
   }
 
-  /// Runs JS's handler for a remote command if it set one, else `fallback`; reports the command
-  /// to JS either way.
   private func dispatchRemote(handler: (() -> Void)?, report: () -> Void, fallback: () -> Void) {
     if let handler { handler() } else { fallback() }
     report()

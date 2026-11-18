@@ -1,16 +1,10 @@
 import CarPlay
 import os.log
 
-/// Logged, guarded wrappers around `CPInterfaceController`'s template-stack mutations.
-///
-/// Per the SDK header, a failed push/setRoot/present with a nil completion raises an
-/// Objective-C exception (depth limit included) that takes down the whole app, not just the
-/// CarPlay scene; pushing a template already in the hierarchy raises regardless. So every
-/// stack mutation goes through here: raise-prone preconditions are checked first, the
-/// underlying call always gets a completion, and every failure is logged.
-///
-/// A push onto a full stack replaces the top template (`TopTemplateReplacer`); every mutation
-/// waits for a replacement to settle, so none lands between its pop and its push.
+/// Guarded, logged wrappers for every template-stack mutation. Per the SDK header, a failed push
+/// or setRoot without a completion raises an Objective-C exception that ends the whole app, and
+/// pushing a template already in the hierarchy raises regardless. A push onto a full stack
+/// replaces the top template, and every mutation waits for a replacement to settle.
 @MainActor
 extension CPInterfaceController {
   private static let stackLogger = Logger(subsystem: "com.audiobrowser", category: "TemplateStack")
@@ -19,8 +13,8 @@ extension CPInterfaceController {
     String(describing: type(of: template))
   }
 
-  // CarPlay's stack depth cap for audio apps, which the SDK does not expose. Exceeding it
-  // raises `NSGenericException` synchronously, even through the completion-based push.
+  // CarPlay's depth limit for audio apps, which the SDK does not expose. Exceeding it raises
+  // synchronously, even through the completion-based push.
   private static let maximumStackDepth = 5
 
   private static var topReplacerKey: UInt8 = 0
@@ -41,8 +35,8 @@ extension CPInterfaceController {
     }
   }
 
-  /// Pushes `template`, skipping one already in the hierarchy. At the depth limit it replaces
-  /// the top template.
+  /// Pushes `template`, skipping one already in the hierarchy. At the depth limit it replaces the
+  /// top template.
   func safePush(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
     whenStackSettled { controller in
       let templates = controller.templates
@@ -102,7 +96,7 @@ extension CPInterfaceController {
     }
   }
 
-  /// Pops back to `template`, skipping one not in the hierarchy. Succeeds without popping
+  /// Pops back to `template`, failing when it is not in the hierarchy. Succeeds without popping
   /// when it is already the top template.
   func safePop(to template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
     whenStackSettled { controller in
@@ -147,8 +141,6 @@ extension CPInterfaceController {
   }
 }
 
-/// The guarded pop and push a replacement is made of, so a push that still cannot fit is
-/// skipped and logged rather than raising.
 @MainActor
 private struct GuardedTemplateStack: TemplateStack {
   let controller: CPInterfaceController

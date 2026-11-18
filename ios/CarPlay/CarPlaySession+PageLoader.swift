@@ -9,8 +9,6 @@ extension CarPlaySession {
     spawn { await $0.loadContent(for: path, into: template) }
   }
 
-  /// Resolves `path` into a loading template, showing a centered message when the page is
-  /// empty, fails, or outlasts `resolveTimeout`.
   func loadContent(for path: String, into template: CPListTemplate) async {
     let templateId = ObjectIdentifier(template)
     guard !loadingTemplates.contains(templateId) else { return }
@@ -39,8 +37,8 @@ extension CarPlaySession {
     switch outcome {
     case let .success(resolved):
       guard !Task.isCancelled else { return }
-      // An assistant cell is content in itself, even with no rows; a page of empty sections is
-      // empty (ADR 0001).
+      // An assistant cell is content even with no rows; a page of empty sections is empty
+      // (ADR 0001).
       let hasChildren = resolved.normalizedSections?.contains { !$0.children.isEmpty } ?? false
       if hasChildren || resolved.carPlaySiriListButton != nil {
         updateTemplate(template, with: resolved)
@@ -63,15 +61,13 @@ extension CarPlaySession {
     }
   }
 
-  /// Shows `error`, as the app's `formatNavigationError` formats it, as the template's centered
-  /// message (ADR 0001).
+  /// Shows `error`, as the app formats it, as the template's centered message (ADR 0001).
   private func showNavigationError(_ error: NavigationError, path: String, on template: CPListTemplate) async {
     let formatted = await audioBrowser.browserManager.formatted(error, path: path)
     guard !Task.isCancelled else { return }
     let title = formatted.title.isEmpty ? "Couldn't load" : formatted.title
     if isTabRoot(template) {
-      // A tab root cannot be popped, so its message is set in place; it renders when the tab
-      // is selected.
+      // A tab root cannot be popped, so its message is set in place.
       if #available(iOS 18.4, *) {
         template.showsSpinnerWhileEmpty = false
       }
@@ -79,8 +75,7 @@ extension CarPlaySession {
       template.updateSections([])
     } else {
       // A pushed template's empty view renders reliably only as its initial state, so it is
-      // replaced. The message has no path, so no refresh reloads it: backing out and
-      // re-tapping retries.
+      // replaced. The message has no path, so no refresh reloads it.
       interfaceController.safeReplaceTop(
         template, with: CPListTemplate.message(title, subtitle: formatted.message, listTitle: template.title), animated: false,
       )
