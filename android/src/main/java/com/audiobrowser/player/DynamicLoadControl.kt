@@ -74,6 +74,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     updateBufferConfig(BufferConfig())
   }
 
+  // One instance per ExoPlayer, so the one allocator serves any playerId.
   override fun getAllocator(playerId: PlayerId): Allocator = allocator
 
   override fun getBackBufferDurationUs(): Long = backBufferUs

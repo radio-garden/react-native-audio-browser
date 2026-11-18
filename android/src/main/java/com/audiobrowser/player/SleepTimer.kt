@@ -80,6 +80,7 @@ open class SleepTimer {
 
   private fun complete() {
     if (!isRunning) return
+    // No onFadeCancel: onComplete pauses first, then restores the volume itself.
     stopTimer()
     time = null
     sleepWhenPlayedToEnd = false

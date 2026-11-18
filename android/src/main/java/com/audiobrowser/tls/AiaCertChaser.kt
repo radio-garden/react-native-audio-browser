@@ -91,6 +91,7 @@ object AiaCertChaser {
       val last = chain.last()
       if (last.subjectX500Principal == last.issuerX500Principal) break
       if (last.issuerX500Principal in anchorSubjects) break
+      // Lazy, so no URL is fetched after one yields the issuer.
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()

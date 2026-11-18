@@ -43,6 +43,9 @@ internal class SleepTimerManager(
       else -> none()
     }
 
+  /**
+   * Pauses after [seconds], fading out over the last [fadeDuration] seconds, clamped to [seconds].
+   */
   fun setAfter(seconds: Double, fadeDuration: Double? = null) {
     timer.sleepAfter(seconds, fadeDuration)
     onChanged(get())

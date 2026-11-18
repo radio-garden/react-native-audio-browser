@@ -434,7 +434,6 @@ internal class SonosPlayer(
     }
   }
 
-  // Another controller plays on the room.
   private fun onTakenOver() {
     loadedUrl = null
     ready = false

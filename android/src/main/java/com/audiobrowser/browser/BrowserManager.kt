@@ -86,8 +86,9 @@ class BrowserManager {
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
   // Moves on clearContentCache, and [pageGenerations] on invalidateContentCache, so a fetch that
-  // outlives either caches nothing. Browses run on IO threads and clears on the JS thread: each
-  // check and its write hold [cacheLock].
+  // outlives either caches nothing. [pageGenerations] is cleared only together with a move of
+  // this, or a stale fetch's generation can match again. Browses run on IO threads and clears on
+  // the JS thread: each check and its write hold [cacheLock].
   @Volatile private var contentGeneration = 0
   private val pageGenerations = HashMap<String, Int>()
   private var tabsGeneration = -1
@@ -375,8 +376,7 @@ class BrowserManager {
     val resolvedTracks = mediaItems.map { resolveMediaItemToTrack(it) }
 
     // Refusal fails the future, so Media3 reports an error and current playback stays; an empty
-    // item
-    // list would clear the timeline. Media3's legacy path (Android Auto, Assistant) passes
+    // item list would clear the timeline. Media3's legacy path (Android Auto, Assistant) passes
     // C.INDEX_UNSET for the first item: normalize before the guard, or the refusal misses it.
     val effectiveStartIndex = if (startIndex == C.INDEX_UNSET) 0 else startIndex
     val startTrack = resolvedTracks.getOrNull(effectiveStartIndex)
@@ -821,7 +821,7 @@ class BrowserManager {
       return searchResolvedTrack
     } catch (e: Exception) {
       Timber.e(e, "Error during search for query: ${params.query}")
-      // Like iOS: a caller must tell a failed search from an empty one.
+      // Propagates, like iOS `search`: a caller must tell a failed search from an empty one.
       throw e
     }
   }

@@ -30,7 +30,7 @@ internal interface RemotePlayback {
 
     /**
      * The receiver reports its item playing. [player]'s play state turns to playing as soon as play
-     * is asked, before the receiver starts, so only this disarms the start timeout.
+     * is asked, before the receiver starts, so it can't show that the receiver started.
      */
     fun onPlaying()
 

@@ -15,7 +15,10 @@ sealed interface PlaybackEvent {
     val shouldPlayWhenReady: Boolean,
   ) : PlaybackEvent
 
-  /** [loads] is false when the engine idles, so nothing loads the track. */
+  /**
+   * [loads] is false when the engine idles, so nothing loads the track. Read it after the command's
+   * own prepare(): onEvents runs once the command returns.
+   */
   data class MediaItemTransition(
     val hasTrack: Boolean,
     val isPlaying: Boolean,

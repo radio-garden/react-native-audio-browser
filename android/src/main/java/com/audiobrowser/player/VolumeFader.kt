@@ -62,7 +62,7 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
 
   /**
    * Stops the ramp, runs [halt], then restores the pre-fade volume, so no audio plays at full
-   * volume before the halt.
+   * volume before the halt. Restores nothing when no fade was running.
    */
   fun resolve(halt: () -> Unit) {
     val preFadeVolume = originalVolume

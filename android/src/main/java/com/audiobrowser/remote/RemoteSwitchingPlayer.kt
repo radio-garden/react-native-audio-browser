@@ -616,6 +616,8 @@ internal class RemoteSwitchingPlayer(
   override fun handleRemoveMediaItems(fromIndex: Int, toIndex: Int): ListenableFuture<*> {
     val remote = remoteRoute ?: return super.handleRemoveMediaItems(fromIndex, toIndex)
     if (!queue.remove(fromIndex, toIndex)) return done()
+    // As the local player does: with the current item gone and nothing after it, playback ends
+    // unless the queue repeats.
     val nothingAfter = fromIndex >= queue.items.size && !queue.isEmpty
     val playing = remote.load !is Load.Idle && remote.load !is Load.Failed
     when {

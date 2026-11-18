@@ -434,7 +434,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       browserManager.clearContentCache()
 
       launchInScope {
-        // On main, where onServiceConnected reads it.
+        // On main, where onServiceConnected reads it, and after browserManager.config is set, which
+        // it must not run before.
         isConfigured = true
         connectedService?.player?.notifyBrowserConfigurationReady()
       }
@@ -1401,9 +1402,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   companion object {
     // Process-wide and observed once: instances are re-created on each JS reload, and a
-    // per-instance
-    // observeForever would leak each one. The latest instance's callback is the one target (mirrors
-    // iOS).
+    // per-instance observeForever would leak each one. The latest instance's callback is the one
+    // target (mirrors iOS).
     @Volatile private var carConnected = false
     // Compare-and-set: a disposing instance clears the slot only while it still owns it.
     private val carConnectionTarget = AtomicReference<((Boolean) -> Unit)?>(null)

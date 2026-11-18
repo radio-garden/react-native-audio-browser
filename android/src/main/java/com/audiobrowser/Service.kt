@@ -204,8 +204,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
     // The focus picks a vertical. Genre, artist and album focuses are filters, carried by the
-    // extras
-    // below, so they yield no mode. Android has no station or podcast focus.
+    // extras below, so they yield no mode. Android has no station or podcast focus.
     val mode =
       when (mediaFocus) {
         "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
@@ -263,8 +262,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
       AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> {
         // Only a car keeps the session through a swipe: the Bluetooth stack connects as a
-        // controller
-        // whenever Bluetooth is on, with or without a device.
+        // controller whenever Bluetooth is on, with or without a device.
         val carConnected =
           mediaSession.connectedControllers.any {
             mediaSession.isAutomotiveController(it) || mediaSession.isAutoCompanionController(it)
@@ -279,8 +277,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
           // Ends a waiting play-from-search, also while AudioBrowser is bound.
           scope.coroutineContext.cancelChildren()
           // AudioBrowser keeps the player. Otherwise tear down now: a media controller still bound
-          // keeps
-          // the service alive after stopSelf().
+          // keeps the service alive after stopSelf().
           if (!moduleBound) tearDown()
           stopSelf()
         }

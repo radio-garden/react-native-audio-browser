@@ -153,6 +153,8 @@ class CachingCertificateFetcher(
 
   private fun connect(host: String, port: Int, secure: Boolean, deadlineNanos: Long): Connection {
     val plain = Socket()
+    // Android's Socket.connect, unlike OpenJDK's, doesn't close itself on failure: the catch closes
+    // `plain`, or every unreachable AIA host leaks a descriptor.
     var wrapper: SSLSocket? = null
     return try {
       plain.connect(InetSocketAddress(host, port), timeoutMs(deadlineNanos, connectTimeoutMs))
@@ -252,7 +254,7 @@ class CachingCertificateFetcher(
         if (read < 0) return out.toByteArray()
         if (out.size() + read > limit) return null
         out.write(chunk, 0, read)
-        // Subtraction, not `>=`: nanoTime's origin is arbitrary, so its values may overflow.
+        // `now - deadline >= 0`, not `now >= deadline`: nanoTime can wrap.
         if (nowNanos() - deadline >= 0) return null
       }
     }
