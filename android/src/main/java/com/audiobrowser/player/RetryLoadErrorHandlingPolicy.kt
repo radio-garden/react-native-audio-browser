@@ -45,10 +45,6 @@ class RetryLoadErrorHandlingPolicy(
     LIVE,
   }
 
-  companion object {
-    private val RETRYABLE_HTTP_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
-  }
-
   override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
     // Not super's verdict: it still backs off on some errors it doesn't treat as fatal (a 404),
     // which would retry a dead URL until the silence deadline.
@@ -112,7 +108,7 @@ class RetryLoadErrorHandlingPolicy(
     while (current != null) {
       when (current) {
         is HttpDataSource.InvalidResponseCodeException ->
-          return current.responseCode in RETRYABLE_HTTP_STATUS_CODES
+          return current.responseCode.let { it == 408 || it == 429 || it in 500..599 }
         // Mirrors DefaultLoadErrorHandlingPolicy's fatal set.
         is HttpDataSource.CleartextNotPermittedException,
         is ParserException,

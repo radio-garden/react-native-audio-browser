@@ -78,7 +78,7 @@ enum PlaybackFailure {
 
   // MARK: - Retrying
 
-  /// Retried besides 500–599. Android shares 408/429 but retries only 500/502/503/504 of 5xx.
+  /// Retried besides 500–599.
   private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
 
   /// Failures a retry cannot fix. Every unplayable code but the temporary decoder shortage is
