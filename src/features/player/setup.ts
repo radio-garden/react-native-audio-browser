@@ -333,7 +333,7 @@ export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 export interface AndroidSetupOptions extends AndroidUpdateOptions {
   /**
    * Minimum duration of media that the player will attempt to buffer in ms.
-   * Has no effect: the player keeps loading until `maxBuffer` is buffered.
+   * Once `maxBuffer` is buffered, loading resumes only when the buffer falls below this.
    *
    * @default 50000
    */

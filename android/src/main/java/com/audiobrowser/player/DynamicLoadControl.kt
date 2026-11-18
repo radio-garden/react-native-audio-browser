@@ -35,6 +35,8 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
 
   @Volatile private var rebuffering: Boolean = false
 
+  @Volatile private var loading: Boolean = false
+
   /**
    * Whether ExoPlayer reports a stall after playback had started, as opposed to an initial connect,
    * a seek or a track change.
@@ -94,7 +96,10 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     // ExoPlayer polls this in every playback state, unlike shouldStartPlayback, so this is where
     // the flag clears once a rebuffer recovers.
     rebuffering = parameters.rebuffering
-    return parameters.bufferedDurationUs < maxBufferUs
+    val bufferedDurationUs = parameters.bufferedDurationUs
+    if (bufferedDurationUs >= maxBufferUs) loading = false
+    else if (bufferedDurationUs < minBufferUs) loading = true
+    return loading
   }
 
   override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
@@ -133,6 +138,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     prepareStartTimeMs = System.currentTimeMillis()
     playbackStarted = false
     rebuffering = false
+    loading = false
   }
 
   override fun onTracksSelected(
@@ -140,7 +146,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     trackGroups: TrackGroupArray,
     trackSelections: Array<out ExoTrackSelection?>,
   ) {
-    // No byte target from the selected tracks: loading is bounded by maxBufferUs alone.
+    // No byte target from the selected tracks: loading is bounded by duration alone.
   }
 
   override fun onStopped() {}

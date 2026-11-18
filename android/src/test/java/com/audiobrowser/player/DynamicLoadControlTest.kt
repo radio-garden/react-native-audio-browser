@@ -5,6 +5,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.source.MediaSource
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -51,5 +52,17 @@ class DynamicLoadControlTest {
     loadControl.shouldContinueLoading(params(rebuffering = true))
     loadControl.onPrepared()
     assertFalse(loadControl.isRebuffering)
+  }
+
+  @Test
+  fun `loads to maxBuffer, then waits until the buffer falls below minBuffer`() {
+    val loadControl = DynamicLoadControl(BufferConfig(minBufferMs = 10_000, maxBufferMs = 30_000))
+    fun loads(bufferedMs: Long) =
+      loadControl.shouldContinueLoading(params(rebuffering = false, bufferedUs = bufferedMs * 1000))
+
+    assertEquals(
+      listOf(true, true, false, false, false, true, true),
+      listOf(0L, 20_000L, 30_000L, 20_000L, 10_000L, 9_999L, 20_000L).map(::loads),
+    )
   }
 }
