@@ -37,6 +37,7 @@ final class AudioSessionController {
   /// re-activation keep their order.
   private let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
+  // Touched only by init and deinit.
   private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
   private var volumeObservation: NSKeyValueObservation?
 

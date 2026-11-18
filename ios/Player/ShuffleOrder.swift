@@ -6,7 +6,7 @@ struct ShuffleOrder {
   /// Shuffle position → queue index.
   private(set) var shuffled: [Int]
 
-  /// Queue index → shuffle position.
+  /// Queue index → shuffle position; -1 for an index `shuffled` lacks.
   private(set) var indexInShuffled: [Int]
 
   var count: Int { shuffled.count }

@@ -3,9 +3,9 @@ import Foundation
   import NitroModules
 #endif
 
-/// Search paths (`/__search?q=…`) and Contextual Paths (GLOSSARY.md, ADR 0009):
-/// `{parentPath}?__trackId={identity}&__index={position}`, the same format as on Android and the
-/// web.
+/// Search paths (`/__search?q=…`) and Contextual Paths (GLOSSARY.md, ADR 0009). A Contextual
+/// Path is `{parentPath}?__trackId={identity}&__index={position}`, the same format as on Android
+/// and the web.
 enum BrowserPathHelper {
   static let searchPathPrefix = "/__search"
 

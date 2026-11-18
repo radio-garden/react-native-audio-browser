@@ -11,6 +11,7 @@ final class VolumeFader {
   private let getVolume: () -> Float
   private let setVolume: (Float) -> Void
   private let scheduler: any SleepTimerScheduling
+  // So the nonisolated deinit can cancel it.
   private nonisolated(unsafe) var step: (any SleepTimerJob)?
 
   /// The volume to restore, set from `start` until `cancel` or `resolve`, also once the ramp has

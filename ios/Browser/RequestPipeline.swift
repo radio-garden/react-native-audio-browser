@@ -65,6 +65,8 @@ final class RequestPipeline {
     var merged = RequestConfig.base(path: path)
     let layers = try await resolvedLayers()
     merged = try await applyLayer(layers.request, to: merged, params: params)
+    // After the request layer, so it reaches the URL even when a later layer's transforms replace
+    // the static query.
     if let initialQuery, !initialQuery.isEmpty {
       merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
     }

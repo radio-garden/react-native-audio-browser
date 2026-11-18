@@ -6,6 +6,7 @@ import Foundation
 
 typealias SleepTimerState = SleepTimer
 
+/// A scheduled job not yet run. `cancel()` is nonisolated so a nonisolated `deinit` can call it.
 protocol SleepTimerJob: AnyObject {
   func cancel()
 }
@@ -29,6 +30,7 @@ private final class StrictTimerJob: SleepTimerJob {
   init(after delay: TimeInterval, _ work: @escaping @Sendable @MainActor () -> Void) {
     source = DispatchSource.makeTimerSource(flags: .strict, queue: .main)
     source.schedule(deadline: .now() + delay, leeway: .nanoseconds(0))
+    // A strong capture: it keeps the source alive until it fires or is cancelled.
     source.setEventHandler { [source] in
       source.cancel()
       MainActor.assumeIsolated { work() }
@@ -63,6 +65,7 @@ final class SleepTimerManager {
   private let scheduler: any SleepTimerScheduling
   private let fader: VolumeFader
 
+  // So the nonisolated deinit can cancel them.
   private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
   private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
 

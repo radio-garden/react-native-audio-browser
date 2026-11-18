@@ -105,7 +105,8 @@ enum EngineEvent {
 
   // MARK: Audio session
 
-  /// Activates the audio session asynchronously, off the main thread.
+  /// Activates the audio session asynchronously, off the main thread, then re-requests the
+  /// now-playing session (`NowPlayingInfoController.reactivateSessionIfNeeded`).
   func activateAudioSession()
   func cancelAudioSessionRelease()
   /// Releases the audio session after a delay, unless cancelled or the play intent comes back.

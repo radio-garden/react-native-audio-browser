@@ -12,6 +12,7 @@ public struct MediaIntentCriteria: Sendable {
   /// into a search for a word of it, with a radio media type: an app-open or resume.
   let matchesAppName: Bool
 
+  // Plain strings, mirroring `SearchParams`, so this type stays in the SwiftPM test target.
   let searchMode: String?
   let genre: String?
   let artist: String?

@@ -7,6 +7,7 @@ import Foundation
 /// non-positive interval turns it off.
 @MainActor
 final class PlaybackTimer {
+  // So the nonisolated deinit can invalidate it: the run loop retains a timer until then.
   private nonisolated(unsafe) var timer: Timer?
   private var interval: TimeInterval?
   private var active = false

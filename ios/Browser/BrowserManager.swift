@@ -4,6 +4,7 @@ import os.log
 
 @MainActor
 final class BrowserManager {
+  // Nonisolated so HybridAudioBrowser can create it as a property default.
   nonisolated init() {
     pages = PageResolver(requests: requests)
   }
@@ -43,6 +44,7 @@ final class BrowserManager {
 
   private(set) var content: ResolvedTrack? {
     didSet {
+      // ResolvedTrack isn't comparable, so every set emits.
       contentChanged.emit(content)
     }
   }

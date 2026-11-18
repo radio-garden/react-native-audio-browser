@@ -225,6 +225,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public var onCarConnectedChanged: (Bool) -> Void = { _ in } {
     didSet {
+      // The CarPlay scene may have connected before this JS runtime subscribed.
       onCarConnectedChanged(HybridAudioBrowser.carPlayConnected)
     }
   }

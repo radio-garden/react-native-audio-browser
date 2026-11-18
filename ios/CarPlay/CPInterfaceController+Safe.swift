@@ -81,6 +81,7 @@ extension CPInterfaceController {
     }
   }
 
+  /// Skips the pop when only the root is left, which would raise.
   fileprivate func guardedPop(animated: Bool, completion: ((Bool, Error?) -> Void)?) {
     guard templates.count > 1 else {
       Self.stackLogger.warning("pop skipped: already at the root template")
