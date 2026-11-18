@@ -5,9 +5,8 @@
 extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 
 /// Observes one AVPlayerItem until `invalidate()`: status, buffering, end-of-item and stall
-/// notifications, and timed metadata. KVO and notifications arrive off the main thread; whatever
-/// lands after `invalidate()` is dropped, so an old item's late failure never reaches the next
-/// item's handlers.
+/// notifications, and timed metadata. Whatever lands after `invalidate()` is dropped, so an old
+/// item's late failure never reaches the next item's handlers.
 @MainActor
 final class ItemObserver: NSObject {
   enum Event {
@@ -16,7 +15,6 @@ final class ItemObserver: NSObject {
     case failed(Error?)
     case playedToEnd
     case failedToPlayToEnd(Error?)
-    /// The buffer emptied mid-playback.
     case stalled
     case timedMetadata([AVTimedMetadataGroup])
   }

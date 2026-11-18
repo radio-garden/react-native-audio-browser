@@ -1,8 +1,8 @@
 import NitroModules
 
 extension RequestConfig {
-  /// Returns a copy with only the given fields changed: an omitted argument keeps the field,
-  /// `.some(nil)` clears it. The Nitro struct's fields are get-only, hence the rebuild.
+  /// A copy with only the given fields changed: an omitted argument keeps the field, `.some(nil)`
+  /// clears it.
   func copying(
     method: HttpMethod?? = nil,
     path: String?? = nil,

@@ -1,6 +1,6 @@
 import NitroModules
 
-/// Awaits for JS callbacks in place of Nitro's `await()`, which ignores cancellation: see
+/// Awaits a JS callback in place of Nitro's `await()`, which ignores cancellation: see
 /// `awaitCallback`. The nested forms are for a callback returning a promise, which crosses the
 /// bridge as `Promise<Promise<U>>`.
 extension Promise {
@@ -18,7 +18,8 @@ extension Promise {
     try await awaitCallback(subscribeNested)
   }
 
-  /// The timeout covers both promises.
+  /// Throws `CallbackTimeoutError` when both promises have not settled after
+  /// `callbackFallbackTimeout`; only for a caller with a fallback.
   func awaitNestedOrTimeout<U>() async throws -> U where T == Promise<U> {
     try await awaitCallback(timeout: callbackFallbackTimeout, subscribeNested)
   }

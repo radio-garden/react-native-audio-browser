@@ -11,9 +11,8 @@ extension UIApplication {
 
 /// The scale to rasterise at for the app's own screen. CarPlay surfaces use
 /// `carTraitCollection.displayScale` instead.
-// `UITraitCollection.current` reflects the environment being rendered for only on the main actor.
-// Not `UIScreen.main.scale`: deprecated, and unavailable on visionOS, which the podspec targets.
 @MainActor
 var appDisplayScale: CGFloat {
+  // Not `UIScreen.main.scale`: deprecated, and unavailable on visionOS, which the podspec targets.
   UITraitCollection.current.displayScale
 }

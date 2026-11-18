@@ -16,7 +16,6 @@ final class ReadyValue<T: Sendable> {
     waiters.count
   }
 
-  /// Resumes every parked waiter if the provider now has a value.
   func check() {
     guard !waiters.isEmpty, let value = provider() else { return }
     let pending = waiters

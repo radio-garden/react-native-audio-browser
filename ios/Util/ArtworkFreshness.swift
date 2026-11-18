@@ -1,12 +1,11 @@
 import Foundation
 
 enum ArtworkFreshness {
-  /// Used when no response states a lifetime; matches Kingfisher's default disk expiry.
+  /// For responses that state no lifetime; Kingfisher's default disk expiry.
   static let defaultLifetime: TimeInterval = 7 * 24 * 60 * 60
 
-  /// The shortest lifetime stated across `responses` (every redirect and the final response):
-  /// `max-age` minus `Age`, or 0 for `no-cache` or `no-store`. Responses that state none are
-  /// ignored; `defaultLifetime` when none states one.
+  /// The shortest lifetime the responses (every redirect and the final one) state: `max-age`
+  /// less `Age`, or 0 for `no-cache` or `no-store`. `defaultLifetime` when none states one.
   static func lifetime(of responses: [HTTPURLResponse]) -> TimeInterval {
     responses.compactMap(lifetime(of:)).min() ?? defaultLifetime
   }

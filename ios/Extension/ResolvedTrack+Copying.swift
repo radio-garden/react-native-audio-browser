@@ -3,8 +3,8 @@
 #endif
 
 extension ResolvedTrack {
-  /// Returns a copy with the given fields replaced. An omitted argument keeps the field;
-  /// `.some(nil)` clears it. `path` and `title` are required, so they can only be replaced.
+  /// A copy with only the given fields changed: an omitted argument keeps the field, `.some(nil)`
+  /// clears it. `path` and `title` are required, so they can only be replaced.
   func copying(
     path: String? = nil,
     style: SectionStyle?? = nil,
