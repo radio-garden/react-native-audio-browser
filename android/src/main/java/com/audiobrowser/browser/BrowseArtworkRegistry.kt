@@ -1,12 +1,10 @@
 package com.audiobrowser.browser
 
 /**
- * Token → resolved artwork, the only data the [com.audiobrowser.util.ArtworkContentProvider]
- * serves. Thread-safe: written from browse coroutines, read from the provider's IO scope.
+ * Token → resolved artwork, the only data [com.audiobrowser.util.ArtworkContentProvider] serves.
+ * Thread-safe.
  */
 class BrowseArtworkRegistry(
-  // Entries hold plain data, no JS closures (unlike [ArtworkResolutionRegistry]), so they are cheap
-  // to keep many of.
   private val maxEntries: Int = 2048,
   private val maxPinnedEntries: Int = 2048,
 ) {
@@ -34,7 +32,6 @@ class BrowseArtworkRegistry(
   @Synchronized fun clear() = entries.clear()
 
   private fun lruMap(maxEntries: Int) =
-    // Access order, so a lookup keeps an entry from eviction.
     object : LinkedHashMap<String, ResolvedArtwork>(16, 0.75f, true) {
       override fun removeEldestEntry(
         eldest: MutableMap.MutableEntry<String, ResolvedArtwork>
@@ -42,7 +39,6 @@ class BrowseArtworkRegistry(
     }
 }
 
-/** Everything the provider needs to fetch one artwork. */
 data class ResolvedArtwork(
   val finalUrl: String,
   val headers: Map<String, String>?,

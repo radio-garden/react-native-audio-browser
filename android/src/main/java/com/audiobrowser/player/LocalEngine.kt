@@ -14,11 +14,9 @@ internal class LocalEngine(
   private val playing: ExoPlayer?
     get() = engine().takeIf { !isRemote() }
 
-  /** Whether the phone's ExoPlayer is what plays, rather than a remote output. */
   val isActive: Boolean
     get() = playing != null
 
-  /** Prepares again what failed or stalled, from the live edge when [toLiveEdge]. */
   fun retry(toLiveEdge: Boolean = false) {
     val engine = playing ?: return
     if (toLiveEdge) engine.seekToDefaultPosition()

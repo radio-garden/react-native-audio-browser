@@ -20,10 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-/**
- * Serves the Sonos rooms as media routes for the system Output Switcher. The system binds it, not
- * the app: [SonosOutputs.setEnabled] turns the component on.
- */
+/** The system binds it, not the app; [SonosOutputs.setEnabled] turns the component on. */
 class SonosRouteProviderService : MediaRouteProviderService() {
   private var provider: SonosRouteProvider? = null
 
@@ -61,7 +58,6 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     if (request == null || !request.selector.hasControlCategory(RemoteOutputs.CATEGORY)) return
     scanJob =
       scope.launch {
-        // Passive requests reuse a recent scan; the open switcher asks for an active one.
         if (!request.isActiveScan && System.currentTimeMillis() - lastScanMs < PASSIVE_RESCAN_MS) {
           return@launch
         }
@@ -85,8 +81,8 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
   }
 
   /**
-   * Serves only this app's own sessions: [SonosOutputs.selected] moves this app's playback, so
-   * another app's session would play this app's queue in its place.
+   * Serves only this app's sessions: [SonosOutputs.selected] moves this app's playback, so another
+   * app's session would play this app's queue.
    */
   override fun onCreateRouteController(
     routeId: String,
@@ -105,7 +101,6 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
     Timber.d("Sonos: %d room(s)", rooms.size)
   }
 
-  /** Reads [room]'s volume from the speaker, for a room no session plays on: a session reads it. */
   private suspend fun readVolume(room: SonosRoom): Int? {
     val volume =
       withContext(Dispatchers.IO) {
@@ -140,8 +135,8 @@ internal class SonosRouteProvider(context: Context) : MediaRouteProvider(context
 
     override fun onUpdateVolume(delta: Int) {
       scope.launch {
-        // Read from the speaker unless a session tracks it: the Sonos app or the speaker's buttons
-        // may have moved it.
+        // Read from the speaker unless a session tracks it: another controller or the speaker's
+        // buttons may have moved it.
         val current =
           (if (SonosOutputs.hasSession(room.id)) null else readVolume(room))
             ?: SonosOutputs.volumeOf(room.id)

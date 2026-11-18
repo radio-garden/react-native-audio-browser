@@ -1,20 +1,15 @@
 package com.audiobrowser.browser
 
 /**
- * Matches paths against route patterns segment by segment; empty segments are ignored, so leading
- * and trailing slashes don't matter. In a pattern, `{name}` captures one segment into
- * `params[name]`, `*` matches one segment without capturing it, a final `**` matches zero or more
- * remaining segments and captures them, joined with `/`, as `params["tail"]` when there is at least
- * one, and anything else must match exactly.
+ * Matches paths against route patterns, ignoring empty segments. `{name}` captures one segment, `*`
+ * matches one without capturing, and a final `**` matches zero or more remaining segments, captured
+ * as `params["tail"]` when there is at least one. Mirrors iOS `SimpleRouter`.
  */
 class SimpleRouter {
 
   /**
-   * Returns the pattern in [routes] that matches [path] with the highest specificity, and its
-   * match, or null when none matches. Ranks mostly by constant segments, then `{param}`s, then `*`s
-   * (weights 1000/100/10); then a trailing `**` adds one, and each pattern segment (the `**`
-   * included) adds one, so `/a/{x}` with a trailing `**` beats `/a/{x}` even when the path ends at
-   * `{x}`. Among equal scores, the first in [routes]' iteration order wins.
+   * The pattern in [routes] that matches [path] with the highest specificity, and its match, or
+   * null when none matches. Among equal scores, the first in [routes]' iteration order wins.
    */
   fun <T> findBestMatch(path: String, routes: Map<String, T>): Pair<String, RouteMatch>? {
     return routes.keys
@@ -81,8 +76,7 @@ class SimpleRouter {
       }
     }
 
-    // Weights, not a strict order: the lower terms add up, so enough `{param}`s and `*`s (e.g. 9 of
-    // each) can outscore one more constant.
+    // Weights, not a strict order: enough `{param}`s and `*`s can outscore one more constant.
     val specificity =
       (constantSegments * 1000) +
         (parameterSegments * 100) +

@@ -22,7 +22,6 @@ import timber.log.Timber
  */
 suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): MediaRequestConfig? {
   val mediaConfig = config.media
-  // A resolver-only request layer counts: its baseUrl still has to reach a relative src.
   val hasRequestLayer = config.request != null || config.requestResolver != null
   if (mediaConfig == null && !hasRequestLayer) return null
 
@@ -66,7 +65,7 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
  * replaces `config.artwork`, it does not merge), `resolve`, image query params from [imageContext],
  * transform, then `{id}`. With no artwork config the track's artwork URL is returned untouched.
  * Returns null when there is no artwork, when `resolve`/`resolveSync` yields nothing for a track
- * without an artwork URL (even if the config has a static path), or when any callback throws.
+ * without an artwork URL, or when any callback throws.
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -144,11 +143,10 @@ suspend fun BrowserManager.resolveArtworkUrl(
         )
     }
 
-    // A track without an id leaves `{id}` in the URL on purpose: the request then fails visibly,
-    // and the warning below says why.
     track.id
       ?.takeIf { it.isNotEmpty() }
       ?.let { transformedConfig = substituteTrackId(transformedConfig, it) }
+    // A track without an id leaves `{id}` in the URL, so the request fails visibly.
     val hasUnfilledIdToken = configContainsIdToken(transformedConfig)
 
     val uri = RequestConfigBuilder.buildUrl(transformedConfig)
@@ -177,8 +175,7 @@ suspend fun BrowserManager.resolveArtworkUrl(
 
 /**
  * Re-resolves an artwork [uri] registered in [BrowserManager.artworkResolutions] from its track,
- * with the display size in [imageContext], rather than transforming the already-transformed URI.
- * Returns null for an unregistered [uri].
+ * with the display size in [imageContext]. Returns null for an unregistered [uri].
  */
 suspend fun BrowserManager.displayArtworkSource(
   uri: String,
@@ -189,10 +186,9 @@ suspend fun BrowserManager.displayArtworkSource(
 }
 
 /**
- * For an artwork [uri] no track can be found for (evicted from the registry, or restored after
- * process death): fetches [uri] as is, adding only the static headers of the request and artwork
- * configs. No transform or resolve runs, so headers a transform adds are missing. Returns null when
- * there are no headers to add.
+ * Fetches an artwork [uri] that no registered track explains as is, adding only the static headers
+ * of the request and artwork configs: no transform or resolve runs. Returns null when there are no
+ * headers to add.
  */
 suspend fun BrowserManager.unattributedArtworkSource(uri: String): ImageSource? {
   var merged =

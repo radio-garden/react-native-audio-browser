@@ -16,20 +16,20 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 
-/** What a receiver fetches for a track: its media URL, after the media transform, and artwork. */
+/** What a receiver fetches for a track: its media URL, after the transform, and its artwork. */
 internal data class RemoteUrls(val url: String, val artworkUrl: String?)
 
 /**
- * Sets up the Output Switcher's routes and the Sonos route provider as [RemoteOutputsOptions] says,
- * and owns the remote of each output turned on and the [RemoteSwitchingPlayer] that plays on them,
- * resolving the items it sends through [resolveUrls].
+ * Turns the Output Switcher's routes and the Sonos route provider on as [RemoteOutputsOptions]
+ * says, and owns each enabled output's [RemotePlayback] and the [RemoteSwitchingPlayer] that plays
+ * on them.
  */
 internal class RemoteOutputsController(
   private val context: Context,
   private val resolveUrls: suspend (Track) -> RemoteUrls,
   private val castRemote: (Context, String?) -> RemotePlayback?,
   private val sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
-  /** Whether the phone's idle engine is the retry loop's, between connections of a load. */
+  /** Whether the phone's idle player is between connections of a retried load. */
   private val localHeld: () -> Boolean = { false },
 ) {
   private val scope = MainScope()
@@ -37,14 +37,14 @@ internal class RemoteOutputsController(
   private var cast: RemotePlayback? = null
   private var sonos: RemotePlayback? = null
 
-  /** Plays while any output is on; null when none is. */
+  /** Null while no output is on. */
   var player: RemoteSwitchingPlayer? = null
     private set
 
   /**
    * Turns the outputs in [options] on and the rest off; null turns remote outputs off. An output
-   * that stays on keeps its remote, session and what it plays, even if the receiver ID changes.
-   * [local] is used only when the switch is built. Returns whether [player] changed.
+   * that stays on keeps its remote, session and item, even when the receiver ID changes. [local] is
+   * used only when the switch is built. Returns whether [player] changed.
    */
   @MainThread
   fun apply(options: RemoteOutputsOptions?, local: MediaPlayer): Boolean {
@@ -59,7 +59,7 @@ internal class RemoteOutputsController(
     SonosOutputs.setEnabled(context, wantSonos)
     val had = this.options
     this.options = options
-    // A remote turned off is only dropped here; the switch releases it below.
+    // A remote turned off is only dropped here: the switch lets it go below.
     if (wantCast != (had?.cast == true))
       cast = if (wantCast) castRemote(context, receiver) else null
     if (wantSonos != (had?.sonos == true))
@@ -81,8 +81,8 @@ internal class RemoteOutputsController(
   }
 
   /**
-   * Brings playback back to the local player and lets go of the remotes; the controller is unusable
-   * after. The Output Switcher routes and Sonos route provider stay as [apply] left them.
+   * Brings playback back to the phone and lets go of the remotes; the controller is unusable after.
+   * The routes stay as [apply] left them.
    */
   fun release() {
     player?.release()
@@ -93,7 +93,7 @@ internal class RemoteOutputsController(
     scope.cancel()
   }
 
-  /** [item] as a receiver loads it; an item without a [Track] tag plays its own URI. */
+  /** An item without a [Track] tag plays its own URI. */
   private suspend fun resolve(item: MediaItem): MediaItem {
     val track = item.localConfiguration?.tag as? Track
     val urls =

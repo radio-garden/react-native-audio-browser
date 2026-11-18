@@ -8,8 +8,8 @@ import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 
 /**
  * The locks the engine's wake mode holds while it loads, held instead while [RetryLoop] keeps the
- * engine idle between connections: ExoPlayer releases its own in IDLE, and with the CPU asleep the
- * loop's reconnect and deadline would not run.
+ * engine idle: ExoPlayer releases its own in IDLE, and with the CPU asleep the loop's reconnect and
+ * deadline would not run.
  */
 internal class RetryLocks(
   context: Context,
@@ -29,7 +29,7 @@ internal class RetryLocks(
       ?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "AudioBrowser:retry")
       ?.apply { setReferenceCounted(false) }
 
-  /** The Wi-Fi lock has no timeout of its own. */
+  // The Wi-Fi lock has no timeout of its own.
   private val releaseWifiLock = Runnable { if (wifiLock?.isHeld == true) wifiLock.release() }
 
   val wakeLockHeld: Boolean

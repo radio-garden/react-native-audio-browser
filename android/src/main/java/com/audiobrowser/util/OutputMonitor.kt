@@ -38,12 +38,10 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
       .build()
 
-  // Last emitted output, the baseline for change detection; [current] reads it from any thread.
   @Volatile private var cached: Output? = null
 
   private var onOutputChanged: ((Output) -> Unit)? = null
 
-  /** Read live; the last emitted output when there is no reading, null before any. */
   val current: Output?
     get() = computeOutput() ?: cached
 
@@ -73,7 +71,6 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       }
     }
 
-  /** Safe from any thread: registers on the main thread. */
   fun start() {
     mainHandler.post {
       audioManager.registerAudioDeviceCallback(deviceCallback, mainHandler)
@@ -83,14 +80,12 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     }
   }
 
-  // Reads at once, so a reroute made in the background shows on return.
   override fun onStart(owner: LifecycleOwner) {
     recompute("foreground")
     mainHandler.removeCallbacks(poll)
     mainHandler.postDelayed(poll, POLL_INTERVAL_MS)
   }
 
-  // The device callback stays registered in the background; only the poll stops.
   override fun onStop(owner: LifecycleOwner) {
     mainHandler.removeCallbacks(poll)
   }
@@ -173,7 +168,6 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     private const val POLL_INTERVAL_MS = 1000L
     private val REMOTE_TYPES = setOf(OutputType.REMOTE, OutputType.CAST, OutputType.SONOS)
 
-    /** Maps an [AudioDeviceInfo] `TYPE_*` to an [OutputType]; [OutputType.OTHER] if unknown. */
     fun outputTypeOf(deviceType: Int): OutputType =
       when (deviceType) {
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
