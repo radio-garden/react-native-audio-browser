@@ -6,7 +6,7 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.Util
 
 /**
- * The queue [RemoteSwitchingPlayer] keeps while remote, played in list order. Each item has a uid
+ * The queue [RemoteSwitchingPlayer] keeps while remote, played in list order. Each entry has a uid
  * of its own that follows it through moves, so equal media items stay distinct playlist entries.
  */
 internal class RemoteQueue {
@@ -48,8 +48,8 @@ internal class RemoteQueue {
   }
 
   /**
-   * Removes the items from [fromIndex] to [toIndex]; true when the current one went with them, and
-   * then the item after them, or else the last, is current.
+   * Removes the items from [fromIndex] to [toIndex]. Returns true when the current item went with
+   * them; the item after them, or else the last, is then current.
    */
   fun remove(fromIndex: Int, toIndex: Int): Boolean {
     val to = toIndex.coerceAtMost(itemList.size)
@@ -67,8 +67,8 @@ internal class RemoteQueue {
   }
 
   /**
-   * Puts [newItems] in place of the items from [fromIndex] to [toIndex]. True when the current item
-   * is now another media: for a same-length replacement, by media id or uri, so a restamp of its
+   * Puts [newItems] in place of the items from [fromIndex] to [toIndex]. Returns true when the
+   * current item is now other media: in a same-length replacement, by media id or uri, so new
    * metadata alone is not; otherwise whenever the range held the current item.
    */
   fun replace(fromIndex: Int, toIndex: Int, newItems: List<MediaItem>): Boolean {
@@ -103,7 +103,7 @@ internal class RemoteQueue {
   }
 
   /**
-   * The item that plays when the current one ends under [repeatMode], or [C.INDEX_UNSET] when
+   * The index that plays when the current item ends under [repeatMode], or [C.INDEX_UNSET] when
    * playback stops.
    */
   fun nextAtEnd(repeatMode: Int): Int =
