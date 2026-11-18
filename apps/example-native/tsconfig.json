@@ -4,6 +4,9 @@
   "exclude": ["**/node_modules", "**/Pods"],
   "compilerOptions": {
     "strict": true,
+    // @react-native/typescript-config declares `types: ["jest"]`; this app has
+    // no jest, so the entry point would resolve to nothing (TS2688).
+    "types": [],
     "paths": {
       "react-native-audio-browser": ["../../src"]
     }

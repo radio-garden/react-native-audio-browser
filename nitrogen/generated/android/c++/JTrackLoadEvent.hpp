@@ -10,19 +10,31 @@
 #include <fbjni/fbjni.h>
 #include "TrackLoadEvent.hpp"
 
+#include "ArtworkRendering.hpp"
+#include "ArtworkVariants.hpp"
+#include "CardImage.hpp"
 #include "HttpMethod.hpp"
-#include "ImageRowItem.hpp"
+#include "ImageShape.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkRendering.hpp"
+#include "JArtworkVariants.hpp"
+#include "JCardImage.hpp"
 #include "JHttpMethod.hpp"
-#include "JImageRowItem.hpp"
+#include "JImageShape.hpp"
 #include "JImageSource.hpp"
+#include "JStyleDisplay.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "StyleDisplay.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -30,11 +42,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "TrackLoadEvent" and the the Kotlin data class "TrackLoadEvent".
+   * The C++ JNI bridge between the C++ struct "TrackLoadEvent" and the Kotlin data class "TrackLoadEvent".
    */
   struct JTrackLoadEvent final: public jni::JavaClass<JTrackLoadEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TrackLoadEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/TrackLoadEvent;";
 
   public:
     /**
@@ -50,19 +62,22 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> queue = this->getFieldValue(fieldQueue);
       static const auto fieldStartIndex = clazz->getField<double>("startIndex");
       double startIndex = this->getFieldValue(fieldStartIndex);
+      static const auto fieldStartPosition = clazz->getField<jni::JDouble>("startPosition");
+      jni::local_ref<jni::JDouble> startPosition = this->getFieldValue(fieldStartPosition);
       return TrackLoadEvent(
         track->toCpp(),
-        [&]() {
-          size_t __size = queue->size();
+        [&](auto&& __input) {
+          size_t __size = __input->size();
           std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = queue->getElement(__i);
+            auto __element = __input->getElement(__i);
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }(),
-        startIndex
+        }(queue),
+        startIndex,
+        startPosition != nullptr ? std::make_optional(startPosition->value()) : std::nullopt
       );
     }
 
@@ -72,23 +87,24 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrackLoadEvent::javaobject> fromCpp(const TrackLoadEvent& value) {
-      using JSignature = JTrackLoadEvent(jni::alias_ref<JTrack>, jni::alias_ref<jni::JArrayClass<JTrack>>, double);
+      using JSignature = JTrackLoadEvent(jni::alias_ref<JTrack>, jni::alias_ref<jni::JArrayClass<JTrack>>, double, jni::alias_ref<jni::JDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JTrack::fromCpp(value.track),
-        [&]() {
-          size_t __size = value.queue.size();
+        [&](auto&& __input) {
+          size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.queue[__i];
+            const auto& __element = __input[__i];
             auto __elementJni = JTrack::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }(),
-        value.startIndex
+        }(value.queue),
+        value.startIndex,
+        value.startPosition.has_value() ? jni::JDouble::valueOf(value.startPosition.value()) : nullptr
       );
     }
   };

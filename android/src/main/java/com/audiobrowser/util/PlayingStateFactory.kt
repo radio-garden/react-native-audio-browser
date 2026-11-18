@@ -5,20 +5,20 @@ import com.margelo.nitro.audiobrowser.PlayingState
 
 object PlayingStateFactory {
   /**
-   * Derives a PlayingState from playWhenReady and state.
+   * `playing` reports intent, not audible output: it holds through every state but ERROR, ENDED,
+   * NONE and STOPPED, PAUSED included. `buffering` implies `playing`.
    *
-   * @param playWhenReady Whether the player wants to play when ready
-   * @param playbackState The current player state
-   * @return A PlayingState representing the current playing/buffering status
+   * @param shouldPlayWhenReady playWhenReady and no suppression of output, not playWhenReady alone
    */
-  fun derive(playWhenReady: Boolean, playbackState: PlaybackState): PlayingState {
+  fun derive(shouldPlayWhenReady: Boolean, playbackState: PlaybackState): PlayingState {
     val playing =
-      playWhenReady &&
+      shouldPlayWhenReady &&
         !(playbackState == PlaybackState.ERROR ||
           playbackState == PlaybackState.ENDED ||
-          playbackState == PlaybackState.NONE)
+          playbackState == PlaybackState.NONE ||
+          playbackState == PlaybackState.STOPPED)
     val buffering =
-      playWhenReady &&
+      shouldPlayWhenReady &&
         (playbackState == PlaybackState.LOADING || playbackState == PlaybackState.BUFFERING)
     return PlayingState(playing, buffering)
   }

@@ -7,43 +7,40 @@ import { RecordType } from './types/RecordType.js';
 import { StructType } from './types/StructType.js';
 import { TupleType } from './types/TupleType.js';
 import { VariantType } from './types/VariantType.js';
-export function getReferencedTypes(type, visited = new Set()) {
-    if (visited.has(type))
-        return [];
-    visited.add(type);
+export function getReferencedTypes(type) {
     switch (type.kind) {
         case 'array':
             const array = getTypeAs(type, ArrayType);
-            return [type, ...getReferencedTypes(array.itemType, visited)];
+            return [type, ...getReferencedTypes(array.itemType)];
         case 'function':
             const func = getTypeAs(type, FunctionType);
             return [
                 type,
-                ...getReferencedTypes(func.returnType, visited),
-                ...func.parameters.flatMap((t) => getReferencedTypes(t, visited)),
+                ...getReferencedTypes(func.returnType),
+                ...func.parameters.flatMap((t) => getReferencedTypes(t)),
             ];
         case 'optional':
             const optional = getTypeAs(type, OptionalType);
-            return [type, ...getReferencedTypes(optional.wrappingType, visited)];
+            return [type, ...getReferencedTypes(optional.wrappingType)];
         case 'promise':
             const promise = getTypeAs(type, PromiseType);
-            return [type, ...getReferencedTypes(promise.resultingType, visited)];
+            return [type, ...getReferencedTypes(promise.resultingType)];
         case 'record':
             const record = getTypeAs(type, RecordType);
             return [
                 type,
-                ...getReferencedTypes(record.keyType, visited),
-                ...getReferencedTypes(record.valueType, visited),
+                ...getReferencedTypes(record.keyType),
+                ...getReferencedTypes(record.valueType),
             ];
         case 'struct':
             const struct = getTypeAs(type, StructType);
-            return [type, ...struct.properties.flatMap((p) => getReferencedTypes(p, visited))];
+            return [type, ...struct.properties.flatMap((p) => getReferencedTypes(p))];
         case 'tuple':
             const tuple = getTypeAs(type, TupleType);
-            return [type, ...tuple.itemTypes.flatMap((t) => getReferencedTypes(t, visited))];
+            return [type, ...tuple.itemTypes.flatMap((t) => getReferencedTypes(t))];
         case 'variant':
             const variant = getTypeAs(type, VariantType);
-            return [type, ...variant.variants.flatMap((t) => getReferencedTypes(t, visited))];
+            return [type, ...variant.variants.flatMap((t) => getReferencedTypes(t))];
         default:
             return [type];
     }

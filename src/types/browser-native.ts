@@ -9,14 +9,21 @@
 import type {
   ArtworkRequestConfig,
   BrowserSourceCallback,
-  CarPlayNowPlayingButton,
+  ResolveAlbumPathCallback,
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
   MediaRequestConfig,
   SearchSourceCallback,
-  TransformableRequestConfig
+  TransformableRequestConfig,
+  ViewMoreTitleCallback
 } from './browser'
 import type { ResolvedTrack } from './browser-nodes'
+
+// Native resolvers are Promise-only. The public `request`/`browse` resolver may
+// return its config sync OR async; `toNativeConfig` wraps it in Promise.resolve so
+// the bridge never sees a `T | Promise<T>` variant (which would misread the async
+// case). Resolvers run once per content generation, so the wrap is free.
+type NativeRequestConfigResolver = () => Promise<TransformableRequestConfig>
 
 /**
  * Flattened route entry for native bridge.
@@ -42,27 +49,37 @@ export interface NativeRouteEntry {
 export interface NativeBrowserConfiguration {
   path?: string
 
-  // Request defaults
+  // Request defaults (applied to every request: browse, search, media, artwork).
+  // The union `TransformableRequestConfig | RequestConfigResolver` from the public
+  // API is lowered here into two sibling fields (mirrors browseCallback/browseConfig).
   request?: TransformableRequestConfig
+  requestResolver?: NativeRequestConfigResolver
 
-  // Global media/artwork config (applied when route doesn't override)
+  // Per-kind request config, layered request → <kind> → route.
+  browse?: TransformableRequestConfig
+  browseResolver?: NativeRequestConfigResolver
   media?: MediaRequestConfig
   artwork?: ArtworkRequestConfig
+  nowPlayingArtwork?: ArtworkRequestConfig
 
   // Routes as array - includes:
   // - Explicit routes from config.routes
-  // - Root browse as __default__ entry
+  // - The '*' route (if any) as the __default__ entry (custom default override)
   // - Tabs as __tabs__ entry (returns ResolvedTrack with children for navigation tabs)
   // - Search as __search__ entry (has searchCallback or searchConfig)
+  // A browse path matching none of these is fetched via request + browse + path.
   routes?: NativeRouteEntry[]
 
   // Behavior
   singleTrack?: boolean
   handleTrackLoad?: HandleTrackLoadCallback
   androidControllerOfflineError?: boolean
+  // Title of the "view more" row appended to a pathed section where the header
+  // can't be tapped (Android Auto). Absent = native's "View more" default.
+  viewMoreTitle?: ViewMoreTitleCallback
 
   // CarPlay options
-  carPlayUpNextButton?: boolean
-  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+  carPlayLoadingTitle?: string
+  resolveAlbumPath?: ResolveAlbumPathCallback
   formatNavigationError?: FormatNavigationErrorCallback
 }

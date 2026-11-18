@@ -27,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_BatteryOptimizationStatusChangedEvent: public jni::JavaClass<JFunc_void_BatteryOptimizationStatusChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_BatteryOptimizationStatusChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_BatteryOptimizationStatusChangedEvent;";
 
   public:
     /**
@@ -63,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_BatteryOptimizationStatusChangedEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_BatteryOptimizationStatusChangedEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::invoke_cxx)});
     }

@@ -10,8 +10,9 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.NullType
+import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
+import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.HybridObject
 
 /**
@@ -114,6 +115,48 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @set:DoNotStrip
   @set:Keep
   abstract var configuration: NativeBrowserConfiguration
+  
+  abstract var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>>
+  
+  private var resolveGate_cxx: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_java(resolveGate)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      resolveGate = value
+    }
+  
+  abstract var onGate: (event: GateEvent) -> Unit
+  
+  private var onGate_cxx: Func_void_GateEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_GateEvent_java(onGate)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onGate = value
+    }
+  
+  abstract var onCarConnectedChanged: (connected: Boolean) -> Unit
+  
+  private var onCarConnectedChanged_cxx: Func_void_bool
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_bool_java(onCarConnectedChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onCarConnectedChanged = value
+    }
   
   abstract var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit
   
@@ -227,6 +270,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackProgressUpdated = value
     }
   
+  abstract var onPlaybackInterval: () -> Unit
+  
+  private var onPlaybackInterval_cxx: Func_void
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_java(onPlaybackInterval)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onPlaybackInterval = value
+    }
+  
   abstract var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit
   
   private var onPlaybackQueueEnded_cxx: Func_void_PlaybackQueueEndedEvent
@@ -311,34 +368,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackChanged = value
     }
   
-  abstract var onRemoteBookmark: () -> Unit
-  
-  private var onRemoteBookmark_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteBookmark)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteBookmark = value
-    }
-  
-  abstract var onRemoteDislike: () -> Unit
-  
-  private var onRemoteDislike_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteDislike)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteDislike = value
-    }
-  
   abstract var onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) -> Unit
   
   private var onRemoteJumpBackward_cxx: Func_void_RemoteJumpBackwardEvent
@@ -365,20 +394,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       onRemoteJumpForward = value
-    }
-  
-  abstract var onRemoteLike: () -> Unit
-  
-  private var onRemoteLike_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteLike)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteLike = value
     }
   
   abstract var onRemoteNext: () -> Unit
@@ -479,20 +494,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onRemoteSeek = value
     }
   
-  abstract var onRemoteSetRating: (event: RemoteSetRatingEvent) -> Unit
-  
-  private var onRemoteSetRating_cxx: Func_void_RemoteSetRatingEvent
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_RemoteSetRatingEvent_java(onRemoteSetRating)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteSetRating = value
-    }
-  
   abstract var onRemoteSkip: (event: RemoteSkipEvent) -> Unit
   
   private var onRemoteSkip_cxx: Func_void_RemoteSkipEvent
@@ -563,34 +564,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onNowPlayingChanged = value
     }
   
-  abstract var handleRemoteBookmark: (() -> Unit)?
-  
-  private var handleRemoteBookmark_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteBookmark?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteBookmark = value?.let { it }
-    }
-  
-  abstract var handleRemoteDislike: (() -> Unit)?
-  
-  private var handleRemoteDislike_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteDislike?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteDislike = value?.let { it }
-    }
-  
   abstract var handleRemoteJumpBackward: ((event: RemoteJumpBackwardEvent) -> Unit)?
   
   private var handleRemoteJumpBackward_cxx: Func_void_RemoteJumpBackwardEvent?
@@ -617,20 +590,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       handleRemoteJumpForward = value?.let { it }
-    }
-  
-  abstract var handleRemoteLike: (() -> Unit)?
-  
-  private var handleRemoteLike_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteLike?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteLike = value?.let { it }
     }
   
   abstract var handleRemoteNext: (() -> Unit)?
@@ -787,18 +746,18 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onSystemVolumeChanged = value
     }
   
-  abstract var onIosOutputChanged: (output: IosOutput) -> Unit
+  abstract var onOutputChanged: (output: Output) -> Unit
   
-  private var onIosOutputChanged_cxx: Func_void_IosOutput
+  private var onOutputChanged_cxx: Func_void_Output
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_IosOutput_java(onIosOutputChanged)
+      return Func_void_Output_java(onOutputChanged)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onIosOutputChanged = value
+      onOutputChanged = value
     }
   
   abstract var onEqualizerChanged: (settings: EqualizerSettings) -> Unit
@@ -854,7 +813,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun onSearch(query: String): Promise<Array<Track>>
+  abstract fun search(query: String): Promise<Array<Track>>
   
   @DoNotStrip
   @Keep
@@ -874,11 +833,27 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun invalidateAllContent(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun setFavorites(favorites: Array<String>): Unit
   
   @DoNotStrip
   @Keep
-  abstract fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit>
+  abstract fun setGate(gate: Gate?, hasResolver: Boolean): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearGate(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun isCarConnected(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit>
   
   @DoNotStrip
   @Keep
@@ -886,7 +861,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getOptions(): UpdateOptions
+  abstract fun getOptions(): Options
   
   @DoNotStrip
   @Keep
@@ -930,6 +905,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun seekToLiveEdge(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun setVolume(level: Double): Unit
   
   @DoNotStrip
@@ -947,6 +926,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getProgress(): Progress
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setPlaybackIntervalEnabled(enabled: Boolean): Unit
   
   @DoNotStrip
   @Keep
@@ -986,7 +969,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setSleepTimer(seconds: Double): Unit
+  abstract fun setSleepTimer(seconds: Double, fadeDuration: Double?): Unit
   
   @DoNotStrip
   @Keep
@@ -1034,11 +1017,15 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?): Unit
+  abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPosition: Double?): Unit
   
   @DoNotStrip
   @Keep
   abstract fun getQueue(): Array<Track>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getQueueVersion(): Double
   
   @DoNotStrip
   @Keep
@@ -1058,7 +1045,19 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearNowPlayingFlash(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun getNowPlaying(): NowPlayingMetadata?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getTimedMetadata(): TimedMetadata?
   
   @DoNotStrip
   @Keep
@@ -1074,11 +1073,15 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getIosOutput(): IosOutput?
+  abstract fun getOutput(): Output?
   
   @DoNotStrip
   @Keep
-  abstract fun openIosOutputPicker(): Unit
+  abstract fun openOutputPicker(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun supportsOutputSwitcher(): Boolean
   
   @DoNotStrip
   @Keep
@@ -1122,6 +1125,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @Keep
   protected open class CxxPart(javaPart: HybridAudioBrowserSpec): HybridObject.CxxPart(javaPart) {
     // C++ JHybridAudioBrowserSpec::CxxPart::initHybrid(...)
+    @FastNative
     external override fun initHybrid(): HybridData
   }
   override fun createCxxPart(): CxxPart {

@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PlaybackPlayWhenReadyChangedEvent" and the the Kotlin data class "PlaybackPlayWhenReadyChangedEvent".
+   * The C++ JNI bridge between the C++ struct "PlaybackPlayWhenReadyChangedEvent" and the Kotlin data class "PlaybackPlayWhenReadyChangedEvent".
    */
   struct JPlaybackPlayWhenReadyChangedEvent final: public jni::JavaClass<JPlaybackPlayWhenReadyChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackPlayWhenReadyChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackPlayWhenReadyChangedEvent;";
 
   public:
     /**

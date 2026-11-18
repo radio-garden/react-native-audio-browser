@@ -7,7 +7,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const error = errors.find(
     ([, track]) =>
-      ('url' in track && track.url === fullPath) ||
+      ('path' in track && track.path === fullPath) ||
       ('src' in track && track.src === fullPath)
   )
 

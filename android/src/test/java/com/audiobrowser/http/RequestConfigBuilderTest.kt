@@ -1,7 +1,16 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.TestFixtures
+import com.audiobrowser.TestFixtures.mediaConfig
+import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__
 import com.margelo.nitro.audiobrowser.HttpMethod
 import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.core.Promise
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -175,15 +184,13 @@ class RequestConfigBuilderTest {
 
     val result = RequestConfigBuilder.mergeConfig(base, override)
 
-    // Headers should be merged with override winning
     assertEquals("base-value", result.headers!!["Base-Header"])
     assertEquals("override-value", result.headers!!["Override-Header"])
-    assertEquals("override-shared", result.headers!!["Shared"]) // Override wins
+    assertEquals("override-shared", result.headers!!["Shared"])
 
-    // Query should be merged with override winning
     assertEquals("base-value", result.query!!["base-query"])
     assertEquals("override-value", result.query!!["override-query"])
-    assertEquals("override-shared", result.query!!["shared"]) // Override wins
+    assertEquals("override-shared", result.query!!["shared"])
   }
 
   @Test
@@ -203,7 +210,7 @@ class RequestConfigBuilderTest {
     val configWithoutSlash =
       RequestConfig(
         method = null,
-        path = "albums", // No leading slash
+        path = "albums",
         baseUrl = "https://api.example.com",
         headers = null,
         query = null,
@@ -216,7 +223,7 @@ class RequestConfigBuilderTest {
     val result2 = RequestConfigBuilder.buildHttpRequest(configWithoutSlash)
 
     assertEquals("https://api.example.com/albums", result1.url)
-    assertEquals("https://api.example.com/albums", result2.url) // Should add slash
+    assertEquals("https://api.example.com/albums", result2.url)
   }
 
   @Test
@@ -227,7 +234,7 @@ class RequestConfigBuilderTest {
         path = "/albums",
         baseUrl = "https://api.example.com",
         headers = null,
-        query = emptyMap(), // Empty map
+        query = emptyMap(),
         body = null,
         contentType = null,
         userAgent = null,
@@ -235,6 +242,125 @@ class RequestConfigBuilderTest {
 
     val result = RequestConfigBuilder.buildHttpRequest(config)
 
-    assertEquals("https://api.example.com/albums", result.url) // No query string
+    assertEquals("https://api.example.com/albums", result.url)
   }
+
+  @Test
+  fun `composeResolved merges async then sync with sync winning`() {
+    val async =
+      RequestConfig(null, null, "https://async.example.com", null, null, null, null, "ASYNC")
+    val sync = RequestConfig(null, null, null, null, null, null, null, "SYNC")
+
+    val merged = RequestConfigBuilder.composeResolved(async, sync)
+
+    assertEquals("SYNC", merged?.userAgent)
+    assertEquals("https://async.example.com", merged?.baseUrl)
+  }
+
+  @Test
+  fun `composeResolved returns the single present side, or null for neither`() {
+    val cfg = RequestConfig(null, null, null, null, null, null, null, "ONLY")
+
+    assertEquals("ONLY", RequestConfigBuilder.composeResolved(cfg, null)?.userAgent)
+    assertEquals("ONLY", RequestConfigBuilder.composeResolved(null, cfg)?.userAgent)
+    assertNull(RequestConfigBuilder.composeResolved(null, null))
+  }
+
+  @Test
+  fun `mergeConfig MediaRequestConfig static fields merge over base and preserve callbacks`() =
+    runTest {
+      val base =
+        RequestConfig(
+          method = null,
+          path = "/stream.mp3",
+          baseUrl = "https://media.example.com",
+          headers = mapOf("x-base" to "1"),
+          query = null,
+          body = null,
+          contentType = null,
+          userAgent = "base-ua",
+        )
+      val override = mediaConfig(headers = mapOf("x-media" to "2"), query = mapOf("token" to "abc"))
+      val merged = RequestConfigBuilder.mergeConfig(base, override)
+      assertEquals("/stream.mp3", merged.path)
+      assertEquals("https://media.example.com", merged.baseUrl)
+      assertEquals("1", merged.headers?.get("x-base"))
+      assertEquals("2", merged.headers?.get("x-media"))
+      assertEquals("abc", merged.query?.get("token"))
+      assertEquals("base-ua", merged.userAgent)
+    }
+
+  @Test
+  fun `mergeConfig TransformableRequestConfig carries the base path over a static layer path`() =
+    runTest {
+      val base =
+        RequestConfig(null, "/navigated", "https://api.example.com", null, null, null, null, null)
+      val layer = transformableConfig(path = "/static-layer-path")
+      val merged = RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+      assertEquals("/navigated", merged.path)
+    }
+
+  @Test
+  fun `mergeConfig MediaRequestConfig carries the base path over a static media path`() = runTest {
+    val base =
+      RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
+    val media = mediaConfig(path = "/static-media-path")
+    val merged = RequestConfigBuilder.mergeConfig(base, media)
+    assertEquals("/stream/123", merged.path)
+  }
+
+  @Test
+  fun `a transform cancelled while JS is silent hands back no config`() =
+    runTest(timeout = 5.seconds) {
+      val bridge =
+        JsPromise<Promise<RequestConfig>>().apply { resolve(JsPromise<RequestConfig>().promise) }
+      val override =
+        transformableConfig()
+          .copy(
+            transform =
+              Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
+                _,
+                _ ->
+                bridge.promise
+              }
+          )
+      var returned = false
+      val caller =
+        backgroundScope.launch {
+          RequestConfigBuilder.mergeConfig(
+            RequestConfigBuilder.toRequestConfig(transformableConfig()),
+            override,
+          )
+          returned = true
+        }
+      runCurrent()
+
+      caller.cancel()
+      runCurrent()
+
+      assertTrue(caller.isCompleted)
+      assertFalse(returned)
+    }
+
+  @Test
+  fun `a media resolve cancelled while JS is silent hands back no config`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<RequestConfig>()
+      var returned = false
+      val caller =
+        backgroundScope.launch {
+          RequestConfigBuilder.applyMediaResolve(
+            mediaConfig(resolveSync = { silent.promise }),
+            TestFixtures.track(),
+          )
+          returned = true
+        }
+      runCurrent()
+
+      caller.cancel()
+      runCurrent()
+
+      assertTrue(caller.isCompleted)
+      assertFalse(returned)
+    }
 }

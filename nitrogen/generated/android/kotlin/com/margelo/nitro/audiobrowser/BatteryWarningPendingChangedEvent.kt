@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -22,6 +23,18 @@ data class BatteryWarningPendingChangedEvent(
   val pending: Boolean
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is BatteryWarningPendingChangedEvent) return false
+    return Objects.deepEquals(this.pending, other.pending)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      pending
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

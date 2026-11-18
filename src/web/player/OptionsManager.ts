@@ -59,27 +59,21 @@ export class OptionsManager {
     // Store merged options
     this.options = mergedOptions
 
-    // Call callback with full Options type (including repeatMode)
-    const fullOptions: Options = {
-      forwardJumpInterval: mergedOptions.forwardJumpInterval ?? 15,
-      backwardJumpInterval: mergedOptions.backwardJumpInterval ?? 15,
-      progressUpdateEventInterval:
-        mergedOptions.progressUpdateEventInterval ?? 15,
-      capabilities: mergedOptions.capabilities ?? {},
-      repeatMode: mergedOptions.repeatMode
-    }
-    this.onOptionsChanged(fullOptions)
+    this.onOptionsChanged(this.toOptions())
   }
 
-  /**
-   * Gets current player options (excluding repeatMode).
-   */
-  getOptions(): UpdateOptions {
+  /** The current options in their resolved shape. */
+  getOptions(): Options {
+    return this.toOptions()
+  }
+
+  private toOptions(): Options {
     return {
-      forwardJumpInterval: this.options.forwardJumpInterval,
-      backwardJumpInterval: this.options.backwardJumpInterval,
-      progressUpdateEventInterval: this.options.progressUpdateEventInterval,
-      capabilities: this.options.capabilities
+      forwardJumpInterval: this.options.forwardJumpInterval ?? 15,
+      backwardJumpInterval: this.options.backwardJumpInterval ?? 15,
+      progressUpdateEventInterval:
+        this.options.progressUpdateEventInterval ?? null,
+      capabilities: this.options.capabilities ?? {}
     }
   }
 

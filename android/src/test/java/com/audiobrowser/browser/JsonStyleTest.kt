@@ -1,0 +1,163 @@
+package com.audiobrowser.browser
+
+import com.audiobrowser.util.toGridTile
+import com.audiobrowser.util.toWireString
+import com.margelo.nitro.audiobrowser.ArtworkRendering
+import com.margelo.nitro.audiobrowser.CardImage
+import com.margelo.nitro.audiobrowser.GridTile
+import com.margelo.nitro.audiobrowser.ImageShape
+import com.margelo.nitro.audiobrowser.StyleDisplay
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/** Style blocks on the wire, decoded tolerantly (ADR 0011). */
+class JsonStyleTest {
+  private val json = Json { ignoreUnknownKeys = true }
+
+  @Test
+  fun `decodes a block onto TrackStyle`() {
+    val track =
+      json.decodeFromString<JsonTrack>(
+        """{"title":"X","style":{"display":"grid","artworkRendering":"stencil"}}"""
+      )
+    val style = track.toNitro().style
+    assertEquals(StyleDisplay.GRID, style?.display)
+    assertEquals(ArtworkRendering.STENCIL, style?.artworkRendering)
+  }
+
+  @Test
+  fun `decodes a block onto SectionStyle`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridWrap":false},"children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(StyleDisplay.GRID, style?.display)
+    assertEquals(false, style?.gridWrap)
+  }
+
+  @Test
+  fun `a stale string style decodes as no declaration - never a parse failure`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","style":"rail","children":[
+          {"title":"C","src":"s","style":"grid"}
+        ]}"""
+      )
+    val nitro = resolved.toNitro()
+    assertNull(nitro.style)
+    assertNull(nitro.children?.first()?.style)
+  }
+
+  @Test
+  fun `unknown enum values decode as no declaration`() {
+    // A block of only unknown values collapses to no block, the shape iOS gives too.
+    val track =
+      json.decodeFromString<JsonTrack>(
+        """{"title":"X","style":{"display":"carousel","artworkRendering":"embossed","gridWrap":"yes"}}"""
+      )
+    assertNull(track.toNitro().style)
+  }
+
+  @Test
+  fun `an empty block decodes as no declaration`() {
+    val track = json.decodeFromString<JsonTrack>("""{"title":"X","style":{}}""")
+    assertNull(track.toNitro().style)
+  }
+
+  @Test
+  fun `a quoted boolean gridWrap is a wrong-typed field - no declaration`() {
+    // iOS's typed decode drops a quoted "false"; reading it here would render a
+    // teaser shelf on one platform and a wrapping grid on the other.
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridWrap":"false"},"children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(StyleDisplay.GRID, style?.display)
+    assertNull(style?.gridWrap)
+  }
+
+  @Test
+  fun `decodes disabled`() {
+    val track = json.decodeFromString<JsonTrack>("""{"title":"X","src":"s","disabled":true}""")
+    assertEquals(true, track.toNitro().disabled)
+  }
+
+  @Test
+  fun `decodes imageShape and accessorySymbol`() {
+    val track =
+      json.decodeFromString<JsonTrack>(
+        """{"title":"X","style":{"imageShape":"circular","accessorySymbol":"lock.fill"}}"""
+      )
+    val style = track.toNitro().style
+    assertEquals(ImageShape.CIRCULAR, style?.imageShape)
+    assertEquals("lock.fill", style?.accessorySymbol)
+  }
+
+  @Test
+  fun `accessorySymbol 'none' is a value - not emptiness`() {
+    // "none" opts out of the section's symbol; dropping it would let that value inherit back.
+    val track =
+      json.decodeFromString<JsonTrack>("""{"title":"X","style":{"accessorySymbol":"none"}}""")
+    assertEquals("none", track.toNitro().style?.accessorySymbol)
+  }
+
+  @Test
+  fun `unknown imageShape decodes as no declaration`() {
+    val track =
+      json.decodeFromString<JsonTrack>("""{"title":"X","style":{"imageShape":"hexagonal"}}""")
+    assertNull(track.toNitro().style)
+  }
+
+  @Test
+  fun `decodes the card family`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridTile":"card","cardTint":"#1e3a8a","cardImage":"background"},
+           "children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(GridTile.CARD, style?.gridTile)
+    assertEquals("#1e3a8a", style?.cardTint)
+    assertEquals(CardImage.BACKGROUND, style?.cardImage)
+  }
+
+  @Test
+  fun `decodes the image family`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"display":"grid","gridTile":"image","imageShape":"circular"},
+           "children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    val style = resolved.toNitro().sections?.first()?.style
+    assertEquals(GridTile.IMAGE, style?.gridTile)
+    assertEquals(ImageShape.CIRCULAR, style?.imageShape)
+  }
+
+  @Test
+  fun `every gridTile survives the wire`() {
+    GridTile.entries.forEach { assertEquals(it, it.toWireString().toGridTile()) }
+  }
+
+  @Test
+  fun `unknown gridTile decodes as no declaration`() {
+    val resolved =
+      json.decodeFromString<JsonResolvedTrack>(
+        """{"path":"/home","title":"Home","sections":[
+          {"style":{"gridTile":"hexagon"},"children":[{"title":"C","src":"s"}]}
+        ]}"""
+      )
+    assertNull(resolved.toNitro().sections?.first()?.style)
+  }
+}

@@ -18,8 +18,26 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
-    self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
+  init(path: String, style: SectionStyle?, sections: [Section]?, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, disabled: Bool?, favorited: Bool?, live: Bool?, icyCharset: String?) {
+    self.init(std.string(path), { () -> bridge.std__optional_SectionStyle_ in
+      if let __unwrappedValue = style {
+        return bridge.create_std__optional_SectionStyle_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_Section__ in
+      if let __unwrappedValue = sections {
+        return bridge.create_std__optional_std__vector_Section__({ () -> bridge.std__vector_Section_ in
+          var __vector = bridge.create_std__vector_Section_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
           var __vector = bridge.create_std__vector_Track_(__unwrappedValue.count)
@@ -38,14 +56,27 @@ public extension ResolvedTrack {
         return .init()
       }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = src {
+      if let __unwrappedValue = id {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = artwork {
+      if let __unwrappedValue = src {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_std__string__ArtworkVariants__ in
+      if let __unwrappedValue = artwork {
+        return bridge.create_std__optional_std__variant_std__string__ArtworkVariants__({ () -> bridge.std__variant_std__string__ArtworkVariants_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_std__string__ArtworkVariants_(std.string(__value))
+            case .second(let __value):
+              return bridge.create_std__variant_std__string__ArtworkVariants_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
@@ -55,9 +86,9 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = artworkCarPlayTinted {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
+    }(), { () -> bridge.std__optional_TrackRequest_ in
+      if let __unwrappedValue = request {
+        return bridge.create_std__optional_TrackRequest_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -69,6 +100,12 @@ public extension ResolvedTrack {
       }
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = artist {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = albumPath {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -97,15 +134,9 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_TrackStyle_ in
-      if let __unwrappedValue = style {
-        return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_TrackStyle_ in
-      if let __unwrappedValue = childrenStyle {
-        return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = disabled {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -115,27 +146,15 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = groupTitle {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = live {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__vector_ImageRowItem__ in
-      if let __unwrappedValue = imageRow {
-        return bridge.create_std__optional_std__vector_ImageRowItem__({ () -> bridge.std__vector_ImageRowItem_ in
-          var __vector = bridge.create_std__vector_ImageRowItem_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
-          }
-          return __vector
-        }())
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = icyCharset {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -143,8 +162,25 @@ public extension ResolvedTrack {
   }
 
   @inline(__always)
-  var url: String {
-    return String(self.__url)
+  var path: String {
+    return String(self.__path)
+  }
+  
+  @inline(__always)
+  var style: SectionStyle? {
+    return self.__style.value
+  }
+  
+  @inline(__always)
+  var sections: [Section]? {
+    return { () -> [Section]? in
+      if bridge.has_value_std__optional_std__vector_Section__(self.__sections) {
+        let __unwrapped = bridge.get_std__optional_std__vector_Section__(self.__sections)
+        return __unwrapped.map({ __item in __item })
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)
@@ -165,6 +201,18 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
+  var id: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__id) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__id)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
   var src: String? {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__src) {
@@ -177,11 +225,23 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var artwork: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__artwork) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
-        return String(__unwrapped)
+  var artwork: Variant_String_ArtworkVariants? {
+    return { () -> Variant_String_ArtworkVariants? in
+      if bridge.has_value_std__optional_std__variant_std__string__ArtworkVariants__(self.__artwork) {
+        let __unwrapped = bridge.get_std__optional_std__variant_std__string__ArtworkVariants__(self.__artwork)
+        return { () -> Variant_String_ArtworkVariants in
+          let __variant = bridge.std__variant_std__string__ArtworkVariants_(__unwrapped)
+          switch __variant.index() {
+            case 0:
+              let __actual = __variant.get_0()
+              return .first(String(__actual))
+            case 1:
+              let __actual = __variant.get_1()
+              return .second(__actual)
+            default:
+              fatalError("Variant can never have index \(__variant.index())!")
+          }
+        }()
       } else {
         return nil
       }
@@ -194,15 +254,8 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var artworkCarPlayTinted: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__artworkCarPlayTinted) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__artworkCarPlayTinted)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
+  var request: TrackRequest? {
+    return self.__request.value
   }
   
   @inline(__always)
@@ -227,6 +280,18 @@ public extension ResolvedTrack {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__artist) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__artist)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var albumPath: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__albumPath) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumPath)
         return String(__unwrapped)
       } else {
         return nil
@@ -283,20 +348,10 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var style: TrackStyle? {
-    return self.__style.value
-  }
-  
-  @inline(__always)
-  var childrenStyle: TrackStyle? {
-    return self.__childrenStyle.value
-  }
-  
-  @inline(__always)
-  var favorited: Bool? {
+  var disabled: Bool? {
     return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__favorited) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__favorited)
+      if bridge.has_value_std__optional_bool_(self.__disabled) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__disabled)
         return __unwrapped
       } else {
         return nil
@@ -305,11 +360,11 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var groupTitle: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__groupTitle) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__groupTitle)
-        return String(__unwrapped)
+  var favorited: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__favorited) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__favorited)
+        return __unwrapped
       } else {
         return nil
       }
@@ -329,11 +384,11 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var imageRow: [ImageRowItem]? {
-    return { () -> [ImageRowItem]? in
-      if bridge.has_value_std__optional_std__vector_ImageRowItem__(self.__imageRow) {
-        let __unwrapped = bridge.get_std__optional_std__vector_ImageRowItem__(self.__imageRow)
-        return __unwrapped.map({ __item in __item })
+  var icyCharset: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__icyCharset) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__icyCharset)
+        return String(__unwrapped)
       } else {
         return nil
       }

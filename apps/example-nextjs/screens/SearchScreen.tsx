@@ -12,7 +12,7 @@ import {
 import {
   navigate,
   search,
-  Track,
+  type Track,
   useActiveTrack
 } from 'react-native-audio-browser'
 import { TrackListItem } from '../components/TrackListItem'
@@ -69,7 +69,7 @@ export function SearchScreen({
       onPress={() => {
         navigate(item)
         // Push browser on top of search when navigating to a browsable item
-        if (item.url && !item.src) {
+        if (item.path && !item.src) {
           onNavigate?.()
         }
       }}

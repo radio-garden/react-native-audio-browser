@@ -7,9 +7,11 @@ on:
   push:
     branches:
       - main
+      - next
     paths:
       - '.github/workflows/android-build.yml'
-      - 'apps/example-native/android/**'
+      - 'apps/example-native/**'
+      - 'src/**'
       - 'nitrogen/generated/shared/**'
       - 'nitrogen/generated/android/**'
       - 'cpp/**'
@@ -20,7 +22,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/android-build.yml'
-      - 'apps/example-native/android/**'
+      - 'apps/example-native/**'
+      - 'src/**'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/android/**'
       - 'cpp/**'
@@ -36,12 +39,8 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android Example App (${{ matrix.arch }})
+    name: Build Android Example App
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [new, old]
     steps:
       - uses: actions/checkout@v6
       - name: Enable Corepack
@@ -54,10 +53,6 @@ jobs:
 
       - name: Install dependencies
         run: yarn install
-
-      - name: Disable new architecture in gradle.properties
-        if: matrix.arch == 'old'
-        run: sed -i "s/newArchEnabled=true/newArchEnabled=false/g" apps/example-native/android/gradle.properties
 
       - name: Setup JDK 17
         uses: actions/setup-java@v5
@@ -76,9 +71,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Gradle build
+      - name: Build debug
         working-directory: apps/example-native/android
         run: ./gradlew assembleDebug --no-daemon --build-cache
+
+      - name: Build release
+        working-directory: apps/example-native/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --build-cache
 
       - name: Stop Gradle daemon
         working-directory: apps/example-native/android

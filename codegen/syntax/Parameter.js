@@ -18,7 +18,7 @@ export class Parameter {
             const name = param.getSymbolOrThrow().getEscapedName();
             const type = param.getType();
             const isOptional = param.hasQuestionToken() || param.isOptional() || type.isNullable();
-            this.type = createNamedType(language, name, type, isOptional);
+            this.type = createNamedType(language, name, type, isOptional, param.getTypeNode());
         }
         else {
             // constructor(...)???

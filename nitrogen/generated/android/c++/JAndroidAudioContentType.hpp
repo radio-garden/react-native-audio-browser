@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "AndroidAudioContentType" and the the Kotlin enum "AndroidAudioContentType".
+   * The C++ JNI bridge between the C++ enum "AndroidAudioContentType" and the Kotlin enum "AndroidAudioContentType".
    */
   struct JAndroidAudioContentType final: public jni::JavaClass<JAndroidAudioContentType> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AndroidAudioContentType;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AndroidAudioContentType;";
 
   public:
     /**
@@ -45,18 +45,18 @@ namespace margelo::nitro::audiobrowser {
         case AndroidAudioContentType::MUSIC:
           static const auto fieldMUSIC = clazz->getStaticField<JAndroidAudioContentType>("MUSIC");
           return clazz->getStaticFieldValue(fieldMUSIC);
-        case AndroidAudioContentType::SPEECH:
-          static const auto fieldSPEECH = clazz->getStaticField<JAndroidAudioContentType>("SPEECH");
-          return clazz->getStaticFieldValue(fieldSPEECH);
-        case AndroidAudioContentType::SONIFICATION:
-          static const auto fieldSONIFICATION = clazz->getStaticField<JAndroidAudioContentType>("SONIFICATION");
-          return clazz->getStaticFieldValue(fieldSONIFICATION);
         case AndroidAudioContentType::MOVIE:
           static const auto fieldMOVIE = clazz->getStaticField<JAndroidAudioContentType>("MOVIE");
           return clazz->getStaticFieldValue(fieldMOVIE);
         case AndroidAudioContentType::UNKNOWN:
           static const auto fieldUNKNOWN = clazz->getStaticField<JAndroidAudioContentType>("UNKNOWN");
           return clazz->getStaticFieldValue(fieldUNKNOWN);
+        case AndroidAudioContentType::SPEECH:
+          static const auto fieldSPEECH = clazz->getStaticField<JAndroidAudioContentType>("SPEECH");
+          return clazz->getStaticFieldValue(fieldSPEECH);
+        case AndroidAudioContentType::SONIFICATION:
+          static const auto fieldSONIFICATION = clazz->getStaticField<JAndroidAudioContentType>("SONIFICATION");
+          return clazz->getStaticFieldValue(fieldSONIFICATION);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

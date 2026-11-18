@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_TrackMetadata_cxx: Func_void_TrackMetadata {
   override fun invoke(metadata: TrackMetadata): Unit
     = invoke_cxx(metadata)
 
-  @FastNative
   private external fun invoke_cxx(metadata: TrackMetadata): Unit
 }
 

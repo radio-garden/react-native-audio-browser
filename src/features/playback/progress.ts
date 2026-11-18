@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AppState } from 'react-native'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -43,9 +44,10 @@ export function getProgress(): Progress {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to playback progress updates.
- * @param callback - Called periodically with playback progress updates
- * @returns Cleanup function to unsubscribe
+ * Emits the progress every `progressUpdateEventInterval` seconds while the
+ * player is loading, buffering or playing. Off by default (the interval is
+ * `null`). Subscribe with `onProgressUpdated.addListener(cb)`, which returns
+ * an unsubscribe function.
  */
 export const onProgressUpdated =
   NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(
@@ -55,9 +57,14 @@ export const onProgressUpdated =
 // MARK: - Hooks
 
 /**
- * Hook that returns the current playback progress and updates when it changes.
+ * Hook that returns the current playback progress and updates on each
+ * progress event.
  *
- * Progress update frequency is controlled globally via `updateOptions({ progressUpdateEventInterval })`.
+ * Progress events are off by default (`progressUpdateEventInterval: null`), so
+ * this hook does not update until you set an interval in `setupPlayer` or
+ * `updateOptions`. Events fire only while loading, buffering or playing, so a
+ * seek while paused does not show. For updates without configuration, use
+ * {@link usePolledProgress}.
  * @returns The current playback progress
  */
 export function useProgress(): Progress {
@@ -68,6 +75,9 @@ export function useProgress(): Progress {
  * Hook that returns the current playback progress and updates via polling.
  *
  * Use this when you need custom polling behavior instead of event-based updates.
+ *
+ * Skips updates while the app is backgrounded and refreshes once it becomes
+ * active again.
  *
  * @param updateInterval - Update interval in milliseconds (default: 1000)
  * @returns The current playback progress
@@ -80,12 +90,12 @@ export function usePolledProgress(updateInterval = 1000): Progress {
   })
 
   useEffect(() => {
-    let mounted = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let unsubscribeState: (() => void) | undefined
 
     const update = () => {
       try {
         const { position, duration, buffered } = getProgress()
-        if (!mounted) return
 
         setState((currentState) =>
           position === currentState.position &&
@@ -99,22 +109,38 @@ export function usePolledProgress(updateInterval = 1000): Progress {
       }
     }
 
-    // Update immediately on playback state changes
-    const unsubscribeState = onPlaybackChanged.addListener(update)
-
     const poll = () => {
       update()
-      if (!mounted) return
-      setTimeout(() => {
-        if (mounted) poll()
-      }, updateInterval)
+      timer = setTimeout(poll, updateInterval)
     }
 
-    poll()
+    // We only poll and listen for playback changes while the app is active. On
+    // return to the foreground we update once and restart the loop so the
+    // interval timing stays correct.
+    const start = () => {
+      if (timer !== undefined) return
+      unsubscribeState = onPlaybackChanged.addListener(update)
+      poll()
+    }
+
+    const stop = () => {
+      // Guarded: React Native types clearTimeout(handle: number) — no undefined.
+      if (timer !== undefined) clearTimeout(timer)
+      timer = undefined
+      unsubscribeState?.()
+      unsubscribeState = undefined
+    }
+
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') start()
+      else stop()
+    })
+
+    if (AppState.currentState === 'active') start()
 
     return () => {
-      mounted = false
-      unsubscribeState()
+      stop()
+      appStateSub.remove()
     }
   }, [updateInterval])
 

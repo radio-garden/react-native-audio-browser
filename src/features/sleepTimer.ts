@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
 
 /**
- * Time-based sleep timer that stops playback after a specific time.
+ * Time-based sleep timer that pauses playback after a specific time.
  */
 export type SleepTimerTime = {
-  /** Time when playback should stop (milliseconds since epoch) */
+  /** Time when playback should pause (milliseconds since epoch) */
   time: number
 }
 
 /**
- * End-of-track sleep timer that stops playback when current track finishes.
+ * End-of-track sleep timer that pauses playback when current track finishes.
  */
 export type SleepTimerEndOfTrack = {
   /** Whether to sleep when current track finishes playing */
@@ -22,12 +22,16 @@ export type SleepTimerEndOfTrack = {
 
 /**
  * Sleep timer configuration:
- * - `SleepTimerTime`: Stop playback after a specific time
- * - `SleepTimerEndOfTrack`: Stop playback after current track finishes
+ * - `SleepTimerTime`: Pause playback after a specific time
+ * - `SleepTimerEndOfTrack`: Pause playback after current track finishes
  * - `null`: No sleep timer active
  */
 export type SleepTimer = SleepTimerTime | SleepTimerEndOfTrack | null
 
+/**
+ * Payload of `onSleepTimerChanged`: the new timer, or `null` once it is
+ * cleared or has fired.
+ */
 export type SleepTimerChangedEvent = SleepTimer
 
 // MARK: - Getters and Setters
@@ -40,15 +44,39 @@ export function getSleepTimer(): SleepTimer {
 }
 
 /**
- * Sets a sleep timer to stop playback after the specified duration.
- * @param seconds - Number of seconds until playback stops
+ * Options for `setSleepTimer`.
  */
-export function setSleepTimer(seconds: number): void {
-  nativeBrowser.setSleepTimer(seconds)
+export type SleepTimerOptions = {
+  /**
+   * Seconds over which to fade the volume out before the timer completes.
+   * The fade ends exactly at the deadline (clamped to the timer duration if
+   * longer), playback is paused, and the pre-fade volume is restored so the
+   * next play starts at normal loudness. During the fade the timer wins:
+   * skips and seeks play into the remaining ramp; only pausing or
+   * clearing/replacing the timer cancels it.
+   */
+  fadeDuration?: number
 }
 
 /**
- * Sets a sleep timer to stop playback when the current track finishes playing.
+ * Sets a sleep timer to pause playback after the specified duration.
+ * @param seconds - Number of seconds until playback pauses
+ * @param options - Optional fade-out configuration
+ */
+export function setSleepTimer(
+  seconds: number,
+  options?: SleepTimerOptions
+): void {
+  nativeBrowser.setSleepTimer(seconds, options?.fadeDuration)
+}
+
+/**
+ * Sets a sleep timer to pause playback when the current track finishes playing.
+ * A live stream never ends, so on one this timer never fires; use
+ * `setSleepTimer` instead. On iOS a change of current track before it ends
+ * (skip, new queue) cancels the timer. On Android and web it stays set until a
+ * track plays to its end. On Android it never fires while the repeat mode is
+ * `track`.
  */
 export function setSleepTimerToEndOfTrack(): void {
   nativeBrowser.setSleepTimerToEndOfTrack()
@@ -66,8 +94,7 @@ export function clearSleepTimer(): boolean {
 
 /**
  * Subscribes to sleep timer changes.
- * @param callback - Called when the sleep timer state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
   (cb) => (nativeBrowser.onSleepTimerChanged = cb)
@@ -82,9 +109,13 @@ export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
  * @returns true if any sleep timer is active, false otherwise
  */
 export function useSleepTimerActive(): boolean {
+  const eventCountAtRender = useRef(onSleepTimerChanged.eventCount)
   const [isActive, setIsActive] = useState(() => getSleepTimer() !== null)
 
   useEffect(() => {
+    if (onSleepTimerChanged.eventCount !== eventCountAtRender.current) {
+      setIsActive(getSleepTimer() !== null)
+    }
     return onSleepTimerChanged.addListener((timer) => {
       setIsActive(timer !== null)
     })
@@ -110,6 +141,7 @@ export function useSleepTimer(params?: {
   const updateInterval = params?.updateInterval ?? 1000
   const inactive = params?.inactive ?? false
 
+  const eventCountAtRender = useRef(onSleepTimerChanged.eventCount)
   const [state, setState] = useState<SleepTimerState | undefined>(() => {
     const timerState = getSleepTimer()
     return addSecondsLeft(timerState)
@@ -118,6 +150,9 @@ export function useSleepTimer(params?: {
   const time = state && 'time' in state ? state.time : undefined
 
   useEffect(() => {
+    if (onSleepTimerChanged.eventCount !== eventCountAtRender.current) {
+      setState(addSecondsLeft(getSleepTimer()))
+    }
     return onSleepTimerChanged.addListener((event) => {
       setState(addSecondsLeft(event))
     })

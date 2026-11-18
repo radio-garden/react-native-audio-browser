@@ -1,2 +1,11 @@
 [tools]
 node = "24"
+
+# SwiftFormat's output shifts between releases, so an unpinned local install
+# reformats files the pinned one considers correct — an unrelated PR turns into
+# a repo-wide diff, or `--lint` reports dozens of errors in untouched code.
+#
+# This is the only place the version is written down: `mise install` gives you
+# that build, CI downloads it, and `scripts/swiftformat.sh` refuses to run any
+# other. Bump it here and everything follows.
+swiftformat = "0.58.2"

@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "AndroidPlayerWakeMode" and the the Kotlin enum "AndroidPlayerWakeMode".
+   * The C++ JNI bridge between the C++ enum "AndroidPlayerWakeMode" and the Kotlin enum "AndroidPlayerWakeMode".
    */
   struct JAndroidPlayerWakeMode final: public jni::JavaClass<JAndroidPlayerWakeMode> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AndroidPlayerWakeMode;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AndroidPlayerWakeMode;";
 
   public:
     /**

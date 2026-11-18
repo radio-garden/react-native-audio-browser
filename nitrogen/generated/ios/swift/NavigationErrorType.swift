@@ -27,6 +27,10 @@ public extension NavigationErrorType {
         self = .callbackError
       case "unknown-error":
         self = .unknownError
+      case "empty-content":
+        self = .emptyContent
+      case "timeout":
+        self = .timeout
       default:
         return nil
     }
@@ -47,6 +51,10 @@ public extension NavigationErrorType {
         return "callback-error"
       case .unknownError:
         return "unknown-error"
+      case .emptyContent:
+        return "empty-content"
+      case .timeout:
+        return "timeout"
     }
   }
 }

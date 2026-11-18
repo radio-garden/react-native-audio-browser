@@ -1,191 +1,129 @@
 package com.audiobrowser.player
 
 import androidx.media3.common.C
-import androidx.media3.common.PlaybackException
+import androidx.media3.common.ParserException
+import androidx.media3.datasource.DataSourceException
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.CacheKeyFactory
+import androidx.media3.datasource.cache.ContentMetadata
+import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
-import kotlin.math.min
-import kotlin.math.pow
-import timber.log.Timber
+import androidx.media3.exoplayer.upstream.Loader
+import java.io.FileNotFoundException
+import java.io.IOException
 
 /**
- * Custom LoadErrorHandlingPolicy that retries on recoverable IO errors with exponential backoff.
+ * What becomes of a recoverable load failure of one media item (docs/adr/0014). Where media3
+ * resumes the connection in place (an adaptive stream's segment or playlist, a file whose response
+ * declared its length), it retries after the backoff; anything else ends the connection, for
+ * [RetryLoop] to reconnect once the buffer has played out. An item that is only preloading retries
+ * in place: the loop serves the current item. It never gives up on a recoverable failure: the
+ * loop's silence deadline does. Called on ExoPlayer's playback thread.
  *
- * When a network monitor is provided and the device is offline during a network error, the policy
- * will use a shorter retry delay and the network restoration callback can trigger an immediate
- * retry when connectivity is restored.
- *
- * @param maxRetries Maximum number of retries, or null for infinite retries
- * @param maxRetryDurationMs Maximum duration to keep retrying before giving up, or null for default (2 minutes)
- * @param shouldRetry Optional callback to check if retry should proceed (e.g., check playWhenReady)
- * @param isOnline Optional callback to check current network state
- * @param onRetryPending Optional callback invoked when a retry is pending (for network restoration
- *   acceleration)
+ * @param isCurrent whether the item is the one playing; read on the playback thread
+ * @param cache the cache the item's loads read through, if any
+ * @param onFailure each recoverable failure of the current item, and whether it is retried in place
  */
 class RetryLoadErrorHandlingPolicy(
-  private val maxRetries: Int? = null,
-  maxRetryDurationMs: Long? = null,
-  private val shouldRetry: () -> Boolean = { true },
-  private val isOnline: () -> Boolean = { true },
-  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
+  private val sources: Sources,
+  private val isCurrent: () -> Boolean,
+  private val cache: Cache? = null,
+  private val onFailure: (exception: IOException, inPlace: Boolean) -> Unit,
 ) : DefaultLoadErrorHandlingPolicy() {
 
+  enum class Sources {
+    /** HLS, DASH and SmoothStreaming: segments and playlists retry in place. */
+    ADAPTIVE,
+
+    /** A progressive stream: in place only once the response declared its length. */
+    PROGRESSIVE,
+
+    /** A progressive stream marked live: every failure ends the connection. */
+    LIVE,
+  }
+
   companion object {
-    private const val INITIAL_RETRY_DELAY_MS = 1000L // 1 second
-    private const val MAX_RETRY_DELAY_MS = 5000L // 5 seconds cap
-    private const val BACKOFF_MULTIPLIER = 1.5
-    // When offline, use a short fixed delay instead of exponential backoff.
-    // ExoPlayer's retry timer can't be interrupted, so we use a short delay to:
-    // 1. Allow our network restoration callback to trigger immediate retry
-    // 2. Keep polling in case the callback doesn't fire
-    private const val OFFLINE_RETRY_DELAY_MS = 1000L
-    // Default maximum duration to keep retrying before giving up (in milliseconds).
-    private const val DEFAULT_MAX_RETRY_DURATION_MS = 120_000L // 2 minutes
-
-    // HTTP status codes that are worth retrying
-    private val RETRYABLE_HTTP_STATUS_CODES =
-      setOf(
-        408, // Request Timeout
-        429, // Too Many Requests
-        500, // Internal Server Error
-        502, // Bad Gateway
-        503, // Service Unavailable
-        504, // Gateway Timeout
-      )
-  }
-
-  // Maximum duration to keep retrying before giving up.
-  // This prevents surprising playback resumption after long periods offline.
-  private val maxRetryDurationMs: Long = maxRetryDurationMs ?: DEFAULT_MAX_RETRY_DURATION_MS
-
-  // Track when we started retrying to enforce max duration
-  @Volatile
-  private var firstErrorTime: Long? = null
-
-  /** Resets the retry timer. Call when track changes. */
-  fun reset() {
-    firstErrorTime = null
-  }
-
-  /** Calculates exponential backoff delay: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped) */
-  private fun calculateBackoffDelay(errorCount: Int): Long {
-    // errorCount is 1-based (first error = 1)
-    val exponentialDelay =
-      INITIAL_RETRY_DELAY_MS * BACKOFF_MULTIPLIER.pow((errorCount - 1).toDouble())
-    return min(exponentialDelay.toLong(), MAX_RETRY_DELAY_MS)
-  }
-
-  /**
-   * Checks if an HTTP error is worth retrying based on status code. Only server errors (5xx) and
-   * specific client errors (408, 429) are retryable.
-   */
-  private fun isRetryableHttpError(exception: Throwable): Boolean {
-    // Check the exception chain for HttpDataSource.InvalidResponseCodeException
-    var current: Throwable? = exception
-    while (current != null) {
-      if (current is HttpDataSource.InvalidResponseCodeException) {
-        return current.responseCode in RETRYABLE_HTTP_STATUS_CODES
-      }
-      current = current.cause
-    }
-    return false
+    private val RETRYABLE_HTTP_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
   }
 
   override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-    val exception = loadErrorInfo.exception
-    val errorCount = loadErrorInfo.errorCount
-    val currentTime = System.currentTimeMillis()
+    // Not super's verdict: it still backs off on some errors it doesn't treat as fatal (a 404),
+    // which would retry a dead URL until the silence deadline.
+    if (!isRecoverable(loadErrorInfo.exception)) return C.TIME_UNSET
+    val backoff = ReconnectPacer.backoffMs(loadErrorInfo.errorCount)
+    if (!isCurrent()) return backoff
+    val inPlace =
+      when (sources) {
+        Sources.ADAPTIVE -> true
+        Sources.PROGRESSIVE -> hasKnownLength(loadErrorInfo.loadEventInfo)
+        Sources.LIVE -> false
+      }
+    onFailure(loadErrorInfo.exception, inPlace)
+    return if (inPlace) backoff else C.TIME_UNSET
+  }
 
-    // Don't retry if player is paused/stopped (e.g., another app took audio focus)
-    if (!shouldRetry()) {
-      Timber.d("Retry skipped: shouldRetry() returned false (player likely paused)")
-      return C.TIME_UNSET
-    }
+  override fun onLoadTaskConcluded(loadTaskId: Long) {
+    knownLength -= loadTaskId
+  }
 
-    // Check if we've exceeded max retries
-    if (maxRetries != null && errorCount > maxRetries) {
-      Timber.d("Max retries ($maxRetries) exceeded, not retrying")
-      return C.TIME_UNSET
-    }
+  /** Load tasks whose response declared a length: a reopen that fails carries no headers. */
+  private val knownLength = mutableSetOf<Long>()
 
-    // Track when we started retrying
-    if (firstErrorTime == null) {
-      firstErrorTime = currentTime
-    }
+  private fun hasKnownLength(info: LoadEventInfo): Boolean {
+    if (
+      declaresLength(info.responseHeaders) ||
+        (info.responseHeaders.isEmpty() && cachedLengthKnown(info.dataSpec))
+    )
+      knownLength += info.loadTaskId
+    return info.loadTaskId in knownLength
+  }
 
-    // Check if we've been retrying too long (prevents surprising resumption after long offline)
-    val startTime = firstErrorTime
-    if (startTime != null) {
-      val elapsed = currentTime - startTime
-      if (elapsed >= maxRetryDurationMs) {
-        Timber.d("Max retry duration (${maxRetryDurationMs}ms) exceeded after ${elapsed}ms, giving up")
-        return C.TIME_UNSET
+  /** A load reading from the cache has no response: the cache keeps the length one declared. */
+  private fun cachedLengthKnown(dataSpec: DataSpec): Boolean {
+    val cache = cache ?: return false
+    val key = CacheKeyFactory.DEFAULT.buildCacheKey(dataSpec)
+    return ContentMetadata.getContentLength(cache.getContentMetadata(key)) !=
+      C.LENGTH_UNSET.toLong()
+  }
+
+  /** Never media3's verdict: the in-place path retries until the loop gives up on it. */
+  override fun getMinimumLoadableRetryCount(dataType: Int): Int = Int.MAX_VALUE
+
+  private fun declaresLength(headers: Map<String, List<String>>): Boolean =
+    headers.any { (name, values) ->
+      when {
+        name.equals("Content-Length", ignoreCase = true) -> true
+        // A Range response's total, `bytes 0-99/1234`; `*` is a length the server doesn't know.
+        name.equals("Content-Range", ignoreCase = true) ->
+          values.any { !it.substringAfterLast('/').trim().startsWith('*') }
+        else -> false
       }
     }
 
-    // Classify the error
-    val errorClassification = classifyError(exception)
-
-    return if (errorClassification.isRecoverable) {
-      // Check if we're offline during a network error
-      val currentlyOffline = !isOnline()
-      val isNetworkError = errorClassification.isNetworkError
-
-      val delay =
-        if (currentlyOffline && isNetworkError) {
-          // Use shorter delay when offline - we'll retry immediately when network comes back
-          Timber.d(
-            "Device is offline, using short retry delay (will accelerate when network returns)"
-          )
-          OFFLINE_RETRY_DELAY_MS
-        } else {
-          calculateBackoffDelay(errorCount)
-        }
-
-      Timber.d(
-        "Retrying after IO error (attempt $errorCount, delay ${delay}ms, offline=$currentlyOffline): ${exception.message}"
-      )
-
-      // Notify that a retry is pending (for network restoration acceleration)
-      onRetryPending?.invoke(isNetworkError)
-
-      delay
-    } else {
-      // For non-recoverable errors, use default behavior (no retry)
-      super.getRetryDelayMsFor(loadErrorInfo)
-    }
-  }
-
-  /** Classification result for an error */
-  private data class ErrorClassification(val isRecoverable: Boolean, val isNetworkError: Boolean)
-
-  /** Classifies whether an error is recoverable and whether it's network-related */
-  private fun classifyError(exception: Throwable): ErrorClassification {
-    return when {
-      exception is PlaybackException -> {
-        when (exception.errorCode) {
-          // Clearly transient network errors
-          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
-            ErrorClassification(isRecoverable = true, isNetworkError = true)
-          // HTTP errors - retry on server errors and specific client errors
-          PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-            val isRetryable = isRetryableHttpError(exception)
-            ErrorClassification(isRecoverable = isRetryable, isNetworkError = isRetryable)
-          }
-          else -> ErrorClassification(isRecoverable = false, isNetworkError = false)
-        }
+  /**
+   * Walks the cause chain: load errors arrive as raw IOExceptions (a Wi-Fi drop is a socket or DNS
+   * error), never as a PlaybackException. Anything not known to be fatal is recoverable.
+   */
+  private fun isRecoverable(exception: IOException): Boolean {
+    var current: Throwable? = exception
+    while (current != null) {
+      when (current) {
+        is HttpDataSource.InvalidResponseCodeException ->
+          return current.responseCode in RETRYABLE_HTTP_STATUS_CODES
+        // Mirrors DefaultLoadErrorHandlingPolicy's fatal set.
+        is HttpDataSource.CleartextNotPermittedException,
+        is ParserException,
+        is FileNotFoundException,
+        is Loader.UnexpectedLoaderException -> return false
       }
-      // HTTP errors outside PlaybackException wrapper
-      isRetryableHttpError(exception) ->
-        ErrorClassification(isRecoverable = true, isNetworkError = true)
-      else -> ErrorClassification(isRecoverable = false, isNetworkError = false)
+      current = current.cause
     }
-  }
 
-  override fun getMinimumLoadableRetryCount(dataType: Int): Int {
-    // Return the max retries, or MAX_VALUE for infinite
-    return maxRetries ?: Int.MAX_VALUE
+    // A position the source can no longer serve (e.g. behind a live window) won't come back on an
+    // in-place retry.
+    return !DataSourceException.isCausedByPositionOutOfRange(exception)
   }
 }

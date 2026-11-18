@@ -2,8 +2,6 @@ package com.audiobrowser
 
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.ChapterMetadata
-import com.margelo.nitro.audiobrowser.TimedMetadata
-import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
@@ -17,19 +15,20 @@ import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SleepTimer
+import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackMetadata
 
-/** Callbacks for all player events. */
 interface Callbacks {
-  // Playback state events
   fun onPlaybackChanged(playback: Playback)
 
   fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent)
 
   fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent)
+
+  fun onPlaybackInterval()
 
   fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent)
 
@@ -45,14 +44,13 @@ interface Callbacks {
 
   fun onPlaybackError(error: PlaybackError?)
 
-  // Metadata events
   fun onTrackMetadata(metadata: TrackMetadata)
 
   fun onChapterMetadata(chapters: List<ChapterMetadata>)
 
   fun onTimedMetadata(metadata: TimedMetadata)
 
-  // Remote control events
+  // handleRemote*: true when JS handled the command, so the player skips its default action.
   fun handleRemotePlay(): Boolean
 
   fun handleRemotePause(): Boolean
@@ -69,24 +67,15 @@ interface Callbacks {
 
   fun handleRemoteSeek(event: RemoteSeekEvent): Boolean
 
-  // Rating events (listener only, not handler)
-  fun onRemoteSetRating(event: RemoteSetRatingEvent)
-
-  // Configuration events
   fun onOptionsChanged(options: PlayerUpdateOptions)
 
-  // Favorite events
   fun onFavoriteChanged(event: FavoriteChangedEvent)
 
-  // Now playing metadata events
   fun onNowPlayingChanged(metadata: NowPlayingMetadata)
 
-  // Network connectivity events
   fun onOnlineChanged(online: Boolean)
 
-  // Equalizer events
   fun onEqualizerChanged(settings: EqualizerSettings)
 
-  // Sleep timer events
   fun onSleepTimerChanged(timer: SleepTimer?)
 }

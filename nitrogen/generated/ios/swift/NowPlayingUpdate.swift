@@ -18,7 +18,7 @@ public extension NowPlayingUpdate {
   /**
    * Create a new instance of `NowPlayingUpdate`.
    */
-  init(title: String?, artist: String?) {
+  init(title: String?, artist: String?, album: String?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = title {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -27,6 +27,12 @@ public extension NowPlayingUpdate {
       }
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = artist {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = album {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -51,6 +57,18 @@ public extension NowPlayingUpdate {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__artist) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__artist)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var album: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__album) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__album)
         return String(__unwrapped)
       } else {
         return nil

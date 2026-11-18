@@ -10,31 +10,42 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackActiveTrackChangedEvent.hpp"
 
+#include "ArtworkRendering.hpp"
+#include "ArtworkVariants.hpp"
+#include "CardImage.hpp"
 #include "HttpMethod.hpp"
-#include "ImageRowItem.hpp"
+#include "ImageShape.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkRendering.hpp"
+#include "JArtworkVariants.hpp"
+#include "JCardImage.hpp"
 #include "JHttpMethod.hpp"
-#include "JImageRowItem.hpp"
+#include "JImageShape.hpp"
 #include "JImageSource.hpp"
+#include "JStyleDisplay.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "StyleDisplay.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <vector>
+#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PlaybackActiveTrackChangedEvent" and the the Kotlin data class "PlaybackActiveTrackChangedEvent".
+   * The C++ JNI bridge between the C++ struct "PlaybackActiveTrackChangedEvent" and the Kotlin data class "PlaybackActiveTrackChangedEvent".
    */
   struct JPlaybackActiveTrackChangedEvent final: public jni::JavaClass<JPlaybackActiveTrackChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackActiveTrackChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/PlaybackActiveTrackChangedEvent;";
 
   public:
     /**

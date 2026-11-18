@@ -1,74 +1,41 @@
 import Foundation
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
-/// Utility for handling browser paths and contextual URLs in the media browser system.
-///
-/// Handles two types of special paths:
-/// 1. System paths (prefixed with `/__`): Root, recent, and search paths
-/// 2. Contextual URLs: Embed parent context in track identifiers for playback integration
-///
-/// Contextual URL format: `{parentPath}?__trackId={trackSrc}`
-/// Example: "/library/radio?__trackId=song.mp3"
-///
-/// This allows:
-/// - Playable-only tracks (tracks with `src` but no `url`) to be referenced
-/// - Cache lookup to work consistently
-/// - Parent context to be preserved for queue restoration
+/// Search paths (`/__search?q=…`) and contextual paths, which address a child of a page:
+/// `{parentPath}?__trackId={identity}&__index={position}`. `__trackId` decides the track;
+/// `__index` only breaks ties between children with the same identity, so a stale index never
+/// selects a different track.
 enum BrowserPathHelper {
-  /// Root path for media browsing
-  static let rootPath = "/__root"
-
-  /// Recent media path for playback resumption
-  static let recentPath = "/__recent"
-
-  /// Search path prefix (full path is /__search?q=query)
   static let searchPathPrefix = "/__search"
 
-  /// Offline error placeholder media ID
-  static let offlinePath = "/__offline"
-
-  /// Character set for percent-encoding query parameter keys and values.
-  /// Starts from `.urlQueryAllowed` but removes characters that have special
-  /// meaning in query strings (`&`, `=`, `+`) to prevent value corruption.
   private static let queryComponentAllowed: CharacterSet = {
     var cs = CharacterSet.urlQueryAllowed
     cs.remove(charactersIn: "&=+")
     return cs
   }()
 
-  /// Query parameter name for contextual track identifiers
   private static let contextualTrackParam = "__trackId"
 
-  /// Check if a path is a special system path (not a regular navigation path)
-  static func isSpecialPath(_ path: String) -> Bool {
-    path == rootPath ||
-      path == recentPath ||
-      path.hasPrefix("\(searchPathPrefix)?")
+  private static let contextualIndexParam = "__index"
+
+  static func isSearchPath(_ path: String) -> Bool {
+    path.hasPrefix("\(searchPathPrefix)?")
   }
 
-  /// Create a search path for a given query
   static func createSearchPath(_ query: String) -> String {
     let encodedQuery =
       query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
     return "\(searchPathPrefix)?q=\(encodedQuery)"
   }
 
-  /// Checks if a path contains a contextual track identifier.
-  ///
-  /// - Parameter path: The URL path to check
-  /// - Returns: true if the path contains the contextual track parameter
   static func isContextual(_ path: String) -> Bool {
     path.contains("?\(contextualTrackParam)=")
       || path.contains("&\(contextualTrackParam)=")
   }
 
-  /// Strips the __trackId parameter from a contextual URL to get the parent path.
-  /// If the URL is not contextual, returns it unchanged.
-  ///
-  /// - Parameter url: The URL to process
-  /// - Returns: The URL without the __trackId parameter
-  ///
-  /// Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
-  /// Example: "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
+  /// Strips both `__trackId` and `__index`; `url` unchanged when it is not contextual.
   static func stripTrackId(_ url: String) -> String {
     guard isContextual(url) else {
       return url
@@ -78,10 +45,10 @@ enum BrowserPathHelper {
       return url
     }
 
-    // Filter out __trackId parameter
-    components.queryItems = components.queryItems?.filter { $0.name != contextualTrackParam }
+    components.queryItems = components.queryItems?.filter {
+      $0.name != contextualTrackParam && $0.name != contextualIndexParam
+    }
 
-    // If no query items left, clear the query string entirely
     if components.queryItems?.isEmpty == true {
       components.queryItems = nil
     }
@@ -89,30 +56,16 @@ enum BrowserPathHelper {
     return components.string ?? url
   }
 
-  /// Builds a contextual URL by appending a track identifier to a parent path.
-  /// Handles existing query parameters correctly.
-  ///
-  /// - Parameters:
-  ///   - parentPath: The parent container path
-  ///   - trackId: The track identifier (typically the `src` value)
-  /// - Returns: A contextual URL combining parent path and track ID
-  ///
-  /// Example: build("/library", "song.mp3") → "/library?__trackId=song.mp3"
-  /// Example: build("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
-  static func build(parentPath: String, trackId: String) -> String {
+  /// `parentPath` with `trackId` (the track's identity) and, when given, its page position
+  /// appended; keeps any query `parentPath` already has.
+  static func build(parentPath: String, trackId: String, index: Int? = nil) -> String {
     let encodedTrackId =
-      trackId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackId
+      trackId.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? trackId
     let separator = parentPath.contains("?") ? "&" : "?"
-    return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)"
+    let indexParam = index.map { "&\(contextualIndexParam)=\($0)" } ?? ""
+    return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)\(indexParam)"
   }
 
-  /// Extracts the track ID from a contextual URL.
-  /// Returns nil if the URL is not contextual or doesn't contain the track ID parameter.
-  ///
-  /// - Parameter path: The contextual URL to parse
-  /// - Returns: The extracted track ID, or nil if not found
-  ///
-  /// Example: "/library/radio?__trackId=song.mp3" → "song.mp3"
   static func extractTrackId(_ path: String) -> String? {
     guard isContextual(path) else {
       return nil
@@ -125,16 +78,19 @@ enum BrowserPathHelper {
     return components.queryItems?.first { $0.name == contextualTrackParam }?.value
   }
 
-  /// Appends query parameters to a URL, handling `?` vs `&` separator and percent-encoding.
-  ///
-  /// - Parameters:
-  ///   - query: Dictionary of query parameter key-value pairs
-  ///   - url: The URL to append parameters to
-  /// - Returns: The URL with query parameters appended
-  ///
-  /// Examples:
-  /// - appendQuery(["q": "jazz"], to: "/search") → "/search?q=jazz"
-  /// - appendQuery(["page": "2"], to: "/items?sort=new") → "/items?sort=new&page=2"
+  /// Nil when the path is not contextual or its index is missing or negative.
+  static func extractIndex(_ path: String) -> Int? {
+    guard isContextual(path),
+          let components = URLComponents(string: path),
+          let raw = components.queryItems?.first(where: { $0.name == contextualIndexParam })?.value,
+          let index = Int(raw), index >= 0
+    else {
+      return nil
+    }
+    return index
+  }
+
+  /// Percent-encodes keys and values, so pass them unencoded.
   static func appendQuery(_ query: [String: String], to url: String) -> String {
     guard !query.isEmpty else { return url }
 
@@ -150,41 +106,51 @@ enum BrowserPathHelper {
     return "\(url)\(separator)\(queryString)"
   }
 
-  /// Combines a base URL with a path, ensuring proper slash handling.
-  ///
-  /// - Parameters:
-  ///   - baseUrl: The base URL (can be nil)
-  ///   - path: The path to append
-  /// - Returns: The combined URL with proper slash handling
-  ///
-  /// Examples:
-  /// - buildUrl("http://example.com", "api/test") → "http://example.com/api/test"
-  /// - buildUrl("http://example.com/", "/api/test") → "http://example.com/api/test"
-  /// - buildUrl(nil, "/api/test") → "/api/test"
-  /// - buildUrl(nil, "http://full.url") → "http://full.url"
+  /// `path` joined to `baseUrl` with one slash; `path` alone when it is a full http(s) URL or
+  /// there is no base, and the base alone when `path` is empty or only slashes.
   static func buildUrl(baseUrl: String?, path: String) -> String {
-    // If path is already a full URL, return it as-is
     if path.hasPrefix("http://") || path.hasPrefix("https://") {
       return path
     }
 
-    // If no baseUrl, return path as-is
     guard let baseUrl else {
       return path
     }
 
-    // Ensure baseUrl ends with / and path doesn't start with /
     var normalizedBase = baseUrl
     while normalizedBase.hasSuffix("/") {
       normalizedBase.removeLast()
     }
-    normalizedBase += "/"
 
     var normalizedPath = path
     while normalizedPath.hasPrefix("/") {
       normalizedPath.removeFirst()
     }
 
-    return "\(normalizedBase)\(normalizedPath)"
+    if normalizedPath.isEmpty {
+      return normalizedBase
+    }
+
+    return "\(normalizedBase)/\(normalizedPath)"
+  }
+}
+
+extension BrowserPathHelper {
+  /// `sections` with a contextual path on every track that has a `src` and no `path`, its index
+  /// counted across all sections. Throws on a track with neither.
+  static func stampingContextualPaths(_ sections: [Section], parentPath: String) throws -> [Section] {
+    var flatIndex = 0
+    return try sections.map { section in
+      try section.copying(children: section.children.map { track in
+        defer { flatIndex += 1 }
+        if track.path != nil { return track }
+        guard track.src != nil, let identity = track.identity else {
+          throw BrowserError.invalidConfiguration(
+            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
+          )
+        }
+        return track.copying(path: build(parentPath: parentPath, trackId: identity, index: flatIndex))
+      })
+    }
   }
 }

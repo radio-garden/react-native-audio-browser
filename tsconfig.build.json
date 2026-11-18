@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "stripInternal": true
+  },
+  "exclude": [
+    "**/node_modules",
+    "**/lib",
+    "scripts/**",
+    "src/web/**",
+    "**/*.web.ts",
+    "**/.eslintrc.js",
+    "**/.prettierrc.js",
+    "**/babel.config.js",
+    "**/metro.config.js",
+    "**/tsconfig.json",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
+}

@@ -2,8 +2,7 @@ import Foundation
 import Network
 import os.log
 
-/// Monitors network connectivity state using NWPathMonitor.
-/// Notifies listeners when the connection state changes.
+/// The device's connectivity from NWPathMonitor; `changed` emits each change on the main thread.
 final class NetworkMonitor: @unchecked Sendable {
   // MARK: - Properties
 
@@ -11,50 +10,51 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  /// Current network connectivity state. Must only be set on main thread.
-  private(set) var isOnline: Bool = false {
-    didSet {
-      if oldValue != isOnline {
-        logger.info("Network status changed: \(oldValue) -> \(self.isOnline)")
-        onChanged?(isOnline)
-      }
+  // Guards `_isOnline` only; never held across an emit.
+  private let lock = NSLock()
+  private var _isOnline = false
+
+  /// Readable from any thread, so the JS thread's `getOnline` needs no main-queue hop.
+  var isOnline: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return _isOnline
+  }
+
+  private func apply(_ newStatus: Bool) {
+    lock.lock()
+    let changed = _isOnline != newStatus
+    let oldValue = _isOnline
+    _isOnline = newStatus
+    lock.unlock()
+
+    guard changed else { return }
+    logger.notice("Network status changed: \(oldValue) -> \(newStatus)")
+    DispatchQueue.main.async { [weak self] in
+      self?.changed.emit(newStatus)
     }
   }
 
-  /// Callback invoked when network state changes
-  var onChanged: ((Bool) -> Void)?
+  let changed = Emitter<Bool>()
 
   // MARK: - Initialization
 
   init() {
     monitor = NWPathMonitor()
 
-    // Set up handler before starting
+    // Seeded before `start`: written after it, a `currentPath` the monitor hasn't finished
+    // evaluating could clobber the handler's real update. The handler stays the last writer.
+    let initialStatus = monitor.currentPath.status.isOnline
+    logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
+    _isOnline = initialStatus
+
     monitor.pathUpdateHandler = { [weak self] path in
-      let newStatus = path.status == .satisfied
-      DispatchQueue.main.async { [weak self] in
-        self?.isOnline = newStatus
-      }
+      self?.apply(path.status.isOnline)
     }
 
-    // Start monitoring
     monitor.start(queue: queue)
-
-    // Read initial state after starting (currentPath is now valid)
-    let initialStatus = monitor.currentPath.status == .satisfied
-    logger.info("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
-    isOnline = initialStatus
   }
 
-  // MARK: - Public Methods
-
-  /// Gets the current network connectivity state.
-  /// - Returns: true if device is online, false otherwise
-  func getOnline() -> Bool {
-    isOnline
-  }
-
-  /// Stops monitoring and cleans up resources.
   func destroy() {
     monitor.cancel()
   }
@@ -63,3 +63,5 @@ final class NetworkMonitor: @unchecked Sendable {
     destroy()
   }
 }
+
+extension NetworkMonitor: NetworkStatusProviding {}

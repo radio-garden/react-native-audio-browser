@@ -18,9 +18,8 @@ import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
  * - `'buffering'`: Indicates that the player is currently loading more data
  *   before it can continue playing or is ready to start playing.
  * - `'error'`: Indicates that playback of the current item failed. Call
- *   `AudioBrowser.getError()` to get more information on the type of error that
- *   occurred. Call `AudioBrowser.retry()` or `AudioBrowser.play()` to try to play
- *   the item again.
+ *   `getPlaybackError()` (or subscribe via `usePlaybackError()`) for the
+ *   error details. Call `retry()` or `play()` to try to play the item again.
  * - `'ended'`: Indicates that playback stopped due to the end of the queue
  *   being reached.
  */
@@ -37,6 +36,11 @@ export type PlaybackState =
 
 export type Playback = {
   state: PlaybackState
+  /**
+   * What made playback fail, in the `'error'` state. On iOS and Android, also
+   * a failure still being retried (`retrying: true`) while loading, buffering
+   * or paused.
+   */
   error?: PlaybackError
 }
 
@@ -53,9 +57,9 @@ export function getPlayback(): Playback {
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to playback state changes.
- * @param callback - Called when the playback state changes
- * @returns Cleanup function to unsubscribe
+ * Emits the {@link Playback} each time the playback state or error changes.
+ * Subscribe with `onPlaybackChanged.addListener(cb)`, which returns an
+ * unsubscribe function.
  */
 export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
   (cb) => (nativeBrowser.onPlaybackChanged = cb)

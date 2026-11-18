@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "NavigationErrorType" and the the Kotlin enum "NavigationErrorType".
+   * The C++ JNI bridge between the C++ enum "NavigationErrorType" and the Kotlin enum "NavigationErrorType".
    */
   struct JNavigationErrorType final: public jni::JavaClass<JNavigationErrorType> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorType;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/NavigationErrorType;";
 
   public:
     /**
@@ -57,6 +57,12 @@ namespace margelo::nitro::audiobrowser {
         case NavigationErrorType::UNKNOWN_ERROR:
           static const auto fieldUNKNOWN_ERROR = clazz->getStaticField<JNavigationErrorType>("UNKNOWN_ERROR");
           return clazz->getStaticFieldValue(fieldUNKNOWN_ERROR);
+        case NavigationErrorType::EMPTY_CONTENT:
+          static const auto fieldEMPTY_CONTENT = clazz->getStaticField<JNavigationErrorType>("EMPTY_CONTENT");
+          return clazz->getStaticFieldValue(fieldEMPTY_CONTENT);
+        case NavigationErrorType::TIMEOUT:
+          static const auto fieldTIMEOUT = clazz->getStaticField<JNavigationErrorType>("TIMEOUT");
+          return clazz->getStaticFieldValue(fieldTIMEOUT);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

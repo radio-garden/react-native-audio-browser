@@ -10,6 +10,7 @@
 #include <fbjni/fbjni.h>
 #include "FormattedNavigationError.hpp"
 
+#include <optional>
 #include <string>
 
 namespace margelo::nitro::audiobrowser {
@@ -17,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "FormattedNavigationError" and the the Kotlin data class "FormattedNavigationError".
+   * The C++ JNI bridge between the C++ struct "FormattedNavigationError" and the Kotlin data class "FormattedNavigationError".
    */
   struct JFormattedNavigationError final: public jni::JavaClass<JFormattedNavigationError> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FormattedNavigationError;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/FormattedNavigationError;";
 
   public:
     /**
@@ -37,7 +38,7 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> message = this->getFieldValue(fieldMessage);
       return FormattedNavigationError(
         title->toStdString(),
-        message->toStdString()
+        message != nullptr ? std::make_optional(message->toStdString()) : std::nullopt
       );
     }
 
@@ -53,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
       return create(
         clazz,
         jni::make_jstring(value.title),
-        jni::make_jstring(value.message)
+        value.message.has_value() ? jni::make_jstring(value.message.value()) : nullptr
       );
     }
   };

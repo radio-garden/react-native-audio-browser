@@ -10,7 +10,6 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
 
 /**
@@ -59,7 +58,6 @@ class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Req
   override fun invoke(request: RequestConfig, routeParams: Map<String, String>?): Promise<Promise<RequestConfig>>
     = invoke_cxx(request,routeParams)
 
-  @FastNative
   private external fun invoke_cxx(request: RequestConfig, routeParams: Map<String, String>?): Promise<Promise<RequestConfig>>
 }
 

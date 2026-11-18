@@ -10,8 +10,6 @@ on:
     paths:
       - '.github/workflows/ios-build.yml'
       - 'apps/example-native/ios/**'
-      - 'apps/example-native/Gemfile'
-      - 'apps/example-native/Gemfile.lock'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/ios/**'
       - 'cpp/**'
@@ -25,8 +23,6 @@ on:
     paths:
       - '.github/workflows/ios-build.yml'
       - 'apps/example-native/ios/**'
-      - 'apps/example-native/Gemfile'
-      - 'apps/example-native/Gemfile.lock'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/ios/**'
       - 'cpp/**'
@@ -47,12 +43,8 @@ concurrency:
 
 jobs:
   build:
-    name: Build iOS Example App (${{ matrix.arch }})
+    name: Build iOS Example App
     runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [new, old]
     steps:
       - uses: actions/checkout@v6
       - name: Enable Corepack
@@ -65,21 +57,15 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 26.2
+          xcode-version: 26.4.1
 
       - name: Install dependencies
         run: yarn install
 
-      - name: Disable new architecture in Podfile
-        if: matrix.arch == 'old'
-        run: sed -i "" "s/ENV\['RCT_NEW_ARCH_ENABLED'\] = '1'/ENV['RCT_NEW_ARCH_ENABLED'] = '0'/g" apps/example-native/ios/Podfile
-
-      - name: Setup Ruby (bundle)
+      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: apps/example-native/ios
 
       - name: Install xcpretty
         run: gem install xcpretty
@@ -105,7 +91,7 @@ jobs:
             CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ \
             -derivedDataPath build -UseModernBuildSystem=YES \
             -workspace AudioBrowserExample.xcworkspace \
-            -scheme AudioBrowserExample \
+            -scheme 'AudioBrowserExample (Debug)' \
             -sdk iphonesimulator \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.NullType
 
 /**
@@ -22,6 +23,9 @@ data class NativeUpdateOptions(
   val android: NitroAndroidUpdateOptions?,
   @DoNotStrip
   @Keep
+  val ios: NitroIOSUpdateOptions?,
+  @DoNotStrip
+  @Keep
   val forwardJumpInterval: Double?,
   @DoNotStrip
   @Keep
@@ -31,12 +35,31 @@ data class NativeUpdateOptions(
   val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
-  val capabilities: PlayerCapabilities?,
-  @DoNotStrip
-  @Keep
-  val iosPlaybackRates: DoubleArray?
+  val capabilities: PlayerCapabilities?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NativeUpdateOptions) return false
+    return Objects.deepEquals(this.android, other.android)
+      && Objects.deepEquals(this.ios, other.ios)
+      && Objects.deepEquals(this.forwardJumpInterval, other.forwardJumpInterval)
+      && Objects.deepEquals(this.backwardJumpInterval, other.backwardJumpInterval)
+      && Objects.deepEquals(this.progressUpdateEventInterval, other.progressUpdateEventInterval)
+      && Objects.deepEquals(this.capabilities, other.capabilities)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      android,
+      ios,
+      forwardJumpInterval,
+      backwardJumpInterval,
+      progressUpdateEventInterval,
+      capabilities
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -46,8 +69,8 @@ data class NativeUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: NitroAndroidUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?, iosPlaybackRates: DoubleArray?): NativeUpdateOptions {
-      return NativeUpdateOptions(android, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, iosPlaybackRates)
+    private fun fromCpp(android: NitroAndroidUpdateOptions?, ios: NitroIOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?): NativeUpdateOptions {
+      return NativeUpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
     }
   }
 }

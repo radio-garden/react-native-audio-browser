@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -19,12 +20,31 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class RetryConfig(
   @DoNotStrip
   @Keep
-  val maxRetries: Double,
+  val maxRetries: Double?,
   @DoNotStrip
   @Keep
-  val maxRetryDurationMs: Double?
+  val maxRetryDurationMs: Double?,
+  @DoNotStrip
+  @Keep
+  val firstConnectMaxRetryDurationMs: Double?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is RetryConfig) return false
+    return Objects.deepEquals(this.maxRetries, other.maxRetries)
+      && Objects.deepEquals(this.maxRetryDurationMs, other.maxRetryDurationMs)
+      && Objects.deepEquals(this.firstConnectMaxRetryDurationMs, other.firstConnectMaxRetryDurationMs)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      maxRetries,
+      maxRetryDurationMs,
+      firstConnectMaxRetryDurationMs
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -34,8 +54,8 @@ data class RetryConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(maxRetries: Double, maxRetryDurationMs: Double?): RetryConfig {
-      return RetryConfig(maxRetries, maxRetryDurationMs)
+    private fun fromCpp(maxRetries: Double?, maxRetryDurationMs: Double?, firstConnectMaxRetryDurationMs: Double?): RetryConfig {
+      return RetryConfig(maxRetries, maxRetryDurationMs, firstConnectMaxRetryDurationMs)
     }
   }
 }

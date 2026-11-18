@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -19,7 +20,13 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class ResolvedTrack(
   @DoNotStrip
   @Keep
-  val url: String,
+  val path: String,
+  @DoNotStrip
+  @Keep
+  val style: SectionStyle?,
+  @DoNotStrip
+  @Keep
+  val sections: Array<Section>?,
   @DoNotStrip
   @Keep
   val children: Array<Track>?,
@@ -28,16 +35,19 @@ data class ResolvedTrack(
   val carPlaySiriListButton: CarPlaySiriListButtonPosition?,
   @DoNotStrip
   @Keep
+  val id: String?,
+  @DoNotStrip
+  @Keep
   val src: String?,
   @DoNotStrip
   @Keep
-  val artwork: String?,
+  val artwork: Variant_String_ArtworkVariants?,
   @DoNotStrip
   @Keep
   val artworkSource: ImageSource?,
   @DoNotStrip
   @Keep
-  val artworkCarPlayTinted: Boolean?,
+  val request: TrackRequest?,
   @DoNotStrip
   @Keep
   val title: String,
@@ -47,6 +57,9 @@ data class ResolvedTrack(
   @DoNotStrip
   @Keep
   val artist: String?,
+  @DoNotStrip
+  @Keep
+  val albumPath: String?,
   @DoNotStrip
   @Keep
   val album: String?,
@@ -61,24 +74,72 @@ data class ResolvedTrack(
   val duration: Double?,
   @DoNotStrip
   @Keep
-  val style: TrackStyle?,
-  @DoNotStrip
-  @Keep
-  val childrenStyle: TrackStyle?,
+  val disabled: Boolean?,
   @DoNotStrip
   @Keep
   val favorited: Boolean?,
   @DoNotStrip
   @Keep
-  val groupTitle: String?,
-  @DoNotStrip
-  @Keep
   val live: Boolean?,
   @DoNotStrip
   @Keep
-  val imageRow: Array<ImageRowItem>?
+  val icyCharset: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ResolvedTrack) return false
+    return Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.style, other.style)
+      && Objects.deepEquals(this.sections, other.sections)
+      && Objects.deepEquals(this.children, other.children)
+      && Objects.deepEquals(this.carPlaySiriListButton, other.carPlaySiriListButton)
+      && Objects.deepEquals(this.id, other.id)
+      && Objects.deepEquals(this.src, other.src)
+      && Objects.deepEquals(this.artwork, other.artwork)
+      && Objects.deepEquals(this.artworkSource, other.artworkSource)
+      && Objects.deepEquals(this.request, other.request)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.subtitle, other.subtitle)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.albumPath, other.albumPath)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.description, other.description)
+      && Objects.deepEquals(this.genre, other.genre)
+      && Objects.deepEquals(this.duration, other.duration)
+      && Objects.deepEquals(this.disabled, other.disabled)
+      && Objects.deepEquals(this.favorited, other.favorited)
+      && Objects.deepEquals(this.live, other.live)
+      && Objects.deepEquals(this.icyCharset, other.icyCharset)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      path,
+      style,
+      sections,
+      children,
+      carPlaySiriListButton,
+      id,
+      src,
+      artwork,
+      artworkSource,
+      request,
+      title,
+      subtitle,
+      artist,
+      albumPath,
+      album,
+      description,
+      genre,
+      duration,
+      disabled,
+      favorited,
+      live,
+      icyCharset
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -88,8 +149,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
-      return ResolvedTrack(url, children, carPlaySiriListButton, src, artwork, artworkSource, artworkCarPlayTinted, title, subtitle, artist, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(path: String, style: SectionStyle?, sections: Array<Section>?, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, disabled: Boolean?, favorited: Boolean?, live: Boolean?, icyCharset: String?): ResolvedTrack {
+      return ResolvedTrack(path, style, sections, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, title, subtitle, artist, albumPath, album, description, genre, duration, disabled, favorited, live, icyCharset)
     }
   }
 }

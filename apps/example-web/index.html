@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Browser — Live Demo</title>
+    <style>
+      /* Dark from the first paint so the iframe never flashes white before the
+         app's stylesheet loads. */
+      html,
+      body {
+        margin: 0;
+        background: #202127;
+      }
+    </style>
+    <script>
+      // A couple of RN-ism globals some bundled code expects.
+      window.global ||= window
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

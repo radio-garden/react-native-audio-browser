@@ -1,30 +1,28 @@
 import AVFoundation
 
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 extension TimedMetadata {
-  /// Creates TimedMetadata from AVMetadataItem array, detecting the metadata format.
-  static func from(items: [AVMetadataItem]) -> TimedMetadata? {
-    // Check for ICY metadata (Shoutcast/Icecast streams)
+  /// Reads the ICY items if there are any, else the ID3 items, else the common identifiers;
+  /// nil when the chosen set yields no field. `icyCharset` re-decodes an ICY title AVFoundation
+  /// decoded as Latin-1 and never applies to ID3 or common metadata.
+  static func from(items: [AVMetadataItem], icyCharset: String? = nil) -> TimedMetadata? {
     let icyItems = items.filter { $0.keySpace == .icy }
     if !icyItems.isEmpty {
-      return fromIcy(items: icyItems)
+      return fromIcy(items: icyItems, icyCharset: icyCharset)
     }
 
-    // Check for ID3 metadata (MP3)
     let id3Items = items.filter { $0.keySpace == .id3 }
     if !id3Items.isEmpty {
       return fromId3(items: id3Items)
     }
 
-    // Fall back to common metadata identifiers (covers QuickTime, iTunes, etc.)
     return fromCommon(items: items)
   }
 
-  /// Creates TimedMetadata from ICY (Shoutcast/Icecast) metadata.
-  static func fromIcy(items: [AVMetadataItem]) -> TimedMetadata? {
+  static func fromIcy(items: [AVMetadataItem], icyCharset: String? = nil) -> TimedMetadata? {
     var title: String?
 
     for item in items {
@@ -35,7 +33,7 @@ extension TimedMetadata {
 
     guard let title else { return nil }
     return TimedMetadata(
-      title: title,
+      title: icyCharset.map { title.redecodingIcyTitle(charset: $0) } ?? title,
       artist: nil,
       album: nil,
       date: nil,
@@ -43,7 +41,6 @@ extension TimedMetadata {
     )
   }
 
-  /// Creates TimedMetadata from ID3 metadata (MP3).
   static func fromId3(items: [AVMetadataItem]) -> TimedMetadata? {
     var title: String?
     var artist: String?
@@ -59,10 +56,11 @@ extension TimedMetadata {
         artist = item.stringValue
       case .id3MetadataAlbumTitle, .id3MetadataOriginalAlbumTitle:
         album = item.stringValue
+      // TDRC (ID3v2.4) wins over TYER (ID3v2.3) whichever comes first.
       case .id3MetadataRecordingTime:
-        date = item.stringValue // TDRC takes precedence (ID3v2.4, more precise)
+        date = item.stringValue
       case .id3MetadataYear:
-        date = date ?? item.stringValue // TYER only if TDRC not found (ID3v2.3)
+        date = date ?? item.stringValue
       case .id3MetadataContentType:
         genre = item.stringValue
       default:
@@ -80,7 +78,6 @@ extension TimedMetadata {
     )
   }
 
-  /// Creates TimedMetadata from common metadata identifiers.
   static func fromCommon(items: [AVMetadataItem]) -> TimedMetadata? {
     var title: String?
     var artist: String?
@@ -99,7 +96,6 @@ extension TimedMetadata {
       case .commonIdentifierCreationDate:
         date = item.stringValue
       default:
-        // Check by commonKey for broader compatibility
         if let commonKey = item.commonKey {
           switch commonKey {
           case .commonKeyTitle:

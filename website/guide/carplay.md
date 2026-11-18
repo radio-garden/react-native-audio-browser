@@ -1,17 +1,29 @@
+---
+description: 'CarPlay for audio apps: browse templates generated from your browse tree, the UIScene and headless React Native host setup, and Siri voice search via INPlayMediaIntent.'
+---
+
 # CarPlay
 
 ## Overview
 
 CarPlay integration for audio apps works through two systems:
 
-1. **Browse templates** — Tab-based navigation that mirrors your app's browser routes, handled automatically by the library.
-2. **Siri voice search** — The search button on CarPlay launches Siri, which creates an `INPlayMediaIntent`. This requires additional setup in your app (see [Siri Voice Search](#siri-voice-search) below).
+1. **Browse templates** — Tab-based navigation generated from the **browse tree** you declare with `configureBrowser`, handled automatically by the library. If you haven't set that up yet, see [Basic Usage](/guide/basic-usage) for tabs, routes, and sources — this page assumes it's already configured. Every config key used below is documented in [`BrowserConfiguration`](/api/types/browser/#browserconfiguration).
+2. **Siri voice search** — The search button on CarPlay launches Siri, which creates an `INPlayMediaIntent`. The library resolves it through the same [`search`](/guide/search) source that powers your in-app search, then queues and plays the results. This requires additional setup in your app (see [Siri Voice Search](#siri-voice-search) below).
 
-CarPlay audio apps do **not** use `CPSearchTemplate` (that's for navigation apps). The search button on CarPlay's audio interface always triggers Siri.
+On CarPlay's audio interface the search button always triggers Siri — audio apps don't use `CPSearchTemplate` (that's a navigation-app API).
+
+The two systems are independent, but **both** require the [React Native host setup](#react-native-host-uiscene-headless) (UIScene lifecycle + headless RN boot). Every CarPlay app needs it, even browse-only. Siri then adds its own entitlement, Info.plist keys, and intent handler on top.
+
+The **Now Playing Buttons**, **Playing Indicator**, **Loading States** and **Album Line Navigation** sections are optional polish. Skip them to get a minimal integration working.
+
+::: info Before you start
+This page assumes you've installed the library and have the player running: add `react-native-audio-browser`, run `pod install` in `ios/`, and call `setupPlayer()` + `configureBrowser()` at startup. See [Getting Started](/guide/getting-started) and [Basic Usage](/guide/basic-usage) first.
+:::
 
 ## Setup
 
-### 1. Entitlements
+### Entitlement
 
 Your app needs the CarPlay audio entitlement in your `.entitlements` file:
 
@@ -20,27 +32,206 @@ Your app needs the CarPlay audio entitlement in your `.entitlements` file:
 <true/>
 ```
 
-This must be requested from Apple via the [CarPlay entitlement request](https://developer.apple.com/contact/carplay/).
+If your target has no `.entitlements` file yet, add one via Xcode (**Signing & Capabilities → + Capability**) and make sure the target's **`CODE_SIGN_ENTITLEMENTS`** build setting points at it — otherwise the key is ignored at build time.
 
-### 2. Info.plist
+The CarPlay audio entitlement also must be **granted by Apple** via the [CarPlay entitlement request](https://developer.apple.com/contact/carplay/) before it works on a device — approval can take a while, so request it early. You can still develop against the [CarPlay Simulator](#testing) meanwhile.
 
-Ensure your scene manifest includes the CarPlay template application scene:
+### Scene manifest (Info.plist)
+
+Your scene manifest needs **two** scene configurations: the CarPlay template scene (driven by the library's `RNABCarPlaySceneDelegate`) and your phone window scene (driven by your own `PhoneSceneDelegate`, shown in the host setup below). If your app isn't scene-based yet, this whole `UIApplicationSceneManifest` is new:
 
 ```xml
-<key>CPTemplateApplicationSceneSessionRoleApplication</key>
-<array>
+<key>UIApplicationSceneManifest</key>
+<dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <true/>
+    <key>UISceneConfigurations</key>
     <dict>
-        <key>UISceneConfigurationName</key>
-        <string>CarPlay</string>
-        <key>UISceneDelegateClassName</key>
-        <string>RNABCarPlaySceneDelegate</string>
+        <key>CPTemplateApplicationSceneSessionRoleApplication</key>
+        <array>
+            <dict>
+                <key>UISceneConfigurationName</key>
+                <string>CarPlay</string>
+                <key>UISceneDelegateClassName</key>
+                <string>RNABCarPlaySceneDelegate</string>
+            </dict>
+        </array>
+        <key>UIWindowSceneSessionRoleApplication</key>
+        <array>
+            <dict>
+                <key>UISceneConfigurationName</key>
+                <string>Phone</string>
+                <!-- $(PRODUCT_MODULE_NAME) = your app's Swift module -->
+                <key>UISceneDelegateClassName</key>
+                <string>$(PRODUCT_MODULE_NAME).PhoneSceneDelegate</string>
+            </dict>
+        </array>
     </dict>
-</array>
+</dict>
 ```
 
-### 3. Scene Configuration
+The two `UISceneDelegateClassName` strings name the delegate for each scene:
 
-In your `AppDelegate`, return the library's CarPlay scene delegate for CarPlay connections:
+- `RNABCarPlaySceneDelegate` ships with the library. You never implement it; it links in once the `AudioBrowser` pod is installed.
+- `PhoneSceneDelegate` is your own, written in the host setup below.
+
+These manifest strings are only a fallback: once you add `configurationForConnecting` (next section), your code picks each scene's delegate. Until you finish the host setup, `PhoneSceneDelegate` does not resolve yet, and that is expected.
+
+## React Native host (UIScene + headless)
+
+This section is **required for any CarPlay integration**, browse-only or Siri. Set it up once; both the browse templates and Siri depend on it.
+
+CarPlay connects through scenes and can launch your app in the background with no phone window. So React Native has to start both on the foreground path (your phone scene) and headless (in a hidden window).
+
+::: warning Two prerequisites
+**UIScene lifecycle** — CarPlay requires a `UIWindowSceneDelegate` for the phone window. If your app still sets up its window directly in `AppDelegate`, migrate to scenes first (the sections below build all the pieces).
+
+**New Architecture host, Swift** — these snippets assume a Swift `AppDelegate` built on `RCTReactNativeFactory` and `RCTDefaultReactNativeFactoryDelegate`, which React Native ships from **0.78**.
+
+On React Native versions before 0.78 (see [Getting Started](/guide/getting-started#installation) for the minimum), the template's `AppDelegate` subclasses `RCTAppDelegate` instead, so adapt the same pieces (scene routing, the headless helper, the started flag) to that host.
+
+If yours is still Objective-C (`.mm`), migrating it to Swift first is simpler than translating this wiring by hand. Scaffold a throwaway app (`npx @react-native-community/cli init Tmp`) and use its `AppDelegate.swift` as a reference. ObjC works too (the bridging header is then unnecessary, see [Siri step 3](#_3-bridging-header-swift-appdelegate-only)) but isn't shown here.
+:::
+
+### The factory
+
+These AppDelegate snippets need the New-Architecture React host imports:
+
+```swift
+import UIKit
+import Intents
+import React
+import React_RCTAppDelegate
+import ReactAppDependencyProvider
+```
+
+Create the `RCTReactNativeFactory` in `didFinishLaunchingWithOptions`, but **don't** start RN there — the phone scene starts it on the foreground path, and the headless helper starts it on the background path:
+
+```swift
+var reactNativeFactory: RCTReactNativeFactory?
+private var reactNativeDelegate: ReactNativeDelegate?
+
+func application(
+  _ application: UIApplication,
+  didFinishLaunchingWithOptions launchOptions:
+    [UIApplication.LaunchOptionsKey: Any]? = nil
+) -> Bool {
+  let delegate = ReactNativeDelegate()
+  delegate.dependencyProvider = RCTAppDependencyProvider()
+  reactNativeDelegate = delegate
+  reactNativeFactory = RCTReactNativeFactory(delegate: delegate)
+  // Note: do NOT start RN here — the scene delegates own startup.
+  return true
+}
+```
+
+`ReactNativeDelegate` is a `RCTDefaultReactNativeFactoryDelegate` subclass **you** define (standard New-Architecture AppDelegate boilerplate — it supplies your JS bundle URL); `RCTAppDependencyProvider` is a React-core class. Neither comes from this library. The default New-Arch template generates both — if you scaffolded with it you already have them; otherwise this is the whole subclass:
+
+```swift
+class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
+  override func sourceURL(for bridge: RCTBridge) -> URL? { bundleURL() }
+
+  override func bundleURL() -> URL? {
+#if DEBUG
+    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+#else
+    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+#endif
+  }
+}
+```
+
+### The headless helper
+
+Two things call this helper, which is why it's required even for **browse-only** apps:
+
+- The library's `RNABCarPlaySceneDelegate` calls `startReactNativeHeadless` on your `AppDelegate` every time CarPlay connects. So a browse-only CarPlay launch boots RN automatically. When the phone scene already started RN, the helper's guard makes the call a no-op.
+- Your Siri intent handler calls it (step 4) for a background intent launch.
+
+::: warning Declare it `@objc func startReactNativeHeadless()`
+The library finds this method **by Objective-C selector**. It must be named exactly `startReactNativeHeadless`, take no arguments, and be marked `@objc`: Swift does not expose a plain method to the Objective-C runtime. Otherwise the library's CarPlay delegate can't boot RN and browse screens hang empty.
+:::
+
+```swift
+// Properties on your AppDelegate.
+private var reactNativeStarted = false
+private var headlessWindow: UIWindow?
+
+/// Boots React Native into a hidden window when no UI scene exists yet.
+/// Called by the library's CarPlay delegate (browse) and your Siri handler.
+/// Safe to call repeatedly — it starts RN at most once.
+@objc func startReactNativeHeadless() {
+  guard !reactNativeStarted else { return }
+  reactNativeStarted = true
+
+  // RCTReactNativeFactory needs a window to host the root view.
+  headlessWindow = UIWindow(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+  headlessWindow?.isHidden = true
+
+  // `startReactNative(withModuleName:in:launchOptions:)` is a React-core method
+  // on RCTReactNativeFactory — not a library API. "YourAppModuleName" is your
+  // app.json `name` (= the AppRegistry.registerComponent string); the phone
+  // scene and this headless path must use that same name.
+  reactNativeFactory?.startReactNative(
+    // ⚠️ replace with your app.json `name`
+    withModuleName: "YourAppModuleName",
+    in: headlessWindow,
+    launchOptions: nil
+  )
+}
+
+/// Called by the phone scene when it starts RN on the foreground path, so the
+/// headless helper doesn't start it again. Only the headless helper checks
+/// `reactNativeStarted`: the phone scene always starts RN in its own window.
+func markReactNativeStarted() {
+  reactNativeStarted = true
+}
+```
+
+### The phone scene delegate
+
+Create this as a **new `.swift` file in your app target** (e.g. `PhoneSceneDelegate.swift`, next to `AppDelegate.swift`). It must compile into your app's own module — that's why the Info.plist refers to it as `$(PRODUCT_MODULE_NAME).PhoneSceneDelegate`. It starts RN on the foreground path and flips the shared flag via `markReactNativeStarted()`:
+
+```swift
+class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions
+  ) {
+    guard session.role == .windowApplication,
+          let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+          let windowScene = scene as? UIWindowScene else { return }
+
+    let window = UIWindow(windowScene: windowScene)
+    appDelegate.window = window
+    appDelegate.markReactNativeStarted() // foreground path owns RN startup
+
+    // Module name must exactly match the headless helper / registerComponent.
+    appDelegate.reactNativeFactory?.startReactNative(
+      // ⚠️ replace with your app.json `name`
+      withModuleName: "YourAppModuleName",
+      in: window,
+      launchOptions: nil
+    )
+    self.window = window
+  }
+}
+```
+
+::: info After a headless launch
+The phone scene starts RN even when CarPlay or Siri already started it headless. The factory reuses its React host, so JS keeps running in the same runtime.
+
+But your root component mounts a second time, in the phone window, while the headless one stays mounted in the hidden window. Keep app-wide side effects (player setup, `configureBrowser`) idempotent, or put them outside the root component.
+:::
+
+See the example app's [`AppDelegate.swift`](https://github.com/radio-garden/react-native-audio-browser/blob/next/apps/example-native/ios/AudioBrowserExample/AppDelegate.swift) and [`PhoneSceneDelegate.swift`](https://github.com/radio-garden/react-native-audio-browser/blob/next/apps/example-native/ios/AudioBrowserExample/PhoneSceneDelegate.swift) for the complete, copy-pasteable versions.
+
+### Routing scene connections
+
+Now that both delegates exist, route each incoming scene to the right one from your `AppDelegate` — the library's `RNABCarPlaySceneDelegate` for CarPlay, your `PhoneSceneDelegate` for the phone window:
 
 ```swift
 func application(
@@ -49,123 +240,303 @@ func application(
   options: UIScene.ConnectionOptions
 ) -> UISceneConfiguration {
   if connectingSceneSession.role == UISceneSession.Role.carTemplateApplication {
-    let config = UISceneConfiguration(name: "CarPlay", sessionRole: connectingSceneSession.role)
-    config.delegateClass = NSClassFromString("RNABCarPlaySceneDelegate") as? UIResponder.Type
+    let config = UISceneConfiguration(
+      name: "CarPlay", sessionRole: connectingSceneSession.role)
+    // RNABCarPlaySceneDelegate is an ObjC class the library ships, so it's
+    // resolved by name rather than imported.
+    config.delegateClass =
+      NSClassFromString("RNABCarPlaySceneDelegate") as? UIResponder.Type
     return config
   }
-  // ... phone scene config
+  // Phone scene — your own delegate, defined above.
+  let config = UISceneConfiguration(
+    name: "Phone", sessionRole: connectingSceneSession.role)
+  config.delegateClass = PhoneSceneDelegate.self
+  return config
 }
 ```
 
+As noted in the scene manifest above, the `delegateClass` you set here is what actually routes each scene; the Info.plist names are just the fallback. Seeing each delegate in both places is expected.
+
+One coupling that **is** load-bearing: the `name:` you pass to `UISceneConfiguration` (`"CarPlay"` / `"Phone"`) must match a `UISceneConfigurationName` in the manifest. Rename one without the other and iOS crashes at connect time with _"no UISceneConfiguration named …"_.
+
+### The assembled `AppDelegate`
+
+The fragments above all live on one `AppDelegate`. Here is the whole class in one piece, to copy.
+
+It **replaces** the `@main class AppDelegate` your RN template generated in `ios/<app>/AppDelegate.swift` (you keep one `@main`; don't add a second). The Siri `handlerFor` method at the end is needed only if you add [Siri Voice Search](#siri-voice-search):
+
+```swift
+import UIKit
+import Intents
+import React
+import React_RCTAppDelegate
+import ReactAppDependencyProvider
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+  var window: UIWindow?
+
+  var reactNativeFactory: RCTReactNativeFactory?
+  private var reactNativeDelegate: ReactNativeDelegate?
+  private var reactNativeStarted = false
+  private var headlessWindow: UIWindow?
+
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions:
+      [UIApplication.LaunchOptionsKey: Any]? = nil
+  ) -> Bool {
+    let delegate = ReactNativeDelegate()
+    delegate.dependencyProvider = RCTAppDependencyProvider()
+    reactNativeDelegate = delegate
+    reactNativeFactory = RCTReactNativeFactory(delegate: delegate)
+    return true // don't start RN here — the scene delegates own startup
+  }
+
+  // Route each connecting scene to its delegate.
+  func application(
+    _ application: UIApplication,
+    configurationForConnecting connectingSceneSession: UISceneSession,
+    options: UIScene.ConnectionOptions
+  ) -> UISceneConfiguration {
+    if connectingSceneSession.role
+      == UISceneSession.Role.carTemplateApplication {
+      let config = UISceneConfiguration(
+        name: "CarPlay", sessionRole: connectingSceneSession.role)
+      config.delegateClass =
+        NSClassFromString("RNABCarPlaySceneDelegate") as? UIResponder.Type
+      return config
+    }
+    let config = UISceneConfiguration(
+      name: "Phone", sessionRole: connectingSceneSession.role)
+    config.delegateClass = PhoneSceneDelegate.self
+    return config
+  }
+
+  // Boots RN into a hidden window when there's no UI scene (background launch).
+  // `@objc` so the library's CarPlay delegate can find it by selector.
+  @objc func startReactNativeHeadless() {
+    guard !reactNativeStarted else { return }
+    reactNativeStarted = true
+    headlessWindow = UIWindow(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+    headlessWindow?.isHidden = true
+    reactNativeFactory?.startReactNative(
+      // ⚠️ replace with your app.json `name`
+      withModuleName: "YourAppModuleName",
+      in: headlessWindow,
+      launchOptions: nil
+    )
+  }
+
+  // Called by PhoneSceneDelegate so the headless path won't double-start RN.
+  func markReactNativeStarted() { reactNativeStarted = true }
+
+  // Siri only — needed when you add Siri Voice Search (step 4). Requires the
+  // bridging header so `RNABAudioBrowser` is visible in Swift.
+  func application(
+    _ application: UIApplication,
+    handlerFor intent: INIntent
+  ) -> Any? {
+    startReactNativeHeadless()
+    return RNABAudioBrowser.handler(for: intent)
+  }
+}
+
+// Same file as AppDelegate. Standard New-Arch host delegate —
+// supplies the bundle URL.
+class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
+  override func sourceURL(for bridge: RCTBridge) -> URL? { bundleURL() }
+
+  override func bundleURL() -> URL? {
+#if DEBUG
+    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+#else
+    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+#endif
+  }
+}
+```
+
+This is the complete `AppDelegate.swift` (the `@main class AppDelegate` plus its `ReactNativeDelegate` in the same file). `PhoneSceneDelegate` lives in its **own** `PhoneSceneDelegate.swift` (shown above). Those two files are the complete native side.
+
+::: warning Don't blindly overwrite an AppDelegate you've customized
+This block is the minimal shape. If your existing `AppDelegate` / `ReactNativeDelegate` already has extra overrides (bundle customization, linking setup, push/deep-link handlers, `customize(rootView:)`, extra modules), **keep them**.
+
+Merge the CarPlay additions into your file rather than replacing it wholesale: the factory split, `configurationForConnecting`, the headless helper, `markReactNativeStarted`, and the Siri `handlerFor`.
+:::
+
+### Where to call `configureBrowser`
+
+Call `configureBrowser` (and `setupPlayer`) as a **top-level side-effect in `index.js`**, next to `AppRegistry.registerComponent`. It then runs when the JS bundle loads, mounted UI or not.
+
+The headless helper mounts your root component in the hidden window, and the phone scene mounts it again later. So a call in a component's `useEffect` runs once per window, and only after the first render. That's late for Siri, whose handler waits only briefly for setup (see [step 4](#_4-appdelegate-intent-handler)). A top-level call in `index.js` runs once, as soon as the bundle loads.
+
+`configureBrowser` **replaces** the whole config each time; it doesn't merge. So build one object with everything together: tabs, routes, and (for Siri) search. The snippets further down show one key at a time for brevity.
+
+```ts
+const browserConfig = {
+  // Tabs along the top of the CarPlay browser (see the tab limit in
+  // /guide/browser#tabs-and-the-initial-path).
+  tabs: [{ title: 'Home', path: '/' }],
+
+  // routes: path → BrowserSource (static page, callback, or HTTP).
+  routes: {
+    '/': async () => ({
+      path: '/',
+      title: 'Home',
+      children: [{ title: 'Crunchy Greens FM', src: 'https://...' }]
+    })
+  },
+
+  // search: required for Siri voice search (omit for browse-only).
+  search: { baseUrl: 'https://api.example.com/search' }
+}
+```
+
+Then apply it as a top-level side-effect in `index.js`:
+
+```js
+// index.js
+import { AppRegistry } from 'react-native'
+import { configureBrowser, setupPlayer } from 'react-native-audio-browser'
+import App from './App'
+import { name as appName } from './app.json'
+import { browserConfig } from './browserConfig' // the object above
+
+AppRegistry.registerComponent(appName, () => App)
+
+// Runs on every launch — including headless CarPlay / Siri — because it's a
+// module side-effect, not tied to a mounted component.
+void (async () => {
+  await setupPlayer()
+  configureBrowser(browserConfig)
+})()
+```
+
+The `"YourAppModuleName"` in the Swift snippets above is exactly this `appName` — your `app.json` `name`, identical to the string passed to `AppRegistry.registerComponent` (the same in the default RN template). The headless helper and the phone scene must both start RN with that name.
+
 ## Siri Voice Search
 
-The library can show an "Ask Siri to Play Audio" button on CarPlay list templates. To enable it, set `carPlaySiriListButton` on the resolved content returned by your route source:
+Siri voice search builds on the [React Native host setup](#react-native-host-uiscene-headless) above — make sure that's in place first. Then complete the steps below, in order:
+
+- **Step 0 — configure a `search` source** (the warning box just below; required, easy to forget)
+- **Steps 1–4** — Siri entitlement, Info.plist keys, bridging header, intent handler
+
+::: warning Step 0 (required) — a configured `search` source
+Siri voice search resolves spoken queries through the **same [`search`](/guide/search) source as your in-app search**. Without one, "play jazz" returns **nothing**, even with steps 1–4 wired up. Add `search` to the one config you pass to [`configureBrowser`](#where-to-call-configurebrowser) at startup:
 
 ```ts
 configureBrowser({
-  routes: [{
-    path: '/',
-    source: async () => ({
-      title: 'Home',
-      carPlaySiriListButton: 'top',
-      children: [
-        { title: 'Song 1', src: 'https://...' },
-      ]
-    })
-  }]
+  // …your tabs / routes …
+  search: {
+    // GET https://api.example.com/search?q=jazz — the library appends
+    // `q` plus structured voice params (`mode`, `genre`, `artist`,
+    // `album`, `reference`) and expects a bare Track[] back (a JSON
+    // array, not a page object), where each playable Track needs at
+    // least `title` + `src`.
+    baseUrl: 'https://api.example.com/search'
+  }
 })
 ```
 
-The `carPlaySiriListButton` property accepts `'top'` or `'bottom'` to control where the system assistant cell appears. It only affects CarPlay — it has no effect on the phone UI.
+The browse templates work without `search`; Siri does not. See [Search](/guide/search#configuring-search) for:
 
-To complete the setup, your app also needs an Intents Extension, a bridging header, and a one-line handler in your AppDelegate.
+- the full `SearchParams` (genre / artist / album / `mode` / `reference`)
+- the callback form, which returns [`Track`](/api/types/browser-nodes/#track)`[]` itself and receives the spoken text as `query` rather than `q`
+- `transform`, for rewriting requests
 
-### 1. Entitlements
+:::
 
-Add the Siri entitlement to your `.entitlements` file:
+CarPlay's tab bar already has a **search button that launches Siri**, which works once the steps below are wired up.
 
-```xml
-<key>com.apple.developer.siri</key>
-<true/>
+The library can also show an **"Ask Siri to Play Audio" cell inside a list** as an extra entry point. This is optional polish, not what enables Siri search. To add it, set [`carPlaySiriListButton`](/api/types/browser/#carplaysirilistbuttonposition) on the resolved content your route source returns:
+
+```ts
+configureBrowser({
+  // `routes` maps a path → a `BrowserSource`: a static page object, an async
+  // callback returning one (as here), or an HTTP request config. See
+  // Basic Usage and the BrowserSource type: /api/types/browser/#browsersource
+  routes: {
+    '/': async () => ({
+      path: '/',
+      title: 'Home',
+      carPlaySiriListButton: 'top',
+      children: [{ title: 'Crunchy Greens FM', src: 'https://...' }]
+    })
+  }
+})
 ```
 
-### 2. Info.plist
+(Tabs themselves come from your separate [`tabs`](/api/types/browser/#tabs) config, not from this route — the `'/'` route here is just where the button is attached. See [Basic Usage](/guide/basic-usage) for how `tabs` and `routes` fit together.)
+
+The `carPlaySiriListButton` property accepts `'top'` or `'bottom'` to control where the system assistant cell appears. It only affects CarPlay, not the phone UI.
+
+To complete the setup, your app needs the Siri entitlement, a couple of Info.plist keys, a bridging header, and a one-line handler in your AppDelegate. Media intents are handled in-app: Siri delivers the `INPlayMediaIntent` straight to your `AppDelegate`.
+
+::: info iOS version
+The version numbers on this page are capability notes within the library's [iOS floor](/guide/getting-started#installation):
+
+- The in-app handler API (`application(_:handlerFor:)`) exists from iOS 14, so you never need to gate on it.
+- The automatic CarPlay loading spinner needs iOS 18.4+.
+
+:::
+
+### 1. Siri entitlement
+
+Add the Siri entitlement to the **same `.entitlements` file** as the CarPlay key — both live in one `<dict>`:
+
+```xml
+<!-- YourApp.entitlements -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.carplay-audio</key>
+    <true/>
+    <key>com.apple.developer.siri</key>
+    <true/>
+</dict>
+</plist>
+```
+
+The reliable way to add this is Xcode → **Signing & Capabilities → + Capability → Siri**, which writes the key and enables **SiriKit on your App ID** (via automatic signing or the developer portal). Unlike the CarPlay audio entitlement, Siri does **not** require a manual Apple approval request — enabling the capability is enough.
+
+### 2. Siri Info.plist keys
 
 Add Siri usage description and supported media categories to your app's Info.plist:
 
 ```xml
 <key>NSSiriUsageDescription</key>
 <string>Siri is used for voice-controlled media playback via CarPlay.</string>
+<key>INIntentsSupported</key>
+<array>
+    <string>INPlayMediaIntent</string>
+    <!-- Optional — only for "like/dislike" / "add to favorites": -->
+    <string>INUpdateMediaAffinityIntent</string>
+    <string>INAddMediaIntent</string>
+</array>
 <key>INSupportedMediaCategories</key>
 <array>
-    <string>INMediaCategoryMusic</string>
+    <!-- PLACEHOLDER — replace with the categories matching YOUR content.
+         E.g. INMediaCategoryRadio for live radio, INMediaCategoryPodcasts
+         for podcasts, INMediaCategoryMusic for music. List every one you
+         support. -->
+    <string>INMediaCategoryRadio</string>
 </array>
 ```
 
-### 3. Intents Extension
+`INIntentsSupported` registers the intents your app can handle. The library's handler vends a handler for three intents:
 
-The Siri search button requires an **Intents Extension** target. The extension receives the Siri intent, resolves media items, and forwards it to the main app for playback.
+- **`INPlayMediaIntent`** — search / resume / play (the core voice-search flow).
+- **`INUpdateMediaAffinityIntent`** — "like" / "dislike" the current track.
+- **`INAddMediaIntent`** — add the current track to favorites.
 
-Add an Intents Extension target to your Xcode project (File > New > Target > Intents Extension). The extension's bundle identifier must be a child of the main app's (e.g. `com.myapp.SiriIntentExtension`), and it must be embedded in the app via the "Embed App Extensions" build phase.
+Register only the ones you want; `INPlayMediaIntent` alone is enough for voice search. The [`INSupportedMediaCategories`](https://developer.apple.com/documentation/bundleresources/information-property-list/insupportedmediacategories) values tell Siri which spoken requests to route to your app — if they don't cover your content, Siri may hand the request to a **different app**, so list every category you actually support.
 
-The extension needs two files:
+### 3. Bridging Header (Swift AppDelegate only)
 
-**IntentHandler.swift** — resolves media items and forwards to the main app:
+The intent API lives in the library's CocoaPod, **`AudioBrowser`** (the umbrella header for the `react-native-audio-browser` package). An **Objective-C** AppDelegate just `#import <AudioBrowser/RNABAudioBrowser.h>` directly and skips this step.
 
-```swift
-import Intents
-
-class IntentHandler: INExtension, INPlayMediaIntentHandling {
-
-  func resolveMediaItems(for intent: INPlayMediaIntent, with completion: @escaping ([INPlayMediaMediaItemResolutionResult]) -> Void) {
-    // Create a pass-through media item carrying the search term.
-    // Actual search/playback is handled by the main app after .handleInApp.
-    let searchTerm = intent.mediaSearch?.mediaName ?? ""
-    let mediaItem = INMediaItem(
-      identifier: searchTerm,
-      title: searchTerm,
-      type: .song,
-      artwork: nil
-    )
-    completion([.success(with: mediaItem)])
-  }
-
-  func handle(intent: INPlayMediaIntent, completion: @escaping (INPlayMediaIntentResponse) -> Void) {
-    completion(INPlayMediaIntentResponse(code: .handleInApp, userActivity: nil))
-  }
-}
-```
-
-**Info.plist** — declares `INPlayMediaIntent` support:
-
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionAttributes</key>
-    <dict>
-        <key>IntentsRestrictedWhileLocked</key>
-        <array/>
-        <key>IntentsRestrictedWhileProtectedDataUnavailable</key>
-        <array/>
-        <key>IntentsSupported</key>
-        <array>
-            <string>INPlayMediaIntent</string>
-        </array>
-        <key>SupportedMediaCategories</key>
-        <array>
-            <string>INMediaCategoryMusic</string>
-        </array>
-    </dict>
-    <key>NSExtensionPointIdentifier</key>
-    <string>com.apple.intents-service</string>
-    <key>NSExtensionPrincipalClass</key>
-    <string>$(PRODUCT_MODULE_NAME).IntentHandler</string>
-</dict>
-```
-
-### 4. Bridging Header
-
-Create a bridging header to access the library's intent handling API from Swift:
+A **Swift** AppDelegate reaches it through a bridging header. If your app already has one (check `SWIFT_OBJC_BRIDGING_HEADER`), add the import to it; otherwise create one and point that build setting at it:
 
 **YourApp-Bridging-Header.h:**
 
@@ -173,44 +544,190 @@ Create a bridging header to access the library's intent handling API from Swift:
 #import <AudioBrowser/RNABAudioBrowser.h>
 ```
 
-Set `SWIFT_OBJC_BRIDGING_HEADER` in your target's build settings to point to this file.
+::: tip If the import won't resolve
+`<AudioBrowser/...>` resolves only once the `AudioBrowser` pod is linked. Run `pod install` (from `ios/`) after adding the npm dependency, and confirm the pod is named **`AudioBrowser`** in your `Podfile.lock`. A "module 'AudioBrowser' not found" error almost always means `pod install` hasn't run.
+:::
 
-### 5. AppDelegate
+### 4. AppDelegate intent handler
 
-When the extension forwards the intent via `.handleInApp`, the system calls `application(_:handle:completionHandler:)` on your `AppDelegate`. Delegate to the library:
+For in-app intent handling, implement `application(_:handlerFor:)` on your `AppDelegate`, boot RN headless (the [`startReactNativeHeadless()`](#the-headless-helper) helper from the host setup), and return the library's handler object. This is the same method already shown (commented "Siri only") in the [assembled `AppDelegate`](#the-assembled-appdelegate) — add it once, not twice; it's repeated here in isolation:
 
 ```swift
 import Intents
 
 func application(
   _ application: UIApplication,
-  handle intent: INIntent,
-  completionHandler: @escaping (INIntentResponse) -> Void
-) {
-  RNABAudioBrowser.handleMediaIntent(intent, completionHandler: completionHandler)
+  handlerFor intent: INIntent
+) -> Any? {
+  // The intent may have cold-launched us with no scene — boot RN first;
+  // the library's handler waits for RN before resolving.
+  startReactNativeHeadless()
+  return RNABAudioBrowser.handler(for: intent)
 }
 ```
 
-The library searches using your configured browser search route, queues the results, and starts playback automatically.
+`RNABAudioBrowser.handler(for:)` is the library's **only** intent entry point, with no separate registration or setup call. It returns an opaque handler object for the intents it supports (`INPlayMediaIntent`, `INUpdateMediaAffinityIntent`, `INAddMediaIntent`) and `nil` for anything else.
+
+The library resolves the spoken query through your configured [`search`](/guide/search) source (the same one your in-app search uses — it is **not** a browse route), queues the results, and starts playback automatically.
+
+::: tip The handler waits only briefly for setup
+On a cold launch, the handler waits up to about **8 seconds** for your JS to run `setupPlayer()` and `configureBrowser()`, then fails the intent. So call both at the top level of `index.js`, before any slow async work (see [Where to call `configureBrowser`](#where-to-call-configurebrowser)).
+
+That limit covers only the wait for setup. Your Gate's resolver and your `search` source run after it with no time limit of their own, so keep them quick: Siri gives up on a slow request.
+
+If you use a [Gate](/guide/gate), a paywall or region check, it can refuse the search. It blocks search and browsing from the car, not playback, so "resume" still plays.
+:::
+
+> **Why a handler object, not `application(_:handle:completionHandler:)`?** The latter is not a real `UIApplicationDelegate` method, so iOS never calls it. With no in-app handler registered, the system falls back to a `UISIntentForwardingAction`, which crashes in `-[INHandleIntentForwardingActionResponse isSuccess]`.
+>
+> Returning a handler from `application(_:handlerFor:)` keeps iOS on the in-app path. **No separate Intents Extension is required**; everything runs in-app.
 
 ### How It Works
 
 1. User taps the search button on a CarPlay tab
 2. Siri activates and listens for a voice query
-3. iOS creates an `INPlayMediaIntent` with the transcribed search term
-4. The Intents Extension resolves a pass-through media item and responds with `.handleInApp`
-5. The system forwards the intent to the main app via `application(_:handle:completionHandler:)`
-6. The library searches your content and starts playback
-7. CarPlay's Now Playing screen updates automatically
+3. iOS creates an `INPlayMediaIntent` carrying the parsed query
+4. The system asks your app for a handler via `application(_:handlerFor:)` and drives the intent against it
+5. The library resolves the request and starts playback — **resuming** the last session when the user just said your app's name, otherwise **searching** your content (genre/artist/album/etc. are forwarded as structured search params)
+6. CarPlay's Now Playing screen updates automatically
 
-## Headless Mode
+## Now Playing Buttons
 
-CarPlay can launch your app in the background (without the phone UI). The library supports this via headless React Native startup. See the example app's `AppDelegate.startReactNativeHeadless()` for the implementation pattern.
+The Now Playing screen always has CarPlay's transport controls. More buttons, one of each kind in the table below, go in the row beneath them: list them in `ios.carPlayNowPlayingButtons`, left to right in the order you want them:
+
+```ts
+await setupPlayer({
+  capabilities: { favorite: true },
+  ios: {
+    carPlayNowPlayingButtons: ['shuffle', 'repeat', 'favorite', 'playback-rate']
+  }
+})
+```
+
+You can also change them later with `updateOptions({ ios: { carPlayNowPlayingButtons: [...] } })`. The default is `[]`, which means no extra buttons.
+
+| Button            | What a tap does                                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `'shuffle'`       | Turns shuffle on or off.                                                                                                                |
+| `'repeat'`        | Cycles the repeat mode: off → track → queue → off.                                                                                      |
+| `'favorite'`      | Toggles the playing track's favorite state; the heart is filled while it is a favorite. See [Favorites](/guide/favorites).              |
+| `'playback-rate'` | Steps to the next rate in `ios.playbackRates`, wrapping from the last back to the first. With `playbackRates: []` the tap does nothing. |
+
+- **Each button is drawn once.** A button listed twice keeps its first position.
+- **More than five entries log a warning.** Five is CarPlay's limit for the row; the count includes repeats.
+- **A [gate](/guide/gate) hides them.** While a gate is active the row is empty. The transport controls stay.
+
+The **Up Next** button is separate. It opens the queue and shows only when the queue has more than one track. Set `ios.carPlayUpNextButton: false` to never show it.
+
+## Playing Indicator
+
+CarPlay marks the playing item in browse lists with a now-playing indicator. `ios.carPlayPlayingIndicatorLocation` chooses where it draws:
+
+- `'leading'` (default): in the artwork slot, in place of the row's artwork while it plays, as Apple Music does.
+- `'trailing'`: at the end of the row, so the artwork stays visible.
+
+If you change it with `updateOptions`, rows already on screen update too.
+
+## Loading States
+
+Browse screens show a loading state while their content resolves — pushed destinations, tabs loading lazily, and the startup screen while tabs are queried. On iOS 18.4+ the system loading spinner is shown automatically. Older iOS versions have no spinner API; those screens stay blank unless you supply a [`carPlayLoadingTitle`](/api/types/browser/#carplayloadingtitle):
+
+```ts
+configureBrowser({
+  carPlayLoadingTitle: t('loading')
+  // ...
+})
+```
+
+The title renders as the list's centered empty state and disappears as soon as content arrives.
+
+## Album Line Navigation
+
+The album line on the Now Playing screen can navigate into the browse tree. It becomes tappable when the active track has both:
+
+- an **`album`** string, which CarPlay builds the tappable line from (see the warning below)
+- an **`albumPath`**: a `path` in your [`routes`](/guide/basic-usage), so the destination must exist there
+
+Tapping the line pushes that path:
+
+```ts
+{
+  title: 'Sweet Pea',
+  artist: 'The Radishes',
+  album: 'Greens',
+  src: 'https://…',
+  albumPath: '/album/greens'
+}
+```
+
+For tracks without an `albumPath`, configure a [`resolveAlbumPath`](/api/types/browser/#resolvealbumpath) resolver. It runs when the active track changes (not at tap time), so the album line only becomes tappable when there is actually somewhere to go:
+
+```ts
+configureBrowser({
+  // `slugify` here is your own helper (illustrative) — turn an album name
+  // into a browse path that exists in your `routes`.
+  resolveAlbumPath: (track) =>
+    track.album ? `/album/${slugify(track.album)}` : undefined
+  // ...
+})
+```
+
+Return a browse path to enable the album line for that track, or `undefined` to leave it untappable.
+
+::: warning Album metadata required
+CarPlay renders the tappable album/artist button as a **separate line built from the track's `album`**: the third metadata line, with a chevron. A track without an `album` gives CarPlay no string to turn into a button, and the artist line alone is never tappable.
+
+Set `album` on any track that should offer album-line navigation. See [Now Playing](/guide/now-playing) for the full field-by-surface rendering matrix.
+:::
+
+## Template Depth
+
+CarPlay limits an audio app's template stack to **five templates, the tab bar included** (see Apple's [CarPlay App Programming Guide](https://developer.apple.com/carplay/)), so the stack is full four pushes in. Now Playing and Up Next each take a slot like any list.
+
+A browse tree with a fixed shape (tabs → show → episodes) never gets there; one that can be drilled without end — a place, a place near it, a place near that — does.
+
+At the limit, the library replaces the **top** page with the new one, so a push always lands:
+
+```
+[tabs, A, B, C, D]  + push E
+[tabs, A, B, C, E]
+```
+
+- **Forward never blocks.** A deeper list, Now Playing and Up Next all open at full depth.
+- **Back skips one page.** From `E` it goes to `C`: `D`, the page the listener came from, is the one that was replaced. Below full depth, back works as usual.
+- **The swap is a pop and a push.** CarPlay can't replace a template in place, so the library pops the top one without animation and then pushes the new one.
+
+Each replacement is logged under the `com.audiobrowser` subsystem, category `TemplateStack`:
+
+```
+push at the depth limit: replacing the top, CPListTemplate, with CPListTemplate
+```
+
+To watch for it on the simulator:
+
+```sh
+xcrun simctl spawn booted log stream --level info \
+  --predicate 'subsystem == "com.audiobrowser" AND category == "TemplateStack"'
+```
+
+An `error` line in that category means the pop or the push failed; it names the template involved.
 
 ## Testing
 
-Siri cannot be tested in the iOS Simulator or CarPlay Simulator. You must test on a physical device connected to CarPlay (wireless CarPlay is recommended so you can use Xcode debugging simultaneously).
+Test your app in the `CarPlay Simulator.app`, which is part of the [Additional Tools for Xcode](https://developer.apple.com/download/all/?q=additional%20tools%20for%20xcode). Siri voice search works there, so you can exercise the full intent flow without a car.
+
+CarPlay support on the iOS Simulator can be a little flaky. If something looks broken, retry, or check on a physical device.
+
+### Troubleshooting
+
+| Symptom                                        | Likely cause                                                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Siri mic opens but returns nothing             | No [`search` source](#siri-voice-search) configured (Step 0).                                         |
+| The "Ask Siri" cell does nothing               | Siri entitlement / Info.plist keys / intent handler not wired (steps 1–4).                            |
+| CarPlay browse screens hang empty              | `startReactNativeHeadless` missing, misnamed or missing `@objc`: the library calls it by selector.    |
+| Build error: _module 'AudioBrowser' not found_ | `pod install` hasn't linked the `AudioBrowser` pod.                                                   |
+| Crash: _no UISceneConfiguration named …_       | The `name:` in `configurationForConnecting` doesn't match `UISceneConfigurationName` in the manifest. |
 
 ## Reference
 
-See the [example app](https://github.com/anthropics/react-native-audio-browser/tree/main/apps/example-native/ios/AudioBrowserExample) for a complete working implementation including the Intents Extension.
+See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/next/apps/example-native/ios/AudioBrowserExample) for a complete working implementation.

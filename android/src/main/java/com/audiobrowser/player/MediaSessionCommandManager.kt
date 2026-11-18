@@ -4,153 +4,212 @@ import android.os.Bundle
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
-import androidx.media3.session.R
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionCommands
-import com.margelo.nitro.audiobrowser.NotificationButton
-import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
+import com.margelo.nitro.audiobrowser.RemoteButton
+import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import timber.log.Timber
 
 /**
- * MediaSession manager that handles command configuration and execution.
- *
- * Responsibilities:
- * - Maps player capabilities to MediaSession commands and notification layouts
- * - Updates MediaSession configuration and applies changes immediately
- * - Builds connection results for new MediaSession controllers
- * - Handles execution of custom MediaSession commands (jump actions)
- * - Maintains proper separation between global capabilities and notification-specific controls
- *
- * Initializes with sensible defaults: all global capabilities enabled, essential notification
- * controls only.
+ * Whether a surface draws this button itself from the standard PlaybackState: Previous in BACK and
+ * Next in FORWARD everywhere, and the favorite on Android Automotive OS (its rating control).
  */
-class MediaSessionCommandManager {
+private fun SlottedButton.isDrawnBySurface(automotive: Boolean): Boolean =
+  (button == RemoteButton.SKIP_TO_PREVIOUS && slot == ButtonSlot.BACK) ||
+    (button == RemoteButton.SKIP_TO_NEXT && slot == ButtonSlot.FORWARD) ||
+    (automotive && button == RemoteButton.FAVORITE)
+
+/**
+ * The slot, then OVERFLOW. Media3 reads `slots` as a preference order and places a button in the
+ * first that exists, is free and allows it; every surface's flattening
+ * (`CommandButton.getCustomLayoutFromMediaButtonPreferences`, `DefaultMediaNotificationProvider`)
+ * keeps only a button that won BACK or FORWARD or lists OVERFLOW, so without the fallback a button
+ * that loses its slot disappears instead of demoting.
+ */
+internal fun media3SlotsFor(slot: ButtonSlot): IntArray =
+  when (slot) {
+    ButtonSlot.BACK -> intArrayOf(CommandButton.SLOT_BACK, CommandButton.SLOT_OVERFLOW)
+    ButtonSlot.FORWARD -> intArrayOf(CommandButton.SLOT_FORWARD, CommandButton.SLOT_OVERFLOW)
+    ButtonSlot.OVERFLOW -> intArrayOf(CommandButton.SLOT_OVERFLOW)
+  }
+
+/**
+ * Maps player capabilities to the session's available commands and its one button layout.
+ *
+ * Capabilities decide what works; the layout only decides where buttons sit, so a control left out
+ * of the layout still works from a Bluetooth remote or headset. The layout is published
+ * session-wide via `setMediaButtonPreferences`, which Media3 turns into the notification and the
+ * legacy PlaybackState that Android Auto and the Android 13+ media controls read. A per-controller
+ * layout would reach neither: Android Auto connects as a legacy controller.
+ */
+class MediaSessionCommandManager(private val automotive: Boolean) {
 
   companion object {
     private const val CUSTOM_ACTION_JUMP_BACKWARD = "JUMP_BACKWARD"
     private const val CUSTOM_ACTION_JUMP_FORWARD = "JUMP_FORWARD"
     const val CUSTOM_ACTION_FAVORITE = "FAVORITE"
-  }
 
-  /** Current player commands configuration for external controllers */
-  var playerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-    private set
-
-  /** Current player commands configuration for notification controller */
-  var notificationPlayerCommands: MediaPlayer.Commands =
-    MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-    private set
-
-  /** Current session commands configuration for external controllers */
-  lateinit var sessionCommands: SessionCommands
-    private set
-
-  /** Current session commands configuration for notification */
-  lateinit var notificationSessionCommands: SessionCommands
-    private set
-
-  /** Current custom layout configuration for external controllers */
-  lateinit var customLayout: List<CommandButton>
-    private set
-
-  /** Current custom layout configuration for notification */
-  lateinit var notificationCustomLayout: List<CommandButton>
-    private set
-
-  /** Stored state for rebuilding layout */
-  private var currentCapabilities: PlayerCapabilities = PlayerCapabilities(
-    play = null, pause = null, stop = null, seekTo = null,
-    skipToNext = null, skipToPrevious = null,
-    jumpForward = null, jumpBackward = null,
-    favorite = null,
-    shuffleMode = null, repeatMode = null, playbackRate = null
-  )
-  private var currentNotificationButtons: NotificationButtonLayout? = null
-  private var currentSearchAvailable: Boolean = false
-  private var currentFavorited: Boolean? = null
-
-  init {
-    // Initialize with defaults matching PlayerUpdateOptions (all capabilities enabled)
-    val defaultCapabilities = currentCapabilities
-
-    playerCommands = buildPlayerCommands(defaultCapabilities)
-    notificationPlayerCommands = buildPlayerCommands(defaultCapabilities)
-
-    val (extSessionCommands, extCustomLayout) =
-      buildSessionCommandsAndLayout(defaultCapabilities, searchAvailable = false, favorited = null)
-    sessionCommands = extSessionCommands
-    customLayout = extCustomLayout
-
-    notificationSessionCommands = extSessionCommands
-    notificationCustomLayout = extCustomLayout
+    // Seconds; matches PlayerUpdateOptions' default.
+    private const val DEFAULT_JUMP_INTERVAL = 15.0
   }
 
   /**
-   * Updates MediaSession configuration and applies changes immediately
-   *
-   * @param mediaSession The MediaSession to configure
-   * @param capabilities Global capabilities that enable commands for ALL MediaSession controllers
-   *   (Bluetooth, Android Auto, lock screen, notification, etc.). All capabilities are enabled
-   *   by default - only false values disable them.
-   * @param notificationButtons Slot-based button layout for notifications. When null, button layout
-   *   is derived from capabilities using smart defaults.
-   * @param searchAvailable Whether search functionality is configured and available
-   *
-   * Manager initializes with defaults: all global capabilities, limited notification capabilities.
+   * Media3 has numbered icons only for 5, 10, 15 and 30 seconds. The match is exact: a numbered
+   * icon promises how far the button seeks, so 14.6 gets the plain arrow, not "15". Android Auto
+   * draws from this icon constant, not from an icon resource set with `setIconResId`.
+   */
+  private fun jumpForwardIcon(seconds: Double): Int =
+    when (seconds) {
+      5.0 -> CommandButton.ICON_SKIP_FORWARD_5
+      10.0 -> CommandButton.ICON_SKIP_FORWARD_10
+      15.0 -> CommandButton.ICON_SKIP_FORWARD_15
+      30.0 -> CommandButton.ICON_SKIP_FORWARD_30
+      else -> CommandButton.ICON_SKIP_FORWARD
+    }
+
+  private fun jumpBackwardIcon(seconds: Double): Int =
+    when (seconds) {
+      5.0 -> CommandButton.ICON_SKIP_BACK_5
+      10.0 -> CommandButton.ICON_SKIP_BACK_10
+      15.0 -> CommandButton.ICON_SKIP_BACK_15
+      30.0 -> CommandButton.ICON_SKIP_BACK_30
+      else -> CommandButton.ICON_SKIP_BACK
+    }
+
+  var playerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+    private set
+
+  lateinit var sessionCommands: SessionCommands
+    private set
+
+  lateinit var buttonPreferences: List<CommandButton>
+    private set
+
+  private var currentCapabilities: PlayerCapabilities =
+    PlayerCapabilities(
+      play = null,
+      pause = null,
+      stop = null,
+      seekTo = null,
+      skipToNext = null,
+      skipToPrevious = null,
+      jumpForward = null,
+      jumpBackward = null,
+      favorite = null,
+      shuffleMode = null,
+      repeatMode = null,
+      playbackRate = null,
+    )
+  private var currentRemoteButtonLayout: RemoteButtonLayout? = null
+  private var currentFavorited: Boolean? = null
+  private var currentLive: Boolean = false
+  private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
+  private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
+
+  /**
+   * FAVORITE is a session command, so it is absent here. Skip maps to two commands: Media3
+   * advertises the platform skip action for either, and its notification uses the media-item one,
+   * so a disabled skip must remove both.
+   */
+  private val capabilityPlayerCommands: Map<Capability, List<@MediaPlayer.Command Int>> =
+    mapOf(
+      Capability.PLAY_PAUSE to listOf(MediaPlayer.COMMAND_PLAY_PAUSE),
+      Capability.STOP to listOf(MediaPlayer.COMMAND_STOP),
+      Capability.SEEK_TO to listOf(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM),
+      Capability.SKIP_TO_NEXT to
+        listOf(MediaPlayer.COMMAND_SEEK_TO_NEXT, MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM),
+      Capability.SKIP_TO_PREVIOUS to
+        listOf(
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+          MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        ),
+      Capability.JUMP_FORWARD to listOf(MediaPlayer.COMMAND_SEEK_FORWARD),
+      Capability.JUMP_BACKWARD to listOf(MediaPlayer.COMMAND_SEEK_BACK),
+    )
+
+  // capabilityPlayerCommands must stay above `init`: properties initialize in textual order, and
+  // `init` reads it through buildPlayerCommands.
+  init {
+    val defaultCapabilities = currentCapabilities
+
+    playerCommands = buildPlayerCommands(defaultCapabilities, live = false)
+    sessionCommands = buildSessionCommands(defaultCapabilities, searchAvailable = false)
+    buttonPreferences =
+      buildButtonPreferences(
+        deriveButtonSlots(defaultCapabilities, layout = null),
+        favorited = null,
+      )
+  }
+
+  /**
+   * Rebuilds and publishes commands and layout. A null [remoteButtonLayout] derives the layout from
+   * [capabilities]. The favorite and live states set by [updateFavoriteState] and [updateLiveState]
+   * carry over.
    */
   fun updateMediaSession(
     mediaSession: MediaSession,
     capabilities: PlayerCapabilities,
-    notificationButtons: NotificationButtonLayout?,
+    remoteButtonLayout: RemoteButtonLayout?,
     searchAvailable: Boolean,
-    favorited: Boolean? = null,
+    forwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL,
+    backwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL,
   ) {
-    // Store state for future rebuilds
     currentCapabilities = capabilities
-    currentNotificationButtons = notificationButtons
-    currentSearchAvailable = searchAvailable
-    currentFavorited = favorited
+    currentRemoteButtonLayout = remoteButtonLayout
+    currentForwardJumpInterval = forwardJumpInterval
+    currentBackwardJumpInterval = backwardJumpInterval
 
-    // Build commands for external controllers (global capabilities)
-    playerCommands = buildPlayerCommands(capabilities)
-    val (extSessionCommands, extCustomLayout) =
-      buildSessionCommandsAndLayout(capabilities, searchAvailable, favorited)
-    sessionCommands = extSessionCommands
-    customLayout = extCustomLayout
+    playerCommands = buildPlayerCommands(capabilities, currentLive)
+    sessionCommands = buildSessionCommands(capabilities, searchAvailable)
+    buttonPreferences =
+      buildButtonPreferences(deriveButtonSlots(capabilities, remoteButtonLayout), currentFavorited)
 
-    // Build notification button preferences with explicit slots
-    val (notifSessionCommands, notifButtonPrefs) =
-      buildNotificationButtonPreferences(
-        capabilities,
-        notificationButtons,
-        searchAvailable,
-        favorited,
-      )
-    notificationSessionCommands = notifSessionCommands
-    notificationCustomLayout = notifButtonPrefs
-
-    // Derive notification player commands from the buttons that will be shown
-    notificationPlayerCommands = buildNotificationPlayerCommands(capabilities, notificationButtons)
-
-    // Apply media button preferences to notification controller
-    mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
-      mediaSession.setMediaButtonPreferences(controllerInfo, notifButtonPrefs)
-      mediaSession.setAvailableCommands(
-        controllerInfo,
-        notificationSessionCommands,
-        notificationPlayerCommands,
-      )
-    }
-
-    // Broadcast updated layout to all external controllers (Android Auto, etc.)
-    mediaSession.setCustomLayout(customLayout)
+    // Commands first: Media3 disables a button whose command is not yet available.
+    publishAvailableCommands(mediaSession)
+    publishButtonPreferences(mediaSession)
   }
 
   /**
-   * Updates the favorite button state and reapplies the button preferences. Call this when the
-   * current track changes or when favorite state is toggled.
+   * Withholds seeking within the current item while it is live, whatever `seekTo` says: a
+   * controller offered that command draws a seek bar a live stream cannot fill. Call whenever the
+   * current track may have changed.
    */
+  fun updateLiveState(mediaSession: MediaSession, live: Boolean) {
+    if (currentLive == live) return
+    currentLive = live
+    playerCommands = buildPlayerCommands(currentCapabilities, live)
+    publishAvailableCommands(mediaSession)
+  }
+
+  // [buildConnectionResult] only reaches controllers that connect later; an Android Auto connection
+  // lasts until the car shuts down.
+  private fun publishAvailableCommands(mediaSession: MediaSession) {
+    mediaSession.connectedControllers.forEach {
+      mediaSession.setAvailableCommands(it, sessionCommands, playerCommands)
+    }
+  }
+
+  /**
+   * Both calls are needed. Only the session-wide one reaches Android Auto, a legacy controller, but
+   * it re-broadcasts only when the slot-reservation flags change, never the PlaybackState carrying
+   * the custom actions. The notification-controller overload calls
+   * `updateLegacySessionPlaybackState`; without it a reordered layout stays unseen until some
+   * playback event republishes the state.
+   */
+  private fun publishButtonPreferences(mediaSession: MediaSession) {
+    Timber.Forest.d(
+      "Publishing ${buttonPreferences.size} button preferences: " +
+        "${buttonPreferences.map { it.displayName }}"
+    )
+    mediaSession.setMediaButtonPreferences(buttonPreferences)
+
+    mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
+      mediaSession.setMediaButtonPreferences(controllerInfo, buttonPreferences)
+    }
+  }
+
+  /** Call when the current track changes or its favorite state is toggled. */
   fun updateFavoriteState(mediaSession: MediaSession, favorited: Boolean?) {
     Timber.Forest.d(
       "updateFavoriteState called: currentFavorited=$currentFavorited, newFavorited=$favorited"
@@ -162,52 +221,23 @@ class MediaSessionCommandManager {
 
     currentFavorited = favorited
 
-    // Rebuild external controller layout with new favorite state
-    val (extSessionCommands, extCustomLayout) =
-      buildSessionCommandsAndLayout(currentCapabilities, currentSearchAvailable, favorited)
-    sessionCommands = extSessionCommands
-    customLayout = extCustomLayout
-    Timber.Forest.d("Built external customLayout with ${customLayout.size} buttons")
-
-    // Rebuild notification button preferences with new favorite state
-    val (notifSessionCommands, notifButtonPrefs) =
-      buildNotificationButtonPreferences(
-        currentCapabilities,
-        currentNotificationButtons,
-        currentSearchAvailable,
+    buttonPreferences =
+      buildButtonPreferences(
+        deriveButtonSlots(currentCapabilities, currentRemoteButtonLayout),
         favorited,
       )
-    notificationSessionCommands = notifSessionCommands
-    notificationCustomLayout = notifButtonPrefs
 
-    // Apply updated button preferences to notification controller
-    mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
-      Timber.Forest.d("Updating notification controller button preferences")
-      mediaSession.setMediaButtonPreferences(controllerInfo, notificationCustomLayout)
-    }
+    publishButtonPreferences(mediaSession)
   }
 
-  /**
-   * Builds a MediaSession ConnectionResult with current command configuration
-   *
-   * @param session The MediaSession to build the result for
-   * @return Configured ConnectionResult with current commands and layout
-   */
   fun buildConnectionResult(session: MediaSession): MediaSession.ConnectionResult {
     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-      .setCustomLayout(customLayout)
+      .setMediaButtonPreferences(buttonPreferences)
       .setAvailableSessionCommands(sessionCommands)
       .setAvailablePlayerCommands(playerCommands)
       .build()
   }
 
-  /**
-   * Handles custom MediaSession commands
-   *
-   * @param command The custom command to handle
-   * @param player The AudioBrowser instance to execute commands on
-   * @return true if command was handled, false otherwise
-   */
   fun handleCustomCommand(command: SessionCommand, player: Player): Boolean {
     Timber.Forest.d("onCustomCommand: action=${command.customAction}")
 
@@ -223,9 +253,8 @@ class MediaSessionCommandManager {
         true
       }
       CUSTOM_ACTION_FAVORITE -> {
+        // Unreached: MediaSessionCallback.onCustomCommand handles the favorite itself.
         Timber.Forest.d("Favorite command received")
-        // Return true to indicate this was handled - the actual callback
-        // is triggered in MediaSessionCallback.onCustomCommand
         true
       }
       else -> {
@@ -235,344 +264,114 @@ class MediaSessionCommandManager {
     }
   }
 
-  private fun buildPlayerCommands(capabilities: PlayerCapabilities): MediaPlayer.Commands {
+  private fun buildPlayerCommands(
+    capabilities: PlayerCapabilities,
+    live: Boolean,
+  ): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
 
-    // Commands to remove - start with always-disabled commands
-    val disabledCommands =
-      mutableSetOf<@MediaPlayer.Command Int>(
-        // Always filter out direct media item commands to avoid dual-command confusion
-        // This forces MediaSession to only use the "smart" commands we can control via capabilities
-        MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-        MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-      )
-
-    // Only disable jump commands if capabilities are explicitly disabled (false)
-    if (capabilities.jumpForward == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_FORWARD)
-    }
-    if (capabilities.jumpBackward == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_BACK)
+    capabilityPlayerCommands.forEach { (capability, commands) ->
+      if (!capabilities.isEnabled(capability)) {
+        commands.forEach { playerCommandsBuilder.remove(it) }
+        Timber.Forest.d("Removed commands: $commands ($capability disabled)")
+      }
     }
 
-    // Check each capability and add commands to remove if explicitly disabled
-    // Both play and pause must be disabled to remove PLAY_PAUSE command
-    if (capabilities.play == false && capabilities.pause == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_PLAY_PAUSE)
-    }
-
-    if (capabilities.stop == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_STOP)
-    }
-
-    if (capabilities.seekTo == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-    }
-
-    if (capabilities.skipToNext == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_NEXT)
-    }
-
-    if (capabilities.skipToPrevious == false) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
-    }
-
-    // Remove disabled commands from the builder
-    disabledCommands.forEach { command ->
-      playerCommandsBuilder.remove(command)
-      Timber.Forest.d("Removed command: $command")
+    if (live) {
+      playerCommandsBuilder.remove(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 
     return playerCommandsBuilder.build()
   }
 
-  private fun buildSessionCommandsAndLayout(
+  // Registers the command of every capability-allowed button, placed or not: Media3 disables a
+  // button whose command is missing.
+  private fun buildSessionCommands(
     capabilities: PlayerCapabilities,
     searchAvailable: Boolean,
-    favorited: Boolean?,
-  ): Pair<SessionCommands, List<CommandButton>> {
-    val customLayoutButtons = mutableListOf<CommandButton>()
+  ): SessionCommands {
     val sessionCommandsBuilder =
       MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
 
-    // Remove search commands if search is not configured
     if (!searchAvailable) {
       sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
       sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
       Timber.Forest.d("Removed search commands - search not configured")
     }
 
-    // Create custom command buttons for jump commands (required for notification visibility)
-    // All capabilities enabled by default - only false disables
-    if (capabilities.jumpBackward != false) {
-      val jumpBackCommand = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
-      customLayoutButtons.add(
-        CommandButton.Builder()
-          .setDisplayName("Jump Backward")
-          .setSessionCommand(jumpBackCommand)
-          .setIconResId(R.drawable.media3_icon_skip_back)
-          .build()
-      )
-      sessionCommandsBuilder.add(jumpBackCommand)
+    // Media3 always advertises the platform rating action, which sets the favorite.
+    if (!capabilities.isEnabled(Capability.FAVORITE)) {
+      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_SESSION_SET_RATING)
     }
 
-    if (capabilities.jumpForward != false) {
-      val jumpForwardCommand = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
-      customLayoutButtons.add(
-        CommandButton.Builder()
-          .setDisplayName("Jump Forward")
-          .setSessionCommand(jumpForwardCommand)
-          .setIconResId(R.drawable.media3_icon_skip_forward)
-          .build()
-      )
-      sessionCommandsBuilder.add(jumpForwardCommand)
-    }
+    RemoteButton.entries
+      .filter { capabilities.allows(it) }
+      .mapNotNull { customCommandFor(it) }
+      .forEach { sessionCommandsBuilder.add(it) }
 
-    // Add favorite button when FAVORITE capability is not disabled
-    if (capabilities.favorite != false) {
-      val heartIcon =
-        if (favorited == true) {
-          CommandButton.ICON_HEART_FILLED
-        } else {
-          CommandButton.ICON_HEART_UNFILLED
-        }
-      val displayName = if (favorited == true) "Remove from favorites" else "Add to favorites"
-      val favoriteCommand = SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
-
-      customLayoutButtons.add(
-        CommandButton.Builder(heartIcon)
-          .setDisplayName(displayName)
-          .setSessionCommand(favoriteCommand)
-          .build()
-      )
-      sessionCommandsBuilder.add(favoriteCommand)
-      Timber.Forest.d("Added favorite button - favorited=$favorited")
-    }
-
-    return Pair(sessionCommandsBuilder.build(), customLayoutButtons)
+    return sessionCommandsBuilder.build()
   }
 
-  /**
-   * Builds notification button preferences with explicit slot assignments. If notificationButtons
-   * is null, derives button layout from capabilities.
-   */
-  private fun buildNotificationButtonPreferences(
-    capabilities: PlayerCapabilities,
-    notificationButtons: NotificationButtonLayout?,
-    searchAvailable: Boolean,
-    favorited: Boolean?,
-  ): Pair<SessionCommands, List<CommandButton>> {
-    val buttons = mutableListOf<CommandButton>()
-    val sessionCommandsBuilder =
-      MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
-
-    // Remove search commands if search is not configured
-    if (!searchAvailable) {
-      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
-      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
+  // The one source for both the command a button carries and the registry in buildSessionCommands,
+  // so a published button cannot lack its command.
+  private fun customCommandFor(button: RemoteButton): SessionCommand? =
+    when (button) {
+      RemoteButton.JUMP_BACKWARD -> SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
+      RemoteButton.JUMP_FORWARD -> SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
+      RemoteButton.FAVORITE -> SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
+      RemoteButton.SKIP_TO_PREVIOUS,
+      RemoteButton.SKIP_TO_NEXT -> null
     }
 
-    // Helper to create a CommandButton for a NotificationButton with specific slot
-    // Only creates button if the corresponding capability is not disabled
-    fun createButton(button: NotificationButton, slot: Int): CommandButton? {
-      return when (button) {
-        NotificationButton.SKIP_TO_PREVIOUS -> {
-          if (capabilities.skipToPrevious != false) {
-            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-              .setDisplayName("Previous")
-              .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
-              .setSlots(slot)
-              .build()
-          } else null
-        }
-        NotificationButton.SKIP_TO_NEXT -> {
-          if (capabilities.skipToNext != false) {
-            CommandButton.Builder(CommandButton.ICON_NEXT)
-              .setDisplayName("Next")
-              .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_NEXT)
-              .setSlots(slot)
-              .build()
-          } else null
-        }
-        NotificationButton.JUMP_BACKWARD -> {
-          if (capabilities.jumpBackward != false) {
-            val command = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
-            sessionCommandsBuilder.add(command)
-            CommandButton.Builder()
-              .setDisplayName("Jump Backward")
-              .setSessionCommand(command)
-              .setIconResId(R.drawable.media3_icon_skip_back)
-              .setSlots(slot)
-              .build()
-          } else null
-        }
-        NotificationButton.JUMP_FORWARD -> {
-          if (capabilities.jumpForward != false) {
-            val command = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
-            sessionCommandsBuilder.add(command)
-            CommandButton.Builder()
-              .setDisplayName("Jump Forward")
-              .setSessionCommand(command)
-              .setIconResId(R.drawable.media3_icon_skip_forward)
-              .setSlots(slot)
-              .build()
-          } else null
-        }
-        NotificationButton.FAVORITE -> {
-          if (capabilities.favorite != false) {
-            val heartIcon =
+  // This and customCommandFor list every button instead of `else`, so a new button fails the build
+  // until it has an action.
+  private fun playerCommandFor(button: RemoteButton): Int? =
+    when (button) {
+      RemoteButton.SKIP_TO_PREVIOUS -> MediaPlayer.COMMAND_SEEK_TO_PREVIOUS
+      RemoteButton.SKIP_TO_NEXT -> MediaPlayer.COMMAND_SEEK_TO_NEXT
+      RemoteButton.JUMP_BACKWARD,
+      RemoteButton.JUMP_FORWARD,
+      RemoteButton.FAVORITE -> null
+    }
+
+  private fun buttonFor(button: RemoteButton, favorited: Boolean?): CommandButton.Builder {
+    val builder =
+      when (button) {
+        RemoteButton.SKIP_TO_PREVIOUS ->
+          CommandButton.Builder(CommandButton.ICON_PREVIOUS).setDisplayName("Previous")
+        RemoteButton.SKIP_TO_NEXT ->
+          CommandButton.Builder(CommandButton.ICON_NEXT).setDisplayName("Next")
+        RemoteButton.JUMP_BACKWARD ->
+          CommandButton.Builder(jumpBackwardIcon(currentBackwardJumpInterval))
+            .setDisplayName("Jump Backward")
+        RemoteButton.JUMP_FORWARD ->
+          CommandButton.Builder(jumpForwardIcon(currentForwardJumpInterval))
+            .setDisplayName("Jump Forward")
+        RemoteButton.FAVORITE ->
+          CommandButton.Builder(
               if (favorited == true) CommandButton.ICON_HEART_FILLED
               else CommandButton.ICON_HEART_UNFILLED
-            val displayName = if (favorited == true) "Remove from favorites" else "Add to favorites"
-            val command = SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
-            sessionCommandsBuilder.add(command)
-            CommandButton.Builder(heartIcon)
-              .setDisplayName(displayName)
-              .setSessionCommand(command)
-              .setSlots(slot)
-              .build()
-          } else null
-        }
-      }
-    }
-
-    if (notificationButtons != null) {
-      // Use explicit slot configuration
-      notificationButtons.back?.let { btn ->
-        createButton(btn, CommandButton.SLOT_BACK)?.let { buttons.add(it) }
-      }
-      notificationButtons.forward?.let { btn ->
-        createButton(btn, CommandButton.SLOT_FORWARD)?.let { buttons.add(it) }
-      }
-      notificationButtons.backSecondary?.let { btn ->
-        createButton(btn, CommandButton.SLOT_BACK_SECONDARY)?.let { buttons.add(it) }
-      }
-      notificationButtons.forwardSecondary?.let { btn ->
-        createButton(btn, CommandButton.SLOT_FORWARD_SECONDARY)?.let { buttons.add(it) }
-      }
-      notificationButtons.overflow?.forEach { btn ->
-        createButton(btn, CommandButton.SLOT_OVERFLOW)?.let { buttons.add(it) }
-      }
-    } else {
-      // Derive from capabilities with default slot mapping
-      // All capabilities enabled by default - only false disables
-      val hasSkipPrevious = capabilities.skipToPrevious != false
-      val hasSkipNext = capabilities.skipToNext != false
-
-      // Back slot: skip-to-previous, or jump-backward if no skip
-      if (hasSkipPrevious) {
-        createButton(NotificationButton.SKIP_TO_PREVIOUS, CommandButton.SLOT_BACK)?.let {
-          buttons.add(it)
-        }
-      } else if (capabilities.jumpBackward != false) {
-        createButton(NotificationButton.JUMP_BACKWARD, CommandButton.SLOT_BACK)?.let {
-          buttons.add(it)
-        }
+            )
+            .setDisplayName(if (favorited == true) "Remove from favorites" else "Add to favorites")
       }
 
-      // Forward slot: skip-to-next, or jump-forward if no skip
-      if (hasSkipNext) {
-        createButton(NotificationButton.SKIP_TO_NEXT, CommandButton.SLOT_FORWARD)?.let {
-          buttons.add(it)
-        }
-      } else if (capabilities.jumpForward != false) {
-        createButton(NotificationButton.JUMP_FORWARD, CommandButton.SLOT_FORWARD)?.let {
-          buttons.add(it)
-        }
-      }
-
-      // Secondary slots for jump buttons if skip buttons are present
-      if (hasSkipPrevious && capabilities.jumpBackward != false) {
-        createButton(NotificationButton.JUMP_BACKWARD, CommandButton.SLOT_BACK_SECONDARY)?.let {
-          buttons.add(it)
-        }
-      }
-      if (hasSkipNext && capabilities.jumpForward != false) {
-        createButton(NotificationButton.JUMP_FORWARD, CommandButton.SLOT_FORWARD_SECONDARY)?.let {
-          buttons.add(it)
-        }
-      }
-
-      // Overflow: favorite
-      if (capabilities.favorite != false) {
-        createButton(NotificationButton.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let {
-          buttons.add(it)
-        }
-      }
-    }
-
-    Timber.Forest.d("Built notification button preferences: ${buttons.map { it.displayName }}")
-    return Pair(sessionCommandsBuilder.build(), buttons)
+    return customCommandFor(button)?.let { builder.setSessionCommand(it) }
+      ?: playerCommandFor(button)?.let { builder.setPlayerCommand(it) }
+      ?: builder
   }
 
   /**
-   * Builds player commands for the notification controller based on the button layout. This enables
-   * the commands needed for the buttons that will be shown.
+   * Leaves out the buttons a surface draws itself, so Media3 keeps the standard skip actions and
+   * reserves their slots. Sent as buttons they arrive as custom actions, which Android Automotive
+   * OS's car media app places by its own rules rather than beside play/pause.
    */
-  private fun buildNotificationPlayerCommands(
-    capabilities: PlayerCapabilities,
-    notificationButtons: NotificationButtonLayout?,
-  ): MediaPlayer.Commands {
-    val builder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
-
-    // Always remove direct media item commands to avoid dual-command confusion
-    builder.remove(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-    builder.remove(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-
-    // Determine which buttons will be shown
-    val showSkipPrevious: Boolean
-    val showSkipNext: Boolean
-    val showJumpBackward: Boolean
-    val showJumpForward: Boolean
-
-    if (notificationButtons != null) {
-      showSkipPrevious =
-        notificationButtons.back == NotificationButton.SKIP_TO_PREVIOUS ||
-          notificationButtons.backSecondary == NotificationButton.SKIP_TO_PREVIOUS
-      showSkipNext =
-        notificationButtons.forward == NotificationButton.SKIP_TO_NEXT ||
-          notificationButtons.forwardSecondary == NotificationButton.SKIP_TO_NEXT
-      showJumpBackward =
-        notificationButtons.back == NotificationButton.JUMP_BACKWARD ||
-          notificationButtons.backSecondary == NotificationButton.JUMP_BACKWARD
-      showJumpForward =
-        notificationButtons.forward == NotificationButton.JUMP_FORWARD ||
-          notificationButtons.forwardSecondary == NotificationButton.JUMP_FORWARD
-    } else {
-      // Default derivation from capabilities
-      // All capabilities enabled by default - only false disables
-      showSkipPrevious = capabilities.skipToPrevious != false
-      showSkipNext = capabilities.skipToNext != false
-      showJumpBackward = capabilities.jumpBackward != false
-      showJumpForward = capabilities.jumpForward != false
-    }
-
-    // Enable/disable commands based on what buttons are shown and capabilities
-    if (!showSkipPrevious || capabilities.skipToPrevious == false) {
-      builder.remove(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
-    }
-    if (!showSkipNext || capabilities.skipToNext == false) {
-      builder.remove(MediaPlayer.COMMAND_SEEK_TO_NEXT)
-    }
-    if (!showJumpBackward || capabilities.jumpBackward == false) {
-      builder.remove(MediaPlayer.COMMAND_SEEK_BACK)
-    }
-    if (!showJumpForward || capabilities.jumpForward == false) {
-      builder.remove(MediaPlayer.COMMAND_SEEK_FORWARD)
-    }
-
-    // Other commands based on global capabilities
-    // Both play and pause must be disabled to remove PLAY_PAUSE
-    if (capabilities.play == false && capabilities.pause == false) {
-      builder.remove(MediaPlayer.COMMAND_PLAY_PAUSE)
-    }
-    if (capabilities.stop == false) {
-      builder.remove(MediaPlayer.COMMAND_STOP)
-    }
-    if (capabilities.seekTo == false) {
-      builder.remove(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-    }
-
-    return builder.build()
-  }
+  private fun buildButtonPreferences(
+    slots: List<SlottedButton>,
+    favorited: Boolean?,
+  ): List<CommandButton> =
+    slots
+      .filterNot { it.isDrawnBySurface(automotive) }
+      .map { (button, slot) ->
+        buttonFor(button, favorited).setSlots(*media3SlotsFor(slot)).build()
+      }
 }

@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class PlaybackProgressUpdatedEvent(
   val buffered: Double
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is PlaybackProgressUpdatedEvent) return false
+    return Objects.deepEquals(this.track, other.track)
+      && Objects.deepEquals(this.position, other.position)
+      && Objects.deepEquals(this.duration, other.duration)
+      && Objects.deepEquals(this.buffered, other.buffered)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      track,
+      position,
+      duration,
+      buffered
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

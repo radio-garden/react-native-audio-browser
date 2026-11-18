@@ -2,69 +2,66 @@ package com.audiobrowser.util
 
 import android.net.Uri
 import androidx.core.net.toUri
+import com.margelo.nitro.audiobrowser.NavigationErrorKind
 import java.net.URLEncoder
 
 /**
- * Utility for handling browser paths and contextual URLs in the media browser system.
- *
- * Handles two types of special paths:
- * 1. System paths (prefixed with `/__`): Root, recent, and search paths
- * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
- *
- * Contextual URL format: `{parentPath}?__trackId={trackSrc}` Example:
- * "/library/radio?__trackId=song.mp3"
- *
- * This allows:
- * - Media3 to reference playable-only tracks (tracks with `src` but no `url`)
- * - Cache lookup to work consistently
- * - Parent context to be preserved for queue restoration
+ * Builds and parses the library's own browse paths: the `/__` system paths, and contextual paths
+ * `{parentPath}?__trackId={identity}&__index={childIndex}`, which give Media3 a media ID for a
+ * playable-only track while keeping its parent for queue restoration (docs/adr/0009).
  */
 object BrowserPathHelper {
-  /** Root path for media browsing */
   const val ROOT_PATH = "/__root"
 
-  /** Recent media path for playback resumption */
-  const val RECENT_PATH = "/__recent"
-
-  /** Search path prefix (full path is /__search?q=query) */
+  /** Full search paths are `/__search?q=<query>`; see [createSearchPath]. */
   const val SEARCH_PATH_PREFIX = "/__search"
 
-  /** Offline error placeholder media ID */
+  /** Placeholder media ID for the offline tile. */
   const val OFFLINE_PATH = "/__offline"
 
-  // Query parameter name for contextual track identifiers
+  /** Placeholder media ID for a generic browse error tile. */
+  const val ERROR_PATH = "/__error"
+
+  /** Placeholder media ID for a Browse Gate tile (subscription, login or region block). */
+  const val GATE_PATH = "/__gate"
+
+  /** Placeholder media ID for a level that resolved with zero children (docs/adr/0001). */
+  const val EMPTY_PATH = "/__empty"
+
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 
-  /** Check if a path is a special system path (not a regular navigation path) */
+  // Only a tie-breaker between surfaces carrying the same identity: a stale index never selects a
+  // different track.
+  private const val CONTEXTUAL_INDEX_PARAM = "__index"
+
+  fun navigationErrorKind(path: String): NavigationErrorKind =
+    if (path.startsWith("$SEARCH_PATH_PREFIX?")) NavigationErrorKind.SEARCH
+    else NavigationErrorKind.BROWSE
+
   fun isSpecialPath(path: String): Boolean {
-    return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
+    return path == ROOT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
   }
 
-  /** Create a search path for a given query */
+  /**
+   * The tile sentinels a drill-in dead-ends on (see `deadEndChildren`). [GATE_PATH] is not one: it
+   * re-serves the gate tile so the message stays readable.
+   */
+  fun isDeadEndPath(path: String): Boolean {
+    return path == OFFLINE_PATH || path == ERROR_PATH || path == EMPTY_PATH
+  }
+
   fun createSearchPath(query: String): String {
     val encodedQuery = URLEncoder.encode(query, "UTF-8")
     return "$SEARCH_PATH_PREFIX?q=$encodedQuery"
   }
 
-  /**
-   * Checks if a path contains a contextual track identifier.
-   *
-   * @param path The URL path to check
-   * @return true if the path contains the contextual track parameter
-   */
   fun isContextual(path: String): Boolean {
     return path.contains("?$CONTEXTUAL_TRACK_PARAM=") || path.contains("&$CONTEXTUAL_TRACK_PARAM=")
   }
 
   /**
-   * Strips the __trackId parameter from a contextual URL to get the parent path. If the URL is not
-   * contextual, returns it unchanged.
-   *
-   * @param url The URL to process
-   * @return The URL without the __trackId parameter
-   *
-   * Example: "/library/radio?__trackId=song.mp3" → "/library/radio" Example:
-   * "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
+   * The parent path: [url] without `__trackId` and `__index`, its other query parameters kept.
+   * Returns a non-contextual [url] unchanged.
    */
   fun stripTrackId(url: String): String {
     if (!isContextual(url)) {
@@ -73,13 +70,11 @@ object BrowserPathHelper {
 
     val uri = url.toUri()
 
-    // Build URL preserving everything except __trackId parameter
     val builder = uri.buildUpon()
     builder.clearQuery()
 
-    // Re-add all query params except __trackId
     uri.queryParameterNames.forEach { paramName ->
-      if (paramName != CONTEXTUAL_TRACK_PARAM) {
+      if (paramName != CONTEXTUAL_TRACK_PARAM && paramName != CONTEXTUAL_INDEX_PARAM) {
         uri.getQueryParameters(paramName).forEach { value ->
           builder.appendQueryParameter(paramName, value)
         }
@@ -90,30 +85,18 @@ object BrowserPathHelper {
   }
 
   /**
-   * Builds a contextual URL by appending a track identifier to a parent path. Handles existing
-   * query parameters correctly.
+   * Appends the contextual parameters to [parentPath], which may already carry a query.
    *
-   * @param parentPath The parent container path
-   * @param trackId The track identifier (typically the `src` value)
-   * @return A contextual URL combining parent path and track ID
-   *
-   * Example: build("/library", "song.mp3") → "/library?__trackId=song.mp3" Example:
-   * build("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
+   * @param trackId the track identity (`id` when non-blank, else `src`; docs/adr/0008)
+   * @param index the child's position on the page when tapped
    */
-  fun build(parentPath: String, trackId: String): String {
+  fun build(parentPath: String, trackId: String, index: Int? = null): String {
     val separator = if (parentPath.contains('?')) '&' else '?'
-    return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}"
+    val indexParam = if (index != null) "&$CONTEXTUAL_INDEX_PARAM=$index" else ""
+    return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}$indexParam"
   }
 
-  /**
-   * Extracts the track ID from a contextual URL. Returns null if the URL is not contextual or
-   * doesn't contain the track ID parameter.
-   *
-   * @param path The contextual URL to parse
-   * @return The extracted track ID, or null if not found
-   *
-   * Example: "/library/radio?__trackId=song.mp3" → "song.mp3"
-   */
+  /** The decoded `__trackId`, or null when [path] is not contextual. */
   fun extractTrackId(path: String): String? {
     if (!isContextual(path)) {
       return null
@@ -123,31 +106,29 @@ object BrowserPathHelper {
     return uri.getQueryParameter(CONTEXTUAL_TRACK_PARAM)
   }
 
+  /** The `__index`, or null when [path] is not contextual or its index is missing or negative. */
+  fun extractIndex(path: String): Int? {
+    if (!isContextual(path)) {
+      return null
+    }
+
+    val raw = Uri.parse(path).getQueryParameter(CONTEXTUAL_INDEX_PARAM) ?: return null
+    return raw.toIntOrNull()?.takeIf { it >= 0 }
+  }
+
   /**
-   * Combines a base URL with a path, ensuring proper slash handling.
-   *
-   * @param baseUrl The base URL (can be null)
-   * @param path The path to append
-   * @return The combined URL with proper slash handling
-   *
-   * Examples:
-   * - buildUrl("http://example.com", "api/test") → "http://example.com/api/test"
-   * - buildUrl("http://example.com/", "/api/test") → "http://example.com/api/test"
-   * - buildUrl(null, "/api/test") → "/api/test"
-   * - buildUrl(null, "http://full.url") → "http://full.url"
+   * Joins [baseUrl] and [path] with exactly one slash. Returns [path] unchanged when it is already
+   * an http(s) URL or [baseUrl] is null.
    */
   fun buildUrl(baseUrl: String?, path: String): String {
-    // If path is already a full URL, return it as-is
     if (path.startsWith("http://") || path.startsWith("https://")) {
       return path
     }
 
-    // If no baseUrl, return path as-is
     if (baseUrl == null) {
       return path
     }
 
-    // Ensure baseUrl ends with / and path doesn't start with /
     val normalizedBase = "${baseUrl.trimEnd('/')}/"
     val normalizedPath = path.trimStart('/')
     return "$normalizedBase$normalizedPath"

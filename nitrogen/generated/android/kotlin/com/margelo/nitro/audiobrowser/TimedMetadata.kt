@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -34,6 +35,26 @@ data class TimedMetadata(
   val genre: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TimedMetadata) return false
+    return Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.date, other.date)
+      && Objects.deepEquals(this.genre, other.genre)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      title,
+      artist,
+      album,
+      date,
+      genre
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

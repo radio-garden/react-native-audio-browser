@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <!-- Lets the CarConnection query reach the car system app's content
+         provider under Android 11+ package-visibility rules -->
+    <queries>
+        <provider android:authorities="androidx.car.app.connection" />
+    </queries>
+
     <application>
         <!-- Audio Browser Service -->
         <service android:name="com.audiobrowser.Service" android:enabled="true" android:exported="true" android:foregroundServiceType="mediaPlayback">
@@ -17,10 +23,32 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
 
-            <!-- For Android Auto support -->
+            <!-- Voice "play <query>". Any app can send it, but that is a subset of what an
+                 unauthenticated MediaController already has: onConnect admits everyone.
+                 Restrict connections there, not here. -->
             <intent-filter>
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <!-- Exported, token-gated content provider serving browse artwork to Android Auto / AAOS.
+             Exported is required: AAOS runs in a different uid and no URI grant is issued by Media3.
+             The authority placeholder is replaced by the app's package name at build time. -->
+        <provider
+            android:name="com.audiobrowser.util.ArtworkContentProvider"
+            android:authorities="${applicationId}.audiobrowser.artwork"
+            android:exported="true"
+            android:grantUriPermissions="false" />
+
+        <!-- Serves Sonos rooms to the system Output Switcher; enabled at setup with remoteOutputs.sonos -->
+        <service
+            android:name="com.audiobrowser.sonos.SonosRouteProviderService"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.MediaRouteProviderService" />
+                <action android:name="android.media.MediaRoute2ProviderService" />
             </intent-filter>
         </service>
 

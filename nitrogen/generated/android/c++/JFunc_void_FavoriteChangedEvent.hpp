@@ -18,16 +18,27 @@
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
+#include "ArtworkVariants.hpp"
+#include <variant>
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include <vector>
-#include "JImageRowItem.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -39,7 +50,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_FavoriteChangedEvent: public jni::JavaClass<JFunc_void_FavoriteChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_FavoriteChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_FavoriteChangedEvent;";
 
   public:
     /**
@@ -75,7 +86,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_FavoriteChangedEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_FavoriteChangedEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_FavoriteChangedEvent_cxx::invoke_cxx)});
     }

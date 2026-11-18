@@ -1,3 +1,126 @@
+---
+description: 'Put your browse tree and playback on the Android Auto car screen: the automotive app descriptor, the manifest entries the library merges in, and "Hey Google, play…" voice search.'
+---
+
 # Android Auto
 
-Documentation coming soon.
+## Overview
+
+Android Auto shows your [browse tree](/guide/basic-usage) on the car screen and plays through the same player as your app. Two systems drive it:
+
+1. **Browse tree** — Android Auto reads your content from a `MediaBrowserService`, which mirrors your browser routes. The library ships this service.
+2. **Voice search** — "Hey Google, play…" arrives as a `MEDIA_PLAY_FROM_SEARCH` intent, which the library routes to your `search` source.
+
+Unlike CarPlay — which needs entitlements and scene delegates — Android Auto needs almost no app-side code.
+
+The library's own `AndroidManifest.xml` declares the media library service Android Auto binds to, the voice-search intent filter, the content provider that serves browse artwork to the car, and the foreground-service permissions, and those **merge into your app automatically**. You only have to declare your app as an automotive media app.
+
+## Setup
+
+### 1. Declare the automotive app descriptor
+
+Add this `<meta-data>` inside the `<application>` tag of your app's `AndroidManifest.xml`:
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.car.application"
+    android:resource="@xml/automotive_app_desc" />
+```
+
+### 2. Add the descriptor resource
+
+Create `android/app/src/main/res/xml/automotive_app_desc.xml`:
+
+```xml
+<automotiveApp>
+    <uses name="media"/>
+</automotiveApp>
+```
+
+That's the whole setup.
+
+The rest comes from the [library's manifest](https://github.com/radio-garden/react-native-audio-browser/blob/next/android/src/main/AndroidManifest.xml), which merges into your app, so you don't declare it yourself.
+
+## Voice search
+
+Google Assistant requests ("play some jazz", "play the radishes") arrive as a `MEDIA_PLAY_FROM_SEARCH` intent. The library normalizes it into the same structured `SearchParams` your in-app and Siri searches use and calls your `search` source — no extra manifest setup, since the library declares the intent filter.
+
+Android sends a subset of what iOS does: the query, the `any` / `song` / `playlist` modes, and the genre, artist, album, title and playlist filters, always with `reference: 'unknown'`. See [Search](/guide/search) for how to resolve these requests and the cross-platform differences.
+
+## Browse display
+
+Android Auto reads a page's layout from the **parent item** that opens it — before the page resolves. So the layout is declared in two places: on the parent item (a tab, or a row on another page) and on the page itself.
+
+```ts
+// The parent item — a tab, or a row on another page. Android Auto
+// reads the layout from here, before the page resolves.
+{
+  title: 'Stations',
+  path: '/browse/stations',
+  // layout of the page this opens ('list' is the default)
+  style: { display: 'grid' },
+}
+
+// The page it opens — the ResolvedTrack served for '/browse/stations':
+{
+  path: '/browse/stations',
+  title: 'Stations',
+  style: { display: 'grid' },   // the page-wide declaration
+  children: [ /* the tiles */ ]
+}
+```
+
+- **`style.display` on the parent item** — `'list'` (rows) or `'grid'` (tiles). Android Auto decides the page's layout from this before the page resolves, and it is only sent when you declare it. Leave it off and AAOS renders the whole page as a list (see the warning below); projected Android Auto still follows the page's and its sections' `display` item by item.
+
+  The library logs a warning to Logcat, in debug and release builds, when Android Auto opens an all-grid page whose parent item declares no `display`. (A section's "view all" page needs no declaration of its own: it reuses the section's `style`.)
+
+- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section that carries a `path` also gets a browsable "view more" row appended after its children, navigating there.
+
+  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option — one wording for every section.
+
+  For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like. `children` is shared by every surface, so CarPlay and in-app UIs show that row too; see [`Section`](/api/types/browser-nodes/#section) for how CarPlay draws a section with and without a `path`.
+
+::: warning AAOS lays out the whole page from the parent item's `display`
+On AOSP-based Android Automotive units — including mainstream cars' OEM skins — the parent item's `display` is the **only** below-root layout signal honored. The whole page renders as list or grid, uniformly.
+
+Per-section `display` differences (a single-line grid above a list, say) render on CarPlay and projected Android Auto, but an AAOS unit shows the page in the single declared layout.
+
+There is no way to describe a mixed page there — pick the layout that suits its dominant section, or split the content across pages. `gridWrap: false` also has no single-line container there: the grid wraps, showing more, never less.
+:::
+
+```ts
+sections: [
+  {
+    title: 'Live now',
+    children: [
+      { title: 'Morning Show', src: '…' },
+      { title: 'Afternoon Drive', src: '…' }
+    ]
+  },
+  { title: 'Up next', children: [{ title: 'Late Night Jazz', src: '…' }] }
+]
+```
+
+## Now Playing buttons
+
+The buttons on the Now Playing screen come from the same
+[`remoteButtonLayout`](/guide/remote-controls#button-layout-android) that drives the
+notification — there's no car-specific option. Two behaviors are particular to
+the car, though:
+
+- **The head unit has the last word.** Slots are a preference. A unit with a
+  spare position may promote the first `overflow` entry onto the main row, so
+  a button you placed in overflow can still appear beside play/pause.
+- **Fewer buttons, cleaner row.** If you want just
+  `jump-back │ play/pause │ jump-forward`, leave the rest out of the layout
+  entirely — they keep working from the steering wheel and headset regardless.
+
+## Testing
+
+Test in a real car, or in Google's **Desktop Head Unit (DHU)** emulator:
+
+Install the DHU from the SDK Manager, turn on developer mode and the head unit server in the phone's Android Auto app, then connect: Google's [Test Android Auto apps with DHU](https://developer.android.com/training/cars/testing/dhu) has the steps. Your app appears under the media apps — browse the tree, exercise voice search, and verify artwork, grid/list styles, and section headers.
+
+## Reference
+
+See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/next/apps/example-native/android) for a complete working manifest and descriptor.

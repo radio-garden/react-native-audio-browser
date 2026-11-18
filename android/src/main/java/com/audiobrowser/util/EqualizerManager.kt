@@ -1,16 +1,15 @@
 package com.audiobrowser.util
 
 import android.media.audiofx.Equalizer
+import com.audiobrowser.player.EqualizerEffect
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import timber.log.Timber
 
 /**
- * Manages Android Equalizer audio effect for the audio player.
- *
- * Provides access to equalizer presets, band levels, and enables/disables the effect. The equalizer
- * is attached to a specific audio session ID.
+ * The platform [Equalizer] on one audio session. Where the device refuses to create one, every
+ * setter is a no-op and [getSettings] returns null.
  */
-class EqualizerManager(val audioSessionId: Int) {
+internal class EqualizerManager(override val audioSessionId: Int) : EqualizerEffect {
   private var equalizer: Equalizer? = null
   private var onSettingsChanged: ((EqualizerSettings) -> Unit)? = null
 
@@ -24,20 +23,12 @@ class EqualizerManager(val audioSessionId: Int) {
     }
   }
 
-  /**
-   * Cleans preset name by removing null terminators and whitespace. Android's Equalizer API
-   * sometimes returns preset names with trailing null characters.
-   */
+  // Some devices return preset names with trailing NUL characters.
   private fun cleanPresetName(name: String): String {
     return name.trim().replace("\u0000", "")
   }
 
-  /**
-   * Gets the current equalizer settings.
-   *
-   * @return Current settings or null if equalizer is not available
-   */
-  fun getSettings(): EqualizerSettings? {
+  override fun getSettings(): EqualizerSettings? {
     val eq = equalizer ?: return null
 
     return try {
@@ -85,55 +76,32 @@ class EqualizerManager(val audioSessionId: Int) {
     }
   }
 
-  /**
-   * Enables or disables the equalizer.
-   *
-   * @param enabled true to enable, false to disable
-   */
-  fun setEnabled(enabled: Boolean) {
+  override fun setEnabled(enabled: Boolean) {
     val eq = equalizer ?: return
 
-    // Only notify if state actually changed
     if (eq.enabled != enabled) {
       eq.enabled = enabled
       notifySettingsChanged()
     }
   }
 
-  /**
-   * Applies a preset to the equalizer.
-   *
-   * @param presetName Name of the preset to apply
-   */
-  fun setPreset(presetName: String) {
+  /** Matches [presetName] case-insensitively; an unknown name is logged and changes nothing. */
+  override fun setPreset(presetName: String) {
     val eq = equalizer ?: return
 
     try {
-      // Get current preset first
-      val currentPreset =
-        try {
-          eq.currentPreset.toInt()
-        } catch (e: Exception) {
-          -1
-        }
-
-      // Find preset by case-insensitive name match
       val presetIndex =
         (0 until eq.numberOfPresets).firstOrNull { index ->
           cleanPresetName(eq.getPresetName(index.toShort())).equals(presetName, ignoreCase = true)
         }
 
       if (presetIndex != null) {
-        // Only apply if it's actually a different preset
-        if (currentPreset != presetIndex) {
-          eq.usePreset(presetIndex.toShort())
-          Timber.d("Applied equalizer preset: $presetName")
-          notifySettingsChanged()
-        } else {
-          Timber.d("Preset already active: $presetName")
-        }
+        // Applied even when it is already the current preset: usePreset costs nothing then,
+        // and the caller gets an event whatever the effect reports as current.
+        eq.usePreset(presetIndex.toShort())
+        Timber.d("Applied equalizer preset: $presetName")
+        notifySettingsChanged()
       } else {
-        // Log available presets to help debug
         val availablePresets =
           (0 until eq.numberOfPresets).joinToString(", ") { index ->
             cleanPresetName(eq.getPresetName(index.toShort()))
@@ -145,12 +113,8 @@ class EqualizerManager(val audioSessionId: Int) {
     }
   }
 
-  /**
-   * Sets custom band levels for the equalizer.
-   *
-   * @param levels Array of levels in millibels for each band
-   */
-  fun setLevels(levels: DoubleArray) {
+  /** [levels] are millibels, one per band; an array of any other length changes nothing. */
+  override fun setLevels(levels: DoubleArray) {
     val eq = equalizer ?: return
 
     try {
@@ -171,12 +135,7 @@ class EqualizerManager(val audioSessionId: Int) {
     }
   }
 
-  /**
-   * Sets a callback to be invoked when equalizer settings change.
-   *
-   * @param callback Function to call with new settings
-   */
-  fun setOnSettingsChanged(callback: (EqualizerSettings) -> Unit) {
+  override fun setOnSettingsChanged(callback: (EqualizerSettings) -> Unit) {
     onSettingsChanged = callback
   }
 
@@ -184,8 +143,7 @@ class EqualizerManager(val audioSessionId: Int) {
     getSettings()?.let { settings -> onSettingsChanged?.invoke(settings) }
   }
 
-  /** Releases the equalizer resources. Call this when the equalizer is no longer needed. */
-  fun release() {
+  override fun release() {
     try {
       equalizer?.release()
       equalizer = null

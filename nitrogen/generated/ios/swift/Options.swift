@@ -18,7 +18,7 @@ public extension Options {
   /**
    * Create a new instance of `Options`.
    */
-  init(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, repeatMode: RepeatMode) {
+  init(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, ios: IOSOptions?) {
     self.init({ () -> bridge.std__optional_AndroidOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_AndroidOptions_(__unwrappedValue)
@@ -38,7 +38,13 @@ public extension Options {
       } else {
         return .init()
       }
-    }(), capabilities, repeatMode)
+    }(), capabilities, { () -> bridge.std__optional_IOSOptions_ in
+      if let __unwrappedValue = ios {
+        return bridge.create_std__optional_IOSOptions_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
   }
 
   @inline(__always)
@@ -86,7 +92,7 @@ public extension Options {
   }
   
   @inline(__always)
-  var repeatMode: RepeatMode {
-    return self.__repeatMode
+  var ios: IOSOptions? {
+    return self.__ios.value
   }
 }

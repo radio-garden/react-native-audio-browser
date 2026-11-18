@@ -1,9 +1,7 @@
 package com.audiobrowser.browser
 
 /**
- * Represents a successful route match with extracted parameters and specificity score.
- *
- * @param params Extracted path parameters (e.g., {id} → "123")
- * @param specificity Score for route priority - higher means more specific
+ * A pattern that matched a path: its `{param}` values by name, and a [specificity] score where the
+ * highest wins (rules in [SimpleRouter]).
  */
 data class RouteMatch(val params: Map<String, String>, val specificity: Int)

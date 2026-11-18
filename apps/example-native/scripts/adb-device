@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Print the adb device id that the android:* scripts should target.
+#
+# - Honors $ID if set (e.g. `ID=emulator-5554 yarn android:adb-reverse`).
+# - Otherwise prefers a physically-connected device (non-emulator) over an
+#   emulator, so a USB phone wins when both are attached.
+# - Falls back to an emulator when that's all that's connected.
+#
+# Only the chosen id goes to stdout (it is captured via `$(scripts/adb-device)`);
+# the human-readable "which device" line is logged to stderr.
+
+if [ -n "$ID" ]; then
+  echo "adb-device: using \$ID override → $ID" >&2
+  echo "$ID"
+  exit 0
+fi
+
+device=$(adb devices | awk '
+  NR>1 && $2=="device" {
+    if ($1 !~ /^emulator-/) { print $1; found=1; exit }
+    else if (!emu) emu=$1
+  }
+  END { if (!found && emu) print emu }
+')
+
+if [ -z "$device" ]; then
+  echo "adb-device: no connected device found (is it plugged in / authorized?)" >&2
+  exit 1
+fi
+
+case "$device" in
+  emulator-*) echo "adb-device: no physical device connected → using emulator $device" >&2 ;;
+  *)          echo "adb-device: targeting physical device → $device" >&2 ;;
+esac
+
+echo "$device"

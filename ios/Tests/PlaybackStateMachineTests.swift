@@ -39,21 +39,21 @@ struct UnconditionalEventTests {
     }
   }
 
-  @Test func avPlayerWaiting_alwaysTransitionsToBuffering() {
+  @Test func avPlayerWaiting_transitionsToBuffering_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == .buffering)
+      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == (state == .error ? nil : .buffering))
     }
   }
 
-  @Test func avPlayerPlaying_alwaysTransitionsToPlaying() {
+  @Test func avPlayerPlaying_transitionsToPlaying_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == .playing)
+      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == (state == .error ? nil : .playing))
     }
   }
 
-  @Test func audioFrameDecoded_alwaysTransitionsToPlaying() {
+  @Test func audioFrameDecoded_transitionsToPlaying_exceptFromError() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == .playing)
+      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == (state == .error ? nil : .playing))
     }
   }
 
@@ -76,7 +76,7 @@ struct LoadSeekCompletedTests {
     for state in allStates where state != .loading {
       #expect(
         nextPlaybackState(from: state, on: .loadSeekCompleted) == nil,
-        "Expected nil from \(state), got non-nil"
+        "Expected nil from \(state), got non-nil",
       )
     }
   }
@@ -95,24 +95,26 @@ struct AVPlayerPausedTests {
     #expect(nextPlaybackState(from: .error, on: .avPlayerPaused(hasAsset: true)) == nil)
   }
 
+  @Test func fromEnded_hasAssetTrue_isSuppressed() {
+    #expect(nextPlaybackState(from: .ended, on: .avPlayerPaused(hasAsset: true)) == nil)
+  }
+
   @Test func hasAssetFalse_transitionsToNone() {
-    // hasAsset: false → .none from any non-stopped state
     let nonStoppedStates = allStates.filter { $0 != .stopped }
     for state in nonStoppedStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: false)) == PlaybackState.none,
-        "Expected .none from \(state) with hasAsset: false"
+        "Expected .none from \(state) with hasAsset: false",
       )
     }
   }
 
   @Test func hasAssetTrue_transitionsToPaused() {
-    // hasAsset: true → .paused from states that aren't stopped or error
-    let validStates = allStates.filter { $0 != .stopped && $0 != .error }
+    let validStates = allStates.filter { $0 != .stopped && $0 != .error && $0 != .ended }
     for state in validStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: true)) == .paused,
-        "Expected .paused from \(state) with hasAsset: true"
+        "Expected .paused from \(state) with hasAsset: true",
       )
     }
   }
@@ -120,24 +122,32 @@ struct AVPlayerPausedTests {
 
 // MARK: - bufferingSufficient
 
-@Suite("bufferingSufficient — suppressed from .playing and .ended")
+@Suite("bufferingSufficient — suppressed from terminal states and .playing")
 struct BufferingSufficientTests {
+  private let suppressedStates: [PlaybackState] = [.playing, .ended, .stopped, .error]
+
   @Test func fromPlaying_isSuppressed() {
     #expect(nextPlaybackState(from: .playing, on: .bufferingSufficient) == nil)
   }
 
-  /// A late playbackLikelyToKeepUp observation after a natural track end must not
-  /// leave .ended — playWhenReady is still true, so entering .ready would restart
-  /// playback of the completed track.
   @Test func fromEnded_isSuppressed() {
     #expect(nextPlaybackState(from: .ended, on: .bufferingSufficient) == nil)
   }
 
+  // stop() seeks a non-live track to 0 with its asset loaded, so a buffer refill follows every stop.
+  @Test func fromStopped_isSuppressed() {
+    #expect(nextPlaybackState(from: .stopped, on: .bufferingSufficient) == nil)
+  }
+
+  @Test func fromError_isSuppressed() {
+    #expect(nextPlaybackState(from: .error, on: .bufferingSufficient) == nil)
+  }
+
   @Test func fromOtherStates_transitionsToReady() {
-    for state in allStates where state != .playing && state != .ended {
+    for state in allStates where !suppressedStates.contains(state) {
       #expect(
         nextPlaybackState(from: state, on: .bufferingSufficient) == .ready,
-        "Expected .ready from \(state)"
+        "Expected .ready from \(state)",
       )
     }
   }

@@ -1,713 +1,88 @@
 import CarPlay
 import Foundation
-import NitroModules
 import os.log
 
-/// Controller managing CarPlay templates and navigation.
-///
-/// Responsibilities:
-/// - Creates and manages CPTabBarTemplate from browser tabs
-/// - Converts browser content to CPListTemplate for navigation
-/// - Handles item selection for playback and navigation
-/// - Delegates image loading to CarPlayImageLoader
-/// - Delegates Now Playing management to CarPlayNowPlayingManager
-///
-/// This class is exposed to Objective-C for use by RNABCarPlaySceneDelegate.
+/// The CarPlay scene's controller, called from Objective-C by `RNABCarPlaySceneDelegate`.
+/// Shows a loading root until the player and a configured browser exist, then runs a
+/// `CarPlaySession`.
 @MainActor
 @objc(RNABCarPlayController)
 public final class RNABCarPlayController: NSObject {
-  // Force the linker to include RNABMediaIntentHandler so NSClassFromString can find it
-  @objc public static let mediaIntentHandlerClass: AnyClass = RNABMediaIntentHandler.self
-
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayController")
-
   private let interfaceController: CPInterfaceController
-  private weak var audioBrowser: HybridAudioBrowser?
-  private var trackSelector: TrackSelector?
-
-  /// Track content subscriptions
-  private var isStarted = false
-  private var listenerRemovals: [() -> Void] = []
-
-  /// Current navigation stack paths (for back navigation context)
-  private var navigationStack: [String] = []
-
-  /// Key (src ?? url) of the item currently being selected.
-  /// Prevents duplicate taps from triggering parallel async operations.
-  private var pendingSelectionKey: String?
-
-  /// URLs currently being resolved for navigation.
-  /// Prevents duplicate taps from pushing the same template twice.
-  private var pendingNavigationUrls: Set<String> = []
-
-  /// Helper object for CPInterfaceControllerDelegate conformance
   private var interfaceDelegate: InterfaceControllerDelegate?
+  private var instanceSubscription: Subscription?
 
-  /// Image loading service for CarPlay artwork
-  private var imageLoader: CarPlayImageLoader?
-
-  /// List item and section factory
-  private var listItemFactory: CarPlayListItemFactory?
-
-  /// Now Playing template and button management
-  private let nowPlayingManager: CarPlayNowPlayingManager
-
-  /// Convenience accessor for browser config
-  private var config: BrowserConfig {
-    audioBrowser?.browserManager.config ?? BrowserConfig()
-  }
-
-  /// Checks if the given src matches the currently active (loaded) track
-  private func isActiveTrack(src: String) -> Bool {
-    audioBrowser?.getPlayer()?.currentTrack?.src == src
-  }
-
-  // MARK: - Initialization
+  /// The pending or running start; nil while stopped.
+  private var run: Task<Void, Never>?
+  private(set) var session: CarPlaySession?
 
   @objc
   public init(interfaceController: CPInterfaceController) {
     self.interfaceController = interfaceController
-    audioBrowser = HybridAudioBrowser.shared
-    nowPlayingManager = CarPlayNowPlayingManager(interfaceController: interfaceController)
     super.init()
-    nowPlayingManager.listItemFactory = { [weak self] track, handler in
-      self?.listItemFactory?.createListItem(for: track, handler: handler)
-        ?? CPListItem(text: track.title, detailText: nil)
-    }
   }
 
-  // MARK: - Lifecycle
+  /// Reports the scene's connection (JS `isCarPlayConnected`). Called on scene connect and
+  /// disconnect, not from `start()`/`stop()`, which also cycle on a JS reload.
+  @objc
+  public static func setConnected(_ connected: Bool) {
+    HybridAudioBrowser.setCarPlayConnected(connected)
+  }
 
   @objc
   public func start() {
-    guard !isStarted else { return }
-    isStarted = true
-
+    guard run == nil else { return }
     logger.info("Starting CarPlay controller")
 
-    // Set up interface controller delegate for template lifecycle events
     let delegate = InterfaceControllerDelegate(controller: self)
     interfaceDelegate = delegate
     interfaceController.delegate = delegate
 
-    // Show loading template while waiting
-    showLoadingTemplate()
+    // A JS reload replaces the bridge, and with it every emitter the session listens to.
+    instanceSubscription = HybridAudioBrowser.instanceChangedEmitter.subscribeOnMain { [weak self] in
+      self?.restart()
+    }
 
-    // Wait for both browser and player to be ready
-    Task { @MainActor in
-      let (browser, _) = await playerAndConfiguredBrowser.wait()
-      guard self.isStarted else { return }
-      self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
-      self.audioBrowser = browser
-      self.trackSelector = TrackSelector(browserManager: browser.browserManager)
+    // Before the config loads the title is unknown: the spinner alone.
+    let browserManager = HybridAudioBrowser.shared?.browserManager
+    let loadingTitle = browserManager?.isConfigured == true ? browserManager?.config.carPlayLoadingTitle : nil
+    interfaceController.safeSetRoot(
+      CPListTemplate.loading(title: nil, path: nil, loadingTitle: loadingTitle), animated: false,
+    )
 
-      // Create image loader with CarPlay display traits
-      self.imageLoader = CarPlayImageLoader(
-        carTraitCollection: self.interfaceController.carTraitCollection,
-        browserManager: browser.browserManager
+    run = Task { [weak self] in
+      guard let (browser, _) = await playerAndConfiguredBrowser.wait(), !Task.isCancelled,
+            let self
+      else { return }
+      let session = CarPlaySession(
+        interfaceController: interfaceController, audioBrowser: browser,
       )
-
-      // Create list item factory
-      let factory = CarPlayListItemFactory(
-        isActiveTrack: { [weak self] src in self?.isActiveTrack(src: src) ?? false },
-        onItemSelected: { [weak self] track, completion in
-          self?.handleItemSelection(track: track, completion: completion)
-        }
-      )
-      factory.imageLoader = self.imageLoader
-      self.listItemFactory = factory
-
-      self.setupContentSubscriptions()
-
-      // Wire up now playing manager
-      self.nowPlayingManager.setup(audioBrowser: browser)
-
-      await self.buildInitialInterface()
+      self.session = session
+      session.start()
     }
   }
 
   @objc
   public func stop() {
-    guard isStarted else { return }
-    isStarted = false
-
+    guard run != nil else { return }
     logger.info("Stopping CarPlay controller")
-
-    // Remove all emitter listeners
-    for removal in listenerRemovals { removal() }
-    listenerRemovals.removeAll()
-
-    // Clear config callback
-    audioBrowser?.browserManager.onConfigChanged = nil
-
-    nowPlayingManager.teardown()
-    listItemFactory = nil
-
-    navigationStack.removeAll()
-    pendingSelectionKey = nil
-    pendingNavigationUrls.removeAll()
+    run?.cancel()
+    run = nil
+    session?.end()
+    session = nil
+    instanceSubscription = nil
   }
 
-  // MARK: - Content Subscriptions
-
-  private func setupContentSubscriptions() {
-    guard let audioBrowser else {
-      logger.warning("AudioBrowser not available for CarPlay")
-      return
-    }
-
-    // Subscribe to tab changes
-    let tabsToken = audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
-      Task { @MainActor in
-        self?.handleTabsChanged(tabs)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.tabsChangedEmitter.removeListener(tabsToken)
-    }
-
-    // Subscribe to content changes
-    let contentToken = audioBrowser.contentChangedEmitter.addListener { [weak self] content in
-      Task { @MainActor in
-        self?.handleContentChanged(content)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.contentChangedEmitter.removeListener(contentToken)
-    }
-
-    // Subscribe to config changes (for Now Playing buttons)
-    audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
-      Task { @MainActor in
-        self?.nowPlayingManager.setupNowPlayingButtons()
-      }
-    }
-
-    // Subscribe to favorite changes (for Now Playing button)
-    let favoriteToken = audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
-      Task { @MainActor in
-        self?.nowPlayingManager.updateFavoriteButtonState()
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.favoriteChangedEmitter.removeListener(favoriteToken)
-    }
-
-    // Subscribe to external content changes (from notifyContentChanged)
-    let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
-      self?.notifyContentChanged(path: path)
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
-    }
-
-    // Subscribe to active track changes (for playing indicator in lists)
-    let activeTrackToken = audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
-      Task { @MainActor in
-        self?.handleActiveTrackChanged(event)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.activeTrackChangedEmitter.removeListener(activeTrackToken)
-    }
-
-    // Subscribe to queue changes (for Up Next list updates)
-    let queueToken = audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
-      Task { @MainActor in
-        self?.nowPlayingManager.handleQueueChanged(tracks)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.queueChangedEmitter.removeListener(queueToken)
-    }
-
-    // Subscribe to navigation errors (from browser layer)
-    let navErrorToken = audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
-      Task { @MainActor in
-        self?.handleNavigationError(event)
-      }
-    }
-    listenerRemovals.append { [weak audioBrowser] in
-      audioBrowser?.navigationErrorEmitter.removeListener(navErrorToken)
-    }
-  }
-
-  /// Handles navigation errors from the browser layer, displaying them in CarPlay
-  @MainActor
-  private func handleNavigationError(_ event: NavigationErrorEvent) {
-    guard let error = event.error else { return }
-    logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
-    // Use current path from navigation stack, or "/" as fallback
-    let path = navigationStack.last ?? "/"
-    showNavigationError(error, path: path)
-  }
-
-  // MARK: - Initial Interface
-
-  @MainActor
-  private func buildInitialInterface() async {
-    guard let audioBrowser else {
-      logger.error("AudioBrowser not available")
-      showErrorTemplate(message: "Audio browser not initialized")
-      return
-    }
-
-    // Get tabs from browser manager
-    let tabs = audioBrowser.browserManager.getTabs()
-
-    if let tabs, !tabs.isEmpty {
-      await showTabBar(tabs: tabs)
-    } else {
-      // No tabs yet - query them
-      logger.info("No tabs available, querying...")
-      do {
-        let queriedTabs = try await audioBrowser.browserManager.queryTabs()
-        if !queriedTabs.isEmpty {
-          await showTabBar(tabs: queriedTabs)
-        } else {
-          showErrorTemplate(message: "No content available")
-        }
-      } catch {
-        logger.error("Failed to query tabs: \(error.localizedDescription)")
-        showErrorTemplate(message: "Failed to load content")
-      }
-    }
-  }
-
-  /// Shows a loading template while waiting for initialization
-  private func showLoadingTemplate() {
-    let template = CPListTemplate(
-      title: nil,
-      sections: [],
-    )
-    interfaceController.setRootTemplate(template, animated: false, completion: nil)
-  }
-
-  // MARK: - Tab Bar
-
-  @MainActor
-  private func showTabBar(tabs: [Track]) async {
-    logger.info("Building tab bar with \(tabs.count) tabs")
-
-    let maxTabs = CPTabBarTemplate.maximumTabCount
-
-    // Create tab templates synchronously (empty shells) - don't block on content loading
-    let tabTemplates: [CPListTemplate] = tabs.prefix(maxTabs).map { tab in
-      createTabTemplate(for: tab)
-    }
-
-    // Set the tab bar immediately so UI appears fast
-    logger.info("Setting tab bar root template with \(tabTemplates.count) templates")
-    let tabBar = CPTabBarTemplate(templates: tabTemplates)
-    interfaceController.setRootTemplate(tabBar, animated: true, completion: nil)
-
-    // Load content for the first tab only - others load lazily when selected
-    if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let url = firstTab.url {
-      await loadContent(for: url, into: firstTemplate)
-    }
-  }
-
-  /// Creates a tab template shell without loading content (synchronous)
-  private func createTabTemplate(for track: Track) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: track.title,
-      sections: [],
-    )
-
-    // Set tab title explicitly (required for tab bar display)
-    template.tabTitle = track.title
-
-    // Store path for lazy loading and refresh
-    if let url = track.url {
-      template.userInfo = ["path": url] as [String: Any]
-    }
-
-    // Set tab image - CarPlay requires an image for proper tab display
-    // Tab bar icons are 24pt x 24pt per CarPlay Developer Guide
-    // https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
-    template.tabImage = imageLoader?.defaultTabImage()
-
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
-      let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
-      if let image = imageLoader?.sfSymbolImage(symbolName) {
-        template.tabImage = image
-      }
-    } else if track.artwork != nil || track.artworkSource != nil {
-      // loadArtwork handles both artwork and artworkSource
-      let tabImageSize = CGSize(width: 24, height: 24)
-      imageLoader?.loadArtwork(for: track, size: tabImageSize) { [weak template] image in
-        Task { @MainActor in
-          if let image {
-            template?.tabImage = image
-          }
-        }
-      }
-    }
-
-    return template
-  }
-
-  // MARK: - List Templates
-
-  @MainActor
-  private func createListTemplate(
-    for resolvedTrack: ResolvedTrack,
-    path: String,
-  ) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: resolvedTrack.title,
-      sections: [],
-    )
-    updateTemplate(template, with: resolvedTrack)
-    template.userInfo = ["path": path] as [String: Any]
-
-    return template
-  }
-
-  /// Finds the path associated with a template, if any
-  private func getPath(from template: CPTemplate) -> String? {
-    (template.userInfo as? [String: Any])?["path"] as? String
-  }
-
-  /// Updates a template's sections and assistant cell from resolved content.
-  private func updateTemplate(_ template: CPListTemplate, with resolvedTrack: ResolvedTrack) {
-    let sections = listItemFactory?.createSections(from: resolvedTrack) ?? []
-    template.updateSections(sections)
-    configureAssistantCell(on: template, from: resolvedTrack)
-  }
-
-  /// Configures the assistant cell ("Ask Siri to Play Audio") on a template
-  /// based on the `carPlaySiriListButton` property of the resolved content.
-  private func configureAssistantCell(on template: CPListTemplate, from resolvedTrack: ResolvedTrack) {
-    guard #available(iOS 15.4, *) else { return }
-    guard let position = resolvedTrack.carPlaySiriListButton else {
-      template.assistantCellConfiguration = nil
-      return
-    }
-    let cellPosition: CPListItem.AssistantCellPosition = position == .top ? .top : .bottom
-    template.assistantCellConfiguration = CPAssistantCellConfiguration(
-      position: cellPosition,
-      visibility: .always,
-      assistantAction: .playMedia,
-    )
-  }
-
-  // MARK: - Content Loading
-
-  @MainActor
-  private func loadContent(for path: String, into template: CPListTemplate) async {
-    guard let audioBrowser else { return }
-
-    do {
-      let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
-      updateTemplate(template, with: resolved)
-    } catch {
-      logger.error("Failed to load content for \(path): \(error.localizedDescription)")
-    }
-  }
-
-  // MARK: - Selection Handling
-
-  private func handleItemSelection(track: Track, completion: @escaping () -> Void) {
-    logger.info("Selected track: \(track.title)")
-
-    guard let audioBrowser else {
-      completion()
-      return
-    }
-
-    // Deduplicate: ignore if the same item is already being loaded
-    let key = track.src ?? track.url
-    if let key, key == pendingSelectionKey {
-      completion()
-      return
-    }
-    pendingSelectionKey = key
-
-    // If this track is already loaded, resume playback and show Now Playing
-    if let src = track.src, isActiveTrack(src: src) {
-      pendingSelectionKey = nil
-      try? audioBrowser.play()
-      nowPlayingManager.showNowPlaying()
-      completion()
-      return
-    }
-
-    guard let player = audioBrowser.getPlayer(), let trackSelector else {
-      pendingSelectionKey = nil
-      completion()
-      return
-    }
-
-    Task {
-      defer { self.pendingSelectionKey = nil }
-      let result = await trackSelector.select(track: track, player: player)
-      switch result {
-      case .play(let intent):
-        self.executePlayback(intent, player: player)
-        self.nowPlayingManager.showNowPlaying()
-      case .intercepted:
-        self.nowPlayingManager.showNowPlaying()
-      case .browse(let url):
-        self.navigateToUrl(url, completion: completion)
-        return // navigateToUrl handles its own completion
-      case .none:
-        break
-      }
-      completion()
-    }
-  }
-
-  private func executePlayback(_ intent: TrackSelector.PlaybackIntent, player: TrackPlayer) {
-    switch intent {
-    case .skipTo(let index):
-      try? player.skipTo(index, playWhenReady: true)
-    case .setQueue(let tracks, let startIndex, let sourcePath):
-      player.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-    case .loadTrack(let track):
-      player.load(track, playWhenReady: true)
-    }
-  }
-
-  /// Navigates to a browsable URL path, showing error action sheet on failure with retry option.
-  private func navigateToUrl(_ url: String, completion: @escaping () -> Void) {
-    guard let audioBrowser else {
-      completion()
-      return
-    }
-
-    // Deduplicate: ignore if already navigating to this URL
-    guard !pendingNavigationUrls.contains(url) else {
-      completion()
-      return
-    }
-    pendingNavigationUrls.insert(url)
-
-    Task {
-      defer { self.pendingNavigationUrls.remove(url) }
-      do {
-        let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
-
-        // Guard against duplicate push if top template already shows this path
-        if let top = self.interfaceController.topTemplate,
-           self.getPath(from: top) == url
-        {
-          completion()
-          return
-        }
-
-        let listTemplate = self.createListTemplate(for: resolved, path: url)
-        self.navigationStack.append(url)
-        self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
-        completion()
-      } catch {
-        logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
-        let navError = NavigationError.from(error)
-        self.showNavigationError(navError, path: url)
-        completion()
-      }
-    }
-  }
-
-  // MARK: - Content Change Handlers
-
-  @MainActor
-  private func handleTabsChanged(_ tabs: [Track]) {
-    logger.debug("Tabs changed: \(tabs.count) tabs")
-    // Rebuild tab bar if we're at the root
-    Task {
-      await showTabBar(tabs: tabs)
-    }
-  }
-
-  @MainActor
-  private func handleContentChanged(_ content: ResolvedTrack?) {
-    // This callback fires when the main browser's content changes.
-    // For CarPlay-specific refreshes (e.g., favorites), use notifyContentChanged instead.
-    guard let content else { return }
-    refreshTemplatesForPath(content.url, with: content)
-  }
-
-  @MainActor
-  private func handleActiveTrackChanged(_ event: PlaybackActiveTrackChangedEvent) {
-    logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
-    updatePlayingIndicators()
-    // Update favorite button to reflect the new track's favorite state
-    nowPlayingManager.updateFavoriteButtonState()
-  }
-
-  /// Updates the isPlaying state on all list items based on the current active track.
-  @MainActor
-  fileprivate func updatePlayingIndicators() {
-    var templates: [CPListTemplate] = []
-
-    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
-      for template in tabBar.templates {
-        if let listTemplate = template as? CPListTemplate {
-          templates.append(listTemplate)
-        }
-      }
-    }
-
-    if let topTemplate = interfaceController.topTemplate as? CPListTemplate,
-       !templates.contains(where: { $0 === topTemplate })
-    {
-      templates.append(topTemplate)
-    }
-
-    for template in templates {
-      for section in template.sections {
-        for item in section.items {
-          guard let listItem = item as? CPListItem,
-                let itemSrc = listItem.carPlayItemInfo?.src
-          else { continue }
-
-          let isPlaying = isActiveTrack(src: itemSrc)
-          if listItem.isPlaying != isPlaying {
-            logger.debug("Updating isPlaying for \(itemSrc): \(listItem.isPlaying) → \(isPlaying)")
-            listItem.isPlaying = isPlaying
-          }
-        }
-      }
-    }
-  }
-
-  // MARK: - Public Content Notification
-
-  /// Notifies CarPlay that content at the given path has changed and should be refreshed.
-  /// Called from HybridAudioBrowser.notifyContentChanged() to update CarPlay lists.
-  ///
-  /// - Parameter path: The path where content has changed (e.g., "/favorites")
-  @objc
-  public func notifyContentChanged(path: String) {
-    guard isStarted else { return }
-
-    Task { @MainActor in
-      await refreshContentForPath(path)
-    }
-  }
-
-  /// Fetches fresh content for a path and updates any matching CarPlay templates.
-  @MainActor
-  private func refreshContentForPath(_ path: String) async {
-    guard let audioBrowser else { return }
-
-    logger.debug("Refreshing CarPlay content for path: \(path)")
-
-    // Fetch fresh content (bypassing cache since content changed)
-    do {
-      let resolved = try await audioBrowser.browserManager.resolve(path, useCache: false)
-      refreshTemplatesForPath(path, with: resolved)
-    } catch {
-      logger.error("Failed to refresh content for \(path): \(error.localizedDescription)")
-    }
-  }
-
-  /// Updates all CarPlay templates that are displaying the given path.
-  @MainActor
-  private func refreshTemplatesForPath(_ path: String, with content: ResolvedTrack) {
-    logger.debug("Content changed for path: \(path)")
-
-    // Check if the root template is a tab bar and refresh matching tabs
-    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
-      for template in tabBar.templates {
-        guard let listTemplate = template as? CPListTemplate,
-              let templatePath = getPath(from: listTemplate),
-              templatePath == path
-        else { continue }
-
-        logger.info("Refreshing tab template for path: \(path)")
-        updateTemplate(listTemplate, with: content)
-      }
-    }
-
-    // Check if any template in the navigation stack matches the changed path
-    // The top template is the currently visible one
-    if let topTemplate = interfaceController.topTemplate as? CPListTemplate,
-       let templatePath = getPath(from: topTemplate),
-       templatePath == path
-    {
-      logger.info("Refreshing top template for path: \(path)")
-      updateTemplate(topTemplate, with: content)
-    }
-  }
-
-  // MARK: - Error Handling
-
-  /// Shows a navigation error using CPActionSheetTemplate.
-  /// - Parameters:
-  ///   - error: The NavigationError to display
-  ///   - path: The path that was being navigated to when the error occurred
-  private func showNavigationError(_ error: NavigationError, path: String) {
-    let defaultFormatted = error.defaultFormatted()
-
-    // Check if custom formatter is configured
-    logger.debug("showNavigationError: formatNavigationError is \(self.config.formatNavigationError != nil ? "set" : "nil")")
-    if let formatter = config.formatNavigationError {
-      logger.debug("Calling formatNavigationError callback...")
-      // Call the JS callback and handle result
-      let params = FormatNavigationErrorParams(error: error, defaultFormatted: defaultFormatted, path: path)
-      formatter(params)
-        .then { [weak self] customDisplay in
-          self?.logger.debug("formatNavigationError returned: \(String(describing: customDisplay))")
-          self?.presentErrorActionSheet(customDisplay: customDisplay ?? defaultFormatted)
-        }
-        .catch { [weak self] callbackError in
-          self?.logger.error("formatNavigationError failed: \(callbackError)")
-          // On error, fall back to defaults
-          self?.presentErrorActionSheet(customDisplay: defaultFormatted)
-        }
-    } else {
-      presentErrorActionSheet(customDisplay: defaultFormatted)
-    }
-  }
-
-  /// Presents the error action sheet with the given display info.
-  /// - Parameter customDisplay: The formatted error to display
-  private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
-    // If another template is already presented, dismiss it first
-    if interfaceController.presentedTemplate != nil {
-      interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
-        self?.showErrorActionSheet(customDisplay: customDisplay)
-      }
-    } else {
-      showErrorActionSheet(customDisplay: customDisplay)
-    }
-  }
-
-  /// Actually shows the error action sheet (called after safety checks)
-  private func showErrorActionSheet(customDisplay: FormattedNavigationError) {
-    // OK action - dismiss the action sheet (use system-localized "OK")
-    let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
-    let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
-      self?.interfaceController.dismissTemplate(animated: true, completion: nil)
-    }
-
-    let actionSheet = CPActionSheetTemplate(
-      title: customDisplay.title,
-      message: customDisplay.message,
-      actions: [ok],
-    )
-
-    interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
-  }
-
-  /// Shows a simple error template as root (for initialization errors when no other template exists)
-  private func showErrorTemplate(message: String) {
-    // CPAlertTemplate cannot be set as root - use a list template instead
-    let errorItem = CPListItem(text: message, detailText: nil)
-    errorItem.isEnabled = false
-    let template = CPListTemplate(
-      title: "Error",
-      sections: [CPListSection(items: [errorItem])],
-    )
-    interfaceController.setRootTemplate(template, animated: true, completion: nil)
+  private func restart() {
+    guard run != nil else { return }
+    logger.info("AudioBrowser instance changed — restarting CarPlay controller")
+    stop()
+    start()
   }
 }
 
-// MARK: - CPInterfaceControllerDelegate
-
-/// Separate delegate class to avoid exposing CPInterfaceControllerDelegate to Obj-C header
+/// Keeps `CPInterfaceControllerDelegate` out of the Objective-C header.
 private final class InterfaceControllerDelegate: NSObject, CPInterfaceControllerDelegate {
   private weak var controller: RNABCarPlayController?
 
@@ -717,55 +92,10 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
   }
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
-    guard let listTemplate = aTemplate as? CPListTemplate else { return }
-
-    // Update playing indicators when navigating back to a list template
-    controller?.updatePlayingIndicators()
-
-    // Lazy load content for tabs that haven't been loaded yet
-    controller?.loadContentIfNeeded(for: listTemplate)
+    controller?.session?.templateDidAppear(aTemplate)
   }
-}
 
-// MARK: - Lazy Loading
-
-private extension RNABCarPlayController {
-  /// Loads content for a template if it hasn't been loaded yet (lazy loading for tabs)
-  func loadContentIfNeeded(for template: CPListTemplate) {
-    // Skip if already has content
-    guard template.sections.isEmpty else { return }
-
-    // Get path from userInfo
-    guard let path = getPath(from: template) else { return }
-
-    logger.debug("Lazy loading content for tab: \(path)")
-
-    Task {
-      await loadContent(for: path, into: template)
-    }
-  }
-}
-
-// MARK: - UIImage Resize
-
-extension UIImage {
-  /// Draws the image centered within the target size, maintaining aspect ratio
-  func resized(to targetSize: CGSize) -> UIImage? {
-    UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
-    defer { UIGraphicsEndImageContext() }
-
-    // Scale to fit while maintaining aspect ratio
-    let widthRatio = targetSize.width / size.width
-    let heightRatio = targetSize.height / size.height
-    let scale = min(widthRatio, heightRatio)
-
-    let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
-    let origin = CGPoint(
-      x: (targetSize.width - scaledSize.width) / 2,
-      y: (targetSize.height - scaledSize.height) / 2,
-    )
-
-    draw(in: CGRect(origin: origin, size: scaledSize))
-    return UIGraphicsGetImageFromCurrentImageContext()?.withRenderingMode(.alwaysTemplate)
+  func templateDidDisappear(_ aTemplate: CPTemplate, animated _: Bool) {
+    controller?.session?.templateDidDisappear(aTemplate)
   }
 }

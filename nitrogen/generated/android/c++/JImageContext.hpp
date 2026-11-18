@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "ImageContext" and the the Kotlin data class "ImageContext".
+   * The C++ JNI bridge between the C++ struct "ImageContext" and the Kotlin data class "ImageContext".
    */
   struct JImageContext final: public jni::JavaClass<JImageContext> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageContext;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageContext;";
 
   public:
     /**

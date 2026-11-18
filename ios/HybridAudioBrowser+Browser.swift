@@ -1,0 +1,134 @@
+import AVFoundation
+import AVKit
+import Foundation
+import MediaPlayer
+import NitroModules
+import os.log
+
+public extension HybridAudioBrowser {
+  /// Navigates the in-app browser, superseding a configuration's pending start path, and reports
+  /// a failure as the navigation error. The clear is synchronous, so JS hears it before the
+  /// navigation that may set the error again.
+  internal func navigate(_ path: String, clearError: Bool) {
+    onMainActor {
+      initialNavigation?.cancel()
+      if clearError { navigationError.clear() }
+    }
+    Task { @MainActor in await loadPath(path) }
+  }
+
+  @MainActor
+  private func loadPath(_ path: String) async {
+    do {
+      try await browserManager.load(path)
+    } catch {
+      await reportNavigationError(error, path: path)
+    }
+  }
+
+  @MainActor
+  private func reportNavigationError(_ error: Error, path: String) async {
+    await navigationError.report(NavigationError.from(error)) { [browserManager] in
+      await browserManager.formatted($0, path: path)
+    }
+  }
+
+  // MARK: - Browser Methods
+
+  func navigatePath(path: String) throws {
+    navigate(path, clearError: true)
+  }
+
+  func navigateTrack(track: Track) throws {
+    Task { @MainActor in
+      guard let player else { return }
+      let result = await trackSelector.select(track: track, player: player)
+      switch result {
+      case let .play(intent):
+        player.execute(intent)
+      case .intercepted:
+        break
+      case let .browse(path):
+        navigate(path, clearError: true)
+      case .none:
+        break
+      }
+    }
+  }
+
+  func search(query: String) throws -> Promise<[Track]> {
+    Promise.async { [weak self] in
+      guard let self else { return [] }
+      let resolved = try await browserManager.search(query)
+      return resolved.flattenedChildren ?? []
+    }
+  }
+
+  func getContent() throws -> ResolvedTrack? {
+    onMainActor { browserManager.content }
+  }
+
+  func getNavigationError() throws -> NavigationError? {
+    onMainActor { navigationError.error }
+  }
+
+  func getFormattedNavigationError() throws -> FormattedNavigationError? {
+    onMainActor { navigationError.formatted }
+  }
+
+  /// Sent on `externalContentChangedEmitter` to make CarPlay refresh every displayed template.
+  /// Paths always start with `/`, so it can't collide with one.
+  internal static let invalidateAllSentinel = "__rnab_invalidate_all__"
+
+  func notifyContentChanged(path: String) throws {
+    // Throws on a contextual path, as Android's `require` does: the caller must pass the
+    // container path, or the invalidation silently hits nothing.
+    let isCurrentPath = try onMainActor {
+      try browserManager.invalidateContentCache(path)
+      return browserManager.path == path
+    }
+    externalContentChangedEmitter.emit(path)
+    if isCurrentPath { Task { @MainActor in await loadPath(path) } }
+  }
+
+  func invalidateAllContent() throws {
+    onMainActor {
+      browserManager.invalidateAll { error, path in
+        await self.reportNavigationError(error, path: path)
+      }
+    }
+    externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
+  }
+
+  func setFavorites(favorites: [String]) throws {
+    onMainActor { browserManager.setFavorites(favorites) }
+  }
+
+  // MARK: - Gate
+
+  func setGate(gate: Gate?, hasResolver: Bool) throws {
+    onMainActor { browseGate.set(chrome: gate, hasResolver: hasResolver) }
+  }
+
+  func clearGate() throws {
+    onMainActor { browseGate.clear() }
+  }
+
+  // MARK: - Car Connection (CarPlay)
+
+  /// Static because the CarPlay scene can connect before JS creates the shared instance
+  /// (cold start in the car).
+  internal nonisolated(unsafe) static var carPlayConnected = false
+
+  /// Called by the CarPlay scene delegate on scene connect/disconnect only, not on controller
+  /// start/stop, which also cycle on a JS reload and would emit spurious changes.
+  internal static func setCarPlayConnected(_ connected: Bool) {
+    guard carPlayConnected != connected else { return }
+    carPlayConnected = connected
+    shared?.onCarConnectedChanged(connected)
+  }
+
+  func isCarConnected() throws -> Bool {
+    HybridAudioBrowser.carPlayConnected
+  }
+}

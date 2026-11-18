@@ -27,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_RepeatModeChangedEvent: public jni::JavaClass<JFunc_void_RepeatModeChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RepeatModeChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RepeatModeChangedEvent;";
 
   public:
     /**
@@ -63,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RepeatModeChangedEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RepeatModeChangedEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_RepeatModeChangedEvent_cxx::invoke_cxx)});
     }

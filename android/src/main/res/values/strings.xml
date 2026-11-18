@@ -1,6 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default copy for the two error tiles the library invents in the Android Auto
+  browse list. These rows have no consumer-authored Track behind them, so there
+  is nothing in the browse tree to read a title from; English here because a
+  default that renders beats a blank row.
+
+  Resources rather than a browser-config option — the route the library's
+  cross-platform copy takes (`formatNavigationError`, `carPlayLoadingTitle`,
+  `viewMoreTitle`) — because these two are not cross-platform. They exist only
+  because Media3 drops the message from `LibraryResult.ofError` on the legacy
+  browse bridge, so a row is the sole signal available; CarPlay has no
+  counterpart, stating failures in the list's centered empty view instead
+  (CarPlayController.showMessage). Android-only copy in the Android-idiomatic
+  place: an app re-skins either by declaring the same name in its own
+  strings.xml, and a `values-<locale>/` file can add translations later without
+  touching the API.
+-->
 <resources>
-    <!-- Error message shown in Android Auto when network is offline -->
+    <!--
+      The SessionError message a browse or search failure sends alongside its
+      tile. The tiles themselves are worded by the app's `formatNavigationError`
+      (ADR 0001), so these two are the library's only device-locale browse copy —
+      kept because a SessionError carries a string, not a navigation error.
+      Offline is distinct from the browse error: it is sent only when the network
+      monitor says we are actually offline, so it may name the cause.
+    -->
     <string name="audio_browser_offline_error">No internet connection</string>
-    <string name="audio_browser_offline_error_subtitle">Check your connection and try again</string>
+    <string name="audio_browser_browse_error">Something went wrong</string>
 </resources>

@@ -1,17 +1,13 @@
 import Foundation
 
 extension NavigationError {
-  /// Converts a generic Error to a NavigationError.
-  /// Handles BrowserError, HttpClient.HttpException, URLError, and fallback.
+  /// Maps any thrown error to a NavigationError. `BrowserError.invalidConfiguration`,
+  /// and any error that is not a BrowserError, HttpException or URLError, becomes `.unknownError`.
   static func from(_ error: Error) -> NavigationError {
     if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
         NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
-      case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
         NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .callbackError:
@@ -26,7 +22,7 @@ extension NavigationError {
     }
   }
 
-  /// Returns the default user-facing formatted error.
+  /// The English copy passed to the app's `formatNavigationError`, and used when it has none.
   func defaultFormatted() -> FormattedNavigationError {
     let title: String = switch code {
     case .contentNotFound:
@@ -43,7 +39,25 @@ extension NavigationError {
       "Error"
     case .unknownError:
       "Error"
+    case .emptyContent:
+      // Not a failure: a container with no children (ADR 0001).
+      "Nothing here"
+    case .timeout:
+      "Couldn't load"
     }
-    return FormattedNavigationError(title: title, message: message)
+    return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
+  }
+}
+
+extension NavigationError {
+  /// A code-only error: the copy comes from the app's `formatNavigationError` (ADR 0001).
+  static func code(_ code: NavigationErrorType) -> NavigationError {
+    NavigationError(code: code, message: "", statusCode: nil, statusCodeSuccess: nil)
+  }
+}
+
+extension NavigationErrorKind {
+  init(path: String) {
+    self = BrowserPathHelper.isSearchPath(path) ? .search : .browse
   }
 }

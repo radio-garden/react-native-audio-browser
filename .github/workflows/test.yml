@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck
         run: yarn types
 
+      - name: Typecheck the example app
+        run: yarn example types
+
       - name: Lint
         run: yarn ci:lint
 
@@ -44,7 +47,13 @@ jobs:
       - name: Test
         run: yarn test
 
+      - name: Glossary
+        run: yarn vocab-check
+
   ios:
+    # These three job names are the required status check contexts on main's
+    # ruleset. Renaming one leaves its context permanently pending and blocks
+    # every merge — put detail in step names instead.
     name: iOS (swift test)
     runs-on: macos-26
     steps:
@@ -52,7 +61,36 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 26.2
+          xcode-version: 26.4.1
+
+      # Pinned, not `brew install`: formatter output shifts between releases, so
+      # an unpinned version turns an unrelated PR into a repo-wide reformat. The
+      # version comes from mise.toml, the same pin contributors install from —
+      # bump it there and CI follows.
+      #
+      # Onto GITHUB_PATH, not /usr/local/bin: these runners are arm64 and put
+      # Homebrew's /opt/homebrew/bin first, so a preinstalled swiftformat
+      # shadowed the pinned one and lint ran under whatever the image shipped.
+      - name: Install SwiftFormat
+        run: |
+          version=$(scripts/swiftformat.sh --pinned-version)
+          echo "installing SwiftFormat $version"
+          curl -fsSL -o swiftformat.zip \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${version}/swiftformat.zip"
+          unzip -q swiftformat.zip
+          chmod +x swiftformat
+          mkdir -p "$RUNNER_TEMP/bin"
+          mv swiftformat "$RUNNER_TEMP/bin/swiftformat"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # The wrapper re-checks the version before formatting, so a shadowed pin
+      # fails loudly here instead of showing up as dozens of files "needing
+      # formatting" that were already correct.
+      #
+      # `yarn ci:format:ios` locally; the script is called directly because this
+      # job has no Node/Corepack setup.
+      - name: Format
+        run: scripts/swiftformat.sh --lint ios
 
       # No --disable-sandbox here: CI runners are unsandboxed, so SwiftPM can
       # shell out to sandbox-exec to compile the manifest. See CLAUDE.md.
@@ -94,9 +132,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      # ktfmt's version is pinned by the Gradle plugin in android/build.gradle,
+      # so this needs no separate install.
+      - name: Format
+        working-directory: apps/example-native/android
+        run: ./gradlew :react-native-audio-browser:formatCheck --no-daemon --build-cache
+
       - name: Test
         working-directory: apps/example-native/android
         run: ./gradlew :react-native-audio-browser:testDebugUnitTest --no-daemon --build-cache
+
+      # The example app builds with Cast; this compiles the library the way an app without it does.
+      - name: Compile without Cast
+        working-directory: apps/example-native/android
+        run: ./gradlew :react-native-audio-browser:formatCheck :react-native-audio-browser:compileDebugKotlin -PAudioBrowser_castEnabled=false --no-daemon --build-cache
 
       - name: Upload test report
         if: failure()

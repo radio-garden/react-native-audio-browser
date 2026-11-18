@@ -1,5 +1,5 @@
 import type { NavigationErrorType } from '../../features'
-import type { RequestConfig, TransformableRequestConfig } from '../../types'
+import type { RequestConfig } from '../../types'
 import { RequestConfigBuilder } from './RequestConfigBuilder'
 
 type HttpError = Error & {
@@ -23,42 +23,12 @@ const TIMEOUT_MS = 30_000
 /**
  * HTTP client for making browser API requests.
  * Mirrors Android's HttpClient.kt
- * Uses RequestConfigBuilder for URL building and config merging.
+ *
+ * Config layering (the shared `request` → `<kind>` → route chain) is handled by
+ * the callers via RequestConfigBuilder.applyLayer; this client just builds the
+ * URL from the fully-merged config and executes the request.
  */
 export class HttpClient {
-  private baseRequestConfig: Partial<TransformableRequestConfig>
-
-  constructor(baseRequestConfig: Partial<TransformableRequestConfig> = {}) {
-    this.baseRequestConfig = baseRequestConfig
-  }
-
-  /**
-   * Updates the base request configuration used for all requests.
-   */
-  setBaseRequestConfig(config: Partial<TransformableRequestConfig>): void {
-    this.baseRequestConfig = config
-  }
-
-  /**
-   * Merges multiple request configs with proper header and query parameter merging.
-   * Uses RequestConfigBuilder for consistent merging behavior.
-   */
-  mergeRequestConfig(
-    base: Partial<TransformableRequestConfig>,
-    overrides: Partial<RequestConfig>
-  ): RequestConfig {
-    // First merge base with the instance's base config
-    const withBase = RequestConfigBuilder.mergeConfig(
-      this.baseRequestConfig as RequestConfig,
-      base as RequestConfig
-    )
-    // Then merge with overrides
-    return RequestConfigBuilder.mergeConfig(
-      withBase,
-      overrides as RequestConfig
-    )
-  }
-
   /**
    * Executes an HTTP request and returns the JSON response.
    * Throws navigation errors for HTTP and network failures.

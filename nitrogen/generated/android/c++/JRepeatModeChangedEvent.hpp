@@ -18,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "RepeatModeChangedEvent" and the the Kotlin data class "RepeatModeChangedEvent".
+   * The C++ JNI bridge between the C++ struct "RepeatModeChangedEvent" and the Kotlin data class "RepeatModeChangedEvent".
    */
   struct JRepeatModeChangedEvent final: public jni::JavaClass<JRepeatModeChangedEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RepeatModeChangedEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RepeatModeChangedEvent;";
 
   public:
     /**

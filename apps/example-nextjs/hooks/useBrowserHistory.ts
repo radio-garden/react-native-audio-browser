@@ -43,7 +43,7 @@ export function useBrowserHistory(): (() => void) | undefined {
     }
 
     // Check if this path is a tab root
-    const isTabRoot = tabs?.some((tab) => tab.url === path)
+    const isTabRoot = tabs?.some((tab) => tab.path === path)
 
     setHistory((prev) => {
       const currentTop = prev[prev.length - 1]
@@ -67,7 +67,7 @@ export function useBrowserHistory(): (() => void) | undefined {
   }, [path, tabs])
 
   // Don't show back button if we're on a tab root
-  const isOnTabRoot = tabs?.some((tab) => tab.url === path)
+  const isOnTabRoot = tabs?.some((tab) => tab.path === path)
   const canGoBack = history.length > 1 && !isOnTabRoot
 
   if (!canGoBack) {
@@ -78,7 +78,7 @@ export function useBrowserHistory(): (() => void) | undefined {
     if (history.length > 1) {
       setHistory((history) => history.slice(0, -1))
       isNavigatingBackRef.current = true
-      navigate(history[history.length - 2])
+      navigate(history[history.length - 2]!)
     }
   }
 }

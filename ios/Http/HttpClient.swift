@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-/// URLSession-based HTTP client for API requests.
+/// Counterpart of the Kotlin `HttpClient`; change request building and error messages in both.
 final class HttpClient: @unchecked Sendable {
   static let defaultUserAgent = "react-native-audio-browser"
   static let defaultContentType = "application/json"
@@ -10,199 +10,114 @@ final class HttpClient: @unchecked Sendable {
   private let session: URLSession
   private let logger = Logger(subsystem: "com.audiobrowser", category: "HttpClient")
 
-  /// HTTP request configuration (matches Kotlin HttpClient.HttpRequest).
   struct HttpRequest {
     let url: String
-    let method: String
+    let method: HttpMethod
     let headers: [String: String]?
     let body: String?
     let contentType: String
     let userAgent: String
-
-    init(
-      url: String,
-      method: String = "GET",
-      headers: [String: String]? = nil,
-      body: String? = nil,
-      contentType: String = HttpClient.defaultContentType,
-      userAgent: String = HttpClient.defaultUserAgent,
-    ) {
-      self.url = url
-      self.method = method
-      self.headers = headers
-      self.body = body
-      self.contentType = contentType
-      self.userAgent = userAgent
-    }
   }
 
-  /// HTTP response data (matches Kotlin HttpClient.HttpResponse).
-  struct HttpResponse {
-    let code: Int
-    let body: String
-    let headers: [String: String]
-
-    var isSuccessful: Bool {
-      (200 ..< 300).contains(code)
-    }
-  }
-
-  /// HTTP exception (matches Kotlin HttpClient.HttpException).
-  final class HttpException: Error, Sendable {
+  /// A non-2xx response.
+  struct HttpException: LocalizedError {
     let code: Int
     let responseBody: String
 
-    init(code: Int, responseBody: String) {
-      self.code = code
-      self.responseBody = responseBody
-    }
-
-    var localizedDescription: String {
-      // Try to extract error message from JSON response: { "error": "message" }
+    /// The API's `{ "error": "message" }`, else the localized HTTP status.
+    var errorDescription: String? {
       if let data = responseBody.data(using: .utf8),
          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-         let errorMessage = json["error"] as? String
+         let message = json["error"] as? String
       {
-        return errorMessage
+        return message
       }
-      // Fall back to localized HTTP status description
       return HTTPURLResponse.localizedString(forStatusCode: code)
     }
   }
 
-  /// Creates a new HTTP client.
+  enum HttpClientError: LocalizedError {
+    case invalidUrl(String)
+    case unsupportedMethod(HttpMethod)
+    case notHttp
+    case undecodable(String)
+
+    var errorDescription: String? {
+      switch self {
+      case let .invalidUrl(url): "Invalid URL: \(url)"
+      case let .unsupportedMethod(method): "Unsupported HTTP method: \(method.stringValue)"
+      case .notHttp: "Invalid response type"
+      case let .undecodable(reason): reason
+      }
+    }
+  }
+
   init(session: URLSession = .shared) {
     self.session = session
   }
 
-  /// Executes an HTTP request (matches Kotlin request() signature).
-  func request(_ httpRequest: HttpRequest) async -> Result<HttpResponse, Error> {
-    guard let url = URL(string: httpRequest.url) else {
-      return .failure(NSError(
-        domain: "HttpClient",
-        code: -1,
-        userInfo: [NSLocalizedDescriptionKey: "Invalid URL: \(httpRequest.url)"],
-      ))
-    }
+  /// Sends `httpRequest` and returns the status code and body, whatever the status.
+  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
+    guard let url = URL(string: httpRequest.url) else { throw HttpClientError.invalidUrl(httpRequest.url) }
 
     var urlRequest = URLRequest(url: url)
     urlRequest.timeoutInterval = Self.timeoutSeconds
-
-    // Add headers
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
-    // Set User-Agent (userAgent parameter takes precedence over headers)
-    urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
+    // A `User-Agent` header wins over `userAgent`, as in the media and artwork paths.
+    if httpRequest.headers?["User-Agent"] == nil {
+      urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
+    }
 
-    // Add body for non-GET requests
-    switch httpRequest.method.uppercased() {
-    case "GET":
-      urlRequest.httpMethod = "GET"
-    case "POST", "PUT", "PATCH":
-      urlRequest.httpMethod = httpRequest.method.uppercased()
+    urlRequest.httpMethod = httpRequest.method.stringValue
+    switch httpRequest.method {
+    case .get:
+      break
+    case .post, .put, .patch:
       urlRequest.setValue(httpRequest.contentType, forHTTPHeaderField: "Content-Type")
-      if let body = httpRequest.body {
-        urlRequest.httpBody = body.data(using: .utf8)
-      }
-    case "DELETE":
-      urlRequest.httpMethod = "DELETE"
+      urlRequest.httpBody = httpRequest.body?.data(using: .utf8)
+    case .delete:
       if let body = httpRequest.body {
         urlRequest.setValue(httpRequest.contentType, forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = body.data(using: .utf8)
       }
-    default:
-      return .failure(NSError(
-        domain: "HttpClient",
-        code: -1,
-        userInfo: [NSLocalizedDescriptionKey: "Unsupported HTTP method: \(httpRequest.method)"],
-      ))
+    case .head, .options:
+      throw HttpClientError.unsupportedMethod(httpRequest.method)
     }
 
-    // Log request
     logRequest(httpRequest)
-
     do {
       let (data, response) = try await session.data(for: urlRequest)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        return .failure(NSError(
-          domain: "HttpClient",
-          code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Invalid response type"],
-        ))
-      }
-
-      let responseBody = String(data: data, encoding: .utf8) ?? ""
-
-      // Extract response headers
-      var headers: [String: String] = [:]
-      for (key, value) in httpResponse.allHeaderFields {
-        if let keyString = key as? String, let valueString = value as? String {
-          headers[keyString] = valueString
-        }
-      }
-
-      let httpResp = HttpResponse(
-        code: httpResponse.statusCode,
-        body: responseBody,
-        headers: headers,
-      )
-
-      // Log response
-      logResponse(httpResp, url: httpRequest.url)
-
-      return .success(httpResp)
+      guard let response = response as? HTTPURLResponse else { throw HttpClientError.notHttp }
+      logResponse(code: response.statusCode, data: data, url: httpRequest.url)
+      return (response.statusCode, data)
     } catch {
-      logError(error, url: httpRequest.url)
-      return .failure(error)
+      logger.error("✗ Error for \(httpRequest.url): \(error.localizedDescription)")
+      throw error
     }
   }
 
-  /// Executes an HTTP request and decodes the JSON response (matches Kotlin requestJson()).
-  func requestJson<T: Decodable>(
-    _ httpRequest: HttpRequest,
-    as type: T.Type,
-  ) async throws -> T {
-    let result = await request(httpRequest)
-
-    switch result {
-    case let .success(response):
-      if !response.isSuccessful {
-        throw HttpException(code: response.code, responseBody: response.body)
-      }
-      guard let data = response.body.data(using: .utf8) else {
-        throw NSError(
-          domain: "HttpClient",
-          code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Failed to convert response body to data"],
-        )
-      }
-      let decoder = JSONDecoder()
-      do {
-        return try decoder.decode(type, from: data)
-      } catch let DecodingError.keyNotFound(key, context) {
-        throw NSError(
-          domain: "HttpClient",
-          code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
-        )
-      } catch let DecodingError.typeMismatch(type, context) {
-        throw NSError(
-          domain: "HttpClient",
-          code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
-        )
-      } catch let DecodingError.valueNotFound(type, context) {
-        throw NSError(
-          domain: "HttpClient",
-          code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
-        )
-      }
-    case let .failure(error):
-      throw error
+  /// Sends `httpRequest` and decodes a 2xx body as `T`; any other status throws `HttpException`.
+  /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
+  func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
+    let (code, data) = try await request(httpRequest)
+    guard (200 ..< 300).contains(code) else {
+      throw HttpException(code: code, responseBody: String(decoding: data, as: UTF8.self))
     }
+    do {
+      return try JSONDecoder().decode(type, from: data)
+    } catch let DecodingError.keyNotFound(key, context) {
+      throw HttpClientError.undecodable("Missing required key '\(key.stringValue)' at path: \(Self.path(context))")
+    } catch let DecodingError.typeMismatch(type, context) {
+      throw HttpClientError.undecodable("Type mismatch for \(type) at path: \(Self.path(context))")
+    } catch let DecodingError.valueNotFound(type, context) {
+      throw HttpClientError.undecodable("Value not found for \(type) at path: \(Self.path(context))")
+    }
+  }
+
+  private static func path(_ context: DecodingError.Context) -> String {
+    context.codingPath.map(\.stringValue).joined(separator: ".")
   }
 }
 
@@ -210,28 +125,19 @@ final class HttpClient: @unchecked Sendable {
 
 extension HttpClient {
   private func logRequest(_ request: HttpRequest) {
-    logger.debug("→ \(request.method) \(request.url)")
-    if let headers = request.headers, !headers.isEmpty {
-      for (key, value) in headers {
-        logger.debug("  \(key): \(value)")
-      }
+    logger.debug("→ \(request.method.stringValue) \(request.url)")
+    for (key, value) in request.headers ?? [:] {
+      logger.debug("  \(key): \(value)")
     }
     if let body = request.body {
-      let truncated = body.prefix(500)
-      logger.debug("  Body: \(truncated)\(body.count > 500 ? "..." : "")")
+      logger.debug("  Body: \(body.prefix(500))\(body.count > 500 ? "..." : "")")
     }
   }
 
-  private func logResponse(_ response: HttpResponse, url: String) {
-    let emoji = response.isSuccessful ? "✓" : "✗"
-    logger.debug("← \(emoji) \(response.code) \(url)")
-    if !response.body.isEmpty {
-      let truncated = response.body.prefix(500)
-      logger.debug("  Body: \(truncated)\(response.body.count > 500 ? "..." : "")")
+  private func logResponse(code: Int, data: Data, url: String) {
+    logger.debug("← \((200 ..< 300).contains(code) ? "✓" : "✗") \(code) \(url)")
+    if !data.isEmpty {
+      logger.debug("  Body: \(String(decoding: data.prefix(500), as: UTF8.self))\(data.count > 500 ? "..." : "")")
     }
-  }
-
-  private func logError(_ error: Error, url: String) {
-    logger.error("✗ Error for \(url): \(error.localizedDescription)")
   }
 }

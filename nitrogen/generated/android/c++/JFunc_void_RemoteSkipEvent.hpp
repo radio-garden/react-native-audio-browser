@@ -25,7 +25,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_RemoteSkipEvent: public jni::JavaClass<JFunc_void_RemoteSkipEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemoteSkipEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemoteSkipEvent;";
 
   public:
     /**
@@ -61,7 +61,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemoteSkipEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemoteSkipEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_RemoteSkipEvent_cxx::invoke_cxx)});
     }

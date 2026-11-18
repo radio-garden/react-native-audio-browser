@@ -50,16 +50,13 @@ struct TrackMetadataCommonIdentifierTests {
   }
 
   @Test func identifierWinsOverCommonKey() {
-    // .quickTimeMetadataTitle doesn't match the identifier switch
-    // but has commonKey .commonKeyTitle — so it only matches the fallback path.
+    // .quickTimeMetadataTitle reaches title only through its commonKey fallback.
     let items = [
       makeMetadataItem(identifier: .commonIdentifierTitle, value: "Identifier Title"),
       makeMetadataItem(identifier: .quickTimeMetadataTitle, value: "QuickTime Title"),
     ]
 
     let metadata = TrackMetadata.from(items: items)
-    // The first item sets title via identifier match.
-    // The second item falls through to commonKey, which uses title ?? ... (no overwrite).
     #expect(metadata.title == "Identifier Title")
   }
 }

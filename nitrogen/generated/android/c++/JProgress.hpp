@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "Progress" and the the Kotlin data class "Progress".
+   * The C++ JNI bridge between the C++ struct "Progress" and the Kotlin data class "Progress".
    */
   struct JProgress final: public jni::JavaClass<JProgress> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Progress;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Progress;";
 
   public:
     /**

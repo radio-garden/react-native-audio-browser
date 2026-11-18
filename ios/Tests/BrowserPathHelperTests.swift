@@ -29,6 +29,12 @@ import Testing
   #expect(result == "http://example.com/api")
 }
 
+@Test func buildUrlEmptyPathReturnsBaseWithoutTrailingSlash() {
+  // An endpoint whose baseUrl is already the whole URL (e.g. search) passes an empty path.
+  let result = BrowserPathHelper.buildUrl(baseUrl: "http://example.com/api/search", path: "")
+  #expect(result == "http://example.com/api/search")
+}
+
 // MARK: - appendQuery
 
 @Test func appendQueryAddsParamsWithQuestionMark() {
@@ -64,6 +70,54 @@ import Testing
 @Test func appendQuerySortsKeysDeterministically() {
   let result = BrowserPathHelper.appendQuery(["z": "3", "a": "1", "m": "2"], to: "/items")
   #expect(result == "/items?a=1&m=2&z=3")
+}
+
+// MARK: - build
+
+@Test func buildAppendsTrackIdWithQuestionMark() {
+  let result = BrowserPathHelper.build(parentPath: "/library", trackId: "song.mp3")
+  #expect(result == "/library?__trackId=song.mp3")
+}
+
+@Test func buildAppendsTrackIdWithAmpersandWhenParentHasQuery() {
+  let result = BrowserPathHelper.build(parentPath: "/search?q=jazz", trackId: "song.mp3")
+  #expect(result == "/search?q=jazz&__trackId=song.mp3")
+}
+
+@Test func buildRoundTripsSrcWithQueryParams() {
+  // An unescaped `&` in the src would split it into stray query params of the parent path.
+  let src = "https://cdn.example.com/stream.mp3?token=abc&exp=1699999999"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
+@Test func buildRoundTripsSrcWithEqualsAndPlus() {
+  let src = "https://cdn.example.com/a+b.mp3?sig=x=y"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
+@Test func buildStampsTheIndexAndRoundTripsIt() {
+  let src = "https://cdn.example.com/stream.mp3?token=abc&exp=1"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src, index: 3)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.extractIndex(url) == 3)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
+// MARK: - extractIndex
+
+@Test func extractIndexReturnsNilWithoutAStampedIndex() {
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: "song.mp3")
+  #expect(BrowserPathHelper.extractIndex(url) == nil)
+}
+
+@Test func extractIndexReturnsNilForNonContextualOrMalformedIndex() {
+  #expect(BrowserPathHelper.extractIndex("/library") == nil)
+  #expect(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=x") == nil)
+  #expect(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=-1") == nil)
 }
 
 // MARK: - stripTrackId
@@ -107,4 +161,49 @@ import Testing
 
 @Test func isContextualReturnsTrueWithAmpersandSeparator() {
   #expect(BrowserPathHelper.isContextual("/lib?q=1&__trackId=x") == true)
+}
+
+// MARK: - isSearchPath
+
+@Test func isSearchPathMatchesCreatedSearchPaths() {
+  #expect(BrowserPathHelper.isSearchPath(BrowserPathHelper.createSearchPath("jazz")) == true)
+}
+
+@Test func isSearchPathRejectsBrowsePaths() {
+  #expect(BrowserPathHelper.isSearchPath("/search?q=jazz") == false)
+  #expect(BrowserPathHelper.isSearchPath("/__searchable") == false)
+}
+
+// MARK: - stampingContextualPaths
+
+@Test func stampsPlayableOnlyTracksWithTheirFlatPagePosition() throws {
+  // The index counts every track, the one with a path too; the trackId is the id, else the src.
+  let sections = [
+    Section(children: [Track(path: "/a", title: "A"), Track(src: "one.mp3", title: "One")]),
+    Section(children: [Track(id: "two", src: "two.mp3", title: "Two")]),
+  ]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page")
+  #expect(stamped.map { $0.children.map(\.path) } == [
+    ["/a", "/page?__trackId=one.mp3&__index=1"],
+    ["/page?__trackId=two&__index=2"],
+  ])
+}
+
+@Test func keepsTheSectionsAndATrackThatHasAPath() throws {
+  let track = Track(path: "/a", src: "a.mp3", title: "A")
+  let sections = [Section(title: "Top", path: "/top", children: [track])]
+  #expect(try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page") == sections)
+}
+
+@Test func stampsBesideAnExistingQuery() throws {
+  let sections = [Section(children: [Track(src: "s.mp3", title: "S")])]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/search?q=jazz")
+  #expect(stamped[0].children[0].path == "/search?q=jazz&__trackId=s.mp3&__index=0")
+}
+
+@Test func rejectsATrackWithNeitherPathNorSrc() {
+  let sections = [Section(children: [Track(id: "only-id", title: "Nowhere")])]
+  #expect(throws: BrowserError.self) {
+    try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/page")
+  }
 }

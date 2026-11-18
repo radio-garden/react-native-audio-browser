@@ -1,5 +1,7 @@
 # Claude Development Notes
 
+Domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) — the glossary for terms used across the codebase. Follow it when naming things, and run `yarn vocab-check` after editing it. Architectural decisions, when recorded, live as ADRs in [`docs/adr/`](docs/adr/).
+
 ## Building
 
 ### Codegen (Nitrogen)
@@ -12,26 +14,42 @@ yarn codegen
 
 ### Android
 
-Compile Kotlin code from the example app directory:
+Compile Kotlin without building the app:
 
 ```bash
-cd apps/example-native/android && ./gradlew :react-native-audio-browser:compileDebugKotlin
+yarn android:types
 ```
 
 ## Testing
 
-Everything below is gated in CI by `.github/workflows/test.yml`.
+The local equivalents of what `.github/workflows/test.yml` runs:
 
 ```bash
 yarn test                          # vitest
 yarn types                         # tsc --noEmit
 yarn ci:lint                       # oxlint, type-aware
 yarn ci:format                     # oxfmt --check
-swift test --disable-sandbox       # iOS
-cd apps/example-native/android && ./gradlew :react-native-audio-browser:testDebugUnitTest
+yarn ios:test                      # Swift tests
+yarn android:test                  # Kotlin unit tests
+yarn vocab-check                   # glossary format
 ```
 
-`swift test` needs `--disable-sandbox` locally: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
+`yarn ios:test` passes `--disable-sandbox`: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
+
+### Testing hooks
+
+Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and not `@testing-library/react-native`. The library exports no components, so react-dom is a valid host and costs a few devDependencies instead of a second test runner plus `@react-native/jest-preset`.
+
+Revisit this the day the package exports something that renders RN primitives — react-dom cannot host those, and RNTL means Jest.
+
+Two things to know before writing one:
+
+- Start the file with `/** @vitest-environment happy-dom */`, detached by a blank line so the import sort cannot pull it off line 1. Without it the file runs in node and every render fails on `document is not defined`.
+- `'react-native'` is aliased to `src/test-utils/reactNativeStub.ts` in `vitest.config.ts`, because `react-native/index.js` is Flow-typed and Rollup cannot parse it. Extend the stub when a test needs more of the RN surface.
+
+Emitters are module-level singletons created at import, so their `eventCount` and any log store outlive an individual test. Reset the mocks in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both.
+
+The tests that pin the render-vs-effect re-read (`utils/useNativeUpdatedValue.test.ts`, `utils/useNativeValueRefreshedBy.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the effect stops re-reading the getter after an event lands between render and subscription.
 
 ## Breaking Changes Policy
 
@@ -39,23 +57,14 @@ This is an **alpha product** - we do not care about breaking changes. Feel free 
 
 ## Architecture
 
-- Uses **Nitro Modules** most functionality can be sync / blocking in nature
+- Built on **Nitro Modules**, so most native calls can be synchronous.
 - For user facing callbacks always work with a param object
 
 ## Nitro
 
-### Important Callback Behaviors
-
-**Callbacks work seamlessly across JS/native boundary:**
-
-- Functions can be passed directly as parameters (no registration needed)
-- Reference counting system holds strong references safely
-- Can be called multiple times and stored in memory
-- **Value-returning callbacks** become Promise<T> for thread safety
-- **Void callbacks** (`() => void`) stay synchronous on native side
-- **Sync<T> callbacks** are synchronous but dangerous (must call from JS thread only)
-
 ### Documentation
+
+`.claude/nitro/` is a copy of Nitro's docs taken at Nitro 0.30.0. `package.json` pins the Nitro version the library builds against, and [nitro.margelo.com](https://nitro.margelo.com) documents that version; where the copy and the site differ, the site is right. How callbacks cross the boundary (reference counting, which ones become `Promise<T>`, `Sync<T>`) is in [callbacks.md](.claude/nitro/types/callbacks.md).
 
 - [what-is-nitro.md](.claude/nitro/what-is-nitro.md) - Introduction and core concepts
 - [hybrid-objects.md](.claude/nitro/hybrid-objects.md) - Core HybridObject interface patterns and constraints

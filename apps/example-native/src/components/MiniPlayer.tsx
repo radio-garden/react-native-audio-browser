@@ -17,6 +17,7 @@ import {
   usePlaybackError,
   usePlayingState
 } from 'react-native-audio-browser'
+import { playbackErrorMessage } from '../utils/playbackError'
 
 type MiniPlayerProps = {
   onPress: () => void
@@ -34,7 +35,10 @@ export function MiniPlayer({ onPress }: MiniPlayerProps) {
 
   return (
     <View style={styles.container}>
-      <Pressable style={({ pressed }) => [styles.info, { opacity: pressed ? 0.5 : 1 }]} onPress={onPress}>
+      <Pressable
+        style={({ pressed }) => [styles.info, { opacity: pressed ? 0.5 : 1 }]}
+        onPress={onPress}
+      >
         {artwork ? (
           <Image source={{ uri: artwork }} style={styles.artwork} />
         ) : (
@@ -50,13 +54,16 @@ export function MiniPlayer({ onPress }: MiniPlayerProps) {
             style={[styles.artist, playbackError && styles.error]}
             numberOfLines={1}
           >
-            {playbackError?.message ?? artist}
+            {playbackError ? playbackErrorMessage(playbackError.kind) : artist}
           </Text>
         </View>
       </Pressable>
       <View style={styles.controls}>
         <Pressable
-          style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.5 : 1 }]}
+          style={({ pressed }) => [
+            styles.controlButton,
+            { opacity: pressed ? 0.5 : 1 }
+          ]}
           onPress={() => skipToPrevious()}
         >
           <Icon
@@ -67,7 +74,11 @@ export function MiniPlayer({ onPress }: MiniPlayerProps) {
           />
         </Pressable>
         <Pressable
-          style={({ pressed }) => [styles.controlButton, styles.playPauseButton, { opacity: pressed ? 0.5 : 1 }]}
+          style={({ pressed }) => [
+            styles.controlButton,
+            styles.playPauseButton,
+            { opacity: pressed ? 0.5 : 1 }
+          ]}
           onPress={togglePlayback}
         >
           {playingState.buffering ? (
@@ -82,15 +93,13 @@ export function MiniPlayer({ onPress }: MiniPlayerProps) {
           )}
         </Pressable>
         <Pressable
-          style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.5 : 1 }]}
+          style={({ pressed }) => [
+            styles.controlButton,
+            { opacity: pressed ? 0.5 : 1 }
+          ]}
           onPress={() => skipToNext()}
         >
-          <Icon
-            name="forward-step"
-            size={20}
-            color="white"
-            iconStyle="solid"
-          />
+          <Icon name="forward-step" size={20} color="white" iconStyle="solid" />
         </Pressable>
       </View>
     </View>

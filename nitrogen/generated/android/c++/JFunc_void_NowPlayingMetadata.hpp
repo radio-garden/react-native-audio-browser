@@ -16,16 +16,6 @@
 #include "JNowPlayingMetadata.hpp"
 #include <optional>
 #include <string>
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include <variant>
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "JHeartRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JStarRating.hpp"
-#include "JPercentageRating.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -37,7 +27,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_NowPlayingMetadata: public jni::JavaClass<JFunc_void_NowPlayingMetadata> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata;";
 
   public:
     /**
@@ -73,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_NowPlayingMetadata_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_NowPlayingMetadata_cxx::invoke_cxx)});
     }

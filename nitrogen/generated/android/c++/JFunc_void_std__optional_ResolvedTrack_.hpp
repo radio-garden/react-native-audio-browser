@@ -16,18 +16,36 @@
 #include <NitroModules/JNICallable.hpp>
 #include "JResolvedTrack.hpp"
 #include <string>
-#include "Track.hpp"
+#include "SectionStyle.hpp"
+#include "JSectionStyle.hpp"
+#include "GridTile.hpp"
+#include "JGridTile.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
+#include "Section.hpp"
 #include <vector>
+#include "JSection.hpp"
+#include "Track.hpp"
 #include "JTrack.hpp"
+#include "ArtworkVariants.hpp"
+#include <variant>
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include "JImageRowItem.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 
@@ -41,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__optional_ResolvedTrack_: public jni::JavaClass<JFunc_void_std__optional_ResolvedTrack_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack_;";
 
   public:
     /**
@@ -77,7 +95,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack__cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__optional_ResolvedTrack__cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_std__optional_ResolvedTrack__cxx::invoke_cxx)});
     }

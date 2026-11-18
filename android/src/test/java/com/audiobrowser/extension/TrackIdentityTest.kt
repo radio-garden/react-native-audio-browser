@@ -1,0 +1,36 @@
+package com.audiobrowser.extension
+
+import com.audiobrowser.TestFixtures.track
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class TrackIdentityTest {
+
+  @Test
+  fun `id wins over src`() {
+    assertEquals("stable-id", track(id = "stable-id", src = "https://s/a.mp3").identity)
+  }
+
+  @Test
+  fun `blank id falls back to src`() {
+    assertEquals("https://s/a.mp3", track(id = "", src = "https://s/a.mp3").identity)
+    assertEquals("https://s/a.mp3", track(id = "  ", src = "https://s/a.mp3").identity)
+  }
+
+  @Test
+  fun `missing id falls back to src`() {
+    assertEquals("https://s/a.mp3", track(id = null, src = "https://s/a.mp3").identity)
+  }
+
+  @Test
+  fun `id alone is an identity`() {
+    assertEquals("stable-id", track(id = "stable-id", src = null).identity)
+  }
+
+  @Test
+  fun `neither id nor src means no identity`() {
+    assertNull(track(id = null, src = null).identity)
+    assertNull(track(id = "", src = null).identity)
+  }
+}

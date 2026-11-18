@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "RepeatMode" and the the Kotlin enum "RepeatMode".
+   * The C++ JNI bridge between the C++ enum "RepeatMode" and the Kotlin enum "RepeatMode".
    */
   struct JRepeatMode final: public jni::JavaClass<JRepeatMode> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RepeatMode;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/RepeatMode;";
 
   public:
     /**

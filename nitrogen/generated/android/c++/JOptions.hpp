@@ -12,20 +12,22 @@
 
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
+#include "CarPlayNowPlayingButton.hpp"
+#include "CarPlayPlayingIndicatorLocation.hpp"
+#include "IOSOptions.hpp"
 #include "JAndroidOptions.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JNotificationButton.hpp"
-#include "JNotificationButtonLayout.hpp"
+#include "JCarPlayNowPlayingButton.hpp"
+#include "JCarPlayPlayingIndicatorLocation.hpp"
+#include "JIOSOptions.hpp"
 #include "JPlayerCapabilities.hpp"
-#include "JRatingType.hpp"
-#include "JRepeatMode.hpp"
+#include "JRemoteButton.hpp"
+#include "JRemoteButtonLayout.hpp"
 #include "JVariant_NullType_Double.hpp"
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
 #include "PlayerCapabilities.hpp"
-#include "RatingType.hpp"
-#include "RepeatMode.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -37,11 +39,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "Options" and the the Kotlin data class "Options".
+   * The C++ JNI bridge between the C++ struct "Options" and the Kotlin data class "Options".
    */
   struct JOptions final: public jni::JavaClass<JOptions> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Options;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Options;";
 
   public:
     /**
@@ -61,15 +63,15 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
       static const auto fieldCapabilities = clazz->getField<JPlayerCapabilities>("capabilities");
       jni::local_ref<JPlayerCapabilities> capabilities = this->getFieldValue(fieldCapabilities);
-      static const auto fieldRepeatMode = clazz->getField<JRepeatMode>("repeatMode");
-      jni::local_ref<JRepeatMode> repeatMode = this->getFieldValue(fieldRepeatMode);
+      static const auto fieldIos = clazz->getField<JIOSOptions>("ios");
+      jni::local_ref<JIOSOptions> ios = this->getFieldValue(fieldIos);
       return Options(
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
         forwardJumpInterval,
         backwardJumpInterval,
         progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->toCpp()) : std::nullopt,
         capabilities->toCpp(),
-        repeatMode->toCpp()
+        ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt
       );
     }
 
@@ -79,7 +81,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JOptions::javaobject> fromCpp(const Options& value) {
-      using JSignature = JOptions(jni::alias_ref<JAndroidOptions>, double, double, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>, jni::alias_ref<JRepeatMode>);
+      using JSignature = JOptions(jni::alias_ref<JAndroidOptions>, double, double, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>, jni::alias_ref<JIOSOptions>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -89,7 +91,7 @@ namespace margelo::nitro::audiobrowser {
         value.backwardJumpInterval,
         value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
         JPlayerCapabilities::fromCpp(value.capabilities),
-        JRepeatMode::fromCpp(value.repeatMode)
+        value.ios.has_value() ? JIOSOptions::fromCpp(value.ios.value()) : nullptr
       );
     }
   };

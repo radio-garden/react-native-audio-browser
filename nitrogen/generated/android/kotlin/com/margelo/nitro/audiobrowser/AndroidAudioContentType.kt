@@ -17,10 +17,10 @@ import com.facebook.proguard.annotations.DoNotStrip
 @Keep
 enum class AndroidAudioContentType(@DoNotStrip @Keep val value: Int) {
   MUSIC(0),
-  SPEECH(1),
-  SONIFICATION(2),
-  MOVIE(3),
-  UNKNOWN(4);
+  MOVIE(1),
+  UNKNOWN(2),
+  SPEECH(3),
+  SONIFICATION(4);
 
   companion object
 }

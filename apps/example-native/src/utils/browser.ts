@@ -7,64 +7,88 @@ import AudioBrowser, {
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import {
-  archiveLibraryEntry,
+  archiveLibrarySection,
   archiveRoutes,
   searchArchive
 } from '../api/archive-org'
+import { authedMediaTransform } from '../api/authed'
 import {
-  radioGardenLibraryEntry,
+  radioGardenLibrarySection,
   radioGardenMediaTransform,
   radioGardenRoutes
 } from '../api/radio-garden'
+import { streamServerSection, urlTrack } from '../api/stream-server'
 import { fetchFavorites, setupFavorites } from '../favorites'
+import { styleLabRoutes } from './style-lab'
 import { throttle } from './throttle'
 
 const configuration: BrowserConfiguration = {
   tabs: [
     {
       title: 'Library',
-      url: '/library',
+      path: '/library',
       artwork: Platform.select({ ios: 'sf:music.note.list' })
     },
     {
       title: 'JSON API',
-      url: '/api',
+      path: '/api',
       artwork: Platform.select({ ios: 'sf:server.rack' })
     },
     {
       title: 'Favorites',
-      url: '/favorites',
+      path: '/favorites',
       artwork: Platform.select({ ios: 'sf:heart.fill' })
+    },
+    {
+      title: 'Style Lab',
+      path: '/lab',
+      artwork: Platform.select({ ios: 'sf:paintpalette.fill' })
     }
   ],
   media: {
-    transform: radioGardenMediaTransform
+    // Each transform returns the request untouched when the path isn't its own,
+    // so they compose: radio.garden rewrites the URL, the authed one attaches a
+    // bearer token to `/api/authed/…`.
+    async transform(request, params) {
+      return authedMediaTransform(
+        await radioGardenMediaTransform(request, params),
+        params
+      )
+    }
   },
   routes: {
     '/api/**': { baseUrl: 'http://localhost:3003' },
     '/favorites': fetchFavorites,
     ...radioGardenRoutes,
     ...archiveRoutes,
+    ...styleLabRoutes,
     '/library': {
-      url: '/library',
+      path: '/library',
       title: 'Library',
       carPlaySiriListButton: 'top',
-      children: [
-        archiveLibraryEntry,
-        radioGardenLibraryEntry,
+      sections: [
+        archiveLibrarySection,
+        radioGardenLibrarySection,
+        streamServerSection,
         {
-          src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-          title: 'Chapters',
-          groupTitle: 'Other'
+          title: 'Other',
+          children: [
+            {
+              src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+              title: 'Chapters',
+              // List-row accessory: replaces the derived (playable → none).
+              style: { accessorySymbol: 'waveform' }
+            }
+          ]
         }
       ]
     }
   },
 
   async search({ query }) {
-    return searchArchive(query)
+    const track = urlTrack(query)
+    return track ? [track] : searchArchive(query)
   },
-  carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate'],
 
   formatNavigationError({ error, defaultFormatted, path }) {
     if (error.code === 'network-error' && path.startsWith('/api')) {
@@ -78,16 +102,32 @@ const configuration: BrowserConfiguration = {
 }
 
 export const setupBrowser = async () => {
-  await AudioBrowser.setupPlayer()
+  await AudioBrowser.setupPlayer({
+    retry: true,
+    remoteOutputs: { cast: true, sonos: true }
+  })
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
+    // Enable favoriting (now-playing heart + browse-row hearts). Favorites are
+    // stored as full `src` strings here, so 'exact' matching (`true`) fits.
+    // jumpForward/jumpBackward default to off, and an explicit layout is
+    // filtered by capability - so the jump buttons below need these on or they
+    // are silently dropped from the layout.
+    capabilities: { favorite: true, jumpForward: true, jumpBackward: true },
     android: {
-      notificationButtons: {
-        back: 'skip-to-previous',
-        forward: 'skip-to-next',
+      // Jump either side of play/pause. Claiming back/forward is what makes
+      // Media3 tell the car to stop reserving space for skip-prev/next.
+      // Overflow is priority-ordered: a head unit with a spare slot promotes
+      // the first entry onto the main row.
+      remoteButtonLayout: {
+        back: 'jump-backward',
+        forward: 'jump-forward',
         overflow: ['favorite']
       }
+    },
+    ios: {
+      carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate']
     }
   })
 

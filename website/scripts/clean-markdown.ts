@@ -3,11 +3,43 @@ import { join } from 'path'
 
 const apiDir = './api'
 
+// TypeDoc titles module pages with the raw module path ("features/favorites").
+// Rewrite them to reader-facing titles; the same names are used for the link
+// text on the modules index page. URLs are untouched.
+const titleOverrides: Record<string, string> = {
+  'features/carConnection': 'Car',
+  'types/browser': 'Browser Types',
+  'types/browser-nodes': 'Browser Node Types'
+}
+
+function prettyModuleTitle(modulePath: string): string {
+  const override = titleOverrides[modulePath]
+  if (override) return override
+  const [group, name] = modulePath.split('/')
+  if (group === 'features' && name) {
+    // "nowPlaying" -> "Now Playing"
+    return (
+      name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1')
+    )
+  }
+  // utils pages are identifiers (getTrackIdentity, NativeUpdatedValue) — keep verbatim
+  if (group === 'utils' && name) return name
+  return modulePath
+}
+
 function cleanMarkdown(content: string): string {
   // Remove "### Extends" and "### Extended by" sections (including the list that follows)
   return content
     .replace(/### Extends\n\n- [^\n]+\n\n/g, '')
     .replace(/### Extended by\n\n(?:- [^\n]+\n)+\n/g, '')
+    .replace(
+      /^# ((?:features|types|utils)\/[\w-]+)$/m,
+      (_, p) => `# ${prettyModuleTitle(p)}`
+    )
+    .replace(
+      /^\| \[((?:features|types|utils)\/[\w-]+)\]\(/gm,
+      (_, p) => `| [${prettyModuleTitle(p)}](`
+    )
 }
 
 // Fenced blocks and inline spans. Used as a split pattern, so the capture group

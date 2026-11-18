@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -25,6 +26,20 @@ data class BrowserSourceCallbackParam(
   val routeParams: Map<String, String>?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is BrowserSourceCallbackParam) return false
+    return Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.routeParams, other.routeParams)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      path,
+      routeParams
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

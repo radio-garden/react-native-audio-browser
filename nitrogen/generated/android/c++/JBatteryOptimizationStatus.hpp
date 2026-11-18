@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "BatteryOptimizationStatus" and the the Kotlin enum "BatteryOptimizationStatus".
+   * The C++ JNI bridge between the C++ enum "BatteryOptimizationStatus" and the Kotlin enum "BatteryOptimizationStatus".
    */
   struct JBatteryOptimizationStatus final: public jni::JavaClass<JBatteryOptimizationStatus> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BatteryOptimizationStatus;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BatteryOptimizationStatus;";
 
   public:
     /**

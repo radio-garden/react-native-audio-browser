@@ -2,71 +2,122 @@ import CarPlay
 import Foundation
 import os.log
 
-/// Manages the Now Playing template, buttons, Up Next, and related state for CarPlay.
-///
-/// Responsibilities:
-/// - CPNowPlayingTemplate setup and button configuration
-/// - Button action handlers (shuffle, repeat, favorite, playback rate)
-/// - Button state updates (favorite appearance, Up Next enabled)
-/// - Up Next template creation and queue change handling
-/// - NowPlayingObserver for Up Next button taps
 @MainActor
 final class CarPlayNowPlayingManager {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayNowPlayingManager")
 
   private let interfaceController: CPInterfaceController
-  var listItemFactory: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
+  private let audioBrowser: HybridAudioBrowser
+  /// Read on each use: a re-setup replaces the bridge's player.
+  private var player: Player? { audioBrowser.player }
+  private let listItem: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
+  private let navigate: (_ path: String, _ title: String) -> Void
 
-  private weak var audioBrowser: HybridAudioBrowser?
+  private var subscriptions: [Subscription] = []
   private var nowPlayingObserver: NowPlayingObserver?
   private weak var upNextTemplate: CPListTemplate?
+  /// A rebuild is skipped while this is unchanged: every `updateNowPlayingButtons` re-renders
+  /// all buttons. Shuffle and repeat carry `isSelected` because CarPlay draws a re-render from
+  /// the serialized state first: a button built unselected while its mode is on flashes off.
+  private struct BuiltButtonRow: Equatable {
+    let types: [CarPlayNowPlayingButton]
+    let favorited: Bool?
+    let shuffleSelected: Bool?
+    let repeatSelected: Bool?
+  }
 
-  /// Convenience accessor for browser config
+  private var builtRow: BuiltButtonRow?
+
+  /// Resolved on track change, not on tap, so the album line shows only when a destination exists.
+  private var albumArtistDestination: String?
+  private let albumPathResolution = SupersedingTask<String, String>()
+  /// The tapped track while its load runs, which wins over `currentTrack`: CarPlay reads
+  /// `isAlbumArtistButtonEnabled` only when Now Playing is displayed, and that push comes first.
+  private var pendingAlbumArtistTrack: Track?
+
   private var config: BrowserConfig {
-    audioBrowser?.browserManager.config ?? BrowserConfig()
+    audioBrowser.browserManager.config
   }
 
-  /// Gets the current active track's favorited state
-  private var isActiveTrackFavorited: Bool {
-    (try? audioBrowser?.getActiveTrack())?.favorited ?? false
-  }
-
-  init(interfaceController: CPInterfaceController) {
+  init(
+    interfaceController: CPInterfaceController,
+    audioBrowser: HybridAudioBrowser,
+    listItem: @escaping (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem,
+    navigate: @escaping (_ path: String, _ title: String) -> Void,
+  ) {
     self.interfaceController = interfaceController
-    self.listItemFactory = { track, _ in CPListItem(text: track.title, detailText: nil) }
+    self.audioBrowser = audioBrowser
+    self.listItem = listItem
+    self.navigate = navigate
   }
 
   // MARK: - Lifecycle
 
-  func setup(audioBrowser: HybridAudioBrowser) {
-    self.audioBrowser = audioBrowser
-    setupNowPlayingTemplate()
-  }
-
-  func teardown() {
-    if let observer = nowPlayingObserver {
-      CPNowPlayingTemplate.shared.remove(observer)
-      nowPlayingObserver = nil
-    }
-    audioBrowser = nil
-  }
-
-  // MARK: - Now Playing Template
-
-  private func setupNowPlayingTemplate() {
-    let template = CPNowPlayingTemplate.shared
-
+  func start() {
     let observer = NowPlayingObserver(manager: self)
     nowPlayingObserver = observer
-    template.add(observer)
+    CPNowPlayingTemplate.shared.add(observer)
 
-    setupNowPlayingButtons()
-    updateNowPlayingButtonStates()
+    let browserManager = audioBrowser.browserManager
+    subscriptions = [
+      browserManager.configChanged.subscribeOnMain { [weak self] _ in
+        // A new config may bring a new `resolveAlbumPath`, so the current track is asked again.
+        self?.albumPathResolution.cancel()
+        self?.refresh()
+      },
+      audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.refresh() },
+      browserManager.favoritesChanged.subscribeOnMain { [weak self] in self?.refreshButtons() },
+      audioBrowser.favoriteChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
+      audioBrowser.repeatModeChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
+      audioBrowser.shuffleChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
+      audioBrowser.queueChangedEmitter.subscribeOnMain { [weak self] in self?.queueChanged($0) },
+      audioBrowser.showNowPlayingRequestedEmitter.subscribeOnMain { [weak self] in self?.showNowPlaying() },
+      audioBrowser.activeTrackChangedEmitter.subscribeOnMain { [weak self] _ in
+        // The player's current track is authoritative again.
+        self?.pendingAlbumArtistTrack = nil
+        self?.refresh()
+      },
+    ]
+    refresh()
   }
 
-  /// Sets up custom Now Playing buttons based on configuration
-  func setupNowPlayingButtons() {
-    let buttons = config.carPlayNowPlayingButtons
+  func end() {
+    if let nowPlayingObserver { CPNowPlayingTemplate.shared.remove(nowPlayingObserver) }
+    nowPlayingObserver = nil
+    subscriptions = []
+    pendingAlbumArtistTrack = nil
+    // A resolve in flight must not set the shared template for the next session.
+    albumPathResolution.cancel()
+  }
+
+  func refresh() {
+    updateUpNextButton()
+    refreshButtons()
+    updateAlbumArtistDestination()
+  }
+
+  /// Call before pushing Now Playing for a just-tapped track: enabling the album line after
+  /// the push renders no chevron.
+  func prepare(for track: Track) {
+    pendingAlbumArtistTrack = track
+    updateAlbumArtistDestination()
+  }
+
+  // MARK: - Buttons
+
+  private func refreshButtons() {
+    // A gate hides the custom buttons; the transport controls stay, as a gate never blocks playback.
+    let buttons = NowPlayingButtonRules.buttons(
+      audioBrowser.browseGate.isActive ? [] : audioBrowser.playerOptions.carPlayNowPlayingButtons,
+    )
+    let row = BuiltButtonRow(
+      types: buttons,
+      favorited: buttons.contains(.favorite) ? audioBrowser.isActiveTrackFavorited() : nil,
+      shuffleSelected: buttons.contains(.shuffle) ? player?.shuffleEnabled ?? false : nil,
+      repeatSelected: buttons.contains(.repeat) ? (player?.repeatMode ?? .off) != .off : nil,
+    )
+    guard row != builtRow else { return }
+    builtRow = row
     logger.info("Setting up Now Playing buttons: \(buttons.map(\.stringValue))")
 
     guard !buttons.isEmpty else {
@@ -82,17 +133,21 @@ final class CarPlayNowPlayingManager {
         let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
           self?.handleShuffleButtonTapped()
         }
+        // Pre-stamped: see BuiltButtonRow.
+        shuffleButton.isSelected = row.shuffleSelected ?? false
         nowPlayingButtons.append(shuffleButton)
 
       case .repeat:
         let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
           self?.handleRepeatButtonTapped()
         }
+        // Pre-stamped: see BuiltButtonRow.
+        repeatButton.isSelected = row.repeatSelected ?? false
         nowPlayingButtons.append(repeatButton)
 
       case .favorite:
         let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited)
+          image: favoriteButtonImage(isFavorited: row.favorited ?? false),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -112,137 +167,135 @@ final class CarPlayNowPlayingManager {
 
   // MARK: - Show Now Playing
 
-  func showNowPlaying() {
-    updateNowPlayingButtonStates()
+  /// Pushes Now Playing, or pops back to it when it is buried under Up Next or a browse page,
+  /// unless `popToFront` is false: a call seconds after the tap must not yank away a screen the
+  /// user opened since.
+  func showNowPlaying(popToFront: Bool = true) {
+    refresh()
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
-    // Don't push if already on the template stack
-    guard !interfaceController.templates.contains(where: { $0 === nowPlayingTemplate }) else {
+    if interfaceController.templates.contains(where: { $0 === nowPlayingTemplate }) {
+      if popToFront {
+        interfaceController.safePop(to: nowPlayingTemplate, animated: true)
+      }
+    } else {
+      interfaceController.safePush(nowPlayingTemplate, animated: true)
+    }
+  }
+
+  // MARK: - Album Line
+
+  private func updateAlbumArtistDestination() {
+    guard let track = pendingAlbumArtistTrack ?? player?.currentTrack else {
+      logger.debug("AlbumArtist: no current track → disabled")
+      settleAlbumArtistDestination(nil)
       return
     }
-    interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
-  }
-
-  // MARK: - Button State Updates
-
-  /// Updates the favorite button appearance based on current track's favorite state
-  func updateFavoriteButtonState() {
-    guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
-    let favorited = isActiveTrackFavorited
-    let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
-
-    for (index, button) in buttons.enumerated() {
-      if button is CPNowPlayingImageButton {
-        let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: favorited)
-        ) { [weak self] _ in
-          self?.handleFavoriteButtonTapped()
-        }
-
-        var updatedButtons = buttons
-        updatedButtons[index] = newFavoriteButton
-        CPNowPlayingTemplate.shared.updateNowPlayingButtons(updatedButtons)
-        break
+    logger.info("AlbumArtist: track=\(track.title) albumPath=\(track.albumPath ?? "nil") resolver=\(self.config.resolveAlbumPath != nil)")
+    if let albumPath = track.albumPath {
+      settleAlbumArtistDestination(albumPath)
+      return
+    }
+    guard let resolver = config.resolveAlbumPath else {
+      settleAlbumArtistDestination(nil)
+      return
+    }
+    albumPathResolution.run(key: track.identity) {
+      try await resolver(track).awaitCancellable()
+    } deliver: { [weak self] result in
+      guard let self else { return }
+      if case let .failure(error) = result {
+        logger.error("resolveAlbumPath failed: \(error.localizedDescription)")
       }
+      setAlbumArtistDestination(try? result.get())
     }
   }
 
-  /// Updates Now Playing button states based on config and current queue
-  func updateNowPlayingButtonStates() {
-    updateNowPlayingUpNextButton()
-    updateFavoriteButtonState()
+  /// Sets the destination without a resolve, ending any in flight so it cannot overwrite this.
+  private func settleAlbumArtistDestination(_ path: String?) {
+    albumPathResolution.cancel()
+    setAlbumArtistDestination(path)
+  }
+
+  private func setAlbumArtistDestination(_ path: String?) {
+    albumArtistDestination = path
+    let template = CPNowPlayingTemplate.shared
+    let enabled = path != nil
+    if template.isAlbumArtistButtonEnabled != enabled {
+      logger.info("AlbumArtist: button \(enabled ? "enabled" : "disabled") (destination: \(path ?? "nil"))")
+      template.isAlbumArtistButtonEnabled = enabled
+    }
   }
 
   // MARK: - Queue Changes
 
-  /// Handles queue changes - updates Up Next list if visible
-  func handleQueueChanged(_ tracks: [Track]) {
-    updateNowPlayingUpNextButton()
-
-    guard let template = upNextTemplate,
-          let player = audioBrowser?.getPlayer()
-    else {
-      return
-    }
-
-    logger.debug("Queue changed, updating Up Next list with \(tracks.count) tracks")
-    template.updateSections([createUpNextSection(tracks: tracks, player: player)])
+  private func queueChanged(_ tracks: [Track]) {
+    updateUpNextButton()
+    guard let upNextTemplate else { return }
+    upNextTemplate.updateSections([createUpNextSection(tracks: tracks)])
   }
 
   // MARK: - Private - Button Handlers
 
-  /// Returns the appropriate image for the favorite button based on state
   private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
     let symbolName = isFavorited ? "heart.fill" : "heart"
-    guard let image = UIImage(systemName: symbolName)?.resized(to: CPNowPlayingButtonMaximumImageSize) else {
+    guard let image = UIImage(systemName: symbolName)?.fitted(
+      to: CPNowPlayingButtonMaximumImageSize,
+      scale: interfaceController.carTraitCollection.displayScale,
+    ) else {
       return UIImage()
     }
     return image
   }
 
   private func handleShuffleButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else { return }
-
+    guard let player else { return }
     let newEnabled = !player.shuffleEnabled
     player.shuffleEnabled = newEnabled
     logger.info("CarPlay shuffle mode changed: \(newEnabled)")
   }
 
   private func handleRepeatButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else { return }
-
-    let currentMode = player.getRepeatMode()
-    let newMode: RepeatMode = switch currentMode {
-    case .off:
-      .track
-    case .track:
-      .queue
-    case .queue:
-      .off
-    }
-
-    player.setRepeatMode(newMode)
+    guard let player else { return }
+    let currentMode = player.repeatMode
+    let newMode = NowPlayingButtonRules.repeatMode(after: currentMode)
+    player.repeatMode = newMode
     logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
   }
 
   private func handleFavoriteButtonTapped() {
-    try? audioBrowser?.toggleActiveTrackFavorited()
+    do {
+      try audioBrowser.toggleActiveTrackFavorited()
+    } catch {
+      logger.error("favorite toggle failed: \(error.localizedDescription)")
+    }
     logger.info("CarPlay favorite toggled")
   }
 
   private func handlePlaybackRateButtonTapped() {
-    guard let audioBrowser, let player = audioBrowser.getPlayer() else { return }
-
-    let rates = audioBrowser.playbackRates
-    guard !rates.isEmpty else { return }
-
+    guard let player else { return }
     let currentRate = Double(player.rate)
-    let nextRate: Double
-
-    if let currentIndex = rates.firstIndex(where: { (currentRate - $0).magnitude < 0.01 }) {
-      let nextIndex = (currentIndex + 1) % rates.count
-      nextRate = rates[nextIndex]
-    } else {
-      nextRate = rates.first { $0 > currentRate } ?? rates[0]
-    }
-
+    guard let nextRate = NowPlayingButtonRules.rate(after: currentRate, in: audioBrowser.playerOptions.playbackRates) else { return }
     player.rate = Float(nextRate)
     logger.info("CarPlay playback rate changed: \(currentRate) → \(nextRate)")
   }
 
   // MARK: - Private - Up Next
 
-  private func updateNowPlayingUpNextButton() {
-    let template = CPNowPlayingTemplate.shared
-    template.isUpNextButtonEnabled = config.carPlayUpNextButton && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
+  fileprivate func handleAlbumArtistButtonTapped() {
+    guard let destination = albumArtistDestination else { return }
+    let track = pendingAlbumArtistTrack ?? player?.currentTrack
+    // The album line is what was tapped, so it titles the destination; artist may be unset.
+    let title = track?.album ?? track?.artist ?? track?.title ?? ""
+    logger.info("Album/Artist button tapped, navigating to \(destination)")
+    navigate(destination, title)
+  }
+
+  private func updateUpNextButton() {
+    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.playerOptions.carPlayUpNextButton && (player?.tracks.count ?? 0) > 1
   }
 
   fileprivate func handleUpNextButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else {
-      logger.warning("Player not available for Up Next")
-      return
-    }
-
-    let tracks = player.tracks
+    let tracks = player?.tracks ?? []
 
     guard !tracks.isEmpty else {
       logger.debug("No tracks in queue for Up Next")
@@ -251,22 +304,29 @@ final class CarPlayNowPlayingManager {
 
     logger.info("Showing Up Next queue with \(tracks.count) tracks")
 
+    // System-localized, or what the app set.
+    let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
     let template = CPListTemplate(
-      title: "Up Next",
-      sections: [createUpNextSection(tracks: tracks, player: player)]
+      title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,
+      sections: [createUpNextSection(tracks: tracks)],
     )
 
     upNextTemplate = template
 
-    interfaceController.pushTemplate(template, animated: true, completion: nil)
+    interfaceController.safePush(template, animated: true)
   }
 
-  private func createUpNextSection(tracks: [Track], player: TrackPlayer) -> CPListSection {
-    let items = tracks.enumerated().map { index, track -> CPListItem in
-      listItemFactory(track) { [weak self] _, completion in
+  private func createUpNextSection(tracks: [Track]) -> CPListSection {
+    let maxItems = CPListTemplate.maximumItemCount
+    if tracks.count > maxItems {
+      logger.info("Up Next queue has \(tracks.count) tracks, clamping to CarPlay's limit of \(maxItems)")
+    }
+    // A prefix keeps item positions equal to queue indices.
+    let items = tracks.prefix(maxItems).enumerated().map { index, track -> CPListItem in
+      listItem(track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
         do {
-          try player.skipTo(index, playWhenReady: true)
+          try self?.player?.skipTo(index, playWhenReady: true)
         } catch {
           self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
         }
@@ -279,7 +339,6 @@ final class CarPlayNowPlayingManager {
 
 // MARK: - Now Playing Observer
 
-/// Private helper class for CPNowPlayingTemplateObserver conformance.
 private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver, @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingObserver")
   private weak var manager: CarPlayNowPlayingManager?
@@ -297,6 +356,20 @@ private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver, 
   }
 
   func nowPlayingTemplateAlbumArtistButtonTapped(_: CPNowPlayingTemplate) {
-    logger.debug("Album/Artist button tapped (not implemented)")
+    Task { @MainActor in
+      manager?.handleAlbumArtistButtonTapped()
+    }
+  }
+}
+
+private extension UIImage {
+  func fitted(to targetSize: CGSize, scale: CGFloat) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(targetSize, false, scale)
+    defer { UIGraphicsEndImageContext() }
+    let fitScale = min(targetSize.width / size.width, targetSize.height / size.height)
+    let scaledSize = CGSize(width: size.width * fitScale, height: size.height * fitScale)
+    let origin = CGPoint(x: (targetSize.width - scaledSize.width) / 2, y: (targetSize.height - scaledSize.height) / 2)
+    draw(in: CGRect(origin: origin, size: scaledSize))
+    return UIGraphicsGetImageFromCurrentImageContext()?.withRenderingMode(.alwaysTemplate)
   }
 }

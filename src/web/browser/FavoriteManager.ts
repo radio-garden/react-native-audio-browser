@@ -1,14 +1,16 @@
 import type { Track, ResolvedTrack } from '../../types'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 
 /**
- * Manages favorite state for tracks.
+ * Manages favorite state for tracks, keyed by track identity (`id` when set,
+ * falling back to `src` — see getTrackIdentity / ADR 0008).
  * Matches Android's favorite hydration behavior.
  */
 export class FavoriteManager {
   private favorites = new Set<string>()
 
   /**
-   * Sets the favorites cache from an array of track src values.
+   * Sets the favorites cache from an array of track identities.
    * This is typically called when favorites are loaded from storage.
    */
   setFavorites(favorites: string[]): void {
@@ -16,24 +18,27 @@ export class FavoriteManager {
   }
 
   /**
-   * Checks if a track is favorited based on its src.
+   * Checks if a track is favorited based on its identity.
    */
-  isFavorited(src: string): boolean {
-    return this.favorites.has(src)
+  isFavorited(track: Track): boolean {
+    const identity = getTrackIdentity(track)
+    return identity !== undefined && this.favorites.has(identity)
   }
 
   /**
-   * Adds a track src to the favorites cache.
+   * Adds a track to the favorites cache under its identity.
    */
-  addFavorite(src: string): void {
-    this.favorites.add(src)
+  addFavorite(track: Track): void {
+    const identity = getTrackIdentity(track)
+    if (identity !== undefined) this.favorites.add(identity)
   }
 
   /**
-   * Removes a track src from the favorites cache.
+   * Removes a track from the favorites cache under its identity.
    */
-  removeFavorite(src: string): void {
-    this.favorites.delete(src)
+  removeFavorite(track: Track): void {
+    const identity = getTrackIdentity(track)
+    if (identity !== undefined) this.favorites.delete(identity)
   }
 
   /**
@@ -48,8 +53,7 @@ export class FavoriteManager {
     if (track.favorited !== undefined && track.favorited !== null) return track
     if (this.favorites.size === 0) return track
 
-    const isFavorited = track.src ? this.favorites.has(track.src) : false
-    if (!isFavorited) return track
+    if (!this.isFavorited(track)) return track
 
     return {
       ...track,
@@ -58,22 +62,23 @@ export class FavoriteManager {
   }
 
   /**
-   * Hydrates favorites on all children of a ResolvedTrack.
-   * Matches Android's hydrateChildren behavior.
+   * Hydrates favorites on all tracks of a resolved page.
+   * Matches Android's hydrateChildren behavior. Pages reach hydration
+   * normalized (ADR 0010), so `sections` is the only structure to walk.
    *
-   * @param resolvedTrack ResolvedTrack with children to hydrate
-   * @returns ResolvedTrack with favorited properties set on children
+   * @param resolvedTrack Resolved page to hydrate
+   * @returns Resolved page with favorited properties set on its tracks
    */
   hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
-    const children = resolvedTrack.children
-    if (!children) return resolvedTrack
+    const { sections } = resolvedTrack
+    if (!sections) return resolvedTrack
 
-    const hydratedChildren = children.map((track) =>
-      this.hydrateFavorite(track)
-    )
     return {
       ...resolvedTrack,
-      children: hydratedChildren
+      sections: sections.map((section) => ({
+        ...section,
+        children: section.children.map((track) => this.hydrateFavorite(track))
+      }))
     }
   }
 }

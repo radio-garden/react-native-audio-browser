@@ -11,8 +11,10 @@
 #include "Playback.hpp"
 
 #include "JPlaybackError.hpp"
+#include "JPlaybackErrorKind.hpp"
 #include "JPlaybackState.hpp"
 #include "PlaybackError.hpp"
+#include "PlaybackErrorKind.hpp"
 #include "PlaybackState.hpp"
 #include <optional>
 #include <string>
@@ -22,11 +24,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "Playback" and the the Kotlin data class "Playback".
+   * The C++ JNI bridge between the C++ struct "Playback" and the Kotlin data class "Playback".
    */
   struct JPlayback final: public jni::JavaClass<JPlayback> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Playback;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Playback;";
 
   public:
     /**

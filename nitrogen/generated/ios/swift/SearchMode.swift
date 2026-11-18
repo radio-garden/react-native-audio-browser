@@ -17,18 +17,30 @@ public extension SearchMode {
    */
   init?(fromString string: String) {
     switch string {
-      case "artist":
-        self = .artist
-      case "album":
-        self = .album
-      case "genre":
-        self = .genre
       case "any":
         self = .any
       case "song":
         self = .song
       case "playlist":
         self = .playlist
+      case "station":
+        self = .station
+      case "podcast":
+        self = .podcast
+      case "audiobook":
+        self = .audiobook
+      case "news":
+        self = .news
+      case "music":
+        self = .music
+      case "music-video":
+        self = .musicVideo
+      case "movie":
+        self = .movie
+      case "tv-show":
+        self = .tvShow
+      case "tv-show-episode":
+        self = .tvShowEpisode
       default:
         return nil
     }
@@ -39,18 +51,30 @@ public extension SearchMode {
    */
   var stringValue: String {
     switch self {
-      case .artist:
-        return "artist"
-      case .album:
-        return "album"
-      case .genre:
-        return "genre"
       case .any:
         return "any"
       case .song:
         return "song"
       case .playlist:
         return "playlist"
+      case .station:
+        return "station"
+      case .podcast:
+        return "podcast"
+      case .audiobook:
+        return "audiobook"
+      case .news:
+        return "news"
+      case .music:
+        return "music"
+      case .musicVideo:
+        return "music-video"
+      case .movie:
+        return "movie"
+      case .tvShow:
+        return "tv-show"
+      case .tvShowEpisode:
+        return "tv-show-episode"
     }
   }
 }

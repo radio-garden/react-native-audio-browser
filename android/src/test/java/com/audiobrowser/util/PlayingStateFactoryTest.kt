@@ -1,0 +1,36 @@
+package com.audiobrowser.util
+
+import com.margelo.nitro.audiobrowser.PlaybackState
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class PlayingStateFactoryTest {
+
+  @Test
+  fun `shouldPlayWhenReady false is never playing nor buffering`() {
+    for (state in PlaybackState.entries) {
+      val derived = PlayingStateFactory.derive(shouldPlayWhenReady = false, playbackState = state)
+      assertEquals("playing for $state", false, derived.playing)
+      assertEquals("buffering for $state", false, derived.buffering)
+    }
+  }
+
+  @Test
+  fun `shouldPlayWhenReady true plays except in terminal or empty states`() {
+    val notPlaying =
+      setOf(PlaybackState.ERROR, PlaybackState.ENDED, PlaybackState.NONE, PlaybackState.STOPPED)
+    for (state in PlaybackState.entries) {
+      val derived = PlayingStateFactory.derive(shouldPlayWhenReady = true, playbackState = state)
+      assertEquals("playing for $state", state !in notPlaying, derived.playing)
+    }
+  }
+
+  @Test
+  fun `buffering only while loading or rebuffering with shouldPlayWhenReady`() {
+    val buffering = setOf(PlaybackState.LOADING, PlaybackState.BUFFERING)
+    for (state in PlaybackState.entries) {
+      val derived = PlayingStateFactory.derive(shouldPlayWhenReady = true, playbackState = state)
+      assertEquals("buffering for $state", state in buffering, derived.buffering)
+    }
+  }
+}

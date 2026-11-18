@@ -50,6 +50,13 @@ fun as${innerName}OrNull(): ${optional.getCode('kotlin')} {
 is ${innerName} -> ${label}(${bridge.parseFromCppToKotlin('value', 'kotlin')})
     `.trim();
     });
+    const asCases = variant.cases.map(([label, v]) => {
+        const innerName = capitalizeName(label);
+        const bridge = new KotlinCxxBridgedType(v);
+        return `
+is ${innerName} -> (${bridge.parseFromCppToKotlin('value', 'kotlin')}) as? T
+    `.trim();
+    });
     const createFunctions = variant.cases.map(([label, v]) => {
         const bridge = new KotlinCxxBridgedType(v);
         const innerName = capitalizeName(label);
@@ -79,15 +86,23 @@ ${extraImports.join('\n')}
 sealed class ${kotlinName} {
   ${indent(innerClasses.join('\n'), '  ')}
 
-  ${indent(isFunctions.join('\n'), '  ')}
-
-  ${indent(asFunctions.join('\n'), '  ')}
-
+  inline fun <reified T> asType(): T? {
+    return when (this) {
+      ${indent(asCases.join('\n'), '      ')}
+    }
+  }
+  inline fun <reified T> isType(): Boolean {
+    return asType<T>() != null
+  }
   inline fun <R> match(${matchParameters.join(', ')}): R {
     return when (this) {
       ${indent(matchCases.join('\n'), '      ')}
     }
   }
+
+  ${indent(isFunctions.join('\n'), '  ')}
+
+  ${indent(asFunctions.join('\n'), '  ')}
 
   companion object {
     ${indent(createFunctions.join('\n'), '    ')}
@@ -127,7 +142,7 @@ if (isInstanceOf(${namespace}::${innerName}::javaClassStatic())) {
         return `
 class ${innerName} final: public jni::JavaClass<${innerName}, J${kotlinName}> {
 public:
-  static auto constexpr kJavaDescriptor = "L${descriptor};";
+  static constexpr auto kJavaDescriptor = "L${descriptor};";
 
   [[nodiscard]] ${bridge.asJniReferenceType('local')} getValue() const {
     static const auto field = javaClassStatic()->getField<${bridge.getTypeCode('c++')}>("value");
@@ -160,7 +175,7 @@ namespace ${cxxNamespace} {
    */
   class J${kotlinName}: public jni::JavaClass<J${kotlinName}> {
   public:
-    static auto constexpr kJavaDescriptor = "L${jniClassDescriptor};";
+    static constexpr auto kJavaDescriptor = "L${jniClassDescriptor};";
 
     ${indent(cppCreateFuncs.join('\n'), '    ')}
 

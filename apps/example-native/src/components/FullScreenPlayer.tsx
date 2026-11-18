@@ -6,31 +6,29 @@ import {
   Image,
   Modal,
   PanResponder,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
-  View
+  View,
+  type ViewInstance
 } from 'react-native'
-import { DebugPanel } from './DebugPanel'
-import { EqualizerModal } from './EqualizerModal'
-import { SleepTimerModal } from './SleepTimerModal'
 import {
   getRate,
   getRepeatMode,
-  openIosOutputPicker,
+  openOutputPicker,
   seekTo,
   setRate,
   setRepeatMode,
   skipToNext,
   skipToPrevious,
+  supportsOutputSwitcher,
   toggleActiveTrackFavorited,
   togglePlayback,
   toggleShuffle,
   useActiveTrack,
   useEqualizerSettings,
-  useIosOutput,
+  useOutput,
   useNowPlaying,
   usePlayingState,
   usePolledProgress,
@@ -38,6 +36,9 @@ import {
   useShuffle,
   useSleepTimerActive
 } from 'react-native-audio-browser'
+import { DebugPanel } from './DebugPanel'
+import { EqualizerModal } from './EqualizerModal'
+import { SleepTimerModal } from './SleepTimerModal'
 
 type Props = {
   visible: boolean
@@ -70,7 +71,7 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
-  const iosOutput = useIosOutput()
+  const output = useOutput()
   const { width: screenWidth } = useWindowDimensions()
   const [rateState, setRateState] = useState(() => getRate())
 
@@ -98,7 +99,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
       <View style={styles.modalContainer}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })} onPress={onClose}>
+          <Pressable
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            onPress={onClose}
+          >
             <Text style={styles.closeButtonText}>Done</Text>
           </Pressable>
         </View>
@@ -159,7 +163,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
           {/* Primary Controls */}
           <View style={styles.primaryControls}>
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={() => skipToPrevious()}
             >
               <Icon
@@ -170,7 +177,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               />
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.playPauseButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.playPauseButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={togglePlayback}
             >
               {playingState.buffering ? (
@@ -185,7 +195,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               )}
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={() => skipToNext()}
             >
               <Icon
@@ -201,7 +214,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
           <View style={styles.secondaryControls}>
             {track && (
               <Pressable
-                style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  { opacity: pressed ? 0.5 : 1 }
+                ]}
                 onPress={toggleActiveTrackFavorited}
               >
                 <Icon
@@ -213,7 +229,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               </Pressable>
             )}
             <Pressable
-              style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={toggleShuffle}
             >
               <Icon
@@ -224,7 +243,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               />
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={cycleRepeatMode}
             >
               <Icon
@@ -235,7 +257,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               />
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={cycleRate}
             >
               <Text
@@ -248,7 +273,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
               </Text>
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
               onPress={() => setShowSleepTimer(true)}
             >
               <Icon
@@ -260,7 +288,10 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
             </Pressable>
             {equalizerSettings != null && (
               <Pressable
-                style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  { opacity: pressed ? 0.5 : 1 }
+                ]}
                 onPress={() => setShowEqualizer(true)}
               >
                 <View style={{ transform: [{ rotate: '90deg' }] }}>
@@ -273,15 +304,19 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
                 </View>
               </Pressable>
             )}
-            {Platform.OS === 'ios' && (
+            {supportsOutputSwitcher() && (
               <Pressable
-                style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={openIosOutputPicker}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  { opacity: pressed ? 0.5 : 1 }
+                ]}
+                onPress={openOutputPicker}
+                accessibilityLabel={`Output: ${output?.name ?? 'unknown'}`}
               >
                 <Icon
                   name="headphones"
                   size={20}
-                  color={iosOutput?.external ? '#007AFF' : 'white'}
+                  color={output?.external ? '#007AFF' : 'white'}
                   iconStyle="solid"
                 />
               </Pressable>
@@ -315,7 +350,7 @@ function Scrubber({
 }) {
   const barWidth = useRef(0)
   const barX = useRef(0)
-  const viewRef = useRef<View>(null)
+  const viewRef = useRef<ViewInstance>(null)
   const durationRef = useRef(duration)
   const onSeekRef = useRef(onSeek)
   durationRef.current = duration
@@ -379,17 +414,11 @@ function Scrubber({
     >
       <View style={styles.scrubberTrack}>
         <View
-          style={[
-            styles.scrubberFill,
-            { width: `${displayValue * 100}%` }
-          ]}
+          style={[styles.scrubberFill, { width: `${displayValue * 100}%` }]}
         />
       </View>
       <View
-        style={[
-          styles.scrubberThumb,
-          { left: `${displayValue * 100}%` }
-        ]}
+        style={[styles.scrubberThumb, { left: `${displayValue * 100}%` }]}
       />
     </View>
   )

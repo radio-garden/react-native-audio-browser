@@ -5,13 +5,16 @@ import type {
   NavigationErrorEvent
 } from '../../features'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
+import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
 const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'network-error': 'Network Error',
   'http-error': 'Server Error',
   'content-not-found': 'Content Not Found',
   'callback-error': 'Error',
-  'unknown-error': 'Error'
+  'unknown-error': 'Error',
+  'empty-content': 'Nothing here',
+  'timeout': "Couldn't load"
 }
 
 /**
@@ -89,7 +92,8 @@ export class NavigationErrorManager {
         const customFormatted = this.formatCallback({
           error: navError,
           defaultFormatted,
-          path
+          path,
+          kind: BrowserPathHelper.navigationErrorKind(path)
         })
         this._formattedNavigationError = customFormatted || defaultFormatted
       } catch (error) {

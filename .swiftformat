@@ -1,3 +1,6 @@
 --disable redundantSelf
 --swiftversion 6.2
 --indent 2
+# Keep hand-written digit grouping: the default (3,6) strips the underscores
+# from 5-digit literals, turning 12_000 back into 12000.
+--decimalgrouping ignore

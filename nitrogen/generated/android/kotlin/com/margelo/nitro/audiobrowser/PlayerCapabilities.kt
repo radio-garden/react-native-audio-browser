@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -55,6 +56,40 @@ data class PlayerCapabilities(
   val playbackRate: Boolean?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is PlayerCapabilities) return false
+    return Objects.deepEquals(this.play, other.play)
+      && Objects.deepEquals(this.pause, other.pause)
+      && Objects.deepEquals(this.stop, other.stop)
+      && Objects.deepEquals(this.seekTo, other.seekTo)
+      && Objects.deepEquals(this.skipToNext, other.skipToNext)
+      && Objects.deepEquals(this.skipToPrevious, other.skipToPrevious)
+      && Objects.deepEquals(this.jumpForward, other.jumpForward)
+      && Objects.deepEquals(this.jumpBackward, other.jumpBackward)
+      && Objects.deepEquals(this.favorite, other.favorite)
+      && Objects.deepEquals(this.shuffleMode, other.shuffleMode)
+      && Objects.deepEquals(this.repeatMode, other.repeatMode)
+      && Objects.deepEquals(this.playbackRate, other.playbackRate)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      play,
+      pause,
+      stop,
+      seekTo,
+      skipToNext,
+      skipToPrevious,
+      jumpForward,
+      jumpBackward,
+      favorite,
+      shuffleMode,
+      repeatMode,
+      playbackRate
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

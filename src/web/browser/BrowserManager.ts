@@ -1,13 +1,27 @@
 import type { NavigationErrorType } from '../../features'
-import type { Track, ResolvedTrack } from '../../types'
+import type {
+  Track,
+  ResolvedTrack,
+  Section,
+  TransformableRequestConfig
+} from '../../types'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { assertBrowsePageShape } from './assertBrowsePageShape'
+import { parseSearchResponse } from './parseSearchResponse'
+import {
+  flattenSections,
+  flattenedChildren,
+  normalizePage,
+  sectionContaining
+} from './sections'
 
 /**
  * Manages browser navigation, route resolution, and content loading.
@@ -20,6 +34,19 @@ export class BrowserManager {
   private _content: ResolvedTrack | undefined
   private _configuration: NativeBrowserConfiguration = {}
   private router = new SimpleRouter()
+
+  // Layer resolution: any present request/browse resolver is invoked once per
+  // content generation, and the resolved TransformableRequestConfig is cached
+  // and fed into applyLayers in place of the static request/browse config. The
+  // generation bumps on config-set and on invalidateAllContent().
+  private _layerGeneration = 0
+  private _resolvedLayerGeneration = -1
+  private _resolvedRequest?: TransformableRequestConfig
+  private _resolvedBrowse?: TransformableRequestConfig
+  // Dedupes concurrent resolution within a generation (config-set triggers an
+  // initial navigate that can overlap with an explicit navigatePath), so a
+  // resolver is invoked exactly once per generation even under concurrency.
+  private _layerResolution?: { generation: number; promise: Promise<void> }
 
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
@@ -132,25 +159,20 @@ export class BrowserManager {
    */
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
+    this._layerGeneration += 1
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
-
-    // Update HTTP client base config
-    if (value.request) {
-      this.httpClient.setBaseRequestConfig(value.request)
-    }
 
     // Determine initial path
     let initialPath = value.path
 
-    // If no path specified, try to get first tab URL
+    // If no path specified, try to get first tab path
     if (!initialPath) {
       const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
-      if (tabsRoute?.browseStatic?.children?.[0]?.url) {
-        initialPath = tabsRoute.browseStatic.children[0].url
-      } else {
-        initialPath = '/'
-      }
+      const staticTabs = tabsRoute?.browseStatic
+        ? flattenedChildren(tabsRoute.browseStatic)
+        : []
+      initialPath = staticTabs[0]?.path ?? '/'
     }
 
     if (initialPath) {
@@ -167,16 +189,16 @@ export class BrowserManager {
   }
 
   /**
-   * Navigates to a track's URL.
+   * Navigates to a track's path.
    */
   async navigateTrack(track: Track): Promise<void> {
     this.navigationErrorManager.clearNavigationError()
-    const url = track.url
-    if (!url) {
-      console.warn('Track has no URL to navigate to')
+    const path = track.path
+    if (!path) {
+      console.warn('Track has no path to navigate to')
       return
     }
-    await this.navigate(url)
+    await this.navigate(path)
   }
 
   /**
@@ -186,6 +208,18 @@ export class BrowserManager {
   notifyContentChanged(path: string): void {
     if (this._path === path) {
       void this.navigate(path)
+    }
+  }
+
+  /**
+   * Invalidates all browse content. Web shows a single path at a time and
+   * doesn't keep a content cache, so this just re-navigates the current path
+   * to re-resolve it.
+   */
+  invalidateAllContent(): void {
+    this._layerGeneration += 1
+    if (this._path) {
+      void this.navigate(this._path)
     }
   }
 
@@ -220,23 +254,15 @@ export class BrowserManager {
         return
       }
 
-      // Add contextual URLs to non-search content (matches Android behavior where
-      // search() bypasses the resolve() contextual URL logic).
-      // Shallow copy to avoid mutating the original config object (e.g., browseStatic
-      // from routes), which would break search that reads from the same source.
-      if (content?.children && !isSearchPath) {
+      // Resolution returns canonical sectioned pages; add contextual paths
+      // to non-search content (matches Android behavior where search()
+      // bypasses the resolve() contextual-path logic). Copies avoid mutating
+      // the original config object (e.g., browseStatic from routes), which
+      // would break search that reads from the same source.
+      if (content?.sections && !isSearchPath) {
         content = {
           ...content,
-          children: content.children.map((track) => {
-            // If track has src, always add/update contextual URL with current path context
-            // This matches Android's BrowserManager.kt:436-441
-            if (track.src) {
-              const contextualUrl = `${path}?__trackId=${encodeURIComponent(track.src)}`
-              return { ...track, url: contextualUrl }
-            }
-            // Return a shallow copy in attempt to avoid mutating original config objects
-            return { ...track }
-          })
+          sections: this.addContextualPaths(path, content.sections)
         }
       }
 
@@ -288,12 +314,42 @@ export class BrowserManager {
   }
 
   /**
+   * Stamps contextual paths onto a page's sections. A playable track gets a
+   * contextual path carrying its identity (id ?? src) so the queue can be
+   * re-expanded from it later, plus its flat page position (children
+   * concatenated in section order — ADR 0009/0010) as a duplicate-identity
+   * tie-breaker. Non-playable tracks are shallow-copied to avoid mutating
+   * original config objects (e.g., browseStatic from routes).
+   */
+  private addContextualPaths(path: string, sections: Section[]): Section[] {
+    let index = 0
+    return sections.map((section) => ({
+      ...section,
+      children: section.children.map((track) => {
+        const flatIndex = index++
+        const identity = getTrackIdentity(track)
+        if (track.src && identity) {
+          return {
+            ...track,
+            path: BrowserPathHelper.build(path, identity, flatIndex)
+          }
+        }
+        return { ...track }
+      })
+    }))
+  }
+
+  /**
    * Resolves search content from a search path.
-   * Returns a ResolvedTrack with raw children (no contextual URLs).
+   * Returns a canonical sectioned page — one untitled section of raw search
+   * results (no contextual URLs), like the native `makeSearchResult`.
    * Matches Android's BrowserManager.search() which bypasses resolve() entirely.
    *
+   * A failed search propagates, so `navigate` turns it into a navigation error
+   * the way it does a failed browse resolve.
+   *
    * @param searchPath The search path (format: /__search?q=query)
-   * @returns ResolvedTrack containing search results as children
+   * @returns ResolvedTrack containing search results as one untitled section
    */
   private async resolveSearchContent(
     searchPath: string
@@ -319,34 +375,24 @@ export class BrowserManager {
 
     // Handle callback-based search
     if (searchRoute.searchCallback) {
-      searchResults = await searchRoute.searchCallback({ query })
+      searchResults = await searchRoute.searchCallback({
+        query,
+        reference: 'unknown'
+      })
     }
-    // Handle request config-based search
+    // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {
-      const searchQueryParams: Record<string, string> = { q: query }
-      const requestConfig = this.httpClient.mergeRequestConfig(
-        searchRoute.searchConfig,
-        {
-          query: searchQueryParams
-        }
-      )
-
-      try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        searchResults = Array.isArray(response) ? (response as Track[]) : []
-      } catch (error) {
-        console.error('Search failed:', error)
-        return undefined
-      }
+      searchResults = await this.fetchSearchResults(searchRoute.searchConfig, {
+        q: query
+      })
     }
 
-    // Create ResolvedTrack with raw children
-    // Search callbacks should return fresh tracks without contextual URLs (like Android)
-    return {
-      url: searchPath,
+    // Search callbacks should return fresh tracks without contextual paths (like Android)
+    return normalizePage({
+      path: searchPath,
       title: `Search: ${query}`,
       children: searchResults
-    }
+    })
   }
 
   /**
@@ -357,46 +403,60 @@ export class BrowserManager {
   private async transformArtworkForContent(
     content: ResolvedTrack
   ): Promise<ResolvedTrack> {
+    // No short-circuit on a missing artwork config: Android gates per *track*
+    // (`artworkConfig == null && track.artwork == null`), so a track carrying a
+    // plain `artwork` URL still gets an `artworkSource`. Returning early here
+    // meant an app with no `artwork` block never populated the field at all —
+    // `resolveArtworkSourceAsync` already handles the no-config case the way
+    // `resolveArtworkUrl` does on Android.
     const artworkConfig = this._configuration.artwork
-    if (!artworkConfig) {
-      return content
-    }
+    // The shared request layer applies to artwork too — use the resolved layer
+    // (resolver result or static config) so a resolver-only config still works.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
 
     // Transform parent artwork
     const parentArtworkSource =
       await RequestConfigBuilder.resolveArtworkSourceAsync(
         content,
+        requestConfig,
         artworkConfig
       )
 
-    // Transform children artwork
-    let transformedChildren: Track[] | undefined
-    if (content.children) {
-      transformedChildren = await Promise.all(
-        content.children.map(async (track) => {
-          const artworkSource =
-            await RequestConfigBuilder.resolveArtworkSourceAsync(
-              track,
-              artworkConfig
-            )
-          if (artworkSource && !track.artworkSource) {
-            return { ...track, artworkSource }
-          }
-          return track
-        })
+    // Transform children artwork, section by section
+    const transformTrack = async (track: Track): Promise<Track> => {
+      const artworkSource =
+        await RequestConfigBuilder.resolveArtworkSourceAsync(
+          track,
+          requestConfig,
+          artworkConfig
+        )
+      if (artworkSource && !track.artworkSource) {
+        return { ...track, artworkSource }
+      }
+      return track
+    }
+    let transformedSections: Section[] | undefined
+    if (content.sections) {
+      transformedSections = await Promise.all(
+        content.sections.map(async (section) => ({
+          ...section,
+          children: await Promise.all(section.children.map(transformTrack))
+        }))
       )
     }
 
     return {
       ...content,
       artworkSource: parentArtworkSource ?? content.artworkSource,
-      children: transformedChildren ?? content.children
+      sections: transformedSections ?? content.sections
     }
   }
 
   /**
    * Resolves content from a route using browseCallback, browseStatic, or browseConfig.
-   * Single source of truth for route resolution logic.
+   * Single source of truth for route resolution logic. Returns canonical
+   * sectioned pages (normalizePage) — consumers never see authored `children`.
    *
    * @param route The route configuration to resolve
    * @param path The path being navigated to
@@ -438,23 +498,27 @@ export class BrowserManager {
         )
         return undefined
       }
-      return result
+      return normalizePage(result)
     }
 
-    // Handle static ResolvedTrack route
+    // Handle static ResolvedTrack route (normalizePage also copies, so the
+    // config object itself is never handed out)
     if (route.browseStatic) {
-      return route.browseStatic
+      return normalizePage(route.browseStatic)
     }
 
-    // Handle request config-based route
+    // Handle request config-based route via the layered request → browse → route
+    // chain (matches native's resolveRouteEntry → resolveFromConfig).
     if (route.browseConfig) {
-      const requestConfig = this.httpClient.mergeRequestConfig(
-        route.browseConfig,
-        { path }
-      )
       try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        return response as ResolvedTrack
+        return normalizePage(
+          await this.resolveFromConfig(
+            this._configuration.browse,
+            route.browseConfig,
+            path,
+            routeParams
+          )
+        )
       } catch (error: unknown) {
         console.error(`Failed to resolve ${errorContext}:`, error)
         this.handleNavigationError(error, path)
@@ -466,56 +530,198 @@ export class BrowserManager {
   }
 
   /**
+   * Ensures the request layer is resolved for the current generation and
+   * returns it — the resolver's result when a `requestResolver` is configured,
+   * else the static `request`.
+   *
+   * Consumers outside the browse path (media URL building, artwork) must reach
+   * the request layer through this rather than reading `configuration.request`,
+   * or a resolver-only config silently loses its baseUrl, headers and transform
+   * exactly where a credential is needed. Mirrors Android's
+   * `BrowserManager.resolvedRequestConfig()`, which carries the same warning.
+   */
+  async resolvedRequestConfig(): Promise<
+    TransformableRequestConfig | undefined
+  > {
+    await this.ensureLayersResolved()
+    return this._resolvedRequest
+  }
+
+  /**
+   * Ensures the request/browse layer configs are resolved for the current
+   * generation. Any present resolver is invoked once per generation and the
+   * result cached; a static config (no resolver) passes through unchanged.
+   */
+  private async ensureLayersResolved(): Promise<void> {
+    if (this._resolvedLayerGeneration === this._layerGeneration) return
+    // Reuse an in-flight resolution for the same generation so concurrent
+    // navigations (e.g. config-set's initial navigate overlapping an explicit
+    // navigatePath) don't each invoke the resolver.
+    if (this._layerResolution?.generation === this._layerGeneration) {
+      return this._layerResolution.promise
+    }
+    const generation = this._layerGeneration
+    const promise = (async () => {
+      const cfg = this._configuration
+      const resolvedRequest = cfg.requestResolver
+        ? await cfg.requestResolver()
+        : cfg.request
+      const resolvedBrowse = cfg.browseResolver
+        ? await cfg.browseResolver()
+        : cfg.browse
+      // Only commit if no newer generation superseded us mid-resolution.
+      if (this._layerGeneration === generation) {
+        this._resolvedRequest = resolvedRequest
+        this._resolvedBrowse = resolvedBrowse
+        this._resolvedLayerGeneration = generation
+      }
+    })().catch((err) => {
+      // A failed resolution must not wedge the generation — clear the in-flight
+      // cache so the next navigation retries (e.g. a transient async resolver error).
+      if (this._layerResolution?.generation === generation) {
+        this._layerResolution = undefined
+      }
+      throw err
+    })
+    this._layerResolution = { generation, promise }
+    return promise
+  }
+
+  /**
+   * Resolves content from the layered request config chain:
+   * `request` (shared) → `kindConfig` (browse/search) → `routeConfig` (route).
+   * Each layer's transform receives the previous layer's output; a layer with no
+   * transform merges its static fields. `routeConfig` is undefined for the
+   * implicit browse default; `kindConfig` is undefined for search.
+   *
+   * Mirrors native's BrowserManager.resolveFromConfig.
+   */
+  private async resolveFromConfig(
+    kindConfig: TransformableRequestConfig | undefined,
+    routeConfig: TransformableRequestConfig | undefined,
+    path: string,
+    params: Record<string, string>
+  ): Promise<ResolvedTrack> {
+    await this.ensureLayersResolved()
+    const merged = await RequestConfigBuilder.applyLayers(
+      { path },
+      [
+        this._resolvedRequest,
+        // fall back to the route's kind config when no browse layer is configured
+        this._resolvedBrowse ?? kindConfig,
+        routeConfig
+      ],
+      params
+    )
+    const response = await this.httpClient.executeRequest(merged)
+    return assertBrowsePageShape(response, path)
+  }
+
+  /**
+   * Fetches search results from a `searchConfig` via the layered
+   * `request → search` chain (search is its own kind — no browse layer). The
+   * query params are seeded on the base so they survive both the static merge
+   * and a search `transform`. Shared by `resolveSearchContent` (navigating to a
+   * search path) and `SearchManager` (the voice/`search` API), so the ladder
+   * isn't duplicated. Errors propagate to the caller.
+   */
+  async fetchSearchResults(
+    searchConfig: TransformableRequestConfig,
+    queryParams: Record<string, string>
+  ): Promise<Track[]> {
+    await this.ensureLayersResolved()
+    const merged = await RequestConfigBuilder.applyLayers(
+      { path: searchConfig.path, query: queryParams },
+      [this._resolvedRequest, searchConfig],
+      queryParams
+    )
+    const response = await this.httpClient.executeRequest(merged)
+    return parseSearchResponse(response)
+  }
+
+  /**
    * Resolves content for a specific path using configured routes.
+   * Like the native resolve pipelines, the returned page is canonical
+   * sectioned shape — `children` sugar is normalized away at this seam.
    */
   private async resolveContent(
     path: string
   ): Promise<ResolvedTrack | undefined> {
     const routes = this._configuration.routes
-    if (!routes || routes.length === 0) {
-      return undefined
-    }
 
-    // Convert routes array to record for SimpleRouter
-    const routePatterns: Record<
-      string,
-      {
-        browseCallback?: (typeof routes)[0]['browseCallback']
-        browseConfig?: (typeof routes)[0]['browseConfig']
-        browseStatic?: (typeof routes)[0]['browseStatic']
+    if (routes && routes.length > 0) {
+      // Convert routes array to record for SimpleRouter
+      const routePatterns: Record<
+        string,
+        {
+          browseCallback?: (typeof routes)[0]['browseCallback']
+          browseConfig?: (typeof routes)[0]['browseConfig']
+          browseStatic?: (typeof routes)[0]['browseStatic']
+        }
+      > = {}
+
+      for (const route of routes) {
+        // Skip special routes
+        if (route.path.startsWith('__')) continue
+
+        routePatterns[route.path] = {
+          browseCallback: route.browseCallback,
+          browseConfig: route.browseConfig,
+          browseStatic: route.browseStatic
+        }
       }
-    > = {}
 
-    for (const route of routes) {
-      // Skip special routes
-      if (route.path.startsWith('__')) continue
-
-      routePatterns[route.path] = {
-        browseCallback: route.browseCallback,
-        browseConfig: route.browseConfig,
-        browseStatic: route.browseStatic
+      // Try to match route
+      const match = this.router.findBestMatch(path, routePatterns)
+      if (match) {
+        const [matchedPattern, routeMatch] = match
+        const matchedRoute = routes.find((r) => r.path === matchedPattern)
+        if (matchedRoute) {
+          return this.resolveRouteContent(
+            matchedRoute,
+            path,
+            routeMatch.params,
+            'Route'
+          )
+        }
       }
-    }
 
-    // Try to match route
-    const match = this.router.findBestMatch(path, routePatterns)
-    if (match) {
-      const [matchedPattern, routeMatch] = match
-      const matchedRoute = routes.find((r) => r.path === matchedPattern)
-      if (matchedRoute) {
+      // Fall back to the custom __default__ route ('*') if configured
+      const defaultRoute = routes.find((r) => r.path === '__default__')
+      if (defaultRoute) {
         return this.resolveRouteContent(
-          matchedRoute,
+          defaultRoute,
           path,
-          routeMatch.params,
-          'Route'
+          { path },
+          'Default route'
         )
       }
     }
 
-    // Fall back to __default__ route
-    const defaultRoute = routes.find((r) => r.path === '__default__')
-    if (defaultRoute) {
-      return this.resolveRouteContent(defaultRoute, path, {}, 'Default route')
+    // Implicit default — no matching route, fetch the path via the layered
+    // request → browse chain. Only attempt this when there's something to fetch
+    // (a configured request or browse layer, static or resolver); otherwise
+    // there's no content.
+    if (
+      this._configuration.request ||
+      this._configuration.requestResolver ||
+      this._configuration.browse ||
+      this._configuration.browseResolver
+    ) {
+      try {
+        return normalizePage(
+          await this.resolveFromConfig(
+            this._configuration.browse,
+            undefined,
+            path,
+            { path }
+          )
+        )
+      } catch (error: unknown) {
+        console.error('Failed to resolve default browse content:', error)
+        this.handleNavigationError(error, path)
+        return undefined
+      }
     }
 
     return undefined
@@ -533,12 +739,30 @@ export class BrowserManager {
     }
 
     const result = await this.resolveRouteContent(tabsRoute, '/', {}, 'Tabs')
-    const tabs = result?.children ?? []
+    // Tabs are a flat list, not a page — a sectioned tabs source flattens.
+    const tabs = result ? flattenSections(result.sections) : []
 
-    // Transform artwork URLs on tabs
-    return RequestConfigBuilder.transformTracksArtwork(
-      tabs,
-      this._configuration.artwork
+    // Transform artwork URLs on tabs via the async resolver so the shared
+    // request layer (incl. its transform) applies, matching content/search.
+    // Gated per track inside the resolver, as on Android — see
+    // `transformArtworkForContent`.
+    const artworkConfig = this._configuration.artwork
+    // Resolved request layer (resolver or static), matching content/search.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
+    return Promise.all(
+      tabs.map(async (track) => {
+        const artworkSource =
+          await RequestConfigBuilder.resolveArtworkSourceAsync(
+            track,
+            requestConfig,
+            artworkConfig
+          )
+        if (artworkSource && !track.artworkSource) {
+          return { ...track, artworkSource }
+        }
+        return track
+      })
     )
   }
 
@@ -555,44 +779,79 @@ export class BrowserManager {
   /**
    * Expands a queue from a contextual URL.
    * Resolves the parent container to get all siblings.
-   * Matches Android's BrowserManager.expandQueueFromContextualUrl() behavior.
+   * Matches Android's BrowserManager.expandQueueFromContextualPath() behavior.
    *
-   * @param contextualUrl The contextual URL (format: /path?__trackId=trackSrc)
+   * @param contextualPath The contextual path (format: /path?__trackId=trackSrc)
    * @returns Object with tracks and selectedIndex, or undefined if expansion fails
    */
-  async expandQueueFromContextualUrl(
-    contextualUrl: string
+  async expandQueueFromContextualPath(
+    contextualPath: string
   ): Promise<{ tracks: Track[]; selectedIndex: number } | undefined> {
-    const trackId = BrowserPathHelper.extractTrackId(contextualUrl)
+    const trackId = BrowserPathHelper.extractTrackId(contextualPath)
     if (!trackId) return undefined
 
     try {
       // Resolve the parent container to get all siblings
-      const parentPath = BrowserPathHelper.stripTrackId(contextualUrl)
+      const parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       const parentResolvedTrack = await this.resolveContent(parentPath)
-      const children = parentResolvedTrack?.children
+      const rawSections = parentResolvedTrack?.sections
 
-      if (!children || children.length === 0) {
+      if (!rawSections || rawSections.every((s) => s.children.length === 0)) {
         console.warn('Parent has no children, cannot expand queue')
         return undefined
       }
 
-      // Filter to only playable tracks (tracks with src)
-      const playableTracks = children.filter((track) => track.src != null)
+      // Stamp contextual paths so queued tracks carry their own queue context
+      // (navigate() stamps the displayed page the same way).
+      const sections = this.addContextualPaths(parentPath, rawSections)
 
-      if (playableTracks.length === 0) {
-        console.warn('Parent has no playable tracks, cannot expand queue')
+      // Queue scope is the tapped section, not the whole page (ADR 0006).
+      // The stamped flat index pins which section (and which copy) was
+      // tapped when the same identity appears more than once; a stale index
+      // falls back to the first identity match. An identity that no longer
+      // appears on the page aborts the expansion — the caller falls back to
+      // the single track.
+      const tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
+      const scoped = sectionContaining(sections, trackId, tappedIndex)
+      if (!scoped) {
+        console.warn(
+          `Track with identity='${trackId}' not found on parent page`
+        )
         return undefined
       }
 
-      // Find the index of the selected track in the playable tracks array
-      const selectedIndex = playableTracks.findIndex(
-        (track) => track.src === trackId
-      )
+      // Filter to only playable tracks (tracks with src). A disabled track is
+      // unavailable — queue expansion excludes it, so auto-advance never
+      // meets one (Track.disabled).
+      const isQueueable = (track: Track) =>
+        track.src != null && track.disabled !== true
+      const playableTracks = scoped.tracks.filter(isQueueable)
+
+      if (playableTracks.length === 0) {
+        console.warn('Section has no playable tracks, cannot expand queue')
+        return undefined
+      }
+
+      // Selected position: the pinned copy when the stamp survived, else
+      // the first identity match.
+      let selectedIndex = -1
+      if (scoped.tappedOffset !== undefined) {
+        const tapped = scoped.tracks[scoped.tappedOffset]
+        if (tapped != null && isQueueable(tapped)) {
+          selectedIndex =
+            scoped.tracks.slice(0, scoped.tappedOffset + 1).filter(isQueueable)
+              .length - 1
+        }
+      }
+      if (selectedIndex < 0) {
+        selectedIndex = playableTracks.findIndex(
+          (track) => getTrackIdentity(track) === trackId
+        )
+      }
 
       if (selectedIndex < 0) {
         console.warn(
-          `Track with src='${trackId}' not found in playable children`
+          `Track with identity='${trackId}' not found in playable children`
         )
         return undefined
       }
@@ -607,7 +866,7 @@ export class BrowserManager {
       return { tracks: playableTracks, selectedIndex }
     } catch (error) {
       console.error(
-        `Error expanding queue from contextual URL: ${contextualUrl}`,
+        `Error expanding queue from contextual path: ${contextualPath}`,
         error
       )
       return undefined
@@ -631,23 +890,31 @@ export class BrowserManager {
     startPositionMs: number,
     searchQuery?: string
   ): Promise<{ tracks: Track[]; startIndex: number; startPositionMs: number }> {
-    // Single track: check for search context or contextual URL
+    // Single track: check for search context or contextual path
     if (tracks.length === 1) {
       const track = assertedNotNullish(tracks[0])
-      const trackUrl = track.url
+      const trackPath = track.path
 
       // If search query present, expand search results
       if (searchQuery) {
-        // Execute search (will hit cache if already performed)
+        // Execute search (will hit cache if already performed). Disabled
+        // tracks never play, so they never enter a search-built queue
+        // (Track.disabled — mirrors both native platforms).
         const searchResults = await this.resolveSearchContent(
           BrowserPathHelper.createSearchPath(searchQuery)
         )
-        const searchTracks = searchResults?.children
+        const searchTracks = flattenSections(searchResults?.sections).filter(
+          (t) => t.disabled !== true
+        )
 
-        if (searchTracks && searchTracks.length > 0) {
-          // Find the selected track in search results
+        if (searchTracks.length > 0) {
+          // Find the selected track in search results by path or identity
+          // (matches Android's three-way mediaId match)
+          const identity = getTrackIdentity(track)
           const selectedIdx = searchTracks.findIndex(
-            (t) => t.url === trackUrl || t.src === track.src
+            (t) =>
+              t.path === trackPath ||
+              (identity !== undefined && getTrackIdentity(t) === identity)
           )
 
           if (selectedIdx >= 0) {
@@ -660,14 +927,14 @@ export class BrowserManager {
         }
       }
 
-      // Check if contextual URL - expand from parent
+      // Check if contextual path - expand from parent
       // Note: The queueSourcePath optimization is handled by the caller (NativeAudioBrowser.navigateTrackAsync)
       // which has access to the existing queue and can skip to the track directly.
       // This matches Android where MediaSessionCallback handles the optimization before calling
       // BrowserManager.resolveMediaItemsForPlayback.
-      if (trackUrl && BrowserPathHelper.isContextual(trackUrl)) {
-        const parentPath = BrowserPathHelper.stripTrackId(trackUrl)
-        const expanded = await this.expandQueueFromContextualUrl(trackUrl)
+      if (trackPath && BrowserPathHelper.isContextual(trackPath)) {
+        const parentPath = BrowserPathHelper.stripTrackId(trackPath)
+        const expanded = await this.expandQueueFromContextualPath(trackPath)
 
         if (expanded) {
           // Store source path for optimization by caller on next invocation
@@ -686,13 +953,13 @@ export class BrowserManager {
   }
 
   /**
-   * Gets the default navigation path (first tab URL or '/').
+   * Gets the default navigation path (first tab path or '/').
    */
   private getDefaultPath(): string {
     // Try to get first tab as default path
     if (this._tabs && this._tabs.length > 0) {
       const firstTab = this._tabs[0]
-      return firstTab?.url ?? '/'
+      return firstTab?.path ?? '/'
     }
     return '/'
   }

@@ -24,6 +24,16 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>INIntentsSupported</key>
+	<array>
+		<string>INPlayMediaIntent</string>
+		<string>INUpdateMediaAffinityIntent</string>
+		<string>INAddMediaIntent</string>
+	</array>
+	<key>INSupportedMediaCategories</key>
+	<array>
+		<string>INMediaCategoryMusic</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -31,8 +41,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app plays audio content.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSSiriUsageDescription</key>
+	<string>Siri is used for voice-controlled media playback via CarPlay.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -85,17 +99,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSSiriUsageDescription</key>
-	<string>Siri is used for voice-controlled media playback via CarPlay.</string>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>This app plays audio content.</string>
-	<key>INSupportedMediaCategories</key>
-	<array>
-		<string>INMediaCategoryMusic</string>
-	</array>
-	<key>INIntentsSupported</key>
-	<array>
-		<string>INPlayMediaIntent</string>
-	</array>
 </dict>
 </plist>

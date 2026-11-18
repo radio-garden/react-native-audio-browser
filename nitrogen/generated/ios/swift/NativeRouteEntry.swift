@@ -18,12 +18,12 @@ public extension NativeRouteEntry {
   /**
    * Create a new instance of `NativeRouteEntry`.
    */
-  init(path: String, browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((_ params: SearchParams) -> Promise<Promise<[Track]>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?) {
-    self.init(std.string(path), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______ in
+  init(path: String, browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((_ params: SearchParams) -> Promise<Promise<[Track]>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?) {
+    self.init(std.string(path), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______ in
       if let __unwrappedValue = browseCallback {
-        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam in
-          let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(__unwrappedValue)
-          return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______({ () -> bridge.Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -76,31 +76,31 @@ public extension NativeRouteEntry {
   }
   
   @inline(__always)
-  var browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)? {
-    return { () -> ((_ param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)? in
-      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(self.__browseCallback) {
-        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(self.__browseCallback)
-        return { () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>> in
-          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(__unwrapped)
-          return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>> in
+  var browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>)? {
+    return { () -> ((_ param: BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______(self.__browseCallback) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______(self.__browseCallback)
+        return { () -> (BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam(__unwrapped)
+          return { (__param: BrowserSourceCallbackParam) -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_> in
             let __result = __wrappedFunction.call(__param)
-            return { () -> Promise<Promise<BrowseResult>> in
-              let __promise = Promise<Promise<BrowseResult>>()
-              let __resolver = { (__result: Promise<BrowseResult>) in
+            return { () -> Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_> in
+              let __promise = Promise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>()
+              let __resolver = { (__result: Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_) in
                 __promise.resolve(withResult: __result)
               }
               let __rejecter = { (__error: Error) in
                 __promise.reject(withError: __error)
               }
-              let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ in
-                let __closureWrapper = Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(__resolver)
-                return bridge.create_Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(__closureWrapper.toUnsafe())
+              let __resolverCpp = { () -> bridge.Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ in
+                let __closureWrapper = Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(__resolver)
+                return bridge.create_Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(__closureWrapper.toUnsafe())
               }()
               let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
                 let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
                 return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
               }()
-              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____(__result)
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______(__result)
               __promiseHolder.addOnResolvedListener(__resolverCpp)
               __promiseHolder.addOnRejectedListener(__rejecterCpp)
               return __promise

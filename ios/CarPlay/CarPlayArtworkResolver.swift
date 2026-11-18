@@ -1,107 +1,56 @@
 import Foundation
 
-/// Represents a resolved artwork image URL with optional headers.
 struct ArtworkResolvedImage: Equatable, Sendable {
   let uri: String
   let headers: [String: String]?
 }
 
-/// Describes what action to take for loading artwork.
-/// Produced by `CarPlayArtworkResolver`, consumed by `CarPlayImageLoader`.
 enum ArtworkLoadAction: Equatable, Sendable {
-  /// Render an SF Symbol from the artwork string at the given canvas size
+  /// `width` and `height` are the canvas size in points.
   case sfSymbol(artwork: String, width: Double, height: Double)
-  /// Fetch an image from a URL, optionally with headers, tinting, and SVG processing
   case fetch(uri: String, headers: [String: String]?, shouldTint: Bool, isSvg: Bool)
-  /// No artwork available
   case none
 }
 
-/// Determines artwork loading strategy without UIKit dependencies.
-///
-/// Encapsulates the decision tree for how to load artwork:
-/// 1. SF Symbol artwork → render directly
-/// 2. URL resolver available → resolve, then fetch from resolved URL
-/// 3. Fallback → fetch directly from artwork/artworkSource URL
 enum CarPlayArtworkResolver {
-  /// Resolves the artwork loading strategy for a track.
-  ///
-  /// - Parameters:
-  ///   - artwork: The track's `artwork` field (may be an SF Symbol string or URL)
-  ///   - artworkSourceUri: The track's `artworkSource?.uri` field
-  ///   - artworkCarPlayTinted: Whether to apply light/dark tinting
-  ///   - targetWidth: Target width in points
-  ///   - targetHeight: Target height in points
-  ///   - displayScale: The CarPlay display scale factor
-  ///   - urlResolver: Optional closure that resolves artwork URLs (wraps BrowserManager)
-  static func resolve(
+  /// False for an `sf:` symbol, which CarPlay renders itself.
+  static func needsResolve(artwork: String?) -> Bool {
+    !isSFSymbol(artwork)
+  }
+
+  /// An `sf:` symbol renders locally. Otherwise the resolved URL is fetched; if it is missing or does not
+  /// parse, `artwork` is used, or `artworkSource` with its headers when `artwork` is nil. A direct URI
+  /// that does not parse yields `.none`. `stencil` tints the fetched image to the appearance.
+  static func action(
     artwork: String?,
-    artworkSourceUri: String?,
-    artworkCarPlayTinted: Bool?,
-    targetWidth: Double,
-    targetHeight: Double,
-    displayScale: Double,
-    urlResolver: ((Double, Double) async -> ArtworkResolvedImage?)?
-  ) async -> ArtworkLoadAction {
-    // 1. Primary SF symbol check
-    if let artwork, artwork.hasPrefix("sf:") {
-      return .sfSymbol(artwork: artwork, width: targetWidth, height: targetHeight)
+    artworkSource: ArtworkResolvedImage?,
+    resolved: ArtworkResolvedImage?,
+    stencil: Bool,
+    width: Double,
+    height: Double,
+  ) -> ArtworkLoadAction {
+    if isSFSymbol(artwork), let artwork {
+      return .sfSymbol(artwork: artwork, width: width, height: height)
     }
-
-    // 2. Try URL resolution via resolver
-    if let urlResolver {
-      let pixelWidth = targetWidth * displayScale
-      let pixelHeight = targetHeight * displayScale
-      if let resolved = await urlResolver(pixelWidth, pixelHeight) {
-        guard let resolvedUrl = URL(string: resolved.uri) else {
-          return resolveDirectFallback(
-            artwork: artwork,
-            artworkSourceUri: artworkSourceUri,
-            artworkCarPlayTinted: artworkCarPlayTinted,
-            targetWidth: targetWidth,
-            targetHeight: targetHeight
-          )
-        }
-        let isSvg = resolvedUrl.pathExtension.lowercased() == "svg"
-        return .fetch(
-          uri: resolved.uri,
-          headers: resolved.headers,
-          shouldTint: artworkCarPlayTinted ?? false,
-          isSvg: isSvg
-        )
-      }
+    if let resolved, let action = fetch(resolved, stencil: stencil) {
+      return action
     }
+    let direct = artwork.map { ArtworkResolvedImage(uri: $0, headers: nil) } ?? artworkSource
+    guard let direct else { return .none }
+    if isSFSymbol(direct.uri) {
+      return .sfSymbol(artwork: direct.uri, width: width, height: height)
+    }
+    return fetch(direct, stencil: stencil) ?? .none
+  }
 
-    // 3. Direct fallback
-    return resolveDirectFallback(
-      artwork: artwork,
-      artworkSourceUri: artworkSourceUri,
-      artworkCarPlayTinted: artworkCarPlayTinted,
-      targetWidth: targetWidth,
-      targetHeight: targetHeight
+  private static func fetch(_ image: ArtworkResolvedImage, stencil: Bool) -> ArtworkLoadAction? {
+    guard let url = URL(string: image.uri) else { return nil }
+    return .fetch(
+      uri: image.uri, headers: image.headers, shouldTint: stencil, isSvg: url.pathExtension.lowercased() == "svg",
     )
   }
 
-  private static func resolveDirectFallback(
-    artwork: String?,
-    artworkSourceUri: String?,
-    artworkCarPlayTinted: Bool?,
-    targetWidth: Double,
-    targetHeight: Double
-  ) -> ArtworkLoadAction {
-    guard let directUri = artwork ?? artworkSourceUri else { return .none }
-
-    if directUri.hasPrefix("sf:") {
-      return .sfSymbol(artwork: directUri, width: targetWidth, height: targetHeight)
-    }
-
-    guard let directUrl = URL(string: directUri) else { return .none }
-    let isSvg = directUrl.pathExtension.lowercased() == "svg"
-    return .fetch(
-      uri: directUri,
-      headers: nil,
-      shouldTint: artworkCarPlayTinted ?? false,
-      isSvg: isSvg
-    )
+  private static func isSFSymbol(_ artwork: String?) -> Bool {
+    artwork?.hasPrefix("sf:") == true
   }
 }

@@ -1,0 +1,300 @@
+---
+description: 'Set Track.artwork once and render it everywhere: the fetch and transform pipeline, per-surface sizing, SF Symbols, tinting, light/dark pairs, Android vector icons, and SVG.'
+---
+
+# Artwork
+
+**Artwork** is the image shown for a track — the thumbnail in a browse list, the cover on the lock screen, the icon on a CarPlay row.
+
+You set one field, `artwork`, on a [`Track`](/guide/track); the library resolves and transforms it per surface and per requested size, and hands the ready-to-render result back on `artworkSource`.
+
+This guide covers the mental model (the two configs and the output field), **which artwork renders where**, and the **transform pipeline** that turns your URL into a sized request. It then covers the platform-specific bits: SF Symbols on iOS, tinting, light/dark artwork, Android vector icons, and SVG.
+
+## Mental model
+
+Three names do all the work:
+
+| Name                                   | What it is                                                                                                                     | You                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `Track.artwork`                        | The image **you set** — an `https` URL, an `sf:` symbol (iOS), a platform URI, or a `{ light, dark }` pair.                    | set it                                                |
+| `artwork` / `nowPlayingArtwork` config | How the library **fetches** that image (base URL, headers, signing, sizing).                                                   | configure once (override per route / for now-playing) |
+| `Track.artworkSource`                  | The resolved, ready-to-render [`ImageSource`](/api/types/browser-nodes/#imagesource) (URL + headers) the library **produces**. | read it                                               |
+
+`artwork` is the only field you set per track. `artworkSource` is **output-only** — the library populates it; never set it yourself.
+
+```tsx
+import { useActiveTrack } from 'react-native-audio-browser'
+import { Image } from 'react-native'
+
+function Cover() {
+  const track = useActiveTrack()
+  // artworkSource is the transformed result, shaped for <Image>
+  return <Image source={track?.artworkSource} />
+}
+```
+
+## Which artwork renders where
+
+The library publishes art to several surfaces; each gets its image from a field/config and (where the surface knows its display size) a size hint:
+
+| Surface                                       | Image from                                    | Size hint | Tinting                                                                        |
+| --------------------------------------------- | --------------------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| **CarPlay browse rows / tabs**                | `artwork` (global config; no per-route)       | yes       | `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair          |
+| **Android Auto browse rows**                  | `artwork` (per-route override allowed)        | no        | — (see [Tinting](#tinting-and-platform-icons))                                 |
+| **In-app `<Image>`**                          | `artworkSource` (output)                      | no        | your UI                                                                        |
+| **iOS lock screen / Control Center**          | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                                              |
+| **CarPlay Now Playing**                       | `nowPlayingArtwork` → `artwork`               | yes       | —                                                                              |
+| **Android notification / Android Auto**       | `nowPlayingArtwork` → `artwork`               | yes       | — (see [Tinting](#tinting-and-platform-icons))                                 |
+| **CarPlay tile sections** (`display: 'grid'`) | `artwork` (each tile is a Track)              | yes       | CarPlay: `style: { artworkRendering: 'stencil' }`, or a `{ light, dark }` pair |
+
+**Size hint** = the surface tells the library the pixels it needs, delivered as an [`ImageContext`](/api/types/browser/#imagecontext) to your `transform` / `imageQueryParams`. Browse-time resolution, which produces `artworkSource` and the Android Auto browse URLs, has none.
+
+Three things to take from the table:
+
+- **One image by default.** With only `artwork` set, the same source feeds browse rows _and_ every now-playing surface. Set `nowPlayingArtwork` only when the now-playing image should differ (a larger, lock-screen-quality cover without bloating list thumbnails).
+- **Size hints exist only where the surface knows its size.** Browse-time resolution (`artworkSource`, Android Auto browse rows) has no size, so `imageQueryParams` and `context` (below) do nothing there; they kick in when CarPlay loads a row, tab or tile, and on now-playing surfaces.
+- **Tinting is for browse icons only.** `artworkRendering: 'stencil'` is applied when CarPlay renders browse content — list rows, tabs, and tiles — not to now-playing cover art.
+
+## The transform pipeline
+
+`artwork` is an [`ArtworkRequestConfig`](/api/types/browser/#artworkrequestconfig). When the library needs a track's image, it builds the request in layers, each overriding the last:
+
+1. **`request`** — shared base config (user agent, common headers).
+2. **`artwork`** — the static image config (`baseUrl`, `headers`, …).
+3. **`resolve(track)` / `resolveSync(track)`** — per-track overrides built from the track's metadata.
+4. **`imageQueryParams`** — appends the surface's requested size (when it reports one).
+5. **`transform({ request, context })` / `transformSync`** — final tweak, with the requested size in `context`.
+
+To build a per-track URL, use `resolve` (the track is the argument). On iOS and Android, an `{id}` token in an artwork config's `path`, `query` or `headers` is replaced with the track's `id`. This applies to `artwork`, a route's `artwork` and `nowPlayingArtwork` alike. The web implementation sends static values verbatim.
+
+A typical CDN setup never needs more than `baseUrl` plus `imageQueryParams`:
+
+```ts
+import { configureBrowser } from 'react-native-audio-browser'
+
+configureBrowser({
+  // ...the rest of your config (tabs, routes, …)
+  artwork: {
+    baseUrl: 'https://images.example.com',
+    // tell the library which query params carry the requested size
+    imageQueryParams: { width: 'w', height: 'h' }
+  }
+})
+```
+
+With [`imageQueryParams`](/api/types/browser/#imagequeryparams) the requested size from CarPlay / Android Auto is appended automatically — `?w=200&h=200` — so each surface gets right-sized art. Omit `height` to send width only. This only fires on surfaces that report a size; `artworkSource` and Android Auto browse rows (no size hint) get the URL without these params.
+
+For anything `imageQueryParams` can't express — per-track paths, signed URLs — use `resolve` and `transform` (or their sync variants):
+
+```ts
+import { configureBrowser } from 'react-native-audio-browser'
+// add: yarn add crypto-js
+import HmacSHA256 from 'crypto-js/hmac-sha256'
+
+// your CDN signing key
+const CDN_KEY = process.env.CDN_KEY ?? ''
+
+// sign the path locally with your key — a pure, sync function
+const signUrl = (path: string) => HmacSHA256(path, CDN_KEY).toString()
+
+configureBrowser({
+  artwork: {
+    baseUrl: 'https://images.example.com',
+    // build the path from the track (sync — no await needed)
+    resolveSync: (track) => ({ path: `/covers/${track.id}.jpg` }),
+    // then sign it + size it. both are sync, so no Promise is
+    // allocated per image
+    transformSync: ({ request, context }) => ({
+      ...request,
+      query: {
+        ...request.query,
+        w: context?.width ? String(context.width) : '600',
+        // path is optional in the type; resolveSync above always sets it
+        sig: signUrl(request.path ?? '')
+      }
+    })
+  }
+})
+```
+
+A `transform` (or `transformSync`) **replaces** the request — it doesn't merge — so spread `...request` (and `...request.query`) or you'll drop the `baseUrl` and other layers. The [`context`](/api/types/browser/#imagecontext) is an `ImageContext` with `width` / `height` in **pixels**, present only when the surface knows its display size (so guard with `context?.width`).
+
+`request.path` starts as the track's `artwork` URL, which a `resolve` or a static `path` can replace; it's undefined only for a track with no artwork and nothing supplying a path, so guard it before signing (as above).
+
+`resolveSync` / `transformSync` are no-Promise variants of `resolve` / `transform`. Reach for them when the per-track config or final tweak needs no `await` — a synced query param, a locally-computed path — to skip a Promise allocation per image (the example above is fully sync for that reason).
+
+If you set _both_ the sync and async form of the **same** stage (e.g. `transform` _and_ `transformSync`), the async one runs first and the sync one tweaks its result; `resolve` and `transform` are independent stages that both always run.
+
+::: tip Per-route artwork
+A route can override the global `artwork` with its own config — `routes: { '/premium': { artwork: { baseUrl: '…' } } }` — so different content can load images from different hosts. On iOS and Android it applies to `artworkSource` and Android Auto browse rows; CarPlay rows, tabs and tiles use the global config, and so does the web implementation. See the [Browser](/guide/browser) guide.
+:::
+
+## SF Symbols (iOS)
+
+Prefix `artwork` with `sf:` to render an Apple [SF Symbol](https://developer.apple.com/sf-symbols/) instead of fetching an image — ideal for tab and category icons.
+
+Optional `bg` (background) and `fg` (symbol color) query params set the colors. On the lock screen and in `artworkSource`, `bg` defaults to transparent and `fg` to black. There the library renders the symbol to a PNG on device and caches it. CarPlay differs (below):
+
+```ts
+{
+  title: 'Favorites',
+  path: '/favorites',
+  artwork: 'sf:heart.fill?bg=#FF0090&fg=#fff'
+}
+```
+
+On CarPlay rows and tiles the library draws the symbol on a grey tile.
+
+With **no `fg`**, it draws black on light grey and white on dark grey, and CarPlay swaps them with the appearance; a `bg` alone is ignored. With an `fg`, the symbol is drawn in that color on `bg`, or on a grey tile when `bg` is omitted.
+
+A tab icon is the exception: the symbol goes to CarPlay as is, `bg` and `fg` are ignored, and CarPlay tints it. This is iOS-only; on Android an `sf:` value is not a valid image.
+
+## Tinting and platform icons
+
+For monochrome **icons** (not full-color album art), let the system tint them to stay legible on either appearance:
+
+- **iOS CarPlay** — declare [`style: { artworkRendering: 'stencil' }`](/api/types/browser-nodes/#trackstyle) on the track. Inside a page it's an inherited style property (a section- or page-wide value covers every item); tabs render without a section context, so a tab icon needs the declaration on the tab track itself.
+
+  CarPlay tints the glyph per appearance: black in light mode, white in dark.
+
+- **Android Auto** is dark-only, so there's no per-appearance tinting — ship an appropriately colored (e.g. white) icon.
+
+  When a layout is declared (`display` on the section, page, or parent item), an `android.resource://…/drawable/…` artwork URI switches Android Auto to the **category** variant of that layout (which adds icon margins and lets Android Auto render it as an icon).
+
+  The library only sets the category style; the visual treatment is Android Auto's — see [Browse display](/guide/android-auto#browse-display).
+
+```ts
+{
+  title: 'Settings',
+  path: '/settings',
+  artwork: 'sf:gear',
+  style: { artworkRendering: 'stencil' }
+}
+```
+
+**SVG** is detected by a `.svg` URL suffix: serve SVGs with a path ending in `.svg` and they decode as vectors rather than raster images.
+
+On iOS that covers CarPlay browse rows, tabs and tiles, but not the lock screen or Control Center. On Android it covers Android Auto browse and the notification / now-playing image. Your own `<Image>` showing `artworkSource` needs its own SVG support.
+
+## Light and dark artwork
+
+Tinting recolors _one_ image. When the two appearances need genuinely **different** images — a logo whose colors change, a mark with a light-on-dark counterpart — set `artwork` to an [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) pair instead of a URL:
+
+```ts
+{
+  title: 'Playlists',
+  path: '/playlists',
+  artwork: {
+    light: 'https://images.example.com/playlists-light.png',
+    dark: 'https://images.example.com/playlists-dark.png'
+  }
+}
+```
+
+Both fields are required — a pair with one side missing has no sensible fallback at render time.
+
+On CarPlay browse rows and tabs the library fetches both and registers them as a single adaptive image, so switching appearance mid-drive swaps the image **in place** — no re-fetch, and no re-query of the browse tree.
+
+Each URL runs through the [transform pipeline](#the-transform-pipeline) independently, so `baseUrl`, headers, `imageQueryParams` and `resolve` / `transform` apply to both.
+
+Everywhere a single image is required, a pair resolves to its `dark` URL:
+
+| Surface                                  | Uses                          |
+| ---------------------------------------- | ----------------------------- |
+| **CarPlay browse rows / tabs**           | both, adapting per appearance |
+| **Android Auto**                         | `dark`                        |
+| **Now-playing** (all platforms)          | `dark`                        |
+| **`artworkSource`** (your own `<Image>`) | `dark`                        |
+
+::: tip Pair or tint?
+Prefer [`artworkRendering: 'stencil'`](#tinting-and-platform-icons) when recoloring the same shape gives the right result: it's one fetch instead of two, the variants can't drift apart, and it works from the image's alpha so the source color is irrelevant. Reach for a pair only when the appearances need different artwork.
+:::
+
+::: warning Android Auto fetches only `http(s)` artwork
+Browse artwork is served to Android Auto through an internal content provider that only fetches `http`/`https` URLs. `android.resource://` and `file://` URIs pass through and render directly; other custom schemes won't load there.
+:::
+
+## Now-playing artwork
+
+By default the now-playing image (lock screen, Control Center, CarPlay / Android Auto Now Playing) is the active track's `artwork` — the same image as its browse-row thumbnail.
+
+To resolve it differently, set `nowPlayingArtwork`, which builds the now-playing image from its **own** request. Like any artwork config, it can use an `{id}` template filled from the active track's `id`:
+
+```ts
+import { configureBrowser } from 'react-native-audio-browser'
+
+configureBrowser({
+  nowPlayingArtwork: {
+    baseUrl: 'https://images.example.com',
+    // {id} is replaced with the active track's id
+    path: '/artwork/{id}',
+    // ask the CDN for a lock-screen-quality variant
+    imageQueryParams: { width: 'w', height: 'h' }
+  }
+})
+```
+
+Now-playing surfaces request a **much larger** image than list thumbnails — on iOS, up to the screen width in pixels — so with `imageQueryParams` set you fetch a fittingly large variant rather than upscaling a tiny thumbnail.
+
+If you _don't_ set `nowPlayingArtwork` at all, now-playing surfaces fall back to the `artwork` config (and to `track.artwork`).
+
+`nowPlayingArtwork` is an `ArtworkRequestConfig` like `artwork`, so it takes the same `resolve` / `transform` / `imageQueryParams`. It is **native-only**. On web, now-playing artwork is the track's own `artwork` URL as set (the `dark` URL of a pair), with neither `artwork` nor `nowPlayingArtwork` applied.
+
+Artwork is also the one now-playing field the text layers can't touch — the formatter / override / flash carry only `title` / `artist` / `album`. See [Now Playing](/guide/now-playing#now-playing-artwork) for the metadata side.
+
+::: warning Now-playing artwork follows the active track
+Now-playing artwork is resolved **once per active track**, keyed on its `id` — so it won't re-resolve while the same track keeps playing.
+
+There is no imperative way to swap _only_ the image mid-stream: `updateNowPlaying()` overrides `title` / `artist` / `album`, not artwork.
+
+Changing it means making a _new_ active track (a different `id` plus the new `artwork`) the current one, which reloads playback — so it's not a fit for, say, updating live-radio cover art on each song. An in-place update API is tracked in [issue #76](https://github.com/radio-garden/react-native-audio-browser/issues/76).
+:::
+
+## Tile sections
+
+A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by declaring `style: { display: 'grid' }` (wrapping; add `gridWrap: false` for a single line of tiles):
+
+```ts
+{
+  path: '/home',
+  title: 'Home',
+  sections: [
+    {
+      title: 'Featured',
+      style: { display: 'grid', gridWrap: false },
+      // header / "view all" target
+      path: '/browse/featured',
+      children: [
+        {
+          title: 'Jazz',
+          path: '/browse/jazz',
+          artwork: 'https://…/jazz.jpg'
+        },
+        {
+          title: 'Rock',
+          path: '/browse/rock',
+          artwork: 'https://…/rock.jpg'
+        }
+      ]
+    }
+  ]
+}
+```
+
+Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art.
+
+See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
+
+## API summary
+
+| Symbol                                                                | Purpose                                                                                         |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`Track.artwork`](/api/types/browser-nodes/#track)                    | The image you set — `https` URL, `sf:` symbol (iOS), platform URI, or a `{ light, dark }` pair. |
+| [`Track.artworkSource`](/api/types/browser-nodes/#track)              | Output-only resolved `ImageSource` for your own `<Image>`.                                      |
+| [`TrackStyle.artworkRendering`](/api/types/browser-nodes/#trackstyle) | `'stencil'` tints a monochrome icon per CarPlay light/dark (iOS only).                          |
+| [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants)        | A `{ light, dark }` pair set on `artwork` when the appearances need different images.           |
+| [`artwork`](/api/types/browser/#artworkrequestconfig)                 | Config for browse-row image requests (and the default everywhere).                              |
+| `nowPlayingArtwork`                                                   | Separate config for now-playing art; native-only.                                               |
+| [`imageQueryParams`](/api/types/browser/#imagequeryparams)            | Map the surface's requested size to your CDN's query params.                                    |
+| [`ImageContext`](/api/types/browser/#imagecontext)                    | Requested `width`/`height` in pixels, passed to `transform`.                                    |
+| [`Section.style`](/api/types/browser-nodes/#sectionstyle)             | `display: 'grid'` (± `gridWrap: false`) renders a section's tracks as artwork tiles.            |

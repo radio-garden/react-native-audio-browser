@@ -1,9 +1,10 @@
 import {
+  getTrackIdentity,
   notifyContentChanged,
   onFavoriteChanged,
   ResolvedTrack,
   setFavorites,
-  Track,
+  Track
 } from 'react-native-audio-browser'
 import { createMMKV } from 'react-native-mmkv'
 
@@ -14,21 +15,25 @@ let favorites: Track[] = []
 const persisted = storage.getString('favorites')
 if (persisted) {
   favorites = JSON.parse(persisted) as Track[]
-  setFavorites(favorites.map((t) => t.src).filter(Boolean) as string[])
+  // setFavorites ids are matched exactly against each track's identity
+  // (id when set, else src).
+  setFavorites(favorites.map(getTrackIdentity).filter(Boolean) as string[])
 }
 
 /** Call after setupPlayer() to start listening for favorite changes. */
 export function setupFavorites() {
   onFavoriteChanged.addListener(({ track, favorited }) => {
+    const identity = getTrackIdentity(track)
+    if (identity === undefined) return
     if (favorited) {
-      if (!favorites.find((t) => t.src === track.src)) {
-        // Strip url/groupTitle - the library regenerates contextual URLs when browsing favorites
+      if (!favorites.find((t) => getTrackIdentity(t) === identity)) {
+        // Strip path - the library regenerates contextual paths when browsing favorites
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { url, groupTitle, ...rest } = track
+        const { path, ...rest } = track
         favorites.push(rest as Track)
       }
     } else {
-      favorites = favorites.filter((t) => t.src !== track.src)
+      favorites = favorites.filter((t) => getTrackIdentity(t) !== identity)
     }
     favorites.sort((a, b) => a.title.localeCompare(b.title))
     storage.set('favorites', JSON.stringify(favorites))
@@ -37,5 +42,5 @@ export function setupFavorites() {
 }
 
 export async function fetchFavorites(): Promise<ResolvedTrack> {
-  return { url: '/favorites', title: 'Favorites', children: favorites }
+  return { path: '/favorites', title: 'Favorites', children: favorites }
 }

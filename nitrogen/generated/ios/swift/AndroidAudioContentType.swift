@@ -19,14 +19,14 @@ public extension AndroidAudioContentType {
     switch string {
       case "music":
         self = .music
-      case "speech":
-        self = .speech
-      case "sonification":
-        self = .sonification
       case "movie":
         self = .movie
       case "unknown":
         self = .unknown
+      case "speech":
+        self = .speech
+      case "sonification":
+        self = .sonification
       default:
         return nil
     }
@@ -39,14 +39,14 @@ public extension AndroidAudioContentType {
     switch self {
       case .music:
         return "music"
-      case .speech:
-        return "speech"
-      case .sonification:
-        return "sonification"
       case .movie:
         return "movie"
       case .unknown:
         return "unknown"
+      case .speech:
+        return "speech"
+      case .sonification:
+        return "sonification"
     }
   }
 }

@@ -1,12 +1,21 @@
 {
   "name": "react-native-audio-browser",
-  "version": "0.2.0",
-  "description": "react-native-audio-browser is a react native package built with Nitro",
+  "version": "1.0.0-next.1",
+  "description": "React Native audio playback with a browsable media tree, CarPlay, Android Auto and lock-screen controls, built on Nitro Modules.",
   "keywords": [
-    "react-native",
-    "react-native-audio-browser"
+    "android",
+    "android-auto",
+    "audio",
+    "audio-library",
+    "audio-player",
+    "carplay",
+    "ios",
+    "media-browser",
+    "media3",
+    "nitro-modules",
+    "react-native"
   ],
-  "homepage": "https://github.com/radio-garden/react-native-audio-browser#readme",
+  "homepage": "https://audiobrowser.dev",
   "bugs": "https://github.com/radio-garden/react-native-audio-browser/issues",
   "license": "MIT",
   "author": "puckey",
@@ -31,6 +40,7 @@
     "ios/**/*.mm",
     "ios/**/*.cpp",
     "ios/**/*.swift",
+    "website/guide",
     "*.podspec",
     "README.md"
   ],
@@ -45,45 +55,61 @@
   },
   "scripts": {
     "android:format": "yarn workspace example-native android:format",
+    "android:format:check": "yarn workspace example-native android:format:check",
+    "android:gradle-stop": "yarn workspace example-native android:gradle-stop",
     "android:ide": "yarn workspace example-native android:ide",
     "android:logs": "react-native log-android",
     "android:test": "yarn workspace example-native android:test",
+    "android:types": "yarn workspace example-native android:types",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
-    "prepare": "bob build",
+    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && node codegen/strip-struct-equality.cjs && yarn build",
+    "prepare": "bob build && echo '{\"type\":\"commonjs\"}' > lib/typescript/package.json && yarn hooks:install",
+    "hooks:install": "git config core.hooksPath .githooks || exit 0",
     "example": "yarn workspace example-native",
-    "ci:format": "oxfmt --check src",
+    "ci:android": "yarn android:format:check && yarn android:types && yarn android:test",
+    "ci:format": "oxfmt --check --ignore-path .gitignore --ignore-path .oxfmtignore .",
+    "ci:format:ios": "scripts/swiftformat.sh --lint ios",
+    "ci:ios": "yarn ci:format:ios && yarn ios:test",
     "ci:lint": "oxlint --type-aware src",
-    "format": "oxfmt --write",
-    "ios:format": "swiftformat ios",
+    "format": "oxfmt --write --ignore-path .gitignore --ignore-path .oxfmtignore .",
+    "ios:format": "scripts/swiftformat.sh ios",
     "ios:ide": "yarn workspace example-native ios:ide",
     "ios:rebuild": "yarn workspace example-native ios:rebuild",
-    "ios:test": "swift test",
+    "ios:test": "swift test --disable-sandbox",
     "lint": "oxlint --fix",
     "release": "semantic-release",
+    "stream-cases": "node scripts/stream-cases/index.ts",
+    "stream-server": "node scripts/stream-server/index.ts",
     "test": "vitest run",
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "vocab-check": "node scripts/vocab-check.ts"
   },
   "devDependencies": {
     "@react-native-community/cli": "15.0.0-alpha.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
-    "@types/react": "19.1.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22",
+    "@types/react": "19.2.3",
+    "@types/react-dom": "^19.2.0",
     "conventional-changelog-conventionalcommits": "^9.3.0",
     "del-cli": "^5.1.0",
-    "nitrogen": "0.35.0",
+    "happy-dom": "^20.11.2",
+    "nitrogen": "0.37.2",
     "oxfmt": "^0.27.0",
     "oxlint": "^1.42.0",
     "oxlint-tsgolint": "^0.11.2",
-    "react": "19.1.1",
-    "react-native": "0.83.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
     "react-native-builder-bob": "^0.37.0",
     "react-native-monorepo-config": "^0.3.1",
-    "react-native-nitro-modules": "0.35.0",
+    "react-native-nitro-modules": "0.37.2",
     "semantic-release": "^25.0.3",
     "shaka-player": "^4.15.4",
-    "typescript": "^5.8.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
@@ -97,17 +123,21 @@
       "optional": true
     }
   },
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.18.0",
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
+    "exclude": [
+      "**/{__tests__,__fixtures__,__mocks__}/**",
+      "**/*.{spec,test}.{js,jsx,ts,tsx}"
+    ],
     "targets": [
       "commonjs",
       "module",
       [
         "typescript",
         {
-          "project": "tsconfig.json"
+          "project": "tsconfig.build.json"
         }
       ]
     ]

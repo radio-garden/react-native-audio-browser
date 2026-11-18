@@ -39,12 +39,13 @@ namespace margelo::nitro::audiobrowser {
    */
   struct RetryConfig final {
   public:
-    double maxRetries     SWIFT_PRIVATE;
+    std::optional<double> maxRetries     SWIFT_PRIVATE;
     std::optional<double> maxRetryDurationMs     SWIFT_PRIVATE;
+    std::optional<double> firstConnectMaxRetryDurationMs     SWIFT_PRIVATE;
 
   public:
     RetryConfig() = default;
-    explicit RetryConfig(double maxRetries, std::optional<double> maxRetryDurationMs): maxRetries(maxRetries), maxRetryDurationMs(maxRetryDurationMs) {}
+    explicit RetryConfig(std::optional<double> maxRetries, std::optional<double> maxRetryDurationMs, std::optional<double> firstConnectMaxRetryDurationMs): maxRetries(maxRetries), maxRetryDurationMs(maxRetryDurationMs), firstConnectMaxRetryDurationMs(firstConnectMaxRetryDurationMs) {}
 
   public:
     friend bool operator==(const RetryConfig& lhs, const RetryConfig& rhs) = default;
@@ -60,14 +61,16 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RetryConfig fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::RetryConfig(
-        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetries"))),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetryDurationMs")))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetries"))),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetryDurationMs"))),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "firstConnectMaxRetryDurationMs")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RetryConfig& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "maxRetries"), JSIConverter<double>::toJSI(runtime, arg.maxRetries));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "maxRetries"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.maxRetries));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "maxRetryDurationMs"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.maxRetryDurationMs));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "firstConnectMaxRetryDurationMs"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.firstConnectMaxRetryDurationMs));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -78,8 +81,9 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetries")))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetries")))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "maxRetryDurationMs")))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "firstConnectMaxRetryDurationMs")))) return false;
       return true;
     }
   };

@@ -19,11 +19,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "BrowserSourceCallbackParam" and the the Kotlin data class "BrowserSourceCallbackParam".
+   * The C++ JNI bridge between the C++ struct "BrowserSourceCallbackParam" and the Kotlin data class "BrowserSourceCallbackParam".
    */
   struct JBrowserSourceCallbackParam final: public jni::JavaClass<JBrowserSourceCallbackParam> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSourceCallbackParam;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSourceCallbackParam;";
 
   public:
     /**

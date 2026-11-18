@@ -26,7 +26,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_RemotePlaySearchEvent: public jni::JavaClass<JFunc_void_RemotePlaySearchEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemotePlaySearchEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemotePlaySearchEvent;";
 
   public:
     /**
@@ -62,7 +62,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemotePlaySearchEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_RemotePlaySearchEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_RemotePlaySearchEvent_cxx::invoke_cxx)});
     }

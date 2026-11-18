@@ -1,5 +1,6 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.BuildConfig
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -27,13 +28,25 @@ class HttpClient {
     isLenient = true
   }
 
-  private val loggingInterceptor =
+  /**
+   * Debug builds only: Timber is an `api` dependency, so these lines reach the host app's trees
+   * (crash-reporter breadcrumbs included), and `BODY` buffers every response whether or not
+   * anything logs it. The credential headers below are redacted even in debug, as logcat ends up in
+   * bug reports; add any new one to the list.
+   */
+  private fun loggingInterceptor() =
     HttpLoggingInterceptor { message -> Timber.d(message) }
-      .apply { level = HttpLoggingInterceptor.Level.BODY }
+      .apply {
+        level = HttpLoggingInterceptor.Level.BODY
+        redactHeader("Authorization")
+        redactHeader("Proxy-Authorization")
+        redactHeader("Cookie")
+        redactHeader("Set-Cookie")
+      }
 
   private val client =
     OkHttpClient.Builder()
-      .addInterceptor(loggingInterceptor)
+      .apply { if (BuildConfig.DEBUG) addInterceptor(loggingInterceptor()) }
       .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
       .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
       .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -52,13 +65,14 @@ class HttpClient {
     val code: Int,
     val body: String,
     val headers: Map<String, String>,
-    /** HTTP reason phrase (e.g., "Not Found", "Service Unavailable") */
+    /** HTTP reason phrase, e.g. "Not Found"; OkHttp leaves it empty over HTTP/2. */
     val message: String,
   ) {
     val isSuccessful: Boolean
       get() = code in 200..299
   }
 
+  /** A non-2xx response is a success; check [HttpResponse.isSuccessful]. */
   suspend fun request(httpRequest: HttpRequest): Result<HttpResponse> =
     withContext(Dispatchers.IO) {
       try {
@@ -70,21 +84,18 @@ class HttpClient {
 
         val requestBuilder = Request.Builder().url(url)
 
-        // Add headers
         val headers =
           Headers.Builder()
             .apply {
               httpRequest.headers?.forEach { (name, value) -> add(name, value) }
-              // Set User-Agent (userAgent parameter takes precedence over headers)
               add("User-Agent", httpRequest.userAgent)
             }
             .build()
         requestBuilder.headers(headers)
 
-        // Add body for non-GET requests
         when (httpRequest.method.uppercase()) {
           "GET" -> {
-            /* No body for GET */
+            // Request.Builder defaults to GET.
           }
           "POST",
           "PUT",
@@ -127,6 +138,7 @@ class HttpClient {
       }
     }
 
+  /** Fails with [HttpException] on a non-2xx response. */
   suspend inline fun <reified T> requestJson(httpRequest: HttpRequest): Result<T> {
     return request(httpRequest).mapCatching { response ->
       if (!response.isSuccessful) {
@@ -136,6 +148,7 @@ class HttpClient {
     }
   }
 
+  /** Fails with [HttpException] on a non-2xx response. */
   suspend fun requestJsonElement(httpRequest: HttpRequest): Result<JsonElement> {
     return request(httpRequest).mapCatching { response ->
       if (!response.isSuccessful) {
@@ -145,15 +158,11 @@ class HttpClient {
     }
   }
 
-  class HttpException(
-    val code: Int,
-    val responseBody: String,
-    /** HTTP reason phrase (e.g., "Not Found", "Service Unavailable") */
-    val reasonPhrase: String,
-  ) : Exception(formatMessage(code, responseBody, reasonPhrase)) {
+  /** Its message is the JSON body's `error` field when there is one, else [reasonPhrase]. */
+  class HttpException(val code: Int, val responseBody: String, val reasonPhrase: String) :
+    Exception(formatMessage(code, responseBody, reasonPhrase)) {
     companion object {
       private fun formatMessage(code: Int, responseBody: String, reasonPhrase: String): String {
-        // Try to extract error message from JSON response: { "error": "message" }
         try {
           val json = org.json.JSONObject(responseBody)
           val errorMessage = json.optString("error", null)
@@ -161,9 +170,8 @@ class HttpClient {
             return errorMessage
           }
         } catch (_: Exception) {
-          // Not valid JSON, fall through
+          // Not JSON: fall back to the reason phrase.
         }
-        // Fall back to HTTP reason phrase
         return reasonPhrase
       }
     }

@@ -17,12 +17,12 @@ public extension CarPlayNowPlayingButton {
    */
   init?(fromString string: String) {
     switch string {
+      case "favorite":
+        self = .favorite
       case "shuffle":
         self = .shuffle
       case "repeat":
         self = .repeat
-      case "favorite":
-        self = .favorite
       case "playback-rate":
         self = .playbackRate
       default:
@@ -35,12 +35,12 @@ public extension CarPlayNowPlayingButton {
    */
   var stringValue: String {
     switch self {
+      case .favorite:
+        return "favorite"
       case .shuffle:
         return "shuffle"
       case .repeat:
         return "repeat"
-      case .favorite:
-        return "favorite"
       case .playbackRate:
         return "playback-rate"
     }

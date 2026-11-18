@@ -5,7 +5,9 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+# AudioBrowser requires iOS 16.0; track RN's floor but never go below 16.0
+ios_deployment_target = [min_ios_version_supported.to_f, 16.0].max.to_s
+platform :ios, ios_deployment_target
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -31,12 +33,27 @@ target 'AudioBrowserExample' do
       # :ccache_enabled => true
     )
 
-    # Disable BUILD_LIBRARY_FOR_DISTRIBUTION for Kingfisher to fix
-    # SwiftVerifyEmittedModuleInterface failures on Xcode 16+
     installer.pods_project.targets.each do |target|
-      if target.name == 'Kingfisher'
-        target.build_configurations.each do |config|
+      target.build_configurations.each do |config|
+        # Strict concurrency for AudioBrowser. NOTE: deliberately do NOT pin
+        # SWIFT_VERSION here -- the podspec declares swift_version 6.2 and
+        # consumers get that, so overriding it to 6.0 would make the example
+        # build laxer than real consumers and mask data-race diagnostics.
+        if target.name == 'AudioBrowser'
+          config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'complete'
+        end
+
+        # Disable BUILD_LIBRARY_FOR_DISTRIBUTION for Kingfisher to fix
+        # SwiftVerifyEmittedModuleInterface failures on Xcode 16+
+        if target.name == 'Kingfisher'
           config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+        end
+
+        # Pod resource bundles declare their own, older deployment targets,
+        # below what Xcode supports
+        target_version = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if target_version && Gem::Version.new(target_version) < Gem::Version.new(ios_deployment_target)
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
         end
       end
     end

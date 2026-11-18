@@ -9,15 +9,68 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
+
 
 /**
- * Represents the JavaScript enum/union "TrackStyle".
+ * Represents the JavaScript object/struct "TrackStyle".
  */
 @DoNotStrip
 @Keep
-enum class TrackStyle(@DoNotStrip @Keep val value: Int) {
-  LIST(0),
-  GRID(1);
+data class TrackStyle(
+  @DoNotStrip
+  @Keep
+  val display: StyleDisplay?,
+  @DoNotStrip
+  @Keep
+  val artworkRendering: ArtworkRendering?,
+  @DoNotStrip
+  @Keep
+  val imageShape: ImageShape?,
+  @DoNotStrip
+  @Keep
+  val accessorySymbol: String?,
+  @DoNotStrip
+  @Keep
+  val cardTint: String?,
+  @DoNotStrip
+  @Keep
+  val cardImage: CardImage?
+) {
+  /* primary constructor */
 
-  companion object
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TrackStyle) return false
+    return Objects.deepEquals(this.display, other.display)
+      && Objects.deepEquals(this.artworkRendering, other.artworkRendering)
+      && Objects.deepEquals(this.imageShape, other.imageShape)
+      && Objects.deepEquals(this.accessorySymbol, other.accessorySymbol)
+      && Objects.deepEquals(this.cardTint, other.cardTint)
+      && Objects.deepEquals(this.cardImage, other.cardImage)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      display,
+      artworkRendering,
+      imageShape,
+      accessorySymbol,
+      cardTint,
+      cardImage
+    ).contentDeepHashCode()
+  }
+
+  companion object {
+    /**
+     * Constructor called from C++
+     */
+    @DoNotStrip
+    @Keep
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?, cardTint: String?, cardImage: CardImage?): TrackStyle {
+      return TrackStyle(display, artworkRendering, imageShape, accessorySymbol, cardTint, cardImage)
+    }
+  }
 }

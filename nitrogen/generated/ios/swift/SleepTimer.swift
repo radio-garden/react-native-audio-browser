@@ -17,3 +17,16 @@ public indirect enum SleepTimer {
   case second(SleepTimerTime)
   case third(SleepTimerEndOfTrack)
 }
+
+public extension SleepTimer {
+  func asType<T>(_ type: T.Type = T.self) -> T? {
+    switch self {
+      case .first(let value): return value as? T
+      case .second(let value): return value as? T
+      case .third(let value): return value as? T
+    }
+  }
+  func isType<T>(_ type: T.Type = T.self) -> Bool {
+    return self.asType(type) != nil
+  }
+}

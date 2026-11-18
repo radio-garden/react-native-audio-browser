@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class ImageSource(
   val body: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is ImageSource) return false
+    return Objects.deepEquals(this.uri, other.uri)
+      && Objects.deepEquals(this.method, other.method)
+      && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.body, other.body)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      uri,
+      method,
+      headers,
+      body
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

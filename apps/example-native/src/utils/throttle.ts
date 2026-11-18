@@ -9,16 +9,16 @@ type ThrottleOptions = {
  * Creates a throttled version of a function that only invokes at most once
  * per `wait` milliseconds.
  */
-export function throttle<T extends (...args: Parameters<T>) => void>(
-  fn: T,
+export function throttle<Args extends unknown[]>(
+  fn: (...args: Args) => void,
   wait: number,
   { leading = true, trailing = false }: ThrottleOptions = {}
-): (...args: Parameters<T>) => void {
+): (...args: Args) => void {
   let lastCall = leading ? 0 : Date.now()
   let timer: ReturnType<typeof setTimeout> | null = null
-  let lastArgs: Parameters<T> | null = null
+  let lastArgs: Args | null = null
 
-  return (...args: Parameters<T>) => {
+  return (...args: Args) => {
     const now = Date.now()
 
     if (now - lastCall >= wait) {

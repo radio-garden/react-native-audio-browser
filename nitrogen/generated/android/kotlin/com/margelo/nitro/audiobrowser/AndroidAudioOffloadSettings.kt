@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -25,6 +26,20 @@ data class AndroidAudioOffloadSettings(
   val rateChangeSupportRequired: Boolean?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is AndroidAudioOffloadSettings) return false
+    return Objects.deepEquals(this.gaplessSupportRequired, other.gaplessSupportRequired)
+      && Objects.deepEquals(this.rateChangeSupportRequired, other.rateChangeSupportRequired)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      gaplessSupportRequired,
+      rateChangeSupportRequired
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

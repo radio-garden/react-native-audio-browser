@@ -1,6 +1,102 @@
 // MARK: - Types
 
+import type { Track } from '../../types'
+import type { PlaybackError } from '../errors'
+import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
+import type { RepeatMode } from '../queue/repeatMode'
+import type {
+  AndroidUpdateOptions,
+  IOSUpdateOptions,
+  NativeUpdateOptions,
+  UpdateOptions
+} from './options'
 import { nativeBrowser } from '../../native'
+import { validateIOSUpdateOptions } from './validateOptions'
+
+/**
+ * Parameters passed to the {@link FormatNowPlayingCallback}.
+ *
+ * The formatter owns every line shown on the now-playing surface — the track text, the live song,
+ * *and* any transient status (reconnecting / error). The library renders no status text; these
+ * fields let you render (and localize) it yourself. The formatter
+ * is re-invoked on track change, each timed-metadata update, play/pause + error/rebuffer
+ * transitions, and device connectivity changes.
+ */
+export type FormatNowPlayingParams = {
+  /** The currently playing track. */
+  track: Track
+  /**
+   * Timed metadata (ICY / ID3 "now playing song") received during playback, if any.
+   * On iOS, also a file's own tags when the file has no chapters.
+   * Always `undefined` on web — see `onTimedMetadata` for why.
+   */
+  timedMetadata?: TimedMetadata
+  /** The play/pause intent — `false` while paused. Stays `true` through buffers, so the song line won't flicker. */
+  playWhenReady: boolean
+  /**
+   * Present (truthy) only while ongoing playback has stalled waiting for data — a mid-stream halt,
+   * never an initial connect or a seek (it won't flash on track start or bleed into playback). The
+   * value classifies *why*, so a "Reconnecting…" vs "No internet connection" line needs no separate
+   * connectivity read:
+   *  - `'buffering'` — the stream is rebuffering while the device is online (rejoining the live edge);
+   *  - `'offline'` — the device has no connectivity.
+   * Safe to use on its own (`if (stalled)`); compare the value (`stalled === 'offline'`) for the reason.
+   */
+  stalled?: StallReason
+  /** The current playback error, if playback has failed. */
+  error?: PlaybackError
+}
+
+/**
+ * Why ongoing playback has stalled, surfaced via {@link FormatNowPlayingParams.stalled}:
+ * - `'buffering'` — rebuffering while online (the live stream is rejoining the live edge);
+ * - `'offline'` — the device has no network connectivity.
+ */
+export type StallReason = 'buffering' | 'offline'
+
+/**
+ * Customizes what's rendered on the now-playing surface — lock screen, notification, Control Center,
+ * CarPlay, and Android Auto — for the currently playing track.
+ *
+ * Configure it via {@link SetupPlayerOptions.nowPlaying}. It is re-invoked on track change, each
+ * timed-metadata update and every playback transition; identical results are de-duplicated
+ * natively, so they don't flicker the surface.
+ *
+ * The callback is **synchronous**, run on the JS thread and awaited natively: no I/O in it.
+ * Each returned field falls back **independently** to the track's own value, so
+ * `{ artist: 'Some Song' }` replaces only the secondary line; `undefined` (or `{}`) keeps the
+ * track's own `title` / `artist`. See the [Now playing guide](https://audiobrowser.dev/guide/now-playing).
+ *
+ * @example
+ * ```ts
+ * setupPlayer({
+ *   nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
+ *     if (error)   return { artist: error.message ?? 'Playback error' }
+ *     if (stalled) {
+ *       return {
+ *         artist: stalled === 'offline'
+ *           ? 'No internet connection'
+ *           : 'Reconnecting…'
+ *       }
+ *     }
+ *     // Show the live song only while playing; else use the track default.
+ *     if (!playWhenReady || !timedMetadata?.title) return
+ *     return {
+ *       artist: timedMetadata.artist
+ *         ? `${timedMetadata.artist} — ${timedMetadata.title}`
+ *         : timedMetadata.title
+ *     }
+ *   }
+ * })
+ * ```
+ *
+ * @see {@link FormatNowPlayingParams} - the per-invocation signals passed in
+ * @see {@link NowPlayingUpdate} - the shape returned
+ * @see {@link SetupPlayerOptions.nowPlaying} - where the callback is configured
+ */
+export type FormatNowPlayingCallback = (
+  params: FormatNowPlayingParams
+) => NowPlayingUpdate | undefined
 
 /**
  * AndroidAudioContentType options:
@@ -41,7 +137,8 @@ export type AndroidAudioContentType =
  * - `'ambient'`: The category for an app in which sound playback is nonprimary
  *   — that is, your app also works with the sound turned off. See
  *   https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616560-ambient
- * - `'soloAmbient'`: The default audio session category. See
+ * - `'soloAmbient'`: The system's default audio session category; the library
+ *   uses `'playback'` when `category` is omitted. See
  *   https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616488-soloambient
  * - `'record'`: The category for recording audio while also silencing playback
  *   audio. See
@@ -141,38 +238,80 @@ export type IOSCategoryOptions =
  */
 export type IOSCategoryPolicy = 'default' | 'longFormAudio' | 'longFormVideo'
 
+/**
+ * Requirements for Android audio offload; see `audioOffload`.
+ * @platform android
+ */
 export interface AndroidAudioOffloadSettings {
   /**
    * Whether gapless playback support is required for offload.
    * Enables smooth transitions between tracks without silence gaps.
-   * @default true
+   * Omitting it here means not required; `audioOffload: true` requires it.
+   * @default false
    */
   gaplessSupportRequired?: boolean
 
   /**
    * Whether playback rate change support is required for offload.
    * Enables variable playback speeds (0.5x, 1.25x, 2x, etc.) during offload.
-   * @default true
+   * Omitting it here means not required; `audioOffload: true` requires it.
+   * @default false
    */
   rateChangeSupportRequired?: boolean
 }
 
 /**
  * Configuration for retry behavior.
+ *
+ * Two budgets apply, chosen by whether the current load has ever produced
+ * audio:
+ *
+ * - **First connect** (the load has never played): retries are bounded by
+ *   `firstConnectMaxRetryDurationMs`. A stream that fails before ever playing
+ *   is usually dead, and the listener is actively waiting for a verdict —
+ *   seconds, not minutes.
+ * - **Recovery**: the player gives up once it has been silent for
+ *   `maxRetryDurationMs`; only 5 s of audio in a row ends a silence. Playback
+ *   proved the stream works; drops are usually transient (tunnels, network
+ *   handovers, a station's encoder restarting) and patience is what recovers
+ *   them unattended.
+ *
+ * While the device is offline, the first-connect budget does not apply: the
+ * player waits for connectivity to return (bounded by `maxRetryDurationMs`),
+ * so a station tapped in a tunnel still starts when the network comes back.
+ * Any offline observation restarts the first-connect clock, so it only ever
+ * measures a contiguous online stretch.
+ *
+ * Native platforms only — the web implementation has no automatic retry.
  */
 export type RetryConfig = {
   /**
-   * Maximum number of retry attempts before giving up.
+   * The connections in a row that may deliver no audio before the player gives
+   * up. One that delivered audio starts the count over, so a stream that played
+   * and dropped reconnects once more than this. On Android, a failure media3
+   * retries within its connection (an HLS segment, a file of known length) is
+   * not a connection, and only the duration budgets bound it. Omit for no
+   * limit.
    */
-  maxRetries: number
+  maxRetries?: number
 
   /**
-   * Maximum duration in milliseconds to keep retrying before giving up.
-   * This prevents surprising playback resumption after long periods offline.
+   * How long in milliseconds the player may stay silent, the listener wanting
+   * audio and hearing none, before it gives up. Time offline counts, so
+   * playback never resumes by surprise after a long time offline.
    *
    * @default 120000 (2 minutes)
    */
   maxRetryDurationMs?: number
+
+  /**
+   * How long in milliseconds a load that has never produced audio keeps
+   * retrying after its first failure while online. When it runs out, the
+   * terminal error carries the real diagnosis (`unreachable`, `not-found`, …).
+   *
+   * @default 12000 (12 seconds)
+   */
+  firstConnectMaxRetryDurationMs?: number
 }
 
 /**
@@ -186,13 +325,16 @@ export type RetryConfig = {
 export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 
 /**
- * Android-specific player setup options.
+ * Android setup options: the engine-construction fields plus the Android runtime options
+ * ({@link AndroidUpdateOptions} — `remoteButtonLayout`, `skipSilence`, …), all expressible at
+ * launch. The consumer never has to know which is which; `setupPlayer` routes each field to
+ * where it's applied.
  */
-export type PartialAndroidSetupPlayerOptions = {
+export interface AndroidSetupOptions extends AndroidUpdateOptions {
   /**
    * Minimum duration of media that the player will attempt to buffer in ms.
+   * Has no effect: the player keeps loading until `maxBuffer` is buffered.
    *
-   * @throws Will throw if min buffer is higher than max buffer.
    * @default 50000
    */
   minBuffer?: number
@@ -205,8 +347,9 @@ export type PartialAndroidSetupPlayerOptions = {
    *
    * - `true`: Enable with default settings (gapless + rate change support required)
    * - `false`/`undefined`: Disabled
-   * - `{ gaplessSupportRequired: boolean, rateChangeSupportRequired: boolean }`:
-   *   Enable with specific requirements for gapless playback and playback rate changes
+   * - `{ gaplessSupportRequired?: boolean, rateChangeSupportRequired?: boolean }`:
+   *   Enable with specific requirements for gapless playback and playback rate changes;
+   *   an omitted field is not required, so `{}` enables offload with no requirements
    *
    * @default false
    */
@@ -214,9 +357,7 @@ export type PartialAndroidSetupPlayerOptions = {
 
   /**
    * Maximum duration of media that the player will attempt to buffer in ms.
-   * Max buffer may not be lower than min buffer.
    *
-   * @throws Will throw if max buffer is lower than min buffer.
    * @default 50000
    */
   maxBuffer?: number
@@ -233,7 +374,7 @@ export type PartialAndroidSetupPlayerOptions = {
    * Duration of media in ms that must be buffered for playback to start or
    * resume following a user action such as a seek.
    *
-   * @default 2500
+   * @default 1000 (media3's `DEFAULT_BUFFER_FOR_PLAYBACK_MS`)
    */
   playBuffer?: number
 
@@ -244,7 +385,6 @@ export type PartialAndroidSetupPlayerOptions = {
    * When null (the default), uses automatic mode:
    * - Starts at `playBuffer` value
    * - On rebuffer, measures how fast the buffer drained
-   * - Calculates how much buffer is needed to sustain 60s of playback
    * - Increases threshold accordingly (up to 8000ms max)
    * - Resets when changing tracks
    *
@@ -267,11 +407,11 @@ export type PartialAndroidSetupPlayerOptions = {
    * The audio content type indicates to the android system how
    * you intend to use audio in your app.
    *
-   * With `audioContentType: AndroidAudioContentType.Speech`, the audio will be
+   * With `audioContentType: 'speech'`, the audio will be
    * paused during short interruptions, such as when a message arrives.
    * Otherwise the playback volume is reduced while the notification is playing.
    *
-   * @default AndroidAudioContentType.Music
+   * @default 'music'
    */
   audioContentType?: AndroidAudioContentType
 
@@ -294,258 +434,405 @@ export type PartialAndroidSetupPlayerOptions = {
   wakeMode?: AndroidPlayerWakeMode
 }
 
-export interface AndroidSetupPlayerOptions {
+/** iOS setup options: the audio-session fields plus the iOS runtime options. */
+export interface IOSSetupOptions extends IOSUpdateOptions {
   /**
-   * Minimum duration of media that the player will attempt to buffer in ms.
+   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
+   * chooses an appropriate level of buffering automatically.
    *
-   * @throws Will throw if min buffer is higher than max buffer.
-   * @default 50000
-   */
-  minBuffer: number
-
-  /**
-   * Audio offload configuration for power-efficient playback.
+   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
    *
-   * - `true`: Enable with default settings (gapless and rate change support required)
-   * - `false`: Disable audio offload
-   * - `{ gaplessSupportRequired?, rateChangeSupportRequired? }`: Enable with custom requirements
-   *
-   * Audio offload moves audio processing to dedicated hardware when available, saving battery
-   * during longer playbacks, especially with screen off. Requirements determine which features
-   * must be supported for offload to activate:
-   * - `gaplessSupportRequired`: Smooth track transitions without silence
-   * - `rateChangeSupportRequired`: Variable playback speeds (0.5x, 1.25x, 2x, etc.)
-   *
-   * @see https://developer.android.com/media/media3/exoplayer/track-selection#audioOffload
-   */
-  audioOffload: boolean | AndroidAudioOffloadSettings
-
-  /**
-   * Maximum duration of media that the player will attempt to buffer in ms.
-   * Max buffer may not be lower than min buffer.
-   *
-   * @throws Will throw if max buffer is lower than min buffer.
-   * @default 50000
-   */
-  maxBuffer: number
-
-  /**
-   * Duration in ms that should be kept in the buffer behind the current
-   * playhead time.
+   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
    *
    * @default 0
    */
-  backBuffer: number
+  buffer?: number
 
   /**
-   * Duration of media in ms that must be buffered for playback to start or
-   * resume following a user action such as a seek.
+   * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
+   * for iOS. Applied at `setupPlayer`; the session is activated when playback
+   * starts.
    *
-   * @default 2500
+   * @default 'playback'
    */
-  playBuffer: number
+  category?: IOSCategory
 
   /**
-   * Duration of media in ms that must be buffered for playback to resume
-   * after a rebuffer (when the buffer runs empty during playback).
+   * The audio session mode, together with the audio session category,
+   * indicates to the system how you intend to use audio in your app. You can use
+   * a mode to configure the audio system for specific use cases such as video
+   * recording, voice or video chat, or audio analysis.
+   * Applied at `setupPlayer`; the session is activated when playback starts.
    *
-   * When null (the default), uses automatic mode:
-   * - Starts at `playBuffer` value
-   * - On rebuffer, measures how fast the buffer drained
-   * - Calculates how much buffer is needed to sustain 60s of playback
-   * - Increases threshold accordingly (up to 8000ms max)
-   * - Resets when changing tracks
+   * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
    *
-   * Set to a number for a fixed threshold in ms. Should be >= playBuffer,
-   * otherwise playback may rebuffer repeatedly (resuming with less buffer
-   * than initial start).
-   *
-   * @default null (automatic)
+   * @default 'default'
    */
-  rebufferBuffer: number | null
+  categoryMode?: IOSCategoryMode
 
   /**
-   * Maximum cache size in MB.
+   * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
+   * Applied at `setupPlayer`; the session is activated when playback starts.
    *
-   * @default 0
+   * @default []
    */
-  maxCacheSize: number
+  categoryOptions?: IOSCategoryOptions[]
 
   /**
-   * The audio content type indicates to the android system how
-   * you intend to use audio in your app.
+   * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
+   * Applied at `setupPlayer`; the session is activated when playback starts.
    *
-   * With `audioContentType: AndroidAudioContentType.Speech`, the audio will be
-   * paused during short interruptions, such as when a message arrives.
-   * Otherwise the playback volume is reduced while the notification is playing.
-   *
-   * @default AndroidAudioContentType.Music
+   * @default 'default'
    */
-  audioContentType: AndroidAudioContentType
+  categoryPolicy?: IOSCategoryPolicy
+}
+
+/** Which remote outputs `setupPlayer({ remoteOutputs })` turns on. */
+export interface RemoteOutputsOptions {
+  /**
+   * Plays on Cast devices selected in the Output Switcher, through the Default Media Receiver:
+   * the receiver fetches the track's media URL itself, so it gets the URL the media transform
+   * resolves, without its headers. Needs the app built with `AudioBrowser_castEnabled=true` in
+   * its `gradle.properties` and Google Play services on the device; without either, playback
+   * stays on the phone and a warning is logged.
+   * @default false
+   */
+  cast?: boolean
+  /**
+   * The Cast receiver application `cast` loads, as registered in the Google Cast SDK Developer
+   * Console: a Styled Media Receiver shows the app's own name on the device and in its
+   * notifications. Cast takes it once per app process: a change takes effect after a restart.
+   * @default the Default Media Receiver, `'CC1AD845'`
+   */
+  castReceiverApplicationId?: string
+  /**
+   * Plays on Sonos rooms selected in the Output Switcher, over the speakers' UPnP control: the
+   * speaker fetches the media URL the media transform resolves, without its headers. Sonos calls
+   * UPnP unsupported and lets the listener switch it off; then no rooms are listed.
+   * @default false
+   */
+  sonos?: boolean
+}
+
+/**
+ * @internal The wire shape `setupPlayer` sends across the bridge: the platform bags hold only
+ * construction fields, the runtime options nest under `options`, and the public `nowPlaying`
+ * option arrives normalized into the two now-playing fields.
+ */
+export interface NativeSetupPlayerOptions extends Pick<
+  SetupPlayerOptions,
+  | 'playWhenReady'
+  | 'repeatMode'
+  | 'retry'
+  | 'keepSessionAliveOnError'
+  | 'remoteOutputs'
+> {
+  /** Android-specific configuration options for setup */
+  android?: NativeAndroidSetupOptions
+  /** iOS-specific configuration options for setup */
+  ios?: NativeIOSSetupOptions
 
   /**
-   * Whether the player should automatically pause when audio becomes noisy
-   * (e.g., when headphones are unplugged).
-   *
+   * Player options to apply atomically with setup. They're stored before the player is
+   * constructed, so e.g. Android's media session derives its remote button layout from
+   * `capabilities` the moment the service connects — no window with default controls.
+   * Normalized from the flat fields on {@link SetupPlayerOptions}.
+   */
+  options?: NativeUpdateOptions
+
+  /**
+   * Normalized from the public `nowPlaying` option. Whether the player
+   * publishes/refreshes track metadata on the now-playing surface.
    * @default true
    */
-  handleAudioBecomingNoisy: boolean
+  autoUpdateNowPlayingMetadata?: boolean
 
   /**
-   * Wake mode for the player to use.
-   *
-   * Determines whether wake locks are held to keep the CPU and/or
-   * WiFi active during playback.
-   *
-   * @default 'none'
+   * Normalized from `nowPlaying` when it's a function. Customizes what's
+   * rendered on the now-playing surface.
    */
-  wakeMode: AndroidPlayerWakeMode
-}
-
-export interface PartialIOSSetupPlayerOptions {
-  /**
-   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
-   * chooses an appropriate level of buffering automatically.
-   *
-   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
-   *
-   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
-   *
-   * @default 0
-   */
-  buffer?: number
-
-  /**
-   * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
-   * for iOS. Sets on `play()`.
-   */
-  category?: IOSCategory
-
-  /**
-   * The audio session mode, together with the audio session category,
-   * indicates to the system how you intend to use audio in your app. You can use
-   * a mode to configure the audio system for specific use cases such as video
-   * recording, voice or video chat, or audio analysis.
-   * Sets on `play()`.
-   *
-   * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
-   */
-  categoryMode?: IOSCategoryMode
-
-  /**
-   * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
-   * Sets on `play()`.
-   */
-  categoryOptions?: IOSCategoryOptions[]
-
-  /**
-   * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
-   * Sets on `play()`.
-   */
-  categoryPolicy?: IOSCategoryPolicy
-}
-
-export interface IOSSetupPlayerOptions {
-  /**
-   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
-   * chooses an appropriate level of buffering automatically.
-   *
-   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
-   *
-   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
-   *
-   * @default 0
-   */
-  buffer?: number
-
-  /**
-   * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
-   * for iOS. Sets on `play()`.
-   */
-  category?: IOSCategory
-
-  /**
-   * The audio session mode, together with the audio session category,
-   * indicates to the system how you intend to use audio in your app. You can use
-   * a mode to configure the audio system for specific use cases such as video
-   * recording, voice or video chat, or audio analysis.
-   * Sets on `play()`.
-   *
-   * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
-   */
-  categoryMode?: IOSCategoryMode
-
-  /**
-   * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
-   * Sets on `play()`.
-   */
-  categoryOptions?: IOSCategoryOptions[]
-
-  /**
-   * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
-   * Sets on `play()`.
-   */
-  categoryPolicy?: IOSCategoryPolicy
-}
-
-export interface PartialSetupPlayerOptions {
-  /** Android-specific configuration options for setup */
-  android?: PartialAndroidSetupPlayerOptions
-  /** iOS-specific configuration options for setup */
-  ios?: PartialIOSSetupPlayerOptions
-  /**
-   * Indicates whether the player should automatically update now playing metadata data in control center / notification.
-   * Defaults to `true`.
-   */
-  autoUpdateMetadata?: boolean
-
-  /**
-   * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
-   * - `false`/`undefined`: No automatic retry (default)
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
-   *
-   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
-   *
-   * @default false
-   */
-  retry?: boolean | RetryConfig
-}
-
-export interface PlayerOptions {
-  /** Android-specific configuration options for setup */
-  android?: AndroidSetupPlayerOptions
-  /** iOS-specific configuration options for setup */
-  ios?: PartialIOSSetupPlayerOptions
-  /**
-   * Indicates whether the player should automatically update now playing metadata data in control center / notification.
-   * Defaults to `true`.
-   */
-  autoUpdateMetadata: boolean
-
-  /**
-   * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
-   * - `false`/`undefined`: No automatic retry (default)
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
-   *
-   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
-   *
-   * @default false
-   */
-  retry?: boolean | RetryConfig
+  nowPlayingMetadataFormatter?: FormatNowPlayingCallback
 }
 
 // MARK: - Lifecycle
 
 /**
- * Initializes the player with the specified options.
+ * @internal Wire shape for {@link AndroidSetupOptions}: just the engine-construction fields —
+ * the runtime options travel separately under the wire payload's `options.android`.
+ */
+export type NativeAndroidSetupOptions = Omit<
+  AndroidSetupOptions,
+  keyof AndroidUpdateOptions
+>
+
+/**
+ * @internal Wire shape for {@link IOSSetupOptions}: just the audio-session fields — the
+ * runtime options travel separately under the wire payload's `options.ios`.
+ */
+export type NativeIOSSetupOptions = Omit<
+  IOSSetupOptions,
+  keyof IOSUpdateOptions
+>
+
+/**
+ * Public setup options: the full launch description of a player in one bag — engine
+ * construction, runtime options (`capabilities`, jump intervals, …), and initial player state
+ * (`playWhenReady`, `repeatMode`). Everything is applied natively in one atomic setup; there
+ * is no call ordering to get right. `setupPlayer` normalizes this into the wire taxonomy —
+ * consumers never see the split.
+ */
+export type SetupPlayerOptions = Pick<
+  UpdateOptions,
+  | 'capabilities'
+  | 'forwardJumpInterval'
+  | 'backwardJumpInterval'
+  | 'progressUpdateEventInterval'
+> & {
+  /**
+   * The initial play/pause intent, applied natively as soon as the player exists. Set it to
+   * `true` so the first queued track starts playing the moment it loads.
+   *
+   * Interleaves with `setPlayWhenReady` by strict last-write-wins, whether or not the
+   * player exists yet.
+   *
+   * @default false
+   */
+  playWhenReady?: boolean
+
+  /**
+   * The initial repeat mode, applied natively as soon as the player exists. Interleaves with
+   * `setRepeatMode` by strict last-write-wins, whether or not the player exists yet.
+   *
+   * @default 'off'
+   */
+  repeatMode?: RepeatMode
+
+  /**
+   * Retry policy for load errors (network failures, timeouts, etc.)
+   * - `true`: Retry indefinitely with exponential backoff, under the default
+   *   duration budgets of {@link RetryConfig}
+   * - `false`/`undefined`: no library retry. Android keeps media3's default
+   *   handling, which retries a failed load a few times before surfacing the
+   *   error; iOS fails at once.
+   * - `{ maxRetries: n }`: give up when a connection delivers no audio after
+   *   n such connections in a row
+   * - `RetryConfig`: custom attempt and duration budgets
+   *
+   * Backoff timing and budgets: see the
+   * [Errors guide](https://audiobrowser.dev/guide/errors#two-duration-budgets).
+   *
+   * @default false
+   */
+  retry?: boolean | RetryConfig
+
+  /**
+   * Keep the media session alive and controllable through a terminal playback error (e.g. a dead
+   * stream), so External Surfaces such as Android Auto keep their transport controls
+   * (next / previous) instead of tearing the session down. The error is still reported via
+   * `onPlaybackError` / `playbackState`; this only affects what the OS media session observes.
+   *
+   * Only Android can tear the session down, so this is the Android opt-out; on iOS the media
+   * session always stays controllable through errors (the player resolves a terminal error to
+   * paused and retains the now-playing).
+   * @default true
+   */
+  keepSessionAliveOnError?: boolean
+
+  /**
+   * Offers remote speakers and TVs in the system Output Switcher (`openOutputPicker`), and
+   * reports the selected one as the `Output`, with `type: 'remote'`, or `'cast'` for a Cast
+   * device and `'sonos'` for a Sonos room. `{}` reports the selection only: the library keeps
+   * playing locally, and rendering the audio on the speaker is the provider's job. The speakers
+   * come from media route providers that declare the library's remote-output control category
+   * (`RemoteOutputs.CATEGORY` on Android). The app declares AndroidX's `MediaTransferReceiver` in
+   * its manifest for the switcher to move the session.
+   *
+   * Each `setupPlayer` sets it: left out, remote outputs are off, and playback on one comes back
+   * to the phone.
+   *
+   * Android 11+; ignored on iOS, whose route picker already lists AirPlay devices.
+   * @default off
+   */
+  remoteOutputs?: RemoteOutputsOptions
+
+  /** Android-specific options: engine construction and runtime, merged. */
+  android?: AndroidSetupOptions
+  /** iOS-specific options: audio session and runtime, merged. */
+  ios?: IOSSetupOptions
+  /**
+   * Controls what the player renders on the now-playing surface (lock screen / notification /
+   * Control Center / CarPlay / Android Auto).
+   *
+   * - `true` (default): publish the track's own title / artist.
+   * - `false`: don't manage the now-playing metadata at all.
+   * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
+   *   including any transient status (buffering / reconnecting / offline / error).
+   *
+   * @default true
+   */
+  nowPlaying?: boolean | FormatNowPlayingCallback
+}
+
+/** The normalized native now-playing fields, resolved from the public option. */
+type NormalizedNowPlaying = Pick<
+  NativeSetupPlayerOptions,
+  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter'
+>
+
+/** Resolves the public `nowPlaying` option to the normalized native fields. */
+function resolveNowPlaying(
+  value: SetupPlayerOptions['nowPlaying']
+): NormalizedNowPlaying {
+  if (typeof value === 'function') {
+    return {
+      autoUpdateNowPlayingMetadata: true,
+      nowPlayingMetadataFormatter: wrapNowPlayingFormatter(value)
+    }
+  }
+  // `undefined` defaults to on; `true`/`false` toggle the default mapping.
+  return {
+    autoUpdateNowPlayingMetadata: value ?? true,
+    nowPlayingMetadataFormatter: undefined
+  }
+}
+
+/**
+ * Wraps a {@link FormatNowPlayingCallback} so it never resolves the native callback to `null`.
+ *
+ * The callback contract lets consumers `return undefined` to mean "use the default". But Nitro's
+ * `Promise<T | undefined>.await()` throws `Failed to cast Object to T!` when the callback resolves
+ * to null/undefined — which surfaces on Android as the misleading "Cannot reject Promise … it is
+ * already resolved!" (the cast error is swallowed, then a reject is attempted on the
+ * already-resolved promise). So we coalesce `undefined` to an empty update before it crosses the
+ * boundary: the native side already falls back to the track's own title/artist for each missing
+ * field, so `{}` is equivalent to "use the default" without ever sending a null across.
+ */
+function wrapNowPlayingFormatter(
+  formatter: FormatNowPlayingCallback
+): FormatNowPlayingCallback {
+  return (params) => formatter(params) ?? {}
+}
+
+/**
+ * The object's entries whose values aren't `undefined`. `null` stays: it's meaningful on some
+ * fields (`progressUpdateEventInterval: null` disables progress events, `remoteButtonLayout:
+ * null` goes back to the layout derived from capabilities), so only `undefined` means "not
+ * provided".
+ */
+function definedFields<T extends object>(obj: T): Partial<T> {
+  const out: Partial<T> = {}
+  for (const key in obj) {
+    if (obj[key] !== undefined) out[key] = obj[key]
+  }
+  return out
+}
+
+/** Spreads `value` under `key` only when it has at least one field. */
+function nonEmpty<K extends string, T extends object>(
+  key: K,
+  value: T
+): { [P in K]?: T } {
+  return Object.keys(value).length > 0
+    ? ({ [key]: value } as { [P in K]?: T })
+    : {}
+}
+
+/**
+ * Initializes the player with the specified options — the full launch description in one
+ * declarative, atomic call. Runtime options (`capabilities`, jump intervals,
+ * `remoteButtonLayout`, …) and the initial `playWhenReady` / `repeatMode` are applied
+ * natively as part of setup itself, so there is no setup-then-command ordering for consumers
+ * to know about, and no window where the player exists without its options.
+ *
+ * Calling it again is how a setup-only option changes after launch, and works differently per
+ * platform. On Android, newly provided fields are merged over the previous ones, except
+ * `remoteOutputs`, which is off when left out, and `nowPlaying`, which is on when left out
+ * and keeps an earlier formatter until a call passes another one. The audio engine is rebuilt
+ * only when construction-bound fields (buffers, wake mode, …) changed. On iOS, each call
+ * replaces the player: the queue is cleared, and setup-only fields you omit (`ios` session
+ * category and `buffer`, `retry`, …) go back to their defaults. Runtime options set earlier
+ * carry over on both.
+ *
  * @param options - The options to initialize the player with.
+ *
+ * @example
+ * ```ts
+ * await setupPlayer({
+ *   retry: true,
+ *   playWhenReady: true,
+ *   repeatMode: 'queue',
+ *   capabilities: { favorite: true },
+ *   android: {
+ *     audioContentType: 'music',
+ *     remoteButtonLayout: {
+ *       back: 'jump-backward',
+ *       forward: 'jump-forward',
+ *       overflow: ['favorite']
+ *     }
+ *   },
+ *   ios: { category: 'playback' }
+ * })
+ * ```
  */
 export async function setupPlayer(
-  options: PartialSetupPlayerOptions = {}
+  options: SetupPlayerOptions = {}
 ): Promise<void> {
-  return nativeBrowser.setupPlayer(options)
+  const {
+    nowPlaying,
+    capabilities,
+    forwardJumpInterval,
+    backwardJumpInterval,
+    progressUpdateEventInterval,
+    android = {},
+    ios = {},
+    ...nativeSetup
+  } = options
+
+  // Split the merged public bags back into the wire taxonomy: construction fields stay under
+  // `android` / `ios`, runtime options nest under `options`. The consumer never has to learn
+  // which is which.
+  const {
+    appKilledPlaybackBehavior,
+    skipSilence,
+    remoteButtonLayout,
+    ...androidSetup
+  } = android
+  const {
+    playbackRates,
+    carPlayUpNextButton,
+    carPlayNowPlayingButtons,
+    carPlayPlayingIndicatorLocation,
+    ...iosSetup
+  } = ios
+  const iosUpdate = definedFields({
+    playbackRates,
+    carPlayUpNextButton,
+    carPlayNowPlayingButtons,
+    carPlayPlayingIndicatorLocation
+  })
+  validateIOSUpdateOptions(iosUpdate)
+
+  const updates: NativeUpdateOptions = definedFields({
+    capabilities,
+    forwardJumpInterval,
+    backwardJumpInterval,
+    progressUpdateEventInterval,
+    ...nonEmpty(
+      'android',
+      definedFields({
+        appKilledPlaybackBehavior,
+        skipSilence,
+        remoteButtonLayout
+      })
+    ),
+    ...nonEmpty('ios', iosUpdate)
+  })
+
+  return nativeBrowser.setupPlayer({
+    ...nativeSetup,
+    ...nonEmpty('android', definedFields(androidSetup)),
+    ...nonEmpty('ios', definedFields(iosSetup)),
+    ...resolveNowPlaying(nowPlaying),
+    ...nonEmpty('options', updates)
+  })
 }

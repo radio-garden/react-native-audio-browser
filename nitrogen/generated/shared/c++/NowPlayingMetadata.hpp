@@ -28,22 +28,10 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
+
 
 #include <optional>
 #include <string>
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -61,11 +49,10 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> description     SWIFT_PRIVATE;
     std::optional<std::string> mediaId     SWIFT_PRIVATE;
     std::optional<std::string> genre     SWIFT_PRIVATE;
-    std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> rating     SWIFT_PRIVATE;
 
   public:
     NowPlayingMetadata() = default;
-    explicit NowPlayingMetadata(std::optional<double> elapsedTime, std::optional<std::string> title, std::optional<std::string> album, std::optional<std::string> artist, std::optional<double> duration, std::optional<std::string> artwork, std::optional<std::string> description, std::optional<std::string> mediaId, std::optional<std::string> genre, std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> rating): elapsedTime(elapsedTime), title(title), album(album), artist(artist), duration(duration), artwork(artwork), description(description), mediaId(mediaId), genre(genre), rating(rating) {}
+    explicit NowPlayingMetadata(std::optional<double> elapsedTime, std::optional<std::string> title, std::optional<std::string> album, std::optional<std::string> artist, std::optional<double> duration, std::optional<std::string> artwork, std::optional<std::string> description, std::optional<std::string> mediaId, std::optional<std::string> genre): elapsedTime(elapsedTime), title(title), album(album), artist(artist), duration(duration), artwork(artwork), description(description), mediaId(mediaId), genre(genre) {}
 
   public:
     friend bool operator==(const NowPlayingMetadata& lhs, const NowPlayingMetadata& rhs) = default;
@@ -89,8 +76,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artwork"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "description"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "mediaId"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "genre"))),
-        JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "rating")))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "genre")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NowPlayingMetadata& arg) {
@@ -104,7 +90,6 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "description"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.description));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "mediaId"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.mediaId));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "genre"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.genre));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "rating"), JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::toJSI(runtime, arg.rating));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -124,7 +109,6 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "description")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "mediaId")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "genre")))) return false;
-      if (!JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "rating")))) return false;
       return true;
     }
   };

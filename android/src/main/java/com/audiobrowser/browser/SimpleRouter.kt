@@ -1,28 +1,20 @@
 package com.audiobrowser.browser
 
 /**
- * Simple route matcher for path patterns with parameter extraction.
- *
- * Supports patterns like:
- * - /artists - exact match
- * - /artists/{id} - parameter extraction
- * - /artists/{id}/albums - multiple segments with parameters
- * - /artists/&#42; - wildcard match (matches any single segment)
- * - /files/&#42;&#42; - tail wildcard (matches remaining path segments)
- *
- * Route specificity rules:
- * - More path segments = higher specificity
- * - Constant segments > parameter segments > wildcards > tail wildcards
- * - Most specific route wins
+ * Matches paths against route patterns segment by segment; empty segments are ignored, so leading
+ * and trailing slashes don't matter. In a pattern, `{name}` captures one segment into
+ * `params[name]`, `*` matches one segment without capturing it, a final `**` matches zero or more
+ * remaining segments and captures them, joined with `/`, as `params["tail"]` when there is at least
+ * one, and anything else must match exactly.
  */
 class SimpleRouter {
 
   /**
-   * Finds the best matching route for the given path.
-   *
-   * @param path The incoming path to match (e.g., "/artists/123")
-   * @param routes Map of route patterns to match against
-   * @return Pair of (route pattern, match result) or null if no match
+   * Returns the pattern in [routes] that matches [path] with the highest specificity, and its
+   * match, or null when none matches. Ranks mostly by constant segments, then `{param}`s, then `*`s
+   * (weights 1000/100/10); then a trailing `**` adds one, and each pattern segment (the `**`
+   * included) adds one, so `/a/{x}` with a trailing `**` beats `/a/{x}` even when the path ends at
+   * `{x}`. Among equal scores, the first in [routes]' iteration order wins.
    */
   fun <T> findBestMatch(path: String, routes: Map<String, T>): Pair<String, RouteMatch>? {
     return routes.keys
@@ -30,13 +22,6 @@ class SimpleRouter {
       .maxByOrNull { (_, match) -> match.specificity }
   }
 
-  /**
-   * Attempts to match a single pattern against a path.
-   *
-   * @param pattern Route pattern (e.g., "/artists/{id}", "/files/&#42;", "/api/&#42;&#42;")
-   * @param path Incoming path (e.g., "/artists/123")
-   * @return RouteMatch if successful, null otherwise
-   */
   private fun matchPattern(pattern: String, path: String): RouteMatch? {
     val patternSegments = pattern.split('/').filter { it.isNotEmpty() }
     val pathSegments = path.split('/').filter { it.isNotEmpty() }
@@ -47,16 +32,13 @@ class SimpleRouter {
     var wildcardSegments = 0
     var hasTailWildcard = false
 
-    // Check for tail wildcard at end
     if (patternSegments.isNotEmpty() && patternSegments.last() == "**") {
       hasTailWildcard = true
 
-      // For tail wildcard, pattern must have <= path segments
       if (patternSegments.size - 1 > pathSegments.size) {
         return null
       }
 
-      // Match all segments except the tail wildcard
       for (i in 0 until patternSegments.size - 1) {
         if (!matchSingleSegment(patternSegments[i], pathSegments[i], params)) {
           return null
@@ -73,13 +55,11 @@ class SimpleRouter {
         wildcardSegments = wildcardCount
       }
 
-      // Capture remaining path segments as "tail" parameter
       if (pathSegments.size > patternSegments.size - 1) {
         val remainingSegments = pathSegments.drop(patternSegments.size - 1)
         params["tail"] = remainingSegments.joinToString("/")
       }
     } else {
-      // Normal matching - must have same number of segments
       if (patternSegments.size != pathSegments.size) {
         return null
       }
@@ -101,12 +81,8 @@ class SimpleRouter {
       }
     }
 
-    // Specificity calculation (higher = more specific):
-    // - Constants: 1000 points each
-    // - Parameters: 100 points each
-    // - Single wildcards: 10 points each
-    // - Tail wildcard: 1 point
-    // - Base path length: segments count
+    // Weights, not a strict order: the lower terms add up, so enough `{param}`s and `*`s (e.g. 9 of
+    // each) can outscore one more constant.
     val specificity =
       (constantSegments * 1000) +
         (parameterSegments * 100) +
@@ -123,17 +99,13 @@ class SimpleRouter {
     params: MutableMap<String, String>,
   ): Boolean {
     return when {
-      // Parameter segment: {paramName}
       patternSegment.startsWith('{') && patternSegment.endsWith('}') -> {
         val paramName = patternSegment.substring(1, patternSegment.length - 1)
         params[paramName] = pathSegment
         true
       }
-      // Single wildcard: *
       patternSegment == "*" -> true
-      // Constant segment: must match exactly
       patternSegment == pathSegment -> true
-      // Mismatch
       else -> false
     }
   }

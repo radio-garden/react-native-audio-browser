@@ -1,5 +1,4 @@
 import type { Track, SearchParams } from '../../types'
-import type { HttpClient } from '../http/HttpClient'
 import type { BrowserManager } from './BrowserManager'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 
@@ -9,17 +8,16 @@ import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
  * Matches Android's search architecture.
  */
 export class SearchManager {
-  constructor(
-    private browserManager: BrowserManager,
-    private httpClient: HttpClient
-  ) {}
+  constructor(private browserManager: BrowserManager) {}
 
   /**
    * Executes a search query using the __search__ route configuration.
    * Matches Android's BrowserManager.search(params: SearchParams) behavior.
    *
    * @param params Search parameters (query is required, other fields optional)
-   * @returns Array of matching tracks
+   * @returns Array of matching tracks — empty only when the source found none
+   * @throws The failure itself: an `Error` carrying a `NavigationErrorType`
+   *   `code` from `HttpClient`, or whatever a `searchCallback` rejected with
    */
   async search(params: SearchParams): Promise<Track[]> {
     // Find __search__ route entry
@@ -43,45 +41,40 @@ export class SearchManager {
         q: params.query
       }
       if (params.mode) searchQueryParams.mode = params.mode
+      if (params.reference === 'my') searchQueryParams.reference = 'my'
       if (params.genre) searchQueryParams.genre = params.genre
       if (params.artist) searchQueryParams.artist = params.artist
       if (params.album) searchQueryParams.album = params.album
       if (params.title) searchQueryParams.title = params.title
       if (params.playlist) searchQueryParams.playlist = params.playlist
 
-      const requestConfig = this.httpClient.mergeRequestConfig(
+      // Delegate to the shared layered fetch (request → search) on BrowserManager
+      // so the ladder lives in one place.
+      results = await this.browserManager.fetchSearchResults(
         searchRoute.searchConfig,
-        {
-          query: searchQueryParams
-        }
+        searchQueryParams
       )
-
-      try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        results = Array.isArray(response) ? (response as Track[]) : []
-      } catch (error) {
-        console.error('Search failed:', error)
-        return []
-      }
     }
 
     // Transform artwork URLs on search results using async method with full Track access
+    // Gated per track inside the resolver, as on Android — a result carrying a
+    // plain `artwork` URL resolves even with no `artwork` config.
+    const requestConfig = await this.browserManager.resolvedRequestConfig()
     const artworkConfig = this.browserManager.configuration.artwork
-    if (artworkConfig) {
-      results = await Promise.all(
-        results.map(async (track) => {
-          const artworkSource =
-            await RequestConfigBuilder.resolveArtworkSourceAsync(
-              track,
-              artworkConfig
-            )
-          if (artworkSource && !track.artworkSource) {
-            return { ...track, artworkSource }
-          }
-          return track
-        })
-      )
-    }
+    results = await Promise.all(
+      results.map(async (track) => {
+        const artworkSource =
+          await RequestConfigBuilder.resolveArtworkSourceAsync(
+            track,
+            requestConfig,
+            artworkConfig
+          )
+        if (artworkSource && !track.artworkSource) {
+          return { ...track, artworkSource }
+        }
+        return track
+      })
+    )
 
     return results
   }

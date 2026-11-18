@@ -1,7 +1,15 @@
+import type { Section, Track } from 'react-native-audio-browser'
 import Icon from '@react-native-vector-icons/fontawesome6'
 import React from 'react'
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Track } from 'react-native-audio-browser'
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import { navigate } from 'react-native-audio-browser'
 
 type TrackListItemProps = {
   track: Track
@@ -19,13 +27,24 @@ export function TrackListItem({
       style={[styles.item, isActive && styles.activeItem]}
       onPress={onPress}
     >
+      {track.artworkSource ? (
+        <Image source={track.artworkSource} style={styles.itemArtworkLeft} />
+      ) : (
+        <View style={[styles.itemArtworkLeft, styles.itemArtworkPlaceholder]}>
+          <Icon name="music" size={16} color="#555555" iconStyle="solid" />
+        </View>
+      )}
       <View style={styles.itemContent}>
-        <Text style={[styles.itemTitle, isActive && styles.activeItemTitle]}>
+        <Text
+          style={[styles.itemTitle, isActive && styles.activeItemTitle]}
+          numberOfLines={2}
+        >
           {track.title}
         </Text>
         {track.subtitle && (
           <Text
             style={[styles.itemSubtitle, isActive && styles.activeItemSubtitle]}
+            numberOfLines={1}
           >
             {track.subtitle}
           </Text>
@@ -33,18 +52,13 @@ export function TrackListItem({
         {track.artist && (
           <Text
             style={[styles.itemArtist, isActive && styles.activeItemArtist]}
+            numberOfLines={1}
           >
             {track.artist}
           </Text>
         )}
       </View>
-      {track.src ? (
-        track.artworkSource ? (
-          <Image source={track.artworkSource} style={styles.itemArtwork} />
-        ) : (
-          <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
-        )
-      ) : (
+      {!track.src && (
         <Icon
           name="chevron-right"
           size={14}
@@ -55,6 +69,72 @@ export function TrackListItem({
     </TouchableOpacity>
   )
 }
+
+/**
+ * A grid-displayed section (`style: { display: 'grid' }`): header (tap →
+ * section.path) above a horizontal scroller of artwork tiles.
+ *
+ * Mirrors the native example's `SectionTileRow` so the two apps render the
+ * same config the same way. Without it a grid section fell back to a plain
+ * list here, and `archiveLibrarySection`'s own `display: 'grid'` was ignored.
+ */
+export function SectionTileRow({ section }: { section: Section }) {
+  return (
+    <View style={styles.imageRowContainer}>
+      <TouchableOpacity
+        style={styles.imageRowHeader}
+        onPress={() => section.path && navigate(section.path)}
+        disabled={!section.path}
+      >
+        <Text style={styles.imageRowTitle}>{section.title}</Text>
+        {section.path && (
+          <Icon
+            name="chevron-right"
+            size={14}
+            color="#ffffff"
+            iconStyle="solid"
+          />
+        )}
+      </TouchableOpacity>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.imageRowScroll}
+      >
+        {section.children.map((tile, index) => (
+          <TouchableOpacity
+            key={`${tile.title}-${index}`}
+            style={styles.imageRowItem}
+            onPress={() => navigate(tile)}
+          >
+            {tile.artworkSource ? (
+              <Image
+                source={tile.artworkSource}
+                style={styles.imageRowArtwork}
+              />
+            ) : (
+              <View
+                style={[styles.imageRowArtwork, styles.imageRowPlaceholder]}
+              >
+                <Icon
+                  name="music"
+                  size={32}
+                  color="#555555"
+                  iconStyle="solid"
+                />
+              </View>
+            )}
+            <Text style={styles.imageRowItemTitle} numberOfLines={2}>
+              {tile.title}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
+
+const IMAGE_ROW_SIZE = 120
 
 const styles = StyleSheet.create({
   item: {
@@ -82,11 +162,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666'
   },
-  itemArtwork: {
+  itemArtworkLeft: {
     width: 48,
     height: 48,
     borderRadius: 4,
-    marginLeft: 12
+    marginRight: 12
+  },
+  itemArtworkPlaceholder: {
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   activeItem: {
     backgroundColor: '#1a1a1a'
@@ -99,5 +184,44 @@ const styles = StyleSheet.create({
   },
   activeItemArtist: {
     color: '#888888'
+  },
+  imageRowContainer: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222222'
+  },
+  imageRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 12
+  },
+  imageRowTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#ffffff'
+  },
+  imageRowScroll: {
+    paddingHorizontal: 16,
+    gap: 12
+  },
+  imageRowItem: {
+    width: IMAGE_ROW_SIZE
+  },
+  imageRowArtwork: {
+    width: IMAGE_ROW_SIZE,
+    height: IMAGE_ROW_SIZE,
+    borderRadius: 8
+  },
+  imageRowPlaceholder: {
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  imageRowItemTitle: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginTop: 6
   }
 })

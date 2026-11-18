@@ -1,11 +1,3 @@
-/**
- * Battery optimization status and warning handling for Android 12+ foreground service restrictions.
- *
- * When an external controller (Bluetooth, car head unit) tries to resume playback while the app
- * is killed and battery restrictions are in place, Android 12+ blocks the foreground service start.
- * This module exposes APIs to detect this condition and guide users to fix their settings.
- */
-
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
@@ -42,7 +34,10 @@ export type BatteryOptimizationStatusChangedEvent = {
 
 /**
  * Check if a battery warning is pending (Android only).
- * Returns true if a foreground service start was blocked and the user hasn't dismissed
+ * On Android 12+, when a Bluetooth or car controller resumes playback while the
+ * app is killed and battery restrictions apply, the system blocks the foreground
+ * service start.
+ * Returns true if such a start was blocked and the user hasn't dismissed
  * the warning or fixed their battery settings.
  * Auto-clears when battery status becomes unrestricted.
  * @returns true if warning is pending, always false on iOS
@@ -53,7 +48,6 @@ export function getBatteryWarningPending(): boolean {
 
 /**
  * Get the current battery optimization status (Android only).
- * Also fires onBatteryOptimizationStatusChanged if status changed since last call.
  * @returns Current status, always 'unrestricted' on iOS
  */
 export function getBatteryOptimizationStatus(): BatteryOptimizationStatus {
@@ -72,7 +66,12 @@ export function dismissBatteryWarning(): void {
 }
 
 /**
- * Open the system battery settings for this app (Android only).
+ * Prompt the user to lift this app's battery restriction (Android only).
+ * With status `'optimized'` it starts the system's one-tap "ignore battery
+ * optimizations" dialog. Android shows that dialog only if the app's manifest
+ * declares `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, which the
+ * library does not declare; without it nothing appears. With any other status it
+ * opens the app's App info page.
  * No-op on iOS.
  */
 export function openBatterySettings(): void {
@@ -94,7 +93,8 @@ export const onBatteryWarningPendingChanged =
 
 /**
  * Subscribes to battery optimization status changes (Android only).
- * Fires when user returns from settings with a different status.
+ * Fires when the app comes to the foreground with a different status from the
+ * one it had at the previous foreground, typically on return from settings.
  * Never fires on iOS.
  */
 export const onBatteryOptimizationStatusChanged =
@@ -138,13 +138,17 @@ export interface BatteryWarning {
   status: BatteryOptimizationStatus
   /** Dismiss the warning without changing settings */
   dismiss: () => void
-  /** Open system battery settings for this app */
+  /** Prompt the user to lift the restriction; see {@link openBatterySettings} */
   openSettings: () => void
 }
 
 /**
  * Meta hook that bundles all battery warning state and actions (Android only).
  * Use this for a complete battery warning UI implementation.
+ *
+ * On Android 12+, when a Bluetooth or car controller resumes playback while the
+ * app is killed and battery restrictions apply, the system blocks the foreground
+ * service start. See the [Battery guide](https://audiobrowser.dev/guide/battery).
  *
  * @example
  * ```tsx

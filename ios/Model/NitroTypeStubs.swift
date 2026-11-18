@@ -1,228 +1,537 @@
 #if !canImport(NitroModules)
-/// Lightweight stand-ins for NitroModules types used by the testable target.
-/// Only compiled when NitroModules is unavailable (SPM test builds).
+  // Stand-ins for the NitroModules types, compiled only in SwiftPM test builds.
+  //
+  // They declare `Equatable` for tests; the generated types do not. Shared `ios/` sources
+  // must not rely on a conformance that exists only here: `swift test` passes and the app
+  // build breaks.
+  //
+  // src/nitro-stub-drift.test.ts (JS CI) checks property names and types against
+  // nitrogen/generated/ios/swift. Declaring fewer properties than the real type is fine;
+  // conformances and default values are not checked.
 
-struct Track: Equatable {
-  var id: String
-  var url: String? = nil
-  var src: String? = nil
-  var title: String = ""
-  var artist: String? = nil
-  var album: String? = nil
-  var live: Bool? = nil
-}
-
-struct TrackLoadEvent {
-  var track: Track
-  var queue: [Track]
-  var startIndex: Double
-}
-
-enum RepeatMode {
-  case off
-  case track
-  case queue
-}
-
-enum CarPlaySiriListButtonPosition {
-  case top
-  case bottom
-}
-
-struct ImageSource: Equatable {
-  var uri: String
-  var method: String? = nil
-  var headers: [String: String]? = nil
-  var body: String? = nil
-}
-
-enum TrackStyle {
-  case list
-  case grid
-}
-
-struct ImageRowItem: Equatable {
-  var url: String? = nil
-  var artwork: String? = nil
-  var artworkSource: ImageSource? = nil
-  var title: String
-}
-
-struct ResolvedTrack: Equatable {
-  var url: String
-  var children: [Track]? = nil
-  var carPlaySiriListButton: CarPlaySiriListButtonPosition? = nil
-  var src: String? = nil
-  var artwork: String? = nil
-  var artworkSource: ImageSource? = nil
-  var artworkCarPlayTinted: Bool? = nil
-  var title: String
-  var subtitle: String? = nil
-  var artist: String? = nil
-  var album: String? = nil
-  var description: String? = nil
-  var genre: String? = nil
-  var duration: Double? = nil
-  var style: TrackStyle? = nil
-  var childrenStyle: TrackStyle? = nil
-  var favorited: Bool? = nil
-  var groupTitle: String? = nil
-  var live: Bool? = nil
-  var imageRow: [ImageRowItem]? = nil
-}
-
-enum PlaybackState: Equatable {
-  case none
-  case ready
-  case playing
-  case paused
-  case stopped
-  case loading
-  case buffering
-  case error
-  case ended
-}
-
-struct TrackMetadata: Equatable {
-  var title: String?
-  var artist: String?
-  var albumTitle: String?
-  var subtitle: String?
-  var description: String?
-  var artworkUri: String?
-  var trackNumber: String?
-  var composer: String?
-  var conductor: String?
-  var genre: String?
-  var compilation: String?
-  var station: String?
-  var mediaType: String?
-  var creationDate: String?
-  var creationYear: String?
-  var url: String?
-
-  init(
-    title: String? = nil, artist: String? = nil, albumTitle: String? = nil,
-    subtitle: String? = nil, description: String? = nil, artworkUri: String? = nil,
-    trackNumber: String? = nil, composer: String? = nil, conductor: String? = nil,
-    genre: String? = nil, compilation: String? = nil, station: String? = nil,
-    mediaType: String? = nil, creationDate: String? = nil, creationYear: String? = nil,
-    url: String? = nil
-  ) {
-    self.title = title
-    self.artist = artist
-    self.albumTitle = albumTitle
-    self.subtitle = subtitle
-    self.description = description
-    self.artworkUri = artworkUri
-    self.trackNumber = trackNumber
-    self.composer = composer
-    self.conductor = conductor
-    self.genre = genre
-    self.compilation = compilation
-    self.station = station
-    self.mediaType = mediaType
-    self.creationDate = creationDate
-    self.creationYear = creationYear
-    self.url = url
+  struct ArtworkVariants: Equatable {
+    var light: String
+    var dark: String
   }
-}
 
-struct TimedMetadata: Equatable {
-  var title: String?
-  var artist: String?
-  var album: String?
-  var date: String?
-  var genre: String?
-
-  init(
-    title: String? = nil, artist: String? = nil, album: String? = nil,
-    date: String? = nil, genre: String? = nil
-  ) {
-    self.title = title
-    self.artist = artist
-    self.album = album
-    self.date = date
-    self.genre = genre
+  @frozen enum Variant_String_ArtworkVariants {
+    case first(String)
+    case second(ArtworkVariants)
   }
-}
 
-struct ChapterMetadata: Equatable {
-  var startTime: Double
-  var endTime: Double
-  var title: String?
-  var url: String?
-
-  init(startTime: Double, endTime: Double, title: String? = nil, url: String? = nil) {
-    self.startTime = startTime
-    self.endTime = endTime
-    self.title = title
-    self.url = url
+  struct TrackRequest: Equatable {
+    var userAgent: String?
+    var headers: [String: String]?
+    var query: [String: String]?
   }
-}
 
-// MARK: - Playback Event Types (used by PlaybackCoordinator)
+  // Every property of the generated type, in its init's order, so the shared conversions in
+  // JsonModels compile against both.
+  struct Track: Equatable {
+    var id: String?
+    var path: String?
+    var src: String?
+    var artwork: Variant_String_ArtworkVariants?
+    var artworkSource: ImageSource?
+    var request: TrackRequest?
+    var title: String = ""
+    var subtitle: String?
+    var artist: String?
+    var albumPath: String?
+    var album: String?
+    var description: String?
+    var genre: String?
+    var duration: Double?
+    var style: TrackStyle?
+    var disabled: Bool?
+    var favorited: Bool?
+    var live: Bool?
+    var icyCharset: String?
+  }
 
-struct PlaybackError: Equatable {
-  var code: String
-  var message: String
-}
+  struct NowPlayingUpdate: Equatable {
+    var title: String?
+    var artist: String?
+    var album: String?
+  }
 
-struct Playback: Equatable {
-  var state: PlaybackState
-  var error: PlaybackError?
-}
+  struct PlayerCapabilities: Equatable {
+    var play: Bool?
+    var pause: Bool?
+    var stop: Bool?
+    var seekTo: Bool?
+    var skipToNext: Bool?
+    var skipToPrevious: Bool?
+    var jumpForward: Bool?
+    var jumpBackward: Bool?
+    var favorite: Bool?
+    var shuffleMode: Bool?
+    var repeatMode: Bool?
+    var playbackRate: Bool?
+  }
 
-struct PlaybackErrorEvent {
-  var error: PlaybackError?
-}
+  struct TrackLoadEvent {
+    var track: Track
+    var queue: [Track]
+    var startIndex: Double
+    var startPosition: Double?
+  }
 
-struct PlaybackActiveTrackChangedEvent {
-  var lastIndex: Double?
-  var lastTrack: Track?
-  var lastPosition: Double
-  var index: Double?
-  var track: Track?
-}
+  enum RepeatMode {
+    case off
+    case track
+    case queue
 
-struct PlaybackProgressUpdatedEvent {
-  var track: Double
-  var position: Double
-  var duration: Double
-  var buffered: Double
-}
-
-struct PlayingState: Equatable {
-  var playing: Bool
-  var buffering: Bool
-}
-
-struct PlaybackQueueEndedEvent {
-  var track: Double
-  var position: Double
-}
-
-struct RepeatModeChangedEvent {
-  var repeatMode: RepeatMode
-}
-
-// MARK: - TrackPlayerError.PlaybackError Nitro Conversion Stub
-
-extension TrackPlayerError.PlaybackError {
-  func toNitroError() -> PlaybackError {
-    let code = switch self {
-    case .failedToLoadKeyValue:
-      "failed_to_load"
-    case .invalidSourceUrl:
-      "invalid_source_url"
-    case .notConnectedToInternet:
-      "not_connected_to_internet"
-    case .playbackFailed:
-      "playback_failed"
-    case .trackWasUnplayable:
-      "track_unplayable"
+    init?(fromString string: String) {
+      switch string {
+      case "off": self = .off
+      case "track": self = .track
+      case "queue": self = .queue
+      default: return nil
+      }
     }
-    return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
+
+    var stringValue: String {
+      switch self {
+      case .off: "off"
+      case .track: "track"
+      case .queue: "queue"
+      }
+    }
   }
-}
+
+  enum CarPlaySiriListButtonPosition {
+    case top
+    case bottom
+
+    init?(fromString string: String) {
+      switch string {
+      case "top": self = .top
+      case "bottom": self = .bottom
+      default: return nil
+      }
+    }
+  }
+
+  enum HttpMethod {
+    case get
+    case post
+    case put
+    case patch
+    case delete
+    case head
+    case options
+  }
+
+  enum SearchMode {
+    case any
+    case song
+    case playlist
+    case station
+    case podcast
+    case audiobook
+    case news
+    case music
+    case musicVideo
+    case movie
+    case tvShow
+    case tvShowEpisode
+
+    var stringValue: String {
+      switch self {
+      case .any: "any"
+      case .song: "song"
+      case .playlist: "playlist"
+      case .station: "station"
+      case .podcast: "podcast"
+      case .audiobook: "audiobook"
+      case .news: "news"
+      case .music: "music"
+      case .musicVideo: "music-video"
+      case .movie: "movie"
+      case .tvShow: "tv-show"
+      case .tvShowEpisode: "tv-show-episode"
+      }
+    }
+  }
+
+  enum MediaReference {
+    case my
+    case unknown
+
+    var stringValue: String {
+      switch self {
+      case .my: "my"
+      case .unknown: "unknown"
+      }
+    }
+  }
+
+  struct SearchParams {
+    var mode: SearchMode?
+    var query: String
+    var genre: String?
+    var artist: String?
+    var album: String?
+    var title: String?
+    var playlist: String?
+    var reference: MediaReference
+  }
+
+  enum GateReason {
+    case browse
+    case search
+  }
+
+  struct Gate {
+    var title: String
+    var message: String?
+  }
+
+  struct GateDecision {
+    var gated: Bool
+    var gate: Gate?
+  }
+
+  struct NativeGateRequest {
+    var reason: GateReason
+    var path: String?
+    var search: SearchParams?
+  }
+
+  struct GateEvent {
+    var reason: GateReason
+  }
+
+  struct ImageContext {
+    var width: Double?
+    var height: Double?
+  }
+
+  struct ImageQueryParams {
+    var width: String?
+    var height: String?
+  }
+
+  struct ImageSource: Equatable {
+    var uri: String
+    var method: HttpMethod?
+    var headers: [String: String]?
+    var body: String?
+  }
+
+  enum StyleDisplay: Equatable {
+    case list
+    case grid
+
+    init?(fromString string: String) {
+      switch string {
+      case "list": self = .list
+      case "grid": self = .grid
+      default: return nil
+      }
+    }
+  }
+
+  enum ArtworkRendering: Equatable {
+    case original
+    case stencil
+
+    init?(fromString string: String) {
+      switch string {
+      case "original": self = .original
+      case "stencil": self = .stencil
+      default: return nil
+      }
+    }
+  }
+
+  enum ImageShape: Equatable {
+    case circular
+    case roundedRectangle
+
+    init?(fromString string: String) {
+      switch string {
+      case "circular": self = .circular
+      case "rounded-rectangle": self = .roundedRectangle
+      default: return nil
+      }
+    }
+  }
+
+  enum GridTile: Equatable {
+    case plain
+    case image
+    case card
+    case condensed
+
+    init?(fromString string: String) {
+      switch string {
+      case "plain": self = .plain
+      case "image": self = .image
+      case "card": self = .card
+      case "condensed": self = .condensed
+      default: return nil
+      }
+    }
+
+    var stringValue: String {
+      switch self {
+      case .plain: "plain"
+      case .image: "image"
+      case .card: "card"
+      case .condensed: "condensed"
+      }
+    }
+  }
+
+  enum CardImage: Equatable {
+    case normal
+    case background
+
+    init?(fromString string: String) {
+      switch string {
+      case "normal": self = .normal
+      case "background": self = .background
+      default: return nil
+      }
+    }
+  }
+
+  struct TrackStyle: Equatable {
+    var display: StyleDisplay?
+    var artworkRendering: ArtworkRendering?
+    var imageShape: ImageShape?
+    var accessorySymbol: String?
+    var cardTint: String?
+    var cardImage: CardImage?
+  }
+
+  // Member order matches the generated init, own properties before inherited ones (Nitro
+  // flattens `extends` own-props-first): a different order still passes `swift test` but
+  // breaks the app build.
+  struct SectionStyle: Equatable {
+    var gridWrap: Bool?
+    var gridTile: GridTile?
+    var display: StyleDisplay?
+    var artworkRendering: ArtworkRendering?
+    var imageShape: ImageShape?
+    var accessorySymbol: String?
+    var cardTint: String?
+    var cardImage: CardImage?
+  }
+
+  struct Section: Equatable {
+    var title: String?
+    var style: SectionStyle?
+    var path: String?
+    var children: [Track]
+  }
+
+  struct ResolvedTrack: Equatable {
+    var path: String
+    var style: SectionStyle?
+    var sections: [Section]?
+    var children: [Track]?
+    var carPlaySiriListButton: CarPlaySiriListButtonPosition?
+    var id: String?
+    var src: String?
+    var artwork: Variant_String_ArtworkVariants?
+    var artworkSource: ImageSource?
+    var request: TrackRequest?
+    var title: String
+    var subtitle: String?
+    var artist: String?
+    var albumPath: String?
+    var album: String?
+    var description: String?
+    var genre: String?
+    var duration: Double?
+    var disabled: Bool?
+    var favorited: Bool?
+    var live: Bool?
+    var icyCharset: String?
+  }
+
+  enum PlaybackState: Equatable {
+    case none
+    case ready
+    case playing
+    case paused
+    case stopped
+    case loading
+    case buffering
+    case error
+    case ended
+  }
+
+  struct TrackMetadata: Equatable {
+    var title: String?
+    var artist: String?
+    var albumTitle: String?
+    var subtitle: String?
+    var description: String?
+    var artworkUri: String?
+    var trackNumber: String?
+    var composer: String?
+    var conductor: String?
+    var genre: String?
+    var compilation: String?
+    var station: String?
+    var mediaType: String?
+    var creationDate: String?
+    var creationYear: String?
+    var url: String?
+
+    init(
+      title: String? = nil, artist: String? = nil, albumTitle: String? = nil,
+      subtitle: String? = nil, description: String? = nil, artworkUri: String? = nil,
+      trackNumber: String? = nil, composer: String? = nil, conductor: String? = nil,
+      genre: String? = nil, compilation: String? = nil, station: String? = nil,
+      mediaType: String? = nil, creationDate: String? = nil, creationYear: String? = nil,
+      url: String? = nil,
+    ) {
+      self.title = title
+      self.artist = artist
+      self.albumTitle = albumTitle
+      self.subtitle = subtitle
+      self.description = description
+      self.artworkUri = artworkUri
+      self.trackNumber = trackNumber
+      self.composer = composer
+      self.conductor = conductor
+      self.genre = genre
+      self.compilation = compilation
+      self.station = station
+      self.mediaType = mediaType
+      self.creationDate = creationDate
+      self.creationYear = creationYear
+      self.url = url
+    }
+  }
+
+  struct TimedMetadata: Equatable {
+    var title: String?
+    var artist: String?
+    var album: String?
+    var date: String?
+    var genre: String?
+
+    init(
+      title: String? = nil, artist: String? = nil, album: String? = nil,
+      date: String? = nil, genre: String? = nil,
+    ) {
+      self.title = title
+      self.artist = artist
+      self.album = album
+      self.date = date
+      self.genre = genre
+    }
+  }
+
+  struct ChapterMetadata: Equatable {
+    var startTime: Double
+    var endTime: Double
+    var title: String?
+    var url: String?
+
+    init(startTime: Double, endTime: Double, title: String? = nil, url: String? = nil) {
+      self.startTime = startTime
+      self.endTime = endTime
+      self.title = title
+      self.url = url
+    }
+  }
+
+  // MARK: - Playback Event Types (used by Player)
+
+  // Public like the generated enum, which `TrackPlayerError` exposes from a public property.
+  public enum PlaybackErrorKind {
+    case offline
+    case unreachable
+    case notFound
+    case rejected
+    case serverError
+    case unplayable
+    case stalled
+    case unknown
+  }
+
+  struct RetryConfig {
+    var maxRetries: Double?
+    var maxRetryDurationMs: Double?
+    var firstConnectMaxRetryDurationMs: Double?
+  }
+
+  @frozen enum Variant_Bool_RetryConfig {
+    case first(Bool)
+    case second(RetryConfig)
+  }
+
+  struct PlaybackError: Equatable {
+    var kind: PlaybackErrorKind
+    var code: String
+    var message: String
+    var statusCode: Double?
+    var retrying: Bool?
+  }
+
+  struct Playback: Equatable {
+    var state: PlaybackState
+    var error: PlaybackError?
+  }
+
+  struct PlaybackErrorEvent {
+    var error: PlaybackError?
+  }
+
+  struct PlaybackActiveTrackChangedEvent {
+    var lastIndex: Double?
+    var lastTrack: Track?
+    var lastPosition: Double
+    var index: Double?
+    var track: Track?
+  }
+
+  struct PlaybackProgressUpdatedEvent {
+    var track: Double
+    var position: Double
+    var duration: Double
+    var buffered: Double
+  }
+
+  struct PlayingState: Equatable {
+    var playing: Bool
+    var buffering: Bool
+  }
+
+  struct PlaybackQueueEndedEvent {
+    var track: Double
+    var position: Double
+  }
+
+  struct RepeatModeChangedEvent {
+    var repeatMode: RepeatMode
+  }
+
+  // MARK: - Sleep Timer Variant Stubs
+
+  enum NullType: Equatable {
+    case null
+  }
+
+  struct SleepTimerTime: Equatable {
+    var time: Double
+  }
+
+  struct SleepTimerEndOfTrack: Equatable {
+    var sleepWhenPlayedToEnd: Bool
+  }
+
+  indirect enum SleepTimer: Equatable {
+    case first(NullType)
+    case second(SleepTimerTime)
+    case third(SleepTimerEndOfTrack)
+  }
+
 #endif

@@ -2,20 +2,24 @@ import Kingfisher
 import SwiftDraw
 import UIKit
 
-/// Kingfisher processor that renders SVG data to UIImage using SwiftDraw.
+/// Kingfisher processor that rasterizes SVG data with SwiftDraw.
 struct SVGProcessor: ImageProcessor {
-  let identifier = "com.audiobrowser.svgprocessor"
+  // Kingfisher keys its cache on the URL and this identifier only (`.scaleFactor` is
+  // not in the key), so every render parameter must be here or different
+  // rasterizations of one URL collide.
+  var identifier: String {
+    "com.audiobrowser.svgprocessor(\(size?.width ?? -1)x\(size?.height ?? -1)@\(scale))"
+  }
 
-  /// Target size for rendering (in points). If nil, uses SVG's intrinsic size.
+  /// Points; nil renders at the SVG's intrinsic size.
   let size: CGSize?
 
-  /// Scale factor for rendering. Resolved at init time to avoid MainActor issues.
   let scale: CGFloat
 
   @MainActor
   init(size: CGSize? = nil, scale: CGFloat? = nil) {
     self.size = size
-    self.scale = scale ?? UIScreen.main.scale
+    self.scale = scale ?? appDisplayScale
   }
 
   func process(item: ImageProcessItem, options _: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
@@ -23,7 +27,6 @@ struct SVGProcessor: ImageProcessor {
     case let .data(data):
       return renderSVG(from: data)
     case let .image(image):
-      // Already an image, return as-is
       return image
     @unknown default:
       return nil
@@ -42,15 +45,5 @@ struct SVGProcessor: ImageProcessor {
     }
 
     return svg.rasterize(size: renderSize, scale: scale)
-  }
-}
-
-// MARK: - Kingfisher Options Extension
-
-extension KingfisherOptionsInfoItem {
-  /// Returns an SVG processor option for Kingfisher.
-  @MainActor
-  static func svgProcessor(size: CGSize? = nil, scale: CGFloat? = nil) -> KingfisherOptionsInfoItem {
-    .processor(SVGProcessor(size: size, scale: scale))
   }
 }

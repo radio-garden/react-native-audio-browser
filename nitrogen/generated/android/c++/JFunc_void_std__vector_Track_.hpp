@@ -17,15 +17,27 @@
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
+#include "ArtworkVariants.hpp"
+#include <variant>
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include "JImageRowItem.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -37,7 +49,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__vector_Track_: public jni::JavaClass<JFunc_void_std__vector_Track_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_Track_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_Track_;";
 
   public:
     /**
@@ -45,16 +57,16 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::vector<Track>& tabs) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tabs */)>("invoke");
-      method(self(), [&]() {
-        size_t __size = tabs.size();
+      method(self(), [&](auto&& __input) {
+        size_t __size = __input.size();
         jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
         for (size_t __i = 0; __i < __size; __i++) {
-          const auto& __element = tabs[__i];
+          const auto& __element = __input[__i];
           auto __elementJni = JTrack::fromCpp(__element);
           __array->setElement(__i, *__elementJni);
         }
         return __array;
-      }());
+      }(tabs));
     }
   };
 
@@ -72,16 +84,16 @@ namespace margelo::nitro::audiobrowser {
      * Invokes the C++ `std::function<...>` this `JFunc_void_std__vector_Track__cxx` instance holds.
      */
     void invoke_cxx(jni::alias_ref<jni::JArrayClass<JTrack>> tabs) {
-      _func([&]() {
-              size_t __size = tabs->size();
-              std::vector<Track> __vector;
-              __vector.reserve(__size);
-              for (size_t __i = 0; __i < __size; __i++) {
-                auto __element = tabs->getElement(__i);
-                __vector.push_back(__element->toCpp());
-              }
-              return __vector;
-            }());
+      _func([&](auto&& __input) {
+        size_t __size = __input->size();
+        std::vector<Track> __vector;
+        __vector.reserve(__size);
+        for (size_t __i = 0; __i < __size; __i++) {
+          auto __element = __input->getElement(__i);
+          __vector.push_back(__element->toCpp());
+        }
+        return __vector;
+      }(tabs));
     }
 
   public:
@@ -91,7 +103,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_Track__cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_Track__cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_std__vector_Track__cxx::invoke_cxx)});
     }

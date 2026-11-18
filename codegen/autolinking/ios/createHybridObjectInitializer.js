@@ -15,26 +15,35 @@ export function createHybridObjectIntializer() {
     const cppImports = [];
     let containsSwiftObjects = false;
     for (const hybridObjectName of Object.keys(autolinkedHybridObjects)) {
-        const config = autolinkedHybridObjects[hybridObjectName];
-        if (config?.cpp != null) {
-            // Autolink a C++ HybridObject!
-            const { cppCode, requiredImports } = createCppHybridObjectRegistration({
-                hybridObjectName: hybridObjectName,
-                cppClassName: config.cpp,
-            });
-            cppImports.push(...requiredImports);
-            cppRegistrations.push(cppCode);
+        const implementation = NitroConfig.current.getIosAutolinkedImplementation(hybridObjectName);
+        if (implementation == null) {
+            continue;
         }
-        if (config?.swift != null) {
-            // Autolink a Swift HybridObject!
-            containsSwiftObjects = true;
-            const { cppCode, requiredImports, swiftRegistrationMethods } = createSwiftHybridObjectRegistration({
-                hybridObjectName: hybridObjectName,
-                swiftClassName: config.swift,
-            });
-            cppImports.push(...requiredImports);
-            cppRegistrations.push(cppCode);
-            swiftRegistrations.push(swiftRegistrationMethods);
+        switch (implementation.language) {
+            case 'c++': {
+                // Autolink a C++ HybridObject!
+                const { cppCode, requiredImports } = createCppHybridObjectRegistration({
+                    hybridObjectName: hybridObjectName,
+                    cppClassName: implementation.implementationClassName,
+                });
+                cppImports.push(...requiredImports);
+                cppRegistrations.push(cppCode);
+                break;
+            }
+            case 'swift': {
+                // Autolink a Swift HybridObject!
+                containsSwiftObjects = true;
+                const { cppCode, requiredImports, swiftRegistrationMethods } = createSwiftHybridObjectRegistration({
+                    hybridObjectName: hybridObjectName,
+                    swiftClassName: implementation.implementationClassName,
+                });
+                cppImports.push(...requiredImports);
+                cppRegistrations.push(cppCode);
+                swiftRegistrations.push(swiftRegistrationMethods);
+                break;
+            }
+            default:
+                throw new Error(`The HybridObject "${hybridObjectName}" cannot be autolinked on iOS - Language "${implementation.language}" is not supported on iOS!`);
         }
     }
     if (cppRegistrations.length === 0) {

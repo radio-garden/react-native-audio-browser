@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.NullType
 
 /**
@@ -25,15 +26,25 @@ data class NitroAndroidUpdateOptions(
   val skipSilence: Boolean?,
   @DoNotStrip
   @Keep
-  val shuffle: Boolean?,
-  @DoNotStrip
-  @Keep
-  val ratingType: RatingType?,
-  @DoNotStrip
-  @Keep
-  val notificationButtons: Variant_NullType_NotificationButtonLayout?
+  val remoteButtonLayout: Variant_NullType_RemoteButtonLayout?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NitroAndroidUpdateOptions) return false
+    return Objects.deepEquals(this.appKilledPlaybackBehavior, other.appKilledPlaybackBehavior)
+      && Objects.deepEquals(this.skipSilence, other.skipSilence)
+      && Objects.deepEquals(this.remoteButtonLayout, other.remoteButtonLayout)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      appKilledPlaybackBehavior,
+      skipSilence,
+      remoteButtonLayout
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -43,8 +54,8 @@ data class NitroAndroidUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, shuffle: Boolean?, ratingType: RatingType?, notificationButtons: Variant_NullType_NotificationButtonLayout?): NitroAndroidUpdateOptions {
-      return NitroAndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, notificationButtons)
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, remoteButtonLayout: Variant_NullType_RemoteButtonLayout?): NitroAndroidUpdateOptions {
+      return NitroAndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, remoteButtonLayout)
     }
   }
 }

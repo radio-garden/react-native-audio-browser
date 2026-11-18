@@ -10,11 +10,11 @@ import Testing
 private func makeTimedMetadataGroup(
   start: Double,
   duration: Double,
-  title: String? = nil
+  title: String? = nil,
 ) -> AVTimedMetadataGroup {
   let timeRange = CMTimeRange(
     start: CMTime(seconds: start, preferredTimescale: 1000),
-    duration: CMTime(seconds: duration, preferredTimescale: 1000)
+    duration: CMTime(seconds: duration, preferredTimescale: 1000),
   )
 
   var items: [AVMetadataItem] = []

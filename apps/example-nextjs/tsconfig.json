@@ -5,7 +5,16 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    // Mirrors the webpack alias in next.config (and example-native's paths):
+    // the workspace package resolves to source, not an installed copy.
+    "paths": {
+      "react-native-audio-browser": ["../../src"]
+    }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js"],
+  // `public` holds the local HLS fixture, whose MPEG-TS segments use the same
+  // `.ts` extension as TypeScript. Without this, `**/*.ts` sweeps them into the
+  // program and every segment fails to parse as source.
+  "exclude": ["node_modules", ".next", "public"]
 }

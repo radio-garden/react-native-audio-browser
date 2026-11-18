@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -43,6 +44,32 @@ data class RequestConfig(
   val userAgent: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is RequestConfig) return false
+    return Objects.deepEquals(this.method, other.method)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.baseUrl, other.baseUrl)
+      && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.query, other.query)
+      && Objects.deepEquals(this.body, other.body)
+      && Objects.deepEquals(this.contentType, other.contentType)
+      && Objects.deepEquals(this.userAgent, other.userAgent)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      method,
+      path,
+      baseUrl,
+      headers,
+      query,
+      body,
+      contentType,
+      userAgent
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

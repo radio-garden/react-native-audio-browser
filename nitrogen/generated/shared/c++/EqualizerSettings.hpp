@@ -54,8 +54,6 @@ namespace margelo::nitro::audiobrowser {
     EqualizerSettings() = default;
     explicit EqualizerSettings(std::optional<std::string> activePreset, double bandCount, std::vector<double> bandLevels, std::vector<double> centerBandFrequencies, bool enabled, double lowerBandLevelLimit, std::vector<std::string> presets, double upperBandLevelLimit): activePreset(activePreset), bandCount(bandCount), bandLevels(bandLevels), centerBandFrequencies(centerBandFrequencies), enabled(enabled), lowerBandLevelLimit(lowerBandLevelLimit), presets(presets), upperBandLevelLimit(upperBandLevelLimit) {}
 
-  public:
-    friend bool operator==(const EqualizerSettings& lhs, const EqualizerSettings& rhs) = default;
   };
 
 } // namespace margelo::nitro::audiobrowser

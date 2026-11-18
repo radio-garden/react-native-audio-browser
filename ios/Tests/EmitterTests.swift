@@ -37,7 +37,6 @@ struct EmitTests {
   @Test func noCrashWithZeroListeners() {
     let emitter = Emitter<Int>()
     emitter.emit(99)
-    // reaching here without crash is the assertion
   }
 }
 
@@ -69,54 +68,38 @@ struct RemoveListenerTests {
 
   @Test func doubleRemoveSameTokenIsSafe() {
     let emitter = Emitter<Int>()
-    let token = emitter.addListener { _ in }
+    var received = [Int]()
+    let token = emitter.addListener { received.append($0) }
     emitter.removeListener(token)
     emitter.removeListener(token)
-    #expect(emitter.listenerCount == 0)
-  }
-}
-
-// MARK: - removeAllListeners
-
-@Suite("removeAllListeners")
-struct RemoveAllListenersTests {
-  @Test func clearsAllAndCountGoesToZero() {
-    let emitter = Emitter<Int>()
-    emitter.addListener { _ in }
-    emitter.addListener { _ in }
-    emitter.addListener { _ in }
-    emitter.removeAllListeners()
-    #expect(emitter.listenerCount == 0)
-  }
-
-  @Test func previouslyAddedListenersStopReceiving() {
-    let emitter = Emitter<Int>()
-    var called = false
-    emitter.addListener { _ in called = true }
-    emitter.removeAllListeners()
     emitter.emit(1)
-    #expect(called == false)
+    #expect(received.isEmpty)
   }
 }
 
-// MARK: - listenerCount
+// MARK: - subscribe
 
-@Suite("listenerCount")
-struct ListenerCountTests {
-  @Test func reflectsAddsAndRemoves() {
+@Suite("subscribe")
+struct SubscribeTests {
+  @Test func receivesUntilCancelled() {
     let emitter = Emitter<Int>()
-    #expect(emitter.listenerCount == 0)
+    var received: [Int] = []
+    let subscription = emitter.subscribe { received.append($0) }
+    emitter.emit(1)
+    subscription.cancel()
+    emitter.emit(2)
+    #expect(received == [1])
+  }
 
-    let t1 = emitter.addListener { _ in }
-    #expect(emitter.listenerCount == 1)
-
-    let t2 = emitter.addListener { _ in }
-    #expect(emitter.listenerCount == 2)
-
-    emitter.removeListener(t1)
-    #expect(emitter.listenerCount == 1)
-
-    emitter.removeListener(t2)
-    #expect(emitter.listenerCount == 0)
+  @Test func releasingTheSubscriptionRemovesTheListener() {
+    let emitter = Emitter<Int>()
+    var received: [Int] = []
+    do {
+      let subscription = emitter.subscribe { received.append($0) }
+      emitter.emit(1)
+      _ = subscription
+    }
+    emitter.emit(2)
+    #expect(received == [1])
   }
 }

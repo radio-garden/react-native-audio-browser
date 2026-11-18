@@ -12,71 +12,66 @@ struct MediaResolvedUrl {
 final class MediaLoader {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaLoader")
 
-  var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
+  /// Resolves a src into a URL and headers; gets the `Track` so it can apply the consumer's
+  /// `media.resolve(track)`.
+  private let resolveUrl: (String, Track?) async -> MediaResolvedUrl
 
-  /// Internal access so TrackPlayer can read it for observer guards.
+  init(resolveUrl: @escaping (String, Track?) async -> MediaResolvedUrl) {
+    self.resolveUrl = resolveUrl
+  }
+
   private(set) var asset: AVURLAsset?
 
-  /// Milliseconds; applied to AVPlayerItem's preferredForwardBufferDuration.
+  /// Milliseconds, applied as the item's `preferredForwardBufferDuration`.
   var bufferDuration: Double = 0
 
-  weak var delegate: MediaLoaderDelegate?
+  enum Event {
+    case prepared(AVPlayerItem)
+    /// The retry loop decides whether another attempt could help.
+    case failed(Error)
+    /// The asset loaded but cannot play.
+    case unplayable
+    /// The resolved src is not a URL, so no asset exists.
+    case invalidSource(String)
+    case commonMetadata([AVMetadataItem])
+    case chapterMetadata([AVTimedMetadataGroup])
+    case timedMetadata([AVTimedMetadataGroup])
+  }
 
-  private var mediaResolverTask: Task<Void, Never>?
+  var onEvent: (@MainActor (Event) -> Void)?
+
+  /// Readable so tests can await the resolve-then-load chain; only this type starts and
+  /// cancels it.
+  private(set) var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
-  private var url: URL?
-  private var urlOptions: [String: Any]?
 
   // MARK: - Public API
 
-  func resolveAndLoad(src: String) {
-    if let resolver = mediaUrlResolver {
-      mediaResolverTask?.cancel()
-      mediaResolverTask = Task {
-        self.logger.debug("resolveAndLoad: starting resolution for \(src)")
-
-        guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoad: cancelled before start")
-          return
-        }
-
-        self.logger.debug("resolveAndLoad: calling resolver...")
-        let resolved = await resolver(src)
-
-        guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoad: cancelled after resolver returned")
-          return
-        }
-
-        self.logger.debug("resolveAndLoad: resolver returned, resolved URL: \(resolved.url)")
-        if let headers = resolved.headers {
-          self.logger.debug("  headers: \(headers)")
-        }
-        if let userAgent = resolved.userAgent {
-          self.logger.debug("  userAgent: \(userAgent)")
-        }
-
-        await MainActor.run {
-          guard !Task.isCancelled else {
-            self.logger.debug("resolveAndLoad: cancelled before loadWithResolvedUrl")
-            return
-          }
-          self.loadWithResolvedUrl(resolved)
-        }
-      }
-    } else {
-      let resolved = MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
-      loadWithResolvedUrl(resolved)
+  /// Resolves `src` and loads the result, reporting through `onEvent`. Cancels a resolve in
+  /// flight; the previous asset's loads stay current, and can still report, until the new
+  /// resolve loads an asset (an invalid source leaves them current).
+  /// - Parameter shortStartBuffer: The item's forward buffer is 1 s, or the configured one when
+  ///   shorter, until its owner restores `bufferDuration`. An item becomes ready only once its
+  ///   forward buffer is filled: by default about 4.5 s of a progressive stream, whatever the bitrate.
+  func resolveAndLoad(src: String, track: Track? = nil, shortStartBuffer: Bool = false) {
+    mediaResolverTask?.cancel()
+    // `self` stays weak across the await: a consumer resolver that never settles must not pin
+    // the loader.
+    let resolveUrl = resolveUrl
+    mediaResolverTask = Task { [weak self] in
+      guard !Task.isCancelled else { return }
+      let resolved = await resolveUrl(src, track)
+      guard !Task.isCancelled, let self else { return }
+      loadWithResolvedUrl(resolved, shortStartBuffer: shortStartBuffer)
     }
   }
 
-  func loadAsset() {
-    guard let url else { return }
-    let pendingAsset = AVURLAsset(url: url, options: urlOptions)
+  private func loadAsset(url: URL, options: [String: Any]?, shortStartBuffer: Bool) {
+    let pendingAsset = AVURLAsset(url: url, options: options)
     asset = pendingAsset
 
-    // Separate from playable loading to allow playback to start faster
+    // Apart from the playable load, so playback need not wait for metadata.
     metadataLoadTask = Task { [weak self] in
       guard let self else { return }
 
@@ -86,33 +81,36 @@ final class MediaLoader {
         .availableMetadataFormats,
       ) else { return }
 
-      guard !Task.isCancelled, pendingAsset == asset else { return }
+      guard isCurrent(pendingAsset) else { return }
 
       if !commonMetadata.isEmpty {
-        delegate?.mediaLoaderDidReceiveCommonMetadata(commonMetadata)
+        onEvent?(.commonMetadata(commonMetadata))
       }
 
       if !chapterLocales.isEmpty {
         for locale in chapterLocales {
-          guard !Task.isCancelled else { return }
+          guard isCurrent(pendingAsset) else { return }
           if let chapters = try? await pendingAsset.loadChapterMetadataGroups(
             withTitleLocale: locale,
             containingItemsWithCommonKeys: [],
           ) {
-            delegate?.mediaLoaderDidReceiveChapterMetadata(chapters)
+            guard isCurrent(pendingAsset) else { return }
+            onEvent?(.chapterMetadata(chapters))
           }
         }
       } else {
+        // Without chapters, each format's metadata is one group spanning the whole asset.
         let duration = await (try? pendingAsset.load(.duration)) ?? .zero
         for format in metadataFormats {
-          guard !Task.isCancelled else { return }
+          guard isCurrent(pendingAsset) else { return }
           if let metadata = try? await pendingAsset.loadMetadata(for: format) {
+            guard isCurrent(pendingAsset) else { return }
             let timeRange = CMTimeRange(
               start: CMTime(seconds: 0, preferredTimescale: 1000),
               end: duration,
             )
             let group = AVTimedMetadataGroup(items: metadata, timeRange: timeRange)
-            delegate?.mediaLoaderDidReceiveTimedMetadata([group])
+            onEvent?(.timedMetadata([group]))
           }
         }
       }
@@ -123,30 +121,29 @@ final class MediaLoader {
 
       do {
         let isPlayable = try await pendingAsset.load(.isPlayable)
-
-        guard !Task.isCancelled else { return }
-
-        await MainActor.run {
-          guard pendingAsset == self.asset else { return }
-
-          if !isPlayable {
-            self.delegate?.mediaLoaderDidFailWithUnplayableTrack()
-            return
-          }
-
-          let avItem = AVPlayerItem(asset: pendingAsset)
-          avItem.preferredForwardBufferDuration = self.bufferDuration / 1000.0
-          self.delegate?.mediaLoaderDidPrepareItem(avItem)
+        guard isCurrent(pendingAsset) else { return }
+        guard isPlayable else {
+          onEvent?(.unplayable)
+          return
         }
+        let avItem = AVPlayerItem(asset: pendingAsset)
+        avItem.preferredForwardBufferDuration = shortStartBuffer
+          ? min(1, bufferDuration > 0 ? bufferDuration / 1000 : 1)
+          : bufferDuration / 1000
+        onEvent?(.prepared(avItem))
       } catch {
-        guard !Task.isCancelled else { return }
-
-        await MainActor.run {
-          guard pendingAsset == self.asset else { return }
-          self.delegate?.mediaLoaderDidFailWithRetryableError(error)
-        }
+        guard isCurrent(pendingAsset) else { return }
+        onEvent?(.failed(error))
       }
     }
+  }
+
+  /// Whether `candidate` is still the asset this loader loads; check it after every await.
+  /// Cancelling the task cannot abort a load inside AVFoundation (only `cancelLoading()` does,
+  /// and a track change does not call it while the old asset backs the playing item), so a late
+  /// result would otherwise land on the next track.
+  private func isCurrent(_ candidate: AVURLAsset) -> Bool {
+    !Task.isCancelled && candidate == asset
   }
 
   func cancelAll() {
@@ -158,12 +155,10 @@ final class MediaLoader {
     playableLoadTask = nil
   }
 
-  /// Preserves `url` and `urlOptions` so that `loadAsset()` can recreate the asset
-  /// (used by `reload()` → `loadAVPlayer()` without a preceding `resolveAndLoad`).
   func clearAsset() {
     guard let currentAsset = asset else { return }
 
-    // Don't call currentAsset.cancelLoading() on main thread - it blocks for 500ms+
+    // `cancelLoading()` blocks for 500 ms or more: keep it off the main thread.
     DispatchQueue.global(qos: .utility).async {
       currentAsset.cancelLoading()
     }
@@ -171,27 +166,33 @@ final class MediaLoader {
     asset = nil
   }
 
+  /// AVURLAsset options carrying `headers`, plus `userAgent` as `User-Agent` unless `headers`
+  /// sets one (as the artwork path in RequestPipeline does). Nil when there is nothing to send,
+  /// so AVPlayer keeps its default User-Agent.
+  nonisolated static func buildAssetOptions(
+    headers: [String: String]?,
+    userAgent: String?,
+  ) -> [String: Any]? {
+    var merged = headers ?? [:]
+    if let userAgent, !userAgent.isEmpty, merged["User-Agent"] == nil {
+      merged["User-Agent"] = userAgent
+    }
+    return merged.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": merged]
+  }
+
   // MARK: - Private
 
-  private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl) {
+  private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl, shortStartBuffer: Bool) {
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")
-      delegate?.mediaLoaderDidFailWithError(.invalidSourceUrl(resolved.url))
+      onEvent?(.invalidSource(resolved.url))
       return
     }
 
-    var options: [String: Any] = [:]
-    if let headers = resolved.headers, !headers.isEmpty {
-      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
-    }
-
-    let isLocalFile = mediaUrl.isFileURL
-    url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
-    urlOptions = options.isEmpty ? nil : options
-
-    logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
-    logger.debug("  isLocalFile: \(isLocalFile)")
-
-    loadAsset()
+    loadAsset(
+      url: mediaUrl.isFileURL ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl,
+      options: Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent),
+      shortStartBuffer: shortStartBuffer,
+    )
   }
 }

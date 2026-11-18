@@ -25,11 +25,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "MediaTransformParams" and the the Kotlin data class "MediaTransformParams".
+   * The C++ JNI bridge between the C++ struct "MediaTransformParams" and the Kotlin data class "MediaTransformParams".
    */
   struct JMediaTransformParams final: public jni::JavaClass<JMediaTransformParams> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaTransformParams;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/MediaTransformParams;";
 
   public:
     /**

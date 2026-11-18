@@ -1,4 +1,4 @@
-import type { NitroUserConfig } from './NitroUserConfig.js';
+import type { AutolinkingAndroidImplementation, AutolinkingIOSImplementation, AutolinkingPlatformImplementation, NitroUserConfig } from './NitroUserConfig.js';
 /**
  * Represents the properly parsed `nitro.json` config of the current executing directory.
  */
@@ -40,6 +40,9 @@ export declare class NitroConfig {
      * Those will be generated and default-constructed.
      */
     getAutolinkedHybridObjects(): NitroUserConfig['autolinking'];
+    getPlatformAutolinkedImplementation(hybridObjectName: string, platform: string): AutolinkingPlatformImplementation | undefined;
+    getIosAutolinkedImplementation(hybridObjectName: string): AutolinkingIOSImplementation | undefined;
+    getAndroidAutolinkedImplementation(hybridObjectName: string): AutolinkingAndroidImplementation | undefined;
     /**
      * Get the paths that will be ignored when loading the TypeScript project.
      * In most cases, this just contains `node_modules/`.

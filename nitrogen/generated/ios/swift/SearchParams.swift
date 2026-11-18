@@ -18,7 +18,7 @@ public extension SearchParams {
   /**
    * Create a new instance of `SearchParams`.
    */
-  init(mode: SearchMode?, query: String, genre: String?, artist: String?, album: String?, title: String?, playlist: String?) {
+  init(mode: SearchMode?, query: String, genre: String?, artist: String?, album: String?, title: String?, playlist: String?, reference: MediaReference) {
     self.init({ () -> bridge.std__optional_SearchMode_ in
       if let __unwrappedValue = mode {
         return bridge.create_std__optional_SearchMode_(__unwrappedValue)
@@ -55,7 +55,7 @@ public extension SearchParams {
       } else {
         return .init()
       }
-    }())
+    }(), reference)
   }
 
   @inline(__always)
@@ -126,5 +126,10 @@ public extension SearchParams {
         return nil
       }
     }()
+  }
+  
+  @inline(__always)
+  var reference: MediaReference {
+    return self.__reference
   }
 }

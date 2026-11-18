@@ -1,0 +1,195 @@
+package com.audiobrowser.player
+
+import android.os.Looper
+import androidx.media3.common.C
+import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.util.Util
+import com.audiobrowser.Callbacks
+import com.audiobrowser.TestFixtures
+import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.silentWavUri
+import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.Playback
+import com.margelo.nitro.audiobrowser.PlaybackState
+import java.time.Duration
+import java.util.concurrent.TimeUnit
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.mockingDetails
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowSystemClock
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class PlayerSetupEndedTest {
+
+  @get:Rule val folder = TemporaryFolder()
+
+  private val context = RuntimeEnvironment.getApplication()
+  private val player = Player(context)
+  private val callbacks = mock(Callbacks::class.java)
+
+  @After fun release() = player.exoPlayer.release()
+
+  @Test
+  fun `a rebuild in ENDED stays ENDED and a later play restarts`() {
+    endAndRebuild()
+
+    // As JS setPlayWhenReady(true) does: the setter alone, without play()'s prepare().
+    player.playWhenReady = true
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a session play after a rebuild in ENDED restarts`() {
+    endAndRebuild()
+
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `prepare after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.prepare()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `next at the end after a rebuild in ENDED stays ended, as on an ended engine`() {
+    endAndRebuild()
+
+    player.next()
+    idleFor(1)
+
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.previous()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a session skip back after a rebuild in ENDED loads, as on an ended engine`() {
+    endAndRebuild(tracks = 2)
+
+    player.forwardingPlayer.seekToPreviousMediaItem()
+    idleFor(1)
+
+    assertEquals(0, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(MediaPlayer.STATE_READY, player.exoPlayer.playbackState)
+  }
+
+  @Test
+  fun `a play after a rebuild in ENDED keeps a seek`() {
+    endAndRebuild()
+
+    player.seekTo(200, TimeUnit.MILLISECONDS)
+    player.playWhenReady = true
+
+    assertEquals(200L, player.exoPlayer.currentPosition)
+  }
+
+  @Test
+  fun `a session play after a session stop on an ended queue restarts`() {
+    end()
+    player.forwardingPlayer.stop()
+
+    // What media3 runs for a controller's play.
+    Util.handlePlayButtonAction(player.forwardingPlayer)
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a play after a stop on an ended queue restarts`() {
+    end()
+    player.stop()
+
+    player.play()
+    assertEquals(0L, player.exoPlayer.currentPosition)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  private fun endAndRebuild(tracks: Int = 1) {
+    end(tracks)
+
+    val before = states().size
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    disableAudio()
+    idleFor(2)
+    assertEquals(emptyList<PlaybackState>(), states().drop(before))
+    assertEquals(PlaybackState.ENDED, player.playbackState)
+  }
+
+  private fun end(tracks: Int = 1) {
+    player.setup(PlayerSetupOptions())
+    player.setCallbacks(callbacks)
+    disableAudio()
+    val src = folder.silentWavUri(Duration.ofMillis(500))
+    player.exoPlayer.setMediaItems(
+      List(tracks) { TrackFactory.toMedia3(TestFixtures.track(title = "$it", src = src)) }
+    )
+    player.exoPlayer.prepare()
+    player.play()
+    idleUntil("ENDED") { player.playbackState == PlaybackState.ENDED }
+  }
+
+  private fun states() =
+    mockingDetails(callbacks)
+      .invocations
+      .filter { it.method.name == "onPlaybackChanged" }
+      .map { (it.arguments[0] as Playback).state }
+
+  private fun disableAudio() {
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+        .build()
+  }
+
+  private fun idleFor(seconds: Int) =
+    repeat(seconds * 10) {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      Thread.sleep(10)
+      shadowOf(Looper.getMainLooper()).idle()
+    }
+
+  private fun idleUntil(what: String, condition: () -> Boolean) {
+    val deadline = System.currentTimeMillis() + 5_000
+    while (!condition()) {
+      if (System.currentTimeMillis() > deadline)
+        fail(
+          "timed out waiting for $what: ${player.playbackState}, " +
+            "exo ${player.exoPlayer.playbackState}, ${player.exoPlayer.playerError}"
+        )
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      Thread.sleep(10)
+      shadowOf(Looper.getMainLooper()).idle()
+    }
+  }
+}

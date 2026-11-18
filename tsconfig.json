@@ -8,7 +8,7 @@
     "jsx": "react",
     "lib": ["esnext", "dom"],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -16,9 +16,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "resolveJsonModule": true,
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "esnext",
+    "types": ["node"],
     "verbatimModuleSyntax": true
   },
   "exclude": [
@@ -26,10 +28,15 @@
     "**/lib",
     "**/.eslintrc.js",
     "**/.prettierrc.js",
-    "**/jest.config.js",
     "**/babel.config.js",
     "**/metro.config.js",
     "**/tsconfig.json"
   ],
-  "include": ["src/**/*", "nitrogen/**/*.json", "api-sketch.d.ts", "types/**/*"]
+  "include": [
+    "src/**/*",
+    "scripts/**/*.ts",
+    "nitrogen/**/*.json",
+    "api-sketch.d.ts",
+    "types/**/*"
+  ]
 }

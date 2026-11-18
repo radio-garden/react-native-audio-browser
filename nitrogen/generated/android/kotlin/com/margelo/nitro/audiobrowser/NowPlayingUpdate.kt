@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -22,9 +23,28 @@ data class NowPlayingUpdate(
   val title: String?,
   @DoNotStrip
   @Keep
-  val artist: String?
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val album: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NowPlayingUpdate) return false
+    return Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.album, other.album)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      title,
+      artist,
+      album
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -34,8 +54,8 @@ data class NowPlayingUpdate(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String?, artist: String?): NowPlayingUpdate {
-      return NowPlayingUpdate(title, artist)
+    private fun fromCpp(title: String?, artist: String?, album: String?): NowPlayingUpdate {
+      return NowPlayingUpdate(title, artist, album)
     }
   }
 }

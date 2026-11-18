@@ -1,6 +1,227 @@
 import type { CarPlaySiriListButtonPosition, HttpMethod } from './browser'
 
-export type TrackStyle = 'list' | 'grid'
+/**
+ * How a holder's *children* lay out — CSS's inner display type, honored
+ * literally (`display: 'grid'` in CSS describes the children, not the
+ * element).
+ *
+ * - `'list'` (default) — full-width rows on every surface.
+ * - `'grid'` — artwork tiles; wraps unless {@link SectionStyle.gridWrap}
+ *   is `false`. Tiles presume artwork: an artwork-less child renders a
+ *   placeholder tile plus its title. On CarPlay a *wrapping* grid needs
+ *   iOS 26+ and renders a list before that; a single-line grid renders
+ *   on every OS.
+ */
+export type StyleDisplay = 'list' | 'grid'
+
+/**
+ * How a track's artwork is rendered.
+ *
+ * - `'original'` (default) — drawn as-is.
+ * - `'stencil'` — treated as a monochrome glyph and tinted to the
+ *   surface's appearance (black in light mode, white in dark). For
+ *   monochrome logos and icons; full-color artwork should stay
+ *   `'original'`.
+ */
+export type ArtworkRendering = 'original' | 'stencil'
+
+/**
+ * The shape an image or condensed grid tile's artwork is cropped to.
+ *
+ * - `'rounded-rectangle'` (default) — the standard tile crop.
+ * - `'circular'` — the standard presentation for *people* (artists, hosts,
+ *   DJs). Shape encodes the kind of item, so mixed grids legitimately
+ *   render circular artists next to rounded albums.
+ */
+export type ImageShape = 'circular' | 'rounded-rectangle'
+
+/**
+ * The kind of tile a grid renders.
+ *
+ * - `'plain'` (default) — large artwork tiles with a title and subtitle
+ *   below. No shape and no accessory.
+ * - `'image'` — artwork tiles with a title and no subtitle; takes
+ *   {@link TrackStyle.imageShape} and {@link TrackStyle.accessorySymbol}.
+ *   The grid of round tiles for people is `'image'` with
+ *   `imageShape: 'circular'`.
+ * - `'card'` — a larger card with title/subtitle and a
+ *   {@link TrackStyle.cardTint} color; its image mode is
+ *   {@link TrackStyle.cardImage}. Cards have no shape and no accessory.
+ * - `'condensed'` — a denser cell carrying title + subtitle beside a small
+ *   image; takes {@link TrackStyle.imageShape} and
+ *   {@link TrackStyle.accessorySymbol}.
+ *
+ * Element families are mutually exclusive within a container, so this is
+ * a container property.
+ */
+export type GridTile = 'plain' | 'image' | 'card' | 'condensed'
+
+/**
+ * How a card tile uses its image.
+ *
+ * - `'normal'` (default) — a square image inset above the labels;
+ *   {@link TrackStyle.cardTint} colors the whole card.
+ * - `'background'` — the image fills the card full-height with the labels
+ *   overlaid; `cardTint` fades in behind them. Selects the larger artwork
+ *   target size.
+ */
+export type CardImage = 'normal' | 'background'
+
+/**
+ * The style declaration block a {@link Track} may carry: *inherited item
+ * properties* (resolved `track ?? section ?? page ?? default`, per
+ * property — they travel with the track) plus the *positional*
+ * {@link TrackStyle.display} (each holder's own children; never
+ * inherited).
+ *
+ * Rules governing every property:
+ *
+ * - **Declarations are aspirational.** Each surface renders the
+ *   properties it understands and ignores the rest — inert, never an
+ *   error.
+ * - **Presentation only.** No style property affects queue scope,
+ *   playback, or navigation: rendering may truncate what is visible, it
+ *   never changes what plays. (This is why {@link Track.disabled} is NOT
+ *   here — it carries behavior, so it lives on Track as a content fact.)
+ * - **The inheritance boundary**: a handle's block styles the handle; a
+ *   page's block is inherited by the page's descendants; nothing
+ *   inherits across resolution.
+ */
+export interface TrackStyle {
+  /**
+   * How this entity's *children* lay out. The meaning is uniform at
+   * every position; only the children differ:
+   *
+   * - On a {@link Section}: the section's children.
+   * - On a resolved page ({@link ResolvedTrack.style}): the declaration
+   *   for the whole page — a section overrides it for its own children.
+   * - On a browsable {@link Track} (the handle): the *advertised*
+   *   layout of the page it opens. Android Auto decides a page's
+   *   layout before resolving it, so it is the one reader that acts
+   *   on the handle's declaration. Declared or it doesn't exist: no
+   *   value → nothing advertised. The resolved page is the truth.
+   * - On a track rendered *playable* (`src` wins the rendering): inert —
+   *   playables open no page.
+   *
+   * Never *item*-inherited — each holder speaks only for its own
+   * children. Between containers it resolves by scope override, not
+   * inheritance: the page declares for its whole scope, a section
+   * overrides for its own children.
+   *
+   * @default 'list'
+   *
+   * @see https://developer.android.com/training/cars/media/create-media-browser/content-styles
+   */
+  display?: StyleDisplay
+
+  /**
+   * Inherited (`track ?? section ?? page`): how this item's artwork is
+   * rendered — `'stencil'` tints a monochrome glyph to the surface's
+   * light/dark appearance.
+   *
+   * @default 'original'
+   *
+   * @platform carplay
+   */
+  artworkRendering?: ArtworkRendering
+
+  /**
+   * Inherited (`track ?? section ?? page`): the shape an image or
+   * condensed grid tile's artwork is cropped to — `'circular'` for people,
+   * the default `'rounded-rectangle'` for everything else. Shape follows
+   * the item wherever it travels: a circular artist stays circular in
+   * whatever shaped grid renders it next. Inert where the presentation has
+   * no shape (list rows, plain and card tiles, pre-26 CarPlay, Android
+   * Auto).
+   *
+   * @default 'rounded-rectangle'
+   *
+   * @platform carplay
+   */
+  imageShape?: ImageShape
+
+  /**
+   * Inherited (`track ?? section ?? page`): an SF Symbol name drawn as
+   * the item's accessory wherever the current presentation supports one —
+   * the trailing edge of a list row or an iOS 26 condensed tile, leading
+   * the title on an image tile (placement is the platform's choice per
+   * surface); plain and card tiles have no slot for one. A resolved
+   * symbol replaces the derived accessory (the disclosure chevron a
+   * browsable row gets); `'none'` clears an inherited value, restoring
+   * the derived accessory. Inert off CarPlay.
+   *
+   * @platform carplay
+   */
+  accessorySymbol?: string
+
+  /**
+   * Inherited (`track ?? section ?? page`): the card treatment's tint
+   * color (hex, e.g. `'#1e3a8a'`) — the card's own color, or the color
+   * that fades in behind the labels when {@link TrackStyle.cardImage} is
+   * `'background'`. Card-prefixed: inert unless the container renders
+   * `gridTile: 'card'`.
+   *
+   * @platform carplay
+   */
+  cardTint?: string
+
+  /**
+   * Inherited (`track ?? section ?? page`): how a card tile uses its
+   * image — see {@link CardImage}. Uniform via the section value,
+   * mixable per card. Inert unless the container renders
+   * `gridTile: 'card'`.
+   *
+   * @default 'normal'
+   *
+   * @platform carplay
+   */
+  cardImage?: CardImage
+}
+
+/**
+ * A {@link Section}'s (or resolved page's) style declaration block: the
+ * *container* properties below, plus — via `extends` — a section-wide
+ * value for every inherited {@link TrackStyle} item property (and the
+ * section's own positional `display`).
+ *
+ * Container properties resolve by scope override, not inheritance: the
+ * page declares for its whole scope, a section overrides for its own
+ * children (`section ?? page ?? default`) — they never flow to items.
+ */
+export interface SectionStyle extends TrackStyle {
+  /**
+   * Whether grid tiles wrap to multiple lines. `false` renders exactly
+   * one line — the teaser shelf: a preview of a larger collection,
+   * typically paired with {@link Section.path} as the "view all" target.
+   *
+   * Rendered by CarPlay (a single line of tiles). Android Auto has no
+   * single-line tile container — its grid wraps, showing more, never
+   * less. Phone UIs typically honor `false` as a horizontal scroller.
+   *
+   * Inert unless {@link TrackStyle.display} is `'grid'`.
+   *
+   * @default true
+   *
+   * @platform carplay
+   *
+   * @see https://developer.apple.com/documentation/carplay/cplistimagerowitem
+   */
+  gridWrap?: boolean
+
+  /**
+   * The kind of tile this container's grid renders — see
+   * {@link GridTile}. A container property (element families are
+   * container-homogeneous), resolved by scope override
+   * (`section ?? page`), never per item. Inert unless
+   * {@link TrackStyle.display} is `'grid'`, and on CarPlay before
+   * iOS 26 (where the treatment drops and the layout survives).
+   *
+   * @default 'plain'
+   *
+   * @platform carplay
+   */
+  gridTile?: GridTile
+}
 
 /**
  * Image source for React Native's `<Image>` component.
@@ -23,31 +244,129 @@ export interface ImageSource {
   body?: string
 }
 
-// export interface BrowserSection {
-//   title: string
-//   style?: BrowserItemStyle
-//   children: Track
-// }
-
-export interface ImageRowItem {
-  /** Navigation path. Tapping this thumbnail navigates to this URL. */
-  url?: string
-  /** Artwork URL for the thumbnail image. */
-  artwork?: string
-  /** Output only — populated by the artwork transform pipeline. */
-  readonly artworkSource?: ImageSource
-  /** Title of this item. Used for identification and accessibility. */
-  title: string
+/**
+ * Per-track request fields, carried verbatim on the Track and round-tripped like
+ * any other field. Not applied: no platform merges them into the track's
+ * media request, so they set no header, user agent or query. For per-track
+ * headers or query, return them from `media.resolve` / `resolveSync(track)`.
+ * `baseUrl`/`path`/`method`/`body` are absent so a (often server-sourced)
+ * track can't repoint its own host or verb.
+ */
+export interface TrackRequest {
+  userAgent?: string
+  headers?: Record<string, string>
+  query?: Record<string, string>
 }
 
+/**
+ * Artwork URLs for a track that ships a different image per appearance.
+ *
+ * Both are required: a pair with one side missing has no sensible fallback at
+ * render time.
+ *
+ * The pair adapts to appearance only on CarPlay browse rows and tabs. Every
+ * other surface takes `dark` whatever the appearance: now-playing and the lock
+ * screen on every platform, Android Auto, and {@link Track.artworkSource}.
+ */
+export interface ArtworkVariants {
+  /** Shown on CarPlay in light mode. */
+  light: string
+  /** Shown on CarPlay in dark mode, and on every other surface. */
+  dark: string
+}
+
+// Aliased rather than written inline on `Track.artwork` because Nitro names
+// variant types after their members: without the alias the generated Swift and
+// Kotlin type is `Variant_String_ArtworkVariants` either way, but the alias is
+// what keeps that name readable rather than accidental. Kept out of the doc
+// comment below — it is a note for this repo, not for the API reference.
+/** A single artwork URL, or one per appearance. */
+export type TrackArtwork = string | ArtworkVariants
+
+/**
+ * A titled, styled group of Tracks within a resolved page — the unit of
+ * queue scope. Tapping a playable child queues the section it sits in,
+ * identically on every platform and screen width: rendering may truncate
+ * what is visible, it never changes what plays.
+ */
+export interface Section {
+  /** Header text. Absent = headerless group. */
+  title?: string
+  /**
+   * Presentation, separated from content. Each surface renders the
+   * declared layout's nearest supported form (CarPlay's grid limits:
+   * {@link StyleDisplay}). Use the artwork `resolve` hook to supply
+   * fallback art for tile layouts.
+   */
+  style?: SectionStyle
+  /**
+   * Navigation target for the section's "view all" affordance — the
+   * fuller page this section is a teaser for. Absent = a self-contained
+   * section: the header is a plain label, not a link.
+   *
+   * The surface picks the form, and each carries the copy
+   * itself — a `path` never adds words to the section:
+   *
+   * - **CarPlay** — a tile section's row draws a disclosure chevron and
+   *   the whole row navigates. A list section renders no affordance:
+   *   CarPlay has no "see all" idiom for one, and an invented row would
+   *   spend an item from the template's cap.
+   * - **Android Auto** — no header is tappable at any display, so the
+   *   section gets an appended browsable row, titled by the global
+   *   `viewMoreTitle` browser option.
+   */
+  path?: string
+  /** The section's tracks. */
+  children: Track[]
+}
+
+/**
+ * The one node type of the browse tree — every tab, folder, station,
+ * episode, and queue item is a Track. What a Track *is* follows from which
+ * address fields it carries: a {@link path} makes it **browsable** (it opens
+ * as a page), a {@link src} makes it **playable** (it can be loaded into the
+ * player); at least one of the two is required. The remaining fields are
+ * display metadata ({@link title}, {@link artist}, {@link artwork}, …) and
+ * content state ({@link favorited}, {@link live}, {@link disabled}).
+ */
 export interface Track {
+  /**
+   * Opaque, stable identifier for this track.
+   *
+   * A track's **identity** is `id` when set (non-empty), falling back to
+   * `src`; Android also treats a whitespace-only `id` as unset, so never
+   * send one. That single rule drives every comparison the library makes:
+   * favorites matching (`setFavorites`), the CarPlay / Android Auto
+   * "now playing" row indicator, section scoping and skip-in-place, and the
+   * contextual queue re-expansion. Two tracks refer to the same item iff
+   * their identities are equal — so set `id` consistently on every surface,
+   * or on none.
+   *
+   * The library never parses or derives anything from this value — it is
+   * round-tripped verbatim through `setQueue`, `getActiveTrack`, the queue,
+   * `onActiveTrackChanged`, and `onFavoriteChanged`, and handed to the
+   * per-track `MediaRequestConfig.resolve` / `ArtworkRequestConfig.resolve`
+   * hooks so requests can be built from the stable id.
+   *
+   * Optional: consumers whose `src` strings are identical wherever the same
+   * item appears can ignore it — their identity is the `src`. Assign ids when
+   * `src` strings for the same item can differ between surfaces (absolute vs
+   * relative URLs, volatile query params), or when favorites are stored as an
+   * identifier that isn't the playable URL.
+   */
+  id?: string
+
   /**
    * Navigation path. When present, this track is a container (tab, album, playlist, folder)
    * that can be navigated into to view its contents.
    *
-   * At least one of `url` or `src` must be defined.
+   * At least one of `path` or `src` must be defined. When both are set, current
+   * surfaces treat the track as playable — `src` wins the rendering, and the
+   * browse pipeline replaces a playable track's `path` with its contextual
+   * path — so a consumer-supplied `path` on a playable track is not reachable
+   * today.
    */
-  url?: string
+  path?: string
 
   /**
    * Direct audio source identifier. When present, this track can be played directly.
@@ -56,25 +375,32 @@ export interface Track {
    * any string (file path, custom identifier, etc.) that will be passed to
    * MediaRequestConfig.resolve to transform it into the actual media request.
    *
-   * At least one of `url` or `src` must be defined.
+   * At least one of `path` or `src` must be defined.
    */
   src?: string
 
   /**
-   * Artwork URL for the item.
+   * Artwork URL for the item, or a URL per appearance.
    *
    * The artwork URL is also returned by native in the `artworkSource` property
    * for use in an `<Image>` component, which will contain the transformed version
    * if `artwork` configuration is set in `BrowserConfiguration` or a route.
    *
+   * Pass an {@link ArtworkVariants} pair to supply genuinely different images
+   * per appearance — a logo that changes colour, say. For a monochrome glyph
+   * that only needs recolouring, prefer a single URL plus
+   * `style: { artworkRendering: 'stencil' }`, which is one fetch instead
+   * of two.
+   *
    * **iOS:** supports {@link https://developer.apple.com/sf-symbols/ | SF Symbols}
    * with the `sf:` prefix and optional color params:
    * `sf:heart.fill?bg=#FF0090&fg=#fff`. `bg` sets the background color
    * (transparent if omitted), `fg` sets the symbol color (black if omitted).
-   * On CarPlay, SF Symbols without explicit colors automatically adapt to
-   * light/dark mode.
+   * CarPlay rows key off `fg` instead: without it, the symbol is drawn black
+   * or white to match light/dark mode over a grey tile, and `bg` is ignored;
+   * with it, an omitted `bg` is a grey tile. CarPlay tabs ignore both.
    */
-  artwork?: string
+  artwork?: TrackArtwork
 
   /**
    * Ready-to-use image source for React Native's `<Image>` component.
@@ -87,99 +413,159 @@ export interface Track {
    *
    * @example
    * ```tsx
-   * <Image source={audioBrowser.activeTrack?.artworkSource} />
+   * const track = useActiveTrack()
+   * <Image source={track?.artworkSource} />
    * ```
    */
   readonly artworkSource?: ImageSource
 
-  /**
-   * Whether this artwork should be tinted based on CarPlay's current appearance (light/dark mode).
-   *
-   * When `true`, the artwork is treated as a monochrome icon and tinted:
-   * - Light mode: tinted black for visibility on light backgrounds
-   * - Dark mode: tinted white for visibility on dark backgrounds
-   *
-   * This is useful for SVG or PNG icons that need to adapt to CarPlay's light/dark themes.
-   * Full-color artwork (album covers, logos) should not use this.
-   *
-   * **iOS CarPlay only** - Android Auto is dark-only, so content providers should
-   * provide appropriately colored icons directly (e.g., white icons).
-   *
-   * @default false
-   */
-  artworkCarPlayTinted?: boolean
+  /** Per-track request fields, round-tripped verbatim; see {@link TrackRequest} for whether they reach the media request. */
+  request?: TrackRequest
 
   // type?: TrackType
+  /** Primary line shown for this item, in both browse lists and now-playing. */
   title: string
+
+  /**
+   * Secondary line shown for this item in **browse lists** (CarPlay list detail
+   * text, Android Auto list subtitle). Free-form, per-context display text — set
+   * it to whatever the row should show, or leave it unset for a blank line. It is
+   * *not* shown on the now-playing screen; use {@link artist} for that.
+   */
   subtitle?: string
+
+  /**
+   * Secondary line shown on the **now-playing / lock-screen** UI, and the value
+   * sent to Bluetooth / car head units — it maps to the platform's "artist"
+   * metadata slot.
+   *
+   * Distinct from {@link subtitle}: `artist` drives the now-playing line,
+   * `subtitle` drives browse-list rows. Neither falls back to the other — set
+   * each for the surface you want it on.
+   */
   artist?: string
+
+  /**
+   * Browse path the {@link album} line navigates to (same path namespace as
+   * {@link path}). On CarPlay, when the active track has an `albumPath`, its
+   * album line on the Now Playing screen becomes tappable and navigates the
+   * browse stack there. See also `resolveAlbumPath` in the browser
+   * configuration for a dynamic fallback.
+   *
+   * Requires {@link album} to be set: CarPlay renders the tappable line from
+   * the album metadata — without an album there is no line to tap.
+   *
+   * @platform ios
+   */
+  albumPath?: string
+
+  /**
+   * Album name, shown on now-playing surfaces that have an album slot
+   * (CarPlay, Android Auto, Bluetooth metadata — the iOS lock screen has
+   * none). With {@link albumPath} set, CarPlay renders it as a tappable
+   * line that navigates there.
+   */
   album?: string
+
+  /**
+   * Longer free-form text about the item, passed to the platform's
+   * description metadata slot where one exists. Not shown on browse rows
+   * (those render {@link title} / {@link subtitle}) or the lock screen.
+   */
   description?: string
+
+  /**
+   * Genre name, passed to the platform's genre metadata slot where one
+   * exists. Catalog metadata only — the library never matches search or
+   * browse against it.
+   */
   genre?: string
+
+  /**
+   * Duration in seconds, as catalog metadata for app UI (e.g. an episode
+   * list). Does not drive the now-playing scrubber — every platform surface
+   * derives elapsed/duration from the player itself.
+   */
   duration?: number
 
   /**
-   * Display style for this item in Android Auto/AAOS.
-   * - 'list': Display as a list row
-   * - 'grid': Display as a grid tile
-   *
-   * On Android: when `artwork` is an `android.resource://` URI
-   * (e.g., `android.resource://com.myapp/drawable/ic_folder`), the library
-   * automatically uses 'category' styling which adds margins around the icon
-   * and enables system tinting for vector drawables.
-   *
-   * @see https://developer.android.com/training/cars/media#default-content-style
+   * The track's style declaration block: inherited item properties (a
+   * per-item override of section/page values — they travel with the
+   * track), plus the positional {@link TrackStyle.display} — on a
+   * browsable track, the advertised layout of the page it opens, read
+   * by Android Auto, which picks a page's layout before resolving it.
    */
   style?: TrackStyle
 
   /**
-   * Display style for this item's children in Android Auto/AAOS.
-   * Only applies to browsable items (containers/folders).
-   * - 'list': Display children as list rows
-   * - 'grid': Display children as grid tiles
+   * Marks the track unavailable: the library never plays it — taps and
+   * voice selection are refused, queue expansion and resume exclude it. A
+   * queue you pass to `setQueue` is not filtered, and your own UI must
+   * honor the flag itself.
    *
-   * Must be set on the item when it appears as a child in a parent's list.
-   * Android Auto reads the extras at that point to determine how to display
-   * the folder's contents when navigated into.
+   * Drawn **grayed + inert** where the surface can (CarPlay list rows and
+   * iOS 26+ tiles), **hidden** where it can't (CarPlay tile rows before
+   * iOS 26, CarPlay tabs, Android Auto). Surfaces that hide lose any
+   * "Available at 9 PM" tease, so put the reason in the title for the ones
+   * that gray. Applied when the page is (re-)served, like style.
+   *
+   * @default false
    */
-  childrenStyle?: TrackStyle
+  disabled?: boolean
 
   /**
-   * Whether this track is favorited. When the `set-rating` capability is enabled,
-   * displays a filled/empty heart icon in media controllers (notification, Android Auto).
+   * Whether this track is favorited. It fills or empties the heart on
+   * CarPlay now-playing when `ios.carPlayNowPlayingButtons` includes
+   * `'favorite'`. When the `favorite` capability is enabled, it does the
+   * same on Android in the notification, Android Auto, the system media
+   * controls and playable browse rows. iOS Control Center shows no heart.
    */
   favorited?: boolean
 
   /**
-   * Group title for section headers in Android Auto/AAOS.
-   * Items with the same groupTitle are displayed under a shared section header.
-   * Items must be contiguous to form a single group.
-   */
-  groupTitle?: string
-
-  /**
-   * Whether this track is a live stream. When true, displays a "live" indicator
-   * in iOS now playing interfaces.
+   * Declares this track a live broadcast rather than a file. The players
+   * detect *transport* liveness (sliding windows, buffering) themselves;
+   * this declaration drives the semantic decisions they can't infer:
+   *
+   * - **End of stream** (iOS): a live track "ending" is judged a dropped
+   *   broadcast and recovered by rejoining the edge, never a queue advance.
+   * - **Stall recovery** (iOS): a live track that runs dry reconnects at
+   *   the edge; a non-live one resumes its existing connection.
+   * - **`seekToLiveEdge()`** (all platforms): the call only acts on a
+   *   track declared live — without the declaration it is a no-op.
+   * - **Persistence** (iOS): no position is stored, so a cold-start resume
+   *   rejoins the current broadcast instead of seeking a stale timestamp.
+   * - **Now-playing** (iOS and Android): non-scrubbing controls; on iOS
+   *   also the live indicator. On Android the seek command is removed from
+   *   media controllers, so the notification and Android Auto draw no
+   *   scrubber.
+   * - **Casting** (Android): a cast receiver loads the item as a live
+   *   stream, at the live edge.
+   *
+   * On Android, ExoPlayer's own liveness detection covers end of stream
+   * and persistence: a dropped live connection surfaces as a load error
+   * (never end-of-stream), and persistence keys off the detected liveness.
+   * Android Auto has no live badge.
+   *
+   * Omitting it never breaks playback — it silently breaks these judgment
+   * calls. Declare it on every live track.
    */
   live?: boolean
 
   /**
-   * When present, renders this track as a horizontal row of tappable artwork
-   * thumbnails instead of a standard list item.
-   *
-   * - Track.title → row header text
-   * - Track.url → navigated when header is tapped (optional)
-   * - Each ImageRowItem → one thumbnail in the horizontal row
-   *
-   * On CarPlay: maps to CPListImageRowItem. Limits visible images by display
-   * width (~4-5). Excess silently truncated.
-   *
-   * On Android Auto: ignored; the parent Track renders as a regular
-   * browsable item using its own artwork/title/url.
-   *
-   * On app side: consumable by React Native UI for horizontal thumbnail layouts.
+   * Byte encoding of this track's ICY `StreamTitle` when it is not UTF-8, as
+   * an IANA label (`'windows-1251'`, `'windows-874'`, …). Some Shoutcast /
+   * Icecast stations send titles in a legacy code page; ICY declares no
+   * encoding, so the player's UTF-8 decode fails and falls back to Latin-1,
+   * showing mojibake. With this set, a title that came out Latin-1 shaped
+   * (every char at or below U+00FF, some at or above U+0080) is re-decoded
+   * through ISO-8859-1 with the given charset; this also repairs stations
+   * that UTF-8 encoded their legacy bytes. A title already in another script
+   * or pure ASCII is left alone. Applies to ICY only: ID3 and HLS timed
+   * metadata declare their own encoding and are never touched. A label the
+   * platform cannot decode with is ignored.
    */
-  imageRow?: ImageRowItem[]
+  icyCharset?: string
 }
 
 /**
@@ -190,27 +576,54 @@ export interface Track {
  *
  * @example
  * ```ts
- * const resolved = await audioBrowser.navigate('albums/abbey-road');
- * console.log(resolved.url); // "albums/abbey-road"
- * console.log(resolved.title); // "Abbey Road"
- * console.log(resolved.children); // Array of tracks in this album
+ * // navigate() is fire-and-forget (returns void); read the resolved page
+ * // from getContent() / useContent() / onContentChanged.
+ * navigate('/albums/abbey-road');
+ * const resolved = getContent();
+ * console.log(resolved?.path); // "/albums/abbey-road"
+ * console.log(resolved?.title); // "Abbey Road"
+ * console.log(resolved?.sections); // the album's tracks, as sections
  * ```
  */
 export interface ResolvedTrack extends Track {
   /**
-   * URL path for this resolved track. Always present since you navigated to this location.
+   * Browse path of this resolved track. Always present since you navigated to this location.
    */
-  url: string
+  path: string
 
   /**
-   * Immediate children of this track. Present for container tracks (albums, playlists, folders).
-   * Undefined for leaf tracks (individual songs without children).
+   * A page is a Track that is also the container of its sections, so its
+   * block widens to {@link SectionStyle}: the declaration for the whole
+   * page. Item properties set here are inherited by every item on the
+   * page unless a section or track declares its own; the container
+   * properties (`gridWrap`, `gridTile`) and the positional `display` are
+   * the page-wide values a section overrides for its own children.
+   */
+  style?: SectionStyle
+
+  /**
+   * The page's sections — the canonical resolved shape. Every resolved page
+   * with content carries `sections`; a page authored with plain `children`
+   * resolves to a single untitled section.
+   */
+  sections?: Section[]
+
+  /**
+   * Authoring sugar for a flat page: equivalent to declaring one untitled,
+   * style-less section holding these tracks (which therefore takes the
+   * page block's scope-wide values, like any undeclared section). Accepted
+   * anywhere a page is authored (static routes, browse callbacks, JSON
+   * payloads); never populated on a *resolved* page — read `sections`
+   * instead.
    */
   children?: Track[]
 
   /**
    * Shows the "Ask Siri to Play Audio" assistant cell on the CarPlay list template
-   * for this content. Requires an Intents Extension to be configured in the app.
+   * for this content. Requires the Siri entitlement, the `INPlayMediaIntent` keys in
+   * Info.plist, and an in-app intent handler in your `AppDelegate`
+   * (`application(_:handlerFor:)`) — no separate Intents Extension is needed. See the
+   * setup guide for the full wiring.
    *
    * - `'top'`: Shows at the top of the list
    * - `'bottom'`: Shows at the bottom of the list

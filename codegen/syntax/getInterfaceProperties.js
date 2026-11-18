@@ -1,9 +1,13 @@
+import { Node } from 'ts-morph';
 import { createNamedType } from './createType.js';
 export function getInterfaceProperties(language, interfaceType) {
     const symbol = interfaceType.getAliasSymbol() ?? interfaceType.getSymbol();
     if (symbol == null)
         throw new Error(`Interface "${interfaceType.getText()}" does not have a Symbol!`);
     return interfaceType.getProperties().map((prop) => {
+        const propDeclaration = prop
+            .getDeclarations()
+            .find((declaration) => Node.isPropertySignature(declaration));
         let propType = prop.getDeclaredType();
         if (propType.isAny() || propType.isUnknown()) {
             // the interface is aliased/merged - we need to look into the actual declaration
@@ -15,7 +19,7 @@ export function getInterfaceProperties(language, interfaceType) {
                 }
             }
         }
-        const refType = createNamedType(language, prop.getName(), propType, prop.isOptional() || propType.isNullable());
+        const refType = createNamedType(language, prop.getName(), propType, prop.isOptional() || propType.isNullable(), propDeclaration?.getTypeNode());
         return refType;
     });
 }

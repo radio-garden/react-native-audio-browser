@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 import com.margelo.nitro.core.Promise
 
 /**
@@ -20,6 +21,9 @@ data class TransformableRequestConfig(
   @DoNotStrip
   @Keep
   val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
+  @DoNotStrip
+  @Keep
+  val transformSync: Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
   @DoNotStrip
   @Keep
   val method: HttpMethod?,
@@ -48,8 +52,38 @@ data class TransformableRequestConfig(
   /**
    * Create a new instance of TransformableRequestConfig from Kotlin
    */
-  constructor(transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, transformSync: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<RequestConfig>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, transformSync?.let { Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is TransformableRequestConfig) return false
+    return Objects.deepEquals(this.transform, other.transform)
+      && Objects.deepEquals(this.transformSync, other.transformSync)
+      && Objects.deepEquals(this.method, other.method)
+      && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.baseUrl, other.baseUrl)
+      && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.query, other.query)
+      && Objects.deepEquals(this.body, other.body)
+      && Objects.deepEquals(this.contentType, other.contentType)
+      && Objects.deepEquals(this.userAgent, other.userAgent)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      transform,
+      transformSync,
+      method,
+      path,
+      baseUrl,
+      headers,
+      query,
+      body,
+      contentType,
+      userAgent
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -59,8 +93,8 @@ data class TransformableRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
-      return TransformableRequestConfig(transform, method, path, baseUrl, headers, query, body, contentType, userAgent)
+    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, transformSync: Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
+      return TransformableRequestConfig(transform, transformSync, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }
 }

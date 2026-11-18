@@ -1,5 +1,7 @@
 import type { NowPlayingUpdate, NowPlayingMetadata } from '../../features'
 import type { Track } from '../../types'
+import { artworkUrl } from '../../utils/artwork'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 
 /**
  * Manages now playing metadata overrides.
@@ -33,10 +35,10 @@ export class NowPlayingManager {
       ? {
           title: update.title ?? currentTrack.title,
           artist: update.artist ?? currentTrack.artist,
-          album: currentTrack.album,
-          artwork: currentTrack.artwork,
+          album: update.album ?? currentTrack.album,
+          artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
-          mediaId: currentTrack.src ?? currentTrack.url,
+          mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
           genre: currentTrack.genre,
           duration
         }
@@ -44,9 +46,9 @@ export class NowPlayingManager {
           title: currentTrack.title,
           artist: currentTrack.artist,
           album: currentTrack.album,
-          artwork: currentTrack.artwork,
+          artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
-          mediaId: currentTrack.src ?? currentTrack.url,
+          mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
           genre: currentTrack.genre,
           duration
         }
@@ -70,10 +72,10 @@ export class NowPlayingManager {
     return {
       title: this.override?.title ?? currentTrack.title,
       artist: this.override?.artist ?? currentTrack.artist,
-      album: currentTrack.album,
-      artwork: currentTrack.artwork,
+      album: this.override?.album ?? currentTrack.album,
+      artwork: artworkUrl(currentTrack.artwork),
       description: currentTrack.description,
-      mediaId: currentTrack.src ?? currentTrack.url,
+      mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
       genre: currentTrack.genre,
       duration
     }

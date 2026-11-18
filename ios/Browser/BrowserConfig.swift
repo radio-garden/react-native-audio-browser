@@ -1,111 +1,160 @@
 import Foundation
 import NitroModules
-import os.log
 
-/// Flattened browser configuration (matches Kotlin BrowserConfig).
-///
-/// This is a convenience wrapper around NativeBrowserConfiguration that
-/// provides easier access to configuration properties.
+/// Copied out of `NativeBrowserConfiguration` once per `configureBrowser`: the generated getters
+/// convert from C++ on every read, and routes are read on every resolve. Matches Kotlin's
+/// BrowserConfig.
 struct BrowserConfig {
-  /// Base HTTP request configuration
-  let request: TransformableRequestConfig?
+  var request: TransformableRequestConfig?
 
-  /// Media URL transformation configuration
-  let media: MediaRequestConfig?
+  /// Layered request → browse → route.
+  var browse: TransformableRequestConfig?
 
-  /// Artwork URL transformation configuration
-  let artwork: ArtworkRequestConfig?
+  /// Resolved once per content generation.
+  var requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
 
-  /// Routes as array with flattened entries
-  /// Includes __tabs__, __search__, and __default__ special routes
-  let routes: [NativeRouteEntry]?
+  /// Resolved once per content generation.
+  var browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
 
-  /// Behavior: single track playback vs queue expansion
-  let singleTrack: Bool
+  var media: MediaRequestConfig?
 
-  /// Behavior: show offline error in Android Auto controller
-  let androidControllerOfflineError: Bool
+  var artwork: ArtworkRequestConfig?
+
+  /// Lock screen, CarPlay and Android Auto now playing; falls back to `artwork` when nil.
+  var nowPlayingArtwork: ArtworkRequestConfig?
+
+  /// Includes the `__tabs__`, `__search__` and `__default__` special routes.
+  var routes: [NativeRouteEntry]?
+
+  /// Plays only the selected track instead of expanding its siblings into the queue.
+  var singleTrack: Bool = false
 
   // MARK: - CarPlay Options
 
-  /// Enable the "Up Next" button on CarPlay Now Playing screen
-  let carPlayUpNextButton: Bool
+  /// The empty state shown while CarPlay content resolves; nil leaves it blank.
+  var carPlayLoadingTitle: String?
 
-  /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
-  let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
+  /// The browse path for the Now Playing album line when the track has no `albumPath`. Called on
+  /// track change, not at tap, so the line is tappable only when a destination exists.
+  var resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?
 
-  /// Custom handler for track load events (overrides default load behavior)
-  let handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
+  /// Replaces the default track load behaviour.
+  var handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
 
-  /// Callback to customize navigation error display (for i18n)
-  /// Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
-  let formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?
+  var formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?
 
-  init(
-    request: TransformableRequestConfig? = nil,
-    media: MediaRequestConfig? = nil,
-    artwork: ArtworkRequestConfig? = nil,
-    routes: [NativeRouteEntry]? = nil,
-    singleTrack: Bool = false,
-    handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)? = nil,
-    androidControllerOfflineError: Bool = true,
-    carPlayUpNextButton: Bool = true,
-    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
-    formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
-  ) {
-    self.request = request
-    self.media = media
-    self.artwork = artwork
-    self.routes = routes
-    self.singleTrack = singleTrack
-    self.handleTrackLoad = handleTrackLoad
-    self.androidControllerOfflineError = androidControllerOfflineError
-    self.carPlayUpNextButton = carPlayUpNextButton
-    self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
-    self.formatNavigationError = formatNavigationError
-  }
+  init() {}
 
-  /// Create from NativeBrowserConfiguration
   init(from config: NativeBrowserConfiguration) {
     request = config.request
+    browse = config.browse
+    requestResolver = config.requestResolver
+    browseResolver = config.browseResolver
     media = config.media
     artwork = config.artwork
+    nowPlayingArtwork = config.nowPlayingArtwork
     routes = config.routes
     singleTrack = config.singleTrack ?? false
     handleTrackLoad = config.handleTrackLoad
-    androidControllerOfflineError = config.androidControllerOfflineError ?? true
-    carPlayUpNextButton = config.carPlayUpNextButton ?? true
-    carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
+    carPlayLoadingTitle = config.carPlayLoadingTitle
+    resolveAlbumPath = config.resolveAlbumPath
     formatNavigationError = config.formatNavigationError
   }
 
-  // MARK: - Track Load Handler
-
-  private static let logger = Logger(subsystem: "com.audiobrowser", category: "BrowserConfig")
-
-  /// Awaits the handleTrackLoad callback using the double-Promise pattern required by Nitro.
-  ///
-  /// Nitro wraps value-returning JS callbacks in Promise<T> for thread safety, so a JS callback
-  /// returning Promise<void> becomes Promise<Promise<Void>> on the native side. Both layers
-  /// must be awaited to properly wait for the JS work to complete.
-  ///
-  /// - Returns: true if the handler was present and invoked, false if not configured
-  func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
-    guard let handler = handleTrackLoad else { return false }
-    do {
-      // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
-      nonisolated(unsafe) let _handler = handler
-      nonisolated(unsafe) let _event = event
-      let outerPromise = await MainActor.run { _handler(_event) }
-      let innerPromise = try await outerPromise.await()
-      try await innerPromise.await()
-    } catch {
-      Self.logger.error("handleTrackLoad failed: \(error.localizedDescription)")
-    }
-    return true
+  /// A copy with every JS function dropped, nested ones included, keeping the static fields.
+  /// Safe to hold after its JS runtime is gone, where invoking a callback aborts the process
+  /// (see `HybridAudioBrowser.dropStaleJSCallbacks`); callers take their static fallbacks.
+  func strippingJSCallbacks() -> BrowserConfig {
+    // Built from empty: a field added later is dropped unless it is copied here.
+    var stripped = BrowserConfig()
+    stripped.request = request?.strippingJSCallbacks()
+    stripped.browse = browse?.strippingJSCallbacks()
+    stripped.media = media?.strippingJSCallbacks()
+    stripped.artwork = artwork?.strippingJSCallbacks()
+    stripped.nowPlayingArtwork = nowPlayingArtwork?.strippingJSCallbacks()
+    stripped.routes = routes?.map { $0.strippingJSCallbacks() }
+    stripped.singleTrack = singleTrack
+    stripped.carPlayLoadingTitle = carPlayLoadingTitle
+    return stripped
   }
 }
 
 // MARK: - NativeRouteEntry + RouteEntry conformance
 
 extension NativeRouteEntry: RouteEntry {}
+
+// MARK: - Deep JS-callback stripping
+
+// The generated structs are get-only from Swift, so each strip rebuilds the value through the
+// memberwise initializer with the function fields nil.
+
+private extension TransformableRequestConfig {
+  func strippingJSCallbacks() -> TransformableRequestConfig {
+    TransformableRequestConfig(
+      transform: nil,
+      transformSync: nil,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension MediaRequestConfig {
+  func strippingJSCallbacks() -> MediaRequestConfig {
+    MediaRequestConfig(
+      resolve: nil,
+      resolveSync: nil,
+      transform: nil,
+      transformSync: nil,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension ArtworkRequestConfig {
+  func strippingJSCallbacks() -> ArtworkRequestConfig {
+    ArtworkRequestConfig(
+      resolve: nil,
+      resolveSync: nil,
+      transform: nil,
+      transformSync: nil,
+      imageQueryParams: imageQueryParams,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension NativeRouteEntry {
+  func strippingJSCallbacks() -> NativeRouteEntry {
+    NativeRouteEntry(
+      path: path,
+      browseCallback: nil,
+      browseConfig: browseConfig?.strippingJSCallbacks(),
+      browseStatic: browseStatic,
+      searchCallback: nil,
+      searchConfig: searchConfig?.strippingJSCallbacks(),
+      media: media?.strippingJSCallbacks(),
+      artwork: artwork?.strippingJSCallbacks(),
+    )
+  }
+}

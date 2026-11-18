@@ -1,5 +1,5 @@
-/// Every trigger that can cause a playback state change.
-/// Call sites describe what happened; the transition table decides the resulting state.
+/// What happened to playback; `nextPlaybackState` decides the resulting state, and the call site
+/// decides whether to fire the event at all.
 enum PlaybackEvent {
   case stopped
   case trackLoading
@@ -12,4 +12,6 @@ enum PlaybackEvent {
   case audioFrameDecoded
   case bufferingSufficient
   case errorOccurred(TrackPlayerError.PlaybackError)
+  /// A pause cancelled a pending retry.
+  case retryCancelled
 }

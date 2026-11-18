@@ -15,19 +15,36 @@
 #include <variant>
 #include "JResolvedTrack.hpp"
 #include <string>
-#include "Track.hpp"
-#include <vector>
+#include "SectionStyle.hpp"
 #include <optional>
+#include "JSectionStyle.hpp"
+#include "GridTile.hpp"
+#include "JGridTile.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
+#include "Section.hpp"
+#include <vector>
+#include "JSection.hpp"
+#include "Track.hpp"
 #include "JTrack.hpp"
+#include "ArtworkVariants.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include "JImageRowItem.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 #include "JBrowseError.hpp"
@@ -41,7 +58,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JBrowseResult: public jni::JavaClass<JBrowseResult> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult;";
 
     static jni::local_ref<JBrowseResult> create_0(jni::alias_ref<JResolvedTrack> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JBrowseResult(jni::alias_ref<JResolvedTrack>)>("create");
@@ -66,7 +83,7 @@ namespace margelo::nitro::audiobrowser {
   namespace JBrowseResult_impl {
     class First final: public jni::JavaClass<First, JBrowseResult> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult$First;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult$First;";
     
       [[nodiscard]] jni::local_ref<JResolvedTrack> getValue() const {
         static const auto field = javaClassStatic()->getField<JResolvedTrack>("value");
@@ -76,7 +93,7 @@ namespace margelo::nitro::audiobrowser {
     
     class Second final: public jni::JavaClass<Second, JBrowseResult> {
     public:
-      static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult$Second;";
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowseResult$Second;";
     
       [[nodiscard]] jni::local_ref<JBrowseError> getValue() const {
         static const auto field = javaClassStatic()->getField<JBrowseError>("value");

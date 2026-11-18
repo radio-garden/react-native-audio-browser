@@ -5,12 +5,12 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 // MARK: - Setters
 
 /**
- * Sets the favorited state of the currently playing track.
- * Updates the heart icon in media controllers (notification, Android Auto).
+ * Sets the favorited state of the Active Track.
+ * Updates the heart icon in media controllers (notification, Android Auto, CarPlay).
  *
- * Use this for programmatic favorite changes (e.g., from a favorite button in your app).
- * For heart button taps from media controllers, use `onFavoriteChanged` instead -
- * the native side handles those automatically.
+ * Use this for favorite changes from your app, such as a favorite button.
+ * It emits `onFavoriteChanged`, so persist the change there, not again in your
+ * button handler.
  *
  * @param favorited - Whether the track is favorited
  *
@@ -24,7 +24,7 @@ export function setActiveTrackFavorited(favorited: boolean): void {
 }
 
 /**
- * Toggles the favorited state of the currently playing track.
+ * Toggles the favorited state of the Active Track. Emits `onFavoriteChanged`.
  *
  * @example
  * ```ts
@@ -37,26 +37,29 @@ export function toggleActiveTrackFavorited(): void {
 }
 
 /**
- * Sets the list of favorited track source identifiers.
+ * Sets the list of favorited track identifiers.
  *
  * This syncs your app's favorites with the native favorites cache, enabling
  * the heart button in media controllers (notification, Android Auto, CarPlay)
  * to show the correct state.
  *
- * Note: This is only needed if the tracks provided to AudioBrowser do not
- * include the `favorited` field. If your API already includes favorite state in
- * track responses, the native favorites cache is populated automatically during browsing.
+ * Each identifier is matched **exactly** against a track's *identity* — its
+ * `id` when set, falling back to `src`. Store favorites as the same stable
+ * identifier you put in `Track.id` (or as the full `src` for id-less tracks).
  *
- * When the heart button is tapped in media controllers or when you call
- * `setActiveTrackFavorited()`, the native favorites cache is automatically
- * updated. You only need to call this on app launch to hydrate the cache.
+ * A track whose response already carries `favorited` keeps that value on
+ * display surfaces — a caller-set flag wins over cache hydration. The cache
+ * itself is written only by this call and by heart toggles
+ * (`setActiveTrackFavorited()` / media-controller taps), so you only need to
+ * call this on app launch — and again whenever the collection changes outside
+ * the player (a sync from another device, say).
  *
- * @param favorites - Array of favorited track `src` values
+ * @param favorites - Array of favorited track identities (`id`, or `src` for id-less tracks)
  *
  * @example
  * ```ts
- * const favoriteSrcs = await loadFavoritesFromStorage()
- * setFavorites(favoriteSrcs)
+ * const favoriteIds = await loadFavoritesFromStorage()
+ * setFavorites(favoriteIds)
  * ```
  */
 export function setFavorites(favorites: string[]): void {
@@ -66,8 +69,10 @@ export function setFavorites(favorites: string[]): void {
 // MARK: - Event Callbacks
 
 /**
- * Event data for when the favorite state of the active track changes.
- * Emitted when the user taps the heart button in a media controller (notification, Android Auto, CarPlay).
+ * Event data for when the favorite state of the Active Track changes.
+ * Emitted on every change: a heart tap in a media controller (notification,
+ * Android Auto, CarPlay), a Siri request (iOS), `setActiveTrackFavorited` or
+ * `toggleActiveTrackFavorited`.
  */
 export interface FavoriteChangedEvent {
   /** The track whose favorite state changed. */
@@ -77,12 +82,12 @@ export interface FavoriteChangedEvent {
 }
 
 /**
- * Subscribes to favorite state change events.
- * Called when the user taps the heart button in a media controller.
- * The native side has already updated the track's favorite state and UI.
- *
- * @param callback - Called with the track and its new favorite state
- * @returns Cleanup function to unsubscribe
+ * Subscribes to favorite changes of the Active Track, with the track and its
+ * new favorite state. Fires on every change: a heart tap in a media controller,
+ * a Siri request (iOS), `setActiveTrackFavorited` or
+ * `toggleActiveTrackFavorited`. Persist favorites here, in one place. The
+ * native side has already updated the track's favorite state and UI.
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  *
  * @example
  * ```ts

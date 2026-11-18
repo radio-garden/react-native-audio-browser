@@ -2,6 +2,7 @@ import Clipboard from '@react-native-clipboard/clipboard'
 import React, { useRef, useState } from 'react'
 import {
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,7 +14,7 @@ export function DebugPanel() {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<'state' | 'logs'>('state')
-  const scrollViewRef = useRef<ScrollView>(null)
+  const scrollViewRef = useRef<ScrollViewInstance>(null)
 
   const debug = useDebug({ metadata: true })
   const stateJson = JSON.stringify(debug.state, null, 2)

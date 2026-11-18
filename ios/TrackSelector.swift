@@ -5,7 +5,7 @@ import os.log
 
 @MainActor protocol TrackSelectionBrowser {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool
-  func expandQueueFromContextualUrl(_ url: String) async throws -> (tracks: [Track], selectedIndex: Int)?
+  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)?
 }
 
 @MainActor protocol TrackSelectionPlayer {
@@ -13,17 +13,12 @@ import os.log
   var queueSourcePath: String? { get }
 }
 
-/// Encapsulates the shared track selection decision tree used by both
-/// HybridAudioBrowser and CarPlayController.
-///
-/// Resolves a track selection to a concrete `SelectionResult` describing
-/// what the caller should do. Each caller then executes the action in its
-/// own way (CarPlay: showNowPlaying + completion; HybridAudioBrowser:
-/// direct player calls).
+/// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession;
+/// each caller carries out the returned `SelectionResult` its own way.
 @MainActor
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
-  nonisolated(unsafe) private let browserManager: any TrackSelectionBrowser
+  private nonisolated(unsafe) let browserManager: any TrackSelectionBrowser
 
   nonisolated init(browserManager: any TrackSelectionBrowser) {
     self.browserManager = browserManager
@@ -32,110 +27,105 @@ class TrackSelector {
   // MARK: - Result Types
 
   enum SelectionResult {
-    /// Playback action determined and not intercepted by JS handler.
     case play(PlaybackIntent)
-    /// JS handleTrackLoad handler intercepted — caller should not play.
+    /// The app's `handleTrackLoad` took the selection; the caller plays nothing.
     case intercepted
-    /// Track is browsable — caller should navigate to this URL.
-    case browse(url: String)
-    /// Nothing to do (no src, no url).
+    /// The track has no `src`; the caller navigates to `path`.
+    case browse(path: String)
     case none
   }
 
   enum PlaybackIntent {
-    /// Skip to an index in the existing queue.
     case skipTo(index: Int)
-    /// Replace queue with new tracks.
     case setQueue(tracks: [Track], startIndex: Int, sourcePath: String?)
-    /// Load a single track.
     case loadTrack(Track)
   }
 
   // MARK: - Selection
 
-  /// Resolves a track selection to a concrete action.
-  /// Handles contextual URL expansion, queue reuse, and handler interception.
+  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within
+  /// the current queue when it came from the same parent, else the parent expanded into a queue
+  /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
+  /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
   func select(
     track: Track,
-    player: some TrackSelectionPlayer
+    player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
-    let url = track.url
-
-    // 1. Contextual URL (playable-only track with queue context)
-    if let url, BrowserPathHelper.isContextual(url) {
-      return await handleContextualUrl(url, track: track, player: player)
+    // Checked here, not only in the UI: a stale resume path can still deliver a disabled track.
+    if track.disabled == true {
+      return .none
     }
 
-    // 2. Has src — single playable track
-    if track.src != nil {
-      return await handlePlayableTrack(track, player: player)
+    let playback: PlannedPlayback
+    if let path = track.path, BrowserPathHelper.isContextual(path) {
+      playback = await contextualPlayback(path, track: track, player: player)
+    } else if track.src != nil {
+      playback = .single(track)
+    } else if let path = track.path {
+      return .browse(path: path)
+    } else {
+      return .none
     }
 
-    // 3. Has url — browsable
-    if let url {
-      return .browse(url: url)
+    let event = TrackLoadEvent(
+      track: track,
+      queue: playback.queue,
+      startIndex: Double(playback.index),
+      startPosition: nil,
+    )
+    if await browserManager.awaitTrackLoadHandler(event: event) {
+      return .intercepted
     }
-
-    // 4. Neither
-    return .none
+    return .play(playback.intent)
   }
 
   // MARK: - Private Helpers
 
-  private func handleContextualUrl(
-    _ url: String,
-    track: Track,
-    player: some TrackSelectionPlayer
-  ) async -> SelectionResult {
-    let parentPath = BrowserPathHelper.stripTrackId(url)
-    let trackId = BrowserPathHelper.extractTrackId(url)
+  /// What a selection plays, and the queue and index the track-load handler is shown.
+  private struct PlannedPlayback {
+    let queue: [Track]
+    let index: Int
+    let intent: PlaybackIntent
 
-    // Check if queue already came from this parent path — just skip to the track
-    if let trackId,
-       parentPath == player.queueSourcePath,
-       let index = player.tracks.firstIndex(where: { $0.src == trackId })
-    {
-      logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-      let queue = player.tracks
-      let event = TrackLoadEvent(track: track, queue: queue, startIndex: Double(index))
-      if await browserManager.awaitTrackLoadHandler(event: event) {
-        return .intercepted
+    static func single(_ track: Track) -> PlannedPlayback {
+      PlannedPlayback(queue: [track], index: 0, intent: .loadTrack(track))
+    }
+  }
+
+  private func contextualPlayback(
+    _ path: String,
+    track: Track,
+    player: some TrackSelectionPlayer,
+  ) async -> PlannedPlayback {
+    let parentPath = BrowserPathHelper.stripTrackId(path)
+    let trackId = BrowserPathHelper.extractTrackId(path)
+
+    // Exact path first: its `__index` pins the tapped copy when the page holds the same identity
+    // more than once. Identity matching is only for index-less paths (e.g. from persisted state
+    // without one); an indexed path with no exact match expands instead, re-scoping
+    // the queue to the tapped section.
+    if parentPath == player.queueSourcePath {
+      var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
+      if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {
+        skipIndex = player.tracks.firstIndex(where: { $0.identity == trackId })
       }
-      return .play(.skipTo(index: index))
+      if let index = skipIndex {
+        logger.debug("Queue already from \(parentPath), skipping to index \(index)")
+        return PlannedPlayback(queue: player.tracks, index: index, intent: .skipTo(index: index))
+      }
     }
 
-    // Expand the queue from the contextual URL
     do {
-      if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
-        let (tracks, startIndex) = expanded
-        let event = TrackLoadEvent(track: track, queue: tracks, startIndex: Double(startIndex))
-        if await browserManager.awaitTrackLoadHandler(event: event) {
-          return .intercepted
-        }
-        return .play(.setQueue(tracks: tracks, startIndex: startIndex, sourcePath: parentPath))
-      } else {
-        // Fallback: single track
-        return await singleTrackResult(track)
+      guard let (tracks, startIndex) = try await browserManager.expandQueueFromContextualPath(path) else {
+        return .single(track)
       }
+      return PlannedPlayback(
+        queue: tracks, index: startIndex,
+        intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: parentPath),
+      )
     } catch {
       logger.error("Error expanding queue: \(error.localizedDescription)")
-      // Fallback to single track
-      return await singleTrackResult(track)
+      return .single(track)
     }
-  }
-
-  private func handlePlayableTrack(
-    _ track: Track,
-    player: some TrackSelectionPlayer
-  ) async -> SelectionResult {
-    return await singleTrackResult(track)
-  }
-
-  private func singleTrackResult(_ track: Track) async -> SelectionResult {
-    let event = TrackLoadEvent(track: track, queue: [track], startIndex: 0)
-    if await browserManager.awaitTrackLoadHandler(event: event) {
-      return .intercepted
-    }
-    return .play(.loadTrack(track))
   }
 }

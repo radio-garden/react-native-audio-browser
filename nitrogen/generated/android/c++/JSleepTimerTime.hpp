@@ -17,11 +17,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "SleepTimerTime" and the the Kotlin data class "SleepTimerTime".
+   * The C++ JNI bridge between the C++ struct "SleepTimerTime" and the Kotlin data class "SleepTimerTime".
    */
   struct JSleepTimerTime final: public jni::JavaClass<JSleepTimerTime> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimerTime;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/SleepTimerTime;";
 
   public:
     /**

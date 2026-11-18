@@ -1,0 +1,203 @@
+import Testing
+
+@testable import AudioBrowserTestable
+
+// The diagnostic reports structural inertness only (ADR 0011): a surface that cannot draw a
+// property it understands is intended usage, never a finding.
+
+@Suite("InertStyleDiagnostic")
+struct InertStyleDiagnosticTests {
+  private func findings(
+    _ sections: [Section], page: SectionStyle? = nil, path: String = "/home",
+  ) -> [String] {
+    InertStyleDiagnostic.findings(path: path, pageStyle: page, sections: sections)
+  }
+
+  private func playable(_ src: String = "https://s/a.mp3", style: TrackStyle? = nil) -> Track {
+    Track(src: src, title: "T", style: style)
+  }
+
+  private func browsable(_ path: String = "/albums/1", style: TrackStyle? = nil) -> Track {
+    Track(path: path, title: "T", style: style)
+  }
+
+  // MARK: - Container properties
+
+  @Test func gridWrapOnAListSectionIsInert() {
+    let found = findings([Section(title: "Recent", style: SectionStyle(gridWrap: false), children: [])])
+    #expect(found.count == 1)
+    #expect(found[0].contains("section 'Recent'"))
+    #expect(found[0].contains("style.gridWrap"))
+    #expect(found[0].contains("display 'list'"))
+    #expect(found[0].contains("/home"))
+  }
+
+  @Test func gridWrapInAGridIsLive() {
+    let style = SectionStyle(gridWrap: false, display: .grid)
+    #expect(findings([Section(style: style, children: [])]).isEmpty)
+  }
+
+  @Test func aSectionInheritsThePagesGridDisplay() {
+    let found = findings(
+      [Section(style: SectionStyle(gridWrap: false), children: [])],
+      page: SectionStyle(display: .grid),
+    )
+    #expect(found.isEmpty)
+  }
+
+  @Test func gridTileOnAListSectionIsInert() {
+    let found = findings([Section(style: SectionStyle(gridTile: .card), children: [])])
+    #expect(found.count == 1)
+    #expect(found[0].contains("style.gridTile"))
+    #expect(found[0].contains("section #1"))
+  }
+
+  // MARK: - Item properties
+
+  @Test func cardPropertiesNeedTheCardTreatment() {
+    let plainGrid = SectionStyle(display: .grid, cardTint: "#1e3a8a", cardImage: .background)
+    let found = findings([Section(title: "Featured", style: plainGrid, children: [])])
+    #expect(found.count == 2)
+    #expect(found.contains { $0.contains("style.cardTint") })
+    #expect(found.contains { $0.contains("style.cardImage") })
+    #expect(found.allSatisfy { $0.contains("display 'grid', gridTile 'plain'") })
+  }
+
+  @Test func cardPropertiesInACardGridAreLive() {
+    let cards = SectionStyle(gridTile: .card, display: .grid, cardTint: "#1e3a8a", cardImage: .background)
+    #expect(findings([Section(style: cards, children: [])]).isEmpty)
+  }
+
+  @Test func imageShapeNeedsAShapedTile() {
+    let list = SectionStyle(imageShape: .circular)
+    let plain = SectionStyle(display: .grid, imageShape: .circular)
+    let cards = SectionStyle(gridTile: .card, display: .grid, imageShape: .circular)
+    let condensed = SectionStyle(gridTile: .condensed, display: .grid, imageShape: .circular)
+    let image = SectionStyle(gridTile: .image, display: .grid, imageShape: .circular)
+    #expect(findings([Section(style: list, children: [])]).count == 1)
+    #expect(findings([Section(style: plain, children: [])]).count == 1)
+    #expect(findings([Section(style: cards, children: [])]).count == 1)
+    #expect(findings([Section(style: condensed, children: [])]).isEmpty)
+    #expect(findings([Section(style: image, children: [])]).isEmpty)
+  }
+
+  @Test func accessorySymbolNeedsAnAccessorySlot() {
+    let rows = SectionStyle(accessorySymbol: "lock.fill")
+    let condensed = SectionStyle(gridTile: .condensed, display: .grid, accessorySymbol: "lock.fill")
+    let image = SectionStyle(gridTile: .image, display: .grid, accessorySymbol: "lock.fill")
+    let plain = SectionStyle(display: .grid, accessorySymbol: "lock.fill")
+    let cards = SectionStyle(gridTile: .card, display: .grid, accessorySymbol: "lock.fill")
+    #expect(findings([Section(style: rows, children: [])]).isEmpty)
+    #expect(findings([Section(style: condensed, children: [])]).isEmpty)
+    #expect(findings([Section(style: image, children: [])]).isEmpty)
+    for style in [plain, cards] {
+      let found = findings([Section(style: style, children: [])])
+      #expect(found.count == 1)
+      #expect(found[0].contains("accessory slot"))
+    }
+  }
+
+  @Test func artworkRenderingIsNeverInert() {
+    let stencilled = SectionStyle(gridTile: .card, display: .grid, artworkRendering: .stencil)
+    #expect(findings([Section(style: stencilled, children: [])]).isEmpty)
+  }
+
+  // MARK: - Track-level declarations
+
+  @Test func trackDeclarationsAreReportedPerSection() {
+    let section = Section(
+      title: "Results", style: SectionStyle(display: .grid),
+      children: [
+        playable(style: TrackStyle(cardTint: "#111")),
+        playable("https://s/b.mp3", style: TrackStyle(cardTint: "#222")),
+        playable("https://s/c.mp3"),
+      ],
+    )
+    let found = findings([section])
+    #expect(found.count == 1)
+    #expect(found[0].contains("2 tracks in section 'Results'"))
+    #expect(found[0].contains("style.cardTint"))
+  }
+
+  @Test func aTracksOwnShapeIsLiveInAShapedGrid() {
+    let section = Section(
+      style: SectionStyle(gridTile: .image, display: .grid),
+      children: [playable(style: TrackStyle(imageShape: .circular))],
+    )
+    #expect(findings([section]).isEmpty)
+  }
+
+  // MARK: - The page block
+
+  @Test func aPageDeclarationLiveInOneSectionIsNotReported() {
+    let found = findings(
+      [
+        Section(style: SectionStyle(gridTile: .card, display: .grid), children: []),
+        Section(style: SectionStyle(display: .grid), children: []),
+      ],
+      page: SectionStyle(cardTint: "#1e3a8a"),
+    )
+    #expect(found.isEmpty)
+  }
+
+  @Test func aPageDeclarationNoSectionRendersIsReportedOnce() {
+    let found = findings(
+      [
+        Section(title: "A", style: SectionStyle(display: .grid), children: []),
+        Section(title: "B", children: []),
+      ],
+      page: SectionStyle(cardTint: "#1e3a8a"),
+    )
+    #expect(found.count == 1)
+    #expect(found[0].contains("the page block"))
+    #expect(found[0].contains("no section that inherits it"))
+  }
+
+  @Test func aSectionOverrideShadowsThePageValue() {
+    // The page tint is shadowed, not inert: the diagnostic reports what cannot render, not what
+    // is never reached.
+    let found = findings(
+      [Section(style: SectionStyle(gridTile: .card, display: .grid, cardTint: "#000"), children: [])],
+      page: SectionStyle(cardTint: "#1e3a8a"),
+    )
+    #expect(found.isEmpty)
+  }
+
+  @Test func aPageWideGridMakesSectionDeclarationsLive() {
+    let found = findings(
+      [Section(style: SectionStyle(cardTint: "#111"), children: [])],
+      page: SectionStyle(gridTile: .card, display: .grid),
+    )
+    #expect(found.isEmpty)
+  }
+
+  // MARK: - The positional `display`
+
+  @Test func displayOnAPlayableTrackIsInert() {
+    let section = Section(
+      title: "Tracks",
+      children: [
+        playable(style: TrackStyle(display: .grid)),
+        browsable(style: TrackStyle(display: .grid)),
+      ],
+    )
+    let found = findings([section])
+    #expect(found.count == 1)
+    #expect(found[0].contains("1 track in section 'Tracks'"))
+    #expect(found[0].contains("style.display"))
+    #expect(found[0].contains("opens none"))
+  }
+
+  @Test func displayOnASectionOrPageIsNeverInert() {
+    let found = findings(
+      [Section(style: SectionStyle(display: .list), children: [browsable()])],
+      page: SectionStyle(display: .grid),
+    )
+    #expect(found.isEmpty)
+  }
+
+  @Test func anUnstyledPageIsSilent() {
+    #expect(findings([Section(children: [playable(), browsable()])]).isEmpty)
+    #expect(findings([]).isEmpty)
+  }
+}

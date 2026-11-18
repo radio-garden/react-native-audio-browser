@@ -229,62 +229,39 @@ type Track = {
 
 - https://androidx.de/androidx/media/utils/MediaConstants.html
 
-## Separate Styles for Browsable vs Playable Children
+## Separate Browsable vs Playable Layouts in a Page Promise
 
-Currently `childrenStyle` applies the same style to both browsable and playable children. Some containers might benefit from different styles (e.g., grid for album folders, list for individual tracks).
+Android Auto's parent-level content-style hint is emitted from a browsable
+track's declared `style.display` (ADR 0011: the page promise), and the library
+sends the same value for the page's browsable and playable children. The
+underlying `MediaConstants` keys are separate (`CONTENT_STYLE_BROWSABLE` /
+`CONTENT_STYLE_PLAYABLE`), so a page could promise different layouts per kind
+— grid for album folders, list for the songs beside them.
 
-**Potential API:**
-
-```typescript
-type ChildrenStyle = {
-  playable?: TrackStyle
-  browsable?: TrackStyle
-}
-
-type Track = {
-  // ... existing fields
-  childrenStyle?: ChildrenStyle
-}
-```
-
-**Usage:**
+**Potential API:** a per-kind object value for the positional `display`:
 
 ```typescript
-// Different styles for browsable vs playable children
-childrenStyle: { playable: 'list', browsable: 'grid' }
-
-// Same style for both (more verbose than current)
-childrenStyle: { playable: 'grid', browsable: 'grid' }
+style: {
+  display: { playable: 'list', browsable: 'grid' }
+}
 ```
 
 **Use cases:**
 
-- Library section with album folders (browsable → grid) and individual songs (playable → list)
+- Library page with album folders (browsable → grid) and individual songs (playable → list)
 - "Recently Played" mixing playlists (browsable) and tracks (playable)
-
-**Alternative - union type for ergonomics:**
-
-```typescript
-childrenStyle?: TrackStyle | {
-  playable?: TrackStyle
-  browsable?: TrackStyle
-}
-
-// Simple (same for both)
-childrenStyle: 'grid'
-
-// Explicit (different styles)
-childrenStyle: { playable: 'list', browsable: 'grid' }
-```
 
 **Trade-offs:**
 
-- Object-only form is more verbose for the common case
-- Union form is more ergonomic but slightly more complex to handle on native side
-- Most containers have homogeneous children anyway
-- Current simple `childrenStyle: TrackStyle` covers ~90% of use cases
+- Widens `display`'s type from a plain union to a union-with-object on every
+  platform decoder, for a hint only Android Auto reads below the root
+- Most pages have homogeneous children anyway; sections already give a page
+  mixed layouts wherever the surface can render them
+- The promise stays declared-only either way (never derived, never
+  back-filled)
 
-**Decision:** Keep simple `childrenStyle: TrackStyle` for now. Add nested object (or union) if real-world use cases emerge.
+**Decision:** keep `display` a plain `'list' | 'grid'`. Revisit if real-world
+pages need per-kind parent hints.
 
 ## Tesla Artwork Bitmap Fallback
 
@@ -365,7 +342,7 @@ MediaItem.Builder()
 // In MediaFactory.createMediaSource()
 MediaItem.Builder()
     .setUri(finalUrl.toUri())
-    .setCustomCacheKey(track.src ?: track.url)  // src is stable, URL may have tokens
+    .setCustomCacheKey(track.src ?: track.path)  // src is stable, URL may have tokens
     .build()
 ```
 
@@ -550,14 +527,14 @@ const track = {
 - API becomes "input can be X or Y, output is always Y"
 - May not be worth it if global artwork config covers most cases
 
-## Custom Notification Buttons
+## Custom Remote Buttons
 
-Currently `ButtonCapability` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
+Currently `RemoteButton` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
 
 **Potential API:**
 
 ```typescript
-notificationButtons: {
+remoteButtonLayout: {
   back: 'skip-to-previous',
   forward: 'skip-to-next',
   overflow: [
@@ -657,16 +634,6 @@ Tap artist on Now Playing screen to search/browse related content.
 - Our approach: search for artist and show results list (more user control)
 - Requires search to be configured in browser config
 
-## CarPlay Image Row Items
-
-Support `CPListImageRowItem` / `CPListImageRowItemCardElement` for list items with multiple images.
-
-**Use cases:**
-
-- Album row showing multiple cover arts
-- Playlist preview with track thumbnails
-- "Recently played" with visual history
-
 ## CarPlay Grid Template
 
 Support `CPGridButton` / `CPGridTemplate` for grid-based navigation with image buttons.
@@ -759,4 +726,88 @@ Surface explicit error codes for business logic failures. Currently using Media3
 
 **Implementation:** Add `setPlaybackError(code, message)` API for JS to report these conditions
 
+**Note:** the _read_ direction already exists. `PlaybackErrorClassifier` maps
+`ERROR_CODE_AUTHENTICATION_EXPIRED`, `ERROR_CODE_PREMIUM_ACCOUNT_REQUIRED` and
+`ERROR_CODE_NOT_AVAILABLE_IN_REGION` to `PlaybackErrorKind.REJECTED`, and
+`ERROR_CODE_NOT_SUPPORTED` to `UNPLAYABLE`, so errors set through this API would
+surface to JS with a sensible `kind` without further work. What is missing is
+only the JS→session direction. If these need to be told apart from an ordinary
+403, that argues for new `kind` values rather than making apps read `code`.
+
 **Reference:** https://developer.android.com/reference/androidx/media3/common/PlaybackException
+
+## Per-Section Queue Policy
+
+Once sections are first-class (ADR 0010, issue #93), `Section` is the natural
+home for the queue-scope knob ADR 0006 deferred ("what becomes the queue when
+a child of this section is tapped"). Deliberately **not** part of the sections
+migration: an optional field is additive and lands compatibly at any time,
+even after production ship, so it must not spend the breaking-change window —
+and no surface varies yet.
+
+```ts
+interface Section {
+  // ...
+  queue?: 'section' | 'page' | 'track' | 'path'
+}
+```
+
+- `'section'` — the section's children (today's fixed behavior, stays the default)
+- `'page'` — the whole page's flattened children
+- `'track'` — the tapped track alone (per-section version of the global `singleTrack`;
+  if the enum lands at config level too, it can subsume that boolean)
+- `'path'` — the content of the section's linked `path` page. Makes a preview
+  section (a rail capped to N items) queue the _full_ collection it
+  previews, and unifies the two tap surfaces: tapping a track in the preview
+  and tapping it inside the view-all page produce the same queue and the same
+  `queueSourcePath`, so skip-in-place treats them as one source.
+
+`'path'` trade-offs, recorded from the design discussion: it is a cold resolve
+at tap time (today's expansion resolves the page being looked at — a cache hit
+by construction); the preview and the linked page can drift, in which case the
+vanished-identity rule falls back to the single track; the `__index`
+tie-breaker cannot be stamped against an unresolved page, so linked-page
+expansion is identity-first (ADR 0009 fallback semantics). Mechanically it is
+a stamp-time decision — the child's contextual path points at `section.path`
+instead of the current page — and the existing expansion/resumption/skip
+machinery works unchanged.
+
+The default stays `'section'` for every style: uniform, offline-safe, no added
+tap latency. A per-style default (rails defaulting to `'path'`) was
+considered and rejected — it would couple `queue`'s meaning to `style`.
+
+## Surface Request Param (server-tailored pages per surface)
+
+An opt-in request-layer option stamping the requesting surface onto browse
+requests (`surface=carplay|android-auto|app`), so a server can tailor the
+_same collection_ per surface — e.g. cap a rail's children where CarPlay
+truncates rows, uncap where Android Auto wraps. A surface-tailored variant
+changes the _declared_ page, which composes cleanly with "queue scope is
+declared, never rendered" (ADR 0010). Additive.
+
+Requirements for honest semantics, recorded from the design discussion:
+
+- **Thread the requesting surface through resolve.** Every call site has an
+  answer: CarPlay template loads, external Android clients (Android Auto
+  detectable by package; bucket the rest deliberately), JS navigation; queue
+  expansion inherits the tapping surface.
+- **Partition the content cache by the param.** The cache key must include
+  whatever varies the response: `(path, surface)`. Note the existing
+  pattern split: params that vary the response _rarely and globally_ (`hl`)
+  are handled by `invalidateAllContent()`; params that vary _concurrently
+  per-request on one device_ (surface) must partition the key. For
+  consumers where only one surface browses per device (car-only browsing
+  apps), the partitioned cache never actually forks at runtime.
+- **Resumption has no surface.** Persist the stamping surface alongside the
+  persisted playback state (it already persists the contextual path), so a
+  resumed queue re-expands against the variant it came from.
+- **Same-collection contract.** Variants of one path must be the same
+  collection, differently presented (row caps, styles) — never different
+  content. Violations are safe but lossy: identity checking (ADR 0009)
+  degrades to first-match or the single-track fallback, never the wrong
+  track.
+- **Not analytics.** The param names who _triggered the fetch_, not who
+  _viewed the page_ — cache hits are invisible to the server. For "a car is
+  connected" telemetry, consumers can already stamp a connection-state param
+  via the request layer (`onCarConnectedChanged` + `invalidateAllContent()`
+  on change), no library change needed.

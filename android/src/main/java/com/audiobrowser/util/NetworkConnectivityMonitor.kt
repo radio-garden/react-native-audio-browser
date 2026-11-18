@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,89 +12,59 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
-/**
- * Monitors network connectivity state and notifies listeners when the connection state changes.
- *
- * This class uses Android's ConnectivityManager.NetworkCallback to detect when the device goes
- * online or offline, which is useful for updating UI in Android Auto and other contexts.
- *
- * Monitoring starts automatically on construction.
- */
+/** Whether the default network has INTERNET. Monitoring starts on construction. */
 class NetworkConnectivityMonitor(private val context: Context) {
   private val connectivityManager =
     context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
   private var destroyed = false
 
-  // Compute initial state before creating StateFlow to avoid race condition
-  private val _isOnline = MutableStateFlow(checkInitialNetworkState())
+  @Volatile private var defaultNetwork: Network? = connectivityManager.activeNetwork
+
+  private val _isOnline = MutableStateFlow(isOnline(defaultNetwork?.let(::capabilitiesOf)))
   val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
-  /**
-   * Gets the current network connectivity state.
-   *
-   * @return true if device is online, false otherwise
-   */
   fun getOnline(): Boolean = _isOnline.value
 
-  /**
-   * Observes network state changes and invokes the callback when state changes. The callback is
-   * invoked on the scope's dispatcher.
-   */
+  /** Calls [onStateChanged] with the current state and on each change, on [scope]'s dispatcher. */
   fun observeOnline(scope: CoroutineScope, onStateChanged: (Boolean) -> Unit) {
     isOnline.onEach { isOnline -> onStateChanged(isOnline) }.launchIn(scope)
   }
 
-  private fun checkInitialNetworkState(): Boolean {
-    return connectivityManager.activeNetwork
-      ?.let { connectivityManager.getNetworkCapabilities(it) }
-      ?.let {
-        it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-          it.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-      } ?: false
-  }
+  private fun capabilitiesOf(network: Network): NetworkCapabilities? =
+    connectivityManager.getNetworkCapabilities(network)
+
+  // Not VALIDATED: some networks never validate (a failing Private DNS, some hotspots and
+  // corporate Wi-Fi) yet reach the stream, and the retry loop makes no connection while offline.
+  private fun isOnline(capabilities: NetworkCapabilities?): Boolean =
+    capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
   private val networkCallback =
     object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
-        Timber.d("Network available: $network")
-        updateNetworkState(true)
+        Timber.d("Default network available: $network")
+        defaultNetwork = network
+        _isOnline.value = isOnline(capabilitiesOf(network))
       }
 
       override fun onLost(network: Network) {
         Timber.d("Network lost: $network")
-        updateNetworkState(false)
+        if (network != defaultNetwork) return
+        defaultNetwork = null
+        _isOnline.value = false
       }
 
-      override fun onCapabilitiesChanged(
-        network: Network,
-        networkCapabilities: NetworkCapabilities,
-      ) {
-        val hasInternet =
-          networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        val isValidated =
-          networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        Timber.d("Network capabilities changed: hasInternet=$hasInternet, isValidated=$isValidated")
-        updateNetworkState(hasInternet && isValidated)
+      override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+        if (network != defaultNetwork) return
+        val online = isOnline(capabilities)
+        Timber.d("Default network $network capabilities changed: online=$online")
+        _isOnline.value = online
       }
     }
-
-  private fun updateNetworkState(isOnline: Boolean) {
-    if (_isOnline.value != isOnline) {
-      _isOnline.value = isOnline
-    }
-  }
 
   init {
     try {
-      val networkRequest =
-        NetworkRequest.Builder()
-          .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-          .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-          .build()
-
-      connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-
+      connectivityManager.registerDefaultNetworkCallback(networkCallback)
       Timber.d(
         "Network monitoring started, initial state: ${if (_isOnline.value) "online" else "offline"}"
       )
@@ -104,7 +73,7 @@ class NetworkConnectivityMonitor(private val context: Context) {
     }
   }
 
-  /** Stops monitoring and cleans up resources. */
+  /** Stops monitoring. A failed unregister leaves it running, so a later call retries. */
   fun destroy() {
     if (destroyed) {
       return

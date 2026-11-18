@@ -3,7 +3,7 @@ import {
   fetchCollections,
   fetchFolksoundomy,
   fetchItem,
-  searchCollection,
+  searchCollection
 } from '../../../../example-native/src/api/archive-org'
 
 const PREFIX = '/api/archive'

@@ -5,36 +5,100 @@
 /// Copyright © Marc Rousavy @ Margelo
 ///
 
+import NitroModules
+
 /**
- * Represents the JS union `TrackStyle`, backed by a C++ enum.
+ * Represents an instance of `TrackStyle`, backed by a C++ struct.
  */
 public typealias TrackStyle = margelo.nitro.audiobrowser.TrackStyle
 
 public extension TrackStyle {
-  /**
-   * Get a TrackStyle for the given String value, or
-   * return `nil` if the given value was invalid/unknown.
-   */
-  init?(fromString string: String) {
-    switch string {
-      case "list":
-        self = .list
-      case "grid":
-        self = .grid
-      default:
-        return nil
-    }
-  }
+  private typealias bridge = margelo.nitro.audiobrowser.bridge.swift
 
   /**
-   * Get the String value this TrackStyle represents.
+   * Create a new instance of `TrackStyle`.
    */
-  var stringValue: String {
-    switch self {
-      case .list:
-        return "list"
-      case .grid:
-        return "grid"
-    }
+  init(display: StyleDisplay?, artworkRendering: ArtworkRendering?, imageShape: ImageShape?, accessorySymbol: String?, cardTint: String?, cardImage: CardImage?) {
+    self.init({ () -> bridge.std__optional_StyleDisplay_ in
+      if let __unwrappedValue = display {
+        return bridge.create_std__optional_StyleDisplay_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ArtworkRendering_ in
+      if let __unwrappedValue = artworkRendering {
+        return bridge.create_std__optional_ArtworkRendering_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ImageShape_ in
+      if let __unwrappedValue = imageShape {
+        return bridge.create_std__optional_ImageShape_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = accessorySymbol {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = cardTint {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_CardImage_ in
+      if let __unwrappedValue = cardImage {
+        return bridge.create_std__optional_CardImage_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
+  }
+
+  @inline(__always)
+  var display: StyleDisplay? {
+    return self.__display.value
+  }
+  
+  @inline(__always)
+  var artworkRendering: ArtworkRendering? {
+    return self.__artworkRendering.value
+  }
+  
+  @inline(__always)
+  var imageShape: ImageShape? {
+    return self.__imageShape.value
+  }
+  
+  @inline(__always)
+  var accessorySymbol: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__accessorySymbol) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__accessorySymbol)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var cardTint: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__cardTint) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__cardTint)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var cardImage: CardImage? {
+    return self.__cardImage.value
   }
 }

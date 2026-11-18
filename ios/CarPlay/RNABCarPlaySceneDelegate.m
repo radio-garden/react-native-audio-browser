@@ -34,6 +34,7 @@ API_AVAILABLE(ios(14.0))
     }
 
     // Create and start the CarPlay controller
+    [RNABCarPlayController setConnected:YES];
     self.carPlayController = [[RNABCarPlayController alloc] initWithInterfaceController:interfaceController];
     [self.carPlayController start];
 }
@@ -44,6 +45,7 @@ API_AVAILABLE(ios(14.0))
 
     [self.carPlayController stop];
     self.carPlayController = nil;
+    [RNABCarPlayController setConnected:NO];
 }
 
 - (void)templateApplicationScene:(CPTemplateApplicationScene *)templateApplicationScene

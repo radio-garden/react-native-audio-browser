@@ -30,12 +30,12 @@ namespace margelo::nitro::audiobrowser {
    */
   enum class PlaybackState {
     NONE      SWIFT_NAME(none) = 0,
-    READY      SWIFT_NAME(ready) = 1,
-    PLAYING      SWIFT_NAME(playing) = 2,
-    PAUSED      SWIFT_NAME(paused) = 3,
-    STOPPED      SWIFT_NAME(stopped) = 4,
-    LOADING      SWIFT_NAME(loading) = 5,
-    BUFFERING      SWIFT_NAME(buffering) = 6,
+    BUFFERING      SWIFT_NAME(buffering) = 1,
+    READY      SWIFT_NAME(ready) = 2,
+    PLAYING      SWIFT_NAME(playing) = 3,
+    PAUSED      SWIFT_NAME(paused) = 4,
+    STOPPED      SWIFT_NAME(stopped) = 5,
+    LOADING      SWIFT_NAME(loading) = 6,
     ERROR      SWIFT_NAME(error) = 7,
     ENDED      SWIFT_NAME(ended) = 8,
   } CLOSED_ENUM;
@@ -51,12 +51,12 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("none"): return margelo::nitro::audiobrowser::PlaybackState::NONE;
+        case hashString("buffering"): return margelo::nitro::audiobrowser::PlaybackState::BUFFERING;
         case hashString("ready"): return margelo::nitro::audiobrowser::PlaybackState::READY;
         case hashString("playing"): return margelo::nitro::audiobrowser::PlaybackState::PLAYING;
         case hashString("paused"): return margelo::nitro::audiobrowser::PlaybackState::PAUSED;
         case hashString("stopped"): return margelo::nitro::audiobrowser::PlaybackState::STOPPED;
         case hashString("loading"): return margelo::nitro::audiobrowser::PlaybackState::LOADING;
-        case hashString("buffering"): return margelo::nitro::audiobrowser::PlaybackState::BUFFERING;
         case hashString("error"): return margelo::nitro::audiobrowser::PlaybackState::ERROR;
         case hashString("ended"): return margelo::nitro::audiobrowser::PlaybackState::ENDED;
         default: [[unlikely]]
@@ -66,12 +66,12 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::PlaybackState arg) {
       switch (arg) {
         case margelo::nitro::audiobrowser::PlaybackState::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
+        case margelo::nitro::audiobrowser::PlaybackState::BUFFERING: return JSIConverter<std::string>::toJSI(runtime, "buffering");
         case margelo::nitro::audiobrowser::PlaybackState::READY: return JSIConverter<std::string>::toJSI(runtime, "ready");
         case margelo::nitro::audiobrowser::PlaybackState::PLAYING: return JSIConverter<std::string>::toJSI(runtime, "playing");
         case margelo::nitro::audiobrowser::PlaybackState::PAUSED: return JSIConverter<std::string>::toJSI(runtime, "paused");
         case margelo::nitro::audiobrowser::PlaybackState::STOPPED: return JSIConverter<std::string>::toJSI(runtime, "stopped");
         case margelo::nitro::audiobrowser::PlaybackState::LOADING: return JSIConverter<std::string>::toJSI(runtime, "loading");
-        case margelo::nitro::audiobrowser::PlaybackState::BUFFERING: return JSIConverter<std::string>::toJSI(runtime, "buffering");
         case margelo::nitro::audiobrowser::PlaybackState::ERROR: return JSIConverter<std::string>::toJSI(runtime, "error");
         case margelo::nitro::audiobrowser::PlaybackState::ENDED: return JSIConverter<std::string>::toJSI(runtime, "ended");
         default: [[unlikely]]
@@ -86,12 +86,12 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("none"):
+        case hashString("buffering"):
         case hashString("ready"):
         case hashString("playing"):
         case hashString("paused"):
         case hashString("stopped"):
         case hashString("loading"):
-        case hashString("buffering"):
         case hashString("error"):
         case hashString("ended"):
           return true;

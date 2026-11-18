@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import {
   getRepeatMode,
-  openIosOutputPicker,
+  openOutputPicker,
   setRepeatMode,
   skipToNext,
   skipToPrevious,
@@ -20,7 +20,7 @@ import {
   togglePlayback,
   toggleShuffle,
   useActiveTrack,
-  useIosOutput,
+  useOutput,
   useNowPlaying,
   usePlaybackError,
   usePlayingState,
@@ -37,7 +37,7 @@ function cycleRepeatMode() {
   const modes: RepeatMode[] = ['off', 'track', 'queue']
   const currentIndex = modes.indexOf(getRepeatMode())
   const nextIndex = (currentIndex + 1) % modes.length
-  setRepeatMode(modes[nextIndex])
+  setRepeatMode(modes[nextIndex]!)
 }
 
 export function MiniPlayer({ onSleepTimerPress }: MiniPlayerProps) {
@@ -48,7 +48,7 @@ export function MiniPlayer({ onSleepTimerPress }: MiniPlayerProps) {
   const shuffleEnabled = useShuffle()
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
-  const iosOutput = useIosOutput()
+  const output = useOutput()
 
   if (!nowPlaying || !track) return null
 
@@ -164,12 +164,12 @@ export function MiniPlayer({ onSleepTimerPress }: MiniPlayerProps) {
           {Platform.OS === 'ios' && (
             <TouchableOpacity
               style={styles.controlButton}
-              onPress={openIosOutputPicker}
+              onPress={openOutputPicker}
             >
               <Icon
                 name="headphones"
                 size={20}
-                color={iosOutput?.external ? '#007AFF' : 'white'}
+                color={output?.external ? '#007AFF' : 'white'}
                 iconStyle="solid"
               />
             </TouchableOpacity>

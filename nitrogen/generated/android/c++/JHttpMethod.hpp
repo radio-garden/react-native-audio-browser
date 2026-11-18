@@ -15,11 +15,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "HttpMethod" and the the Kotlin enum "HttpMethod".
+   * The C++ JNI bridge between the C++ enum "HttpMethod" and the Kotlin enum "HttpMethod".
    */
   struct JHttpMethod final: public jni::JavaClass<JHttpMethod> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HttpMethod;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/HttpMethod;";
 
   public:
     /**

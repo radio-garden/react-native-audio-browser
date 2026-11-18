@@ -21,16 +21,28 @@
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
+#include "ArtworkVariants.hpp"
+#include <variant>
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
+#include "StyleDisplay.hpp"
+#include "JStyleDisplay.hpp"
+#include "ArtworkRendering.hpp"
+#include "JArtworkRendering.hpp"
+#include "ImageShape.hpp"
+#include "JImageShape.hpp"
+#include "CardImage.hpp"
+#include "JCardImage.hpp"
 #include <vector>
-#include "JImageRowItem.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -42,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent: public jni::JavaClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent;";
 
   public:
     /**
@@ -123,7 +135,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::invoke_cxx)});
     }

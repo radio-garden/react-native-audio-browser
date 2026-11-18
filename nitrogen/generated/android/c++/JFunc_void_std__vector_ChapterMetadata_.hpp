@@ -28,7 +28,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__vector_ChapterMetadata_: public jni::JavaClass<JFunc_void_std__vector_ChapterMetadata_> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_ChapterMetadata_;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_ChapterMetadata_;";
 
   public:
     /**
@@ -36,16 +36,16 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::vector<ChapterMetadata>& chapters) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JChapterMetadata>> /* chapters */)>("invoke");
-      method(self(), [&]() {
-        size_t __size = chapters.size();
+      method(self(), [&](auto&& __input) {
+        size_t __size = __input.size();
         jni::local_ref<jni::JArrayClass<JChapterMetadata>> __array = jni::JArrayClass<JChapterMetadata>::newArray(__size);
         for (size_t __i = 0; __i < __size; __i++) {
-          const auto& __element = chapters[__i];
+          const auto& __element = __input[__i];
           auto __elementJni = JChapterMetadata::fromCpp(__element);
           __array->setElement(__i, *__elementJni);
         }
         return __array;
-      }());
+      }(chapters));
     }
   };
 
@@ -63,16 +63,16 @@ namespace margelo::nitro::audiobrowser {
      * Invokes the C++ `std::function<...>` this `JFunc_void_std__vector_ChapterMetadata__cxx` instance holds.
      */
     void invoke_cxx(jni::alias_ref<jni::JArrayClass<JChapterMetadata>> chapters) {
-      _func([&]() {
-              size_t __size = chapters->size();
-              std::vector<ChapterMetadata> __vector;
-              __vector.reserve(__size);
-              for (size_t __i = 0; __i < __size; __i++) {
-                auto __element = chapters->getElement(__i);
-                __vector.push_back(__element->toCpp());
-              }
-              return __vector;
-            }());
+      _func([&](auto&& __input) {
+        size_t __size = __input->size();
+        std::vector<ChapterMetadata> __vector;
+        __vector.reserve(__size);
+        for (size_t __i = 0; __i < __size; __i++) {
+          auto __element = __input->getElement(__i);
+          __vector.push_back(__element->toCpp());
+        }
+        return __vector;
+      }(chapters));
     }
 
   public:
@@ -82,7 +82,7 @@ namespace margelo::nitro::audiobrowser {
     }
 
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_ChapterMetadata__cxx;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/Func_void_std__vector_ChapterMetadata__cxx;";
     static void registerNatives() {
       registerHybrid({makeNativeMethod("invoke_cxx", JFunc_void_std__vector_ChapterMetadata__cxx::invoke_cxx)});
     }

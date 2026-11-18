@@ -5,6 +5,7 @@ import android.app.SearchManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.provider.MediaStore
@@ -23,23 +24,30 @@ import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.ArtworkProviderDeps
 import com.audiobrowser.util.BatteryWarningStore
+import com.audiobrowser.util.CoilArtworkLoader
+import com.audiobrowser.util.CoilArtworkLoaderHolder
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.isActive
 import timber.log.Timber
 
 /**
- * MediaLibraryService for background audio playback and Android Auto/external controller support.
+ * The MediaLibraryService behind background playback, Android Auto and other external controllers.
  *
- * Implements [MediaSessionService.Listener] to receive
- * [onForegroundServiceStartNotAllowedException] callbacks when Android 12+ blocks foreground
- * service starts from background (e.g., Bluetooth resume while app is killed). This allows us to
- * record the failure and notify the user on their next session.
+ * As a [MediaSessionService.Listener] it records when Android 12+ refuses a foreground service
+ * start from the background (a Bluetooth resume while the app is killed, under battery
+ * restrictions), so the user can be warned on their next session.
  */
 @MainThread
 class Service : MediaLibraryService(), MediaSessionService.Listener {
@@ -49,10 +57,17 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   private lateinit var mediaSession: MediaLibrarySession
   private lateinit var imageLoader: ImageLoader
 
-  // Callback for battery warning events to notify JS layer
   var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
 
-  // Headless service binding
+  private var artworkProviderDeps: ArtworkProviderDeps? = null
+
+  /**
+   * Whether AudioBrowser holds its [LocalBinder] binding. While it does, [stopSelf] cannot end the
+   * service, so a task removal keeps the player.
+   */
+  private var moduleBound = false
+
+  private var headlessBound = false
   private val headlessConnection: ServiceConnection =
     object : ServiceConnection {
       override fun onServiceConnected(className: ComponentName, service: IBinder) {}
@@ -90,38 +105,55 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     player = Player(this)
     player.setup(PlayerSetupOptions())
 
-    // Create shared Coil ImageLoader with SVG support and disk caching
-    // Disk cache uses Coil defaults: 2% of disk space, max ~250MB
+    // The disk cache keeps Coil's default size limit: 2% of the disk, at most 250 MB.
     imageLoader =
       ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).build() }
         .build()
 
-    // Create CoilBitmapLoader for artwork loading with custom headers/auth support
     val coilBitmapLoader =
       CoilBitmapLoader(
         context = this,
         imageLoader = imageLoader,
-        getArtworkConfig = { player.browser?.getArtworkConfig() },
+        resolveDisplayArtwork = { uri, sizeHint -> player.resolveDisplayArtwork(uri, sizeHint) },
         getArtworkSizeHint = { player.artworkSizeHintPixels },
       )
 
-    // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
     player.imageLoader = imageLoader
+    player.onPlaybackResumptionFailed = { releasePlaceholder() }
+
+    // ArtworkContentProvider reads the holder to serve browse artwork to Android Auto and AAOS over
+    // content:// URIs.
+    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    artworkProviderDeps =
+      ArtworkProviderDeps(
+        loader = CoilArtworkLoader(this, imageLoader),
+        registry = player.browseArtworkRegistry,
+        scope = artworkScope,
+        artworkSizeHint = { player.artworkSizeHintPixels },
+      )
+    CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
+    // Best-effort: the previous process's files are stale, and keeping them grows the disk across
+    // restarts. The provider fetches again on demand.
+    runCatching {
+      java.io
+        .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
+        .deleteRecursively()
+    }
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        // Add the Uri data so apps can identify that it was a notification click
+        // Lets the app tell that a notification click opened it.
         data = "audiobrowser://notification".toUri()
         action = Intent.ACTION_VIEW
       }
     mediaSession =
       MediaLibrarySession.Builder(this, player.forwardingPlayer, player.getMediaSessionCallback())
-        // Use Coil for artwork loading (enables custom headers, SVG support)
         .setBitmapLoader(CacheBitmapLoader(coilBitmapLoader))
+        .setPeriodicPositionUpdateEnabled(periodicPositionUpdatesEnabled())
         // https://github.com/androidx/media/issues/1218
         .setSessionActivity(
           PendingIntent.getActivity(
@@ -133,71 +165,61 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         )
         .build()
 
-    // Register this service as a listener to catch foreground service start exceptions
     setListener(this)
     player.setMediaSession(mediaSession)
 
-    // Bind headless service once at startup for JS task execution
     Intent(applicationContext, HeadlessTaskService::class.java).also { headlessIntent ->
       Timber.d("Binding to HeadlessTaskService for JS execution")
-      val bound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
-      Timber.d("HeadlessTaskService bind result: $bound")
+      headlessBound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+      Timber.d("HeadlessTaskService bind result: $headlessBound")
     }
   }
+
+  /** The app's [PERIODIC_POSITION_UPDATES] manifest meta-data; true when it declares none. */
+  private fun periodicPositionUpdatesEnabled(): Boolean =
+    packageManager
+      .getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+      .metaData
+      ?.getBoolean(PERIODIC_POSITION_UPDATES, true) ?: true
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Timber.d("onStartCommand: action=${intent?.action}")
 
-    // Handle MEDIA_PLAY_FROM_SEARCH intent for voice commands
     intent
       ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
       ?.let { searchIntent ->
         val searchParams = parseSearchIntent(searchIntent)
         Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: $searchParams")
-        scope.launch { player.playFromSearch(searchParams) }
+        // A search that plays has waited for AudioBrowser, whose MediaBrowser connecting hands
+        // the notification to Media3.
+        playInForeground(scope, startId, hasMedia = { player.currentTrack != null }) {
+          player.playFromSearch(searchParams)
+        }
       }
+    // Released by Media3's update after the play request, or by a failed resumption.
+    if (intent?.isForegroundStartKey() == true) holdForeground()
 
     return super.onStartCommand(intent, flags, startId)
   }
 
-  /**
-   * Parses MEDIA_PLAY_FROM_SEARCH intent into structured SearchParams.
-   *
-   * Extracts search mode from EXTRA_MEDIA_FOCUS and relevant metadata fields:
-   * - "vnd.android.cursor.item/\*" with empty query → ANY ("play music")
-   * - "vnd.android.cursor.item/\*" with query → null (unstructured search)
-   * - Audio.Genres.ENTRY_CONTENT_TYPE → GENRE
-   * - Audio.Artists.ENTRY_CONTENT_TYPE → ARTIST
-   * - Audio.Albums.ENTRY_CONTENT_TYPE → ALBUM
-   * - "vnd.android.cursor.item/audio" → SONG
-   * - Audio.Playlists.ENTRY_CONTENT_TYPE → PLAYLIST
-   * - null or unknown → null (unstructured search)
-   *
-   * See: https://developer.android.com/guide/components/intents-common#PlaySearch
-   */
+  /** See https://developer.android.com/guide/components/intents-common#PlaySearch */
   private fun parseSearchIntent(intent: Intent): SearchParams {
-    // Get the search query from SearchManager.QUERY
     val query = intent.getStringExtra(SearchManager.QUERY) ?: ""
 
-    // Get the media focus type (what kind of media to search for)
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
-    // Determine search mode based on media focus type
+    // The focus picks a vertical. Genre, artist and album focuses are filters, carried by the
+    // extras
+    // below, so they yield no mode. Android has no station or podcast focus: those verticals are
+    // iOS-only.
     val mode =
       when (mediaFocus) {
-        "vnd.android.cursor.item/*" -> {
-          // Generic audio content - could be "play music" or unstructured search
-          if (query.isEmpty()) SearchMode.ANY else null
-        }
-        MediaStore.Audio.Genres.ENTRY_CONTENT_TYPE -> SearchMode.GENRE
-        MediaStore.Audio.Artists.ENTRY_CONTENT_TYPE -> SearchMode.ARTIST
-        MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE -> SearchMode.ALBUM
+        "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
         "vnd.android.cursor.item/audio" -> SearchMode.SONG
         MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
-        else -> null // No media focus or unknown - unstructured search
+        else -> null
       }
 
-    // Extract structured metadata fields
     val genre = intent.getStringExtra("android.intent.extra.genre")
     val artist = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ARTIST)
     val album = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ALBUM)
@@ -212,6 +234,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       album = album,
       title = title,
       playlist = playlist,
+      reference = MediaReference.UNKNOWN,
     )
   }
 
@@ -222,75 +245,77 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       super.onBind(intent)
     } else {
       Timber.d("Service being bound by module - returning LocalBinder")
+      moduleBound = true
       binder
     }
   }
 
-  override fun onTaskRemoved(rootIntent: Intent?) {
-    onUnbind(rootIntent)
+  override fun onRebind(intent: Intent?) {
+    if (intent?.action == null) moduleBound = true
+    super.onRebind(intent)
+  }
 
+  @OptIn(UnstableApi::class)
+  override fun onTaskRemoved(rootIntent: Intent?) {
     val appKilledPlaybackBehavior = player.appKilledPlaybackBehavior
 
     Timber.d("player = $player, appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
-
-    // Check if there are still external controllers connected (like Android Auto)
-    val hasExternalControllers =
-      mediaSession.connectedControllers.any { controller ->
-        controller.packageName != packageName && // Not our own app
-          controller.packageName != "com.android.systemui" // Not system UI
-      }
-
-    Timber.d("hasExternalControllers = $hasExternalControllers")
 
     when (appKilledPlaybackBehavior) {
       AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> {
         Timber.d("Pausing playback - appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
         player.pause()
-        // Service continues running for Android Auto
       }
 
       AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> {
-        if (hasExternalControllers) {
-          Timber.d("External controllers still connected - deferring aggressive cleanup")
-          // Just pause and remove notification, but keep service alive for external controllers
+        // Only a car keeps the session through a swipe: the Bluetooth stack connects as a
+        // controller whenever Bluetooth is on, with or without a device.
+        val carConnected =
+          mediaSession.connectedControllers.any {
+            mediaSession.isAutomotiveController(it) || mediaSession.isAutoCompanionController(it)
+          }
+        if (carConnected) {
+          Timber.d("A car is connected - pausing instead of stopping")
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
-          Timber.d("No external controllers - proceeding with service shutdown")
-          try {
-            if (::mediaSession.isInitialized) {
-              mediaSession.release()
-            }
-            player.clear()
-            player.stop()
-            player.destroy()
-            scope.cancel()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-          } catch (e: Exception) {
-            Timber.e(e, "Error during aggressive cleanup in onTaskRemoved")
-            // Still try to stop the service
-            stopSelf()
-          }
+          Timber.d("No car connected - stopping playback, moduleBound = $moduleBound")
+          stopPlaybackAndRemoveNotification()
+          // Ends a waiting play-from-search, also while AudioBrowser is bound.
+          scope.coroutineContext.cancelChildren()
+          // AudioBrowser keeps the player. Otherwise tear down now: a media controller still bound
+          // keeps the service alive after stopSelf().
+          if (!moduleBound) tearDown()
+          stopSelf()
         }
       }
 
       AppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> {
         Timber.d("Continuing playback - service remains available for Android Auto")
-        // Service continues running for Android Auto with existing callbacks
       }
     }
   }
 
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
+  private fun stopPlaybackAndRemoveNotification() {
+    // Before clear(), which leaves no track to save.
+    player.playbackStateStore.stopPeriodicSave()
+    // Before stop(), while a mid-ramp fade can still restore the volume.
+    player.sleepTimer.clear()
+    player.clear()
+    player.stop()
+    stopForeground(STOP_FOREGROUND_REMOVE)
+  }
+
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
-    // Ensure player is properly set up for external controllers like Android Auto
-    // Only call setup if callbacks haven't been installed yet (meaning React Native hasn't
-    // connected)
+    // Cancelled with the session's release. A client still bound keeps the service alive after
+    // a swipe's shutdown, and Media3 throws on adding a released session.
+    if (!scope.isActive) return null
+
+    // No setup() here: default options would replace the ones setupPlayer applied.
     if (player.getCallbacks() == null) {
       Timber.w("External controller connecting before React Native setup - using default options")
-      player.setup(PlayerSetupOptions())
     }
 
     return mediaSession
@@ -298,14 +323,15 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   override fun onUnbind(intent: Intent?): Boolean {
     Timber.d("onUnbind called - action: ${intent?.action}, package: ${intent?.`package`}")
+    if (intent?.action == null) {
+      moduleBound = false
+      // Android calls onBind once per distinct Intent while the service lives and caches the
+      // binder, so only onRebind tells of the next binding, and only when this returns true.
+      return true
+    }
     return super.onUnbind(intent)
   }
 
-  /**
-   * Called when Android 12+ blocks a foreground service start from background. This happens when an
-   * external controller (Bluetooth, car head unit) tries to resume playback while the app is killed
-   * and battery restrictions are in place.
-   */
   @OptIn(UnstableApi::class)
   override fun onForegroundServiceStartNotAllowedException() {
     Timber.w("Foreground service start blocked by Android - recording battery warning")
@@ -313,22 +339,42 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     onBatteryWarningPendingChanged?.invoke(true)
   }
 
+  /** Idempotent: a swipe's shutdown runs it, and onDestroy runs it again. */
+  private fun tearDown() {
+    // Before player.destroy(), so no in-flight artwork load reaches a destroyed player.
+    artworkProviderDeps?.let {
+      it.scope.cancel()
+      CoilArtworkLoaderHolder.clearIf(it)
+    }
+    artworkProviderDeps = null
+    if (::mediaSession.isInitialized) mediaSession.release()
+    player.destroy()
+    scope.cancel()
+  }
+
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Unbind from HeadlessTaskService to avoid ServiceConnection leak
-    unbindService(headlessConnection)
-
-    Timber.d("Releasing media session and destroying player")
-    if (::mediaSession.isInitialized) {
-      mediaSession.release()
+    // Unbinding a connection that never bound throws IllegalArgumentException.
+    if (headlessBound) {
+      unbindService(headlessConnection)
+      headlessBound = false
     }
-    player.destroy()
+
+    tearDown()
 
     super.onDestroy()
   }
 
   inner class LocalBinder : Binder() {
     val service = this@Service
+  }
+
+  companion object {
+    /**
+     * Application meta-data that, set to false, stops media3's periodic position update: the
+     * session re-sending External Surfaces the playback state every 3 s while playing or loading.
+     */
+    const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
   }
 }

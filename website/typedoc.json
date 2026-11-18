@@ -3,10 +3,26 @@
   "entryPoints": [
     "../src/features/*.ts",
     "../src/features/*/index.ts",
-    "../src/types/*.ts"
+    "../src/types/*.ts",
+    "../src/utils/getTrackIdentity.ts",
+    "../src/utils/useDebug.ts",
+    "../src/utils/NativeUpdatedValue.ts",
+    "../src/utils/LazyNativeEmitter.ts"
   ],
   "entryPointStrategy": "expand",
-  "exclude": ["**/features/index.ts"],
+  "exclude": [
+    "**/features/index.ts",
+    "**/features/browser-config.ts",
+    "**/types/index.ts",
+    "**/*.test.ts",
+    "**/browser-native.ts"
+  ],
+  "intentionallyNotExported": [
+    "Callback",
+    "DebugOptions",
+    "DebugState",
+    "DebugLogEntry"
+  ],
   "out": "./api",
   "plugin": [
     "typedoc-plugin-markdown",
@@ -21,6 +37,7 @@
   "useCodeBlocks": true,
   "entryFileName": "index",
   "excludeNotDocumented": false,
+  "excludeInternal": true,
   "sort": ["source-order"],
   "excludeGroups": true,
   "docsRoot": ".",

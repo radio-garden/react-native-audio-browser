@@ -18,8 +18,8 @@ public extension FormatNavigationErrorParams {
   /**
    * Create a new instance of `FormatNavigationErrorParams`.
    */
-  init(error: NavigationError, defaultFormatted: FormattedNavigationError, path: String) {
-    self.init(error, defaultFormatted, std.string(path))
+  init(error: NavigationError, defaultFormatted: FormattedNavigationError, path: String, kind: NavigationErrorKind) {
+    self.init(error, defaultFormatted, std.string(path), kind)
   }
 
   @inline(__always)
@@ -35,5 +35,10 @@ public extension FormatNavigationErrorParams {
   @inline(__always)
   var path: String {
     return String(self.__path)
+  }
+  
+  @inline(__always)
+  var kind: NavigationErrorKind {
+    return self.__kind
   }
 }

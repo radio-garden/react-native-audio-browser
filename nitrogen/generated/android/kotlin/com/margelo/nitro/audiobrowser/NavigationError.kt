@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -31,6 +32,24 @@ data class NavigationError(
   val statusCodeSuccess: Boolean?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NavigationError) return false
+    return Objects.deepEquals(this.code, other.code)
+      && Objects.deepEquals(this.message, other.message)
+      && Objects.deepEquals(this.statusCode, other.statusCode)
+      && Objects.deepEquals(this.statusCodeSuccess, other.statusCodeSuccess)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      code,
+      message,
+      statusCode,
+      statusCodeSuccess
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**

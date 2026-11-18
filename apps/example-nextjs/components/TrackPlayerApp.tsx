@@ -6,10 +6,21 @@ import AudioBrowser, {
   onFavoriteChanged,
   notifyContentChanged,
   setFavorites,
-  Track,
+  updateOptions,
+  type Track,
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import {
+  archiveLibrarySection,
+  archiveRoutes
+} from '../../example-native/src/api/archive-org'
+import { authedMediaTransform } from '../../example-native/src/api/authed'
+import {
+  radioGardenLibrarySection,
+  radioGardenMediaTransform,
+  radioGardenRoutes
+} from '../../example-native/src/api/radio-garden'
 import { BrowserScreen } from '../screens'
 
 const styles = StyleSheet.create({
@@ -38,141 +49,88 @@ const configuration: BrowserConfiguration = {
   tabs: [
     {
       title: 'Library',
-      url: '/library',
+      path: '/library',
       artwork: Platform.select({
         ios: 'sf:music.note.list'
       })
     },
     {
       title: 'JSON API',
-      url: '/api',
+      path: '/api',
       artwork: Platform.select({
         ios: 'sf:server.rack'
       })
     },
     {
       title: 'Favorites',
-      url: '/favorites',
+      path: '/favorites',
       artwork: Platform.select({
         ios: 'sf:heart.fill'
       })
     }
   ],
   media: {
-    async transform(request) {
-      if (request.path && request.path.startsWith('/rg/')) {
-        return {
-          baseUrl: 'https://radio.garden/api/ara/content/listen',
-          path: `${request.path.replace('/rg/', '')}/channel.mp3`
-        }
-      }
-      return request
+    // Shared with the native example rather than re-inlined, so the two can't
+    // drift. Each returns the request untouched when the path isn't its own.
+    async transform(request, params) {
+      return authedMediaTransform(
+        await radioGardenMediaTransform(request, params),
+        params
+      )
     }
   },
   routes: {
+    // Shared with the native example, like the media transforms above.
+    ...archiveRoutes,
+    ...radioGardenRoutes,
     '/api/**': {
       baseUrl: 'http://localhost:3003'
     },
     '/favorites'() {
       return Promise.resolve({
-        url: '/favorites',
+        path: '/favorites',
         title: 'Favorites',
         children: favorites
       })
     },
-    '/library/playlists': {
-      url: '/library/playlists',
-      title: 'Radio Playlists',
-      children: [
+    '/library': {
+      path: '/library',
+      title: 'Library',
+      sections: [
+        // Same sections, same order as the native example, from the same
+        // shared modules — so the two apps cannot drift. The rntp.dev demo
+        // files these replaced now 307 to www.rntp.dev and 404 there;
+        // Archive.org is also what the `/api/authed` routes redirect to, so it
+        // cannot rot independently of the rest of the app.
+        archiveLibrarySection,
+        radioGardenLibrarySection,
+        // Local HLS fixture. Next serves `public/whip/` at `/whip/`, so the
+        // manifest and all 17 segments are served by this app rather than a
+        // third-party host — HLS manifest parsing, segment loading and seeking
+        // stay testable offline, and can't rot when a remote URL moves.
+        //
+        // The manifest references its segments by relative name, so it needs no
+        // rewriting. Neither media transform claims `/whip/`, so the src reaches
+        // the player untouched.
         {
-          title: 'Independent Sounds',
-          url: '/playlist/independent-sounds'
-        },
-        {
-          title: 'Energetic Rhythms',
-          url: '/playlist/energetic-rhythms'
-        }
-      ]
-    },
-    async '/playlist/{id}'({ routeParams }) {
-      return {
-        'independent-sounds': {
-          title: 'Independent Sounds',
-          url: '/api/playlist/independent-sounds',
+          title: 'HLS',
           children: [
             {
-              title: 'Radio is a Foreign Country',
-              src: 'b35yEqjv',
-              live: true
-            },
-            { title: 'NTS 1', src: 'wT9JJD4j', live: true },
-            { title: 'Worldwide FM', src: '/rg/vfm-z7pR', live: true },
-            { title: 'Kiosk Radio', src: '/rg/rTzlLOJp', live: true },
-            { title: 'Rinse France', src: '/rg/39GkuKiS', live: true },
-            { title: 'Radio 80000', src: '/rg/MBWk5Fmi', live: true },
-            { title: 'Foundation FM', src: '/rg/QgsEUvYo', live: true },
-            { title: 'Dublin Digital Radio', src: '/rg/Bv4OzWTA', live: true },
-            { title: 'LYL Radio', src: '/rg/LINZ0-LZ', live: true }
+              id: 'whip-hls',
+              title: 'Whip',
+              src: '/whip/playlist.m3u8',
+              artwork: '/whip/whip.png'
+            }
           ]
         },
-        'energetic-rhythms': {
-          title: 'Energetic Rhythms',
-          url: '/playlist/energetic-rhythms',
+        {
+          title: 'Other',
           children: [
-            { title: 'Noods Radio', src: '/rg/TdAjNy_3', live: true },
-            { title: 'Systrum Sistum - SSR2', src: '/rg/ftR_mtxU', live: true },
-            { title: 'Radio.D59B', src: '/rg/GSLfbwH8', live: true },
-            { title: 'Dublab DE', src: '/rg/IbYQwskl', live: true },
-            { title: 'Operator Radio', src: '/rg/8Ls6E7wH', live: true },
-            { title: 'datafruits', src: '/rg/nED7EFV4', live: true }
+            {
+              src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+              title: 'Chapters'
+            }
           ]
-        }
-      }[routeParams!.id]!
-    },
-    '/library': {
-      url: '/library',
-      title: 'Library',
-      children: [
-        {
-          url: '/library/playlists',
-          title: 'Radio Playlists',
-          style: 'list'
-        },
-        {
-          src: 'https://rntp.dev/example/Soul%20Searching.mp3',
-          title: 'Soul Searching (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
-          duration: 77,
-          groupTitle: 'David Chavez'
-        },
-        {
-          src: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
-          title: 'Lullaby (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
-          duration: 71,
-          groupTitle: 'David Chavez'
-        },
-        {
-          src: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
-          title: 'Rhythm City (Demo)',
-          artist: 'David Chavez',
-          artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
-          duration: 106,
-          groupTitle: 'David Chavez'
-        },
-        {
-          src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
-          title: 'Whip (m3u8 HLS Stream)',
-          artist: 'prazkhanal',
-          artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
-          groupTitle: 'Other'
-        },
-        {
-          src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-          title: 'Chapters',
-          groupTitle: 'Other'
         }
       ]
     }
@@ -187,18 +145,25 @@ const configuration: BrowserConfiguration = {
     query = query.toLowerCase()
     const results = Object.values(configuration.routes ?? {}).reduce<Track[]>(
       (results, source) => {
-        if ('children' in source) {
+        if ('children' in source || 'sections' in source) {
+          // A static page holds its tracks as plain children or in sections
+          const children = [
+            ...('children' in source ? (source.children ?? []) : []),
+            ...('sections' in source
+              ? (source.sections?.flatMap((section) => section.children) ?? [])
+              : [])
+          ]
           results.push(
-            ...(source.children?.filter(
+            ...children.filter(
               (track) =>
                 !!(['title', 'artist', 'album'] as const).find(
                   (field) => !!track[field]?.toLowerCase().includes(query)
                 )
-            ) ?? [])
+            )
           )
           if (source.title?.toLowerCase().includes(query)) {
             results.push({
-              url: source.url,
+              path: source.path,
               title: source.title,
               artwork: source.artwork,
               artist: source.artist,
@@ -211,17 +176,15 @@ const configuration: BrowserConfiguration = {
       []
     )
 
-    // Dedupe by src (for playable tracks) or url (for browsable items)
+    // Dedupe by src (for playable tracks) or path (for browsable items)
     const seen = new Set<string>()
     return results.filter((track) => {
-      const key = track.src ?? track.url
+      const key = track.src ?? track.path
       if (!key || seen.has(key)) return false
       seen.add(key)
       return true
     })
   },
-  carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate'],
-
   // Customize navigation error messages (used by CarPlay and available via useFormattedNavigationError)
   formatNavigationError({ error, defaultFormatted, path }) {
     // Custom message for local server routes when server isn't running
@@ -243,6 +206,12 @@ export default function TrackPlayerApp() {
   useEffect(() => {
     const setup = async () => {
       await AudioBrowser.setupPlayer({})
+      // Now-playing buttons are a player option (iOS), not browser config
+      updateOptions({
+        ios: {
+          carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate']
+        }
+      })
       AudioBrowser.setPlayWhenReady(true)
       AudioBrowser.configureBrowser(configuration)
 
@@ -251,11 +220,11 @@ export default function TrackPlayerApp() {
         // Update our favorites array
         if (favorited) {
           if (!favorites.find((t) => t.src === track.src)) {
-            // Strip url - it contains the original context (e.g., /library/radio?__trackId=...)
-            // The library will regenerate the correct contextual URL when browsing favorites
+            // Strip path - it contains the original context (e.g., /library/radio?__trackId=...)
+            // The library will regenerate the correct contextual path when browsing favorites
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { url, groupTitle, ...trackWithoutUrl } = track
-            favorites.push(trackWithoutUrl as Track)
+            const { path, ...trackWithoutPath } = track
+            favorites.push(trackWithoutPath as Track)
           }
         } else {
           favorites = favorites.filter((t) => t.src !== track.src)

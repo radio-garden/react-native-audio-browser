@@ -3,17 +3,18 @@ import Testing
 @testable import AudioBrowserTestable
 
 private func makeResolvedTrack(
-  url: String = "/test",
-  title: String = "Test Track"
+  path: String = "/test",
+  title: String = "Test Track",
 ) -> ResolvedTrack {
   ResolvedTrack(
-    url: url,
+    path: path,
+    style: nil,
+    sections: nil,
     children: nil,
     carPlaySiriListButton: nil,
     src: nil,
     artwork: nil,
     artworkSource: nil,
-    artworkCarPlayTinted: nil,
     title: title,
     subtitle: nil,
     artist: nil,
@@ -21,24 +22,24 @@ private func makeResolvedTrack(
     description: nil,
     genre: nil,
     duration: nil,
-    style: nil,
-    childrenStyle: nil,
+    disabled: nil,
     favorited: nil,
-    groupTitle: nil,
     live: nil,
-    imageRow: nil
+    icyCharset: nil,
   )
 }
 
 private func makeFullResolvedTrack() -> ResolvedTrack {
   ResolvedTrack(
-    url: "/original",
-    children: [Track(id: "t1", url: "/t1")],
+    path: "/original",
+    style: SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil),
+    sections: [Section(title: "Group A", style: nil, path: nil, children: [])],
+    children: [Track(id: "t1", path: "/t1")],
     carPlaySiriListButton: .top,
+    id: "original-id",
     src: "src.mp3",
-    artwork: "art.jpg",
+    artwork: .first("art.jpg"),
     artworkSource: ImageSource(uri: "resolved-art.jpg"),
-    artworkCarPlayTinted: true,
     title: "Original Title",
     subtitle: "Original Subtitle",
     artist: "Original Artist",
@@ -46,12 +47,10 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     description: "Original Description",
     genre: "Rock",
     duration: 180.0,
-    style: .list,
-    childrenStyle: .grid,
+    disabled: false,
     favorited: true,
-    groupTitle: "Group A",
     live: false,
-    imageRow: [ImageRowItem(title: "Row 1")]
+    icyCharset: nil,
   )
 }
 
@@ -63,12 +62,12 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy == original)
 }
 
-// MARK: - non-optional fields (url, title)
+// MARK: - non-optional fields (path, title)
 
-@Test func copyingOverridesUrl() {
-  let original = makeResolvedTrack(url: "/old")
-  let copy = original.copying(url: "/new")
-  #expect(copy.url == "/new")
+@Test func copyingOverridesPath() {
+  let original = makeResolvedTrack(path: "/old")
+  let copy = original.copying(path: "/new")
+  #expect(copy.path == "/new")
   #expect(copy.title == "Test Track")
 }
 
@@ -76,14 +75,14 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let original = makeResolvedTrack(title: "Old")
   let copy = original.copying(title: "New")
   #expect(copy.title == "New")
-  #expect(copy.url == "/test")
+  #expect(copy.path == "/test")
 }
 
 // MARK: - optional fields: set value
 
 @Test func copyingOverridesChildren() {
   let original = makeResolvedTrack()
-  let children = [Track(id: "c1", url: "/c1"), Track(id: "c2", url: "/c2")]
+  let children = [Track(id: "c1", path: "/c1"), Track(id: "c2", path: "/c2")]
   let copy = original.copying(children: children)
   #expect(copy.children?.count == 2)
   #expect(copy.children?[0].id == "c1")
@@ -95,10 +94,16 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.src == "new-src.mp3")
 }
 
+@Test func copyingOverridesId() {
+  let original = makeResolvedTrack()
+  let copy = original.copying(id: "new-id")
+  #expect(copy.id == "new-id")
+}
+
 @Test func copyingOverridesArtwork() {
   let original = makeResolvedTrack()
-  let copy = original.copying(artwork: "new-art.jpg")
-  #expect(copy.artwork == "new-art.jpg")
+  let copy = original.copying(artwork: .some(.first("new-art.jpg")))
+  #expect(copy.artwork?.url == "new-art.jpg")
 }
 
 @Test func copyingOverridesArtworkSource() {
@@ -128,8 +133,14 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 
 @Test func copyingOverridesStyle() {
   let original = makeResolvedTrack()
-  let copy = original.copying(style: .grid)
-  #expect(copy.style == .grid)
+  let copy = original.copying(style: SectionStyle(gridWrap: nil, display: .grid, artworkRendering: nil))
+  #expect(copy.style?.display == .grid)
+}
+
+@Test func copyingOverridesDisabled() {
+  let original = makeResolvedTrack()
+  let copy = original.copying(disabled: true)
+  #expect(copy.disabled == true)
 }
 
 @Test func copyingOverridesFavorited() {
@@ -150,11 +161,13 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.carPlaySiriListButton == .bottom)
 }
 
-@Test func copyingOverridesImageRow() {
+@Test func copyingOverridesSections() {
   let original = makeResolvedTrack()
-  let items = [ImageRowItem(title: "Item 1"), ImageRowItem(title: "Item 2")]
-  let copy = original.copying(imageRow: items)
-  #expect(copy.imageRow == items)
+  let sections = [
+    Section(title: "A", style: nil, path: nil, children: [Track(id: "c1", src: "c1")]),
+  ]
+  let copy = original.copying(sections: sections)
+  #expect(copy.sections == sections)
 }
 
 // MARK: - optional fields: set to nil via .some(nil)
@@ -199,18 +212,17 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 @Test func copyingOverridesMultipleFields() {
   let original = makeResolvedTrack()
   let copy = original.copying(
-    url: "/updated",
+    path: "/updated",
     title: "Updated Title",
     artist: "New Artist",
     duration: 240.0,
-    favorited: true
+    favorited: true,
   )
-  #expect(copy.url == "/updated")
+  #expect(copy.path == "/updated")
   #expect(copy.title == "Updated Title")
   #expect(copy.artist == "New Artist")
   #expect(copy.duration == 240.0)
   #expect(copy.favorited == true)
-  // Unchanged fields
   #expect(copy.src == nil)
   #expect(copy.artwork == nil)
   #expect(copy.children == nil)
@@ -222,24 +234,21 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let original = makeFullResolvedTrack()
   let copy = original.copying(title: "Changed Only Title")
   #expect(copy.title == "Changed Only Title")
-  // All other fields unchanged
-  #expect(copy.url == "/original")
+  #expect(copy.path == "/original")
   #expect(copy.children?.count == 1)
   #expect(copy.carPlaySiriListButton == .top)
   #expect(copy.src == "src.mp3")
-  #expect(copy.artwork == "art.jpg")
+  #expect(copy.artwork?.url == "art.jpg")
   #expect(copy.artworkSource == ImageSource(uri: "resolved-art.jpg"))
-  #expect(copy.artworkCarPlayTinted == true)
   #expect(copy.subtitle == "Original Subtitle")
   #expect(copy.artist == "Original Artist")
   #expect(copy.album == "Original Album")
   #expect(copy.description == "Original Description")
   #expect(copy.genre == "Rock")
   #expect(copy.duration == 180.0)
-  #expect(copy.style == .list)
-  #expect(copy.childrenStyle == .grid)
+  #expect(copy.style == SectionStyle(gridWrap: false, display: .grid, artworkRendering: .stencil))
+  #expect(copy.disabled == false)
   #expect(copy.favorited == true)
-  #expect(copy.groupTitle == "Group A")
+  #expect(copy.sections?.first?.title == "Group A")
   #expect(copy.live == false)
-  #expect(copy.imageRow == [ImageRowItem(title: "Row 1")])
 }

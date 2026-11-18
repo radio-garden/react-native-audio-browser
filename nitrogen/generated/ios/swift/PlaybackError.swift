@@ -18,10 +18,27 @@ public extension PlaybackError {
   /**
    * Create a new instance of `PlaybackError`.
    */
-  init(code: String, message: String) {
-    self.init(std.string(code), std.string(message))
+  init(kind: PlaybackErrorKind, code: String, message: String, statusCode: Double?, retrying: Bool?) {
+    self.init(kind, std.string(code), std.string(message), { () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = statusCode {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = retrying {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
   }
 
+  @inline(__always)
+  var kind: PlaybackErrorKind {
+    return self.__kind
+  }
+  
   @inline(__always)
   var code: String {
     return String(self.__code)
@@ -30,5 +47,29 @@ public extension PlaybackError {
   @inline(__always)
   var message: String {
     return String(self.__message)
+  }
+  
+  @inline(__always)
+  var statusCode: Double? {
+    return { () -> Double? in
+      if bridge.has_value_std__optional_double_(self.__statusCode) {
+        let __unwrapped = bridge.get_std__optional_double_(self.__statusCode)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var retrying: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__retrying) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__retrying)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
   }
 }

@@ -18,11 +18,11 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "ImageQueryParams" and the the Kotlin data class "ImageQueryParams".
+   * The C++ JNI bridge between the C++ struct "ImageQueryParams" and the Kotlin data class "ImageQueryParams".
    */
   struct JImageQueryParams final: public jni::JavaClass<JImageQueryParams> {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageQueryParams;";
+    static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/ImageQueryParams;";
 
   public:
     /**

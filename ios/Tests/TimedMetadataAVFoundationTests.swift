@@ -20,6 +20,48 @@ struct TimedMetadataICYTests {
     #expect(result?.artist == nil)
   }
 
+  private func icyTitle(_ value: String) -> AVMetadataItem {
+    let item = AVMutableMetadataItem()
+    item.key = "StreamTitle" as NSString
+    item.keySpace = .icy
+    item.value = value as NSString
+    return item
+  }
+
+  // "Песня" as windows-1251 bytes read as Latin-1, as AVFoundation decodes it when it guesses wrong.
+  private let latin1Shaped = "\u{CF}\u{E5}\u{F1}\u{ED}\u{FF}"
+
+  @Test func icyCharset_redecodesLatin1ShapedTitle() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)], icyCharset: "windows-1251")
+    #expect(result?.title == "Песня")
+  }
+
+  @Test func icyCharset_leavesAlreadyDecodedTitle() {
+    let result = TimedMetadata.from(items: [icyTitle("Песня")], icyCharset: "windows-1251")
+    #expect(result?.title == "Песня")
+  }
+
+  @Test func icyCharset_leavesAscii() {
+    let result = TimedMetadata.from(items: [icyTitle("Plain Title")], icyCharset: "windows-1251")
+    #expect(result?.title == "Plain Title")
+  }
+
+  @Test func icyCharset_ignoresUnknownCharset() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)], icyCharset: "no-such-charset")
+    #expect(result?.title == latin1Shaped)
+  }
+
+  @Test func icyCharset_absent_keepsTitle() {
+    let result = TimedMetadata.from(items: [icyTitle(latin1Shaped)])
+    #expect(result?.title == latin1Shaped)
+  }
+
+  @Test func icyCharset_neverTouchesId3() {
+    let items = [makeMetadataItem(identifier: .id3MetadataTitleDescription, value: latin1Shaped)]
+    let result = TimedMetadata.from(items: items, icyCharset: "windows-1251")
+    #expect(result?.title == latin1Shaped)
+  }
+
   @Test func icyWithoutStreamTitle_returnsNil() {
     let item = AVMutableMetadataItem()
     item.key = "StreamUrl" as NSString
@@ -73,11 +115,10 @@ struct TimedMetadataID3Tests {
   }
 
   @Test func id3AllEmpty_returnsNil() {
-    // Items exist but don't match any known ID3 identifiers
+    // An ID3 item, but not one any field is read from.
     let item = makeMetadataItem(identifier: .id3MetadataEncodedBy, value: "encoder")
 
     let result = TimedMetadata.from(items: [item])
-    // The item has id3 keySpace, so it enters fromId3 which doesn't match .id3MetadataEncodedBy
     #expect(result == nil)
   }
 }

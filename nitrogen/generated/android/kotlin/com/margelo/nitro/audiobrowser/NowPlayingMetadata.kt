@@ -9,6 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import java.util.Objects
 
 
 /**
@@ -43,12 +44,37 @@ data class NowPlayingMetadata(
   val mediaId: String?,
   @DoNotStrip
   @Keep
-  val genre: String?,
-  @DoNotStrip
-  @Keep
-  val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?
+  val genre: String?
 ) {
   /* primary constructor */
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NowPlayingMetadata) return false
+    return Objects.deepEquals(this.elapsedTime, other.elapsedTime)
+      && Objects.deepEquals(this.title, other.title)
+      && Objects.deepEquals(this.album, other.album)
+      && Objects.deepEquals(this.artist, other.artist)
+      && Objects.deepEquals(this.duration, other.duration)
+      && Objects.deepEquals(this.artwork, other.artwork)
+      && Objects.deepEquals(this.description, other.description)
+      && Objects.deepEquals(this.mediaId, other.mediaId)
+      && Objects.deepEquals(this.genre, other.genre)
+  }
+
+  override fun hashCode(): Int {
+    return arrayOf<Any?>(
+      elapsedTime,
+      title,
+      album,
+      artist,
+      duration,
+      artwork,
+      description,
+      mediaId,
+      genre
+    ).contentDeepHashCode()
+  }
 
   companion object {
     /**
@@ -58,8 +84,8 @@ data class NowPlayingMetadata(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?): NowPlayingMetadata {
-      return NowPlayingMetadata(elapsedTime, title, album, artist, duration, artwork, description, mediaId, genre, rating)
+    private fun fromCpp(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?): NowPlayingMetadata {
+      return NowPlayingMetadata(elapsedTime, title, album, artist, duration, artwork, description, mediaId, genre)
     }
   }
 }
