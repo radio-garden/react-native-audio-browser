@@ -22,7 +22,7 @@ module.exports = {
       {
         preset: 'conventionalcommits',
         releaseRules: [
-          { breaking: true, release: 'minor' },
+          { breaking: true, release: 'major' },
           { revert: true, release: 'patch' }
         ].concat(rules.map(({ type, release }) => ({ type, release })))
       }
@@ -49,11 +49,20 @@ module.exports = {
       }
     ],
     '@semantic-release/npm',
-    '@semantic-release/github',
+    [
+      '@semantic-release/github',
+      {
+        // GitHub refuses a release body over 125,000 characters.
+        releaseBodyTemplate:
+          '<%= nextRelease.notes.length <= 125000 ? nextRelease.notes : "The notes are too long for a GitHub release: see [CHANGELOG.md](https://github.com/radio-garden/react-native-audio-browser/blob/" + nextRelease.gitTag + "/CHANGELOG.md)." %>'
+      }
+    ],
     [
       '@semantic-release/git',
       {
-        assets: ['package.json', 'CHANGELOG.md', 'example/package.json']
+        assets: ['package.json', 'CHANGELOG.md', 'example/package.json'],
+        // Without notes: a long release's notes overflow the command line (E2BIG).
+        message: 'chore(release): ${nextRelease.version} [skip ci]'
       }
     ]
   ]
