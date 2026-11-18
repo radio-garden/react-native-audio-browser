@@ -9,27 +9,22 @@ import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
 
-/** Offload preferences; [PlayerSetupOptions.audioOffload] being null turns offload off. */
+/** [PlayerSetupOptions.audioOffload] being null turns offload off. */
 data class AudioOffloadOptions(
   val gaplessSupportRequired: Boolean = true,
   val rateChangeSupportRequired: Boolean = true,
 )
 
-/** How the player retries a load error (network failure, timeout). */
 sealed class RetryPolicy {
   /** ExoPlayer's default: a few retries, then the error surfaces. */
   data object Default : RetryPolicy()
 
-  /**
-   * Retries with exponential backoff, with no attempt cap, until a duration bound runs out; a null
-   * bound takes RetryLoadErrorHandlingPolicy's default.
-   */
+  /** No attempt cap; a null duration bound takes RetryLoadErrorHandlingPolicy's default. */
   data class Infinite(
     val maxRetryDurationMs: Long? = null,
     val firstConnectMaxRetryDurationMs: Long? = null,
   ) : RetryPolicy()
 
-  /** Retries up to [maxRetries] times with exponential backoff. */
   data class Limited(
     val maxRetries: Int,
     val maxRetryDurationMs: Long? = null,
@@ -37,14 +32,11 @@ sealed class RetryPolicy {
   ) : RetryPolicy()
 }
 
-/** The options [Player.setup] builds the engine from; see [engineOptions] for what rebuilds it. */
 data class PlayerSetupOptions(
-  // The buffer fields are durations in milliseconds.
   var minBuffer: Double = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS.toDouble(),
   var audioContentType: AndroidAudioContentType = AndroidAudioContentType.MUSIC,
   var maxBuffer: Double = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS.toDouble(),
   var playBuffer: Double = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS.toDouble(),
-  // null lets AutomaticBufferManager tune it.
   var rebufferBuffer: Double? = null,
   var backBuffer: Double = DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS.toDouble(),
   // In megabytes; 0 disables the cache.
@@ -53,8 +45,7 @@ data class PlayerSetupOptions(
   var wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
   var retryPolicy: RetryPolicy = RetryPolicy.Default,
-  // Keeps the media session through a terminal error so external controllers (Android Auto) keep
-  // their transport controls. On by default to match iOS, where the session always survives.
+  // On by default to match iOS, where the session always survives an error.
   var keepSessionAliveOnError: Boolean = true,
   var autoUpdateNowPlayingMetadata: Boolean = true,
   var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
@@ -114,7 +105,7 @@ data class PlayerSetupOptions(
             val maxDurationMs = it.value.maxRetryDurationMs?.toLong()
             val firstConnectMs = it.value.firstConnectMaxRetryDurationMs?.toLong()
             if (maxRetries == null)
-            // No attempt cap: retry until a duration bound runs out.
+            // Without a cap, only a duration bound ends the retries.
             RetryPolicy.Infinite(
                 maxRetryDurationMs = maxDurationMs,
                 firstConnectMaxRetryDurationMs = firstConnectMs,
