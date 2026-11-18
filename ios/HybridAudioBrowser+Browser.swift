@@ -6,9 +6,8 @@ import NitroModules
 import os.log
 
 public extension HybridAudioBrowser {
-  /// Navigates the in-app browser, superseding a configuration's pending start path, and reports
-  /// a failure as the navigation error. The clear is synchronous, so JS hears it before the
-  /// navigation that may set the error again.
+  /// Navigates the in-app browser, superseding a configuration's pending start path. The error
+  /// clears synchronously, so JS hears it before the navigation that may set it again.
   internal func navigate(_ path: String, clearError: Bool) {
     onMainActor {
       initialNavigation?.cancel()
@@ -81,8 +80,8 @@ public extension HybridAudioBrowser {
   internal static let invalidateAllSentinel = "__rnab_invalidate_all__"
 
   func notifyContentChanged(path: String) throws {
-    // Throws on a contextual path, as Android's `require` does: the caller must pass the
-    // container path, or the invalidation silently hits nothing.
+    // Throws on a contextual path, as Android does: the caller must pass the container path, or the
+    // invalidation silently hits nothing.
     let isCurrentPath = try onMainActor {
       try browserManager.invalidateContentCache(path)
       return browserManager.path == path
@@ -116,12 +115,11 @@ public extension HybridAudioBrowser {
 
   // MARK: - Car Connection (CarPlay)
 
-  /// Static because the CarPlay scene can connect before JS creates the shared instance
-  /// (cold start in the car).
+  /// Static because the CarPlay scene can connect before JS creates the shared instance.
   internal nonisolated(unsafe) static var carPlayConnected = false
 
-  /// Called by the CarPlay scene delegate on scene connect/disconnect only, not on controller
-  /// start/stop, which also cycle on a JS reload and would emit spurious changes.
+  /// Called on scene connect and disconnect only, not on controller start and stop, which also
+  /// cycle on a JS reload.
   internal static func setCarPlayConnected(_ connected: Bool) {
     guard carPlayConnected != connected else { return }
     carPlayConnected = connected

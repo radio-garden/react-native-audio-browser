@@ -2,8 +2,6 @@ import Foundation
 import NitroModules
 import os.log
 
-/// Builds and runs the browser's HTTP requests: the Request-Config Layers for browse, search,
-/// media and artwork, and the API fetches.
 @MainActor
 final class RequestPipeline {
   let logger = Logger(subsystem: "com.audiobrowser", category: "RequestPipeline")
@@ -16,7 +14,6 @@ final class RequestPipeline {
 
   nonisolated init() {}
 
-  /// Resolves the request and browse layers again on next use, as after a locale change.
   func invalidateLayers() {
     layers.invalidate()
   }
@@ -26,25 +23,20 @@ final class RequestPipeline {
     let browse: TransformableRequestConfig?
   }
 
-  /// The request and browse layers: each resolver's result, else the static layer. A
-  /// successful run is kept until the next invalidation, and a failed one runs again on next
-  /// use. The resolvers run one after the other, request first, as on Android and web; an
-  /// invalidation while they run resolves them again.
+  /// The request and browse layers: each resolver's result, else the static layer. A successful
+  /// run is kept until the next invalidation; a failed one runs again on next use. The resolvers
+  /// run in turn, request first, as on Android and the web.
   func resolvedLayers() async throws -> ResolvedLayers {
     try await layers.value { [weak self] in
       guard let self else { throw CancellationError() }
       // Read on every run: a retry after a config change must resolve the new config.
       let config = self.config
-      // Double await: the TS side wraps a sync-or-async thunk in a JS promise, behind the
-      // bridge's promise.
       let request = try await config.requestResolver?().awaitNested() ?? config.request
       let browse = try await config.browseResolver?().awaitNested() ?? config.browse
       return ResolvedLayers(request: request, browse: browse)
     }
   }
 
-  /// `layer` onto `base`: its transforms (async, then sync) when it has any, else its static
-  /// fields (`RequestLayer.apply`).
   func applyLayer(
     _ layer: (some TransformableLayer)?,
     to base: RequestConfig,
@@ -61,11 +53,8 @@ final class RequestPipeline {
     return try await RequestLayer.apply(RequestConfig(fieldsOf: layer), transforms: transforms, to: base)
   }
 
-  /// The HTTP request for an API-backed route: the request layer, then the `kind` layer (nil
-  /// for kinds with none), then `routeConfig` (nil for the implicit browse default).
-  /// `initialQuery` goes onto the request after the request layer, so it reaches the URL even
-  /// when a later layer's transforms replace that layer's static query. Throws
-  /// `invalidConfiguration` when no layer sets a base URL.
+  /// The HTTP request for an API-backed route: the request layer, then the `kind` layer, then
+  /// `routeConfig`. Throws `invalidConfiguration` when no layer sets a base URL.
   func buildApiRequest(
     kind: KeyPath<ResolvedLayers, TransformableRequestConfig?>?,
     _ routeConfig: TransformableRequestConfig?,
@@ -76,6 +65,8 @@ final class RequestPipeline {
     var merged = RequestConfig.base(path: path)
     let layers = try await resolvedLayers()
     merged = try await applyLayer(layers.request, to: merged, params: params)
+    // After the request layer, so it reaches the URL even when a later layer's transforms replace
+    // the static query.
     if let initialQuery, !initialQuery.isEmpty {
       merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
     }
@@ -119,9 +110,8 @@ final class RequestPipeline {
     return nitroResult
   }
 
-  /// A search route's tracks, through the request layer and `searchConfig`. The search params
-  /// go in as `initialQuery`; the config's path seeds the base, since a layer's static path
-  /// never applies.
+  /// A search route's tracks. The config's path seeds the base, since a layer's static path never
+  /// applies.
   func fetchSearch(_ searchConfig: TransformableRequestConfig, params: SearchParams) async throws -> [Track] {
     let request = try await buildApiRequest(
       kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": params.query],
@@ -135,9 +125,9 @@ final class RequestPipeline {
   // MARK: - Media URL Resolution
 
   /// The media request for `originalUrl`: the request layer, the media layer, then what
-  /// `media.resolve(track)` produces over them. `track` only feeds `resolve`; its own `request`
-  /// is not merged here. A failing layer
-  /// leaves the URL as it is, with no headers.
+  /// `media.resolve(track)` produces over them. `track` only feeds `resolve`; its own `request` is
+  /// not merged here. A failing layer leaves the URL as it is, with no headers; a failing
+  /// `resolve` is skipped.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
     let base: RequestConfig
     do {
@@ -167,8 +157,6 @@ final class RequestPipeline {
     }
   }
 
-  /// What the `media` config's `resolve` and `resolveSync` produce for `track`; nil without a
-  /// track or a media config.
   func resolveMediaTrackConfig(_ track: Track?) async throws -> RequestConfig? {
     guard let track, let media = config.media else { return nil }
     return try await resolved(media.resolve, media.resolveSync, for: track)
@@ -188,11 +176,11 @@ final class RequestPipeline {
 
   // MARK: - Artwork URL Resolution
 
-  /// The image source for `track`'s artwork: an SF Symbol rendered to a file; the artwork URL
-  /// as is when no artwork config applies; else the request layer and the artwork config, in
+  /// The image source for `track`'s artwork: an SF Symbol rendered to a file; the artwork URL as
+  /// is when no artwork config applies; else the request layer and the artwork config, in
   /// `RequestLayer.artwork`'s order. `perRouteConfig` replaces the global artwork config;
-  /// `imageContext` is the display size, nil at browse time. Nil when there is no artwork or a
-  /// callback fails.
+  /// `imageContext` is the display size, nil at browse time. Nil when there is no artwork, a
+  /// callback fails or the task is cancelled.
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
     let artworkUrl = track.artwork?.url
     if let artworkUrl, SFSymbolRenderer.isSFSymbol(artworkUrl) {
@@ -257,13 +245,11 @@ final class RequestPipeline {
   // MARK: - Config Utilities
 
   /// Awaits an async config callback, which crosses the bridge as `Promise<Promise<…>>` (the
-  /// bridge hop, then the JS promise): a single await hands a `Promise` downstream. Copies the
-  /// result out.
+  /// bridge hop, then the JS promise), and copies the result out.
   func awaitAsyncConfig(_ promise: Promise<Promise<RequestConfig>>) async throws -> RequestConfig {
     try await extractConfig(promise.awaitNested())
   }
 
-  /// Awaits a sync config callback (one bridge await) and copies the result out.
   func awaitSyncConfig(_ promise: Promise<RequestConfig>) async throws -> RequestConfig {
     try await extractConfig(promise.awaitCancellable())
   }
@@ -277,7 +263,6 @@ final class RequestPipeline {
 extension RequestConfig: RequestFields {}
 extension ArtworkRequestConfig: RequestFieldValues {}
 
-/// A Request-Config Layer with transforms: the request, browse, media and route configs.
 protocol TransformableLayer: RequestFieldValues where Method == HttpMethod {
   var transform: ((RequestConfig, [String: String]?) -> Promise<Promise<RequestConfig>>)? { get }
   var transformSync: ((RequestConfig, [String: String]?) -> Promise<RequestConfig>)? { get }
@@ -287,8 +272,8 @@ extension TransformableRequestConfig: TransformableLayer {}
 extension MediaRequestConfig: TransformableLayer {}
 
 extension RequestPipeline: MediaResolving {
-  /// Runs for every playing track, id or not: an id-less track leaves `{id}` unfilled, so the
-  /// request fails visibly rather than being skipped.
+  /// Runs for an id-less track too: its `{id}` stays unfilled, so the request fails visibly rather
+  /// than being skipped.
   func resolveNowPlayingArtwork(track: Track, imageContext: ImageContext?) async -> ImageSource? {
     await resolveArtworkUrl(track: track, perRouteConfig: config.nowPlayingArtwork, imageContext: imageContext)
   }

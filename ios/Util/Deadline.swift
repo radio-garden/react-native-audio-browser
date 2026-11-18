@@ -1,7 +1,6 @@
-/// `work`'s result, or nil once `timeout` passes, when `work` is cancelled first: the answer comes on
-/// time even when `work` ignores cancellation, and work that resumes after a nil answer sees
-/// `Task.isCancelled`. `work` gets the deadline, to bound its own waits by what is left. Cancelling
-/// the caller does not reach `work`.
+/// `work`'s result, or nil once `timeout` passes, cancelling `work`: the answer comes on time even
+/// when `work` ignores cancellation. `work` gets the deadline, to bound its own waits by what is
+/// left. Cancelling the caller does not reach `work`.
 @MainActor
 func withDeadline<T: Sendable>(
   _ timeout: Duration,

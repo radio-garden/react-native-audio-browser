@@ -3,8 +3,6 @@ import Foundation
 import os.log
 
 /// The CarPlay scene's controller, called from Objective-C by `RNABCarPlaySceneDelegate`.
-/// Shows a loading root until the player and a configured browser exist, then runs a
-/// `CarPlaySession`.
 @MainActor
 @objc(RNABCarPlayController)
 public final class RNABCarPlayController: NSObject {
@@ -13,7 +11,6 @@ public final class RNABCarPlayController: NSObject {
   private var interfaceDelegate: InterfaceControllerDelegate?
   private var instanceSubscription: Subscription?
 
-  /// The pending or running start; nil while stopped.
   private var run: Task<Void, Never>?
   private(set) var session: CarPlaySession?
 
@@ -23,8 +20,8 @@ public final class RNABCarPlayController: NSObject {
     super.init()
   }
 
-  /// Reports the scene's connection (JS `isCarPlayConnected`). Called on scene connect and
-  /// disconnect, not from `start()`/`stop()`, which also cycle on a JS reload.
+  /// Reports the scene's connection to JS. Call it on scene connect and disconnect, not from
+  /// `start()`/`stop()`, which also cycle on a JS reload.
   @objc
   public static func setConnected(_ connected: Bool) {
     HybridAudioBrowser.setCarPlayConnected(connected)
@@ -44,7 +41,6 @@ public final class RNABCarPlayController: NSObject {
       self?.restart()
     }
 
-    // Before the config loads the title is unknown: the spinner alone.
     let browserManager = HybridAudioBrowser.shared?.browserManager
     let loadingTitle = browserManager?.isConfigured == true ? browserManager?.config.carPlayLoadingTitle : nil
     interfaceController.safeSetRoot(

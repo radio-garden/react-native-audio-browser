@@ -1,10 +1,10 @@
 /// A value computed at most once per generation and shared by every caller of that generation.
 ///
-/// `invalidate()` starts a new generation. A caller whose computation finishes or fails after
-/// an invalidation computes again, so `value(_:)` never returns a stale result; `compute` must
+/// `invalidate()` starts a new generation. A caller whose computation settles after an
+/// invalidation computes again, so `value(_:)` never returns a stale result; `compute` must
 /// therefore read the state it depends on when it runs, not capture it. A failure is not kept:
-/// the next caller of the same generation tries again. A cancelled caller leaves at once and stops
-/// retrying; the computation runs on for the others.
+/// the next caller tries again. A cancelled caller leaves at once; the computation runs on for
+/// the others.
 @MainActor
 final class GenerationMemo<Value: Sendable> {
   private var generation = 0

@@ -2,9 +2,6 @@
   import NitroModules
 #endif
 
-/// What `RemoteCommandController` calls when the system delivers a remote command (lock
-/// screen, Control Center, CarPlay, headset). `AVPlayerEngineCallbacks` extends it, so the
-/// controller depends only on these.
 @MainActor protocol RemoteCommandCallbacks: AnyObject {
   func remotePlay()
 

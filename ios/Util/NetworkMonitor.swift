@@ -10,7 +10,6 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  // Guards `_isOnline` only; never held across an emit.
   private let lock = NSLock()
   private var _isOnline = false
 
@@ -43,7 +42,7 @@ final class NetworkMonitor: @unchecked Sendable {
     monitor = NWPathMonitor()
 
     // Seeded before `start`: written after it, a `currentPath` the monitor hasn't finished
-    // evaluating could clobber the handler's real update. The handler stays the last writer.
+    // evaluating could clobber the handler's update. The handler stays the last writer.
     let initialStatus = monitor.currentPath.status.isOnline
     logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
     _isOnline = initialStatus

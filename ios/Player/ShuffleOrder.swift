@@ -26,9 +26,8 @@ struct ShuffleOrder {
     indexInShuffled = Self.buildIndexInShuffled(from: shuffled)
   }
 
-  /// A random order with `firstIndex` at shuffle position 0. Playback starts on that track, so
-  /// left wherever the permutation put it, the queue would end when it is reached: on average
-  /// after half the queue, at once when it lands last.
+  /// A random order with `firstIndex` first: playback starts on it, and left anywhere else the
+  /// queue would end when it is reached.
   init(length: Int, firstIndex: Int) {
     self.init(length: length)
     reshuffle(keepingFirst: firstIndex)
@@ -103,10 +102,6 @@ struct ShuffleOrder {
     indexInShuffled = Self.buildIndexInShuffled(from: shuffled)
   }
 
-  /// Makes room for one queue item at `insertionIndex`, at shuffle position `position` (clamped).
-  /// A queue `move` uses this to keep the item's place in the playback order: a random place
-  /// reorders playback, and can put the playing track last, so the queue reports itself over at
-  /// the next track end with tracks unplayed.
   mutating func insert(at insertionIndex: Int, atShufflePosition position: Int) {
     for i in 0 ..< shuffled.count where shuffled[i] >= insertionIndex {
       shuffled[i] += 1
@@ -136,8 +131,7 @@ struct ShuffleOrder {
     indexInShuffled = []
   }
 
-  /// A new random order of the same length; an out-of-range `keepingFirst` or `keepingLast` is
-  /// ignored.
+  /// An out-of-range `keepingFirst` or `keepingLast` is ignored.
   mutating func reshuffle(keepingFirst: Int? = nil, keepingLast: Int? = nil) {
     let length = shuffled.count
     guard length > 0 else { return }

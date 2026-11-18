@@ -4,49 +4,49 @@ import Foundation
   import NitroModules
 #endif
 
-/// What the engine reports to the Player.
+/// What the engine observes, reported to the Player to decide on.
 enum EngineEvent {
-  /// The loaded item is now the player's current item, and observed.
+  /// The load's item is now the player's current item.
   case itemPrepared(likelyToKeepUp: Bool)
-  /// Loading the resolved asset failed; the retry loop classifies the error.
+  /// The load failed before an item existed.
   case loadFailed(Error)
-  /// The asset loaded but cannot play.
+  /// The asset loaded but cannot be played.
   case unplayable
-  /// The source is not a URL.
+  /// The resolved src is not a URL.
   case invalidSource(String)
-  /// The player or its item failed, with the HTTP status the server last answered, if any.
+  /// The player or its current item failed; `httpStatusCode` comes from the item's error log.
   case failed(Error?, httpStatusCode: Int?)
   case likelyToKeepUp(Bool)
-  /// `waitingForNoItem`: the player waits because it has no item to play.
+  /// `waitingForNoItem`: the player is waiting because it has no current item.
   case timeControlStatus(PlayerTimeControlStatus, waitingForNoItem: Bool)
-  /// Playback crossed its first millisecond.
+  /// Playback passed the item's first millisecond.
   case audioDidStart
   case playedToEnd
   /// The buffer emptied mid-playback.
   case stalled
-  /// A timed-metadata group (a live stream's song line), decoded with the track's ICY charset.
   case timedMetadata(TimedMetadata)
 }
 
-/// The media stack under the Player: the AVPlayer and its items, loading, now playing, remote
-/// commands and the audio session. It carries out what the Player decides and reports what it
-/// observes through `onEvent`; it holds no playback policy (ADR 0012). Tests use a mock.
+/// The Player's one seam to the media stack: it carries out what the Player decides and reports
+/// what it observes as `EngineEvent`s, deciding nothing itself (ADR 0012).
 @MainActor protocol PlayerEngine: AnyObject {
   var onEvent: (@MainActor (EngineEvent) -> Void)? { get set }
 
   // MARK: The current item
 
-  /// True also for the item a failed load leaves in place to carry now playing.
+  /// The player has a current item, which may be the now-playing carrier.
   var hasItem: Bool { get }
+  /// The current load has an asset, whether or not its item is attached yet.
   var hasLoadedAsset: Bool { get }
   var currentTime: Double { get }
+  /// For a live stream, the length of its seekable window; 0 when there is none.
   var duration: Double { get }
   var bufferedPosition: Double { get }
-  /// The position a reload resumes from: nil without an item, for an indefinite duration, or when the item's time isn't finite.
+  /// Where a reload resumes; nil for a live item or no item.
   var resumePosition: Double? { get }
-  /// The end of the seekable window; nil when there is none.
+  /// The end of the seekable window, or nil when it has none.
   var liveEdge: Double? { get }
-  /// How far back a live item can seek from its live edge; nil for an on-demand item or none.
+  /// The seekable window of a live item, or nil when it is not live or has none.
   var liveWindowSeconds: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
   var isAirPlayRoute: Bool { get }
@@ -55,33 +55,34 @@ enum EngineEvent {
 
   // MARK: Loading
 
-  /// Resolves `src` for `track` afresh, so a short-lived URL is minted anew, and loads it. The
-  /// outcome arrives as `itemPrepared`, `loadFailed`, `unplayable` or `invalidSource`.
-  /// - Parameter shortStartBuffer: The item is ready once about 1 s is buffered, not the several
-  ///   seconds AVPlayer otherwise waits for, then buffers as configured.
+  /// Resolves `src` afresh, so a short-lived URL is minted anew, and loads it, ending in
+  /// `.itemPrepared`, `.loadFailed`, `.unplayable` or `.invalidSource`. With `shortStartBuffer`
+  /// the item is ready once about 1 s is buffered, then buffers as configured.
   func resolveAndLoad(src: String, track: Track, shortStartBuffer: Bool)
+  /// Cancels a resolve or load in flight; it reports nothing more.
   func cancelLoading()
-  /// Drops the asset and stops observing the item, leaving the item in place for the reload.
+  /// Drops the asset and stops observing the item, leaving the item in place.
   func dropAsset()
-  /// Drops the asset and removes the item.
+  /// Drops the asset and leaves the player with no item.
   func clearItem()
-  /// Drops the asset and its connection, leaving in the item's place one with no media that carries
-  /// the now-playing info: auto-publishing reads it only from the current item (docs/adr/0005).
+  /// Drops the asset and attaches an empty item, so the now-playing surfaces keep publishing
+  /// without a connection (ADR 0005).
   func replaceItemWithNowPlayingCarrier()
+  /// The current item reports nothing more, and stays attached.
   func stopObservingItem()
-  /// Whether the AVPlayer itself has failed, not only its item: it plays nothing until recreated.
+  /// The player itself failed: it cannot play again until `recreate()`.
   var playerFailed: Bool { get }
-  /// Replaces the AVPlayer: every handle to the old one is invalid.
+  /// Replaces the player with a new one, keeping its volume and rate.
   func recreate()
 
   // MARK: Transport
 
   func play()
   func pause()
-  /// Caps how far ahead the current item loads, in seconds; nil restores the configured buffer.
+  /// Caps how far ahead the current item buffers; nil restores the configured buffer.
   func capForwardBuffer(_ seconds: Double?)
-  /// Stages `rate` for the next play; applies it now only when `playing`, since a nonzero
-  /// AVPlayer rate starts playback.
+  /// Applies at once only when `playing`, since a nonzero AVPlayer rate starts playback;
+  /// otherwise from the next `play()`.
   func setRate(_ rate: Float, playing: Bool)
   /// Seeks exactly, with no tolerance; `completion` gets false when the seek was interrupted.
   func seek(to seconds: Double, completion: @escaping @MainActor (Bool) -> Void)
@@ -89,18 +90,14 @@ enum EngineEvent {
 
   // MARK: Now playing and remote commands
 
-  /// Renders silence so iOS elects the app onto the now-playing surfaces when a load renders
-  /// no audio (ADR 0005).
+  /// Plays a burst of silence, so iOS shows the now-playing surfaces after a failed load (ADR 0005).
   func primeNowPlaying()
   func loadNowPlayingMetadata(for track: Track)
   func clearNowPlaying()
-  /// Re-renders the now-playing lines from the Player's state.
   func renderNowPlaying()
-  /// Drops the previous track's override, flash and timed metadata; the lines change at the next
-  /// render.
+  /// Drops what belonged to the previous track; the lines change at the next render.
   func nowPlayingTrackChanged()
   func applyTimedMetadata(_ metadata: TimedMetadata)
-  /// Drops the stream's title, so the next render shows the track's own lines.
   func clearTimedMetadata()
   func updateRemoteRepeatMode(_ mode: RepeatMode)
   func updateRemoteShuffleMode(_ enabled: Bool)
@@ -108,11 +105,10 @@ enum EngineEvent {
 
   // MARK: Audio session
 
-  /// Activates the audio session off the main thread, then re-requests the now-playing session,
-  /// which the system may have declined while the audio session was inactive.
+  /// Activates the audio session asynchronously, off the main thread, then re-requests the
+  /// now-playing session (`NowPlayingInfoController.reactivateSessionIfNeeded`).
   func activateAudioSession()
   func cancelAudioSessionRelease()
-  /// Releases the audio session after a debounce, unless playback resumes or
-  /// `cancelAudioSessionRelease()` runs first.
+  /// Releases the audio session after a delay, unless cancelled or the play intent comes back.
   func scheduleAudioSessionRelease()
 }

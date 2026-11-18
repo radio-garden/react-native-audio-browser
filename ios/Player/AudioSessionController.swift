@@ -1,7 +1,6 @@
 import AVFoundation
 import NitroModules
 
-/// What `AudioSessionController` tells the player about the audio session.
 @MainActor
 protocol AudioSessionPlayer: AnyObject {
   var playWhenReady: Bool { get }
@@ -14,12 +13,9 @@ protocol AudioSessionPlayer: AnyObject {
 
 extension Player: AudioSessionPlayer {}
 
-/// Owns the app's `AVAudioSession`: category, activation and release, and the interruption,
-/// route-change, media-services-reset and volume observers.
-///
-/// The session is configured at setup but activated only when playback produces output:
-/// activating a non-mixable session interrupts other apps' audio, which must not happen at
-/// launch.
+/// Owns the app's `AVAudioSession`. It is configured at setup but activated only when playback
+/// produces output: activating a non-mixable session interrupts other apps' audio, which must not
+/// happen at launch.
 @MainActor
 final class AudioSessionController {
   weak var player: AudioSessionPlayer?
@@ -37,11 +33,11 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
 
-  /// `setActive` blocks until the system has changed the session, long enough to stall the main
-  /// thread. Serial, so a release and a quick re-activation keep their order.
+  /// `setActive` blocks long enough to stall the main thread. Serial, so a release and a quick
+  /// re-activation keep their order.
   private let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
-  // Touched only by `init` and `deinit`.
+  // Touched only by init and deinit.
   private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
   private var volumeObservation: NSKeyValueObservation?
 
@@ -86,14 +82,13 @@ final class AudioSessionController {
     }
   }
 
-  /// Sets the session category from the iOS setup options, without activating it.
   func configure(_ options: NativeIOSSetupOptions?) {
     configuration = options?.resolveAudioSessionConfig() ?? (.playback, .default, .default, [])
     applyCategory()
   }
 
-  /// Activates the session and cancels a pending release. `then` runs on the main actor once the
-  /// activation has run, whether or not it succeeded.
+  /// Cancels a pending release. `then` runs on the main actor once the activation has run, whether
+  /// or not it succeeded.
   func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
     activationQueue.async {
@@ -167,8 +162,7 @@ final class AudioSessionController {
       player?.handleInterruptionBegan()
     case .ended:
       let shouldResume = options.map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) } ?? false
-      // Reactivate only when a resume follows, and resume once active: activating while staying
-      // paused would hold a non-mixable session with nothing to release it.
+      // Activating while staying paused would hold a non-mixable session that nothing releases.
       if shouldResume, player?.willResumeAfterInterruption == true {
         activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
       } else {
@@ -180,8 +174,6 @@ final class AudioSessionController {
   }
 
   private func handleRouteChange(reason: UInt?) {
-    // The output disappeared (headphones unplugged, a speaker off): pause rather than carry on
-    // from the built-in speaker.
     if let reason, AVAudioSession.RouteChangeReason(rawValue: reason) == .oldDeviceUnavailable {
       player?.handleRouteDisconnected()
     }

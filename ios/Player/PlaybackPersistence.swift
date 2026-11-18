@@ -1,7 +1,7 @@
 import Foundation
 
-/// Keeps the resumable state in UserDefaults so a cold-start resume can restore the last session
-/// without the JS runtime. Swift counterpart of Android's `PlaybackStateStore.kt`.
+/// Keeps the resumable state in UserDefaults, so a cold start can resume without the JS runtime.
+/// Counterpart of Android's `PlaybackStateStore`.
 @MainActor
 final class PlaybackPersistence {
   static let standardDefaults = UserDefaults(suiteName: "com.audiobrowser.playback") ?? .standard
@@ -12,7 +12,6 @@ final class PlaybackPersistence {
   private let snapshot: @MainActor () -> PersistedPlaybackState?
   private var periodicSave: Task<Void, Never>?
 
-  /// - Parameter snapshot: The state to save; nil when there is nothing to resume.
   init(
     defaults: UserDefaults = standardDefaults,
     saveInterval: Duration = .seconds(5),
@@ -23,6 +22,7 @@ final class PlaybackPersistence {
     self.snapshot = snapshot
   }
 
+  /// With no snapshot, nothing is to be resumed and the last saved state stays.
   func save() {
     guard let state = snapshot(), let data = try? JSONEncoder().encode(state) else { return }
     defaults.set(data, forKey: key)
@@ -50,9 +50,6 @@ final class PlaybackPersistence {
     }
   }
 
-  /// The state a resume restores. A live stream keeps no position, and an ended track saves 0:
-  /// at .ended the position is the duration, which would end again at once (Android:
-  /// savePositionZero).
   static func snapshot(
     of track: Track,
     state: PlaybackState,
@@ -63,6 +60,7 @@ final class PlaybackPersistence {
   ) -> PersistedPlaybackState {
     PersistedPlaybackState(
       track: JsonTrack(from: track),
+      // At .ended the position is the duration, which would end again at once on resume.
       positionMs: track.live == true ? nil : (state == .ended ? 0 : position * 1000),
       repeatMode: repeatMode.stringValue,
       shuffleEnabled: shuffleEnabled,

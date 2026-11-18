@@ -8,7 +8,8 @@ public enum TrackPlayerError: Error {
     case failedToLoadKeyValue
     case invalidSourceUrl(String)
     case notConnectedToInternet
-    /// A transport failure: DNS, connect, TLS, timeout, or a dropped connection, which can come mid-stream after audio has played.
+    /// A transport failure: DNS, connect, TLS, timeout, or a dropped connection, which can come
+    /// mid-stream after audio has played.
     case hostUnreachable
     case httpStatus(Int)
     case playbackFailed
@@ -111,11 +112,11 @@ public extension TrackPlayerError.PlaybackError {
 // MARK: - Nitro PlaybackError Conversion
 
 extension TrackPlayerError.PlaybackError {
-  /// `retrying` marks an error the retry loop is still working on; a terminal
-  /// error carries nil, not false.
+  /// `retrying` marks an error the retry loop is still working on; a terminal error carries nil,
+  /// not false.
   ///
-  /// Not behind `#if canImport(NitroModules)`: the stub in `NitroTypeStubs` mirrors
-  /// the generated struct, so the tests exercise this converter.
+  /// Not behind `#if canImport(NitroModules)`: the stub in `NitroTypeStubs` mirrors the generated
+  /// struct, so the tests exercise this converter.
   func toNitroError(retrying: Bool = false) -> PlaybackError {
     PlaybackError(
       kind: kind,

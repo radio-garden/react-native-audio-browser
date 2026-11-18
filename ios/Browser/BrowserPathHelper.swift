@@ -3,10 +3,9 @@ import Foundation
   import NitroModules
 #endif
 
-/// Search paths (`/__search?q=…`) and contextual paths, which address a child of a page:
-/// `{parentPath}?__trackId={identity}&__index={position}`. `__trackId` decides the track;
-/// `__index` only breaks ties between children with the same identity, so a stale index never
-/// selects a different track.
+/// Search paths (`/__search?q=…`) and Contextual Paths (GLOSSARY.md, ADR 0009). A Contextual
+/// Path is `{parentPath}?__trackId={identity}&__index={position}`, the same format as on Android
+/// and the web.
 enum BrowserPathHelper {
   static let searchPathPrefix = "/__search"
 
@@ -35,7 +34,8 @@ enum BrowserPathHelper {
       || path.contains("&\(contextualTrackParam)=")
   }
 
-  /// Strips both `__trackId` and `__index`; `url` unchanged when it is not contextual.
+  /// `url` without `__trackId` and `__index`, its other query items kept; unchanged when it is not
+  /// contextual.
   static func stripTrackId(_ url: String) -> String {
     guard isContextual(url) else {
       return url
@@ -56,8 +56,8 @@ enum BrowserPathHelper {
     return components.string ?? url
   }
 
-  /// `parentPath` with `trackId` (the track's identity) and, when given, its page position
-  /// appended; keeps any query `parentPath` already has.
+  /// The Contextual Path to the child of `parentPath` with identity `trackId`, at page position
+  /// `index` when given; keeps any query `parentPath` already has.
   static func build(parentPath: String, trackId: String, index: Int? = nil) -> String {
     let encodedTrackId =
       trackId.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? trackId
@@ -106,8 +106,8 @@ enum BrowserPathHelper {
     return "\(url)\(separator)\(queryString)"
   }
 
-  /// `path` joined to `baseUrl` with one slash; `path` alone when it is a full http(s) URL or
-  /// there is no base, and the base alone when `path` is empty or only slashes.
+  /// `path` joined to `baseUrl` with one slash; `path` alone when it is a full http(s) URL or there
+  /// is no base, and the base alone when `path` is empty or only slashes.
   static func buildUrl(baseUrl: String?, path: String) -> String {
     if path.hasPrefix("http://") || path.hasPrefix("https://") {
       return path
@@ -136,8 +136,8 @@ enum BrowserPathHelper {
 }
 
 extension BrowserPathHelper {
-  /// `sections` with a contextual path on every track that has a `src` and no `path`, its index
-  /// counted across all sections. Throws on a track with neither.
+  /// `sections` with a Contextual Path on every track that has a `src` and no `path`, its index
+  /// counted across all sections, as `SectionScope` reads it. Throws on a track with neither.
   static func stampingContextualPaths(_ sections: [Section], parentPath: String) throws -> [Section] {
     var flatIndex = 0
     return try sections.map { section in

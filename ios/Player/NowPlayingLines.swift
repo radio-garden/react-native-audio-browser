@@ -8,7 +8,7 @@ struct NowPlayingLines: Equatable {
   let album: String?
 
   /// Each line from the first of `flash`, `formatted` and `override` that sets it, else the
-  /// track's own.
+  /// track's own: `override` gives way to the formatter.
   static func resolve(
     track: Track,
     flash: NowPlayingUpdate? = nil,
@@ -33,7 +33,6 @@ struct PublishedNowPlayingLines {
     self.lines = lines
   }
 
-  /// `lines` when they were published for `track`, else nil.
   func lines(for track: Track) -> NowPlayingLines? {
     trackId == (track.identity ?? track.path) ? lines : nil
   }

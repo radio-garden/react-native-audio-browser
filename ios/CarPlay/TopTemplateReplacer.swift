@@ -1,8 +1,6 @@
 import Foundation
 import os.log
 
-/// The stack operations a top-template replacement needs:
-/// `CPInterfaceController` in the app, a fake in tests.
 @MainActor
 protocol TemplateStack {
   associatedtype Template: AnyObject
@@ -15,10 +13,8 @@ protocol TemplateStack {
   func push(_ template: Template, animated: Bool, completion: @escaping (Bool, Error?) -> Void)
 }
 
-/// Pushes onto a full template stack by replacing its top template (an
-/// unanimated pop, then the push) and holds back every other stack mutation
-/// until both have completed. See "Template Depth" in
-/// `website/guide/carplay.md`.
+/// Pushes onto a full template stack by replacing its top template, and holds back every other
+/// stack mutation until that has completed. See "Template Depth" in `website/guide/carplay.md`.
 @MainActor
 final class TopTemplateReplacer {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TemplateStack")
@@ -26,8 +22,8 @@ final class TopTemplateReplacer {
 
   private(set) var isReplacing = false
 
-  /// Runs `mutation` now or, while a replacement is in flight, once it has
-  /// settled, after the mutations that arrived before it.
+  /// Runs `mutation` now or, while a replacement is in flight, once it has settled, after the
+  /// mutations that arrived before it.
   func whenSettled(_ mutation: @escaping () -> Void) {
     guard isReplacing else {
       mutation()
@@ -36,12 +32,9 @@ final class TopTemplateReplacer {
     deferred.append(mutation)
   }
 
-  /// Pushes `template` onto `stack` in place of its top template. When the
-  /// push fails, the popped template is pushed back. `completion` reports the
-  /// push of `template` itself.
-  ///
-  /// Refuses a stack with nothing above the root, and a call made while a
-  /// replacement is in flight: route it through `whenSettled`.
+  /// Pushes `template` in place of the top template, pushing the popped one back when that fails.
+  /// `completion` reports the push of `template`. Refuses a stack with nothing above the root,
+  /// and a call made while a replacement is in flight: route it through `whenSettled`.
   func push<Stack: TemplateStack>(
     _ template: Stack.Template,
     replacingTopOf stack: Stack,
@@ -80,8 +73,8 @@ final class TopTemplateReplacer {
   }
 
   private func settle(_ completion: ((Bool, Error?) -> Void)?, pushed: Bool, error: Error?) {
-    // Still replacing here, so a mutation the completion issues queues behind
-    // the ones that arrived during the replacement.
+    // Still replacing here, so a mutation the completion issues queues behind the ones that
+    // arrived during the replacement.
     completion?(pushed, error)
     isReplacing = false
     while !isReplacing, !deferred.isEmpty {

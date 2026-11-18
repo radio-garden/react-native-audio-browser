@@ -6,7 +6,6 @@ extension CarPlaySession {
   /// pushes its destination and fills it in; playback shows its loading state on Now Playing.
   func select(_ track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
-    // A tap queued before `end()`: the next run owns the screen.
     guard !ended else {
       completion()
       return
@@ -19,8 +18,8 @@ extension CarPlaySession {
       return
     }
 
-    // A playable track always lands on Now Playing, so it shows now with the tapped track's
-    // fields: the queue expansion and media resolve may both hit the network.
+    // Now Playing shows at once with the tapped track's fields: the queue expansion and media
+    // resolve may both hit the network.
     if track.src != nil {
       player?.previewNowPlaying(track)
       nowPlaying.prepare(for: track)
@@ -49,11 +48,9 @@ extension CarPlaySession {
     }
   }
 
-  /// Pushes `path`'s page as an empty, spinning template that fills in once it appears; or the
-  /// Browse Gate's page when the gate holds the path; or selects the tab that is that path.
+  /// Pushes `path`'s page as an empty template that loads once it appears; or the Browse Gate's
+  /// page when the gate holds the path; or selects the tab that is that path.
   func navigate(to path: String, title: String) async {
-    // A push lands asynchronously: `navigatingPaths` catches a double tap until the pushed
-    // template appears and clears it.
     guard interfaceController.topTemplate?.carPlayInfo?.path != path, !navigatingPaths.contains(path) else { return }
     navigatingPaths.insert(path)
     var pushing = false
@@ -79,9 +76,6 @@ extension CarPlaySession {
     }
   }
 
-  /// Switches to the tab whose path this is, popping any pushed stack first, instead of pushing
-  /// a second copy of the tab. False when no tab has the path, when the root is not a tab bar,
-  /// or before iOS 17, which cannot select a tab.
   private func selectTab(owning path: String) -> Bool {
     guard #available(iOS 17.0, *),
           let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
