@@ -5,38 +5,34 @@ import javax.security.auth.x500.X500Principal
 
 /**
  * Fills in intermediate certificates a server failed to send, by following each certificate's
- * Authority Information Access (AIA) "CA Issuers" URL, as browsers and iOS do and Android's default
- * trust manager does not.
+ * Authority Information Access (AIA) "CA Issuers" URLs.
  */
 object AiaCertChaser {
   /**
-   * A certificate's AIA extension is written by the server that failed validation and may list
-   * hundreds of URLs, each a blocking connect on the handshake thread. Real CAs publish one.
+   * The AIA extension comes from the server that failed validation and may list hundreds of URLs,
+   * each a blocking connect on the handshake thread. Real CAs publish one.
    */
   const val MAX_URLS_PER_CERT = 3
 
   /**
-   * Ceiling on one whole chain completion, across all its fetches. A DNS lookup already in flight
-   * cannot be cut short (Java has no resolver timeout), so the real bound is this plus one lookup.
+   * Ceiling on one whole chain completion, across all its fetches. A DNS lookup in flight cannot be
+   * cut short (Java has no resolver timeout), so the real bound is this plus one lookup.
    */
   const val MAX_CHASE_MILLIS = 20_000L
 
   private const val AIA_OID = "1.3.6.1.5.5.7.1.1"
 
-  /** DER encoding of id-ad-caIssuers, 1.3.6.1.5.5.7.48.2. */
+  // DER content of id-ad-caIssuers, 1.3.6.1.5.5.7.48.2.
   private val CA_ISSUERS_OID = byteArrayOf(0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
 
   private const val TAG_SEQUENCE = 0x30
   private const val TAG_OID = 0x06
   private const val TAG_OCTET_STRING = 0x04
 
-  /** GeneralName's uniformResourceIdentifier: context-specific primitive [6]. */
+  // GeneralName's uniformResourceIdentifier: context-specific primitive [6].
   private const val TAG_URI = 0x86
 
-  /**
-   * The certificate's AIA "CA Issuers" URLs; empty when the extension is absent or malformed. Never
-   * throws.
-   */
+  /** The certificate's AIA "CA Issuers" URLs; empty when absent or malformed. Never throws. */
   fun extractCaIssuerUrls(cert: X509Certificate): List<String> {
     val raw = cert.getExtensionValue(AIA_OID) ?: return emptyList()
     return try {
@@ -68,18 +64,14 @@ object AiaCertChaser {
   }
 
   /**
-   * Appends to [presented] each missing issuer, fetched through its predecessor's CA-Issuers URLs,
-   * until the top is self-signed or issued by one of [anchorSubjects], an issuer cannot be found or
-   * repeats, or [maxIntermediates] have been added. Returns the chain, unchanged if nothing was
-   * found. Only adds certificates and validates nothing: the caller must still check the result.
+   * Appends to [presented] each missing issuer, fetched through its predecessor's CA Issuers URLs,
+   * until the top is self-signed or issued by one of [anchorSubjects], an issuer is not found or
+   * repeats, [maxIntermediates] have been added, or [budgetMs] runs out. Validates nothing: the
+   * caller must still check the result. Returns [presented] unchanged if nothing was found.
    *
-   * @param anchorSubjects subjects of the caller's trust anchors. A chain already reaching one is
-   *   left alone, so a failure that is not a missing intermediate fetches nothing. Empty means
-   *   unknown.
-   * @param maxUrlsPerCert distinct URLs tried per certificate; duplicates do not count.
-   * @param budgetMs ceiling on the whole walk, checked before each fetch.
+   * @param anchorSubjects subjects of the caller's trust anchors; empty means unknown.
    * @param fetch the candidate certificates at a URL, empty if none; must give up by
-   *   `deadlineNanos` (absolute, on [nowNanos]'s clock). A throw counts as empty.
+   *   `deadlineNanos`, absolute on [nowNanos]'s clock. A throw counts as empty.
    */
   fun completeChain(
     presented: List<X509Certificate>,
@@ -99,7 +91,6 @@ object AiaCertChaser {
       val last = chain.last()
       if (last.subjectX500Principal == last.issuerX500Principal) break
       if (last.issuerX500Principal in anchorSubjects) break
-      // Lazy, so no URL is fetched after one yields the issuer.
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()
@@ -117,9 +108,9 @@ object AiaCertChaser {
   }
 
   /**
-   * Minimal DER TLV reader. Malformed input throws [IllegalArgumentException]. The bytes come from
-   * a server's certificate: a length that went negative would rewind `pos` and loop forever on the
-   * handshake thread, so every length is checked against the buffer.
+   * Minimal DER TLV reader; malformed input throws [IllegalArgumentException]. The bytes are a
+   * server's: a negative length would rewind `pos` and loop forever on the handshake thread, so
+   * every length is checked against the buffer.
    */
   private class DerReader(private val buf: ByteArray) {
     private var pos = 0
