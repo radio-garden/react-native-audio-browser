@@ -42,9 +42,9 @@ public extension HybridAudioBrowser {
         // Stage the state before applying it, so setup options and pre-setup setter calls
         // resolve by strict last-write-wins.
         if let bundled = options.options { updateOptions(options: bundled) }
-        if let mode = options.repeatMode { pendingRepeatMode = mode }
-        if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
-        applyPendingPlayerState()
+        if let mode = options.repeatMode { pending.repeatMode = mode }
+        if let intent = options.playWhenReady { pending.playWhenReady = intent }
+        pending.apply(to: newPlayer)
         // The new player starts at its defaults without emitting them; listeners still hold the old values.
         if let oldPlayer {
           if oldPlayer.repeatMode != newPlayer.repeatMode {
@@ -61,21 +61,6 @@ public extension HybridAudioBrowser {
         applyOptions()
         playerAndConfiguredBrowser.check()
       }
-    }
-  }
-
-  /// Applies state staged before the player existed, by setup options or pre-setup setters.
-  /// Consumed on apply so a later re-setup doesn't replay it.
-  @MainActor
-  private func applyPendingPlayerState() {
-    guard let player else { return }
-    if let mode = pendingRepeatMode {
-      player.repeatMode = mode
-      pendingRepeatMode = nil
-    }
-    if let intent = pendingPlayWhenReady {
-      player.setPlayWhenReady(intent)
-      pendingPlayWhenReady = nil
     }
   }
 

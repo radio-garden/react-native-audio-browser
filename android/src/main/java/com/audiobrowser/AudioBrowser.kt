@@ -27,6 +27,7 @@ import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.player.PendingPlayerState
 import com.audiobrowser.player.Player
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
@@ -236,10 +237,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // cancelChildren has rejected its waiters, and on a dead binding, after failing them.
   private var connectionReady = CompletableDeferred<Unit>()
 
-  // Staged by setup options or by setters called before the player exists; last write wins, and
-  // [applyPendingPlayerState] consumes them.
-  private var pendingPlayWhenReady: Boolean? = null
-  private var pendingRepeatMode: RepeatMode? = null
+  private val pending = PendingPlayerState()
 
   private fun post(block: () -> Unit) = handler.post(block)
 
@@ -789,13 +787,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // Staged to apply together with the engine below, or at service connect. Last write wins
       // against the imperative setters.
       options.options?.let { updateOptions.updateFromBridge(it) }
-      options.repeatMode?.let { pendingRepeatMode = it }
-      options.playWhenReady?.let { pendingPlayWhenReady = it }
+      options.repeatMode?.let { pending.repeatMode = it }
+      options.playWhenReady?.let { pending.playWhenReady = it }
 
       connectedService?.let {
         it.player.applyOptions(updateOptions)
         it.player.setup(setupOptions)
-        applyPendingPlayerState(it.player)
+        pending.applyTo(it.player)
         return@promise
       }
 
@@ -847,11 +845,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun setPlayWhenReady(playWhenReady: Boolean) = runBlockingOnMain {
     connectedService?.player?.let { it.playWhenReady = playWhenReady }
-      ?: run { pendingPlayWhenReady = playWhenReady }
+      ?: run { pending.playWhenReady = playWhenReady }
   }
 
   override fun getPlayWhenReady(): Boolean = runBlockingOnMain {
-    connectedService?.player?.playWhenReady ?: pendingPlayWhenReady ?: false
+    connectedService?.player?.playWhenReady ?: pending.playWhenReady ?: false
   }
 
   override fun seekTo(position: Double) =
@@ -891,17 +889,21 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     readPlayer(PlayingState(playing = false, buffering = false)) { it.getPlayingState() }
 
   override fun getRepeatMode(): RepeatMode = runBlockingOnMain {
-    connectedService?.player?.repeatMode ?: pendingRepeatMode ?: RepeatMode.OFF
+    connectedService?.player?.repeatMode ?: pending.repeatMode ?: RepeatMode.OFF
   }
 
   override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain {
-    connectedService?.player?.let { it.repeatMode = mode } ?: run { pendingRepeatMode = mode }
+    connectedService?.player?.let { it.repeatMode = mode } ?: run { pending.repeatMode = mode }
   }
 
-  override fun getShuffleEnabled(): Boolean = readPlayer(false) { it.shuffleMode }
+  override fun getShuffleEnabled(): Boolean = runBlockingOnMain {
+    connectedService?.player?.shuffleMode ?: pending.shuffleEnabled ?: false
+  }
 
-  override fun setShuffleEnabled(enabled: Boolean) =
-    commandPlayer("setShuffleEnabled") { player -> player.shuffleMode = enabled }
+  override fun setShuffleEnabled(enabled: Boolean) = runBlockingOnMain {
+    connectedService?.player?.let { it.shuffleMode = enabled }
+      ?: run { pending.shuffleEnabled = enabled }
+  }
 
   override fun setPlaybackIntervalEnabled(enabled: Boolean) =
     commandPlayer("setPlaybackIntervalEnabled") { player ->
@@ -1141,7 +1143,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.setCallbacks(callbacks)
           player.applyOptions(updateOptions)
           player.setup(setupOptions)
-          applyPendingPlayerState(player)
+          pending.applyTo(player)
           player.observeNetworkConnectivity(mainScope)
           player.browser = this@AudioBrowser
 
@@ -1155,18 +1157,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
       connectionReady.complete(Unit)
-    }
-  }
-
-  // Consumes what it applies, so a later re-setup does not replay stale state.
-  private fun applyPendingPlayerState(player: Player) {
-    pendingRepeatMode?.let {
-      player.repeatMode = it
-      pendingRepeatMode = null
-    }
-    pendingPlayWhenReady?.let {
-      player.applySetupPlayWhenReady(it)
-      pendingPlayWhenReady = null
     }
   }
 

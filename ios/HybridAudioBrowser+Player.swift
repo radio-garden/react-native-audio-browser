@@ -40,12 +40,12 @@ public extension HybridAudioBrowser {
   func setPlayWhenReady(playWhenReady: Bool) throws {
     onMainActor {
       if let player { player.setPlayWhenReady(playWhenReady) }
-      else { pendingPlayWhenReady = playWhenReady }
+      else { pending.playWhenReady = playWhenReady }
     }
   }
 
   func getPlayWhenReady() throws -> Bool {
-    onMainActor { player?.playWhenReady ?? pendingPlayWhenReady ?? false }
+    onMainActor { player?.playWhenReady ?? pending.playWhenReady ?? false }
   }
 
   func seekTo(position: Double) throws {
@@ -107,22 +107,25 @@ public extension HybridAudioBrowser {
   }
 
   func getRepeatMode() throws -> RepeatMode {
-    onMainActor { player?.repeatMode ?? pendingRepeatMode ?? .off }
+    onMainActor { player?.repeatMode ?? pending.repeatMode ?? .off }
   }
 
   func setRepeatMode(mode: RepeatMode) throws {
     onMainActor {
       if let player { player.repeatMode = mode }
-      else { pendingRepeatMode = mode }
+      else { pending.repeatMode = mode }
     }
   }
 
   func getShuffleEnabled() throws -> Bool {
-    onMainActor { player?.shuffleEnabled ?? false }
+    onMainActor { player?.shuffleEnabled ?? pending.shuffleEnabled ?? false }
   }
 
   func setShuffleEnabled(enabled: Bool) throws {
-    onMainActor { player?.shuffleEnabled = enabled }
+    onMainActor {
+      if let player { player.shuffleEnabled = enabled }
+      else { pending.shuffleEnabled = enabled }
+    }
   }
 
   func getPlaybackError() throws -> PlaybackError? {

@@ -57,10 +57,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let trackSelector: TrackSelector
   @MainActor private(set) var initialNavigation: Task<Void, Never>?
   @MainActor private(set) lazy var audioSession = AudioSessionController()
-  // Player state set before the player exists, by setup options or the setters; last write wins,
-  // consumed when the player comes up.
-  @MainActor var pendingPlayWhenReady: Bool?
-  @MainActor var pendingRepeatMode: RepeatMode?
+  @MainActor var pending = PendingPlayerState()
   @MainActor let playerOptions = PlayerUpdateOptions()
 
   @MainActor lazy var navigationError = NavigationErrorState(
