@@ -1,6 +1,6 @@
 {
   "name": "react-native-audio-browser",
-  "version": "0.2.0-next.96",
+  "version": "1.0.0-next.1",
   "description": "React Native audio playback with a browsable media tree, CarPlay, Android Auto and lock-screen controls, built on Nitro Modules.",
   "keywords": [
     "android",
