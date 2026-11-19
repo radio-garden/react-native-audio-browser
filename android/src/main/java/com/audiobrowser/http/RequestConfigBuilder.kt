@@ -1,5 +1,6 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.awaitCancellable
 import com.audiobrowser.util.awaitNested
@@ -92,8 +93,9 @@ object RequestConfigBuilder {
   /**
    * Applies [override] as a Request-Config Layer (GLOSSARY.md): its transforms, async then sync,
    * replace the config and its static fields are then ignored; without one, its static fields merge
-   * over [base] except `path`, which stays the base's. Mirrors iOS `applyLayer`. A transform that
-   * throws yields [base].
+   * over [base] except `path`, which stays the base's. Mirrors iOS `applyLayer`.
+   *
+   * @throws CallbackException when a transform throws
    */
   suspend fun mergeConfig(
     base: RequestConfig,
@@ -111,21 +113,34 @@ object RequestConfigBuilder {
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
-      Timber.e(e, "Failed to apply transform function, using base config")
-      base
+      throw CallbackException(e.message ?: e.toString(), e)
     }
   }
 
   /**
-   * The layer rule of the [TransformableRequestConfig] overload, keeping [override]'s resolve
-   * callbacks.
+   * [mergeConfig] for media and artwork, where a throwing transform costs its own layer and not the
+   * stack: the layers under it stand, so a relative path still gets the shared `baseUrl` and a
+   * media request keeps the shared credential.
    */
+  suspend fun mergeConfigOrBase(
+    base: RequestConfig,
+    override: TransformableRequestConfig,
+    routeParams: Map<String, String>? = null,
+  ): RequestConfig =
+    try {
+      mergeConfig(base, override, routeParams)
+    } catch (e: CallbackException) {
+      Timber.e(e.cause, "Failed to apply transform function, using base config")
+      base
+    }
+
+  /** The layer rule of [mergeConfigOrBase], keeping [override]'s resolve callbacks. */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: MediaRequestConfig,
     routeParams: Map<String, String>? = null,
   ): MediaRequestConfig =
-    override.withRequestFields(mergeConfig(base, override.asTransformable(), routeParams))
+    override.withRequestFields(mergeConfigOrBase(base, override.asTransformable(), routeParams))
 
   private fun MediaRequestConfig.asTransformable() =
     TransformableRequestConfig(
