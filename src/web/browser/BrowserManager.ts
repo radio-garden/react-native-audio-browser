@@ -204,7 +204,7 @@ export class BrowserManager {
    */
   notifyContentChanged(path: string): void {
     if (this._path === path) {
-      void this.navigate(path)
+      void this.navigate(path, { refresh: true })
     }
   }
 
@@ -216,7 +216,7 @@ export class BrowserManager {
   invalidateAllContent(): void {
     this._layerGeneration += 1
     if (this._path) {
-      void this.navigate(this._path)
+      void this.navigate(this._path, { refresh: true })
     }
   }
 
@@ -224,19 +224,26 @@ export class BrowserManager {
    * Main navigation logic.
    * Resolves content for the given path and updates state.
    * Uses navigation ID to prevent race conditions (matches Android's BrowserManager.kt:586-607).
+   * A `refresh` keeps the current content until a new page replaces it, so a
+   * failed reload leaves it on screen.
    */
-  private async navigate(path: string): Promise<void> {
+  private async navigate(
+    path: string,
+    { refresh = false }: { refresh?: boolean } = {}
+  ): Promise<void> {
     // Increment navigation ID and capture for this navigation
     // This prevents stale responses from overwriting newer ones
     const navigationId = ++this.currentNavigationId
 
     try {
-      // Update path and clear content and error immediately to show loading state
+      // Show the loading state: a refresh keeps the content meanwhile
       this._path = path
-      this._content = undefined
       this.navigationErrorManager.clearNavigationError()
       this.onPathChanged(path)
-      this.onContentChanged(undefined)
+      if (!refresh) {
+        this._content = undefined
+        this.onContentChanged(undefined)
+      }
 
       // Resolve content for this path
       // Search paths use a separate code path that doesn't add contextual URLs
@@ -279,8 +286,10 @@ export class BrowserManager {
         return
       }
 
-      this._content = content
-      this.onContentChanged(content)
+      if (content || !refresh) {
+        this._content = content
+        this.onContentChanged(content)
+      }
 
       // Query and update tabs if configuration has __tabs__ route
       const tabsRoute = this._configuration.routes?.find(
@@ -304,8 +313,10 @@ export class BrowserManager {
       }
 
       console.error('Navigation failed:', error)
-      this._content = undefined
-      this.onContentChanged(undefined)
+      if (!refresh) {
+        this._content = undefined
+        this.onContentChanged(undefined)
+      }
 
       this.handleNavigationError(error, path)
     }
