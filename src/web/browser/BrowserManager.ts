@@ -643,6 +643,9 @@ export class BrowserManager {
    * Resolves content for a specific path using configured routes.
    * Like the native resolve pipelines, the returned page is canonical
    * sectioned shape — `children` sugar is normalized away at this seam.
+   *
+   * @throws a `content-not-found` error when no route matches the path and no
+   *   request or browse layer can fetch it
    */
   private async resolveContent(
     path: string
@@ -701,7 +704,7 @@ export class BrowserManager {
     // Implicit default — no matching route, fetch the path via the layered
     // request → browse chain. Only attempt this when there's something to fetch
     // (a configured request or browse layer, static or resolver); otherwise
-    // there's no content.
+    // the path has no route.
     if (
       this._configuration.request ||
       this._configuration.requestResolver ||
@@ -724,7 +727,11 @@ export class BrowserManager {
       }
     }
 
-    return undefined
+    const notFound = new Error('Content not found') as Error & {
+      code: NavigationErrorType
+    }
+    notFound.code = 'content-not-found'
+    throw notFound
   }
 
   /**
