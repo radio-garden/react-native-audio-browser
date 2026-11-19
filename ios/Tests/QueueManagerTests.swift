@@ -155,7 +155,7 @@ struct NextTests {
     #expect(visited.count == 4)
   }
 
-  @Test func shuffle_atEnd_wrapsEvenWithRepeatOff() {
+  @Test func shuffle_atEnd_repeatOff_returnsNoChange() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
     q.shuffleEnabled = true
@@ -163,8 +163,21 @@ struct NextTests {
     for _ in 0 ..< 2 {
       _ = q.next()
     }
-    let result = q.next()
-    #expect(result == .trackChanged)
+    let last = q.currentIndex
+    #expect(q.next() == .noChange)
+    #expect(q.currentIndex == last)
+  }
+
+  @Test func shuffle_atEnd_repeatQueue_wrapsToFirstInOrder() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"))
+    q.shuffleEnabled = true
+    q.repeatMode = .queue
+    for _ in 0 ..< 2 {
+      _ = q.next()
+    }
+    #expect(q.next() == .trackChanged)
+    #expect(q.currentIndex == q.shuffleOrder.firstIndex)
   }
 
   @Test func multipleTrack_repeatTrack_behavesLikeOff() {
@@ -202,17 +215,25 @@ struct PreviousTests {
     #expect(q.currentIndex == 1)
   }
 
-  @Test func shuffle_atBeginning_wrapsEvenWithRepeatOff() {
+  @Test func shuffle_atBeginning_repeatOff_returnsNoChange() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
     q.shuffleEnabled = true
     q.repeatMode = .off
+    let first = q.currentIndex
+    #expect(q.shuffleOrder.isFirst(first))
+    #expect(q.previous() == .noChange)
+    #expect(q.currentIndex == first)
+  }
 
-    while q.previousTracks.count > 0 {
-      _ = q.previous()
-    }
-    let result = q.previous()
-    #expect(result == .trackChanged)
+  @Test func shuffle_atBeginning_repeatQueue_wrapsToLastInOrder() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"))
+    q.shuffleEnabled = true
+    q.repeatMode = .queue
+    #expect(q.shuffleOrder.isFirst(q.currentIndex))
+    #expect(q.previous() == .trackChanged)
+    #expect(q.currentIndex == q.shuffleOrder.lastIndex)
   }
 
   @Test func singleTrack_repeatQueue_returnsSameTrackReplay() {
@@ -1057,8 +1078,7 @@ struct SkipAvailabilityTests {
     #expect(q.canPrevious == true)
   }
 
-  // Shuffle wraps even with repeat off, so canNext and canPrevious stay true at the order's ends.
-  @Test func shuffleEnd_repeatOff_canNextTrue() {
+  @Test func shuffleEnd_repeatOff_previousOnly() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d"))
     q.shuffleEnabled = true
@@ -1066,17 +1086,39 @@ struct SkipAvailabilityTests {
     while !q.isLastInPlaybackOrder {
       _ = q.next()
     }
-    #expect(q.canNext == true)
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == true)
   }
 
-  @Test func shuffleStart_repeatOff_canPreviousTrue() {
+  @Test func shuffleStart_repeatOff_nextOnly() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d"))
     q.shuffleEnabled = true
     q.repeatMode = .off
-    while !q.previousTracks.isEmpty {
-      _ = q.previous()
+    #expect(q.shuffleOrder.isFirst(q.currentIndex))
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func shuffleEnd_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .queue
+    while !q.isLastInPlaybackOrder {
+      _ = q.next()
     }
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func shuffleStart_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .queue
+    #expect(q.shuffleOrder.isFirst(q.currentIndex))
+    #expect(q.canNext == true)
     #expect(q.canPrevious == true)
   }
 }
