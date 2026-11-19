@@ -105,6 +105,15 @@ describe('an element play the library did not ask for', () => {
     expect(h.browser.getPlayWhenReady()).toBe(false)
   })
 
+  it('keeps a lowered intent after stop()', async () => {
+    await playTrackA()
+    h.browser.stop()
+
+    h.resumedFromOutside()
+
+    expect(h.browser.getPlayWhenReady()).toBe(false)
+  })
+
   it('leaves a lowered intent alone when a pause() has overtaken it', async () => {
     await playTrackA()
     h.browser.pause()

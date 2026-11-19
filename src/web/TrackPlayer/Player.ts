@@ -557,12 +557,18 @@ export class Player {
    * interruption is on iOS. `play()` and `pause()` set the intent before they
    * touch the element, so their own events change nothing.
    *
-   * The intent stands, in both directions, while a load is in flight and after
-   * an error: there the element is being emptied, and nothing it does is a
-   * pause or resume of the track.
+   * The intent stands, in both directions, while a load is in flight, after an
+   * error and after `stop()`: there the element is being emptied, and nothing
+   * it does is a pause or resume of the track.
    */
   private followElement(playing: boolean): void {
-    if (this._loadInProgress || this.state.state === State.Error) return
+    if (
+      this._loadInProgress ||
+      this._isStopped ||
+      this.state.state === State.Error
+    ) {
+      return
+    }
     this.playWhenReady = playing
   }
 
