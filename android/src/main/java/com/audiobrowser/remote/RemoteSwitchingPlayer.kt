@@ -31,8 +31,9 @@ import timber.log.Timber
  * - Moving between remotes, or to a remote's new session, goes from receiver to receiver.
  * - A receiver's failure, or an item it hasn't started within [startTimeoutMs] of being sent or
  *   played, is the player error until [prepare] loads the item again. [stop] stops the receiver.
- * - While the remote's session is suspended, playback stays there, and the item loaded meanwhile
- *   goes to the receiver at the resume. Other commands made meanwhile don't reach it.
+ * - While the remote's session is suspended, playback stays there, and the item loaded or the stop
+ *   made meanwhile goes to the receiver at the resume. Other commands made meanwhile don't reach
+ *   it.
  * - [setVolume] sets the receiver's device volume while remote.
  */
 internal class RemoteSwitchingPlayer(
@@ -217,7 +218,8 @@ internal class RemoteSwitchingPlayer(
 
   /**
    * No start times out while the receiver is out of reach. At the resume, the item sent meanwhile,
-   * or sent just before and never seen there, goes to the receiver.
+   * or sent just before and never seen there, goes to the receiver, and a stop made meanwhile stops
+   * it.
    */
   private fun followSuspension(remote: Route.Remote) {
     val suspended = remote.output.isSuspended
@@ -232,6 +234,7 @@ internal class RemoteSwitchingPlayer(
         if (receiverHolds(remote, load.item)) armStart(remote)
         else send(remote, load.item, load.positionMs)
       is Load.Playing -> if (playIntent && !started(remote)) armStart(remote)
+      is Load.Idle -> stopReceiver(remote.receiver)
       else -> Unit
     }
   }

@@ -1055,6 +1055,25 @@ class RemoteSwitchingPlayerTest {
     assertTrue(player.isRemote)
   }
 
+  @Test
+  fun `a stop while the session is suspended stops the receiver at the resume`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.suspendSession()
+
+    player.stop()
+    idle()
+    assertEquals(0, remote.player.stops)
+
+    remote.resumeSession()
+    idle()
+
+    assertEquals(1, remote.player.stops)
+    assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
+  }
+
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {
     local.setMediaItems(items(*ids.toTypedArray()), index, positionMs)
     local.playWhenReady = true

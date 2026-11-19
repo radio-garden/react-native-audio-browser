@@ -151,7 +151,10 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   val seeks = mutableListOf<Long>()
   val intents = mutableListOf<Boolean>()
 
-  /** While set, loads and play intents are dropped, as a suspended session's player drops them. */
+  /**
+   * While set, loads, play intents and stops are dropped, as a suspended session's player drops
+   * them.
+   */
   var unreachable = false
 
   /** While set, a load is held back from the reported state until [catchUp], as a receiver lags. */
@@ -224,6 +227,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   override fun handlePrepare(): ListenableFuture<*> = done()
 
   override fun handleStop(): ListenableFuture<*> {
+    if (unreachable) return done()
     readiness = STATE_IDLE
     stops++
     return done()
