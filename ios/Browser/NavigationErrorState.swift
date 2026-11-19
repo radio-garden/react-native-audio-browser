@@ -1,4 +1,6 @@
-import NitroModules
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// The browser's last navigation error and its formatted display, as JS sees them.
 @MainActor
@@ -38,5 +40,19 @@ final class NavigationErrorState {
     let display = await format(error)
     guard reported == generation else { return }
     formatted = display
+  }
+
+  /// Follows one load of the current page, which returns whether it published its content:
+  /// a throw is reported, and a load that a newer one superseded changes nothing.
+  func follow(
+    _ load: () async throws -> Bool,
+    describe: (Error) -> NavigationError,
+    format: (NavigationError) async -> FormattedNavigationError,
+  ) async {
+    do {
+      _ = try await load()
+    } catch {
+      await report(describe(error), format: format)
+    }
   }
 }

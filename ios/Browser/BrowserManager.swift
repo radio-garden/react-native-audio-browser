@@ -116,10 +116,12 @@ final class BrowserManager {
 
   // MARK: - Navigation
 
-  /// Loads `path` as the current page. `bypassCache` refetches it and keeps the current content
-  /// on screen meanwhile. A newer load supersedes this one: its result or error is dropped, so a
-  /// slow failing /a cannot show its error over a fast /b's content.
-  func load(_ path: String, bypassCache: Bool = false) async throws {
+  /// Loads `path` as the current page and returns whether it published the content.
+  /// `bypassCache` refetches it and keeps the current content on screen meanwhile. A newer load
+  /// supersedes this one: its result or error is dropped, so a slow failing /a cannot show its
+  /// error over a fast /b's content.
+  @discardableResult
+  func load(_ path: String, bypassCache: Bool = false) async throws -> Bool {
     currentNavigationId += 1
     let navigationId = currentNavigationId
     self.path = path
@@ -131,10 +133,11 @@ final class BrowserManager {
     }
     do {
       let resolved = try await resolve(path, useCache: !bypassCache)
-      guard navigationId == currentNavigationId else { return }
+      guard navigationId == currentNavigationId else { return false }
       content = resolved
+      return true
     } catch {
-      guard navigationId == currentNavigationId else { return }
+      guard navigationId == currentNavigationId else { return false }
       throw error
     }
   }

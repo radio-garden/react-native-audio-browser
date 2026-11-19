@@ -19,10 +19,11 @@ public extension HybridAudioBrowser {
 
   @MainActor
   private func loadPath(_ path: String) async {
-    do {
-      try await browserManager.load(path)
-    } catch {
-      await reportNavigationError(error, path: path)
+    await navigationError.follow(
+      { try await browserManager.load(path) },
+      describe: NavigationError.from,
+    ) { [browserManager] in
+      await browserManager.formatted($0, path: path)
     }
   }
 
