@@ -1741,3 +1741,68 @@ struct PlayerLivePauseTests {
     #expect(callbacks.errorEvents.isEmpty)
   }
 }
+
+/// A stopped or ended track plays again only through a reload: an AVPlayer event that lands after
+/// the stop or the end must not move it out of that state, or the next play resumes the item left
+/// behind.
+@Suite("A late AVPlayer event does not cost the next play its reload")
+@MainActor
+struct LateEngineEventTests {
+  enum LateAfterStop: String, CaseIterable, Sendable {
+    case liveLatePlayingThenPaused = "live, a late playing then paused status"
+    case liveLateFirstAudio = "live, a late first audio"
+    case onDemandLateWaitingAfterTheRewind = "on-demand, a late waiting status after the rewind"
+    case onDemandLatePlaying = "on-demand, a late playing status"
+
+    var live: Bool {
+      switch self {
+      case .liveLatePlayingThenPaused, .liveLateFirstAudio: true
+      case .onDemandLateWaitingAfterTheRewind, .onDemandLatePlaying: false
+      }
+    }
+
+    var events: [EngineEvent] {
+      switch self {
+      case .liveLatePlayingThenPaused:
+        [.timeControlStatus(.playing, waitingForNoItem: false), .timeControlStatus(.paused, waitingForNoItem: false)]
+      case .liveLateFirstAudio: [.audioDidStart]
+      case .onDemandLateWaitingAfterTheRewind: [.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false)]
+      case .onDemandLatePlaying: [.timeControlStatus(.playing, waitingForNoItem: false)]
+      }
+    }
+  }
+
+  @Test(arguments: LateAfterStop.allCases)
+  func aStoppedTrackReloadsOnPlay(_ late: LateAfterStop) throws {
+    let (player, engine, _) = try makePlaying(live: late.live)
+    player.stop()
+    for event in late.events {
+      engine.emit(event)
+    }
+    #expect(player.state == .stopped)
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func anEndedTrackReloadsOnPlayAfterALateWaitingStatus() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    engine.emit(.playedToEnd)
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
+    #expect(player.state == .ended)
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aSecondStopThenPlayReloads() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.stop()
+    player.stop()
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+}

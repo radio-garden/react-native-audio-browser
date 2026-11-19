@@ -39,27 +39,34 @@ struct UnconditionalEventTests {
     }
   }
 
-  @Test func avPlayerWaiting_transitionsToBuffering_exceptFromError() {
-    for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == (state == .error ? nil : .buffering))
-    }
-  }
-
-  @Test func avPlayerPlaying_transitionsToPlaying_exceptFromError() {
-    for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == (state == .error ? nil : .playing))
-    }
-  }
-
-  @Test func audioFrameDecoded_transitionsToPlaying_exceptFromError() {
-    for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == (state == .error ? nil : .playing))
-    }
-  }
-
   @Test func errorOccurred_alwaysTransitionsToError() {
     for state in allStates {
       #expect(nextPlaybackState(from: state, on: .errorOccurred(dummyError)) == .error)
+    }
+  }
+}
+
+// MARK: - AVPlayer events
+
+@Suite("AVPlayer events — held by .stopped, .ended and .error")
+struct EngineEventTests {
+  private let terminalStates: [PlaybackState] = [.stopped, .ended, .error]
+
+  @Test func avPlayerWaiting_transitionsToBuffering_exceptFromATerminalState() {
+    for state in allStates {
+      #expect(nextPlaybackState(from: state, on: .avPlayerWaiting) == (terminalStates.contains(state) ? nil : .buffering))
+    }
+  }
+
+  @Test func avPlayerPlaying_transitionsToPlaying_exceptFromATerminalState() {
+    for state in allStates {
+      #expect(nextPlaybackState(from: state, on: .avPlayerPlaying) == (terminalStates.contains(state) ? nil : .playing))
+    }
+  }
+
+  @Test func audioFrameDecoded_transitionsToPlaying_exceptFromATerminalState() {
+    for state in allStates {
+      #expect(nextPlaybackState(from: state, on: .audioFrameDecoded) == (terminalStates.contains(state) ? nil : .playing))
     }
   }
 }
