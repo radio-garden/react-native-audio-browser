@@ -5,7 +5,13 @@ import { RequestConfigBuilder } from './RequestConfigBuilder'
 type HttpError = Error & {
   isHttpError: true
   status: number
-  statusText: string
+}
+
+function httpError(message: string, status: number): HttpError {
+  const error = new Error(message) as HttpError
+  error.isHttpError = true
+  error.status = status
+  return error
 }
 
 function isHttpError(error: unknown): error is HttpError {
@@ -13,8 +19,7 @@ function isHttpError(error: unknown): error is HttpError {
     error instanceof Error &&
     'isHttpError' in error &&
     (error as HttpError).isHttpError === true &&
-    typeof (error as HttpError).status === 'number' &&
-    typeof (error as HttpError).statusText === 'string'
+    typeof (error as HttpError).status === 'number'
   )
 }
 
@@ -30,10 +35,17 @@ const TIMEOUT_MS = 30_000
  */
 export class HttpClient {
   /**
-   * Executes an HTTP request and returns the JSON response.
-   * Throws navigation errors for HTTP and network failures.
+   * Executes an HTTP request and returns its JSON body as `decode` reads it.
+   *
+   * Rejects with an error carrying a navigation error `code`: `http-error`
+   * with `statusCode` for a non-2xx status, and for a 2xx body that is not
+   * JSON or that `decode` throws on; `network-error` when no complete response
+   * arrives.
    */
-  async executeRequest(config: RequestConfig): Promise<unknown> {
+  async executeRequest<T>(
+    config: RequestConfig,
+    decode: (body: unknown) => T
+  ): Promise<T> {
     // Use RequestConfigBuilder to build the URL
     const url = RequestConfigBuilder.buildUrl(config)
     const headers = config.headers ?? {}
@@ -50,17 +62,21 @@ export class HttpClient {
       })
 
       if (!response.ok) {
-        const error = new Error(
-          `HTTP ${response.status}: ${response.statusText}`
-        ) as HttpError
-        error.isHttpError = true
-        error.status = response.status
-        error.statusText = response.statusText
-        throw error
+        throw httpError(
+          `HTTP ${response.status}: ${response.statusText}`,
+          response.status
+        )
       }
 
-      // await so JSON parse errors are caught by the surrounding try/catch
-      return await response.json()
+      const text = await response.text()
+      try {
+        return decode(JSON.parse(text))
+      } catch (error: unknown) {
+        throw httpError(
+          error instanceof Error ? error.message : String(error),
+          response.status
+        )
+      }
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         const navError = new Error(

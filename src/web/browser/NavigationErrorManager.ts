@@ -75,7 +75,10 @@ export class NavigationErrorManager {
       code,
       message,
       statusCode,
-      statusCodeSuccess: undefined
+      statusCodeSuccess:
+        statusCode === undefined
+          ? undefined
+          : statusCode >= 200 && statusCode < 300
     }
     this._navigationError = navError
     this.onNavigationError({ error: navError })
