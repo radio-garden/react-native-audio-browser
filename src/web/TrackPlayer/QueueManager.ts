@@ -207,7 +207,11 @@ export class QueueManager {
       // Match Android/iOS, which throw here: a negative index other than the
       // -1 sentinel would splice from the end and mis-shift the current
       // pointer; past-the-end would silently append under a lying index.
-      if (insertBeforeIndex < 0 || insertBeforeIndex > this._tracks.length) {
+      if (
+        !Number.isFinite(insertBeforeIndex) ||
+        insertBeforeIndex < 0 ||
+        insertBeforeIndex > this._tracks.length
+      ) {
         throw new Error(
           `insertBeforeIndex out of bounds: ${insertBeforeIndex} (use -1 to append)`
         )
@@ -272,7 +276,12 @@ export class QueueManager {
     // Both ends are checked: an out-of-range destination would write a
     // permanent out-of-range entry into the incrementally-maintained order.
     const item = this._tracks[fromIndex]
-    if (item === undefined || toIndex < 0 || toIndex >= this._tracks.length) {
+    if (
+      item === undefined ||
+      !Number.isFinite(toIndex) ||
+      toIndex < 0 ||
+      toIndex >= this._tracks.length
+    ) {
       throw new Error('index out of bounds')
     }
 

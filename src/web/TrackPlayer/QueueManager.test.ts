@@ -225,6 +225,20 @@ describe('QueueManager', () => {
       q.setTracks(tracks(3))
       expect(() => q.insert(tracks(1), 4)).toThrow('out of bounds')
     })
+
+    it.each([NaN, Infinity, -Infinity])(
+      'throws on %s and leaves the queue as it was',
+      (index) => {
+        q.setTracks(tracks(3))
+        q.currentIndex = 1
+        q.setShuffleEnabled(true)
+
+        expect(() => q.insert(tracks(1), index)).toThrow('out of bounds')
+        expect(q.tracks.map((t) => t.src)).toEqual(['s0', 's1', 's2'])
+        expect(q.currentIndex).toBe(1)
+        expect(q.nextIndex()).toBe(0)
+      }
+    )
   })
 
   describe('remove', () => {
@@ -295,6 +309,19 @@ describe('QueueManager', () => {
       expect(() => q.move(0, 9)).toThrow('index out of bounds')
       expect(() => q.move(0, -1)).toThrow('index out of bounds')
     })
+
+    it.each([NaN, Infinity, -Infinity])(
+      'throws on a destination of %s and leaves the queue as it was',
+      (index) => {
+        q.currentIndex = 1
+        q.setShuffleEnabled(true)
+
+        expect(() => q.move(1, index)).toThrow('index out of bounds')
+        expect(q.tracks.map((t) => t.src)).toEqual(['s0', 's1', 's2', 's3'])
+        expect(q.currentIndex).toBe(1)
+        expect(q.nextIndex()).toBe(0)
+      }
+    )
   })
 
   describe('removeUpcoming', () => {
