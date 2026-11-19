@@ -8,13 +8,16 @@ import type {
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
-import type { NavigationErrorManager } from './NavigationErrorManager'
 import { getTrackIdentity } from '../../utils/getTrackIdentity'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
 import { assertBrowsePageShape } from './assertBrowsePageShape'
+import {
+  isNavigationErrorType,
+  type NavigationErrorManager
+} from './NavigationErrorManager'
 import { parseSearchResponse } from './parseSearchResponse'
 import {
   flattenSections,
@@ -75,8 +78,10 @@ export class BrowserManager {
   ) {}
 
   /**
-   * Handles navigation errors by extracting error details and setting the navigation error.
-   * Extracts code, message, and statusCode from typed errors, or falls back to generic network error.
+   * Sets the navigation error from a failed resolve. An error carrying a
+   * navigation error code keeps its code, message and statusCode; anything
+   * else, a foreign error with a `code` of its own included, becomes a generic
+   * network error.
    */
   private handleNavigationError(error: unknown, path: string): void {
     if (
@@ -84,18 +89,16 @@ export class BrowserManager {
       typeof error === 'object' &&
       'code' in error &&
       'message' in error &&
+      isNavigationErrorType(error.code) &&
       typeof error.message === 'string'
     ) {
-      const navError = error as {
-        code: NavigationErrorType
-        message: string
-        statusCode?: number
-      }
       this.navigationErrorManager.setNavigationError(
-        navError.code,
-        navError.message,
+        error.code,
+        error.message,
         path,
-        navError.statusCode
+        'statusCode' in error && typeof error.statusCode === 'number'
+          ? error.statusCode
+          : undefined
       )
     } else {
       this.navigationErrorManager.setNavigationError(

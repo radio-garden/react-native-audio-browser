@@ -17,6 +17,15 @@ const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'timeout': "Couldn't load"
 }
 
+const NAVIGATION_ERROR_TYPES = new Set<unknown>(Object.keys(ERROR_TITLES))
+
+/** Whether `code` is one of the navigation error codes. */
+export function isNavigationErrorType(
+  code: unknown
+): code is NavigationErrorType {
+  return NAVIGATION_ERROR_TYPES.has(code)
+}
+
 /**
  * Manages navigation error state and formatting.
  * Handles both raw error objects and formatted user-facing error messages.
