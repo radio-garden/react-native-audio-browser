@@ -478,6 +478,17 @@ export class Player {
   }
 
   /**
+   * Swaps the current track for an updated copy of itself. Not a transition:
+   * the remembered resume position moves to the copy.
+   */
+  protected replaceCurrent(track: Track): void {
+    if (this._resume && this._resume.track === this.current) {
+      this._resume = { ...this._resume, track }
+    }
+    this.current = track
+  }
+
+  /**
    * Android's `prepare()`, which both `play()` and `retry()` call.
    *
    * It early-returns unless ExoPlayer is STATE_IDLE, so it reconnects after an

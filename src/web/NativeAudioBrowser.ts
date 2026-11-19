@@ -812,7 +812,9 @@ export class NativeAudioBrowser
       if (!attempt.isCurrent) return
 
       super.load(
-        track,
+        // `current` rather than `track`: the track may have been replaced by an
+        // updated copy of itself (a favorite toggle) while the URL resolved.
+        this.current ?? track,
         (loadedTrack) => {
           // Call the provided callback if any
           if (callback) {
@@ -1123,8 +1125,10 @@ export class NativeAudioBrowser
       favorited
     }
 
-    // Replace the track in the queue
+    // Both copies, or a later re-prepare of the queue's entry reads as a
+    // transition to a different track.
     this.queue.replaceTrack(index, updatedTrack)
+    this.replaceCurrent(updatedTrack)
 
     // Emit favorite changed only. A favorite toggle is an in-place mutation of
     // the active track, not a transition — onPlaybackActiveTrackChanged and
