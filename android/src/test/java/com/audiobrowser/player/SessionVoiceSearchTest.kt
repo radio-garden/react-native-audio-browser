@@ -58,7 +58,10 @@ class SessionVoiceSearchTest {
   private val searches = mutableListOf<SearchParams>()
   private val gateEvents = mutableListOf<GateEvent>()
 
-  @After fun destroy() = controller.destroy()
+  @After
+  fun destroy() {
+    controller.destroy()
+  }
 
   private fun browserWhoseSearchAnswers(vararg results: Track, gated: Boolean = false) {
     val answer = JsPromise<Array<Track>>().apply { resolve(arrayOf(*results)) }
