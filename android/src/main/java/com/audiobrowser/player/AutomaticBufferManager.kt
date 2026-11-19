@@ -12,8 +12,8 @@ import timber.log.Timber
 /**
  * Raises [DynamicLoadControl]'s `bufferForPlaybackAfterRebufferMs` after each underrun, to what the
  * measured drain rate says would last [targetPlaybackDurationMs]. The threshold only rises, up to
- * [maxRebufferBufferMs], until a playlist change or a seek to another item resets it to
- * [defaultConfig].
+ * [maxRebufferBufferMs], or stays where the setup put it if that is higher, until a playlist change
+ * or a seek to another item resets it to [defaultConfig].
  *
  * An underrun is a rebuffer while every load delivers, however slowly: a connection that stays open
  * and stalls counts. A rebuffer while media3 retries a failed load in place does not, nor does a
@@ -241,9 +241,13 @@ class AutomaticBufferManager(
     )
 
     if (playbackDurationMs > 0 && bufferAtPlaybackStartMs > 0) {
-      val newRebufferBuffer =
-        calculateOptimalRebufferBuffer(playbackDurationMs, bufferAtPlaybackStartMs)
       val currentConfig = loadControl.getBufferConfig()
+      val newRebufferBuffer =
+        calculateOptimalRebufferBuffer(
+          playbackDurationMs,
+          bufferAtPlaybackStartMs,
+          currentConfig.bufferForPlaybackAfterRebufferMs,
+        )
       if (newRebufferBuffer != currentConfig.bufferForPlaybackAfterRebufferMs) {
         Timber.d(
           "Adjusting rebuffer threshold: %dms -> %dms",
@@ -270,19 +274,14 @@ class AutomaticBufferManager(
 
   /**
    * Assumes the buffer held at ready drained to empty over [playbackDurationMs], and returns the
-   * threshold that would last [targetPlaybackDurationMs]: 1000ms lasting 30s needs 2000ms.
+   * threshold that would last [targetPlaybackDurationMs]: 1000ms lasting 30s needs 2000ms. Both
+   * durations must be positive.
    */
-  private fun calculateOptimalRebufferBuffer(playbackDurationMs: Long, initialBufferMs: Long): Int {
-    val currentConfig = loadControl.getBufferConfig()
-
-    if (playbackDurationMs <= 0 || initialBufferMs <= 0) {
-      Timber.d("Insufficient timing data, using 1.5x fallback")
-      return (currentConfig.bufferForPlaybackAfterRebufferMs * 1.5)
-        .toInt()
-        .coerceAtMost(maxRebufferBufferMs)
-        .coerceAtLeast(defaultConfig.bufferForPlaybackAfterRebufferMs)
-    }
-
+  private fun calculateOptimalRebufferBuffer(
+    playbackDurationMs: Long,
+    initialBufferMs: Long,
+    currentThresholdMs: Int,
+  ): Int {
     val drainRateMsPerSec = (initialBufferMs.toFloat() / (playbackDurationMs / 1000f))
 
     val neededBufferMs = (drainRateMsPerSec * (targetPlaybackDurationMs / 1000)).toLong()
@@ -297,7 +296,7 @@ class AutomaticBufferManager(
     return neededBufferMs
       .toInt()
       .coerceAtMost(maxRebufferBufferMs)
-      .coerceAtLeast(currentConfig.bufferForPlaybackAfterRebufferMs)
+      .coerceAtLeast(currentThresholdMs)
   }
 
   // endregion
