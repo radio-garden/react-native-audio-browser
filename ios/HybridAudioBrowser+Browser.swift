@@ -18,17 +18,11 @@ public extension HybridAudioBrowser {
   }
 
   @MainActor
-  private func loadPath(_ path: String) async {
-    do {
-      try await browserManager.load(path)
-    } catch {
-      await reportNavigationError(error, path: path)
-    }
-  }
-
-  @MainActor
-  private func reportNavigationError(_ error: Error, path: String) async {
-    await navigationError.report(NavigationError.from(error)) { [browserManager] in
+  private func loadPath(_ path: String, bypassCache: Bool = false) async {
+    await navigationError.follow(
+      { try await browserManager.load(path, bypassCache: bypassCache) },
+      describe: { NavigationError.from($0) },
+    ) { [browserManager] in
       await browserManager.formatted($0, path: path)
     }
   }
@@ -93,9 +87,8 @@ public extension HybridAudioBrowser {
 
   func invalidateAllContent() throws {
     onMainActor {
-      browserManager.invalidateAll { error, path in
-        await self.reportNavigationError(error, path: path)
-      }
+      browserManager.invalidateAll()
+      Task { @MainActor in await loadPath(browserManager.path, bypassCache: true) }
     }
     externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
   }

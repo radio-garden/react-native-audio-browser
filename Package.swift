@@ -17,6 +17,7 @@ let package = Package(
         "Browser/TabBarEntries.swift",
         "Browser/RequestLayer.swift",
         "Browser/BrowseGate.swift",
+        "Browser/NavigationErrorState.swift",
         "Browser/JsonModels.swift",
         "Browser/StyleResolver.swift",
         "Browser/InertStyleDiagnostic.swift",
