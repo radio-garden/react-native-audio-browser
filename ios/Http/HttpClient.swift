@@ -1,6 +1,11 @@
 import Foundation
 import os.log
 
+/// A response that failed with its HTTP status.
+protocol HttpStatusError: LocalizedError {
+  var code: Int { get }
+}
+
 /// Counterpart of the Kotlin `HttpClient`; change request building and error messages in both.
 final class HttpClient: @unchecked Sendable {
   static let defaultUserAgent = "react-native-audio-browser"
@@ -20,7 +25,7 @@ final class HttpClient: @unchecked Sendable {
   }
 
   /// A non-2xx response.
-  struct HttpException: LocalizedError {
+  struct HttpException: HttpStatusError {
     let code: Int
     let responseBody: String
 
@@ -37,7 +42,7 @@ final class HttpClient: @unchecked Sendable {
   }
 
   /// A 2xx response whose body does not decode as the type asked for.
-  struct UndecodableResponse: LocalizedError {
+  struct UndecodableResponse: HttpStatusError {
     let code: Int
     let reason: String
 
