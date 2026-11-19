@@ -9,13 +9,13 @@ enum ArtworkImageFetcher {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "ArtworkImageFetcher")
 
   /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
-  /// falls back to the cached copy. `svgScale` wins over `downsampleTo`.
+  /// falls back to the cached copy. `svgFitting` wins over `downsampleTo`.
   /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
   ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
   static func fetchImage(
     from source: ImageSource,
-    svgScale: CGFloat? = nil,
+    svgFitting: (size: CGSize, scale: CGFloat)? = nil,
     downsampleTo: (size: CGSize, scale: CGFloat)? = nil,
     waitsForConnectivity: Bool = false,
   ) async -> UIImage? {
@@ -33,8 +33,8 @@ enum ArtworkImageFetcher {
       options.append(.requestModifier(modifier))
     }
     let processor: (any ImageProcessor)?
-    if let svgScale {
-      processor = SVGProcessor(size: nil, scale: svgScale)
+    if let svgFitting {
+      processor = SVGProcessor(size: svgFitting.size, scale: svgFitting.scale)
     } else if let downsampleTo {
       // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
       // return the original. cacheOriginalImage keeps the original on disk so another target

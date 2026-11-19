@@ -108,13 +108,13 @@ final class CarPlayImageLoader {
     return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
   }
 
-  /// Rasters downsample to `size` points at the car's display scale (CPListItem.h: "size them
-  /// to the display scale of the car screen"); SVGs already rasterize at car scale.
+  /// The image fitted to `size` points at the car's display scale (CPListItem.h: "size them
+  /// to the display scale of the car screen").
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
     let scale = carTraitCollection.displayScale
     if isSvg {
-      return await ArtworkImageFetcher.fetchImage(from: source, svgScale: scale)
+      return await ArtworkImageFetcher.fetchImage(from: source, svgFitting: (size, scale))
     }
     return await ArtworkImageFetcher.fetchImage(from: source, downsampleTo: (size, scale))
   }

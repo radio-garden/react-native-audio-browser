@@ -66,6 +66,7 @@ let package = Package(
         "Extension/TimedMetadata+AVFoundation.swift",
         "Extension/ChapterMetadata+AVFoundation.swift",
         "Extension/URLError+Connectivity.swift",
+        "Extension/CGSize+AspectFit.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Util/Emitter.swift",
         "Util/Connectivity.swift",
