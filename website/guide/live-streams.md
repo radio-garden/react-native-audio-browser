@@ -98,14 +98,18 @@ of re-failing:
 
 - a play after a stop, from `'error'`, or after a pause that closed a live
   stream's connection (see [Pausing a live stream](#pausing-a-live-stream));
+- a skip or a repeat that comes back to the track;
 - [`retry()`](/guide/errors#manual-retry), and a
   [live-edge reconnect](#the-live-edge);
 - on iOS and Android, each reconnect of the
   [automatic retry](/guide/errors#automatic-retry). Web has no automatic
   retry.
 
-A seek within the open stream doesn't re-run it. If your resolver calls your
-backend, each of these reconnects waits on that call.
+A seek within the open stream doesn't re-run it. On Android, the automatic
+retry of an HLS stream reloads its playlists and segments with the URL and
+headers already resolved, and re-runs `media.resolve` only after a request for
+the stream's own URL fails. If your resolver calls your backend, each of these
+reconnects waits on that call.
 
 ```ts
 import { configureBrowser } from 'react-native-audio-browser'
