@@ -374,6 +374,9 @@ handled natively, with nothing to wire up:
   holds focus briefly and resumes when focus returns. It pauses when another
   app takes focus for good. It lowers its volume under a short sound such as a
   notification, or pauses instead with `android.audioContentType: 'speech'`.
+- On **web**, the browser decides. When it pauses the audio, `playWhenReady`
+  goes `false` and the state `'paused'`; if it resumes the audio itself, both
+  follow.
 
 When the output disappears (headphones unplugged, a Bluetooth speaker switched
 off), playback pauses; see

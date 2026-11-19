@@ -196,7 +196,11 @@ export class Player {
       // is meaningful — reporting `paused` first flashes a state Android never
       // reports, mid-queue or at the true end.
       if (element.ended) return
-      this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+      this.onElementPaused()
+    })
+    element.addEventListener('play', () => {
+      // A `pause()` that overtook this event owns the intent.
+      if (!element.paused) this.onElementUnpaused()
     })
 
     player.addEventListener('loading', () => {
@@ -543,6 +547,36 @@ export class Player {
 
     this.playWhenReady = false
     this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+  }
+
+  /**
+   * `pause()` lowers the intent before pausing the element, so an intent still
+   * raised here means something else paused it (the browser, page code) and
+   * the intent follows, as it does for an interruption on iOS.
+   *
+   * It stands while a load is in flight and after an error: there the element
+   * pauses because it is being emptied.
+   */
+  private onElementPaused(): void {
+    const hasAsset = this.current !== undefined
+    if (
+      hasAsset &&
+      !this._isStopped &&
+      !this._loadInProgress &&
+      this.state.state !== State.Error
+    ) {
+      this.playWhenReady = false
+    }
+    this.dispatch({ type: 'paused', hasAsset })
+  }
+
+  /**
+   * `play()` raises the intent before starting the element, so an intent still
+   * lowered here means the browser resumed by itself.
+   */
+  private onElementUnpaused(): void {
+    if (this._isStopped || this.current === undefined) return
+    this.playWhenReady = true
   }
 
   /**
