@@ -54,8 +54,8 @@ final class BrowserManager {
     didSet {
       // An unchanged result must not churn the CarPlay tab bar or reset its selection;
       // `invalidateAll` re-queries the tabs every time.
-      if let tabs, !TabBarEntries.same(oldValue, tabs) {
-        tabsChanged.emit(tabs)
+      if let emitted = TabBarEntries.change(from: oldValue, to: tabs) {
+        tabsChanged.emit(emitted)
       }
     }
   }
@@ -271,9 +271,9 @@ final class BrowserManager {
 
   func queryTabs() async throws -> [Track] {
     let generation = contentGeneration
-    guard let tabs = try await pages.tabs() else { return [] }
+    let tabs = try await pages.tabs()
     if generation == contentGeneration { self.tabs = tabs }
-    return tabs
+    return tabs ?? []
   }
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)

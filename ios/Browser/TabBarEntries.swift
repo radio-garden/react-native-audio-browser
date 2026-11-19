@@ -13,4 +13,11 @@ enum TabBarEntries {
         && $0.disabled == $1.disabled
     }
   }
+
+  /// What `tabsChanged` emits when the tabs go from `old` to `new`, nil for no event. Tabs that
+  /// go away emit an empty list, as on Android: the event cannot carry nil.
+  static func change(from old: [Track]?, to new: [Track]?) -> [Track]? {
+    guard let new else { return old == nil ? nil : [] }
+    return same(old, new) ? nil : new
+  }
 }
