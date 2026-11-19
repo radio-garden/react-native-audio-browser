@@ -83,6 +83,48 @@ describe('setFavorites on the queue', () => {
     expect(h.recorded).not.toContain('activeTrack')
     expect(h.browser.getActiveTrack()?.favorited).toBe(true)
   })
+
+  it('keeps the active track one with its entry when it is a later copy', async () => {
+    await play([trackA, trackB, trackA])
+    h.browser.skip(2)
+    await h.flush()
+    await h.completeLoad()
+    h.clear()
+
+    h.browser.setFavorites(['a'])
+    h.browser.stop()
+    await h.flush()
+    h.browser.play()
+    await h.flush()
+    await h.completeLoad()
+
+    expect(h.browser.getActiveTrack()).toBe(h.browser.getQueue()[2])
+    expect(h.recorded).not.toContain('activeTrack')
+  })
+})
+
+describe('a heart toggle', () => {
+  it('restamps every queued copy of the track', async () => {
+    await play([trackA, trackB, trackA])
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(h.browser.getQueue().map((track) => track.favorited)).toEqual([
+      true,
+      undefined,
+      true
+    ])
+    expect(h.browser.getActiveTrack()).toBe(h.browser.getQueue()[0])
+  })
+
+  it('restamps a copy that disagrees with the set', async () => {
+    h.browser.setFavorites(['a'])
+    await play([{ ...trackA, favorited: false }])
+
+    h.browser.setActiveTrackFavorited(true)
+
+    expect(h.browser.getActiveTrack()?.favorited).toBe(true)
+  })
 })
 
 describe('setFavorites on the content', () => {
@@ -122,6 +164,14 @@ describe('setFavorites on the content', () => {
 
     expect(hearts()).toEqual([[undefined], [false]])
     expect(contents).toHaveLength(2)
+  })
+
+  it('restamps the page on a heart toggle', async () => {
+    await play([trackB])
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(hearts()).toEqual([[undefined], [true]])
   })
 
   it('emits nothing when no track on the page changes', () => {
