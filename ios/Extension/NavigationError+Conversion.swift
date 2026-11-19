@@ -31,7 +31,7 @@ extension NavigationError {
     case .networkError:
       "Network Error"
     case .httpError:
-      if let statusCode {
+      if let statusCode, statusCodeSuccess != true {
         HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
       } else {
         "Server Error"
