@@ -1,3 +1,5 @@
+import { callListener } from './callListener'
+
 type Callback<T> = (arg: T) => void
 
 /**
@@ -32,7 +34,7 @@ export class LazyNativeEmitter<T> {
     const listeners = (this.listeners = new Set())
     this.setter((data: T) => {
       for (const listener of listeners) {
-        listener(data)
+        callListener(listener, data)
       }
     })
     return listeners

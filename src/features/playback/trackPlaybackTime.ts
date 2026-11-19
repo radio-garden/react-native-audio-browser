@@ -1,5 +1,6 @@
 import type { Track } from '../../types/browser-nodes'
 import { nativeBrowser } from '../../native'
+import { callListener } from '../../utils/callListener'
 import { onActiveTrackChanged } from '../queue/activeTrack'
 
 // MARK: - Types
@@ -39,7 +40,7 @@ function onTick() {
     const sinceLast = handle.totalSeconds - handle.lastFireSeconds
     if (sinceLast >= handle.period) {
       handle.lastFireSeconds = handle.totalSeconds
-      handle.callback({
+      callListener(handle.callback, {
         total: handle.totalSeconds,
         sinceLast,
         track: currentTrack
