@@ -40,7 +40,7 @@ public extension HybridAudioBrowser {
       switch result {
       case let .play(intent):
         player.execute(intent)
-      case .intercepted:
+      case .intercepted, .superseded:
         break
       case let .browse(path):
         navigate(path, clearError: true)
