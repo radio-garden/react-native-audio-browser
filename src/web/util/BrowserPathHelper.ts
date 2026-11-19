@@ -60,7 +60,9 @@ export const BrowserPathHelper = {
 
   /**
    * Strips the contextual parameters (__trackId and __index) from a contextual
-   * URL to get the parent path. If the URL is not contextual, returns it unchanged.
+   * URL and leaves every other character as it is, so the result equals the
+   * parent path the contextual URL was built on. If the URL is not contextual,
+   * returns it unchanged.
    *
    * @param url The URL to process
    * @returns The URL without the contextual parameters
@@ -73,35 +75,17 @@ export const BrowserPathHelper = {
       return url
     }
 
-    try {
-      // Parse the URL - handle both full URLs and paths
-      const isFullUrl = url.startsWith('http://') || url.startsWith('https://')
-      const urlObj = new URL(url, isFullUrl ? undefined : 'http://placeholder')
-
-      // Remove the contextual parameters
-      urlObj.searchParams.delete(this.CONTEXTUAL_TRACK_PARAM)
-      urlObj.searchParams.delete(this.CONTEXTUAL_INDEX_PARAM)
-
-      // Return the appropriate format
-      if (isFullUrl) {
-        return urlObj.toString()
-      } else {
-        const search = urlObj.searchParams.toString()
-        return search ? `${urlObj.pathname}?${search}` : urlObj.pathname
-      }
-    } catch {
-      // Fallback: simple string manipulation
-      const paramPattern = new RegExp(
-        `[?&](?:${this.CONTEXTUAL_TRACK_PARAM}|${this.CONTEXTUAL_INDEX_PARAM})=[^&]*`,
-        'g'
+    const queryStart = url.indexOf('?')
+    const head = url.slice(0, queryStart)
+    const kept = url
+      .slice(queryStart + 1)
+      .split('&')
+      .filter(
+        (pair) =>
+          !pair.startsWith(`${this.CONTEXTUAL_TRACK_PARAM}=`) &&
+          !pair.startsWith(`${this.CONTEXTUAL_INDEX_PARAM}=`)
       )
-      let result = url.replace(paramPattern, '')
-      // Clean up any trailing ? or &
-      result = result.replace(/[?&]$/, '')
-      // Fix double && or ?&
-      result = result.replace(/[?&]{2,}/g, '&').replace(/\?&/, '?')
-      return result
-    }
+    return kept.length === 0 ? head : `${head}?${kept.join('&')}`
   },
 
   /**
