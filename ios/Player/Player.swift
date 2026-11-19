@@ -319,9 +319,7 @@ final class Player {
     state = newState
     applySideEffects(old: oldState, new: newState)
     publish()
-    // While nothing plays, no periodic save runs: every transition rewrites the snapshot, so it
-    // never keeps a position from before a track change or a seek.
-    if !(playbackActive && playWhenReady) { persistence.save() }
+    saveSnapshotWhileNothingPlays()
     // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
     // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
     if newState == .ended, queue.isLastInPlaybackOrder, repeatMode == .off {
@@ -714,6 +712,12 @@ final class Player {
     lastIndex = queue.currentIndex
   }
 
+  /// While nothing plays, no periodic save runs: every transition and every seek rewrites the
+  /// snapshot, so it never keeps a position from before a track change or a seek.
+  private func saveSnapshotWhileNothingPlays() {
+    if !(playbackActive && playWhenReady) { persistence.save() }
+  }
+
   // MARK: - Seeking
 
   /// Seeks the current item. While it awaits the next item, or in .error for the restart, the
@@ -724,6 +728,7 @@ final class Player {
       completion(false)
     } else if awaitingItem || state == .error {
       deferredSeek.capture(seconds)
+      saveSnapshotWhileNothingPlays()
       completion(false)
     } else if engine.hasItem {
       seekItem(to: seconds, completion: completion)
@@ -765,6 +770,7 @@ final class Player {
         return
       }
       seekDidLand(finished: finished)
+      if finished { saveSnapshotWhileNothingPlays() }
       completion(finished)
     }
   }
