@@ -45,9 +45,6 @@ final class RemoteCommandController {
   /// and by `refreshSkipAvailability`.
   var skipAvailability: @MainActor () -> (canNext: Bool, canPrevious: Bool) = { (true, true) }
 
-  /// Whether playback is on, which decides if `togglePlayPause` pauses or plays.
-  var isPlaying: @MainActor () -> Bool = { false }
-
   // Kept to restore on a new command center, which starts with shuffle and repeat off.
   private var shuffleEnabled = false
   private var repeatMode: RepeatMode = .off
@@ -114,7 +111,7 @@ final class RemoteCommandController {
   /// The command a `togglePlayPause` runs: pause while playing, else play. `nil` when that
   /// command is not enabled.
   var togglePlayPauseTarget: RemoteCommand? {
-    let target: RemoteCommand = isPlaying() ? .pause : .play
+    let target: RemoteCommand = callbacks?.remoteIsPlaying == true ? .pause : .play
     return enabledCommands.contains(target) ? target : nil
   }
 

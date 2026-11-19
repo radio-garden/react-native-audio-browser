@@ -29,7 +29,7 @@ struct CapabilityRemoteCommandTests {
     }
   }
 
-  @Test func togglePlayPauseGoesOnlyWhenPlayAndPauseAreBothFalse() {
+  @Test func togglePlayPauseGoesUnlessPlayAndPauseAreBothFalse() {
     #expect(PlayerCapabilities(play: false).remoteCommands.contains(.togglePlayPause))
     #expect(PlayerCapabilities(pause: false).remoteCommands.contains(.togglePlayPause))
     #expect(

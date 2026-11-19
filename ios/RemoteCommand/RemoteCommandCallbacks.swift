@@ -6,6 +6,9 @@
 /// screen, Control Center, CarPlay, headset). `AVPlayerEngineCallbacks` extends it, so the
 /// controller depends only on these.
 @MainActor protocol RemoteCommandCallbacks: AnyObject {
+  /// Whether playback is on, which decides if `togglePlayPause` pauses or plays.
+  var remoteIsPlaying: Bool { get }
+
   func remotePlay()
 
   func remotePause()

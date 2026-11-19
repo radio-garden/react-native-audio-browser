@@ -87,6 +87,10 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     onChapterMetadata(chapters)
   }
 
+  var remoteIsPlaying: Bool {
+    player?.playingState.playing ?? false
+  }
+
   public func remotePlay() {
     dispatchRemote(handler: handleRemotePlay, report: onRemotePlay) { player?.play() }
   }

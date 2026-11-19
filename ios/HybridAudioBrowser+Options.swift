@@ -32,9 +32,6 @@ public extension HybridAudioBrowser {
         let newPlayer = Player(engine: newEngine, callbacks: self, retry: RetryLoop(online: networkMonitor.isOnline))
         if let retry = options.retry { newPlayer.retry.updatePolicy(from: retry) }
         newEngine.nowPlayingUpdater.source = newPlayer
-        newEngine.remoteCommandController.isPlaying = { [weak newPlayer] in
-          newPlayer?.playingState.playing ?? false
-        }
         engine = newEngine
         player = newPlayer
         audioSession.player = newPlayer

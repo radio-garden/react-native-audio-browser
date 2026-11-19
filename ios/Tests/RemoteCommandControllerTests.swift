@@ -11,6 +11,7 @@ import Testing
 struct RemoteCommandControllerTests {
   final class SpyCallbacks: RemoteCommandCallbacks {
     var events: [String] = []
+    var remoteIsPlaying = false
     func remotePlay() { events.append("play") }
     func remotePause() { events.append("pause") }
     func remoteStop() { events.append("stop") }
@@ -136,26 +137,23 @@ struct RemoteCommandControllerTests {
   }
 
   @Test func togglePlayPausePausesWhilePlayingAndPlaysOtherwise() {
-    let (controller, _) = makeController()
-    var playing = false
-    controller.isPlaying = { playing }
+    let (controller, spy) = makeController()
     controller.enable(commands: [.play, .pause, .togglePlayPause])
 
     #expect(controller.togglePlayPauseTarget == .play)
 
-    playing = true
+    spy.remoteIsPlaying = true
     #expect(controller.togglePlayPauseTarget == .pause)
   }
 
   @Test func togglePlayPauseRunsNothingWhenItsTargetIsNotEnabled() {
-    let (controller, _) = makeController()
-    var playing = true
-    controller.isPlaying = { playing }
+    let (controller, spy) = makeController()
+    spy.remoteIsPlaying = true
 
     controller.enable(commands: [.play, .togglePlayPause])
     #expect(controller.togglePlayPauseTarget == nil)
 
-    playing = false
+    spy.remoteIsPlaying = false
     #expect(controller.togglePlayPauseTarget == .play)
 
     controller.enable(commands: [.pause, .togglePlayPause])
