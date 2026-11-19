@@ -69,6 +69,13 @@ import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
+/** The active track with its queue index and playback position in seconds. */
+interface ActiveTrackSnapshot {
+  track: Track | undefined
+  index: number | undefined
+  position: number
+}
+
 /**
  * Web implementation of AudioBrowser (unified browser + player)
  */
@@ -875,8 +882,10 @@ export class NativeAudioBrowser
   }
 
   override remove(indexes: number[]): void {
+    const last = this.activeTrackSnapshot()
     super.remove(indexes)
     this.emitQueueChanged()
+    this.announceActiveTrackCleared(last)
   }
 
   override move(fromIndex: number, toIndex: number): void {
@@ -890,8 +899,36 @@ export class NativeAudioBrowser
   }
 
   override reset(): void {
+    const last = this.activeTrackSnapshot()
     super.reset()
     this.emitQueueChanged()
+    this.announceActiveTrackCleared(last)
+  }
+
+  private activeTrackSnapshot(): ActiveTrackSnapshot {
+    return {
+      track: this.current,
+      index: this.queue.currentIndex,
+      position: this.element?.currentTime ?? 0
+    }
+  }
+
+  /**
+   * Announces that no track is active any more, and takes the track off the OS
+   * media controls. `last` is read before the queue is touched: emptying it
+   * unloads the element, which resets its position. A no-op unless a track
+   * was active then and none is now.
+   */
+  private announceActiveTrackCleared(last: ActiveTrackSnapshot): void {
+    if (last.track === undefined || this.current !== undefined) return
+    this.remoteCommands.clearMetadata()
+    this.onPlaybackActiveTrackChanged({
+      lastTrack: last.track,
+      lastPosition: last.position,
+      lastIndex: last.index,
+      index: undefined,
+      track: undefined
+    })
   }
 
   // Override playWhenReady to emit events (mirrors the state override): the
@@ -1058,6 +1095,7 @@ export class NativeAudioBrowser
 
   // MARK: Queue management
   setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void {
+    const last = this.activeTrackSnapshot()
     this.stop()
     // Clear stale references from previous queue
     this.current = undefined
@@ -1082,6 +1120,8 @@ export class NativeAudioBrowser
 
     if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
       this.skip(startIndex, startPosition)
+    } else {
+      this.announceActiveTrackCleared(last)
     }
   }
 

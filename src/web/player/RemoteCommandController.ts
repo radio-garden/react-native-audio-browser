@@ -124,6 +124,11 @@ export class RemoteCommandController {
     this.mediaSession.setMetadata(metadata)
   }
 
+  /** Removes the track from the OS media controls. */
+  clearMetadata(): void {
+    this.mediaSession.clearMetadata()
+  }
+
   /** Reflects the current playing/paused/stopped state in the OS controls. */
   syncPlaybackState(): void {
     const playback = this.host.getPlayback()

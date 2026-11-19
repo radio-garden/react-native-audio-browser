@@ -70,6 +70,12 @@ export class MediaSessionManager {
     })
   }
 
+  /** Removes the track from the OS media controls. */
+  clearMetadata(): void {
+    if (!this.session) return
+    this.session.metadata = null
+  }
+
   /**
    * Reflects whether the player is playing/paused/stopped in the OS controls.
    */
