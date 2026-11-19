@@ -30,7 +30,7 @@ struct CGSizeAspectFitTests {
     CGSize(width: CGFloat.infinity, height: 10),
     CGSize(width: CGFloat.nan, height: 10),
   ])
-  func aCanvasWithoutAnAspectRatioFillsTheSlot(_ canvas: CGSize) {
-    #expect(canvas.aspectFitted(in: slot) == slot)
+  func aCanvasWithoutAnAspectRatioHasNoFit(_ canvas: CGSize) {
+    #expect(canvas.aspectFitted(in: slot) == nil)
   }
 }

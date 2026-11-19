@@ -27,11 +27,12 @@ struct SVGProcessor: ImageProcessor {
     }
   }
 
+  /// Nil for an SVG that declares no usable size, which SwiftDraw cannot scale to the slot.
   private func renderSVG(from data: Data) -> UIImage? {
-    guard let svg = SVG(data: data) else {
+    guard let svg = SVG(data: data), let size = svg.size.aspectFitted(in: slot) else {
       return nil
     }
 
-    return svg.rasterize(size: svg.size.aspectFitted(in: slot), scale: scale)
+    return svg.rasterize(size: size, scale: scale)
   }
 }
