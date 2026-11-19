@@ -366,13 +366,14 @@ describe('parity — what native emits for the same flow', () => {
 
   /**
    * An emptied queue leaves nothing to resume, so native reports `none` rather
-   * than `stopped`: iOS's `clear()` unloads the item (`Player.swift`), and
-   * Android maps an engine with no media items to `NONE`
-   * (`PlaybackStateMachine.kt`, `AudioBrowser.reset`).
+   * than `stopped`: iOS unloads the item once no track is current
+   * (`Player.swift`), and Android maps an engine with no media items to `NONE`
+   * (`PlaybackStateMachine.kt`).
    */
   it.each([
     ['reset()', () => h.browser.reset()],
-    ['setQueue([])', () => h.browser.setQueue([])]
+    ['setQueue([])', () => h.browser.setQueue([])],
+    ['removing the last track', () => h.browser.remove([0])]
   ])('reports none after %s', async (_name, empty) => {
     h.browser.setPlayWhenReady(true)
     h.browser.load(trackA)

@@ -1061,12 +1061,12 @@ export class NativeAudioBrowser
     // Before the queue is touched, so a call before `setupPlayer()` throws
     // rather than half-applying.
     this.requireElement()
+    if (tracks.length === 0) return this.reset()
     const hasStart =
       startIndex !== undefined && tracks[startIndex] !== undefined
     // Loading the start track supersedes the old one; a stop would drop the
     // play intent, which native keeps.
-    if (tracks.length === 0) this.halt('none')
-    else if (!hasStart) this.stop()
+    if (!hasStart) this.stop()
     // Clear stale references from previous queue
     this.current = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
