@@ -14,6 +14,7 @@ class LoadTestPlayer extends Player {
   constructor() {
     super()
     this.element = {
+      currentTime: 0,
       play: () => Promise.resolve(),
       pause: () => {}
     } as unknown as HTMLMediaElement
@@ -36,6 +37,18 @@ class LoadTestPlayer extends Player {
 
   rejectLoad(index: number, err: unknown): void {
     this.rejecters[index]?.(err)
+  }
+
+  resolveLoad(index: number): void {
+    this.resolvers[index]?.()
+  }
+
+  get position(): number {
+    return this.requireElement().currentTime
+  }
+
+  set position(seconds: number) {
+    this.requireElement().currentTime = seconds
   }
 }
 
@@ -82,6 +95,36 @@ describe('Player.load rejection staleness', () => {
     await tick()
 
     expect(player.read().state).toBe('error')
+  })
+})
+
+describe('Player.seekBy during a load', () => {
+  it('offsets the position the load starts at', async () => {
+    const player = new LoadTestPlayer()
+    player.load(track(1), () => player.seekTo(30))
+    player.seekBy(10)
+
+    player.resolveLoad(0)
+    await tick()
+
+    expect(player.position).toBe(40)
+  })
+
+  it('offsets the position play() resumes at after stop()', async () => {
+    const player = new LoadTestPlayer()
+    player.load(track(1))
+    player.resolveLoad(0)
+    await tick()
+    player.position = 300
+    player.stop()
+    player.position = 0
+
+    player.play()
+    player.seekBy(15)
+    player.resolveLoad(1)
+    await tick()
+
+    expect(player.position).toBe(315)
   })
 })
 
