@@ -14,6 +14,12 @@ enum NowPlayingButtonRules {
     return Array(buttons.prefix(maximumButtonCount))
   }
 
+  /// Whether the Up Next button is on: the option and the `skipToQueueItem` capability both allow
+  /// it, an unset capability counting as on, and the queue has another track to go to.
+  static func upNextEnabled(option: Bool, skipToQueueItem: Bool?, trackCount: Int) -> Bool {
+    option && skipToQueueItem != false && trackCount > 1
+  }
+
   static func repeatMode(after mode: RepeatMode) -> RepeatMode {
     switch mode {
     case .off: .track

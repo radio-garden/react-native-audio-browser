@@ -94,6 +94,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
       seekTo = null,
       skipToNext = null,
       skipToPrevious = null,
+      skipToQueueItem = null,
       jumpForward = null,
       jumpBackward = null,
       favorite = null,
@@ -124,6 +125,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
           MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
           MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
         ),
+      Capability.SKIP_TO_QUEUE_ITEM to listOf(MediaPlayer.COMMAND_SEEK_TO_MEDIA_ITEM),
       Capability.JUMP_FORWARD to listOf(MediaPlayer.COMMAND_SEEK_FORWARD),
       Capability.JUMP_BACKWARD to listOf(MediaPlayer.COMMAND_SEEK_BACK),
     )

@@ -291,7 +291,12 @@ final class CarPlayNowPlayingManager {
   }
 
   private func updateUpNextButton() {
-    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = audioBrowser.playerOptions.carPlayUpNextButton && (player?.tracks.count ?? 0) > 1
+    let options = audioBrowser.playerOptions
+    CPNowPlayingTemplate.shared.isUpNextButtonEnabled = NowPlayingButtonRules.upNextEnabled(
+      option: options.carPlayUpNextButton,
+      skipToQueueItem: options.capabilities.skipToQueueItem,
+      trackCount: player?.tracks.count ?? 0,
+    )
   }
 
   fileprivate func handleUpNextButtonTapped() {
@@ -324,13 +329,15 @@ final class CarPlayNowPlayingManager {
     // A prefix keeps item positions equal to queue indices.
     let items = tracks.prefix(maxItems).enumerated().map { index, track -> CPListItem in
       listItem(track) { [weak self] _, completion in
-        self?.logger.info("Skipping to track at index \(index): \(track.title)")
+        defer { completion() }
+        // The list can outlive the capability: it stays pushed when the button turns off.
+        guard let self, audioBrowser.playerOptions.capabilities.skipToQueueItem != false else { return }
+        logger.info("Skipping to track at index \(index): \(track.title)")
         do {
-          try self?.player?.skipTo(index, playWhenReady: true)
+          try player?.skipTo(index, playWhenReady: true)
         } catch {
-          self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
+          logger.error("Failed to skip to track: \(error.localizedDescription)")
         }
-        completion()
       }
     }
     return CPListSection(items: items)

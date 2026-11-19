@@ -43,6 +43,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> skipToNext = this->getFieldValue(fieldSkipToNext);
       static const auto fieldSkipToPrevious = clazz->getField<jni::JBoolean>("skipToPrevious");
       jni::local_ref<jni::JBoolean> skipToPrevious = this->getFieldValue(fieldSkipToPrevious);
+      static const auto fieldSkipToQueueItem = clazz->getField<jni::JBoolean>("skipToQueueItem");
+      jni::local_ref<jni::JBoolean> skipToQueueItem = this->getFieldValue(fieldSkipToQueueItem);
       static const auto fieldJumpForward = clazz->getField<jni::JBoolean>("jumpForward");
       jni::local_ref<jni::JBoolean> jumpForward = this->getFieldValue(fieldJumpForward);
       static const auto fieldJumpBackward = clazz->getField<jni::JBoolean>("jumpBackward");
@@ -62,6 +64,7 @@ namespace margelo::nitro::audiobrowser {
         seekTo != nullptr ? std::make_optional(static_cast<bool>(seekTo->value())) : std::nullopt,
         skipToNext != nullptr ? std::make_optional(static_cast<bool>(skipToNext->value())) : std::nullopt,
         skipToPrevious != nullptr ? std::make_optional(static_cast<bool>(skipToPrevious->value())) : std::nullopt,
+        skipToQueueItem != nullptr ? std::make_optional(static_cast<bool>(skipToQueueItem->value())) : std::nullopt,
         jumpForward != nullptr ? std::make_optional(static_cast<bool>(jumpForward->value())) : std::nullopt,
         jumpBackward != nullptr ? std::make_optional(static_cast<bool>(jumpBackward->value())) : std::nullopt,
         favorite != nullptr ? std::make_optional(static_cast<bool>(favorite->value())) : std::nullopt,
@@ -77,7 +80,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlayerCapabilities::javaobject> fromCpp(const PlayerCapabilities& value) {
-      using JSignature = JPlayerCapabilities(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JPlayerCapabilities(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -88,6 +91,7 @@ namespace margelo::nitro::audiobrowser {
         value.seekTo.has_value() ? jni::JBoolean::valueOf(value.seekTo.value()) : nullptr,
         value.skipToNext.has_value() ? jni::JBoolean::valueOf(value.skipToNext.value()) : nullptr,
         value.skipToPrevious.has_value() ? jni::JBoolean::valueOf(value.skipToPrevious.value()) : nullptr,
+        value.skipToQueueItem.has_value() ? jni::JBoolean::valueOf(value.skipToQueueItem.value()) : nullptr,
         value.jumpForward.has_value() ? jni::JBoolean::valueOf(value.jumpForward.value()) : nullptr,
         value.jumpBackward.has_value() ? jni::JBoolean::valueOf(value.jumpBackward.value()) : nullptr,
         value.favorite.has_value() ? jni::JBoolean::valueOf(value.favorite.value()) : nullptr,

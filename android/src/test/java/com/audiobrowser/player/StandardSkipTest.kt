@@ -49,6 +49,7 @@ class StandardSkipTest {
   private fun capabilities(
     skipToNext: Boolean? = null,
     skipToPrevious: Boolean? = null,
+    skipToQueueItem: Boolean? = null,
     jump: Boolean = false,
     favorite: Boolean = true,
   ) =
@@ -59,6 +60,7 @@ class StandardSkipTest {
       seekTo = null,
       skipToNext = skipToNext,
       skipToPrevious = skipToPrevious,
+      skipToQueueItem = skipToQueueItem,
       jumpForward = jump,
       jumpBackward = jump,
       favorite = favorite,
@@ -131,6 +133,30 @@ class StandardSkipTest {
     assertFalse(commands.contains(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM))
     assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS))
     assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM))
+  }
+
+  @Test
+  fun `a pick of a queue item is offered unless its capability is off`() {
+    assertTrue(commands(capabilities()).contains(MediaPlayer.COMMAND_SEEK_TO_MEDIA_ITEM))
+    assertTrue(
+      commands(capabilities(skipToQueueItem = true))
+        .contains(MediaPlayer.COMMAND_SEEK_TO_MEDIA_ITEM)
+    )
+    assertFalse(
+      commands(capabilities(skipToQueueItem = false))
+        .contains(MediaPlayer.COMMAND_SEEK_TO_MEDIA_ITEM)
+    )
+  }
+
+  @Test
+  fun `a disabled pick of a queue item leaves skipping and seeking in the item`() {
+    val commands = commands(capabilities(skipToQueueItem = false))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_NEXT))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM))
+    assertTrue(commands.contains(MediaPlayer.COMMAND_SEEK_TO_DEFAULT_POSITION))
   }
 
   private fun acceptsRatings(capabilities: PlayerCapabilities): Boolean {

@@ -29,6 +29,10 @@ struct CapabilityRemoteCommandTests {
     }
   }
 
+  @Test func skipToQueueItemEnablesNoCommand() {
+    #expect(PlayerCapabilities(skipToQueueItem: false).remoteCommands == Set(RemoteCommand.allCases))
+  }
+
   @Test func favoriteEnablesNoCommand() {
     #expect(PlayerCapabilities(favorite: false).remoteCommands == Set(RemoteCommand.allCases))
   }

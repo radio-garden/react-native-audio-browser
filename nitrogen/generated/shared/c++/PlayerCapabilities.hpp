@@ -45,6 +45,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<bool> seekTo     SWIFT_PRIVATE;
     std::optional<bool> skipToNext     SWIFT_PRIVATE;
     std::optional<bool> skipToPrevious     SWIFT_PRIVATE;
+    std::optional<bool> skipToQueueItem     SWIFT_PRIVATE;
     std::optional<bool> jumpForward     SWIFT_PRIVATE;
     std::optional<bool> jumpBackward     SWIFT_PRIVATE;
     std::optional<bool> favorite     SWIFT_PRIVATE;
@@ -54,7 +55,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     PlayerCapabilities() = default;
-    explicit PlayerCapabilities(std::optional<bool> play, std::optional<bool> pause, std::optional<bool> stop, std::optional<bool> seekTo, std::optional<bool> skipToNext, std::optional<bool> skipToPrevious, std::optional<bool> jumpForward, std::optional<bool> jumpBackward, std::optional<bool> favorite, std::optional<bool> shuffleMode, std::optional<bool> repeatMode, std::optional<bool> playbackRate): play(play), pause(pause), stop(stop), seekTo(seekTo), skipToNext(skipToNext), skipToPrevious(skipToPrevious), jumpForward(jumpForward), jumpBackward(jumpBackward), favorite(favorite), shuffleMode(shuffleMode), repeatMode(repeatMode), playbackRate(playbackRate) {}
+    explicit PlayerCapabilities(std::optional<bool> play, std::optional<bool> pause, std::optional<bool> stop, std::optional<bool> seekTo, std::optional<bool> skipToNext, std::optional<bool> skipToPrevious, std::optional<bool> skipToQueueItem, std::optional<bool> jumpForward, std::optional<bool> jumpBackward, std::optional<bool> favorite, std::optional<bool> shuffleMode, std::optional<bool> repeatMode, std::optional<bool> playbackRate): play(play), pause(pause), stop(stop), seekTo(seekTo), skipToNext(skipToNext), skipToPrevious(skipToPrevious), skipToQueueItem(skipToQueueItem), jumpForward(jumpForward), jumpBackward(jumpBackward), favorite(favorite), shuffleMode(shuffleMode), repeatMode(repeatMode), playbackRate(playbackRate) {}
 
   public:
     friend bool operator==(const PlayerCapabilities& lhs, const PlayerCapabilities& rhs) = default;
@@ -76,6 +77,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "seekTo"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToNext"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToQueueItem"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpForward"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite"))),
@@ -92,6 +94,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "seekTo"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.seekTo));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "skipToNext"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.skipToNext));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.skipToPrevious));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "skipToQueueItem"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.skipToQueueItem));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "jumpForward"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.jumpForward));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.jumpBackward));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "favorite"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.favorite));
@@ -114,6 +117,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "seekTo")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToNext")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToPrevious")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipToQueueItem")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpForward")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "jumpBackward")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "favorite")))) return false;

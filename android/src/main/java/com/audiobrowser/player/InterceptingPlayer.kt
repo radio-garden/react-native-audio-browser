@@ -192,10 +192,23 @@ internal class InterceptingPlayer(
       super.seekBack()
     }
 
-  override fun seekTo(mediaItemIndex: Int, positionMs: Long) =
+  // The session withholds the command from controllers while the capability is off; this refuses
+  // one that arrives anyway. The app's own skips go to the wrapped player, not through here.
+  private fun refusesQueueItem(mediaItemIndex: Int): Boolean =
+    mediaItemIndex != currentMediaItemIndex &&
+      !optionsProvider().capabilities.isEnabled(Capability.SKIP_TO_QUEUE_ITEM)
+
+  override fun seekToDefaultPosition(mediaItemIndex: Int) {
+    if (refusesQueueItem(mediaItemIndex)) return
+    super.seekToDefaultPosition(mediaItemIndex)
+  }
+
+  override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
+    if (refusesQueueItem(mediaItemIndex)) return
     intercept({ it.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) }) {
       super.seekTo(mediaItemIndex, positionMs)
     }
+  }
 
   override fun seekTo(positionMs: Long) =
     intercept({ it.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) }) {

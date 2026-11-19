@@ -38,6 +38,9 @@ data class PlayerCapabilities(
   val skipToPrevious: Boolean?,
   @DoNotStrip
   @Keep
+  val skipToQueueItem: Boolean?,
+  @DoNotStrip
+  @Keep
   val jumpForward: Boolean?,
   @DoNotStrip
   @Keep
@@ -66,6 +69,7 @@ data class PlayerCapabilities(
       && Objects.deepEquals(this.seekTo, other.seekTo)
       && Objects.deepEquals(this.skipToNext, other.skipToNext)
       && Objects.deepEquals(this.skipToPrevious, other.skipToPrevious)
+      && Objects.deepEquals(this.skipToQueueItem, other.skipToQueueItem)
       && Objects.deepEquals(this.jumpForward, other.jumpForward)
       && Objects.deepEquals(this.jumpBackward, other.jumpBackward)
       && Objects.deepEquals(this.favorite, other.favorite)
@@ -82,6 +86,7 @@ data class PlayerCapabilities(
       seekTo,
       skipToNext,
       skipToPrevious,
+      skipToQueueItem,
       jumpForward,
       jumpBackward,
       favorite,
@@ -99,8 +104,8 @@ data class PlayerCapabilities(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(play: Boolean?, pause: Boolean?, stop: Boolean?, seekTo: Boolean?, skipToNext: Boolean?, skipToPrevious: Boolean?, jumpForward: Boolean?, jumpBackward: Boolean?, favorite: Boolean?, shuffleMode: Boolean?, repeatMode: Boolean?, playbackRate: Boolean?): PlayerCapabilities {
-      return PlayerCapabilities(play, pause, stop, seekTo, skipToNext, skipToPrevious, jumpForward, jumpBackward, favorite, shuffleMode, repeatMode, playbackRate)
+    private fun fromCpp(play: Boolean?, pause: Boolean?, stop: Boolean?, seekTo: Boolean?, skipToNext: Boolean?, skipToPrevious: Boolean?, skipToQueueItem: Boolean?, jumpForward: Boolean?, jumpBackward: Boolean?, favorite: Boolean?, shuffleMode: Boolean?, repeatMode: Boolean?, playbackRate: Boolean?): PlayerCapabilities {
+      return PlayerCapabilities(play, pause, stop, seekTo, skipToNext, skipToPrevious, skipToQueueItem, jumpForward, jumpBackward, favorite, shuffleMode, repeatMode, playbackRate)
     }
   }
 }

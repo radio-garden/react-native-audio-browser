@@ -19,6 +19,7 @@ enum class Capability {
   SEEK_TO,
   SKIP_TO_NEXT,
   SKIP_TO_PREVIOUS,
+  SKIP_TO_QUEUE_ITEM,
   JUMP_FORWARD,
   JUMP_BACKWARD,
   FAVORITE,
@@ -35,6 +36,7 @@ fun PlayerCapabilities.isEnabled(capability: Capability): Boolean =
     Capability.SEEK_TO -> seekTo != false
     Capability.SKIP_TO_NEXT -> skipToNext != false
     Capability.SKIP_TO_PREVIOUS -> skipToPrevious != false
+    Capability.SKIP_TO_QUEUE_ITEM -> skipToQueueItem != false
     Capability.JUMP_FORWARD -> jumpForward != false
     Capability.JUMP_BACKWARD -> jumpBackward != false
     Capability.FAVORITE -> favoriteEnabled

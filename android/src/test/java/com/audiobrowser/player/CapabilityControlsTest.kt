@@ -28,6 +28,7 @@ class CapabilityControlsTest {
       seekTo = seekTo,
       skipToNext = skipToNext,
       skipToPrevious = skipToPrevious,
+      skipToQueueItem = null,
       jumpForward = jumpForward,
       jumpBackward = jumpBackward,
       favorite = favorite,

@@ -57,6 +57,19 @@ export interface PlayerCapabilities {
    */
   skipToPrevious?: boolean
   /**
+   * Let an external surface jump to any track in the queue.
+   *
+   * - Android: a controller's pick of a queue item (the Android Auto queue
+   *   list, a watch, a Bluetooth now-playing list). When `false`, the session
+   *   stops offering the command and refuses one sent anyway.
+   * - iOS: the CarPlay Up Next list. When `false`, the Up Next button is off
+   *   whatever `ios.carPlayUpNextButton` says.
+   *
+   * `skip()` and `setQueue()` called by the app are never restricted.
+   * @default true
+   */
+  skipToQueueItem?: boolean
+  /**
    * Enable jump forward control (configurable via forwardJumpInterval).
    * Typically used for podcast/audiobook apps.
    * @default false
@@ -392,7 +405,8 @@ export interface IOSUpdateOptions {
 
   /**
    * Enable the "Up Next" button on the CarPlay Now Playing screen. The button is
-   * automatically hidden when the queue has only one track.
+   * automatically hidden when the queue has only one track, and while the
+   * `skipToQueueItem` capability is `false`.
    * @default true
    */
   carPlayUpNextButton?: boolean

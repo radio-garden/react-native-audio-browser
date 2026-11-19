@@ -14,7 +14,7 @@ class PlayerUpdateOptions {
   // commands start explicitly disabled.
   var capabilities: PlayerCapabilities = .init(
     play: nil, pause: nil, stop: nil, seekTo: nil,
-    skipToNext: nil, skipToPrevious: nil,
+    skipToNext: nil, skipToPrevious: nil, skipToQueueItem: nil,
     jumpForward: false, jumpBackward: false,
     favorite: nil,
     shuffleMode: nil, repeatMode: nil, playbackRate: nil,
@@ -99,6 +99,7 @@ class PlayerUpdateOptions {
       seekTo: incoming.seekTo ?? existing.seekTo,
       skipToNext: incoming.skipToNext ?? existing.skipToNext,
       skipToPrevious: incoming.skipToPrevious ?? existing.skipToPrevious,
+      skipToQueueItem: incoming.skipToQueueItem ?? existing.skipToQueueItem,
       jumpForward: incoming.jumpForward ?? existing.jumpForward,
       jumpBackward: incoming.jumpBackward ?? existing.jumpBackward,
       favorite: incoming.favorite ?? existing.favorite,
