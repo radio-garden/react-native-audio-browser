@@ -607,7 +607,11 @@ final class Player {
 
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
     try handlePlayWhenReady(playWhenReady) {
-      if index == queue.currentIndex {
+      if index == queue.currentIndex, state == .error {
+        // A skip starts the track over: not where it failed, nor at a seek made since.
+        deferredSeek.reset()
+        reloadResolving(startFromCurrentTime: false)
+      } else if index == queue.currentIndex {
         seek(to: 0)
       } else {
         try queue.skipTo(index)
