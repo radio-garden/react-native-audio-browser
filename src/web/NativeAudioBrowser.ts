@@ -1141,7 +1141,8 @@ export class NativeAudioBrowser
     const track = this.getActiveTrack()
     if (!track || getTrackIdentity(track) === undefined) return
 
-    const isFavorited = this.favoriteManager.isFavorited(track)
+    const isFavorited =
+      track.favorited ?? this.favoriteManager.isFavorited(track)
     this.setActiveTrackFavorited(!isFavorited)
   }
 
