@@ -62,9 +62,28 @@ describe('MediaSessionManager', () => {
     vi.unstubAllGlobals()
   })
 
+  it('registers no action handler until registerHandlers() is called', () => {
+    const manager = new MediaSessionManager(makeActions())
+
+    expect(fake.session.setActionHandler).not.toHaveBeenCalled()
+
+    manager.registerHandlers()
+
+    expect([...fake.handlers.keys()]).toEqual([
+      'play',
+      'pause',
+      'stop',
+      'nexttrack',
+      'previoustrack',
+      'seekto',
+      'seekforward',
+      'seekbackward'
+    ])
+  })
+
   it('registers action handlers that route to the provided actions', () => {
     const actions = makeActions()
-    new MediaSessionManager(actions)
+    new MediaSessionManager(actions).registerHandlers()
 
     fake.handlers.get('play')?.(undefined)
     fake.handlers.get('pause')?.(undefined)
@@ -81,7 +100,7 @@ describe('MediaSessionManager', () => {
 
   it('routes seekto with the requested seek time', () => {
     const actions = makeActions()
-    new MediaSessionManager(actions)
+    new MediaSessionManager(actions).registerHandlers()
 
     fake.handlers.get('seekto')?.({ seekTime: 42 })
 
@@ -90,7 +109,7 @@ describe('MediaSessionManager', () => {
 
   it('ignores seekto without a seek time', () => {
     const actions = makeActions()
-    new MediaSessionManager(actions)
+    new MediaSessionManager(actions).registerHandlers()
 
     fake.handlers.get('seekto')?.({})
 
@@ -99,7 +118,7 @@ describe('MediaSessionManager', () => {
 
   it('uses the seek offset for seekforward/seekbackward, falling back to a default', () => {
     const actions = makeActions()
-    new MediaSessionManager(actions)
+    new MediaSessionManager(actions).registerHandlers()
 
     fake.handlers.get('seekforward')?.({ seekOffset: 30 })
     fake.handlers.get('seekbackward')?.({})
