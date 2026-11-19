@@ -110,6 +110,7 @@ describe('NativeAudioBrowser track selection order', () => {
     browser.configuration = {
       handleTrackLoad: (event) => {
         loaded.push(event.track.id)
+        return Promise.resolve()
       }
     }
 
