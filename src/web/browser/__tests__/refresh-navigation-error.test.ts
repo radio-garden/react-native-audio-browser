@@ -5,8 +5,11 @@ import { BrowserManager } from '../BrowserManager'
 import { FavoriteManager } from '../FavoriteManager'
 import { NavigationErrorManager } from '../NavigationErrorManager'
 
-const codedError = (code: string, message: string): Error =>
-  Object.assign(new Error(message), { code })
+const codedError = (
+  code: string,
+  message: string,
+  statusCode?: number
+): Error => Object.assign(new Error(message), { code, statusCode })
 
 /**
  * A BrowserManager on `/x` whose first load failed with a `network-error`.
@@ -80,11 +83,7 @@ describe('refreshing a page whose navigation failed', () => {
       const { manager, errors, events, server } =
         await makeManagerWithFailedPage()
       server.respond = () =>
-        Promise.reject(
-          Object.assign(codedError('http-error', 'HTTP 500'), {
-            statusCode: 500
-          })
-        )
+        Promise.reject(codedError('http-error', 'HTTP 500', 500))
 
       refresh(manager)
       await vi.waitFor(() =>
