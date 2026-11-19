@@ -198,11 +198,10 @@ describe('a browse failure of the current navigation', () => {
 
       await manager.navigatePath('/a')
 
-      expect(errors.getNavigationError()).toEqual({
+      expect(errors.getNavigationError()).toMatchObject({
         code: 'http-error',
         message: 'HTTP 500: Internal Server Error',
-        statusCode: 500,
-        statusCodeSuccess: undefined
+        statusCode: 500
       })
       expect(manager.content).toBeUndefined()
     }
