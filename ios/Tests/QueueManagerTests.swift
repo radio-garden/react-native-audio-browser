@@ -713,6 +713,27 @@ struct OtherMutationTests {
     #expect(q.tracks[1].id == "B")
   }
 
+  @Test func replaceEach_replacesTheTracksTheTransformReturns() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
+
+    let change = q.replaceEach { $0.id == "b" || $0.id == "c" ? Track(id: $0.id, title: "new") : nil }
+
+    #expect(change == .tracksOnly)
+    #expect(q.tracks.map(\.id) == ["a", "b", "c"])
+    #expect(q.tracks.map(\.title) == ["", "new", "new"])
+    #expect(q.currentIndex == 1)
+  }
+
+  @Test func replaceEach_changesNothingWhenNoTrackIsReplaced() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b"))
+    let version = q.version
+
+    #expect(q.replaceEach { _ in nil } == .none)
+    #expect(q.version == version)
+  }
+
   @Test func removeUpcomingTracks_alsoTrimsShuffleOrder() {
     let q = QueueManager()
     q.shuffleEnabled = true
