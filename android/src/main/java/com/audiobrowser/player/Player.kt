@@ -674,6 +674,7 @@ internal constructor(
         playerState = { playbackState },
         engineView = ::retryView,
         masksPlaying = { retryMasksPlaying },
+        leadShuffleOrder = ::leadShuffleOrder,
         playPlayer = ::play,
         stopPlayer = ::stop,
       )
@@ -796,12 +797,15 @@ internal constructor(
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
-    // While remote, the queue plays in list order.
-    if (mediaItems.isNotEmpty()) {
-      localEngine.setShuffleOrder(shuffleOrderLedBy(startIndex, mediaItems.size))
-    }
+    leadShuffleOrder(startIndex, mediaItems.size)
     queueSourcePath = sourcePath
     sessionPlayer.prepare()
+  }
+
+  /** Call after setting a queue of [count] tracks that starts on [startIndex]. */
+  private fun leadShuffleOrder(startIndex: Int, count: Int) {
+    // While remote, the queue plays in list order.
+    if (count > 0) localEngine.setShuffleOrder(shuffleOrderLedBy(startIndex, count))
   }
 
   /** @throws IllegalArgumentException if [index] is out of bounds. */
