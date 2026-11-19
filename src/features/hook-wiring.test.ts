@@ -79,13 +79,6 @@ const wirings: Wiring[] = [
     expected: { type: 'bluetooth' }
   },
   {
-    name: 'useNowPlaying',
-    hook: useNowPlaying,
-    slot: 'onNowPlayingChanged',
-    event: { title: 'Song' },
-    expected: { title: 'Song' }
-  },
-  {
     name: 'useOnline',
     hook: useOnline,
     slot: 'onOnlineChanged',
@@ -246,7 +239,9 @@ describe('hook wiring table', () => {
  * The getter-refreshed hooks re-read their native getter on each of two
  * slots, because one of them changes the value without the other's event:
  * a favorite toggle mutates the active track in place without a transition,
- * and a track change clears timed metadata without a timed metadata event.
+ * a track change clears timed metadata without a timed metadata event, and
+ * the active track going away clears now-playing metadata without a
+ * now-playing event.
  * Each slot gets an empty payload, so a hook that took the event instead of
  * re-reading fails.
  */
@@ -280,6 +275,13 @@ describe.each([
     hook: useTimedMetadata,
     getter: 'getTimedMetadata',
     slotsRead: ['onTimedMetadata', 'onPlaybackActiveTrackChanged'],
+    reads: [{ title: 'Song A' }, { title: 'Song B' }, undefined]
+  },
+  {
+    name: 'useNowPlaying',
+    hook: useNowPlaying,
+    getter: 'getNowPlaying',
+    slotsRead: ['onNowPlayingChanged', 'onPlaybackActiveTrackChanged'],
     reads: [{ title: 'Song A' }, { title: 'Song B' }, undefined]
   }
 ])('$name (getter-refreshed)', ({ hook, getter, slotsRead, reads }) => {

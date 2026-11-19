@@ -1,7 +1,8 @@
 import type { NowPlayingMetadata, NowPlayingUpdate } from './metadata'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+import { useNativeValueRefreshedBy } from '../utils/useNativeValueRefreshedBy'
+import { onActiveTrackChanged } from './queue/activeTrack'
 
 // MARK: - Functions
 
@@ -97,10 +98,15 @@ export const onNowPlayingChanged =
 
 // MARK: - Hooks
 
+// `onNowPlayingChanged` cannot report that the metadata went away with the
+// active track. Module-level so the hook's subscription identity is stable.
+const nowPlayingInvalidators = [onNowPlayingChanged, onActiveTrackChanged]
+
 /**
- * Hook that returns the current now playing metadata and updates when it changes.
+ * Hook that returns the current now playing metadata and updates when it
+ * changes, to `undefined` when the active track goes away.
  * @returns The current now playing metadata or undefined
  */
 export function useNowPlaying(): NowPlayingMetadata | undefined {
-  return useNativeUpdatedValue(getNowPlaying, onNowPlayingChanged)
+  return useNativeValueRefreshedBy(getNowPlaying, nowPlayingInvalidators)
 }
