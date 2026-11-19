@@ -86,9 +86,7 @@ CarPlay connects through scenes and can launch your app in the background with n
 ::: warning Two prerequisites
 **UIScene lifecycle** — CarPlay requires a `UIWindowSceneDelegate` for the phone window. If your app still sets up its window directly in `AppDelegate`, migrate to scenes first (the sections below build all the pieces).
 
-**New Architecture host, Swift** — these snippets assume a Swift `AppDelegate` built on `RCTReactNativeFactory` and `RCTDefaultReactNativeFactoryDelegate`, which React Native ships from **0.78**.
-
-On React Native versions before 0.78 (see [Getting Started](/guide/getting-started#installation) for the minimum), the template's `AppDelegate` subclasses `RCTAppDelegate` instead, so adapt the same pieces (scene routing, the headless helper, the started flag) to that host.
+**New Architecture host, Swift** — these snippets assume a Swift `AppDelegate` built on `RCTReactNativeFactory` and `RCTDefaultReactNativeFactoryDelegate`, which every React Native version the library supports ships.
 
 If yours is still Objective-C (`.mm`), migrating it to Swift first is simpler than translating this wiring by hand. Scaffold a throwaway app (`npx @react-native-community/cli init Tmp`) and use its `AppDelegate.swift` as a reference. ObjC works too (the bridging header is then unnecessary, see [Siri step 3](#_3-bridging-header-swift-appdelegate-only)) but isn't shown here.
 :::
