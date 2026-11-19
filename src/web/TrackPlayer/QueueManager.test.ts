@@ -226,7 +226,7 @@ describe('QueueManager', () => {
       expect(() => q.insert(tracks(1), 4)).toThrow('out of bounds')
     })
 
-    it.each([NaN, Infinity, -Infinity])(
+    it.each([NaN, Infinity, -Infinity, 0.5, 1.5])(
       'throws on %s and leaves the queue as it was',
       (index) => {
         q.setTracks(tracks(3))
@@ -310,7 +310,7 @@ describe('QueueManager', () => {
       expect(() => q.move(0, -1)).toThrow('index out of bounds')
     })
 
-    it.each([NaN, Infinity, -Infinity])(
+    it.each([NaN, Infinity, -Infinity, 0.5, 1.5])(
       'throws on a destination of %s and leaves the queue as it was',
       (index) => {
         q.currentIndex = 1

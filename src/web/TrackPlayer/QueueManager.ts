@@ -208,7 +208,7 @@ export class QueueManager {
       // -1 sentinel would splice from the end and mis-shift the current
       // pointer; past-the-end would silently append under a lying index.
       if (
-        !Number.isFinite(insertBeforeIndex) ||
+        !Number.isInteger(insertBeforeIndex) ||
         insertBeforeIndex < 0 ||
         insertBeforeIndex > this._tracks.length
       ) {
@@ -278,7 +278,7 @@ export class QueueManager {
     const item = this._tracks[fromIndex]
     if (
       item === undefined ||
-      !Number.isFinite(toIndex) ||
+      !Number.isInteger(toIndex) ||
       toIndex < 0 ||
       toIndex >= this._tracks.length
     ) {
