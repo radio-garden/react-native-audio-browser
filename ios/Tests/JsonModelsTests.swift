@@ -85,7 +85,7 @@ struct JsonTrackFavoritedTests {
         {"children":[{"title":"A","src":"a","favorited":true},{"title":"B","src":"b"}]}
       ]}
       """.utf8)
-    let page = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let page = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/track/1")
     #expect(page.favorited == true)
     #expect(page.sections?.first?.children.map(\.favorited) == [true, nil])
   }
