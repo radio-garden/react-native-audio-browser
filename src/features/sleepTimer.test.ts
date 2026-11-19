@@ -148,13 +148,17 @@ describe('useSleepTimer', () => {
       vi.setSystemTime(1_000_000_000_250)
       native.getSleepTimer.mockReturnValue({ time: 1_000_000_002_500 })
       const { result } = renderHook(() => useSleepTimer())
-      expect(result.current).toMatchObject({ secondsLeft: 2 })
+      expect(result.current).toMatchObject({ secondsLeft: 3 })
       act(() => {
         vi.advanceTimersByTime(1_250)
       })
       expect(result.current).toMatchObject({ secondsLeft: 1 })
       act(() => {
-        vi.advanceTimersByTime(1_000)
+        vi.advanceTimersByTime(999)
+      })
+      expect(result.current).toMatchObject({ secondsLeft: 1 })
+      act(() => {
+        vi.advanceTimersByTime(1)
       })
       expect(result.current).toMatchObject({ secondsLeft: 0 })
     } finally {
