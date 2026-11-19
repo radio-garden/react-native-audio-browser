@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.MockedStatic
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockStatic
+import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -130,16 +131,15 @@ class HeadlessTaskServiceTest {
     controller.create().bind()
     idle()
 
-    val listener = ArgumentCaptor.forClass(ReactInstanceEventListener::class.java)
-    verify(host).addReactInstanceEventListener(capture(listener))
+    val listener = addedListener()
     verify(host).start()
     verify(appRegistry, never()).startHeadlessTask(1, TASK_KEY, taskData)
 
-    listener.value.onReactContextInitialized(reactContext)
+    listener.onReactContextInitialized(reactContext)
     idle()
 
     verify(appRegistry).startHeadlessTask(1, TASK_KEY, taskData)
-    verify(host).removeReactInstanceEventListener(listener.value)
+    verify(host).removeReactInstanceEventListener(listener)
   }
 
   @Test
@@ -176,12 +176,16 @@ class HeadlessTaskServiceTest {
     assertNull(ShadowPowerManager.getLatestWakeLock())
   }
 
+  // ArgumentCaptor.capture() passes null, which ReactHost's Kotlin parameter refuses.
+  private fun addedListener(): ReactInstanceEventListener =
+    mockingDetails(host)
+      .invocations
+      .single { it.method.name == "addReactInstanceEventListener" }
+      .getArgument(0)
+
   private fun bridge() {
     architectureFlags
       .`when`<Boolean> { ReactNativeNewArchitectureFeatureFlags.enableBridgelessArchitecture() }
       .thenReturn(false)
   }
 }
-
-/** [ArgumentCaptor.capture] for a Kotlin parameter that takes no null, as [ReactHost]'s do. */
-private fun <T> capture(captor: ArgumentCaptor<T>): T = captor.capture()
