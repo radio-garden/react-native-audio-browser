@@ -18,7 +18,8 @@ public enum TrackPlayerError: Error {
 
   public enum QueueError: Error {
     case noCurrentItem
-    case invalidIndex(index: Int, message: String)
+    /// `index` is nil when the number JS passed names no `Int`.
+    case invalidIndex(index: Int?, message: String)
     case empty
     case invalidTrack(title: String)
   }
@@ -52,13 +53,31 @@ extension TrackPlayerError.QueueError: LocalizedError {
     switch self {
     case .noCurrentItem:
       "No current track"
-    case let .invalidIndex(index, message):
+    case let .invalidIndex(index?, message):
       "Invalid track index \(index): \(message)"
+    case let .invalidIndex(nil, message):
+      "Invalid track index: \(message)"
     case .empty:
       "Queue is empty"
     case let .invalidTrack(title):
       "Track must have either path or src defined. Track: title='\(title)'"
     }
+  }
+}
+
+// MARK: - Index Conversion
+
+extension Int {
+  /// The queue index a JS number names, its fraction dropped. Throws `QueueError.invalidIndex`
+  /// for a number no `Int` holds: NaN, infinite, or beyond `Int`'s range.
+  init(queueIndex number: Double) throws {
+    guard let index = Int(exactly: number.rounded(.towardZero)) else {
+      throw TrackPlayerError.QueueError.invalidIndex(
+        index: nil,
+        message: "index must be a finite number within the range of Int, got \(number)",
+      )
+    }
+    self = index
   }
 }
 

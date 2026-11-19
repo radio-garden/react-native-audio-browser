@@ -167,7 +167,7 @@ public extension HybridAudioBrowser {
     try onMainActor {
       guard let player else { return }
       if let index = insertBeforeIndex {
-        try player.add(tracks, at: Int(index))
+        try player.add(tracks, at: Int(queueIndex: index))
       } else {
         try player.add(tracks)
       }
@@ -176,7 +176,7 @@ public extension HybridAudioBrowser {
 
   func move(fromIndex: Double, toIndex: Double) throws {
     try onMainActor {
-      try player?.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex))
+      try player?.move(fromIndex: Int(queueIndex: fromIndex), toIndex: Int(queueIndex: toIndex))
     }
   }
 
@@ -184,8 +184,8 @@ public extension HybridAudioBrowser {
     try onMainActor {
       guard let player else { return }
       // Highest index first, so earlier removals don't shift the ones still to go.
-      for index in indexes.sorted().reversed() {
-        try player.remove(Int(index))
+      for index in try indexes.map({ try Int(queueIndex: $0) }).sorted().reversed() {
+        try player.remove(index)
       }
     }
   }
@@ -196,7 +196,7 @@ public extension HybridAudioBrowser {
 
   func skip(index: Double, initialPosition: Double?) throws {
     try onMainActor {
-      try player?.skipTo(Int(index))
+      try player?.skipTo(Int(queueIndex: index))
       if let position = initialPosition.flatMap({ finite($0, "skip") }) {
         player?.seek(to: position)
       }
@@ -256,7 +256,7 @@ public extension HybridAudioBrowser {
       guard let player else { return }
       try player.setQueue(
         tracks,
-        initialIndex: startIndex.map { Int($0) } ?? 0,
+        initialIndex: startIndex.map { try Int(queueIndex: $0) } ?? 0,
         startPositionMs: startPosition.flatMap { finite($0, "setQueue") }.map { $0 * 1000 },
       )
     }
@@ -272,8 +272,7 @@ public extension HybridAudioBrowser {
 
   func getTrack(index: Double) throws -> Track? {
     onMainActor {
-      guard let tracks = player?.tracks else { return nil }
-      let i = Int(index)
+      guard let tracks = player?.tracks, let i = try? Int(queueIndex: index) else { return nil }
       guard i >= 0, i < tracks.count else { return nil }
       return tracks[i]
     }
