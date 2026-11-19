@@ -131,7 +131,7 @@ class HeadlessTaskServiceTest {
     idle()
 
     val listener = ArgumentCaptor.forClass(ReactInstanceEventListener::class.java)
-    verify(host).addReactInstanceEventListener(listener.capture())
+    verify(host).addReactInstanceEventListener(capture(listener))
     verify(host).start()
     verify(appRegistry, never()).startHeadlessTask(1, TASK_KEY, taskData)
 
@@ -182,3 +182,6 @@ class HeadlessTaskServiceTest {
       .thenReturn(false)
   }
 }
+
+/** [ArgumentCaptor.capture] for a Kotlin parameter that takes no null, as [ReactHost]'s do. */
+private fun <T> capture(captor: ArgumentCaptor<T>): T = captor.capture()
