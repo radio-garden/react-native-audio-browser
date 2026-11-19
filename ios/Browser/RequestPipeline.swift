@@ -65,7 +65,7 @@ final class RequestPipeline {
   /// for kinds with none), then `routeConfig` (nil for the implicit browse default).
   /// `initialQuery` goes onto the request after the request layer, so it reaches the URL even
   /// when a later layer's transforms replace that layer's static query. Throws
-  /// `invalidConfiguration` when no layer sets a base URL.
+  /// `BrowserError.missingBaseUrl` when no layer sets a base URL.
   func buildApiRequest(
     kind: KeyPath<ResolvedLayers, TransformableRequestConfig?>?,
     _ routeConfig: TransformableRequestConfig?,
@@ -83,7 +83,7 @@ final class RequestPipeline {
     merged = try await applyLayer(routeConfig, to: merged, params: params)
 
     guard merged.baseUrl != nil else {
-      throw BrowserError.invalidConfiguration("No URL configured for route")
+      throw BrowserError.missingBaseUrl(path: path, routed: routeConfig != nil)
     }
     return HttpClient.HttpRequest(
       url: RequestLayer.buildUrl(merged, defaultPath: path),
@@ -108,8 +108,12 @@ final class RequestPipeline {
     logger.debug("  path: \(path)")
     logger.debug("  url: \(request.url)")
 
-    let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
-    let nitroResult = result.toNitro()
+    let result = if path == SimpleRouter.tabsRoutePath {
+      try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
+    } else {
+      try await httpClient.requestJson(request, as: JsonBrowsePage.self).page
+    }
+    let nitroResult = result.toNitro(requestedPath: path)
 
     logger.debug("Resolved: \(nitroResult.title)")
     if let sections = nitroResult.normalizedSections {

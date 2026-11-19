@@ -54,4 +54,19 @@ extension ResolvedTrack {
       icyCharset: icyCharset ?? self.icyCharset,
     )
   }
+
+  /// A copy with each section track `transform` returns a track for replaced; nil when it
+  /// replaces none.
+  func replacingEachTrack(_ transform: (Track) -> Track?) -> ResolvedTrack? {
+    guard let sections else { return nil }
+    var replaced = false
+    let updated = sections.map { section in
+      section.copying(children: section.children.map { track in
+        guard let replacement = transform(track) else { return track }
+        replaced = true
+        return replacement
+      })
+    }
+    return replaced ? copying(sections: updated) : nil
+  }
 }

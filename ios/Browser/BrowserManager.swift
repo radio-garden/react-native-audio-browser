@@ -28,7 +28,8 @@ final class BrowserManager {
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
-  private var favorites = FavoriteSet()
+  /// The favorite set; set its `queue` to the player.
+  private(set) lazy var favorites = Favorites(content: self)
 
   private var currentNavigationId: Int = 0
 
@@ -53,8 +54,8 @@ final class BrowserManager {
     didSet {
       // An unchanged result must not churn the CarPlay tab bar or reset its selection;
       // `invalidateAll` re-queries the tabs every time.
-      if let tabs, !TabBarEntries.same(oldValue, tabs) {
-        tabsChanged.emit(tabs)
+      if let emitted = TabBarEntries.change(from: oldValue, to: tabs) {
+        tabsChanged.emit(emitted)
       }
     }
   }
@@ -78,8 +79,7 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
-  /// Emitted on any change to the favorites, however it came about.
-  let favoritesChanged = Emitter<Void>()
+  var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
   /// `Promise<void>` arrives as `Promise<Promise<Void>>`); a failure is logged, not thrown. False
@@ -96,10 +96,8 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  func setFavorites(_ favorites: [String]) {
-    if self.favorites.replace(with: favorites) {
-      favoritesChanged.emit(())
-    }
+  func setFavorites(_ identities: [String]) {
+    favorites.replace(with: identities)
   }
 
   func setFavoriteEnabled(_ enabled: Bool) {
@@ -116,10 +114,11 @@ final class BrowserManager {
 
   // MARK: - Navigation
 
-  /// Loads `path` as the current page. `bypassCache` refetches it and keeps the current content
-  /// on screen meanwhile. A newer load supersedes this one: its result or error is dropped, so a
-  /// slow failing /a cannot show its error over a fast /b's content.
-  func load(_ path: String, bypassCache: Bool = false) async throws {
+  /// Loads `path` as the current page and returns whether it published the content.
+  /// `bypassCache` refetches it and keeps the current content on screen meanwhile. A newer load
+  /// supersedes this one: its result or error is dropped, so a slow failing /a cannot show its
+  /// error over a fast /b's content.
+  func load(_ path: String, bypassCache: Bool = false) async throws -> Bool {
     currentNavigationId += 1
     let navigationId = currentNavigationId
     self.path = path
@@ -131,10 +130,11 @@ final class BrowserManager {
     }
     do {
       let resolved = try await resolve(path, useCache: !bypassCache)
-      guard navigationId == currentNavigationId else { return }
+      guard navigationId == currentNavigationId else { return false }
       content = resolved
+      return true
     } catch {
-      guard navigationId == currentNavigationId else { return }
+      guard navigationId == currentNavigationId else { return false }
       throw error
     }
   }
@@ -172,20 +172,12 @@ final class BrowserManager {
     (contentGeneration, pageGenerations[path])
   }
 
-  /// Clears every cache and the resolved request layers, then re-queries the tabs and reloads
-  /// the current path, independently: a failed reload goes to `reloadFailed` with its path, and
-  /// a failed tabs query keeps the current tabs.
-  func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
+  /// Clears every cache and the resolved request layers, then re-queries the tabs; a failed
+  /// query keeps the current tabs. Reloading the current path is the caller's.
+  func invalidateAll() {
     clearContent()
     requests.invalidateLayers()
     Task { _ = try? await queryTabs() }
-    Task {
-      do {
-        try await load(path, bypassCache: true)
-      } catch {
-        await reloadFailed(error, path)
-      }
-    }
   }
 
   /// Clears the cached pages and the last search; a fetch in flight caches nothing.
@@ -279,9 +271,9 @@ final class BrowserManager {
 
   func queryTabs() async throws -> [Track] {
     let generation = contentGeneration
-    guard let tabs = try await pages.tabs() else { return [] }
+    let tabs = try await pages.tabs()
     if generation == contentGeneration { self.tabs = tabs }
-    return tabs
+    return tabs ?? []
   }
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
@@ -299,3 +291,12 @@ final class BrowserManager {
 // MARK: - TrackSelectionBrowser
 
 extension BrowserManager: TrackSelectionBrowser {}
+
+// MARK: - FavoriteStamped
+
+extension BrowserManager: FavoriteStamped {
+  func restampFavorites(_ restamp: (Track) -> Track?) {
+    guard let restamped = content?.replacingEachTrack(restamp) else { return }
+    content = restamped
+  }
+}

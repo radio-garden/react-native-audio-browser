@@ -1,6 +1,8 @@
 package com.audiobrowser.player
 
+import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
@@ -59,6 +61,8 @@ internal class InterceptingPlayer(
   private val engineView: (Int) -> Int,
   /** Whether the engine's playing is a blip the retry loop hides. */
   private val masksPlaying: () -> Boolean,
+  /** Leads the engine's shuffle order with a start index, given the queue's size. */
+  private val leadShuffleOrder: (startIndex: Int, count: Int) -> Unit,
   private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
@@ -214,4 +218,11 @@ internal class InterceptingPlayer(
     intercept({ it.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) }) {
       super.seekTo(positionMs)
     }
+
+  // Media3 sets here the queue of a track picked on an external surface and of playback
+  // resumption. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
+  override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
+    super.setMediaItems(mediaItems, startIndex, startPositionMs)
+    if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
+  }
 }

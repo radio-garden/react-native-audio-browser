@@ -2,7 +2,8 @@ import Foundation
 
 extension NavigationError {
   /// Maps any thrown error to a NavigationError. `BrowserError.invalidConfiguration`,
-  /// and any error that is not a BrowserError, HttpException or URLError, becomes `.unknownError`.
+  /// and any error that is not a BrowserError, HttpStatusError or URLError, becomes
+  /// `.unknownError`.
   static func from(_ error: Error) -> NavigationError {
     if let browserError = error as? BrowserError {
       switch browserError {
@@ -13,7 +14,7 @@ extension NavigationError {
       case .callbackError:
         NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       }
-    } else if let httpError = error as? HttpClient.HttpException {
+    } else if let httpError = error as? any HttpStatusError {
       NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
     } else if error is URLError {
       NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
@@ -30,7 +31,7 @@ extension NavigationError {
     case .networkError:
       "Network Error"
     case .httpError:
-      if let statusCode {
+      if let statusCode, statusCodeSuccess != true {
         HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
       } else {
         "Server Error"

@@ -66,4 +66,23 @@ struct TabBarEntriesTests {
         [tab("Explore", path: "/explore", artist: "b")],
       ))
   }
+
+  @Test func tabsThatGoAwayEmitAnEmptyList() {
+    #expect(TabBarEntries.change(from: [tab("Explore", path: "/explore")], to: nil)?.isEmpty == true)
+  }
+
+  @Test func noTabsBeforeOrAfterEmitsNothing() {
+    #expect(TabBarEntries.change(from: nil, to: nil) == nil)
+  }
+
+  @Test func newTabsEmitThem() {
+    let tabs = [tab("Explore", path: "/explore")]
+    #expect(TabBarEntries.change(from: nil, to: tabs)?.map(\.path) == ["/explore"])
+    #expect(TabBarEntries.change(from: [tab("Browse", path: "/browse")], to: tabs)?.map(\.path) == ["/explore"])
+  }
+
+  @Test func sameEntriesEmitNothing() {
+    let tabs = [tab("Explore", path: "/explore")]
+    #expect(TabBarEntries.change(from: tabs, to: tabs) == nil)
+  }
 }

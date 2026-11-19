@@ -76,7 +76,8 @@ enum RequestLayer {
   }
 
   /// Applies one layer. With transforms, they replace its static fields entirely, each handed
-  /// the one before's result; without, its static fields apply over `base`.
+  /// the one before's result; without, its static fields apply over `base`. A transform that
+  /// throws anything but a cancellation throws `BrowserError.callbackError`.
   nonisolated(nonsending) static func apply<C: RequestFields>(
     _ layer: C,
     transforms: [nonisolated(nonsending)(C) async throws -> C],
@@ -85,7 +86,13 @@ enum RequestLayer {
     guard !transforms.isEmpty else { return applyStatic(layer, to: base) }
     var result = base
     for transform in transforms {
-      result = try await transform(result)
+      do {
+        result = try await transform(result)
+      } catch let error as CancellationError {
+        throw error
+      } catch {
+        throw BrowserError.callbackError(error.localizedDescription)
+      }
     }
     return result
   }
@@ -174,10 +181,10 @@ enum RequestLayer {
   /// sets them. Nil when there are none.
   static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
     var headers = request.headers ?? [:]
-    if let userAgent = request.userAgent, headers["User-Agent"] == nil {
+    if let userAgent = request.userAgent, !headers.hasHeader("User-Agent") {
       headers["User-Agent"] = userAgent
     }
-    if let contentType = request.contentType, headers["Content-Type"] == nil {
+    if let contentType = request.contentType, !headers.hasHeader("Content-Type") {
       headers["Content-Type"] = contentType
     }
     return headers.isEmpty ? nil : headers

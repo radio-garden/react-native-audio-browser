@@ -587,6 +587,7 @@ struct ObserverGuardTests {
   @Test @MainActor
   func audioDidStart_transitionsToPlaying() {
     let (c, eh, _, _) = makeCoordinator()
+    c.setPlayWhenReady(true)
     c.transition(.bufferingSufficient)
 
     eh.emit(.audioDidStart)
@@ -785,6 +786,23 @@ struct HandleCurrentTrackChangedTests {
     #expect(c.state == .error)
     #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
     #expect(cb.errorEvents.count >= 1)
+  }
+
+  @Test @MainActor
+  func nilSrc_errorHoldsAgainstThePauseOfTheReplacedTrack() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try c.setQueue([
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", path: "/no-source", src: nil, title: "No Source"),
+    ])
+    try c.skipTo(1)
+    cb.errorEvents.removeAll()
+
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+
+    #expect(c.state == .error)
+    #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
+    #expect(cb.errorEvents.isEmpty)
   }
 
   @Test @MainActor
@@ -1214,6 +1232,25 @@ struct InterruptionTests {
 
     #expect(c.playWhenReady == false)
   }
+
+  /// `.error` keeps the play intent, but the interruption stopped nothing: its end must not
+  /// restart the stream.
+  @Test @MainActor
+  func ended_doesNotRestart_whenInterruptedInError() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.transition(.errorOccurred(.playbackFailed))
+    #expect(c.playWhenReady == true)
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == false)
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.state == .error)
+    #expect(c.playWhenReady == false)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
+  }
 }
 
 // MARK: - Skip availability freshness
@@ -1358,6 +1395,31 @@ struct QueuePublicationTests {
   }
 
   @Test @MainActor
+  func replaceEach_publishesTheQueueOnceAndKeepsTheActiveTrack() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    cb.activeTrackChanges.removeAll()
+    let loads = eh.resolveAndLoadCalls.count
+
+    c.replaceEach { $0.id == "b" ? nil : $0.copying(favorited: true) }
+
+    #expect(cb.queueChanges.map { $0.map(\.favorited) } == [[true, nil, true]])
+    #expect(c.currentTrack?.favorited == true)
+    #expect(cb.activeTrackChanges.isEmpty)
+    #expect(eh.resolveAndLoadCalls.count == loads)
+  }
+
+  @Test @MainActor
+  func replaceEach_publishesNothingWhenNoTrackIsReplaced() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    try c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.replaceEach { _ in nil }
+    #expect(cb.queueChanges.isEmpty)
+  }
+
+  @Test @MainActor
   func clear_publishesAnEmptyQueue() throws {
     let (c, _, cb, _) = makeCoordinator()
     try c.setQueue(threeTracks())
@@ -1481,6 +1543,50 @@ struct SessionReleaseTests {
     await retrying?.value
 
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+
+  /// `.error` keeps the play intent, so the release cannot wait for a pause.
+  @Test @MainActor
+  func terminalError_requestsRelease_withTheIntentHeld() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.transition(.errorOccurred(.playbackFailed))
+
+    #expect(c.playWhenReady == true)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(c.canReleaseAudioSession == true)
+  }
+
+  /// A play from `.error` activates the session, which cancels the pending release, and leaves
+  /// `canReleaseAudioSession` false for the controller's check when the release fires.
+  @Test @MainActor
+  func playFromError_activatesTheSession_andBlocksTheRelease() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.transition(.errorOccurred(.playbackFailed))
+    eh.activateAudioSessionCount = 0
+
+    c.play()
+
+    #expect(c.state == .loading)
+    #expect(c.canReleaseAudioSession == false)
+    #expect(eh.activateAudioSessionCount == 1)
+  }
+
+  @Test @MainActor
+  func canReleaseAudioSession_waitsForAnInterruptionThatMayResume() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    #expect(c.canReleaseAudioSession == false)
+
+    c.handleInterruptionBegan()
+    #expect(c.playWhenReady == false)
+    #expect(c.canReleaseAudioSession == false)
+
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(c.canReleaseAudioSession == true)
   }
 }
 

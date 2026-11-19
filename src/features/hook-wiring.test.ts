@@ -8,8 +8,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
  * behaviour is covered once in `utils/useNativeUpdatedValue.test.ts`; what is
  * per-hook and untestable there is the wiring — which native callback slot the
  * emitter claims, and which `eventKey` is pulled out of the payload.
- * (`useActiveTrack` and `useQueue` are getter-refreshed instead — they update
- * on transitions AND favorite toggles — and are covered in their own block.)
+ * (The getter-refreshed hooks are covered in their own block.)
  *
  * Both are easy to get wrong and silent when wrong: the hook simply never
  * updates, or yields the whole event where a field was meant. Five slots
@@ -77,13 +76,6 @@ const wirings: Wiring[] = [
     slot: 'onOutputChanged',
     event: { type: 'bluetooth' },
     expected: { type: 'bluetooth' }
-  },
-  {
-    name: 'useNowPlaying',
-    hook: useNowPlaying,
-    slot: 'onNowPlayingChanged',
-    event: { title: 'Song' },
-    expected: { title: 'Song' }
   },
   {
     name: 'useOnline',
@@ -246,7 +238,9 @@ describe('hook wiring table', () => {
  * The getter-refreshed hooks re-read their native getter on each of two
  * slots, because one of them changes the value without the other's event:
  * a favorite toggle mutates the active track in place without a transition,
- * and a track change clears timed metadata without a timed metadata event.
+ * a track change clears timed metadata without a timed metadata event, and
+ * the active track going away clears now-playing metadata without a
+ * now-playing event.
  * Each slot gets an empty payload, so a hook that took the event instead of
  * re-reading fails.
  */
@@ -280,6 +274,13 @@ describe.each([
     hook: useTimedMetadata,
     getter: 'getTimedMetadata',
     slotsRead: ['onTimedMetadata', 'onPlaybackActiveTrackChanged'],
+    reads: [{ title: 'Song A' }, { title: 'Song B' }, undefined]
+  },
+  {
+    name: 'useNowPlaying',
+    hook: useNowPlaying,
+    getter: 'getNowPlaying',
+    slotsRead: ['onNowPlayingChanged', 'onPlaybackActiveTrackChanged'],
     reads: [{ title: 'Song A' }, { title: 'Song B' }, undefined]
   }
 ])('$name (getter-refreshed)', ({ hook, getter, slotsRead, reads }) => {

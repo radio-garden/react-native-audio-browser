@@ -230,17 +230,15 @@ object RequestConfigBuilder {
 
     val url = BrowserPathHelper.buildUrl(baseUrl, path)
 
-    val queryString =
-      config.query?.let { query ->
-        if (query.isNotEmpty()) {
-          "?" +
-            query.entries.joinToString("&") { (key, value) ->
-              "${encodeUrlParam(key)}=${encodeUrlParam(value)}"
-            }
-        } else ""
-      } ?: ""
+    val query = config.query
+    if (query.isNullOrEmpty()) return url
 
-    return "$url$queryString"
+    val queryString =
+      query.entries.joinToString("&") { (key, value) ->
+        "${encodeUrlParam(key)}=${encodeUrlParam(value)}"
+      }
+    val separator = if (url.contains('?')) "&" else "?"
+    return "$url$separator$queryString"
   }
 
   private fun encodeUrlParam(param: String): String {

@@ -8,30 +8,31 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case .trackLoading: return .loading
   case .trackUnloaded: return PlaybackState.none
   case .trackEndedNaturally: return .ended
-  // .error holds against the AVPlayer's own events: an item still connecting when the retry gave
-  // up can report them late. Leaving .error takes an explicit reload, through .loading.
-  case .avPlayerWaiting: return current == .error ? nil : .buffering
-  case .avPlayerPlaying, .audioFrameDecoded: return current == .error ? nil : .playing
+  // The AVPlayer's own events can land after a stop, an end or a failure.
+  case .avPlayerWaiting: return current.isTerminal ? nil : .buffering
+  case .avPlayerPlaying, .audioFrameDecoded: return current.isTerminal ? nil : .playing
   case .errorOccurred: return .error
   case .retryCancelled:
-    guard current != .stopped, current != .ended, current != .error else { return nil }
+    guard !current.isTerminal else { return nil }
     return .paused
   case .loadSeekCompleted:
     guard current == .loading else { return nil }
     return .ready
   case let .avPlayerPaused(hasAsset):
     guard current != .stopped else { return nil }
-    if !hasAsset { return PlaybackState.none }
     // .error and .ended hold against stray pause observations; .ended sees them because the
     // natural-end intent clear opens the call site's `!playWhenReady` gate.
     guard current != .error, current != .ended else { return nil }
-    return .paused
+    return hasAsset ? .paused : PlaybackState.none
   case .bufferingSufficient:
-    // A buffer refill must not move a terminal state back to .ready: .ended would restart the
-    // finished track (playWhenReady is still true), and .stopped/.error would skip reload-on-play,
-    // which starts only from those states. Leaving them takes an explicit load or reload.
-    guard current != .playing, current != .ended, current != .stopped, current != .error
-    else { return nil }
+    // .ended still has the play intent: a move to .ready would restart the finished track.
+    guard current != .playing, !current.isTerminal else { return nil }
     return .ready
   }
+}
+
+extension PlaybackState {
+  /// Stopped, ended or failed: play() reloads from it, and only an explicit load, through
+  /// .loading, leaves it. The AVPlayer's own events and a cancelled retry cannot.
+  var isTerminal: Bool { self == .stopped || self == .ended || self == .error }
 }

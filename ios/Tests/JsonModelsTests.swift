@@ -43,7 +43,7 @@ struct JsonTrackArtworkTests {
       { "title": "Playlist", "artwork": { "light": "https://e.example/l.png", "dark": "https://e.example/d.png" } }
     ] }
     """.data(using: .utf8)!
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     #expect(resolved.children?.first?.artwork?.variants?.dark == "https://e.example/d.png")
   }
 
@@ -53,6 +53,41 @@ struct JsonTrackArtworkTests {
       let decoded = try JSONDecoder().decode(JsonTrack.self, from: encoded)
       #expect(decoded.artwork == artwork)
     }
+  }
+}
+
+@Suite("JsonTrack.favorited")
+struct JsonTrackFavoritedTests {
+  private func track(_ json: String) throws -> Track {
+    try JSONDecoder().decode(JsonTrack.self, from: Data(json.utf8)).toNitro()
+  }
+
+  @Test func decodesTheValueTheResponseCarries() throws {
+    #expect(try track(#"{ "title": "X", "src": "a", "favorited": true }"#).favorited == true)
+    #expect(try track(#"{ "title": "X", "src": "a", "favorited": false }"#).favorited == false)
+    #expect(try track(#"{ "title": "X", "src": "a" }"#).favorited == nil)
+  }
+
+  @Test func theValueOfTheResponseWinsOverHydration() throws {
+    var favorites = FavoriteSet()
+    favorites.enabled = true
+    _ = favorites.replace(with: ["b"])
+    let hearted = try track(#"{ "title": "A", "src": "a", "favorited": true }"#)
+    let unhearted = try track(#"{ "title": "B", "src": "b", "favorited": false }"#)
+    #expect(favorites.hydrate(hearted).favorited == true)
+    #expect(favorites.hydrate(unhearted).favorited == false)
+  }
+
+  @Test func decodesOnAPageAndOnItsTracks() throws {
+    let json = Data(
+      """
+      {"path":"/track/1","title":"Page","src":"p","favorited":true,"sections":[
+        {"children":[{"title":"A","src":"a","favorited":true},{"title":"B","src":"b"}]}
+      ]}
+      """.utf8)
+    let page = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/track/1")
+    #expect(page.favorited == true)
+    #expect(page.sections?.first?.children.map(\.favorited) == [true, nil])
   }
 }
 
@@ -77,7 +112,7 @@ struct JsonStyleTests {
         {"style":{"display":"grid","gridWrap":false},"children":[{"title":"C","src":"s"}]}
       ]}
       """.utf8)
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     let style = resolved.sections?.first?.style
     #expect(style?.display == .grid)
     #expect(style?.gridWrap == false)
@@ -91,7 +126,7 @@ struct JsonStyleTests {
         {"title":"C","src":"s","style":"grid"}
       ]}
       """.utf8)
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     #expect(resolved.style == nil)
     #expect(resolved.children?.first?.style == nil)
   }
@@ -152,7 +187,7 @@ struct JsonStyleTests {
          "children":[{"title":"C","src":"s"}]}
       ]}
       """.utf8)
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     let style = resolved.sections?.first?.style
     #expect(style?.gridTile == .card)
     #expect(style?.cardTint == "#1e3a8a")
@@ -167,7 +202,7 @@ struct JsonStyleTests {
          "children":[{"title":"C","src":"s"}]}
       ]}
       """.utf8)
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     let style = resolved.sections?.first?.style
     #expect(style?.gridTile == .image)
     #expect(style?.imageShape == .circular)
@@ -180,7 +215,7 @@ struct JsonStyleTests {
         {"style":{"gridTile":"hexagon"},"children":[{"title":"C","src":"s"}]}
       ]}
       """.utf8)
-    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    let resolved = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/requested")
     #expect(resolved.sections?.first?.style == nil)
   }
 
@@ -211,6 +246,39 @@ struct JsonStyleTests {
     #expect(snapshot?.accessorySymbol == "none")
     #expect(snapshot?.cardTint == "#1e3a8a")
     #expect(snapshot?.cardImage == "background")
+  }
+}
+
+@Suite("The page an endpoint answers")
+struct JsonPageShapeTests {
+  @Test func aBrowsePageWithoutAPathTakesTheRequestedPath() throws {
+    let json = Data(#"{"title":"Jazz","children":[{"title":"C","src":"s"}]}"#.utf8)
+    let page = try JSONDecoder().decode(JsonBrowsePage.self, from: json).page.toNitro(requestedPath: "/genres/jazz")
+    #expect(page.path == "/genres/jazz")
+    #expect(page.title == "Jazz")
+    #expect(page.children?.map(\.title) == ["C"])
+  }
+
+  @Test func aPagesOwnPathWins() throws {
+    let json = Data(#"{"path":"/jazz","title":"Jazz"}"#.utf8)
+    let page = try JSONDecoder().decode(JsonBrowsePage.self, from: json).page.toNitro(requestedPath: "/genres/jazz")
+    #expect(page.path == "/jazz")
+  }
+
+  @Test func aTabsPageNeedsNeitherTitleNorPath() throws {
+    let json = Data(#"{"children":[{"title":"Home","path":"/home"}]}"#.utf8)
+    let page = try JSONDecoder().decode(JsonResolvedTrack.self, from: json)
+      .toNitro(requestedPath: SimpleRouter.tabsRoutePath)
+    #expect(page.title == "")
+    #expect(page.path == SimpleRouter.tabsRoutePath)
+    #expect(page.children?.map(\.path) == ["/home"])
+  }
+
+  @Test func aBrowsePageWithoutATitleDoesNotDecode() {
+    let json = Data(#"{"children":[]}"#.utf8)
+    #expect(throws: DecodingError.self) {
+      _ = try JSONDecoder().decode(JsonBrowsePage.self, from: json)
+    }
   }
 }
 

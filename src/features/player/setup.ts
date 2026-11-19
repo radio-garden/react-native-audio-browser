@@ -746,8 +746,8 @@ function nonEmpty<K extends string, T extends object>(
  *
  * Calling it again is how a setup-only option changes after launch, and works differently per
  * platform. On Android, newly provided fields are merged over the previous ones, except
- * `remoteOutputs`, which is off when left out, and `nowPlaying`, which is on when left out
- * and keeps an earlier formatter until a call passes another one. The audio engine is rebuilt
+ * `remoteOutputs`, which is off when left out, and `nowPlaying`, which is `true` when left
+ * out: an earlier formatter stays only when the call passes it again. The audio engine is rebuilt
  * only when construction-bound fields (buffers, wake mode, …) changed. On iOS, each call
  * replaces the player: the queue is cleared, and setup-only fields you omit (`ios` session
  * category and `buffer`, `retry`, …) go back to their defaults. Runtime options set earlier

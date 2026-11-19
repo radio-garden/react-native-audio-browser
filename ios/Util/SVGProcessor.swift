@@ -8,19 +8,13 @@ struct SVGProcessor: ImageProcessor {
   // not in the key), so every render parameter must be here or different
   // rasterizations of one URL collide.
   var identifier: String {
-    "com.audiobrowser.svgprocessor(\(size?.width ?? -1)x\(size?.height ?? -1)@\(scale))"
+    "com.audiobrowser.svgprocessor(\(slot.width)x\(slot.height)@\(scale))"
   }
 
-  /// Points; nil renders at the SVG's intrinsic size.
-  let size: CGSize?
+  /// Points; the SVG fills as much of it as its aspect ratio allows.
+  let slot: CGSize
 
   let scale: CGFloat
-
-  @MainActor
-  init(size: CGSize? = nil, scale: CGFloat? = nil) {
-    self.size = size
-    self.scale = scale ?? appDisplayScale
-  }
 
   func process(item: ImageProcessItem, options _: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
     switch item {
@@ -33,17 +27,12 @@ struct SVGProcessor: ImageProcessor {
     }
   }
 
+  /// Nil for an SVG that declares no usable size, which SwiftDraw cannot scale to the slot.
   private func renderSVG(from data: Data) -> UIImage? {
-    guard let svg = SVG(data: data) else {
+    guard let svg = SVG(data: data), let size = svg.size.aspectFitted(in: slot) else {
       return nil
     }
 
-    let renderSize: CGSize = if let size {
-      size
-    } else {
-      svg.size
-    }
-
-    return svg.rasterize(size: renderSize, scale: scale)
+    return svg.rasterize(size: size, scale: scale)
   }
 }

@@ -122,6 +122,45 @@
     case delete
     case head
     case options
+
+    var stringValue: String {
+      switch self {
+      case .get: "GET"
+      case .post: "POST"
+      case .put: "PUT"
+      case .patch: "PATCH"
+      case .delete: "DELETE"
+      case .head: "HEAD"
+      case .options: "OPTIONS"
+      }
+    }
+  }
+
+  enum NavigationErrorType {
+    case contentNotFound
+    case networkError
+    case httpError
+    case callbackError
+    case unknownError
+    case emptyContent
+    case timeout
+  }
+
+  struct NavigationError: Equatable {
+    var code: NavigationErrorType
+    var message: String
+    var statusCode: Double?
+    var statusCodeSuccess: Bool?
+  }
+
+  struct FormattedNavigationError: Equatable {
+    var title: String
+    var message: String?
+  }
+
+  enum NavigationErrorKind {
+    case browse
+    case search
   }
 
   enum SearchMode {

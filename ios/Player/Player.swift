@@ -29,9 +29,9 @@ final class Player {
     guard let self, queue.currentIndex >= 0 else { return }
     let progressEvent = PlaybackProgressUpdatedEvent(
       track: Double(queue.currentIndex),
-      position: engine.currentTime,
-      duration: engine.duration,
-      buffered: engine.bufferedPosition,
+      position: currentTime,
+      duration: duration,
+      buffered: bufferedPosition,
     )
     callbacks?.playerDidUpdateProgress(progressEvent)
   }
@@ -101,8 +101,7 @@ final class Player {
   ) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        of: $0, state: state, position: deferredSeek.target ?? (enginePositionIsCurrent ? engine.currentTime : 0),
-        repeatMode: repeatMode,
+        of: $0, state: state, position: currentTime, repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
     }
@@ -118,6 +117,27 @@ final class Player {
   /// nor while it awaits the next one.
   private var enginePositionIsCurrent: Bool {
     !awaitingItem && load?.itemPrepared == true
+  }
+
+  /// Whether the engine's item is one of this Load's, which a reload of the track keeps until the
+  /// next is prepared.
+  private var engineItemIsCurrent: Bool {
+    load?.itemPrepared == true
+  }
+
+  /// The current track's position: a pending seek's target, and 0 before the engine reports it.
+  var currentTime: Double {
+    deferredSeek.target ?? (enginePositionIsCurrent ? engine.currentTime : 0)
+  }
+
+  /// The current track's duration, 0 until one of its items is in the engine.
+  var duration: Double {
+    engineItemIsCurrent ? engine.duration : 0
+  }
+
+  /// How far the current track is buffered, 0 until one of its items is in the engine.
+  var bufferedPosition: Double {
+    engineItemIsCurrent ? engine.bufferedPosition : 0
   }
 
   private var resumePosition: TimeInterval? {
@@ -141,7 +161,6 @@ final class Player {
   var queueVersion: Int { queue.version }
   var queueSourcePath: String? { queue.queueSourcePath }
   var currentTrack: Track? { queue.currentTrack }
-  var currentTime: Double { engine.currentTime }
   var nitroPlaybackError: PlaybackError? { errorStatus.nitroError }
 
   var repeatMode: RepeatMode {
@@ -189,7 +208,7 @@ final class Player {
     // A terminal state or a cancelled retry has no item to play, or one parked at its end: reload,
     // re-resolving a URL that may have expired since. Only .error and a cancelled retry resume where they failed.
     let resumes = state == .error || load?.reloadOnPlay == true
-    if newValue, resumes || state == .stopped || state == .ended {
+    if newValue, resumes || state.isTerminal {
       reloadResolving(startFromCurrentTime: resumes)
     }
     // While loading, the engine may still hold the previous track's item: a play waits for the new one.
@@ -301,9 +320,7 @@ final class Player {
     state = newState
     applySideEffects(old: oldState, new: newState)
     publish()
-    // While nothing plays, no periodic save runs: every transition rewrites the snapshot, so it
-    // never keeps a position from before a track change or a seek.
-    if !(playbackActive && playWhenReady) { persistence.save() }
+    saveSnapshotWhileNothingPlays()
     // Repeat modes never end the queue (matches web's endsQueue()): a repeat-track pause at the
     // track boundary (e.g. the end-of-track sleep timer) must not read as "playlist over".
     if newState == .ended, queue.isLastInPlaybackOrder, repeatMode == .off {
@@ -389,6 +406,8 @@ final class Player {
       // must not play it under the error.
       engine.pause()
       retry.cancel()
+      // The intent holds through .error: no pause follows to request the release.
+      if playWhenReady { evaluateSessionRelease() }
     default: break
     }
 
@@ -442,8 +461,9 @@ final class Player {
   /// iOS has already paused the AVPlayer, but that pause is swallowed while the intent holds, so
   /// the paused state is forced here.
   func handleInterruptionBegan() {
-    // A nested interruption keeps the intent the first one captured.
-    shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
+    // A nested interruption keeps what the first one captured. `.error` holds the intent with
+    // nothing playing: there is nothing to resume.
+    shouldResumeAfterInterruption = shouldResumeAfterInterruption || playingState.playing
     pause()
     if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
@@ -463,14 +483,18 @@ final class Player {
     }
   }
 
-  /// Requests a session release once playback is deliberately stopped: no intent, no
-  /// interruption to resume from, and no retry pending, whose reconnect needs the session. The
-  /// engine debounces it.
+  /// Whether nothing needs the audio session: playback is deliberately stopped or has failed for
+  /// good (`.error` keeps the intent), with no interruption to resume from and no retry pending,
+  /// whose reconnect needs the session.
+  var canReleaseAudioSession: Bool {
+    (!playWhenReady || state == .error)
+      && !shouldResumeAfterInterruption
+      && retry.pendingTask == nil
+  }
+
+  /// Requests a session release when nothing needs the session. The engine debounces it.
   private func evaluateSessionRelease() {
-    guard !playWhenReady,
-          !shouldResumeAfterInterruption,
-          retry.pendingTask == nil
-    else { return }
+    guard canReleaseAudioSession else { return }
     engine.scheduleAudioSessionRelease()
   }
 
@@ -520,6 +544,12 @@ final class Player {
 
   func replace(_ index: Int, _ track: Track) throws {
     try afterQueueMutation(queue.replace(index, track))
+  }
+
+  /// Replaces, in place, each track `transform` returns a track for; the current track keeps
+  /// playing.
+  func replaceEach(_ transform: (Track) -> Track?) {
+    afterQueueMutation(queue.replaceEach(transform))
   }
 
   func setQueue(
@@ -643,6 +673,8 @@ final class Player {
     defer { pushSkipAvailability() }
     sleepTimerManager.onTrackChanged()
 
+    // Read before the new Load replaces the one it belongs to.
+    let lastPosition = currentTime
     engine.cancelLoading()
     beginLoad()
     if let start { deferredSeek.capture(start) }
@@ -650,7 +682,6 @@ final class Player {
     // Published by the .trackLoading or .trackUnloaded transition below, even when it is a no-op.
     errorStatus = .none
 
-    let lastPosition = engine.currentTime
     let shouldContinuePlayback = playWhenReady
     engine.nowPlayingTrackChanged()
     if let currentTrack {
@@ -689,6 +720,12 @@ final class Player {
     lastIndex = queue.currentIndex
   }
 
+  /// While nothing plays, no periodic save runs: every transition and every seek rewrites the
+  /// snapshot, so it never keeps a position from before a track change or a seek.
+  private func saveSnapshotWhileNothingPlays() {
+    if !(playbackActive && playWhenReady) { persistence.save() }
+  }
+
   // MARK: - Seeking
 
   /// Seeks the current item. While it awaits the next item, or in .error for the restart, the
@@ -699,6 +736,7 @@ final class Player {
       completion(false)
     } else if awaitingItem || state == .error {
       deferredSeek.capture(seconds)
+      saveSnapshotWhileNothingPlays()
       completion(false)
     } else if engine.hasItem {
       seekItem(to: seconds, completion: completion)
@@ -740,6 +778,7 @@ final class Player {
         return
       }
       seekDidLand(finished: finished)
+      if finished { saveSnapshotWhileNothingPlays() }
       completion(finished)
     }
   }
@@ -940,7 +979,7 @@ final class Player {
       recoverIfAirPlayStalled(transitioningTo: status, waitingForNoItem: waitingForNoItem)
       timeControlStatusDidChange(status)
     case .audioDidStart:
-      if !awaitingItem { transition(.audioFrameDecoded) }
+      if !awaitingItem, playWhenReady { transition(.audioFrameDecoded) }
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:

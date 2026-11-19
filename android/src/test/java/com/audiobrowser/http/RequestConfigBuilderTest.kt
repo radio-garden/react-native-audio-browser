@@ -246,6 +246,32 @@ class RequestConfigBuilderTest {
   }
 
   @Test
+  fun `buildUrl joins the query with an ampersand when the path already has one`() = runTest {
+    val relative =
+      RequestConfig(
+        method = null,
+        path = "/stations?genre=rock",
+        baseUrl = "https://api.example.com",
+        headers = null,
+        query = mapOf("locale" to "en"),
+        body = null,
+        contentType = null,
+        userAgent = null,
+      )
+    val absolute =
+      relative.copy(path = "https://img.example.com/a.jpg?v=2", query = mapOf("w" to "512"))
+
+    assertEquals(
+      "https://api.example.com/stations?genre=rock&locale=en",
+      RequestConfigBuilder.buildHttpRequest(relative).url,
+    )
+    assertEquals(
+      "https://img.example.com/a.jpg?v=2&w=512",
+      RequestConfigBuilder.buildHttpRequest(absolute).url,
+    )
+  }
+
+  @Test
   fun `composeResolved merges async then sync with sync winning`() {
     val async =
       RequestConfig(null, null, "https://async.example.com", null, null, null, null, "ASYNC")

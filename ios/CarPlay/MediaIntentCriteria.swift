@@ -72,9 +72,9 @@ public struct MediaIntentCriteria: Sendable {
     }
   }
 
-  /// Whole-word subset match in either direction, case- and diacritic-insensitive. Siri may
-  /// deliver only part of the name, so a partial match counts; a substring match would swallow
-  /// any query inside the app name and make one-word stations unreachable by voice.
+  /// True when every word of `query` is a word of the app name, case- and diacritic-insensitive.
+  /// Siri may deliver only part of the name, so a partial match counts; a substring match would
+  /// swallow any query inside the app name and make one-word stations unreachable by voice.
   private static func queryMatchesAppName(_ query: String, appName: String?) -> Bool {
     guard let appName else { return false }
     let tokens: (String) -> Set<String> = {
@@ -86,6 +86,6 @@ public struct MediaIntentCriteria: Sendable {
     }
     let q = tokens(query), a = tokens(appName)
     guard !q.isEmpty, !a.isEmpty else { return false }
-    return q.isSubset(of: a) || a.isSubset(of: q)
+    return q.isSubset(of: a)
   }
 }

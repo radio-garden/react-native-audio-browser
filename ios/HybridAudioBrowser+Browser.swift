@@ -18,17 +18,11 @@ public extension HybridAudioBrowser {
   }
 
   @MainActor
-  private func loadPath(_ path: String) async {
-    do {
-      try await browserManager.load(path)
-    } catch {
-      await reportNavigationError(error, path: path)
-    }
-  }
-
-  @MainActor
-  private func reportNavigationError(_ error: Error, path: String) async {
-    await navigationError.report(NavigationError.from(error)) { [browserManager] in
+  private func loadPath(_ path: String, bypassCache: Bool = false) async {
+    await navigationError.follow(
+      { try await browserManager.load(path, bypassCache: bypassCache) },
+      describe: { NavigationError.from($0) },
+    ) { [browserManager] in
       await browserManager.formatted($0, path: path)
     }
   }
@@ -46,7 +40,7 @@ public extension HybridAudioBrowser {
       switch result {
       case let .play(intent):
         player.execute(intent)
-      case .intercepted:
+      case .intercepted, .superseded:
         break
       case let .browse(path):
         navigate(path, clearError: true)
@@ -88,14 +82,13 @@ public extension HybridAudioBrowser {
       return browserManager.path == path
     }
     externalContentChangedEmitter.emit(path)
-    if isCurrentPath { Task { @MainActor in await loadPath(path) } }
+    if isCurrentPath { Task { @MainActor in await loadPath(path, bypassCache: true) } }
   }
 
   func invalidateAllContent() throws {
     onMainActor {
-      browserManager.invalidateAll { error, path in
-        await self.reportNavigationError(error, path: path)
-      }
+      browserManager.invalidateAll()
+      Task { @MainActor in await loadPath(browserManager.path, bypassCache: true) }
     }
     externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
   }

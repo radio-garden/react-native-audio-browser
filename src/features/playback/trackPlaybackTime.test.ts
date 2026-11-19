@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const nativeMock = {
   onPlaybackInterval: undefined as undefined | (() => void),
@@ -17,6 +17,10 @@ import { trackPlaybackTime } from './trackPlaybackTime'
 
 beforeEach(() => {
   nativeMock.setPlaybackIntervalEnabled.mockClear()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 /** Ticks through the slot `install()` assigns, so this covers that wiring too. */
@@ -72,5 +76,24 @@ describe('trackPlaybackTime', () => {
     expect(slow).toEqual([2])
     cancelFast()
     cancelSlow()
+  })
+
+  it('keeps counting for the subscribers after one whose callback throws', () => {
+    const rethrown: (() => void)[] = []
+    vi.stubGlobal('queueMicrotask', (task: () => void) => rethrown.push(task))
+    const error = new Error('callback failed')
+    const cancelThrowing = trackPlaybackTime(() => {
+      throw error
+    }, 1)
+    const totals: number[] = []
+    const cancelLater = trackPlaybackTime((e) => totals.push(e.total), 1)
+
+    tick(2)
+
+    expect(totals).toEqual([1, 2])
+    expect(rethrown).toHaveLength(2)
+    expect(rethrown[0]).toThrow(error)
+    cancelThrowing()
+    cancelLater()
   })
 })

@@ -83,12 +83,6 @@ final class FavoriteIntentHandler: NSObject, INAddMediaIntentHandling, INUpdateM
 
   @MainActor
   private static func favoriteCurrentTrack(_ favorited: Bool) -> Bool {
-    guard let browser = HybridAudioBrowser.shared else { return false }
-    do {
-      return try browser.favoriteActiveTrack(favorited)
-    } catch {
-      logger.error("favoriteCurrentTrack(\(favorited)) failed: \(error.localizedDescription)")
-      return false
-    }
+    HybridAudioBrowser.shared?.favoriteActiveTrack(favorited) ?? false
   }
 }

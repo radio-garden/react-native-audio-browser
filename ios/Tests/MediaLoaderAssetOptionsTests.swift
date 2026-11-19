@@ -28,6 +28,13 @@ struct BuildAssetOptionsTests {
     #expect(headerFields(options)?["User-Agent"] == "Explicit")
   }
 
+  @Test func explicitUserAgentHeaderWinsInAnyCase() {
+    let options = MediaLoader.buildAssetOptions(
+      headers: ["user-agent": "Explicit"], userAgent: "TestAgent/1.0",
+    )
+    #expect(headerFields(options) == ["user-agent": "Explicit"])
+  }
+
   @Test func headersOnly_nilUserAgent_keepsHeaders() {
     let options = MediaLoader.buildAssetOptions(headers: ["X-Test": "1"], userAgent: nil)
     #expect(headerFields(options)?["X-Test"] == "1")

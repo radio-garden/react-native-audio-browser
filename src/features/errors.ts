@@ -133,11 +133,15 @@ export interface NavigationErrorEvent {
 // MARK: - Getters
 
 /**
- * Gets the current playback error, if any.
- * @returns The current error or undefined if there is no error
+ * Gets the current terminal playback error, if any. An error the player is
+ * still retrying (`retrying: true`) is on `getPlayback().error` instead.
+ * @returns The error of the `error` state, or undefined outside it
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  return nativeBrowser.getPlaybackError()
+  // Native also holds the retrying error here, which no `onPlaybackError`
+  // announces or clears.
+  const error = nativeBrowser.getPlaybackError()
+  return error?.retrying ? undefined : error
 }
 
 // MARK: - Event Callbacks
@@ -155,8 +159,9 @@ export const onPlaybackError =
 // MARK: - Hooks
 
 /**
- * Hook that returns the current playback error and updates when it changes.
- * @returns The current playback error or undefined
+ * Hook that returns the current terminal playback error and updates when it
+ * changes. An error the player is still retrying is on `usePlayback().error`.
+ * @returns The current terminal playback error or undefined
  */
 export function usePlaybackError(): PlaybackError | undefined {
   return useNativeUpdatedValue(getPlaybackError, onPlaybackError, 'error')
@@ -221,8 +226,8 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
  * in `BrowserConfiguration`, or falls back to built-in English titles with the
  * error's own message. An HTTP error's title is its status text,
  * system-localized on iOS; on Android an English name for common codes. It is
- * `Server Error` when there is no status code, for codes Android does not
- * name, and always on web.
+ * `Server Error` when there is no status code, for a 2xx (a response that
+ * did not parse), for codes Android does not name, and always on web.
  *
  * CarPlay and Android Auto format their own browse errors with the same
  * `formatNavigationError` callback, so the copy matches across your app and

@@ -18,8 +18,8 @@ final class PageResolver {
   }
 
   /// The page at `path`, uncached and without favorites hydrated. A path no route matches is
-  /// fetched through the request and browse layers. The result carries `sections`, never
-  /// `children` (ADR 0010).
+  /// fetched through the request and browse layers, and throws `contentNotFound` when they set
+  /// no base URL. The result carries `sections`, never `children` (ADR 0010).
   func resolve(_ path: String) async throws -> ResolvedTrack {
     let routeEntry = config.routes.flatMap { SimpleRouter.browseRoute(for: path, in: $0) }
 

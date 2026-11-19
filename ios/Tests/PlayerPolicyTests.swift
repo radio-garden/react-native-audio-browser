@@ -280,6 +280,17 @@ struct PlayerEngineEventTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  /// An on-demand pause keeps its item, whose first audio can be reported after the pause.
+  @Test func audioReportedAfterAPauseKeepsItPaused() throws {
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(player.state == .paused)
+
+    engine.emit(.audioDidStart)
+    #expect(player.state == .paused)
+  }
+
   @Test func aPauseWhileLoadingReachesTheEngine_aPlayDoesNot() throws {
     let (player, engine, _) = try makeLoading()
     player.setPlayWhenReady(true)
@@ -1299,6 +1310,33 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == 120)
   }
 
+  @Test func aSeekWhilePausedSavesWhereItLands() throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 120
+    player.pause()
+    engine.seekResult = nil
+    player.seek(to: 30)
+    // A seek inside the buffer lands without any engine event.
+    engine.currentTime = 30
+    engine.completeSeeks(true)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 30000)
+  }
+
+  @Test func aSeekInAnErrorSavesItsTarget() throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 120
+    engine.resumePosition = 120
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    #expect(player.state == .error)
+
+    player.seek(to: 30)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 30000)
+  }
+
   @Test func aFailedSkipKeepsTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
@@ -1739,5 +1777,70 @@ struct PlayerLivePauseTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
     #expect(player.state == .loading)
     #expect(callbacks.errorEvents.isEmpty)
+  }
+}
+
+/// A stopped or ended track plays again only through a reload: an AVPlayer event that lands after
+/// the stop or the end must not move it out of that state, or the next play resumes the item left
+/// behind.
+@Suite("A late AVPlayer event does not cost the next play its reload")
+@MainActor
+struct LateEngineEventTests {
+  enum LateAfterStop: String, CaseIterable, Sendable {
+    case liveLatePlayingThenPaused = "live, a late playing then paused status"
+    case liveLateFirstAudio = "live, a late first audio"
+    case onDemandLateWaitingAfterTheRewind = "on-demand, a late waiting status after the rewind"
+    case onDemandLatePlaying = "on-demand, a late playing status"
+
+    var live: Bool {
+      switch self {
+      case .liveLatePlayingThenPaused, .liveLateFirstAudio: true
+      case .onDemandLateWaitingAfterTheRewind, .onDemandLatePlaying: false
+      }
+    }
+
+    var events: [EngineEvent] {
+      switch self {
+      case .liveLatePlayingThenPaused:
+        [.timeControlStatus(.playing, waitingForNoItem: false), .timeControlStatus(.paused, waitingForNoItem: false)]
+      case .liveLateFirstAudio: [.audioDidStart]
+      case .onDemandLateWaitingAfterTheRewind: [.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false)]
+      case .onDemandLatePlaying: [.timeControlStatus(.playing, waitingForNoItem: false)]
+      }
+    }
+  }
+
+  @Test(arguments: LateAfterStop.allCases)
+  func aStoppedTrackReloadsOnPlay(_ late: LateAfterStop) throws {
+    let (player, engine, _) = try makePlaying(live: late.live)
+    player.stop()
+    for event in late.events {
+      engine.emit(event)
+    }
+    #expect(player.state == .stopped)
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func anEndedTrackReloadsOnPlayAfterALateWaitingStatus() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 300
+    engine.duration = 300
+    engine.emit(.playedToEnd)
+    engine.emit(.timeControlStatus(.waitingToPlayAtSpecifiedRate, waitingForNoItem: false))
+    #expect(player.state == .ended)
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
+  }
+
+  @Test func aSecondStopThenPlayReloads() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.stop()
+    player.stop()
+    engine.resolveAndLoadCalls.removeAll()
+    player.play()
+    #expect(engine.resolveAndLoadCalls.count == 1)
   }
 }

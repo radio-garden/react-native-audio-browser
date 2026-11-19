@@ -138,8 +138,8 @@ class QueueManager {
 
   // MARK: - Navigation (returns QueueNavigationResult)
 
-  // Shared by `next()` and `canNext` so the button and the navigation agree. Shuffle wraps
-  // whatever the repeat mode, as Media3 does; sequential order wraps only on repeat-queue.
+  // Shared by `next()` and `canNext` so the button and the navigation agree. Wraps only on
+  // repeat-queue, shuffled or not, as Media3 does.
   private var nextIndex: Int? {
     guard currentTrack != nil else { return nil }
     return nextIndex(after: currentIndex)
@@ -148,7 +148,8 @@ class QueueManager {
   private func nextIndex(after index: Int) -> Int? {
     guard tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
-      shuffleOrder.getNextIndex(after: index) ?? shuffleOrder.firstIndex
+      shuffleOrder.getNextIndex(after: index)
+        ?? (repeatMode == .queue ? shuffleOrder.firstIndex : nil)
     } else if index + 1 < tracks.count {
       index + 1
     } else {
@@ -174,7 +175,8 @@ class QueueManager {
   private var previousIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
-      shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
+      shuffleOrder.getPreviousIndex(before: currentIndex)
+        ?? (repeatMode == .queue ? shuffleOrder.lastIndex : nil)
     } else if currentIndex - 1 >= 0 {
       currentIndex - 1
     } else {
@@ -320,6 +322,21 @@ class QueueManager {
   func replace(_ index: Int, _ track: Track) throws -> QueueChange {
     try throwIfIndexInvalid(index: index)
     tracks[index] = track
+    return .tracksOnly
+  }
+
+  /// Replaces, in place, each track `transform` returns a track for.
+  @discardableResult
+  func replaceEach(_ transform: (Track) -> Track?) -> QueueChange {
+    var updated = tracks
+    var replaced = false
+    for (index, track) in tracks.enumerated() {
+      guard let replacement = transform(track) else { continue }
+      updated[index] = replacement
+      replaced = true
+    }
+    guard replaced else { return .none }
+    tracks = updated
     return .tracksOnly
   }
 

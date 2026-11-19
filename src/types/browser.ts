@@ -1119,8 +1119,9 @@ export type FormattedNavigationError = {
    * - `'network-error'`: "Network Error" (English)
    * - `'http-error'`: the status text, system-localized on iOS (e.g. "Not
    *   Found", "Service Unavailable"); on Android an English name for common
-   *   codes. "Server Error" when there is no status code, for codes Android
-   *   does not name, and always on web
+   *   codes. "Server Error" when there is no status code, for a 2xx (a
+   *   response that did not parse), for codes Android does not name, and
+   *   always on web
    * - `'callback-error'`: "Error" (English)
    * - `'empty-content'`: "Nothing here" (English)
    * - `'timeout'`: "Couldn't load" (English)

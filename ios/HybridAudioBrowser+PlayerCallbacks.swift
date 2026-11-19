@@ -13,8 +13,7 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    // The queue track's `favorited` is not kept in sync; hydrate it so useActiveTrack matches
-    // getActiveTrack().
+    // A queued track that carries no `favorited` is hydrated here, as getActiveTrack() does.
     let hydrated = PlaybackActiveTrackChangedEvent(
       lastIndex: event.lastIndex,
       lastTrack: event.lastTrack,

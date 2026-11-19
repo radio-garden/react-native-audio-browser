@@ -168,6 +168,21 @@ class BrowserUrlResolutionTest {
   }
 
   @Test
+  fun `resolveArtworkUrl adds image query params to an artwork url that has a query`() = runTest {
+    bm.config =
+      BrowserConfig(
+        artwork = artworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h"))
+      )
+    val source =
+      bm.resolveArtworkUrl(
+        track(artwork = "https://img.example.com/a.jpg?v=2"),
+        perRouteConfig = null,
+        imageContext = ImageContext(256.0, 256.0),
+      )
+    assertEquals("https://img.example.com/a.jpg?v=2&w=256&h=256", source?.uri)
+  }
+
+  @Test
   fun `displayArtworkSource re-resolves a registered uri with the display size`() = runTest {
     bm.config =
       BrowserConfig(
