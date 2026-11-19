@@ -79,7 +79,7 @@ final class HttpClient: @unchecked Sendable {
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
     // A `User-Agent` header wins over `userAgent`, as in the media and artwork paths.
-    if httpRequest.headers?["User-Agent"] == nil {
+    if urlRequest.value(forHTTPHeaderField: "User-Agent") == nil {
       urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
     }
 
