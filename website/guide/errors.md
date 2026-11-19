@@ -251,6 +251,8 @@ if (error?.retrying) {
 _both_ edges of the `'error'` state — entering it (with the error) and leaving
 it (with `error: undefined`; the hook returns `undefined` again). Advisory
 errors never pass through them.
+`getPlaybackError()` is the same snapshot: `undefined` while
+the error is still advisory.
 
 The same advisory error also reaches the
 [Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous), so
@@ -348,7 +350,7 @@ message to render.
 
 | API                                                               | Purpose                                                                                                                                             |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `usePlaybackError()` / `getPlaybackError()`                       | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`.                                                  |
+| `usePlaybackError()` / `getPlaybackError()`                       | The current terminal playback error (`{ kind, code, message, statusCode? }`) — branch on `kind`.                                                    |
 | `onPlaybackError`                                                 | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
 | `retry()`                                                         | Re-attempt the current item; meant for the `'error'` state (on iOS it reloads from any state).                                                      |
 | `setupPlayer({ retry })`                                          | Automatic retry with two [duration budgets](#two-duration-budgets): first-connect and recovery. Off by default.                                     |
