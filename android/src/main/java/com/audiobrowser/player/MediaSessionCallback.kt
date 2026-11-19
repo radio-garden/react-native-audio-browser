@@ -13,6 +13,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
@@ -24,6 +25,7 @@ import com.audiobrowser.navigationErrorFor
 import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
+import com.audiobrowser.util.SearchParamsFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.isAutomotive
 import com.google.common.collect.ImmutableList
@@ -860,8 +862,14 @@ class MediaSessionCallback(private val player: Player) :
         }
       }
 
+      val voiceSearch =
+        mediaItems.singleOrNull()?.let { SearchParamsFactory.fromPlayFromSearch(it) }
       val result =
-        browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+        if (voiceSearch != null) {
+          resolveVoiceSearch(audioBrowser, voiceSearch, startPositionMs)
+        } else {
+          browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+        }
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
       // setQueue reads an unset index as "keep the current one". Media3 still gets it unset on the
@@ -886,6 +894,37 @@ class MediaSessionCallback(private val player: Player) :
         result
       }
     }
+  }
+
+  /**
+   * The playable results of [params], from the first. Gated like browsing, or voice search would
+   * be a way around the gate.
+   *
+   * @throws IllegalStateException when gated (after onGate) or when nothing playable is found:
+   *   failing the future leaves current playback untouched
+   */
+  private suspend fun resolveVoiceSearch(
+    audioBrowser: AudioBrowser,
+    params: SearchParams,
+    startPositionMs: Long,
+  ): MediaSession.MediaItemsWithStartPosition {
+    val gateOutcome =
+      audioBrowser.gateDecision(
+        NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
+      )
+    if (gateOutcome.gated) {
+      Timber.i("Voice search refused: request is gated")
+      audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+      throw IllegalStateException("Refusing voice search: request is gated")
+    }
+    val tracks =
+      audioBrowser.browserManager.searchPlayable(params)
+        ?: throw IllegalStateException("No playable result for voice search: ${params.query}")
+    return MediaSession.MediaItemsWithStartPosition(
+      tracks.map { TrackFactory.toMedia3(it) },
+      0,
+      startPositionMs,
+    )
   }
 
   /**
