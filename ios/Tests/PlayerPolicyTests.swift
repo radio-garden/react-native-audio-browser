@@ -1299,6 +1299,33 @@ struct PlayerReviewRegressionTests {
     #expect(player.deferredSeek.target == 120)
   }
 
+  @Test func aSeekWhilePausedSavesWhereItLands() throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 120
+    player.pause()
+    engine.seekResult = nil
+    player.seek(to: 30)
+    // A seek inside the buffer lands without any engine event.
+    engine.currentTime = 30
+    engine.completeSeeks(true)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 30000)
+  }
+
+  @Test func aSeekInAnErrorSavesItsTarget() throws {
+    UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 120
+    engine.resumePosition = 120
+    engine.emit(.failed(nil, httpStatusCode: 404))
+    #expect(player.state == .error)
+
+    player.seek(to: 30)
+    let saved = PlaybackPersistence(defaults: UserDefaults(suiteName: "PlayerTests")!) { nil }.load()
+    #expect(saved?.positionMs == 30000)
+  }
+
   @Test func aFailedSkipKeepsTheNewTrackAtItsStart() throws {
     UserDefaults(suiteName: "PlayerTests")!.removePersistentDomain(forName: "PlayerTests")
     let (player, engine, _) = try makePlaying()
