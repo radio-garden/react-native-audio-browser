@@ -51,6 +51,23 @@ describe('a track entering the queue', () => {
     expect(h.browser.getActiveTrack()).toMatchObject(hydrated)
   })
 
+  it('is hydrated and gets its artwork source through load() on a queue with no current entry', () => {
+    h.browser.setQueue([trackB])
+
+    h.browser.load(declared)
+
+    expect(h.browser.getActiveTrack()).toMatchObject(hydrated)
+  })
+
+  it('emits no queue change when a skip loads a queued track', () => {
+    h.browser.setQueue([declared, trackB], 0)
+    h.clear()
+
+    h.browser.skipToNext()
+
+    expect(h.recorded).not.toContain('queue')
+  })
+
   it('takes the same form through add() and load() as through setQueue()', () => {
     h.browser.setQueue([declared])
     const [viaSetQueue] = h.browser.getQueue()

@@ -664,33 +664,32 @@ export class NativeAudioBrowser
    * the track as its only entry, a populated one has its current entry
    * replaced.
    *
-   * @returns the entry now in the queue, which is `track` itself when it
-   * already was the current entry.
+   * @returns the track to load: `track` itself when it already is the current
+   * entry, otherwise its queue form.
    */
   private syncQueueTo(track: Track): Track {
+    const { currentIndex } = this.queue
+    if (
+      currentIndex !== undefined &&
+      this.queue.getTrack(currentIndex) === track
+    ) {
+      return track
+    }
+    const entry = this.toQueueEntry(track)
     if (this.queue.length === 0) {
-      const entry = this.toQueueEntry(track)
       this.queue.setTracks([entry])
       this.queue.currentIndex = 0
       this.emitQueueChanged()
-      return entry
-    }
-    if (
-      this.queue.currentIndex !== undefined &&
-      this.queue.getTrack(this.queue.currentIndex) !== track
-    ) {
-      const entry = this.toQueueEntry(track)
-      this.queue.replaceTrack(this.queue.currentIndex, entry)
+    } else if (currentIndex !== undefined) {
+      this.queue.replaceTrack(currentIndex, entry)
       this.emitQueueChanged()
-      return entry
     }
-    return track
+    return entry
   }
 
   /**
    * The form a track takes in the queue: `favorited` hydrated from the
-   * declared favorites and `artworkSource` resolved. Returns `track` itself
-   * when there is nothing to add.
+   * declared favorites and `artworkSource` resolved.
    */
   private toQueueEntry(track: Track): Track {
     const { request, artwork } = this.browserManager.configuration
