@@ -123,6 +123,45 @@ struct RemoteCommandControllerTests {
     #expect(!center.skipForwardCommand.isEnabled)
   }
 
+  @Test func togglePlayPauseIsEnabledAndDisabledWithTheOthers() {
+    let (controller, _) = makeController()
+    let center = MPRemoteCommandCenter.shared()
+    #expect(!center.togglePlayPauseCommand.isEnabled)
+
+    controller.enable(commands: [.play, .pause, .togglePlayPause])
+    #expect(center.togglePlayPauseCommand.isEnabled)
+
+    controller.enable(commands: [.stop])
+    #expect(!center.togglePlayPauseCommand.isEnabled)
+  }
+
+  @Test func togglePlayPausePausesWhilePlayingAndPlaysOtherwise() {
+    let (controller, _) = makeController()
+    var playing = false
+    controller.isPlaying = { playing }
+    controller.enable(commands: [.play, .pause, .togglePlayPause])
+
+    #expect(controller.togglePlayPauseTarget == .play)
+
+    playing = true
+    #expect(controller.togglePlayPauseTarget == .pause)
+  }
+
+  @Test func togglePlayPauseRunsNothingWhenItsTargetIsNotEnabled() {
+    let (controller, _) = makeController()
+    var playing = true
+    controller.isPlaying = { playing }
+
+    controller.enable(commands: [.play, .togglePlayPause])
+    #expect(controller.togglePlayPauseTarget == nil)
+
+    playing = false
+    #expect(controller.togglePlayPauseTarget == .play)
+
+    controller.enable(commands: [.pause, .togglePlayPause])
+    #expect(controller.togglePlayPauseTarget == nil)
+  }
+
   @Test func skipAvailabilityAppliesOnRefreshAndEnable() {
     let (controller, _) = makeController()
     let center = MPRemoteCommandCenter.shared()
