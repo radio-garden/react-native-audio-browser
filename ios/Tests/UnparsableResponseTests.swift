@@ -80,4 +80,12 @@ struct UnparsableResponseTests {
     #expect(error.statusCodeSuccess == true)
     #expect(error.message.contains("Type mismatch"))
   }
+
+  @Test
+  func itsDefaultTitleIsServerError() async throws {
+    let result = await navigationError(status: 200, body: "<html></html>", as: JsonResolvedTrack.self)
+    let error = try #require(result)
+
+    #expect(error.defaultFormatted().title == "Server Error")
+  }
 }
