@@ -288,14 +288,15 @@ export class BrowserManager {
         }
       }
 
-      // Hydrate favorites on all children
-      if (content) {
-        content = this.favoriteManager.hydrateChildren(content)
-      }
-
       // Transform artwork URLs (populates artworkSource)
       if (content) {
         content = await this.transformArtworkForContent(content)
+      }
+
+      // After the last await, so a setFavorites made while the page resolved
+      // reaches it.
+      if (content) {
+        content = this.favoriteManager.hydrateChildren(content)
       }
 
       // Final check before applying result

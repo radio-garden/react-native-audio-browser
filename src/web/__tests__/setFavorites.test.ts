@@ -180,3 +180,34 @@ describe('setFavorites on the content', () => {
     expect(contents).toEqual([])
   })
 })
+
+describe('setFavorites while a page resolves', () => {
+  it('reaches the page once it lands', async () => {
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    h.browser.configuration = {
+      path: '/p',
+      artwork: {
+        resolve: async () => {
+          await gate
+          return {}
+        }
+      },
+      routes: [
+        {
+          path: '/p',
+          browseStatic: { path: '/p', title: 'P', children: [trackA] }
+        }
+      ]
+    }
+    await h.flush()
+
+    h.browser.setFavorites(['a'])
+    release()
+    await h.flush()
+
+    expect(h.browser.getContent()?.sections?.[0]?.children[0]?.favorited).toBe(
+      true
+    )
+  })
+})
