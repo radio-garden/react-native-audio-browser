@@ -40,6 +40,7 @@ let package = Package(
         "Player/PlayerCallbacks.swift",
         "Player/Player.swift",
         "Player/PendingPlayerState.swift",
+        "Player/PlayerCommand.swift",
         "Player/SleepTimerManager.swift",
         "Player/VolumeFader.swift",
         "Player/PlaybackTimer.swift",
