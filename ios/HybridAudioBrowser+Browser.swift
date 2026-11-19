@@ -101,9 +101,7 @@ public extension HybridAudioBrowser {
   }
 
   func setFavorites(favorites: [String]) throws {
-    onMainActor {
-      browserManager.setFavorites(favorites) { restamp in player?.replaceEach(restamp) }
-    }
+    onMainActor { browserManager.setFavorites(favorites) }
   }
 
   // MARK: - Gate

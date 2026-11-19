@@ -36,32 +36,16 @@ struct FavoriteSet {
   }
 
   func hydrate(_ page: ResolvedTrack) -> ResolvedTrack {
-    guard let sections = page.sections else { return page }
-    return page.copying(sections: sections.map { section in
-      section.copying(children: section.children.map(hydrate))
-    })
+    page.replacingEachTrack(hydrate) ?? page
   }
 
   /// `track` with `favorited` as the set has it, for a track whose identity is in `changed`
   /// (what `replace(with:)` returned, or the identity just `set`). Unlike `hydrate`, this
-  /// overwrites the value the track carries. Nil when the track stands as it is.
+  /// overwrites the value the track carries, and ignores `enabled`: a change made while
+  /// favoriting is off must still reach the copies stamped before. Nil when the track stands.
   func restamp(_ track: Track, changed: Set<String>) -> Track? {
-    guard enabled, let identity = track.identity, changed.contains(identity) else { return nil }
+    guard let identity = track.identity, changed.contains(identity) else { return nil }
     let favorited = identities.contains(identity)
     return track.favorited == favorited ? nil : track.copying(favorited: favorited)
-  }
-
-  /// `page` with its tracks restamped; nil when none of them changes.
-  func restamp(_ page: ResolvedTrack, changed: Set<String>) -> ResolvedTrack? {
-    guard let sections = page.sections else { return nil }
-    var restamped = false
-    let updated = sections.map { section in
-      section.copying(children: section.children.map { track in
-        guard let stamped = restamp(track, changed: changed) else { return track }
-        restamped = true
-        return stamped
-      })
-    }
-    return restamped ? page.copying(sections: updated) : nil
   }
 }

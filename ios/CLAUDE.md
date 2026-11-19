@@ -124,6 +124,7 @@ ios/
 │   │                                 #   contextual-path stamping of a page
 │   ├── BrowserError.swift            # Browser errors (content not found, invalid config, callback)
 │   ├── FavoriteSet.swift             # Favorited identities + enabled; hydrates `favorited` (tested)
+│   ├── Favorites.swift               # The set, restamping the content then the queue on a change (tested)
 │   ├── RequestLayer.swift            # Request-Config Layer rules: merge, apply, buildUrl, and the
 │   │                                 #   artwork request order (tested)
 │   ├── SearchDrillIn.swift           # Browsable-first drill-in for "play X" voice intents

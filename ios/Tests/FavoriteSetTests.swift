@@ -92,10 +92,10 @@ struct FavoriteSetTests {
     #expect(set.restamp(Track(src: "a", favorited: true), changed: changed) == nil)
   }
 
-  @Test func restampLeavesATrackAloneWhenDisabled() {
-    var set = favorites([], enabled: false)
-    let changed = set.replace(with: ["a"])
-    #expect(set.restamp(Track(src: "a", favorited: false), changed: changed) == nil)
+  @Test func restampOverwritesAStampedTrackWhenDisabled() {
+    var set = favorites(["a"], enabled: false)
+    let changed = set.replace(with: [])
+    #expect(set.restamp(Track(src: "a", favorited: true), changed: changed)?.favorited == false)
   }
 
   @Test func restampLeavesATrackWithoutIdentityAlone() {
@@ -112,7 +112,7 @@ struct FavoriteSetTests {
       title: "P",
     ))
     let changed = set.replace(with: ["a", "c"])
-    let restamped = set.restamp(page, changed: changed)
+    let restamped = page.replacingEachTrack { set.restamp($0, changed: changed) }
     #expect(restamped?.sections?.map { $0.children.map(\.favorited) } == [[true], [false, true]])
     #expect(restamped?.path == "/p")
   }
@@ -121,6 +121,6 @@ struct FavoriteSetTests {
     var set = favorites(["b"])
     let page = set.hydrate(ResolvedTrack(path: "/p", sections: [Section(children: [Track(src: "b")])], title: "P"))
     let changed = set.replace(with: ["b", "elsewhere"])
-    #expect(set.restamp(page, changed: changed) == nil)
+    #expect(page.replacingEachTrack { set.restamp($0, changed: changed) } == nil)
   }
 }

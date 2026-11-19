@@ -28,7 +28,8 @@ final class BrowserManager {
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
-  private var favorites = FavoriteSet()
+  /// The favorite set; set its `queue` to the player.
+  private(set) lazy var favorites = Favorites(content: self)
 
   private var currentNavigationId: Int = 0
 
@@ -78,8 +79,7 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
-  /// Emitted on any change to the favorites, however it came about.
-  let favoritesChanged = Emitter<Void>()
+  var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
   /// `Promise<void>` arrives as `Promise<Promise<Void>>`); a failure is logged, not thrown. False
@@ -96,15 +96,8 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  /// Replaces the favorites and restamps the page on screen. `restampQueue` gets the restamp
-  /// to apply to each queued track (nil: the track stands), before `favoritesChanged`, whose
-  /// listeners read the queue.
-  func setFavorites(_ favorites: [String], restampQueue: ((Track) -> Track?) -> Void) {
-    let changed = self.favorites.replace(with: favorites)
-    guard !changed.isEmpty else { return }
-    restampContent(changed: changed)
-    restampQueue { self.favorites.restamp($0, changed: changed) }
-    favoritesChanged.emit(())
+  func setFavorites(_ identities: [String]) {
+    favorites.replace(with: identities)
   }
 
   func setFavoriteEnabled(_ enabled: Bool) {
@@ -113,12 +106,6 @@ final class BrowserManager {
 
   func setFavorited(identity: String, favorited: Bool) {
     favorites.set(identity, favorited: favorited)
-    restampContent(changed: [identity])
-  }
-
-  private func restampContent(changed: Set<String>) {
-    guard let content, let restamped = favorites.restamp(content, changed: changed) else { return }
-    self.content = restamped
   }
 
   func hydrateFavorite(_ track: Track) -> Track {
@@ -310,3 +297,12 @@ final class BrowserManager {
 // MARK: - TrackSelectionBrowser
 
 extension BrowserManager: TrackSelectionBrowser {}
+
+// MARK: - FavoriteStamped
+
+extension BrowserManager: FavoriteStamped {
+  func restampFavorites(_ restamp: (Track) -> Track?) {
+    guard let restamped = content?.replacingEachTrack(restamp) else { return }
+    content = restamped
+  }
+}

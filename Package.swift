@@ -12,6 +12,7 @@ let package = Package(
         "Browser/BrowserPathHelper.swift",
         "Browser/BrowserError.swift",
         "Browser/FavoriteSet.swift",
+        "Browser/Favorites.swift",
         "Browser/SectionScope.swift",
         "Browser/SearchDrillIn.swift",
         "Browser/TabBarEntries.swift",
