@@ -474,14 +474,23 @@ export class NativeAudioBrowser
    * Expands a contextual URL into a full queue and starts playback.
    *
    * @param track The track with contextual URL
-   * @returns true if queue was expanded and playback started, false otherwise
+   * @param selection The selection's number, from {@link trackSelection}
+   * @returns false if expansion yielded nothing and the track is still to be
+   *   loaded on its own; true if the queue played or a later selection took over
    */
-  private async expandQueueAndPlay(track: Track): Promise<boolean> {
+  private async expandQueueAndPlay(
+    track: Track,
+    selection: number
+  ): Promise<boolean> {
     const result = await this.browserManager.resolveMediaItemsForPlayback(
       [track],
       0,
       0
     )
+
+    if (selection !== this.trackSelection) {
+      return true
+    }
 
     if (result.tracks.length === 0) {
       return false
@@ -497,6 +506,12 @@ export class NativeAudioBrowser
   }
 
   /**
+   * Counts the selections of a track to play, so a queue expansion that
+   * resolves after a later selection can tell it is no longer the latest.
+   */
+  private trackSelection = 0
+
+  /**
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
@@ -509,7 +524,8 @@ export class NativeAudioBrowser
 
       const nav = classifyTrackNavigation(track)
       switch (nav.kind) {
-        case 'contextual':
+        case 'contextual': {
+          const selection = ++this.trackSelection
           // Optimization: skip to the track if it's already in the queue.
           if (
             nav.trackId &&
@@ -523,9 +539,10 @@ export class NativeAudioBrowser
           }
           // Otherwise expand the queue from the contextual URL, falling back to
           // loading the single track if expansion yields nothing.
-          if (await this.expandQueueAndPlay(track)) return
+          if (await this.expandQueueAndPlay(track, selection)) return
           await this.playSingleTrack(track)
           return
+        }
 
         case 'browse':
           this.browserManager.navigateTrack(track).catch((error: unknown) => {
@@ -534,6 +551,7 @@ export class NativeAudioBrowser
           return
 
         case 'playable':
+          this.trackSelection++
           await this.playSingleTrack(track)
           return
 
