@@ -13,11 +13,12 @@ struct QueueIndexTests {
     Double(Int.max),
   ])
   func numberNoIntHolds_throwsInvalidIndex(number: Double) {
-    #expect {
+    let error = #expect(throws: TrackPlayerError.QueueError.self) {
       _ = try Int(queueIndex: number)
-    } throws: { error in
-      guard case .invalidIndex(nil, _)? = error as? TrackPlayerError.QueueError else { return false }
-      return true
+    }
+    guard case .invalidIndex(nil, _)? = error else {
+      Issue.record("expected invalidIndex without an index, got \(String(describing: error))")
+      return
     }
   }
 
@@ -34,10 +35,9 @@ struct QueueIndexTests {
   }
 
   @Test func unrepresentableNumber_isNamedInTheMessage() {
-    #expect {
+    let error = #expect(throws: TrackPlayerError.QueueError.self) {
       _ = try Int(queueIndex: .nan)
-    } throws: { error in
-      error.localizedDescription == "Invalid track index: index must be a finite number within the range of Int, got nan"
     }
+    #expect(error?.localizedDescription == "Invalid track index: index must be a finite number within the range of Int, got nan")
   }
 }
