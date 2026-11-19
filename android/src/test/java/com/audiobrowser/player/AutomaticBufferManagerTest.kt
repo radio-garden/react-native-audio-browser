@@ -75,6 +75,23 @@ class AutomaticBufferManagerTest {
   }
 
   @Test
+  fun `an underrun keeps a threshold set above the automatic maximum`() {
+    val slowStart =
+      BufferConfig(bufferForPlaybackMs = 10_000, bufferForPlaybackAfterRebufferMs = 10_000)
+    val loadControl = DynamicLoadControl(slowStart)
+    val manager =
+      AutomaticBufferManager(loadControl, slowStart, clock = { nowMs }).also { it.attach(engine) }
+
+    manager.onPlaybackStateChanged(MediaPlayer.STATE_BUFFERING)
+    `when`(engine.totalBufferedDuration).thenReturn(10_000)
+    manager.onPlaybackStateChanged(MediaPlayer.STATE_READY)
+    nowMs += 20_000
+    manager.onPlaybackStateChanged(MediaPlayer.STATE_BUFFERING)
+
+    assertEquals(10_000, loadControl.getBufferConfig().bufferForPlaybackAfterRebufferMs)
+  }
+
+  @Test
   fun `a reconnect's first buffering is not a rebuffer`() {
     play()
     state(MediaPlayer.STATE_IDLE)
