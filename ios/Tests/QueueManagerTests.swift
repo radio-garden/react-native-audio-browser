@@ -69,6 +69,22 @@ struct UpNextIndicesTests {
     #expect(!upNext.contains(2))
   }
 
+  @Test func shuffle_fromTheMiddleOfTheOrder_stopsAtItsEndAsNextDoes() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d", "e"))
+    q.shuffleEnabled = true
+    for _ in 0 ..< 2 {
+      _ = q.next()
+    }
+    let upNext = q.upNextIndices
+    var walked: [Int] = []
+    while q.next() == .trackChanged {
+      walked.append(q.currentIndex)
+    }
+    #expect(upNext == walked)
+    #expect(upNext.count == 2)
+  }
+
   @Test func shuffle_fromTheMiddleOfTheOrder_wrapsAsNextDoes() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d", "e"))
