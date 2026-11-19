@@ -16,6 +16,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import okhttp3.mockwebserver.SocketPolicy
 import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -45,6 +46,9 @@ class MediaUrlReloadTest {
   /** Tokens that get a body no extractor reads. */
   private val unreadable = CopyOnWriteArrayList<Int>()
 
+  /** Tokens whose response the server cuts off halfway, expiring them as it does. */
+  private val dropped = CopyOnWriteArrayList<Int>()
+
   /** The token and status of each request, in order. */
   private val served = CopyOnWriteArrayList<Pair<Int, Int>>()
 
@@ -64,6 +68,12 @@ class MediaUrlReloadTest {
                 MockResponse()
                   .setHeader("Content-Type", "audio/wav")
                   .setBody(Buffer().write(silentWavBytes(Duration.ofSeconds(1))))
+                  .apply {
+                    if (token in dropped) {
+                      expired.set(token)
+                      setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+                    }
+                  }
             }
           served += token to response.status.split(' ')[1].toInt()
           return response
@@ -101,6 +111,33 @@ class MediaUrlReloadTest {
     assertEquals(listOf(1 to 200, 2 to 200), served)
   }
 
+  @Test
+  fun `an in-place retry after a dropped read never requests the url that expired`() {
+    dropped += 1
+    load(RetryPolicy.Infinite())
+    runUntil("the retry reopens the stream") { served.size == 2 || error != null }
+
+    assertNull(error)
+    assertEquals(listOf(1 to 200, 2 to 200), served)
+  }
+
+  @Test
+  fun `a return to a queue item never requests the url that expired`() {
+    val player =
+      load(RetryPolicy.Infinite(), "https://media.example/a.wav", "https://media.example/b.wav")
+    runUntil("the first track opens") { served.isNotEmpty() || error != null }
+    player.seekTo(1, 0)
+    runUntil("the second track opens") { served.size >= 2 || error != null }
+    expired.set(minted.get())
+
+    player.seekTo(0, 0)
+    runUntil("the first track opens again") { served.size >= 3 || error != null }
+
+    assertNull(error)
+    // The second track may load again afterwards, as the next item.
+    assertEquals(listOf(1 to 200, 2 to 200, 3 to 200), served.take(3))
+  }
+
   private fun assertReloadAfterStopResolvesAfresh(retryPolicy: RetryPolicy) {
     val player = load(retryPolicy)
     runUntil("the stream opens") { served.isNotEmpty() || error != null }
@@ -116,8 +153,11 @@ class MediaUrlReloadTest {
     assertEquals(listOf(1 to 200, 2 to 200), served)
   }
 
-  /** Prepares a player on the track, paused: nothing here needs its audio. */
-  private fun load(retryPolicy: RetryPolicy): ExoPlayer {
+  /** Prepares a player on a queue of tracks, paused: nothing here needs their audio. */
+  private fun load(
+    retryPolicy: RetryPolicy,
+    vararg srcs: String = arrayOf("https://media.example/stream.wav"),
+  ): ExoPlayer {
     val factory =
       MediaFactory(
         context,
@@ -134,7 +174,7 @@ class MediaUrlReloadTest {
         }
       }
     )
-    player.setMediaItem(TrackFactory.toMedia3(track(src = "https://media.example/stream.wav")))
+    player.setMediaItems(srcs.map { TrackFactory.toMedia3(track(src = it)) })
     player.prepare()
     return player
   }

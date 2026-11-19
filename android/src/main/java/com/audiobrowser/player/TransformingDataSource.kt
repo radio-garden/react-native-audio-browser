@@ -18,9 +18,9 @@ import timber.log.Timber
  * thread.
  *
  * The first open resolves the media URL and caches the result on the [Factory]. A later open of the
- * media URL (a seek, a playlist refresh) reuses it, unless the source was prepared again or the
- * last open failed: the URL or its token may have expired. Opens of other URLs (HLS segments, keys)
- * keep their own URL and reuse the cached headers and user agent.
+ * media URL (a seek, a playlist refresh) reuses it, unless the track reloaded or the last open or
+ * read of it failed: the URL or its token may have expired. Opens of other URLs (HLS segments,
+ * keys) keep their own URL and reuse the cached headers and user agent.
  */
 class TransformingDataSource(private val upstream: DataSource, private val factory: Factory) :
   DataSource {
@@ -45,6 +45,8 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   }
 
   private var resolvedUri: Uri? = null
+
+  private var openedMediaUrl = false
 
   override fun open(dataSpec: DataSpec): Long {
     val originalUrl = dataSpec.uri.toString()
@@ -79,11 +81,12 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       dataSpec.buildUpon().setUri(finalUrl.toUri()).setHttpRequestHeaders(mergedHeaders).build()
 
     resolvedUri = transformedSpec.uri
+    openedMediaUrl = originalUrl == factory.cachedOriginalUrl
     return try {
       upstream.open(transformedSpec)
     } catch (e: IOException) {
       // Only a media-URL failure refreshes the URL; a failed segment or key leaves it alone.
-      if (originalUrl == factory.cachedOriginalUrl) {
+      if (openedMediaUrl) {
         factory.resolveOnNextMediaOpen = true
       }
       throw e
@@ -100,7 +103,16 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   }
 
   override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-    return upstream.read(buffer, offset, length)
+    return try {
+      upstream.read(buffer, offset, length)
+    } catch (e: IOException) {
+      // An in-place retry reopens the media URL after a dropped read. A load cancelled for a seek,
+      // whose thread the loader interrupts, keeps it.
+      if (openedMediaUrl && !Thread.currentThread().isInterrupted) {
+        factory.resolveOnNextMediaOpen = true
+      }
+      throw e
+    }
   }
 
   override fun addTransferListener(transferListener: TransferListener) {
@@ -124,6 +136,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   override fun close() {
     upstream.close()
     resolvedUri = null
+    openedMediaUrl = false
   }
 
   /**
@@ -161,17 +174,11 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
 
     @Volatile internal var cachedOriginalUrl: String? = null
 
-    // Set by a failed media-URL open and by [mediaSourcePrepared]; the next media-URL open
-    // resolves again and clears it.
-    @Volatile internal var resolveOnNextMediaOpen: Boolean = false
-
     /**
-     * The engine prepared the track's media source: at first, or again after a stop or an error.
-     * Called on ExoPlayer's playback thread, before the source opens anything.
+     * Set by a failed open or read of the media URL and by [ResolvingOnReloadSource] on a reload;
+     * the next open of the media URL resolves it again and clears it.
      */
-    fun mediaSourcePrepared() {
-      resolveOnNextMediaOpen = true
-    }
+    @Volatile internal var resolveOnNextMediaOpen: Boolean = false
 
     override fun createDataSource(): DataSource {
       return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)

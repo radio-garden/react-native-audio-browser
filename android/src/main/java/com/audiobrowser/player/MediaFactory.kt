@@ -13,7 +13,6 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.WrappingMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
@@ -137,7 +136,7 @@ class MediaFactory(
         RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, cache, onLoadFailure)
       )
     val source =
-      ResolvingOnPrepareSource(
+      ResolvingOnReloadSource(
         factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem),
         transformingFactory,
       )
@@ -145,19 +144,5 @@ class MediaFactory(
     return if (retrying && sources != RetryLoadErrorHandlingPolicy.Sources.ADAPTIVE)
       ConnectionEndSource(source)
     else source
-  }
-
-  /**
-   * Has the media URL resolved afresh each time the engine prepares [source]: a stop or an error
-   * releases it, so every reconnect prepares it again.
-   */
-  private class ResolvingOnPrepareSource(
-    source: MediaSource,
-    private val urls: TransformingDataSource.Factory,
-  ) : WrappingMediaSource(source) {
-    override fun prepareSourceInternal() {
-      urls.mediaSourcePrepared()
-      super.prepareSourceInternal()
-    }
   }
 }
