@@ -22,7 +22,8 @@ export function getSystemVolume(): number {
 
 /**
  * Sets the volume of the player.
- * @param level - The volume as a number between 0 and 1.
+ * @param level - The volume as a number between 0 and 1. A level outside that
+ * range is clamped to it.
  */
 export function setVolume(level: number): void {
   nativeBrowser.setVolume(level)
