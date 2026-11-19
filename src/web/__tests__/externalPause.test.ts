@@ -95,6 +95,16 @@ describe('an element play the library did not ask for', () => {
     ])
   })
 
+  it('keeps a lowered intent after an error', async () => {
+    await playTrackA()
+    h.browser.pause()
+    h.raiseError()
+
+    h.resumedFromOutside()
+
+    expect(h.browser.getPlayWhenReady()).toBe(false)
+  })
+
   it('leaves a lowered intent alone when a pause() has overtaken it', async () => {
     await playTrackA()
     h.browser.pause()

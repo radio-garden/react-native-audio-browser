@@ -197,11 +197,12 @@ export class Player {
       // reports, mid-queue or at the true end.
       if (element.ended) return
       // A `play()` that overtook this event owns the intent.
-      this.onElementPaused(element.paused)
+      if (element.paused) this.followElement(false)
+      this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
     })
     element.addEventListener('play', () => {
       // A `pause()` that overtook this event owns the intent.
-      if (!element.paused) this.onElementUnpaused()
+      if (!element.paused) this.followElement(true)
     })
 
     player.addEventListener('loading', () => {
@@ -551,34 +552,18 @@ export class Player {
   }
 
   /**
-   * `pause()` lowers the intent before pausing the element, so an intent still
-   * raised here means something else paused it (the browser, page code) and
-   * the intent follows, as it does for an interruption on iOS.
+   * Sets the intent to what the element did, so a pause or resume that
+   * something else made (the browser, page code) is followed, as an
+   * interruption is on iOS. `play()` and `pause()` set the intent before they
+   * touch the element, so their own events change nothing.
    *
-   * It stands while a load is in flight and after an error: there the element
-   * pauses because it is being emptied.
+   * The intent stands, in both directions, while a load is in flight and after
+   * an error: there the element is being emptied, and nothing it does is a
+   * pause or resume of the track.
    */
-  private onElementPaused(stillPaused: boolean): void {
-    const hasAsset = this.current !== undefined
-    if (
-      stillPaused &&
-      hasAsset &&
-      !this._isStopped &&
-      !this._loadInProgress &&
-      this.state.state !== State.Error
-    ) {
-      this.playWhenReady = false
-    }
-    this.dispatch({ type: 'paused', hasAsset })
-  }
-
-  /**
-   * `play()` raises the intent before starting the element, so an intent still
-   * lowered here means the browser resumed by itself.
-   */
-  private onElementUnpaused(): void {
-    if (this._isStopped || this.current === undefined) return
-    this.playWhenReady = true
+  private followElement(playing: boolean): void {
+    if (this._loadInProgress || this.state.state === State.Error) return
+    this.playWhenReady = playing
   }
 
   /**
