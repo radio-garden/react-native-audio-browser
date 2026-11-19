@@ -108,8 +108,12 @@ final class RequestPipeline {
     logger.debug("  path: \(path)")
     logger.debug("  url: \(request.url)")
 
-    let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
-    let nitroResult = result.toNitro()
+    let result = if path == SimpleRouter.tabsRoutePath {
+      try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
+    } else {
+      try await httpClient.requestJson(request, as: JsonBrowsePage.self).page
+    }
+    let nitroResult = result.toNitro(requestedPath: path)
 
     logger.debug("Resolved: \(nitroResult.title)")
     if let sections = nitroResult.normalizedSections {

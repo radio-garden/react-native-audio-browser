@@ -189,10 +189,12 @@ struct JsonTrackRequest: Codable {
   }
 }
 
+/// A page as an endpoint answers it. `path` and `title` may be absent: a browse page needs its
+/// `title` (`JsonBrowsePage`), a tabs page does not.
 struct JsonResolvedTrack: Codable {
   var id: String? = nil
-  var path: String
-  var title: String
+  var path: String? = nil
+  var title: String? = nil
   var subtitle: String? = nil
   var artwork: JsonArtwork? = nil
   var artist: String? = nil
@@ -209,6 +211,20 @@ struct JsonResolvedTrack: Codable {
   var live: Bool? = nil
   var icyCharset: String? = nil
   var carPlaySiriListButton: String? = nil
+}
+
+/// A browse endpoint's page: a `JsonResolvedTrack` that must carry a `title`.
+struct JsonBrowsePage: Decodable {
+  let page: JsonResolvedTrack
+
+  private enum RequiredKeys: String, CodingKey {
+    case title
+  }
+
+  init(from decoder: Decoder) throws {
+    _ = try decoder.container(keyedBy: RequiredKeys.self).decode(String.self, forKey: .title)
+    page = try JsonResolvedTrack(from: decoder)
+  }
 }
 
 struct JsonTrack: Codable {
@@ -278,9 +294,11 @@ extension JsonSection {
 }
 
 extension JsonResolvedTrack {
-  func toNitro() -> ResolvedTrack {
+  /// The page, with `requestedPath` as its path when the body gave none and an empty title
+  /// when it gave none.
+  func toNitro(requestedPath: String) -> ResolvedTrack {
     ResolvedTrack(
-      path: path,
+      path: path ?? requestedPath,
       style: style?.toSectionStyle(),
       sections: sections?.map { $0.toNitro() },
       children: children?.map { $0.toNitro() },
@@ -289,7 +307,7 @@ extension JsonResolvedTrack {
       src: src,
       artwork: artwork?.toNitro(),
       artworkSource: nil, request: nil,
-      title: title,
+      title: title ?? "",
       subtitle: subtitle,
       artist: artist,
       albumPath: albumPath,
