@@ -8,11 +8,11 @@ struct SVGProcessor: ImageProcessor {
   // not in the key), so every render parameter must be here or different
   // rasterizations of one URL collide.
   var identifier: String {
-    "com.audiobrowser.svgprocessor(\(size.width)x\(size.height)@\(scale))"
+    "com.audiobrowser.svgprocessor(\(slot.width)x\(slot.height)@\(scale))"
   }
 
-  /// The slot in points; the SVG fills as much of it as its aspect ratio allows.
-  let size: CGSize
+  /// Points; the SVG fills as much of it as its aspect ratio allows.
+  let slot: CGSize
 
   let scale: CGFloat
 
@@ -32,6 +32,6 @@ struct SVGProcessor: ImageProcessor {
       return nil
     }
 
-    return svg.rasterize(size: svg.size.aspectFitted(in: size), scale: scale)
+    return svg.rasterize(size: svg.size.aspectFitted(in: slot), scale: scale)
   }
 }

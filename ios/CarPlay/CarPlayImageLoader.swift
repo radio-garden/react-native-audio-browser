@@ -112,11 +112,7 @@ final class CarPlayImageLoader {
   /// to the display scale of the car screen").
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    let scale = carTraitCollection.displayScale
-    if isSvg {
-      return await ArtworkImageFetcher.fetchImage(from: source, svgFitting: (size, scale))
-    }
-    return await ArtworkImageFetcher.fetchImage(from: source, downsampleTo: (size, scale))
+    return await ArtworkImageFetcher.fetchImage(from: source, fitting: (size, carTraitCollection.displayScale, isSvg))
   }
 
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
