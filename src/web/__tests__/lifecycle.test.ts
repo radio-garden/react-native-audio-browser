@@ -379,4 +379,24 @@ describe('parity — what native emits for the same flow', () => {
 
     expect(h.browser.getNowPlaying()?.title).toBe('Live Title')
   })
+
+  /**
+   * Native publishes `track.duration` (`NowPlayingUpdater.kt`). The harness's
+   * element reports 100 throughout, as the outgoing source would at a
+   * transition.
+   */
+  it("publishes the new track's own duration on a transition", async () => {
+    const durations: (number | undefined)[] = []
+    h.browser.load({ ...trackA, duration: 200 })
+    await h.flush()
+    await h.completeLoad()
+    h.browser.onNowPlayingChanged = (metadata) =>
+      durations.push(metadata.duration)
+
+    h.browser.load({ ...trackB, duration: 30 })
+    await h.flush()
+
+    expect(durations).toEqual([30])
+    expect(h.browser.getNowPlaying()?.duration).toBe(30)
+  })
 })

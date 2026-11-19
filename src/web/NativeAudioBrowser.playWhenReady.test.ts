@@ -323,18 +323,6 @@ describe('NativeAudioBrowser active track announced on the load attempt', () => 
         unload: () => Promise.resolve()
       } as unknown as typeof this.player
     }
-
-    /** getNowPlaying() reads progress off the element, which needs buffered ranges. */
-    withProgressCapableElement(): this {
-      this.element = {
-        play: () => Promise.resolve(),
-        pause: () => {},
-        currentTime: 0,
-        duration: 100,
-        buffered: { length: 0, end: () => 0 }
-      } as unknown as HTMLMediaElement
-      return this
-    }
   }
 
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -429,9 +417,7 @@ describe('NativeAudioBrowser active track announced on the load attempt', () => 
   it('still publishes now-playing when the announcement throws', async () => {
     // The two are independent: a consumer's throwing handler must not leave the
     // lock screen showing the previous track.
-    const browser = new FailingLoadBrowser(() =>
-      Promise.resolve()
-    ).withProgressCapableElement()
+    const browser = new FailingLoadBrowser(() => Promise.resolve())
     browser.onPlaybackActiveTrackChanged = () => {
       throw new Error('consumer handler blew up')
     }
