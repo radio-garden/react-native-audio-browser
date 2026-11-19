@@ -381,9 +381,9 @@ describe('parity — what native emits for the same flow', () => {
   })
 
   /**
-   * Native publishes `track.duration` (`NowPlayingUpdater.kt`). The element's
-   * duration at a transition is still the outgoing track's: the harness's
-   * element reports 100 throughout.
+   * Native publishes `track.duration` (`NowPlayingUpdater.kt`). The harness's
+   * element reports 100 throughout, as the outgoing source would at a
+   * transition.
    */
   it("publishes the new track's own duration on a transition", async () => {
     const durations: (number | undefined)[] = []
