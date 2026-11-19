@@ -128,7 +128,9 @@ internal class SdkCastRemote(private val cast: Cast, override val player: Remote
           listener?.onSessionChanged()
         }
 
-        override fun onCastSessionUnavailable() = Unit
+        override fun onCastSessionUnavailable() {
+          listener?.onSessionChanged()
+        }
       }
     )
   }
@@ -145,8 +147,13 @@ internal class SdkCastRemote(private val cast: Cast, override val player: Remote
     client = session?.remoteMediaClient
     client?.registerCallback(statusCallback)
   }
+
   override val isSessionAvailable: Boolean
     get() = hasSession
+
+  /** [player] has no client between letting go of the session and taking it up again. */
+  override val isSuspended: Boolean
+    get() = hasSession && !player.isCastSessionAvailable
 
   override fun setListener(listener: RemotePlayback.Listener?) {
     this.listener = listener

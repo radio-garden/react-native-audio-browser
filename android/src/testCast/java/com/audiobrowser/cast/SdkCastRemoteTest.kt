@@ -102,7 +102,7 @@ class SdkCastRemoteTest {
     tell(first, ::playerTakesUpSession) { toRemote.onSessionResumed(session, true) }
 
   @Test
-  fun `a suspended session stays the session, whichever hears of it first`() {
+  fun `a suspended session stays the session, out of reach, whichever hears of it first`() {
     for (first in First.entries) {
       startSession(first)
       seen.clear()
@@ -110,12 +110,13 @@ class SdkCastRemoteTest {
       suspendSession(first)
 
       assertTrue("$first first", remote.isSessionAvailable)
+      assertTrue("$first first", remote.isSuspended)
       assertFalse("$first first", false in seen)
     }
   }
 
   @Test
-  fun `a session that resumes was never gone`() {
+  fun `a session that resumes was never gone, and is in reach once the player takes it up`() {
     for (first in First.entries) {
       startSession(first)
       seen.clear()
@@ -124,8 +125,23 @@ class SdkCastRemoteTest {
       resumeSession(first)
 
       assertTrue("$first first", remote.isSessionAvailable)
+      assertFalse("$first first", remote.isSuspended)
       assertFalse("$first first", false in seen)
     }
+  }
+
+  @Test
+  fun `a resumed session is out of reach until the player takes it up`() {
+    startSession(First.PLAYER)
+    suspendSession(First.PLAYER)
+    seen.clear()
+
+    toRemote.onSessionResumed(session, true)
+    assertTrue(remote.isSuspended)
+
+    playerTakesUpSession()
+    assertFalse(remote.isSuspended)
+    assertEquals(listOf(true), seen)
   }
 
   @Test
@@ -139,19 +155,21 @@ class SdkCastRemoteTest {
       }
 
       assertFalse("$first first", remote.isSessionAvailable)
-      assertEquals("$first first", listOf(false), seen)
+      assertEquals("$first first", false, seen.last())
     }
   }
 
   @Test
-  fun `a session that is ending is gone before it has ended`() {
-    startSession(First.PLAYER)
-    seen.clear()
+  fun `a session that is ending is gone, whichever hears of it first`() {
+    for (first in First.entries) {
+      startSession(first)
+      seen.clear()
 
-    toRemote.onSessionEnding(session)
+      tell(first, ::playerLetsGoOfSession) { toRemote.onSessionEnding(session) }
 
-    assertFalse(remote.isSessionAvailable)
-    assertEquals(listOf(false), seen)
+      assertFalse("$first first", remote.isSessionAvailable)
+      assertEquals("$first first", false, seen.last())
+    }
   }
 
   // The player only logs a failed resume: it let go of the session when that was suspended.
@@ -164,6 +182,7 @@ class SdkCastRemoteTest {
     toRemote.onSessionResumeFailed(session, CastStatusCodes.NETWORK_ERROR)
 
     assertFalse(remote.isSessionAvailable)
+    assertFalse(remote.isSuspended)
     assertEquals(listOf(false), seen)
   }
 }

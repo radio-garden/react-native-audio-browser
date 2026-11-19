@@ -151,6 +151,9 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   val seeks = mutableListOf<Long>()
   val intents = mutableListOf<Boolean>()
 
+  /** While set, loads and play intents are dropped, as a suspended session's player drops them. */
+  var unreachable = false
+
   /** While set, a load is held back from the reported state until [catchUp], as a receiver lags. */
   var lagging = false
   private var held: MediaItem? = null
@@ -200,6 +203,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
     startPositionMs: Long,
   ): ListenableFuture<*> {
     val loaded = mediaItems.single()
+    if (unreachable) return done()
     loads += SentLoad(loaded, startPositionMs, intent)
     // A fresh uid makes a reload of the same item a new playlist entry to listeners.
     uid = Any()
@@ -211,6 +215,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   }
 
   override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
+    if (unreachable) return done()
     intent = playWhenReady
     intents += playWhenReady
     return done()
@@ -262,6 +267,11 @@ internal class FakeRemote(private val looper: Looper) : RemotePlayback {
   override val isSessionAvailable: Boolean
     get() = receiver != null
 
+  private var suspended = false
+
+  override val isSuspended: Boolean
+    get() = suspended
+
   override fun setListener(listener: RemotePlayback.Listener?) {
     this.listener = listener
   }
@@ -284,6 +294,20 @@ internal class FakeRemote(private val looper: Looper) : RemotePlayback {
 
   fun endSession() {
     receiver = null
+    suspended = false
+    listener?.onSessionChanged()
+  }
+
+  /** Keeps the session out of reach: [player] drops what is sent to it and plays on. */
+  fun suspendSession() {
+    suspended = true
+    player.unreachable = true
+    listener?.onSessionChanged()
+  }
+
+  fun resumeSession() {
+    suspended = false
+    player.unreachable = false
     listener?.onSessionChanged()
   }
 
