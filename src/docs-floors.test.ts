@@ -14,7 +14,7 @@ const pkg = JSON.parse(read('package.json')) as {
 }
 const guide = read('website/guide/getting-started.md')
 
-/** `>=0.76.0` → `0.76`, `^4.7.9` → `4.7.9`: the floor as the guide writes it. */
+/** `>=0.80.0` → `0.80`, `^4.7.9` → `4.7.9`: the floor as the guide writes it. */
 function peerFloor(name: string, parts: number): string {
   const range = pkg.peerDependencies[name]
   const version = range?.match(/\d+(\.\d+)*/)?.[0]
