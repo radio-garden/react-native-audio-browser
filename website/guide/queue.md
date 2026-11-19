@@ -74,10 +74,9 @@ index is empty). To react to changes without a hook, subscribe to
 [`onQueueChanged`](/api/features/queue/#onqueuechanged) — it fires with the new
 queue on every add, remove, or reorder.
 
-A favorite toggle also fires it on iOS
-and Android, but on web it fires only
-[`onFavoriteChanged`](/api/features/favorites/#onfavoritechanged), so listen to
-both, as `useQueue` does.
+A favorite toggle also fires it, alongside
+[`onFavoriteChanged`](/api/features/favorites/#onfavoritechanged); `useQueue`
+listens to both.
 
 ## The active track
 

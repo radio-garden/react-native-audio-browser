@@ -315,4 +315,24 @@ describe('QueueManager', () => {
       expect(q.currentIndex).toBeUndefined()
     })
   })
+
+  describe('replaceEach', () => {
+    it('replaces the tracks the transform returns, in place', () => {
+      q.setTracks(tracks(3))
+      q.currentIndex = 1
+
+      const replaced = q.replaceEach((t) =>
+        t.src === 's0' ? undefined : { ...t, title: 'new' }
+      )
+
+      expect(replaced).toBe(true)
+      expect(q.tracks.map((t) => t.title)).toEqual([undefined, 'new', 'new'])
+      expect(q.currentIndex).toBe(1)
+    })
+
+    it('reports when it replaces nothing', () => {
+      q.setTracks(tracks(2))
+      expect(q.replaceEach(() => undefined)).toBe(false)
+    })
+  })
 })

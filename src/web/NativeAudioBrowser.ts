@@ -580,7 +580,31 @@ export class NativeAudioBrowser
   }
 
   setFavorites(favorites: string[]): void {
-    this.favoriteManager.setFavorites(favorites)
+    this.applyFavoriteChange(this.favoriteManager.setFavorites(favorites))
+  }
+
+  /**
+   * Restamps `favorited` on every copy of a track whose identity is in
+   * `changed`: the current content, then the queue and the active track in
+   * place, which is not a track change.
+   */
+  private applyFavoriteChange(changed: Set<string>): void {
+    if (changed.size === 0) return
+    const restamp = (track: Track) =>
+      this.favoriteManager.restamp(track, changed)
+    this.browserManager.restampContent(restamp)
+
+    const { currentIndex } = this.queue
+    const active =
+      currentIndex === undefined ? undefined : this.queue.getTrack(currentIndex)
+    if (!this.queue.replaceEach(restamp)) return
+    // By index: the queue may hold the active track's object more than once.
+    const updated =
+      currentIndex === undefined ? undefined : this.queue.getTrack(currentIndex)
+    if (active === this.current && updated && updated !== active) {
+      this.replaceCurrent(updated)
+    }
+    this.emitQueueChanged()
   }
 
   // MARK: Player init and config
@@ -1108,33 +1132,19 @@ export class NativeAudioBrowser
 
   setActiveTrackFavorited(favorited: boolean): void {
     const track = this.getActiveTrack()
-    const index = this.getActiveTrackIndex()
-    if (!track || getTrackIdentity(track) === undefined || index === undefined)
-      return
+    const identity = track && getTrackIdentity(track)
+    if (!track || identity === undefined) return
+    if (this.getActiveTrackIndex() === undefined) return
 
-    // Update favorites set via manager (keyed by track identity)
     if (favorited) {
       this.favoriteManager.addFavorite(track)
     } else {
       this.favoriteManager.removeFavorite(track)
     }
+    // Even when the set already agreed: a copy may carry the opposite value.
+    this.applyFavoriteChange(new Set([identity]))
 
-    // Create updated track with new favorited state
-    const updatedTrack: Track = {
-      ...track,
-      favorited
-    }
-
-    // Both copies, or a later re-prepare of the queue's entry reads as a
-    // transition to a different track.
-    this.queue.replaceTrack(index, updatedTrack)
-    this.replaceCurrent(updatedTrack)
-
-    // Emit favorite changed only. A favorite toggle is an in-place mutation of
-    // the active track, not a transition — onPlaybackActiveTrackChanged and
-    // onPlaybackQueueChanged stay transition-only, and the useActiveTrack /
-    // useQueue hooks subscribe to onFavoriteChanged themselves.
-    this.onFavoriteChanged({ track: updatedTrack, favorited })
+    this.onFavoriteChanged({ track: this.current ?? track, favorited })
   }
 
   toggleActiveTrackFavorited(): void {

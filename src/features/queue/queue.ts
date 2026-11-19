@@ -204,10 +204,9 @@ export const onQueueEnded =
 
 /**
  * Subscribes to queue change events.
- * Called when tracks are added, removed, or reordered. On iOS and Android a
- * favorite toggle also fires it, alongside `onFavoriteChanged`. On web a
- * favorite toggle fires only `onFavoriteChanged`. {@link useQueue} subscribes
- * to both.
+ * Called when tracks are added, removed, or reordered. A favorite toggle
+ * also fires it, alongside `onFavoriteChanged`, and so does a `setFavorites`
+ * that changes a queued track. {@link useQueue} subscribes to both.
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(

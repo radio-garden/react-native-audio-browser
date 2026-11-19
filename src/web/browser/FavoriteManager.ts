@@ -12,9 +12,20 @@ export class FavoriteManager {
   /**
    * Sets the favorites cache from an array of track identities.
    * This is typically called when favorites are loaded from storage.
+   *
+   * @returns the identities whose favorite state changed
    */
-  setFavorites(favorites: string[]): void {
-    this.favorites = new Set(favorites)
+  setFavorites(favorites: string[]): Set<string> {
+    const replaced = new Set(favorites)
+    const changed = new Set<string>()
+    for (const identity of replaced) {
+      if (!this.favorites.has(identity)) changed.add(identity)
+    }
+    for (const identity of this.favorites) {
+      if (!replaced.has(identity)) changed.add(identity)
+    }
+    this.favorites = replaced
+    return changed
   }
 
   /**
@@ -59,6 +70,20 @@ export class FavoriteManager {
       ...track,
       favorited: true
     }
+  }
+
+  /**
+   * `track` with `favorited` as the cache has it, for a track whose identity
+   * is in `changed` (what `setFavorites` returned). Unlike `hydrateFavorite`,
+   * this overwrites the value the track carries. Undefined when the track
+   * stands; an unset flag counts as not favorited.
+   */
+  restamp(track: Track, changed: Set<string>): Track | undefined {
+    const identity = getTrackIdentity(track)
+    if (identity === undefined || !changed.has(identity)) return undefined
+    const favorited = this.favorites.has(identity)
+    if ((track.favorited === true) === favorited) return undefined
+    return { ...track, favorited }
   }
 
   /**

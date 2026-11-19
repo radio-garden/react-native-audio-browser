@@ -51,9 +51,24 @@ export class QueueManager {
     if (this._shuffleEnabled) this.regenerateShuffleOrder()
   }
 
-  /** Replaces a single track in place (e.g. a favorite toggle). */
+  /** Replaces a single track in place. */
   replaceTrack(index: number, track: Track): void {
     this._tracks[index] = track
+  }
+
+  /**
+   * Replaces, in place, each track `transform` returns a track for.
+   * @returns whether any track was replaced
+   */
+  replaceEach(transform: (track: Track) => Track | undefined): boolean {
+    let replaced = false
+    this._tracks = this._tracks.map((track) => {
+      const replacement = transform(track)
+      if (!replacement) return track
+      replaced = true
+      return replacement
+    })
+    return replaced
   }
 
   // MARK: current index
