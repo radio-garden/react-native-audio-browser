@@ -8,8 +8,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
  * behaviour is covered once in `utils/useNativeUpdatedValue.test.ts`; what is
  * per-hook and untestable there is the wiring — which native callback slot the
  * emitter claims, and which `eventKey` is pulled out of the payload.
- * (`useActiveTrack` and `useQueue` are getter-refreshed instead — they update
- * on transitions AND favorite toggles — and are covered in their own block.)
+ * (The getter-refreshed hooks are covered in their own block.)
  *
  * Both are easy to get wrong and silent when wrong: the hook simply never
  * updates, or yields the whole event where a field was meant. Five slots
