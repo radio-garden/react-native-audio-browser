@@ -1497,10 +1497,10 @@ struct SessionReleaseTests {
     #expect(c.canReleaseAudioSession == true)
   }
 
-  /// The debounced release asks again when it fires: a play from `.error` in between keeps the
-  /// session.
+  /// A play from `.error` activates the session, which cancels the pending release, and leaves
+  /// `canReleaseAudioSession` false for the controller's check when the release fires.
   @Test @MainActor
-  func playFromError_holdsTheSession() throws {
+  func playFromError_activatesTheSession_andBlocksTheRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.transition(.errorOccurred(.playbackFailed))
