@@ -3,16 +3,11 @@ import type { Track } from '../types'
 import { NativeAudioBrowser } from './NativeAudioBrowser'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
-type Resolved = {
-  tracks: Track[]
-  startIndex: number
-  startPositionMs: number
-  sourcePath?: string
-}
+type Expanded = { tracks: Track[]; selectedIndex: number }
 
 /** A browser whose queue expansions resolve when the test says so. */
 class TestBrowser extends NativeAudioBrowser {
-  private pending = new Map<string, (result: Resolved) => void>()
+  private pending = new Map<string, (result: Expanded) => void>()
 
   constructor() {
     super()
@@ -30,21 +25,19 @@ class TestBrowser extends NativeAudioBrowser {
     ;(
       this as unknown as {
         browserManager: {
-          resolveMediaItemsForPlayback(tracks: Track[]): Promise<Resolved>
+          expandQueueFromContextualPath(path: string): Promise<Expanded>
         }
       }
-    ).browserManager.resolveMediaItemsForPlayback = ([track]) =>
-      new Promise((resolve) => this.pending.set(track!.src!, resolve))
+    ).browserManager.expandQueueFromContextualPath = (path) =>
+      new Promise((resolve) => this.pending.set(path, resolve))
   }
 
   /** Resolves the expansion of `track`'s selection to `queue`. */
   async resolveExpansion(track: Track, queue: Track[]): Promise<void> {
     await tick()
-    this.pending.get(track.src!)!({
+    this.pending.get(track.path!)!({
       tracks: queue,
-      startIndex: queue.indexOf(track),
-      startPositionMs: 0,
-      sourcePath: BrowserPathHelper.stripTrackId(track.path!)
+      selectedIndex: queue.indexOf(track)
     })
     await tick()
   }
