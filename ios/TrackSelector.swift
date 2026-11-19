@@ -19,7 +19,8 @@ import os.log
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
   private nonisolated(unsafe) let browserManager: any TrackSelectionBrowser
-  /// Bumped by every selection that plays; one that finds it bumped has been superseded.
+  /// Bumped by every selection that would play, whether or not the app's `handleTrackLoad`
+  /// intercepts it; one that finds it bumped has been superseded.
   private var latestSelection: UInt = 0
 
   nonisolated init(browserManager: any TrackSelectionBrowser) {
@@ -51,8 +52,8 @@ class TrackSelector {
   /// the current queue when it came from the same parent, else the parent expanded into a queue
   /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
   /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
-  /// Of the playbacks still resolving, only the latest plays: an earlier one is `superseded`,
-  /// and is not offered to the app once it is.
+  /// Of the playbacks still resolving, only the latest plays, even when the app intercepts it:
+  /// an earlier one is `superseded`, and is not offered to the app once it is.
   func select(
     track: Track,
     player: some TrackSelectionPlayer,
@@ -62,20 +63,19 @@ class TrackSelector {
       return .none
     }
 
-    let selection: UInt
-    let playback: PlannedPlayback
-    if let path = track.path, BrowserPathHelper.isContextual(path) {
-      selection = beginSelection()
-      playback = await contextualPlayback(path, track: track, player: player)
-      guard selection == latestSelection else { return .superseded }
-    } else if track.src != nil {
-      selection = beginSelection()
-      playback = .single(track)
-    } else if let path = track.path {
-      return .browse(path: path)
-    } else {
+    let contextualPath = track.path.flatMap { BrowserPathHelper.isContextual($0) ? $0 : nil }
+    if contextualPath == nil, track.src == nil {
+      if let path = track.path { return .browse(path: path) }
       return .none
     }
+
+    let selection = beginSelection()
+    let playback: PlannedPlayback = if let contextualPath {
+      await contextualPlayback(contextualPath, track: track, player: player)
+    } else {
+      .single(track)
+    }
+    guard isLatest(selection) else { return .superseded }
 
     let event = TrackLoadEvent(
       track: track,
@@ -86,15 +86,19 @@ class TrackSelector {
     if await browserManager.awaitTrackLoadHandler(event: event) {
       return .intercepted
     }
-    guard selection == latestSelection else { return .superseded }
+    guard isLatest(selection) else { return .superseded }
     return .play(playback.intent)
   }
 
   // MARK: - Private Helpers
 
   private func beginSelection() -> UInt {
-    latestSelection &+= 1
+    latestSelection += 1
     return latestSelection
+  }
+
+  private func isLatest(_ selection: UInt) -> Bool {
+    selection == latestSelection
   }
 
   /// What a selection plays, and the queue and index the track-load handler is shown.
