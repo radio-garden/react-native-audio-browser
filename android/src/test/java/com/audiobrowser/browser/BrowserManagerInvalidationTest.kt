@@ -2,6 +2,7 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.TestFixtures.transformableConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
+import com.margelo.nitro.audiobrowser.Track
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +159,32 @@ class BrowserManagerInvalidationTest {
     across({ browserManager.config = config() }) { browserManager.resolve("/page") }
 
     assertEquals("en", runBlocking { browserManager.resolve("/page") }.title)
+  }
+
+  @Test
+  fun `a configured start path still resolves the tabs`() = runBlocking {
+    assertEquals("/page", browserManager.startPath("/page"))
+
+    assertEquals("en", browserManager.getTabs()?.single()?.title)
+  }
+
+  @Test
+  fun `a start path without a configured one is the first tab's`() = runBlocking {
+    assertEquals("/t", browserManager.startPath(null))
+  }
+
+  @Test
+  fun `a configuration without tabs clears them, with a configured start path`() = runBlocking {
+    browserManager.queryTabs()
+    val emitted = mutableListOf<List<Track>>()
+    browserManager.setOnTabsChanged { emitted += it.toList() }
+
+    browserManager.config = config().copy(routes = emptyArray())
+    browserManager.clearContentCache()
+    assertEquals("/page", browserManager.startPath("/page"))
+
+    assertEquals(0, browserManager.getTabs()?.size)
+    assertEquals(listOf(emptyList<Track>()), emitted)
   }
 
   @Test

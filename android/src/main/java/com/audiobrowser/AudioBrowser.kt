@@ -384,28 +384,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     return _configuration.routes?.any { it.path != BrowserManager.SEARCH_ROUTE_PATH } == true
   }
 
-  // Suspends because queryTabs() invokes JS callbacks, which run on the JS thread. Never call it
-  // through runBlocking from a Nitro setter: that runs on the JS thread and deadlocks waiting for
-  // callbacks that need it.
-  private suspend fun getDefaultPath(): String? {
-    return try {
-      browserManager.config = buildConfig()
-      val tabs = browserManager.queryTabs()
-      if (tabs.isNotEmpty()) {
-        Timber.d("Using first tab as default path: ${tabs[0].path}")
-        tabs[0].path
-      } else {
-        Timber.d("Using root path as default: /")
-        "/"
-      }
-    } catch (e: CancellationException) {
-      throw e
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to get default path, falling back to /")
-      "/"
-    }
-  }
-
   // ============================================================================
   // MARK: Browser Properties
   // ============================================================================
@@ -421,7 +399,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
         navigationJob =
           mainScope.launch {
-            val path = value ?: getDefaultPath() ?: return@launch
+            val path = browserManager.startPath(value) ?: return@launch
             try {
               browserManager.navigate(path)
             } catch (e: CancellationException) {
@@ -460,7 +438,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       navigationJob =
         mainScope.launch {
-          val path = value.path ?: getDefaultPath() ?: return@launch
+          val path = browserManager.startPath(value.path) ?: return@launch
           try {
             browserManager.navigate(path)
           } catch (e: CancellationException) {
