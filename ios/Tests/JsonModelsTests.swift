@@ -56,6 +56,41 @@ struct JsonTrackArtworkTests {
   }
 }
 
+@Suite("JsonTrack.favorited")
+struct JsonTrackFavoritedTests {
+  private func track(_ json: String) throws -> Track {
+    try JSONDecoder().decode(JsonTrack.self, from: Data(json.utf8)).toNitro()
+  }
+
+  @Test func decodesTheValueTheResponseCarries() throws {
+    #expect(try track(#"{ "title": "X", "src": "a", "favorited": true }"#).favorited == true)
+    #expect(try track(#"{ "title": "X", "src": "a", "favorited": false }"#).favorited == false)
+    #expect(try track(#"{ "title": "X", "src": "a" }"#).favorited == nil)
+  }
+
+  @Test func theValueOfTheResponseWinsOverHydration() throws {
+    var favorites = FavoriteSet()
+    favorites.enabled = true
+    _ = favorites.replace(with: ["b"])
+    let hearted = try track(#"{ "title": "A", "src": "a", "favorited": true }"#)
+    let unhearted = try track(#"{ "title": "B", "src": "b", "favorited": false }"#)
+    #expect(favorites.hydrate(hearted).favorited == true)
+    #expect(favorites.hydrate(unhearted).favorited == false)
+  }
+
+  @Test func decodesOnAPageAndOnItsTracks() throws {
+    let json = Data(
+      """
+      {"path":"/track/1","title":"Page","src":"p","favorited":true,"sections":[
+        {"children":[{"title":"A","src":"a","favorited":true},{"title":"B","src":"b"}]}
+      ]}
+      """.utf8)
+    let page = try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro()
+    #expect(page.favorited == true)
+    #expect(page.sections?.first?.children.map(\.favorited) == [true, nil])
+  }
+}
+
 // MARK: - Style blocks (ADR 0011)
 
 @Suite("JsonTrack.style")
