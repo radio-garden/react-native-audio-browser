@@ -32,8 +32,7 @@ import timber.log.Timber
  * - A receiver's failure, or an item it hasn't started within [startTimeoutMs] of being sent or
  *   played, is the player error until [prepare] loads the item again. [stop] stops the receiver.
  * - While the remote's session is suspended, playback stays there, and the item loaded or the stop
- *   made meanwhile goes to the receiver at the resume. Other commands made meanwhile don't reach
- *   it.
+ *   made meanwhile goes to the receiver at the resume. Other commands made then are lost.
  * - [setVolume] sets the receiver's device volume while remote.
  */
 internal class RemoteSwitchingPlayer(
@@ -80,8 +79,11 @@ internal class RemoteSwitchingPlayer(
       /** The receiver's last timed metadata for the current item; none until it holds that item. */
       var timedMetadata = NO_TIMED_METADATA
 
-      /** [RemotePlayback.isSuspended] as last followed: a send waits for the resume. */
+      /** [RemotePlayback.isSuspended] as last followed: a send or a stop waits for the resume. */
       var suspended = output.isSuspended
+
+      /** A stop made while [suspended], for the resume; a later send replaces it. */
+      var stopHeld = false
     }
   }
 
@@ -229,12 +231,15 @@ internal class RemoteSwitchingPlayer(
       disarmStart(remote)
       return
     }
+    if (remote.stopHeld) {
+      remote.stopHeld = false
+      stopReceiver(remote)
+    }
     when (val load = remote.load) {
       is Load.Sent ->
         if (receiverHolds(remote, load.item)) armStart(remote)
         else send(remote, load.item, load.positionMs)
       is Load.Playing -> if (playIntent && !started(remote)) armStart(remote)
-      is Load.Idle -> stopReceiver(remote.receiver)
       else -> Unit
     }
   }
@@ -347,6 +352,11 @@ internal class RemoteSwitchingPlayer(
     remote.startTimeout = null
   }
 
+  /** Holds the stop back for the resume while [remote] is suspended. */
+  private fun stopReceiver(remote: Route.Remote) {
+    if (remote.suspended) remote.stopHeld = true else stopReceiver(remote.receiver)
+  }
+
   /** A receiver whose session already ended refuses commands; it has stopped by itself. */
   private fun stopReceiver(receiver: MediaPlayer) {
     try {
@@ -362,7 +372,7 @@ internal class RemoteSwitchingPlayer(
     val item = queue.current
     if (item == null) {
       remote.load = Load.Idle(C.TIME_UNSET)
-      stopReceiver(remote.receiver)
+      stopReceiver(remote)
       return
     }
     remote.load =
@@ -381,7 +391,10 @@ internal class RemoteSwitchingPlayer(
 
   private fun send(remote: Route.Remote, item: MediaItem, positionMs: Long) {
     remote.load = Load.Sent(item, positionMs)
-    if (remote.suspended) return
+    if (remote.suspended) {
+      remote.stopHeld = false
+      return
+    }
     armStart(remote)
     try {
       // Before the load, which autoplays as this says. Told again, a receiver plays what it holds.
@@ -606,7 +619,7 @@ internal class RemoteSwitchingPlayer(
     if (remote == null) return super.handleStop()
     val positionMs = positionOn(remote)
     cancelLoad(remote)
-    stopReceiver(remote.receiver)
+    stopReceiver(remote)
     remote.load = Load.Idle(positionMs)
     return done()
   }
@@ -671,7 +684,7 @@ internal class RemoteSwitchingPlayer(
       nothingAfter && repeat == REPEAT_MODE_ALL -> queue.moveTo(0)
       nothingAfter && playing -> {
         cancelLoad(remote)
-        stopReceiver(remote.receiver)
+        stopReceiver(remote)
         remote.load = Load.Ended(0)
         return done()
       }
