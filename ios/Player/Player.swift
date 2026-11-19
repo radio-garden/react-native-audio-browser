@@ -188,7 +188,7 @@ final class Player {
     // A terminal state or a cancelled retry has no item to play, or one parked at its end: reload,
     // re-resolving a URL that may have expired since. Only .error and a cancelled retry resume where they failed.
     let resumes = state == .error || load?.reloadOnPlay == true
-    if newValue, resumes || state == .stopped || state == .ended {
+    if newValue, resumes || state.isTerminal {
       reloadResolving(startFromCurrentTime: resumes)
     }
     // While loading, the engine may still hold the previous track's item: a play waits for the new one.
