@@ -788,6 +788,23 @@ struct HandleCurrentTrackChangedTests {
   }
 
   @Test @MainActor
+  func nilSrc_errorHoldsAgainstThePauseOfTheReplacedTrack() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try c.setQueue([
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", path: "/no-source", src: nil, title: "No Source"),
+    ])
+    try c.skipTo(1)
+    cb.errorEvents.removeAll()
+
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+
+    #expect(c.state == .error)
+    #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
+    #expect(cb.errorEvents.isEmpty)
+  }
+
+  @Test @MainActor
   func nilSrc_emitsActiveTrackChangedEvent() throws {
     let (c, _, cb, _) = makeCoordinator()
     try c.setQueue([
