@@ -134,6 +134,24 @@ describe('a browse failure from a superseded navigation', () => {
     expect(manager.path).toBe('/b')
     expect(manager.content?.title).toBe('/b')
   })
+
+  it.each(Object.keys(cases))(
+    'is not published while the newer navigation is still resolving: %s',
+    async (name) => {
+      const { configuration, respond, fail } = cases[name]!()
+      const { manager, errors, events } = makeManager(configuration, respond)
+
+      const superseded = manager.navigatePath('/a')
+      const current = manager.navigatePath('/b')
+      fail()
+      await superseded
+      await current
+
+      expect(errors.getNavigationError()).toBeUndefined()
+      expect(events).toEqual([])
+      expect(manager.content?.title).toBe('/b')
+    }
+  )
 })
 
 describe('a browse failure of the current navigation', () => {

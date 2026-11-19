@@ -509,9 +509,9 @@ export class BrowserManager {
       if ('error' in result) {
         console.error(`${errorContext} browse error:`, result.error)
         return new BrowseFailure({
-          code: 'callback-error' satisfies NavigationErrorType,
+          code: 'callback-error',
           message: result.error
-        })
+        } satisfies { code: NavigationErrorType; message: string })
       }
       return normalizePage(result)
     }
