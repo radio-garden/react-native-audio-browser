@@ -35,25 +35,18 @@ enum BrowserPathHelper {
       || path.contains("&\(contextualTrackParam)=")
   }
 
-  /// Strips both `__trackId` and `__index`; `url` unchanged when it is not contextual.
+  /// Strips both `__trackId` and `__index` and leaves every other character as it is, so the
+  /// result equals the parent path the contextual path was built on; `url` unchanged when it is
+  /// not contextual.
   static func stripTrackId(_ url: String) -> String {
-    guard isContextual(url) else {
+    guard isContextual(url), let query = splitQuery(url) else {
       return url
     }
 
-    guard var components = URLComponents(string: url) else {
-      return url
+    let kept = query.pairs.filter {
+      !$0.hasPrefix("\(contextualTrackParam)=") && !$0.hasPrefix("\(contextualIndexParam)=")
     }
-
-    components.queryItems = components.queryItems?.filter {
-      $0.name != contextualTrackParam && $0.name != contextualIndexParam
-    }
-
-    if components.queryItems?.isEmpty == true {
-      components.queryItems = nil
-    }
-
-    return components.string ?? url
+    return kept.isEmpty ? String(query.head) : "\(query.head)?\(kept.joined(separator: "&"))"
   }
 
   /// `parentPath` with `trackId` (the track's identity) and, when given, its page position
@@ -67,27 +60,36 @@ enum BrowserPathHelper {
   }
 
   static func extractTrackId(_ path: String) -> String? {
-    guard isContextual(path) else {
-      return nil
-    }
-
-    guard let components = URLComponents(string: path) else {
-      return nil
-    }
-
-    return components.queryItems?.first { $0.name == contextualTrackParam }?.value
+    contextualValue(contextualTrackParam, in: path)
   }
 
   /// Nil when the path is not contextual or its index is missing or negative.
   static func extractIndex(_ path: String) -> Int? {
-    guard isContextual(path),
-          let components = URLComponents(string: path),
-          let raw = components.queryItems?.first(where: { $0.name == contextualIndexParam })?.value,
-          let index = Int(raw), index >= 0
-    else {
+    guard let raw = contextualValue(contextualIndexParam, in: path), let index = Int(raw), index >= 0 else {
       return nil
     }
     return index
+  }
+
+  /// `path` cut at its first `?`: what precedes it, and the `name=value` pairs after it as written.
+  private static func splitQuery(_ path: String) -> (head: Substring, pairs: [Substring])? {
+    guard let mark = path.firstIndex(of: "?") else {
+      return nil
+    }
+    let pairs = path[path.index(after: mark)...].split(separator: "&", omittingEmptySubsequences: false)
+    return (path[..<mark], pairs)
+  }
+
+  /// The percent-decoded value of `name` in a contextual path; nil when `path` is not contextual.
+  private static func contextualValue(_ name: String, in path: String) -> String? {
+    let prefix = "\(name)="
+    guard isContextual(path),
+          let pair = splitQuery(path)?.pairs.first(where: { $0.hasPrefix(prefix) })
+    else {
+      return nil
+    }
+    let raw = pair.dropFirst(prefix.count)
+    return raw.removingPercentEncoding ?? String(raw)
   }
 
   /// Percent-encodes keys and values, so pass them unencoded.

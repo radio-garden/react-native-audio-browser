@@ -107,6 +107,24 @@ import Testing
   #expect(BrowserPathHelper.stripTrackId(url) == "/library")
 }
 
+@Test(arguments: [
+  "/genres/Hip Hop",
+  "/genres/Électro",
+  "/list?tag=c%2B%2B",
+  "/list?sort=a%2Fb",
+  "/list?ids=[1]",
+  "/sale/50%",
+  "/list?x=%E9",
+  "/page#top",
+])
+func buildRoundTripsAParentThatIsNotACanonicalUrl(parent: String) {
+  let identity = "id 1/é"
+  let url = BrowserPathHelper.build(parentPath: parent, trackId: identity, index: 2)
+  #expect(BrowserPathHelper.stripTrackId(url) == parent)
+  #expect(BrowserPathHelper.extractTrackId(url) == identity)
+  #expect(BrowserPathHelper.extractIndex(url) == 2)
+}
+
 // MARK: - extractIndex
 
 @Test func extractIndexReturnsNilWithoutAStampedIndex() {
