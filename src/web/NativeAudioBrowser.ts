@@ -354,6 +354,8 @@ export class NativeAudioBrowser
   }
 
   protected override onPlaybackClockChanged(): void {
+    // Whether buffering reads as paused depends on the duration.
+    this.remoteCommands.syncPlaybackState()
     this.syncPositionState()
   }
 

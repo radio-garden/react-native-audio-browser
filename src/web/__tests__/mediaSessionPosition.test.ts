@@ -135,4 +135,14 @@ describe('media session position state', () => {
 
     expect(playbackStates).toEqual(['playing'])
   })
+
+  it('reads a stall as playing once the duration turns live', async () => {
+    await h.rebuffer()
+    expect(playbackStates).toEqual(['paused'])
+
+    setDuration(Infinity)
+    element.dispatchEvent(new Event('durationchange'))
+
+    expect(playbackStates.at(-1)).toBe('playing')
+  })
 })
