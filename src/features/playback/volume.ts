@@ -22,9 +22,6 @@ export function getSystemVolume(): number {
 
 /**
  * Sets the volume of the player.
- *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
- *
  * @param level - The volume as a number between 0 and 1.
  */
 export function setVolume(level: number): void {

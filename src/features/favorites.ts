@@ -12,8 +12,6 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
  * It emits `onFavoriteChanged`, so persist the change there, not again in your
  * button handler.
  *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
- *
  * @param favorited - Whether the track is favorited
  *
  * @example
@@ -27,8 +25,6 @@ export function setActiveTrackFavorited(favorited: boolean): void {
 
 /**
  * Toggles the favorited state of the Active Track. Emits `onFavoriteChanged`.
- *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  *
  * @example
  * ```ts

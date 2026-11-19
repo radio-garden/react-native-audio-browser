@@ -55,14 +55,15 @@ class TrackSelector {
     if track.disabled == true {
       return .none
     }
+    if let path = Self.browsePath(of: track) {
+      return .browse(path: path)
+    }
 
     let playback: PlannedPlayback
     if let path = track.path, BrowserPathHelper.isContextual(path) {
       playback = await contextualPlayback(path, track: track, player: player)
     } else if track.src != nil {
       playback = .single(track)
-    } else if let path = track.path {
-      return .browse(path: path)
     } else {
       return .none
     }
@@ -77,6 +78,14 @@ class TrackSelector {
       return .intercepted
     }
     return .play(playback.intent)
+  }
+
+  /// The path selecting `track` browses to: a bare, non-contextual `path` on an enabled track with
+  /// no `src`. Needs no player, so it works before setup.
+  static func browsePath(of track: Track) -> String? {
+    guard track.disabled != true, track.src == nil, let path = track.path,
+          !BrowserPathHelper.isContextual(path) else { return nil }
+    return path
   }
 
   // MARK: - Private Helpers

@@ -60,9 +60,6 @@ export type SleepTimerOptions = {
 
 /**
  * Sets a sleep timer to pause playback after the specified duration.
- *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
- *
  * @param seconds - Number of seconds until playback pauses
  * @param options - Optional fade-out configuration
  */
@@ -80,8 +77,6 @@ export function setSleepTimer(
  * (skip, new queue) cancels the timer. On Android and web it stays set until a
  * track plays to its end. On Android it never fires while the repeat mode is
  * `track`.
- *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function setSleepTimerToEndOfTrack(): void {
   nativeBrowser.setSleepTimerToEndOfTrack()

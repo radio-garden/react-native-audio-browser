@@ -79,9 +79,6 @@ export function getBrowserConfiguration(): BrowserConfiguration | undefined {
  * with its page as the queue (see `singleTrack` and `handleTrackLoad` on
  * {@link BrowserConfiguration}); a Browsable track opens its path; a disabled
  * track is ignored.
- *
- * Before `setupPlayer` resolves, iOS drops a Track, even a Browsable one, with
- * a warning; pass its path as a string to open it.
  */
 export function navigate(pathOrTrack: string | Track) {
   if (typeof pathOrTrack === 'string') {

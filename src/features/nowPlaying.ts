@@ -13,8 +13,6 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
  * Android surface ignores it, though `getNowPlaying` still reports it; web
  * ignores `nowPlaying`.
  *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
- *
  * @example
  * ```ts
  * // Override notification with stream metadata
@@ -57,8 +55,6 @@ export function getNowPlaying(): NowPlayingMetadata | undefined {
  *
  * See the [Now playing guide](https://audiobrowser.dev/guide/now-playing#the-flash-transient-top-priority).
  *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
- *
  * @example
  * ```ts
  * // A radio product with an hourly skip allowance:
@@ -79,8 +75,6 @@ export function flashNowPlaying(
  * Clears an active flash immediately, reverting to the live metadata.
  * No-op when no flash is active. On web it also clears the
  * `updateNowPlaying` override.
- *
- * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function clearNowPlayingFlash(): void {
   nativeBrowser.clearNowPlayingFlash()

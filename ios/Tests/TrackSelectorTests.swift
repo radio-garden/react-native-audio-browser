@@ -62,6 +62,14 @@ struct BrowsableTrackTests {
     }
     #expect(path == "/some/path")
   }
+
+  @Test func browsePath_isTheBarePathOfAnEnabledTrackWithoutSrc() {
+    #expect(TrackSelector.browsePath(of: Track(id: "t1", path: "/some/path")) == "/some/path")
+    #expect(TrackSelector.browsePath(of: Track(id: "t1", path: "/gone", disabled: true)) == nil)
+    #expect(TrackSelector.browsePath(of: Track(id: "t1", path: "/a", src: "a.mp3")) == nil)
+    let contextualPath = BrowserPathHelper.build(parentPath: "/list", trackId: "a")
+    #expect(TrackSelector.browsePath(of: Track(id: "a", path: contextualPath)) == nil)
+  }
 }
 
 // MARK: - No src or path
