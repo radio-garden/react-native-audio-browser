@@ -28,6 +28,21 @@ describe('toNativeConfig route classification', () => {
     expect(entry?.artwork).toBeUndefined()
   })
 
+  it('keeps a static page with light and dark artwork out of the RouteConfig branch', () => {
+    const page = {
+      path: '/x',
+      title: 'X',
+      artwork: {
+        light: 'https://img.example.com/x-light.png',
+        dark: 'https://img.example.com/x-dark.png'
+      },
+      children: []
+    }
+    const entry = entryFor({ '/x': page }, '/x')
+    expect(entry?.browseStatic).toEqual(page)
+    expect(entry?.artwork).toBeUndefined()
+  })
+
   it('classifies a static page as static despite its top-level `path` key', () => {
     // `path` is also a RequestConfig field; the page's required `title` must
     // win the classification (a config with a `path` alone is not a page).
