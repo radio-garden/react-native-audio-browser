@@ -174,7 +174,7 @@ final class MediaLoader {
     userAgent: String?,
   ) -> [String: Any]? {
     var merged = headers ?? [:]
-    if let userAgent, !userAgent.isEmpty, merged["User-Agent"] == nil {
+    if let userAgent, !userAgent.isEmpty, !merged.hasHeader("User-Agent") {
       merged["User-Agent"] = userAgent
     }
     return merged.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": merged]

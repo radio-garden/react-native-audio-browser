@@ -174,10 +174,10 @@ enum RequestLayer {
   /// sets them. Nil when there are none.
   static func imageHeaders(_ request: some RequestFieldValues) -> [String: String]? {
     var headers = request.headers ?? [:]
-    if let userAgent = request.userAgent, headers["User-Agent"] == nil {
+    if let userAgent = request.userAgent, !headers.hasHeader("User-Agent") {
       headers["User-Agent"] = userAgent
     }
-    if let contentType = request.contentType, headers["Content-Type"] == nil {
+    if let contentType = request.contentType, !headers.hasHeader("Content-Type") {
       headers["Content-Type"] = contentType
     }
     return headers.isEmpty ? nil : headers
