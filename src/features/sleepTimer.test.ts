@@ -142,6 +142,30 @@ describe('useSleepTimer', () => {
     }
   })
 
+  it('reaches zero at a deadline that is not on a whole second of the clock', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(1_000_000_000_250)
+      native.getSleepTimer.mockReturnValue({ time: 1_000_000_002_500 })
+      const { result } = renderHook(() => useSleepTimer())
+      expect(result.current).toMatchObject({ secondsLeft: 3 })
+      act(() => {
+        vi.advanceTimersByTime(1_250)
+      })
+      expect(result.current).toMatchObject({ secondsLeft: 1 })
+      act(() => {
+        vi.advanceTimersByTime(999)
+      })
+      expect(result.current).toMatchObject({ secondsLeft: 1 })
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(result.current).toMatchObject({ secondsLeft: 0 })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('does not tick while inactive', () => {
     vi.useFakeTimers()
     try {

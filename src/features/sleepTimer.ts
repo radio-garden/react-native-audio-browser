@@ -177,14 +177,14 @@ export function useSleepTimer(params?: {
       })
     }
 
-    // In order to make time update reaching 0 sync with firing of completion,
-    // first wait for the next interval to start before starting update loop
+    // Ticks land a whole number of intervals before the deadline, so with
+    // secondsLeft rounded up the 0 shows when the timer fires.
     const initialTimeoutId = setTimeout(
       () => {
         update()
         intervalId = setInterval(update, updateInterval)
       },
-      updateInterval - (time % updateInterval)
+      (time - Date.now()) % updateInterval
     )
     let intervalId: ReturnType<typeof setInterval> | undefined
     const clear = () => {
@@ -202,7 +202,8 @@ export function useSleepTimer(params?: {
 
 /**
  * State returned by `useSleepTimer` hook.
- * - Time-based timer includes `secondsLeft` countdown
+ * - Time-based timer includes `secondsLeft` countdown, rounded up: 0 only
+ *   once the deadline is reached
  * - End-of-track timer includes `sleepWhenPlayedToEnd` flag
  */
 export type SleepTimerState =
@@ -214,7 +215,7 @@ function addSecondsLeft(state: SleepTimer): SleepTimerState | undefined {
   if ('time' in state) {
     return {
       ...state,
-      secondsLeft: Math.max(0, Math.round((state.time - Date.now()) / 1000))
+      secondsLeft: Math.max(0, Math.ceil((state.time - Date.now()) / 1000))
     }
   }
   return state
