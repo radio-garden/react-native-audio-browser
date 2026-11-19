@@ -587,6 +587,7 @@ struct ObserverGuardTests {
   @Test @MainActor
   func audioDidStart_transitionsToPlaying() {
     let (c, eh, _, _) = makeCoordinator()
+    c.setPlayWhenReady(true)
     c.transition(.bufferingSufficient)
 
     eh.emit(.audioDidStart)
