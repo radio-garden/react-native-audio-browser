@@ -1214,6 +1214,25 @@ struct InterruptionTests {
 
     #expect(c.playWhenReady == false)
   }
+
+  /// `.error` keeps the play intent, but the interruption stopped nothing: its end must not
+  /// restart the stream.
+  @Test @MainActor
+  func ended_doesNotRestart_whenInterruptedInError() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.transition(.errorOccurred(.playbackFailed))
+    #expect(c.playWhenReady == true)
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == false)
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.state == .error)
+    #expect(c.playWhenReady == false)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore)
+  }
 }
 
 // MARK: - Skip availability freshness
