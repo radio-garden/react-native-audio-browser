@@ -10,7 +10,7 @@ private func criteria(
   mediaTypeMode: String? = nil,
   reference: MediaIntentCriteria.Reference = .unknown,
   hasMediaType: Bool = false,
-  // A query names the app on a whole-word subset match either way, so "Acme" matches.
+  // A query names the app when all its words are words of the app name, so "Acme" matches.
   appName: String? = "Acme Radio",
 ) -> MediaIntentCriteria {
   MediaIntentCriteria(
@@ -65,6 +65,16 @@ struct MediaIntentCriteriaTests {
 
   @Test func queryNotApp_isNotResume() {
     #expect(!criteria(mediaName: "jazz").isResume)
+  }
+
+  @Test func queryHoldingTheAppNameAndMore_isNotResume() {
+    let c = criteria(mediaName: "Acme Radio Northside", hasMediaType: true)
+    #expect(!c.matchesAppName)
+    #expect(!c.isResume)
+
+    let oneWordApp = criteria(mediaName: "Acme Northside", hasMediaType: true, appName: "Acme")
+    #expect(!oneWordApp.matchesAppName)
+    #expect(!oneWordApp.isResume)
   }
 
   @Test func emptyGenreName_isStillAGenreFilter() {
