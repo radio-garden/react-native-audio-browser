@@ -28,7 +28,8 @@ final class BrowserManager {
   private var lastSearchKey: String?
   private var lastSearchResults: [Track]?
 
-  private var favorites = FavoriteSet()
+  /// The favorite set; set its `queue` to the player.
+  private(set) lazy var favorites = Favorites(content: self)
 
   private var currentNavigationId: Int = 0
 
@@ -78,8 +79,7 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
-  /// Emitted on any change to the favorites, however it came about.
-  let favoritesChanged = Emitter<Void>()
+  var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
   /// `Promise<void>` arrives as `Promise<Promise<Void>>`); a failure is logged, not thrown. False
@@ -96,10 +96,8 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  func setFavorites(_ favorites: [String]) {
-    if self.favorites.replace(with: favorites) {
-      favoritesChanged.emit(())
-    }
+  func setFavorites(_ identities: [String]) {
+    favorites.replace(with: identities)
   }
 
   func setFavoriteEnabled(_ enabled: Bool) {
@@ -293,3 +291,12 @@ final class BrowserManager {
 // MARK: - TrackSelectionBrowser
 
 extension BrowserManager: TrackSelectionBrowser {}
+
+// MARK: - FavoriteStamped
+
+extension BrowserManager: FavoriteStamped {
+  func restampFavorites(_ restamp: (Track) -> Track?) {
+    guard let restamped = content?.replacingEachTrack(restamp) else { return }
+    content = restamped
+  }
+}

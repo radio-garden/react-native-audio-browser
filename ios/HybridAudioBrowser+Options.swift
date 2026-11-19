@@ -35,6 +35,7 @@ public extension HybridAudioBrowser {
         engine = newEngine
         player = newPlayer
         audioSession.player = newPlayer
+        browserManager.favorites.queue = newPlayer
 
         // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
         // info, and next/previous follow the queue, not the state.

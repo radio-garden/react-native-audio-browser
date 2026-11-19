@@ -1358,6 +1358,31 @@ struct QueuePublicationTests {
   }
 
   @Test @MainActor
+  func replaceEach_publishesTheQueueOnceAndKeepsTheActiveTrack() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    cb.activeTrackChanges.removeAll()
+    let loads = eh.resolveAndLoadCalls.count
+
+    c.replaceEach { $0.id == "b" ? nil : $0.copying(favorited: true) }
+
+    #expect(cb.queueChanges.map { $0.map(\.favorited) } == [[true, nil, true]])
+    #expect(c.currentTrack?.favorited == true)
+    #expect(cb.activeTrackChanges.isEmpty)
+    #expect(eh.resolveAndLoadCalls.count == loads)
+  }
+
+  @Test @MainActor
+  func replaceEach_publishesNothingWhenNoTrackIsReplaced() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    try c.setQueue(threeTracks())
+    cb.queueChanges.removeAll()
+    c.replaceEach { _ in nil }
+    #expect(cb.queueChanges.isEmpty)
+  }
+
+  @Test @MainActor
   func clear_publishesAnEmptyQueue() throws {
     let (c, _, cb, _) = makeCoordinator()
     try c.setQueue(threeTracks())

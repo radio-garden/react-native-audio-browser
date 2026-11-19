@@ -222,20 +222,18 @@ public extension HybridAudioBrowser {
   }
 
   func setActiveTrackFavorited(favorited: Bool) throws {
-    try favoriteActiveTrack(favorited)
+    favoriteActiveTrack(favorited)
   }
 
-  /// Sets the active track's favorite state: in the favorite set first, so the now-playing
-  /// heart (hydrated from it) flips at once, then on the queued track. False when nothing is
-  /// playing or the track has no identity.
+  /// Sets the active track's favorite state in the favorite set, which restamps every copy of
+  /// the track, on screen and queued. False when nothing is playing or the track has no
+  /// identity.
   @discardableResult
-  internal func favoriteActiveTrack(_ favorited: Bool) throws -> Bool {
-    try onMainActor {
+  internal func favoriteActiveTrack(_ favorited: Bool) -> Bool {
+    onMainActor {
       guard let player, let track = player.currentTrack, let identity = track.identity else { return false }
       browserManager.setFavorited(identity: identity, favorited: favorited)
-      // Hydration never overrides a track's own flag, so the queued copy must carry it.
-      let updated = track.copying(favorited: favorited)
-      try player.replace(player.queue.currentIndex, updated)
+      let updated = player.currentTrack ?? track
       // The only emit: a favorite toggle mutates the active track in place, so
       // onPlaybackActiveTrackChanged stays transition-only.
       let event = FavoriteChangedEvent(track: updated, favorited: favorited)
@@ -250,7 +248,7 @@ public extension HybridAudioBrowser {
   }
 
   func toggleActiveTrackFavorited() throws {
-    try favoriteActiveTrack(!isActiveTrackFavorited())
+    favoriteActiveTrack(!isActiveTrackFavorited())
   }
 
   func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws {
@@ -289,8 +287,8 @@ public extension HybridAudioBrowser {
   }
 
   func getActiveTrack() throws -> Track? {
-    // The now-playing track is loaded outside the browse cache: a missing `favorited` is filled
-    // from the favorite set, but a track's own value wins, so writers must update the queued copy too.
+    // A queued track that carries no `favorited` (a queue set from JS) is filled from the
+    // favorite set; one that carries it is kept current by `setFavorites` and the heart toggle.
     onMainActor { player?.currentTrack.map(browserManager.hydrateFavorite) }
   }
 
