@@ -892,6 +892,7 @@ struct ComputedPropertyTests {
       _ = q.next()
     }
     #expect(q.isLastInPlaybackOrder == true)
+    q.repeatMode = .queue
     _ = q.next()
     #expect(q.isLastInPlaybackOrder == false)
   }
