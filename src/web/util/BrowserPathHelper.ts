@@ -1,5 +1,8 @@
 import type { NavigationErrorKind } from '../../types/browser'
 
+const isAbsoluteUrl = (url: string): boolean =>
+  /^([a-z][a-z\d+.-]*:|\/\/)/i.test(url)
+
 /**
  * Utility for handling browser paths and contextual URLs in the media browser system.
  * Mirrors Android's BrowserPathHelper.kt
@@ -183,15 +186,11 @@ export const BrowserPathHelper = {
    * - buildUrl("http://example.com/", "/api/test") → "http://example.com/api/test"
    * - buildUrl(undefined, "/api/test") → "/api/test"
    * - buildUrl(undefined, "http://full.url") → "http://full.url"
+   * - buildUrl("http://example.com", "blob:http://app/id") → "blob:http://app/id"
+   * - buildUrl("http://example.com", "//cdn.example.com/a") → "//cdn.example.com/a"
    */
   buildUrl(baseUrl: string | undefined, path: string): string {
-    // If path is already a full URL, return it as-is
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path
-    }
-
-    // If no baseUrl, return path as-is
-    if (!baseUrl) {
+    if (!baseUrl || isAbsoluteUrl(path)) {
       return path
     }
 

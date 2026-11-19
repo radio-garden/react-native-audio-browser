@@ -66,3 +66,26 @@ describe('BrowserPathHelper.navigationErrorKind', () => {
     )
   })
 })
+
+describe('BrowserPathHelper.buildUrl', () => {
+  const base = 'https://api.example.com'
+
+  it('keeps a path with a colon after its first slash relative', () => {
+    expect(BrowserPathHelper.buildUrl(base, '/shows/a:b')).toBe(
+      `${base}/shows/a:b`
+    )
+    expect(BrowserPathHelper.buildUrl(base, 'shows/a:b')).toBe(
+      `${base}/shows/a:b`
+    )
+  })
+
+  it.each([
+    'HTTPS://other.example.com/a.mp3',
+    'blob:https://app.example.com/0b1c2d3e',
+    'data:image/png;base64,iVBORw0KGgo=',
+    'file:///music/a.mp3',
+    '//cdn.example.com/a.mp3'
+  ])('returns %s without the base', (url) => {
+    expect(BrowserPathHelper.buildUrl(base, url)).toBe(url)
+  })
+})
