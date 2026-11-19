@@ -127,4 +127,12 @@ describe('media session position state', () => {
 
     expect(playbackStates).toEqual(['paused', 'playing'])
   })
+
+  it('keeps a stalled live stream playing, so the controls still offer pause', async () => {
+    setDuration(Infinity)
+
+    await h.rebuffer()
+
+    expect(playbackStates).toEqual(['playing'])
+  })
 })

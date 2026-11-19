@@ -1,6 +1,6 @@
 import type { NowPlayingMetadata } from '../../features'
 import type { AudioBrowser as AudioBrowserSpec } from '../../specs/audio-browser.nitro'
-import { MediaSessionManager } from './MediaSessionManager'
+import { hasPositionState, MediaSessionManager } from './MediaSessionManager'
 
 /**
  * The slice of the player the remote-command bridge drives. Picked straight from
@@ -127,15 +127,19 @@ export class RemoteCommandController {
 
   /**
    * Reflects the current playing/paused/stopped state in the OS controls.
-   * Buffering reads as paused: the browser advances the scrubber while
-   * playing, and the position state cannot carry a rate of 0.
+   * Buffering with a position state reads as paused: the browser advances the
+   * scrubber while playing, and the position state cannot carry a rate of 0.
+   * Without one (live) it reads as playing, so the controls still offer pause.
    */
   syncPlaybackState(): void {
     const playback = this.host.getPlayback()
     const { playing, buffering } = this.host.getPlayingState()
     if (playback.state === 'none') {
       this.mediaSession.setPlaybackState('none')
-    } else if (playing && !buffering) {
+    } else if (
+      playing &&
+      !(buffering && hasPositionState(this.host.getProgress().duration))
+    ) {
       this.mediaSession.setPlaybackState('playing')
     } else {
       this.mediaSession.setPlaybackState('paused')

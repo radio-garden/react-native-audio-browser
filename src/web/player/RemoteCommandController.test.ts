@@ -139,9 +139,11 @@ describe('RemoteCommandController', () => {
   it('mirrors playback state from the host', () => {
     const playback = { state: 'ready' as const }
     const playingState = { playing: false, buffering: false }
+    const progress = { position: 30, duration: 180, buffered: 0 }
     const host = makeHost({
       getPlayback: vi.fn(() => playback) as any,
-      getPlayingState: vi.fn(() => playingState)
+      getPlayingState: vi.fn(() => playingState),
+      getProgress: vi.fn(() => progress)
     })
     const controller = new RemoteCommandController(host)
 
@@ -155,6 +157,10 @@ describe('RemoteCommandController', () => {
     playingState.buffering = true
     controller.syncPlaybackState()
     expect(session.playbackState).toBe('paused')
+
+    progress.duration = Infinity
+    controller.syncPlaybackState()
+    expect(session.playbackState).toBe('playing')
 
     ;(playback as { state: string }).state = 'none'
     controller.syncPlaybackState()
