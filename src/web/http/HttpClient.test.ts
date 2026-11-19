@@ -12,6 +12,7 @@ const identity = (body: unknown): unknown => body
 describe('HttpClient.executeRequest', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('returns the decoded body of a 2xx response', async () => {
