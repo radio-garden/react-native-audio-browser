@@ -21,8 +21,8 @@ beforeEach(async () => {
   h.browser.onFavoriteChanged = (event) => favoriteEvents.push(event)
 })
 
-async function playTrack(): Promise<void> {
-  h.browser.load(track)
+async function playTrack(toPlay: Track = track): Promise<void> {
+  h.browser.load(toPlay)
   await h.flush()
   await h.completeLoad()
   h.clear()
@@ -49,6 +49,35 @@ describe('favoriting the active track', () => {
 
     h.browser.toggleActiveTrackFavorited()
     expect(h.browser.getActiveTrack()?.favorited).toBe(false)
+  })
+
+  it('toggles off a track that arrived favorited and is not in the favorites cache', async () => {
+    await playTrack({ ...track, favorited: true })
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(h.browser.getActiveTrack()?.favorited).toBe(false)
+    expect(favoriteEvents.map((event) => event.favorited)).toEqual([false])
+  })
+
+  it('toggles on a track that arrived unfavorited and is in the favorites cache', async () => {
+    h.browser.setFavorites(['a'])
+    await playTrack({ ...track, favorited: false })
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(h.browser.getActiveTrack()?.favorited).toBe(true)
+    expect(favoriteEvents.map((event) => event.favorited)).toEqual([true])
+  })
+
+  it('toggles on a track without a flag whose identity joined the favorites cache after it loaded', async () => {
+    await playTrack()
+    h.browser.setFavorites(['a'])
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(h.browser.getActiveTrack()?.favorited).toBe(true)
+    expect(favoriteEvents.map((event) => event.favorited)).toEqual([true])
   })
 
   it('survives a load that was still resolving its url', async () => {
