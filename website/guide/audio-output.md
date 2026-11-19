@@ -114,6 +114,25 @@ Kotlin), in its control filters. Only the
 selection is reported: the library keeps playing locally, and rendering the
 audio on the speaker is the provider's job.
 
+`RemoteOutputs.routeDescriptorBuilder(id, name)` starts a route's descriptor
+in the category and visible only to the app, from Android 14. Another app on the
+library would otherwise list the route too, and report it as its output while
+its own playback stays on the phone:
+
+```kotlin
+val speaker =
+  RemoteOutputs.routeDescriptorBuilder("kitchen", "Kitchen")
+    .setPlaybackType(MediaRouter.RouteInfo.PLAYBACK_TYPE_REMOTE)
+    .setDeviceType(MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER)
+    .setEnabled(true)
+    .build()
+```
+
+Before Android 14 every app lists the route regardless. A provider that serves
+only its own app returns `null` from `onCreateRouteController(routeId, options)`
+when `options.clientPackageName` is another package, as the library's Sonos
+provider does: the other app's switch then fails.
+
 ### Google Cast (Android)
 
 With `remoteOutputs: { cast: true }`, selecting a Cast device in the switcher
@@ -291,8 +310,14 @@ Cast and Sonos play the queue the same way:
   Playing again loads the item there anew.
 
 The library's Sonos route provider service is exported, as the Output Switcher
-needs to bind it: another app on the phone can bind it too, list the rooms,
-select one and set its volume, as through any media route provider.
+needs to bind it: another app on the phone can bind it too and list the rooms,
+but the provider serves only the app's own sessions, so another app can't
+select a room. Only an app that bypasses Android's hidden-API restrictions can
+still set the volume of a room the app plays to.
+
+When a Sonos room that another app's provider serves is selected, the library
+unselects it: the output stays the phone, and the switcher stops offering
+**Stop casting** for it.
 
 ## Opening the output picker
 

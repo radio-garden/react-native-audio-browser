@@ -43,6 +43,7 @@ const { useEqualizerSettings } = await import('./equalizer')
 const { useFormattedNavigationError, useNavigationError, usePlaybackError } =
   await import('./errors')
 const { useOnline } = await import('./network')
+const { useTimedMetadata } = await import('./metadata')
 const { useNowPlaying } = await import('./nowPlaying')
 const { useOutput } = await import('./output')
 const { useOptions } = await import('./player/options')
@@ -242,11 +243,12 @@ describe('hook wiring table', () => {
 })
 
 /**
- * `useActiveTrack` and `useQueue` are getter-refreshed: a favorite toggle
- * mutates the active track in place WITHOUT a transition event —
- * transitions and mutations are separate events — so
- * these hooks re-read their native getter on the transition slot AND on
- * `onFavoriteChanged`.
+ * The getter-refreshed hooks re-read their native getter on each of two
+ * slots, because one of them changes the value without the other's event:
+ * a favorite toggle mutates the active track in place without a transition,
+ * and a track change clears timed metadata without a timed metadata event.
+ * Each slot gets an empty payload, so a hook that took the event instead of
+ * re-reading fails.
  */
 const { nativeBrowser } = await import('../native')
 
@@ -255,48 +257,46 @@ describe.each([
     name: 'useActiveTrack',
     hook: useActiveTrack,
     getter: 'getActiveTrack',
-    transitionSlot: 'onPlaybackActiveTrackChanged',
-    initial: { src: 'a', favorited: false },
-    mutated: { src: 'a', favorited: true }
+    slotsRead: ['onPlaybackActiveTrackChanged', 'onFavoriteChanged'],
+    reads: [
+      { src: 'a', favorited: false },
+      { src: 'a', favorited: true },
+      { src: 'a', favorited: false }
+    ]
   },
   {
     name: 'useQueue',
     hook: useQueue,
     getter: 'getQueue',
-    transitionSlot: 'onPlaybackQueueChanged',
-    initial: [{ src: 'a', favorited: false }],
-    mutated: [{ src: 'a', favorited: true }]
+    slotsRead: ['onPlaybackQueueChanged', 'onFavoriteChanged'],
+    reads: [
+      [{ src: 'a', favorited: false }],
+      [{ src: 'a', favorited: true }],
+      [{ src: 'a', favorited: false }]
+    ]
+  },
+  {
+    name: 'useTimedMetadata',
+    hook: useTimedMetadata,
+    getter: 'getTimedMetadata',
+    slotsRead: ['onTimedMetadata', 'onPlaybackActiveTrackChanged'],
+    reads: [{ title: 'Song A' }, { title: 'Song B' }, undefined]
   }
-])(
-  '$name (getter-refreshed)',
-  ({ hook, getter, transitionSlot, initial, mutated }) => {
-    it(`re-reads ${getter} on ${transitionSlot} and onFavoriteChanged`, () => {
-      expect(slots.has(transitionSlot)).toBe(true)
-      expect(slots.has('onFavoriteChanged')).toBe(true)
+])('$name (getter-refreshed)', ({ hook, getter, slotsRead, reads }) => {
+  it(`re-reads ${getter} on ${slotsRead.join(' and ')}`, () => {
+    const getterMock = (
+      nativeBrowser as unknown as Record<string, ReturnType<typeof vi.fn>>
+    )[getter]!
 
-      const getterMock = (
-        nativeBrowser as unknown as Record<string, ReturnType<typeof vi.fn>>
-      )[getter]!
+    getterMock.mockReturnValue(reads[0])
+    const { result } = renderHook(() => hook())
+    expect(result.current).toEqual(reads[0])
 
-      getterMock.mockReturnValue(initial)
-      const { result } = renderHook(() => hook())
-      expect(result.current).toEqual(initial)
-
-      // A transition re-reads the getter (the event payload is not consumed).
-      getterMock.mockReturnValue(mutated)
-      act(() => slots.get(transitionSlot)!({}))
-      expect(result.current).toEqual(mutated)
-
-      // A favorite toggle mutates in place — no transition event fires, but
-      // the hook must still refresh.
-      getterMock.mockReturnValue(initial)
-      act(() =>
-        slots.get('onFavoriteChanged')!({
-          track: { src: 'a' },
-          favorited: false
-        })
-      )
-      expect(result.current).toEqual(initial)
+    slotsRead.forEach((slot, i) => {
+      expect(slots.has(slot)).toBe(true)
+      getterMock.mockReturnValue(reads[i + 1])
+      act(() => slots.get(slot)!({}))
+      expect(result.current).toEqual(reads[i + 1])
     })
-  }
-)
+  })
+})

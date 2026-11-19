@@ -90,6 +90,13 @@ struct PlaybackFailureRetryTests {
     #expect(!retryable(URLError(.timedOut), status: status))
   }
 
+  /// A live stream's error log keeps the 200 of the connection that played.
+  @Test func aSuccessStatusLeavesItToTheErrorChain() {
+    #expect(retryable(URLError(.networkConnectionLost), status: 200))
+    #expect(retryable(NSError(domain: "CoreMediaErrorDomain", code: -16830), status: 206))
+    #expect(!retryable(URLError(.badURL), status: 200))
+  }
+
   @Test func aTransientURLErrorRetries() {
     #expect(retryable(URLError(.networkConnectionLost)))
   }

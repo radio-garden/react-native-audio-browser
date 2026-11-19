@@ -74,6 +74,7 @@
     var track: Track
     var queue: [Track]
     var startIndex: Double
+    var startPosition: Double?
   }
 
   enum RepeatMode {
@@ -175,6 +176,31 @@
     var title: String?
     var playlist: String?
     var reference: MediaReference
+  }
+
+  enum GateReason {
+    case browse
+    case search
+  }
+
+  struct Gate {
+    var title: String
+    var message: String?
+  }
+
+  struct GateDecision {
+    var gated: Bool
+    var gate: Gate?
+  }
+
+  struct NativeGateRequest {
+    var reason: GateReason
+    var path: String?
+    var search: SearchParams?
+  }
+
+  struct GateEvent {
+    var reason: GateReason
   }
 
   struct ImageContext {

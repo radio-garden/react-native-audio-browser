@@ -2,23 +2,25 @@ package com.audiobrowser.player
 
 import android.content.Context
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.remote.FakeRemote
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
+import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -36,7 +38,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 // Robolectric's clock stands still, so a delayed message on ExoPlayer's playback thread never
-// runs: the audio track is disabled because an audio renderer can wait in BUFFERING on one.
+// runs: the audio track is disabled because an audio renderer can wait in BUFFERING on one. A
+// rebuild builds an engine with it enabled, so idle() disables it on each new engine.
 // SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes, which Robolectric 4.11
 // answers with null.
 @RunWith(RobolectricTestRunner::class)
@@ -46,7 +49,13 @@ class PlayerSuppressionTest {
   @get:Rule val folder = TemporaryFolder()
 
   private val context = RuntimeEnvironment.getApplication()
-  private val player = Player(context)
+  private val remote = FakeRemote(Looper.getMainLooper())
+  private val player =
+    Player(
+      context,
+      castRemote = { _, _ -> remote },
+      sonosRemote = { _, _ -> FakeRemote(Looper.getMainLooper()) },
+    )
   private val callbacks = mock(Callbacks::class.java)
   private val audioManager =
     shadowOf(context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
@@ -55,12 +64,8 @@ class PlayerSuppressionTest {
   fun play() {
     player.setup(PlayerSetupOptions())
     player.setCallbacks(callbacks)
-    val src = Uri.fromFile(silentWav()).toString()
-    player.exoPlayer.trackSelectionParameters =
-      player.exoPlayer.trackSelectionParameters
-        .buildUpon()
-        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
-        .build()
+    val src = folder.silentWavUri(Duration.ofMinutes(1))
+    disableAudio()
     player.exoPlayer.setMediaItems(
       listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = src)))
     )
@@ -123,7 +128,7 @@ class PlayerSuppressionTest {
     audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
 
     player.togglePlayback()
-    shadowOf(Looper.getMainLooper()).idle()
+    idle()
     assertEquals(PlaybackState.PAUSED, player.playbackState)
     focus(AudioManager.AUDIOFOCUS_GAIN)
 
@@ -139,6 +144,185 @@ class PlayerSuppressionTest {
     focus(AudioManager.AUDIOFOCUS_GAIN)
 
     assertFalse(player.exoPlayer.playWhenReady)
+    assertEquals(PlaybackState.PAUSED, player.playbackState)
+    assertEquals(PlayingState(false, false), player.getPlayingState())
+  }
+
+  @Test
+  fun `a rebuild during a transient focus loss stays suppressed until focus returns`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    idle()
+
+    assertSame(engine, player.exoPlayer)
+    assertSuppressed()
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing on a new engine") {
+      player.playbackState == PlaybackState.PLAYING && player.exoPlayer !== engine
+    }
+  }
+
+  @Test
+  fun `a rebuild during a call keeps the intent`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    // ExoPlayer requests focus on its playback thread and posts a refusal back.
+    Thread.sleep(200)
+    idle()
+
+    assertSuppressed()
+    audioManager.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing again") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `a rebuild held during a transient focus loss runs when the intent drops`() {
+    listOf<() -> Unit>(
+        { focus(AudioManager.AUDIOFOCUS_LOSS) },
+        { player.pause() },
+        { player.stop() },
+      )
+      .forEachIndexed { i, drop ->
+        player.play()
+        idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+        focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        val engine = player.exoPlayer
+        // A different maxBuffer each time, so each setup() rebuilds.
+        player.setup(PlayerSetupOptions(maxBuffer = 120_000.0 + i))
+        assertSame(engine, player.exoPlayer)
+        drop()
+
+        idle()
+
+        assertNotSame(engine, player.exoPlayer)
+        assertFalse(player.exoPlayer.playWhenReady)
+      }
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+  }
+
+  @Test
+  fun `a play during a transient focus loss runs a held rebuild after it`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    assertSame(engine, player.exoPlayer)
+
+    // ExoPlayer's play() asks for focus again, so it plays over the transient loss.
+    player.play()
+    // The rebuild follows the play: it is posted, never run inside it.
+    assertSame(engine, player.exoPlayer)
+    idle()
+
+    assertNotSame(engine, player.exoPlayer)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+  }
+
+  @Test
+  fun `an engine stopped during a transient focus loss holds no rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    // As a handover to a remote output does: the engine stops but keeps the intent.
+    player.exoPlayer.stop()
+    idle()
+    val engine = player.exoPlayer
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+
+    assertNotSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `a held rebuild runs when a remote output takes over`() {
+    player.setup(
+      PlayerSetupOptions(
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+      )
+    )
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(
+      PlayerSetupOptions(
+        maxBuffer = 120_000.0,
+        remoteOutputs =
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null),
+      )
+    )
+    assertSame(engine, player.exoPlayer)
+
+    remote.startSession()
+    idleUntil("remote") { !player.localEngine.isActive }
+    idle()
+
+    assertNotSame(engine, player.exoPlayer)
+    assertFalse(player.localEngine.isActive)
+  }
+
+  @Test
+  fun `a held rebuild runs when the engine idles`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    assertSame(engine, player.exoPlayer)
+
+    // As a terminal error does: the engine idles with the intent and the suppression unchanged.
+    player.exoPlayer.stop()
+    idle()
+
+    assertNotSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `the last setup during a transient focus loss wins`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engines = mutableSetOf(player.exoPlayer)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    engines += player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 130_000.0))
+    engines += player.exoPlayer
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    val engine = player.exoPlayer
+    engines += engine
+
+    assertEquals("one rebuild", 2, engines.size)
+
+    player.setup(PlayerSetupOptions(maxBuffer = 130_000.0))
+    assertSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `a setup back to the current options during a transient focus loss cancels the rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+    player.setup(PlayerSetupOptions())
+    focus(AudioManager.AUDIOFOCUS_GAIN)
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    assertSame(engine, player.exoPlayer)
+  }
+
+  @Test
+  fun `destroying the player drops a held rebuild`() {
+    focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+    val engine = player.exoPlayer
+    player.setup(PlayerSetupOptions(maxBuffer = 120_000.0))
+
+    player.destroy()
+    idle()
+
+    assertSame(engine, player.exoPlayer)
+  }
+
+  private fun assertSuppressed() {
+    assertTrue(player.exoPlayer.playWhenReady)
     assertEquals(PlaybackState.PAUSED, player.playbackState)
     assertEquals(PlayingState(false, false), player.getPlayingState())
   }
@@ -161,30 +345,21 @@ class PlayerSuppressionTest {
             "exo ${player.exoPlayer.playbackState}, ${player.exoPlayer.playerError}"
         )
       Thread.sleep(10)
-      shadowOf(Looper.getMainLooper()).idle()
+      idle()
     }
   }
 
-  /** A minute of 8 kHz mono 8-bit silence, long enough that no test reaches its end. */
-  private fun silentWav(): File {
-    val samples = 8_000 * 60
-    val header =
-      ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-        put("RIFF".toByteArray())
-        putInt(36 + samples)
-        put("WAVEfmt ".toByteArray())
-        putInt(16)
-        putShort(1)
-        putShort(1)
-        putInt(8_000)
-        putInt(8_000)
-        putShort(1)
-        putShort(8)
-        put("data".toByteArray())
-        putInt(samples)
-      }
-    return folder.newFile("silence.wav").apply {
-      writeBytes(header.array() + ByteArray(samples) { 0x80.toByte() })
-    }
+  private fun idle() {
+    shadowOf(Looper.getMainLooper()).idle()
+    if (C.TRACK_TYPE_AUDIO !in player.exoPlayer.trackSelectionParameters.disabledTrackTypes)
+      disableAudio()
+  }
+
+  private fun disableAudio() {
+    player.exoPlayer.trackSelectionParameters =
+      player.exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+        .build()
   }
 }

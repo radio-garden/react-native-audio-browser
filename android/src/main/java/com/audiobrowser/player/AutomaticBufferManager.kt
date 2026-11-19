@@ -1,25 +1,44 @@
 package com.audiobrowser.player
 
+import android.os.SystemClock
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
+import java.io.IOException
 import timber.log.Timber
 
 /**
- * Raises [DynamicLoadControl]'s `bufferForPlaybackAfterRebufferMs` after each rebuffer, to what the
+ * Raises [DynamicLoadControl]'s `bufferForPlaybackAfterRebufferMs` after each underrun, to what the
  * measured drain rate says would last [targetPlaybackDurationMs]. The threshold only rises, up to
  * [maxRebufferBufferMs], until a playlist change or a seek to another item resets it to
  * [defaultConfig].
+ *
+ * An underrun is a rebuffer while every load delivers, however slowly: a connection that stays open
+ * and stalls counts. A rebuffer while media3 retries a failed load in place does not, nor does a
+ * reconnect's first buffering, which starts from idle.
  */
 class AutomaticBufferManager(
   private val loadControl: DynamicLoadControl,
   private val defaultConfig: BufferConfig = BufferConfig(),
+  private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) : AnalyticsListener, Player.Listener {
 
   private var exoPlayer: ExoPlayer? = null
 
   private var wasReady = false
   private var rebufferCount = 0
+
+  /** When each of the current item's loads last failed or retried, until it completes. */
+  private val failingLoads = mutableMapOf<Long, Long>()
+
+  /**
+   * How long a load counts as failing after its last error or retry: longer than one attempt can
+   * take to fail, a connect and then a read, each with an 8 s timeout. A progressive load that
+   * recovers never completes until its file ends.
+   */
+  private val failingLoadWindowMs = 20_000L
 
   private var playbackStartTimeMs: Long = 0
   private var bufferAtPlaybackStartMs: Long = 0
@@ -68,16 +87,18 @@ class AutomaticBufferManager(
     when (playbackState) {
       Player.STATE_BUFFERING -> {
         if (wasReady) {
-          onRebuffer()
+          if (loadsFailing()) onFailedLoadRebuffer() else onRebuffer()
         }
         if (bufferingStartTimeMs == 0L) {
-          bufferingStartTimeMs = System.currentTimeMillis()
+          bufferingStartTimeMs = clock()
           Timber.d("STATE_BUFFERING entered - starting buffer timer")
         }
       }
       Player.STATE_READY -> {
+        // Playing again: the loads that failed deliver.
+        failingLoads.clear()
         if (!wasReady) {
-          playbackStartTimeMs = System.currentTimeMillis()
+          playbackStartTimeMs = clock()
           bufferAtPlaybackStartMs = exoPlayer?.totalBufferedDuration ?: 0
           lastBufferLogTimeMs = playbackStartTimeMs
 
@@ -104,6 +125,49 @@ class AutomaticBufferManager(
     }
   }
 
+  override fun onLoadError(
+    eventTime: AnalyticsListener.EventTime,
+    loadEventInfo: LoadEventInfo,
+    mediaLoadData: MediaLoadData,
+    error: IOException,
+    wasCanceled: Boolean,
+  ) {
+    // A preload of the next item failing does not starve this one. A canceled load counts too:
+    // media3 cancels the load of an HLS variant it excludes, and loads another.
+    if (eventTime.windowIndex != eventTime.currentWindowIndex) return
+    failingLoads[loadEventInfo.loadTaskId] = clock()
+  }
+
+  override fun onLoadStarted(
+    eventTime: AnalyticsListener.EventTime,
+    loadEventInfo: LoadEventInfo,
+    mediaLoadData: MediaLoadData,
+    retryCount: Int,
+  ) {
+    if (loadEventInfo.loadTaskId in failingLoads) failingLoads[loadEventInfo.loadTaskId] = clock()
+  }
+
+  private fun loadsFailing(): Boolean {
+    val now = clock()
+    return failingLoads.values.any { now - it < failingLoadWindowMs }
+  }
+
+  override fun onLoadCompleted(
+    eventTime: AnalyticsListener.EventTime,
+    loadEventInfo: LoadEventInfo,
+    mediaLoadData: MediaLoadData,
+  ) {
+    failingLoads -= loadEventInfo.loadTaskId
+  }
+
+  override fun onLoadCanceled(
+    eventTime: AnalyticsListener.EventTime,
+    loadEventInfo: LoadEventInfo,
+    mediaLoadData: MediaLoadData,
+  ) {
+    failingLoads -= loadEventInfo.loadTaskId
+  }
+
   override fun onIsPlayingChanged(
     eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
     isPlaying: Boolean,
@@ -121,7 +185,7 @@ class AutomaticBufferManager(
       override fun run() {
         if (wasReady && exoPlayer?.isPlaying == true) {
           val bufferedMs = exoPlayer?.totalBufferedDuration ?: 0
-          val playedMs = System.currentTimeMillis() - playbackStartTimeMs
+          val playedMs = clock() - playbackStartTimeMs
           val config = loadControl.getBufferConfig()
           Timber.d(
             "Buffer status: %dms buffered, played %dms (rebuffer threshold: %dms)",
@@ -160,9 +224,14 @@ class AutomaticBufferManager(
 
   // region Buffer adjustment logic
 
+  private fun onFailedLoadRebuffer() {
+    Timber.d("Rebuffer while a failed load retries, threshold kept")
+    restartMeasurement()
+  }
+
   private fun onRebuffer() {
     rebufferCount++
-    val now = System.currentTimeMillis()
+    val now = clock()
     val playbackDurationMs = if (playbackStartTimeMs > 0) now - playbackStartTimeMs else 0
 
     Timber.d(
@@ -189,7 +258,11 @@ class AutomaticBufferManager(
       Timber.d("Skipping adjustment - insufficient timing data")
     }
 
-    // The next rebuffer counts only after STATE_READY records a fresh start.
+    restartMeasurement()
+  }
+
+  /** The next rebuffer counts only after STATE_READY records a fresh start. */
+  private fun restartMeasurement() {
     wasReady = false
     playbackStartTimeMs = 0
     bufferAtPlaybackStartMs = 0

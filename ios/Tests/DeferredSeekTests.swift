@@ -18,7 +18,7 @@ struct DeferredSeekTests {
     #expect(seek.begin() == 30)
     #expect(seek.state == .inFlight(30))
     #expect(seek.defersReady)
-    #expect(seek.land() == .done)
+    #expect(seek.land(finished: true) == .done)
     #expect(seek.state == .idle)
     #expect(!seek.defersReady)
   }
@@ -45,15 +45,23 @@ struct DeferredSeekTests {
     _ = seek.begin()
     seek.capture(50)
     #expect(seek.state == .pending(50))
-    #expect(seek.land() == .reseek(50))
+    #expect(seek.land(finished: true) == .reseek(50))
     #expect(seek.state == .inFlight(50))
-    #expect(seek.land() == .done)
+    #expect(seek.land(finished: true) == .done)
+  }
+
+  @Test func anUnfinishedLandingKeepsTheTarget() {
+    var seek = DeferredSeek()
+    seek.capture(30)
+    _ = seek.begin()
+    #expect(seek.land(finished: false) == .none)
+    #expect(seek.state == .inFlight(30))
   }
 
   /// A seek issued while playing is never deferred, so its landing has nothing to do.
   @Test func aLandingWithNothingInFlightIsNone() {
     var seek = DeferredSeek()
-    #expect(seek.land() == .none)
+    #expect(seek.land(finished: true) == .none)
   }
 
   @Test func resetDropsTheTargetAndInvalidatesSeeksInFlight() {

@@ -159,6 +159,8 @@ android {
     }
     test {
       if (castEnabled) java.srcDirs += ["src/testCast/java"]
+      // spec/retry-cases.json, which the Swift tests read from the same place.
+      resources.srcDirs += ["../spec"]
     }
   }
 }

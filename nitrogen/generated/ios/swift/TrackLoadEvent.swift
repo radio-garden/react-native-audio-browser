@@ -18,14 +18,20 @@ public extension TrackLoadEvent {
   /**
    * Create a new instance of `TrackLoadEvent`.
    */
-  init(track: Track, queue: [Track], startIndex: Double) {
+  init(track: Track, queue: [Track], startIndex: Double, startPosition: Double?) {
     self.init(track, { () -> bridge.std__vector_Track_ in
       var __vector = bridge.create_std__vector_Track_(queue.count)
       for __item in queue {
         __vector.push_back(__item)
       }
       return __vector
-    }(), startIndex)
+    }(), startIndex, { () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = startPosition {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
   }
 
   @inline(__always)
@@ -41,5 +47,17 @@ public extension TrackLoadEvent {
   @inline(__always)
   var startIndex: Double {
     return self.__startIndex
+  }
+  
+  @inline(__always)
+  var startPosition: Double? {
+    return { () -> Double? in
+      if bridge.has_value_std__optional_double_(self.__startPosition) {
+        let __unwrapped = bridge.get_std__optional_double_(self.__startPosition)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
   }
 }

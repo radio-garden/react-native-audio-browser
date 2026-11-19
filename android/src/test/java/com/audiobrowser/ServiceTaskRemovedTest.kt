@@ -1,10 +1,12 @@
 package com.audiobrowser
 
-import android.content.ComponentName
+import android.app.SearchManager
+import android.content.ContextWrapper
 import android.content.Intent
-import android.os.Binder
 import android.os.Looper
+import android.os.Process
 import androidx.media3.common.C
+import androidx.media3.session.MediaController
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.PlaybackStateStore
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
@@ -14,10 +16,10 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -25,17 +27,7 @@ import org.robolectric.Shadows.shadowOf
 @RunWith(RobolectricTestRunner::class)
 class ServiceTaskRemovedTest {
 
-  private val controller = run {
-    // Robolectric connects an unregistered binding with a null ComponentName, which the
-    // HeadlessTaskService connection's non-null parameter rejects.
-    val application = RuntimeEnvironment.getApplication()
-    shadowOf(application)
-      .setComponentNameAndServiceForBindService(
-        ComponentName(application, HeadlessTaskService::class.java),
-        Binder(),
-      )
-    Robolectric.buildService(Service::class.java).create()
-  }
+  private val controller = buildService()
   private val service = controller.get()
   private val player = service.player
 
@@ -50,6 +42,20 @@ class ServiceTaskRemovedTest {
     player.load(TestFixtures.track(title = title, src = "https://s/$title.mp3"))
     player.play()
     idle()
+  }
+
+  private fun connectController(packageName: String) {
+    val application = RuntimeEnvironment.getApplication()
+    shadowOf(application.packageManager)
+      .setPackagesForUid(Process.myUid(), application.packageName, packageName)
+    val context =
+      object : ContextWrapper(application) {
+        override fun getPackageName() = packageName
+      }
+    val future = MediaController.Builder(context, service.session.token).buildAsync()
+    idle()
+    // Throws if the session refused the controller.
+    future.get()
   }
 
   private fun removeTask(behavior: AppKilledPlaybackBehavior? = null) {
@@ -74,31 +80,32 @@ class ServiceTaskRemovedTest {
     assertTrue(shadowOf(service).isStoppedBySelf)
   }
 
-  private fun playAndSavePositionAt61s() {
+  private fun playAndSeekTo63sAfterAPeriodicSave() {
     playTrack("a")
     player.seekTo(61, TimeUnit.SECONDS)
     shadowOf(Looper.getMainLooper())
       .idleFor(Duration.ofMillis(PlaybackStateStore.PERIODIC_SAVE_INTERVAL_MS))
     assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    player.seekTo(63, TimeUnit.SECONDS)
   }
 
   @Test
-  fun `a removed task keeps the saved position while AudioBrowser is bound`() {
+  fun `a removed task saves the current position while AudioBrowser is bound`() {
     controller.bind()
-    playAndSavePositionAt61s()
+    playAndSeekTo63sAfterAPeriodicSave()
 
     removeTask()
 
-    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    assertEquals(63_000L, player.playbackStateStore.get()?.positionMs)
   }
 
   @Test
-  fun `a removed task keeps the saved position when AudioBrowser never bound`() {
-    playAndSavePositionAt61s()
+  fun `a removed task saves the current position when AudioBrowser never bound`() {
+    playAndSeekTo63sAfterAPeriodicSave()
 
     removeTask()
 
-    assertEquals(61_000L, player.playbackStateStore.get()?.positionMs)
+    assertEquals(63_000L, player.playbackStateStore.get()?.positionMs)
   }
 
   @Test
@@ -197,5 +204,87 @@ class ServiceTaskRemovedTest {
     assertEquals(listOf("a"), player.tracks.map { it.title })
     assertTrue(player.exoPlayer.playWhenReady)
     assertFalse(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task stops playback while the Bluetooth stack is connected as a controller`() {
+    controller.bind()
+    playTrack("a")
+    connectController("com.google.android.bluetooth")
+
+    removeTask()
+
+    assertEquals(emptyList<String>(), player.tracks.map { it.title })
+    assertEquals(PlaybackState.STOPPED, player.playbackState)
+    assertTrue(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task only pauses while Android Auto is connected`() {
+    playTrack("a")
+    connectController("com.google.android.projection.gearhead")
+
+    removeTask()
+
+    assertFalse(player.exoPlayer.isReleased)
+    assertEquals(listOf("a"), player.tracks.map { it.title })
+    assertFalse(player.exoPlayer.playWhenReady)
+    assertTrue(shadowOf(service).isForegroundStopped)
+    assertTrue(shadowOf(service).notificationShouldRemoved)
+    assertFalse(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `a removed task only pauses while Android Automotive is connected`() {
+    playTrack("a")
+    connectController("com.android.car.media")
+
+    removeTask()
+
+    assertFalse(player.exoPlayer.isReleased)
+    assertEquals(listOf("a"), player.tracks.map { it.title })
+  }
+
+  private fun removeTaskDuringASearchWaitingForAudioBrowser() {
+    controller
+      .withIntent(
+        Intent("android.media.action.MEDIA_PLAY_FROM_SEARCH").putExtra(SearchManager.QUERY, "a")
+      )
+      .startCommand(0, 4)
+
+    removeTask()
+    // Past AudioBrowser's registration timeout.
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
+  }
+
+  @Test
+  fun `a search waiting for AudioBrowser ends with the removed task`() {
+    removeTaskDuringASearchWaitingForAudioBrowser()
+
+    assertEquals(NEVER_STOPPED, shadowOf(service).stopSelfId)
+  }
+
+  @Test
+  fun `a search waiting for AudioBrowser ends with the removed task while AudioBrowser is bound`() {
+    controller.bind()
+
+    removeTaskDuringASearchWaitingForAudioBrowser()
+
+    assertEquals(NEVER_STOPPED, shadowOf(service).stopSelfId)
+    assertFalse(player.exoPlayer.isReleased)
+  }
+
+  @Test
+  fun `a media browser binding after the task is removed gets no session`() {
+    playTrack("a")
+    connectController("com.google.android.bluetooth")
+    removeTask()
+
+    assertNull(service.onBind(Intent("android.media.browse.MediaBrowserService")))
+  }
+
+  private companion object {
+    // ShadowService's stopSelfId before any stopSelf(startId); Android's start ids begin at 1.
+    const val NEVER_STOPPED = 0
   }
 }

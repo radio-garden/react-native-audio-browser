@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.os.Bundle
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
@@ -805,16 +806,22 @@ class MediaSessionCallback(private val player: Player) :
       )
     }
 
+    val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
+
     return scope.future {
       val audioBrowser = player.awaitBrowser()
 
-      // Returning the current state unchanged is how handleTrackLoad tells Media3 to do nothing.
+      // Media3 sets whatever this returns: the controller's position would undo the handler's seek.
       // Reads hop to Main: ExoPlayer is main-thread confined and this runs on IO.
       suspend fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition =
         withContext(Dispatchers.Main) {
           val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
           val currentIndex = player.currentIndex ?: 0
-          MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
+          MediaSession.MediaItemsWithStartPosition(
+            currentItems,
+            currentIndex,
+            player.restorablePositionMs,
+          )
         }
 
       val browserManager = audioBrowser.browserManager
@@ -843,6 +850,7 @@ class MediaSessionCallback(private val player: Player) :
               track,
               queueTracks,
               index.toDouble(),
+              startPosition,
               ::currentPlayerState,
             ) {
               val existingItems = queueTracks.map { TrackFactory.toMedia3(it) }
@@ -856,13 +864,17 @@ class MediaSessionCallback(private val player: Player) :
         browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
-      val selectedTrack = tracks.getOrElse(result.startIndex) { tracks.first() }
+      // setQueue reads an unset index as "keep the current one". Media3 still gets it unset on the
+      // default branch, where it means a reset.
+      val handlerIndex = result.startIndex.takeIf { it != C.INDEX_UNSET } ?: 0
+      val selectedTrack = tracks.getOrElse(handlerIndex) { tracks.first() }
 
       handleTrackLoad(
         audioBrowser.configuration.handleTrackLoad,
         selectedTrack,
         tracks,
-        result.startIndex.toDouble(),
+        handlerIndex.toDouble(),
+        startPosition,
         ::currentPlayerState,
       ) {
         // Only on handleTrackLoad's default branch: a consumer that handles the load owns the

@@ -8,8 +8,12 @@ import com.audiobrowser.extension.identity
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.FALLBACK_TIMEOUT
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
+import com.audiobrowser.util.awaitCancellable
+import com.audiobrowser.util.awaitNested
+import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
@@ -25,6 +29,7 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -81,10 +86,12 @@ class BrowserManager {
 
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
-  // Moves on clearContentCache, so a fetch that outlives one caches nothing. Separate from
-  // layerGeneration, which also moves on every path change. Car browses run on IO threads and the
-  // clear on the JS thread: each check and its write hold [cacheLock].
+  // Moves on clearContentCache, so a fetch that outlives one caches nothing; [pageGenerations]
+  // does the same for one path, and is cleared only together with a move of this. Separate from
+  // layerGeneration, which also moves on every path change. Car browses run on IO threads and
+  // the clear on the JS thread: each check and its write hold [cacheLock].
   @Volatile private var contentGeneration = 0
+  private val pageGenerations = HashMap<String, Int>()
   private var tabsGeneration = -1
   private val cacheLock = Any()
 
@@ -453,11 +460,13 @@ class BrowserManager {
       Timber.d("Content cache MISS for path='$normalizedPath'")
     }
 
-    val generation = contentGeneration
+    val generation = synchronized(cacheLock) { pageGeneration(normalizedPath) }
     val resolvedTrack = resolveUncached(normalizedPath)
 
     synchronized(cacheLock) {
-      if (generation == contentGeneration) contentCache.put(normalizedPath, resolvedTrack)
+      if (generation == pageGeneration(normalizedPath)) {
+        contentCache.put(normalizedPath, resolvedTrack)
+      }
     }
 
     cacheChildren(resolvedTrack)
@@ -470,9 +479,14 @@ class BrowserManager {
     require(!BrowserPathHelper.isContextual(path)) {
       "invalidateContentCache() expects a container path, not a contextual path: $path"
     }
-    contentCache.remove(path)
+    synchronized(cacheLock) {
+      pageGenerations[path] = (pageGenerations[path] ?: 0) + 1
+      contentCache.remove(path)
+    }
     Timber.d("Invalidated content cache for path='$path'")
   }
+
+  private fun pageGeneration(path: String) = contentGeneration to pageGenerations[path]
 
   /**
    * Clears every cached page and the last search, which nothing else evicts, and re-resolves the
@@ -482,6 +496,7 @@ class BrowserManager {
   fun clearContentCache() {
     synchronized(cacheLock) {
       contentGeneration += 1
+      pageGenerations.clear()
       contentCache.evictAll()
       lastSearch = null
     }
@@ -667,6 +682,8 @@ class BrowserManager {
         "singleTrack=false - returning ${playableTracks.size} playable tracks (from ${sectionTracks.size} in section), starting at index $selectedIndex"
       )
       return Pair(playableTracks.toTypedArray(), selectedIndex)
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Timber.e(e, "Error expanding queue from contextual path: $contextualPath")
       return null
@@ -952,13 +969,13 @@ class BrowserManager {
       // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms.
       return callback
         .invoke(param)
-        .await()
+        .awaitCancellable()
         .match(
           first = { resolvedTrack -> resolvedTrack },
           second = { browseError -> throw CallbackException(browseError.error) },
           third = { promise ->
             promise
-              .await()
+              .awaitCancellable()
               .match(
                 first = { resolvedTrack -> resolvedTrack },
                 second = { browseError -> throw CallbackException(browseError.error) },
@@ -991,9 +1008,7 @@ class BrowserManager {
 
     searchEntry.searchCallback?.let { callback ->
       Timber.d("Resolving search via callback")
-      val promise = callback.invoke(params)
-      val innerPromise = promise.await()
-      return innerPromise.await()
+      return callback.invoke(params).awaitNested()
     }
 
     searchEntry.searchConfig?.let { apiConfig ->
@@ -1026,7 +1041,7 @@ class BrowserManager {
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
     // The TS layer wraps the thunk in Promise.resolve: await the bridge promise, then the JS one.
-    return resolver.invoke().await().await()
+    return resolver.invoke().awaitNested()
   }
 
   // No in-flight dedupe: concurrent first requests may both resolve, which is harmless, and a
@@ -1054,14 +1069,17 @@ class BrowserManager {
   /**
    * The title of the "view more" row appended to a pathed section where the header can't be tapped
    * (Android Auto). Re-read once per generation, so invalidateAllContent picks up a new language.
-   * Falls back to [DEFAULT_VIEW_MORE_TITLE] when unset, blank or throwing.
+   * Falls back to [DEFAULT_VIEW_MORE_TITLE] when unset, blank, throwing or outrunning
+   * [FALLBACK_TIMEOUT].
    */
   internal suspend fun viewMoreTitle(): String {
     val generation = layerGeneration
     if (resolvedViewMoreTitleGeneration == generation) return resolvedViewMoreTitle
     val title =
       try {
-        config.viewMoreTitle?.invoke()?.await()?.takeIf { it.isNotBlank() }
+        config.viewMoreTitle?.invoke()?.awaitOrTimeout()?.takeIf { it.isNotBlank() }
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         Timber.e(e, "viewMoreTitle callback failed; falling back to the default")
         null

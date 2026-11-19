@@ -3,7 +3,8 @@
 /// `invalidate()` starts a new generation. A caller whose computation finishes or fails after
 /// an invalidation computes again, so `value(_:)` never returns a stale result; `compute` must
 /// therefore read the state it depends on when it runs, not capture it. A failure is not kept:
-/// the next caller of the same generation tries again. A cancelled caller stops retrying.
+/// the next caller of the same generation tries again. A cancelled caller leaves at once and stops
+/// retrying; the computation runs on for the others.
 @MainActor
 final class GenerationMemo<Value: Sendable> {
   private var generation = 0
@@ -21,14 +22,20 @@ final class GenerationMemo<Value: Sendable> {
       if let current, current.generation == generation {
         task = current.task
       } else {
-        task = Task { try await compute() }
+        task = Task {
+          do {
+            return try await compute()
+          } catch {
+            if self.current?.generation == generation { self.current = nil }
+            throw error
+          }
+        }
         current = (generation, task)
       }
       do {
-        let value = try await task.value
+        let value = try await awaitCallback { deliver in Task { await deliver(task.result) } }
         if generation == self.generation { return value }
       } catch {
-        if current?.task == task { current = nil }
         if generation == self.generation { throw error }
       }
     }

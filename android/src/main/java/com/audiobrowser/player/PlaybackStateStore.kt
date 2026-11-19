@@ -76,8 +76,7 @@ class PlaybackStateStore(private val player: Player) {
 
   /** Restarts the interval, so a [save] on track change is not followed by an immediate repeat. */
   fun resetPeriodicSave() {
-    periodicSaveJob?.cancel()
-    periodicSaveJob = null
+    cancelPeriodicSave()
     launchPeriodicSave()
   }
 
@@ -92,11 +91,7 @@ class PlaybackStateStore(private val player: Player) {
       }
   }
 
-  /**
-   * Stops the periodic save without a final save, for engine teardown: a save against the released
-   * player would persist position 0 over the real one.
-   */
-  fun cancelPeriodicSave() {
+  private fun cancelPeriodicSave() {
     periodicSaveJob?.cancel()
     periodicSaveJob = null
   }
@@ -104,8 +99,8 @@ class PlaybackStateStore(private val player: Player) {
   /** Stops the periodic save and calls [save] once more. */
   fun stopPeriodicSave() {
     cancelPeriodicSave()
-    // After a natural end, setPlaybackState(ENDED) has saved position 0 and the dropped intent
-    // calls this afterwards; saving here would make resumption start at the end of the track.
+    // After a natural end, setPlaybackState(ENDED) has saved position 0; a save here, from the
+    // dropped intent or a teardown, would make resumption start at the end of the track.
     if (player.playbackState != PlaybackState.ENDED) {
       save()
     }
@@ -114,9 +109,7 @@ class PlaybackStateStore(private val player: Player) {
   /** Saves the current track and its position; does nothing without a current track. */
   fun save() {
     val track = player.currentTrack ?: return
-    // A live item reports 0 until it has loaded, so 0 is saved unset too.
-    val positionMs =
-      player.position.takeUnless { player.isCurrentItemLive || it == 0L } ?: C.TIME_UNSET
+    val positionMs = player.restorablePositionMs
 
     prefs.edit {
       putLong(KEY_POSITION_MS, positionMs)

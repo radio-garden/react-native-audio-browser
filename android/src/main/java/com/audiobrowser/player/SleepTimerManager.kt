@@ -19,8 +19,8 @@ internal class SleepTimerManager(
 
   private val timer =
     object : SleepTimer() {
-      override fun onFadeStart(durationSeconds: Double) {
-        volumeFader.start(durationSeconds)
+      override fun onFadeStart(deadlineUptimeMs: Long, durationSeconds: Double) {
+        volumeFader.start(deadlineUptimeMs, durationSeconds)
       }
 
       override fun onFadeCancel() {

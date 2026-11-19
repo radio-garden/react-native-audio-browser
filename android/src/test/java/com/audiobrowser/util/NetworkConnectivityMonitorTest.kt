@@ -53,6 +53,8 @@ class NetworkConnectivityMonitorTest {
       shadowOf(it).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
+  private fun noInternet() = ShadowNetworkCapabilities.newInstance()
+
   private fun becomesDefault(network: Network) {
     callback.onAvailable(network)
     callback.onCapabilitiesChanged(network, connectivityManager.getNetworkCapabilities(network)!!)
@@ -74,17 +76,24 @@ class NetworkConnectivityMonitorTest {
   }
 
   @Test
-  fun `is offline while the default network is not validated`() {
+  fun `is online on a default network with internet that never validates`() {
     shadow.setNetworkCapabilities(wifi, unvalidated())
     becomesDefault(wifi)
+    assertTrue(monitor.getOnline())
+  }
+
+  @Test
+  fun `is offline while the default network has no internet`() {
+    shadow.setNetworkCapabilities(wifi, noInternet())
+    becomesDefault(wifi)
     assertFalse(monitor.getOnline())
-    callback.onCapabilitiesChanged(wifi, validated())
+    callback.onCapabilitiesChanged(wifi, unvalidated())
     assertTrue(monitor.getOnline())
   }
 
   @Test
   fun `takes the capabilities of a new default network on its arrival`() {
-    shadow.setNetworkCapabilities(wifi, unvalidated())
+    shadow.setNetworkCapabilities(wifi, noInternet())
     becomesDefault(mobile)
     callback.onAvailable(wifi)
     assertFalse(monitor.getOnline())
@@ -93,7 +102,7 @@ class NetworkConnectivityMonitorTest {
   @Test
   fun `ignores capability changes of a network that is not the default`() {
     becomesDefault(wifi)
-    callback.onCapabilitiesChanged(mobile, unvalidated())
+    callback.onCapabilitiesChanged(mobile, noInternet())
     assertTrue(monitor.getOnline())
   }
 }

@@ -283,6 +283,13 @@ export interface AudioBrowser extends HybridObject<{
   toggleActiveTrackFavorited(): void
   setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void
   getQueue(): Track[]
+  /**
+   * Changes when the queue's tracks or their order change, whoever changed
+   * them (`setQueue`, a pick in CarPlay or Android Auto, `add`, `remove`,
+   * `move`), and never repeats while the app runs: equal readings mean the
+   * queue is the same. -1 before the player is set up.
+   */
+  getQueueVersion(): number
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined
   getActiveTrack(): Track | undefined
@@ -309,6 +316,11 @@ export interface AudioBrowser extends HybridObject<{
    * Gets the current now playing metadata (override if set, else track metadata).
    */
   getNowPlaying(): NowPlayingMetadata | undefined
+  /**
+   * Gets the last timed metadata received for the current track, cleared on
+   * a track change.
+   */
+  getTimedMetadata(): TimedMetadata | undefined
 
   // MARK: network connectivity
   getOnline(): boolean

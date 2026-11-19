@@ -14,9 +14,10 @@ exposes it three ways:
 
 All three report the same boolean, but each platform decides it differently:
 
-- **Android** asks the OS whether the default network is _validated_: it must
-  actually reach the internet, so Wi-Fi with no internet behind it reads
-  `false`.
+- **Android** asks the OS whether the default network offers internet. It does
+  not wait for the OS to validate it, so a network that never validates (a
+  failing Private DNS, some hotspots) reads `true`, and so can a captive or
+  dead Wi-Fi.
 - **iOS** reads the system path monitor (`NWPathMonitor`), which reports
   whether a usable network path exists. It does not check that the internet is
   reachable, so a captive or dead Wi-Fi can read `true`.

@@ -118,4 +118,61 @@ struct GenerationMemoTests {
     await #expect(throws: CancellationError.self) { try await result.value }
     #expect(gate.runs == 1)
   }
+
+  @Test func aCancelledCallerLeavesWhileTheComputationRunsOn() async throws {
+    let memo = GenerationMemo<Int>()
+    let gate = Gate()
+    gate.input = 5
+    let cancelled = Task { try await memo.value { await gate.run() } }
+    let other = Task { try await memo.value { await gate.run() } }
+    await gate.waitForRuns(1)
+    cancelled.cancel()
+    await #expect(throws: CancellationError.self) {
+      try await withinTimeLimit { try await cancelled.value }
+    }
+    gate.release()
+    #expect(try await withinTimeLimit { try await other.value } == 5)
+    #expect(gate.runs == 1)
+  }
+
+  @Test func aCallerAfterACancelledOneJoinsTheRunningComputation() async throws {
+    let memo = GenerationMemo<Int>()
+    let gate = Gate()
+    gate.input = 6
+    let cancelled = Task { try await memo.value { await gate.run() } }
+    await gate.waitForRuns(1)
+    cancelled.cancel()
+    _ = try await withinTimeLimit { await cancelled.result }
+    let later = Task { try await memo.value { await gate.run() } }
+    for _ in 0 ..< 100 {
+      await Task.yield()
+    }
+    gate.release()
+    #expect(try await withinTimeLimit { try await later.value } == 6)
+    #expect(gate.runs == 1)
+  }
+
+  @Test func aFailureAfterEveryCallerLeftIsNotKept() async throws {
+    let memo = GenerationMemo<Int>()
+    let gate = Gate()
+    let cancelled = Task {
+      try await memo.value {
+        let input = await gate.run()
+        if input == 0 { throw Failure() }
+        return input
+      }
+    }
+    await gate.waitForRuns(1)
+    cancelled.cancel()
+    _ = try await withinTimeLimit { await cancelled.result }
+    gate.release()
+    for _ in 0 ..< 100 {
+      await Task.yield()
+    }
+    gate.input = 7
+    let later = Task { try await memo.value { await gate.run() } }
+    await gate.waitForRuns(2)
+    gate.release()
+    #expect(try await withinTimeLimit { try await later.value } == 7)
+  }
 }

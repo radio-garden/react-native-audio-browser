@@ -1,5 +1,7 @@
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeValueRefreshedBy } from '../utils/useNativeValueRefreshedBy'
+import { onActiveTrackChanged } from './queue/activeTrack'
 
 // MARK: - Types
 
@@ -115,6 +117,19 @@ export interface ChapterMetadata {
   url?: string
 }
 
+// MARK: - Getters
+
+/**
+ * Returns the last timed metadata received for the current track, or
+ * `undefined` when none has arrived since the track changed.
+ *
+ * @platform ios android
+ * Always `undefined` on web — see {@link onTimedMetadata} for why.
+ */
+export function getTimedMetadata(): TimedMetadata | undefined {
+  return nativeBrowser.getTimedMetadata() ?? undefined
+}
+
 // MARK: - Event Callbacks
 
 /**
@@ -159,3 +174,17 @@ export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
 export const onTimedMetadata = NativeUpdatedValue.emitterize<TimedMetadata>(
   (cb) => (nativeBrowser.onTimedMetadata = cb)
 )
+
+// MARK: - Hooks
+
+// Module-level so the hook's subscription identity is stable across renders.
+const timedMetadataInvalidators = [onTimedMetadata, onActiveTrackChanged]
+
+/**
+ * Hook that returns the current timed metadata, updating when new timed
+ * metadata arrives and on a track change.
+ * @returns The current timed metadata or undefined
+ */
+export function useTimedMetadata(): TimedMetadata | undefined {
+  return useNativeValueRefreshedBy(getTimedMetadata, timedMetadataInvalidators)
+}

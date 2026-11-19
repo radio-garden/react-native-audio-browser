@@ -11,7 +11,7 @@ private func makeCoordinator() -> (
 ) {
   let clock = ManualSleepTimerScheduler()
   let engine = MockPlayerEngine()
-  let player = makePlayer(engine: engine, retries: false, sleepTimerScheduler: clock)
+  let player = makePlayer(engine: engine, sleepTimerScheduler: clock)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   return (player, engine, callbacks, clock)
@@ -113,6 +113,8 @@ private func makeRetrying() -> (
   let retryHandler = makeRetryLoop()
   let engine = MockPlayerEngine()
   let player = makePlayer(engine: engine, retry: retryHandler)
+  // The loop's intent alone, so a test drives the states without the engine calls a play makes.
+  retryHandler.playIntentChanged(true)
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   return (player, retryHandler, callbacks, engine)
@@ -185,11 +187,15 @@ struct RetryingErrorTests {
   @Test @MainActor
   func exhaustion_hardensIntoTerminalError() async {
     let (c, retryHandler, cb, _) = makeRetrying()
+    retryHandler.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
     c.transition(.trackLoading)
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
-    retryHandler.shouldRetry = { false }
+    // With no track, the reload starts no connection: the second failure needs one of its own.
+    c.retry.connectionStarted()
     c.retry.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
     await c.retry.pendingTask?.value
 
@@ -198,6 +204,206 @@ struct RetryingErrorTests {
     #expect(cb.playbackChanges.last?.error?.retrying == nil)
     #expect(cb.errorEvents.count == 1)
   }
+
+  /// The listener chose to pause, so the retry the pause stops is no failure; the next play
+  /// reloads where it failed, since the item it would have replaced is dead.
+  @Test @MainActor
+  func pauseDuringRetry_staysQuietAndReloadsOnPlay() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+
+    c.pause()
+    await retrying?.value
+
+    #expect(c.state != .error)
+    #expect(cb.errorEvents.isEmpty)
+    #expect(eh.resolveAndLoadCalls.isEmpty)
+
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target == 42)
+  }
+
+  /// AVPlayer fails a paused live item once its data stalls.
+  @Test @MainActor
+  func retryableFailureWhilePaused_staysPausedAndReloadsOnPlay() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.pause()
+    let changesBefore = cb.playbackChanges.count
+
+    eh.emit(.failed(NSError(domain: "CoreMediaErrorDomain", code: -16830), httpStatusCode: nil))
+
+    #expect(c.state == .paused)
+    #expect(cb.errorEvents.isEmpty)
+    #expect(cb.playbackChanges.dropFirst(changesBefore).allSatisfy { $0.error == nil })
+    #expect(c.retry.pendingTask == nil)
+    #expect(eh.resolveAndLoadCalls.isEmpty)
+    #expect(c.getPlayback().state == .paused)
+    #expect(c.getPlayback().error == nil)
+
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target == 42)
+  }
+
+  @Test @MainActor
+  func aParkedLoadThatKeepsFailingAfterPlay_endsInTheTerminalErrorOnAFullBudget() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 2, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    let stall = NSError(domain: "CoreMediaErrorDomain", code: -16830)
+    // One retry spent before the pause; the play after it starts the count over.
+    eh.emit(.failed(stall, httpStatusCode: nil))
+    await c.retry.pendingTask?.value
+
+    c.pause()
+    eh.emit(.failed(stall, httpStatusCode: nil))
+    c.play()
+    eh.resolveAndLoadCalls.removeAll()
+
+    for _ in 0 ..< 3 {
+      eh.emit(.failed(stall, httpStatusCode: nil))
+      await c.retry.pendingTask?.value
+    }
+
+    #expect(eh.resolveAndLoadCalls.count == 2)
+    #expect(c.state == .error)
+    #expect(cb.errorEvents.count == 1)
+    #expect(c.getPlayback().error != nil)
+  }
+
+  @Test @MainActor
+  func nonRetryableFailureWhilePaused_isTerminal() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.pause()
+    eh.emit(.failed(URLError(.fileDoesNotExist), httpStatusCode: 404))
+    #expect(c.state == .error)
+    #expect(cb.errorEvents.count == 1)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_whileBuffering_reportsPausedWithoutTheRetryingError() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.transition(.avPlayerWaiting)
+    eh.emit(.failed(URLError(.cannotConnectToHost), httpStatusCode: nil))
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+
+    c.pause()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_whileLoading_reportsPausedWithoutTheRetryingError() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+    #expect(cb.playbackChanges.last?.state == .loading)
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+
+    c.pause()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  @Test @MainActor
+  func interruptionDuringALoadRetry_reportsPaused() throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.reloadResolving(startFromCurrentTime: false)
+    eh.hasLoadedAsset = false
+    eh.emit(.loadFailed(URLError(.cannotConnectToHost)))
+
+    c.handleInterruptionBegan()
+
+    #expect(cb.playbackChanges.last?.state == .paused)
+  }
+
+  /// The failed item can't seek, so a seek waits for the reload, as one does while loading.
+  @Test @MainActor
+  func seekAfterPauseDuringRetry_landsOnTheReload() throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    eh.currentTime = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    c.pause()
+
+    c.seek(by: 10)
+    #expect(c.deferredSeek.target == 52)
+    c.seek(to: 100)
+    c.play()
+
+    #expect(eh.seekCalls.isEmpty)
+    #expect(c.deferredSeek.target == 100)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_refillsTheBudgets() async throws {
+    let (c, _, cb) = try makePlayingWithRetries()
+    c.retry.updatePolicy(from: .second(RetryConfig(
+      maxRetries: 1, maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
+    )))
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    await c.retry.pendingTask?.value
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    c.pause()
+    c.play()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    await c.retry.pendingTask?.value
+
+    #expect(c.state != .error)
+    #expect(cb.errorEvents.isEmpty)
+  }
+
+  @Test @MainActor
+  func aRetryNowDuringABackoff_reloadsOnce() async throws {
+    let (c, eh, cb) = try makePlayingWithRetries()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+
+    c.retryNow()
+    await retrying?.value
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.retry.pendingTask == nil)
+    #expect(cb.errorEvents.isEmpty)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_thenStop_playsFromTheStart() throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    eh.resumePosition = 42
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    c.pause()
+    c.stop()
+    c.play()
+
+    #expect(eh.resolveAndLoadCalls.count == 1)
+    #expect(c.deferredSeek.target ?? 0 == 0)
+  }
+}
+
+/// Playing a track whose retries follow the play intent and back off long enough to pause in.
+@MainActor
+private func makePlayingWithRetries() throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
+  let engine = MockPlayerEngine()
+  let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
+  let callbacks = MockPlayerCallbacks()
+  player.callbacks = callbacks
+  try startPlaying(player, engine)
+  // The engine's position counts only once an item is prepared.
+  engine.emit(.itemPrepared(likelyToKeepUp: false))
+  engine.resolveAndLoadCalls.removeAll()
+  return (player, engine, callbacks)
 }
 
 // MARK: - emitStateChange
@@ -413,6 +619,21 @@ struct PlayWhenReadyTests {
   }
 
   @Test @MainActor
+  func toggle_fromErrorWithIntentRaised_reloads() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try loadTrack(c)
+    c.setPlayWhenReady(true)
+    c.transition(.errorOccurred(.playbackFailed))
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    c.togglePlayback()
+
+    #expect(c.playWhenReady)
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
+    #expect(c.state == .loading)
+  }
+
+  @Test @MainActor
   func true_fromStopped_triggersReload() throws {
     let (c, eh, _, _) = makeCoordinator()
     try loadTrack(c)
@@ -567,6 +788,33 @@ struct HandleCurrentTrackChangedTests {
   }
 
   @Test @MainActor
+  func nilSrc_emitsActiveTrackChangedEvent() throws {
+    let (c, _, cb, _) = makeCoordinator()
+    try c.setQueue([
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", path: "/no-source", src: nil, title: "No Source"),
+    ])
+    cb.activeTrackChanges.removeAll()
+
+    try c.skipTo(1)
+
+    #expect(cb.activeTrackChanges.count == 1)
+    let event = cb.activeTrackChanges.first
+    #expect(event?.track?.id == "t2")
+    #expect(event?.index == 1)
+    #expect(event?.lastTrack?.id == "t1")
+    #expect(event?.lastIndex == 0)
+    #expect(c.state == .error)
+    #expect(c.errorStatus.error == .invalidSourceUrl("nil"))
+
+    cb.activeTrackChanges.removeAll()
+    try c.skipTo(0)
+
+    #expect(cb.activeTrackChanges.first?.lastTrack?.id == "t2")
+    #expect(cb.activeTrackChanges.first?.lastIndex == 1)
+  }
+
+  @Test @MainActor
   func emitsActiveTrackChangedEvent() throws {
     let (c, _, cb, _) = makeCoordinator()
 
@@ -717,78 +965,15 @@ struct NaturalEndPlayIntentTests {
   }
 }
 
-// MARK: - Healthy playback refills the retry budget
-
-/// Sustained playback proves the stream recovered, so the retry budget refills (as on
-/// Android); otherwise a long-lived stream loses retry after its first recovered blip.
-@Suite("Player - healthy playback resets retry budget")
-struct HealthyPlaybackRetryResetTests {
-  /// A nonzero delay skips the retry, leaving the caller to start one that stays pending.
-  @MainActor
-  private func makeAfterOneRetry(delay: TimeInterval = 0) async -> (Player, RetryLoop, MockPlayerEngine) {
-    let retry = makeRetryLoop(delay: delay)
-    let engine = MockPlayerEngine()
-    let player = makePlayer(engine: engine, retry: retry)
-    if delay == 0 {
-      retry.handleError(URLError(.timedOut), context: .playback)
-      await retry.pendingTask?.value
-    }
-    return (player, retry, engine)
-  }
-
-  @Test @MainActor
-  func sustainedPlayback_resetsRetryBudget() async {
-    let (player, retry, _) = await makeAfterOneRetry()
-    #expect(retry.attempts == 1)
-    retry.healthyPlaybackDuration = .milliseconds(10)
-
-    player.transition(.avPlayerPlaying)
-    await retry.healthyPlaybackTask?.value
-
-    #expect(retry.attempts == 0)
-  }
-
-  /// reset() cancels a pending retry: a refill now would silently kill an in-flight reconnect.
-  @Test @MainActor
-  func refill_skipsWhileRetryIsPending() async {
-    let (player, retry, _) = await makeAfterOneRetry(delay: 1)
-    retry.healthyPlaybackDuration = .milliseconds(10)
-
-    player.transition(.avPlayerPlaying)
-    retry.handleError(URLError(.timedOut), context: .playback)
-    await retry.healthyPlaybackTask?.value
-
-    #expect(retry.pendingTask != nil)
-    retry.cancel()
-  }
-
-  @Test @MainActor
-  func playbackInterruptedBeforeThreshold_doesNotReset() async {
-    let (player, retry, engine) = await makeAfterOneRetry()
-    engine.hasLoadedAsset = true
-    retry.healthyPlaybackDuration = .milliseconds(500)
-
-    player.transition(.avPlayerPlaying)
-    let refill = retry.healthyPlaybackTask
-    player.transition(.avPlayerWaiting)
-
-    // Leaving .playing cancels the refill; awaiting the cancelled task reaches, deterministically,
-    // the point where it would have fired.
-    await refill?.value
-
-    #expect(retry.attempts == 1)
-  }
-}
-
 // MARK: - Sleep Timer Fade
 
 @Suite("Player - sleep timer fade")
 struct SleepTimerFadeTests {
-  /// A 20 s timer whose 10 s fade has begun.
+  /// A 20 s timer whose 10 s fade is half done.
   @MainActor
   private func startFade(_ c: Player, _ clock: ManualSleepTimerScheduler) {
     c.sleepTimerManager.set(seconds: 20, fadeDuration: 10)
-    clock.advance(to: 10)
+    clock.advance(to: 15)
   }
 
   @Test @MainActor
@@ -797,7 +982,7 @@ struct SleepTimerFadeTests {
     eh.volume = 0.8
 
     startFade(c, clock)
-    eh.volume = 0.1 // mid-fade
+    #expect(eh.volume < 0.8)
 
     #expect(c.sleepTimerManager.isFading)
     c.sleepTimerManager.clear()
@@ -813,7 +998,7 @@ struct SleepTimerFadeTests {
     eh.pausePlaybackCallCount = 0
 
     startFade(c, clock)
-    eh.volume = 0.2 // mid-fade
+    #expect(eh.volume < 1.0)
 
     clock.advance(to: 20)
 
@@ -843,7 +1028,7 @@ struct SleepTimerFadeTests {
     eh.volume = 0.8
 
     startFade(c, clock)
-    eh.volume = 0.1 // mid-fade
+    #expect(eh.volume < 0.8)
 
     c.sleepTimerManager.set(seconds: 60)
 
@@ -1127,27 +1312,13 @@ struct LoadTests {
     let (c, eh, _, _) = makeCoordinator()
     try c.setQueue([track("a"), track("b")])
     let first = c.load
-    eh.emit(.audioDidStart)
-    #expect(c.load?.hasPlayed == true)
+    c.transition(.avPlayerPlaying)
+    #expect(c.retry.hasPlayed)
 
     c.next()
 
     #expect(c.load != nil && c.load?.id != first?.id)
-    #expect(c.load?.hasPlayed == false)
-  }
-
-  /// The healthy-playback refill resets the retry budget mid-play; the load must survive it.
-  @Test @MainActor
-  func aRetryResetKeepsTheLoad() throws {
-    let (c, eh, _, _) = makeCoordinator()
-    try c.setQueue([track("a")])
-    eh.emit(.audioDidStart)
-    let load = c.load
-
-    c.retry.reset()
-
-    #expect(c.load == load)
-    #expect(c.load?.hasPlayed == true)
+    #expect(!c.retry.hasPlayed)
   }
 
   @Test
@@ -1216,6 +1387,7 @@ struct StopCancelsRetryTests {
     let errorHandler = makeRetryLoop(delay: 0.05)
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retry: errorHandler)
+    errorHandler.playIntentChanged(true)
     let callbacks = MockPlayerCallbacks()
     player.callbacks = callbacks
 
@@ -1229,6 +1401,22 @@ struct StopCancelsRetryTests {
     await task?.value
     #expect(player.state == .stopped)
     #expect(callbacks.errorEvents.isEmpty)
+  }
+
+  /// Guards where stop() cancels the retry, not the order of its render: lowering the intent with
+  /// a retry pending would park it for a reload on play, and a stop is no pause.
+  @Test @MainActor
+  func stop_duringARetry_goesStraightToStopped() throws {
+    let (c, eh, cb, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.emit(.failed(URLError(.timedOut), httpStatusCode: nil))
+    #expect(c.retry.pendingTask != nil)
+    cb.playbackChanges.removeAll()
+
+    c.stop()
+
+    #expect(cb.playbackChanges.map(\.state) == [.stopped])
+    #expect(c.load?.reloadOnPlay == false)
   }
 }
 
@@ -1279,6 +1467,19 @@ struct SessionReleaseTests {
     c.handleInterruptionBegan()
     eh.scheduleAudioSessionReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: false)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+
+  @Test @MainActor
+  func pauseDuringRetry_requestsRelease() async throws {
+    let (c, eh, _) = try makePlayingWithRetries()
+    c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
+    let retrying = c.retry.pendingTask
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.pause()
+    await retrying?.value
+
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
 }
@@ -1335,15 +1536,21 @@ struct MediaStackEffectTests {
   }
 
   @Test @MainActor
-  func activeTrackChange_resetsTheNowPlayingLinesAfterJSHearsIt() throws {
+  func activeTrackChange_clearsTheTrackStateBeforeJSHearsIt_thenRendersTheLines() throws {
     let (c, eh, cb, _) = makeCoordinator()
     eh.onSeamCall = { [weak cb] call in
-      if call == "nowPlayingTrackChanged" { cb?.queueAndTrackOrder.append(call) }
+      if call == "nowPlayingTrackChanged" || call == "renderNowPlaying" {
+        cb?.queueAndTrackOrder.append(call)
+      }
     }
 
     try c.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "A")])
 
-    #expect(cb.queueAndTrackOrder == ["queue", "activeTrack", "nowPlayingTrackChanged"])
+    let order = cb.queueAndTrackOrder
+    let cleared = try #require(order.firstIndex(of: "nowPlayingTrackChanged"))
+    let heard = try #require(order.firstIndex(of: "activeTrack"))
+    #expect(cleared < heard)
+    #expect(try #require(order.lastIndex(of: "renderNowPlaying")) > heard)
     #expect(eh.nowPlayingTrackChangedCount == 1)
   }
 
@@ -1358,6 +1565,73 @@ struct MediaStackEffectTests {
     #expect(cb.publishOrder == ["timedMetadata", "applyTimedMetadata"])
     #expect(cb.timedMetadata == [metadata])
     #expect(eh.appliedTimedMetadata == [metadata])
+  }
+
+  @Test @MainActor
+  func stop_clearsTheStreamTitleBeforeRendering() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    c.stop()
+
+    let cleared = try #require(cb.publishOrder.firstIndex(of: "clearTimedMetadata"))
+    #expect(try cleared < #require(cb.publishOrder.firstIndex(of: "renderNowPlaying")))
+  }
+
+  @Test @MainActor
+  func stop_rendersTheStoppedStateWithThePlayIntentDown() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    var renders: [(PlaybackState, Bool)] = []
+    eh.onSeamCall = { [unowned c] in
+      if $0 == "renderNowPlaying" { renders.append((c.state, c.playWhenReady)) }
+    }
+
+    c.stop()
+
+    let stopped = renders.filter { $0.0 == .stopped }
+    #expect(!stopped.isEmpty)
+    #expect(stopped.allSatisfy { !$0.1 })
+  }
+
+  @Test @MainActor
+  func pause_keepsTheStreamTitle() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    c.pause()
+
+    #expect(!cb.publishOrder.contains("clearTimedMetadata"))
+  }
+
+  @Test @MainActor
+  func trackEnd_keepsTheStreamTitle() throws {
+    let (c, eh, cb) = makeTraced()
+    try startPlaying(c, eh)
+    cb.publishOrder.removeAll()
+
+    eh.emit(.playedToEnd)
+
+    #expect(c.state == .ended)
+    #expect(!cb.publishOrder.contains("clearTimedMetadata"))
+  }
+
+  /// The stream resends its current title after the reload; nothing may drop it as unchanged.
+  @Test @MainActor
+  func stopThenPlay_appliesTheSameTitleAgain() throws {
+    let (c, eh, cb) = makeTraced()
+    let metadata = TimedMetadata(title: "Song", artist: "Artist")
+    try startPlaying(c, eh)
+    eh.emit(.timedMetadata(metadata))
+
+    c.stop()
+    c.play()
+    eh.emit(.timedMetadata(metadata))
+
+    #expect(eh.appliedTimedMetadata == [metadata, metadata])
+    #expect(cb.timedMetadata == [metadata, metadata])
   }
 }
 

@@ -69,6 +69,13 @@ import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
+/** The active track with its queue index and playback position in seconds. */
+interface ActiveTrackSnapshot {
+  track: Track | undefined
+  index: number | undefined
+  position: number
+}
+
 /**
  * Web implementation of AudioBrowser (unified browser + player)
  */
@@ -859,17 +866,16 @@ export class NativeAudioBrowser
     })
   }
 
-  togglePlayback(): void {
-    super.togglePlayback()
-  }
-
   /**
    * Copies before emitting: the queue mutates in place, and handing out the
    * live array defeats React's reference-equality change detection.
    */
   private emitQueueChanged(): void {
+    this.queueVersion++
     this.onPlaybackQueueChanged([...this.queue.tracks])
   }
+
+  private queueVersion = 0
 
   // Queue mutations must reach onPlaybackQueueChanged (the contract covers
   // added/removed/reordered; Android emits via onTimelineChanged).
@@ -879,8 +885,10 @@ export class NativeAudioBrowser
   }
 
   override remove(indexes: number[]): void {
+    const last = this.activeTrackSnapshot()
     super.remove(indexes)
     this.emitQueueChanged()
+    this.announceActiveTrackCleared(last)
   }
 
   override move(fromIndex: number, toIndex: number): void {
@@ -894,8 +902,36 @@ export class NativeAudioBrowser
   }
 
   override reset(): void {
+    const last = this.activeTrackSnapshot()
     super.reset()
     this.emitQueueChanged()
+    this.announceActiveTrackCleared(last)
+  }
+
+  private activeTrackSnapshot(): ActiveTrackSnapshot {
+    return {
+      track: this.current,
+      index: this.queue.currentIndex,
+      position: this.element?.currentTime ?? 0
+    }
+  }
+
+  /**
+   * Announces that no track is active any more, and takes the track off the OS
+   * media controls. `last` is read before the queue is touched: emptying it
+   * unloads the element, which resets its position. A no-op unless a track
+   * was active then and none is now.
+   */
+  private announceActiveTrackCleared(last: ActiveTrackSnapshot): void {
+    if (last.track === undefined || this.current !== undefined) return
+    this.remoteCommands.clearMetadata()
+    this.onPlaybackActiveTrackChanged({
+      lastTrack: last.track,
+      lastPosition: last.position,
+      lastIndex: last.index,
+      index: undefined,
+      track: undefined
+    })
   }
 
   // Override playWhenReady to emit events (mirrors the state override): the
@@ -1058,6 +1094,7 @@ export class NativeAudioBrowser
     // Before the queue is touched, so a call before `setupPlayer()` throws
     // rather than half-applying.
     this.requireElement()
+    const last = this.activeTrackSnapshot()
     const hasStart =
       startIndex !== undefined && tracks[startIndex] !== undefined
     // Loading the start track supersedes the old one; a stop would drop the
@@ -1085,11 +1122,16 @@ export class NativeAudioBrowser
     this.emitQueueChanged()
 
     if (hasStart) this.skip(startIndex, startPosition)
+    else this.announceActiveTrackCleared(last)
   }
 
   getQueue(): Track[] {
     // Copy — see emitQueueChanged.
     return [...this.queue.tracks]
+  }
+
+  getQueueVersion(): number {
+    return this.queueVersion
   }
 
   getActiveTrackIndex(): number | undefined {
@@ -1142,6 +1184,10 @@ export class NativeAudioBrowser
   // MARK: Now playing metadata
   updateNowPlaying(update: NowPlayingUpdate | undefined): void {
     this.nowPlayingManager.updateNowPlaying(update)
+  }
+
+  getTimedMetadata(): TimedMetadata | undefined {
+    return undefined
   }
 
   getNowPlaying(): NowPlayingMetadata | undefined {

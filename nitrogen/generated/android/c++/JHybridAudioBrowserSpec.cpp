@@ -1783,6 +1783,11 @@ namespace margelo::nitro::audiobrowser {
       return __vector;
     }(__result);
   }
+  double JHybridAudioBrowserSpec::getQueueVersion() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getQueueVersion");
+    auto __result = method(_javaPart);
+    return __result;
+  }
   std::optional<Track> JHybridAudioBrowserSpec::getTrack(double index) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JTrack>(double /* index */)>("getTrack");
     auto __result = method(_javaPart, index);
@@ -1812,6 +1817,11 @@ namespace margelo::nitro::audiobrowser {
   }
   std::optional<NowPlayingMetadata> JHybridAudioBrowserSpec::getNowPlaying() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JNowPlayingMetadata>()>("getNowPlaying");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  std::optional<TimedMetadata> JHybridAudioBrowserSpec::getTimedMetadata() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JTimedMetadata>()>("getTimedMetadata");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }

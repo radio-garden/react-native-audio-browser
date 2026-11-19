@@ -447,14 +447,14 @@ Tapping a row that's already in the current queue from the same page skips in pl
 import { configureBrowser, setQueue, play } from 'react-native-audio-browser'
 
 configureBrowser({
-  handleTrackLoad: async ({ track, queue, startIndex }) => {
+  handleTrackLoad: async ({ track, queue, startIndex, startPosition }) => {
     if (isVideo(track)) {
       // your surface — return without touching the player; audio stays put
       openVideoPlayer(track)
       return
     }
     // audio: drive playback yourself — the library won't auto-play
-    setQueue(queue, startIndex)
+    setQueue(queue, startIndex, startPosition)
     play()
   }
 })

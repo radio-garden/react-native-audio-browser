@@ -124,6 +124,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func toggleActiveTrackFavorited() throws -> Void
   func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws -> Void
   func getQueue() throws -> [Track]
+  func getQueueVersion() throws -> Double
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
@@ -131,6 +132,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws -> Void
   func clearNowPlayingFlash() throws -> Void
   func getNowPlaying() throws -> NowPlayingMetadata?
+  func getTimedMetadata() throws -> TimedMetadata?
   func getOnline() throws -> Bool
   func getSystemVolume() throws -> Double
   func setSystemVolume(volume: Double) throws -> Void

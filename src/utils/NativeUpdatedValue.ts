@@ -5,14 +5,10 @@ type Callback<T> = (arg: T) => void
  * `onQueueChanged`, `onTrackMetadata`, …). Subscribe with {@link addListener};
  * the returned function unsubscribes. The emitter is not callable itself.
  *
- * It listens to native from module load and keeps the latest payload in
- * {@link lastValue}. The remote-control exports and `onGate` use
- * `LazyNativeEmitter`, which listens only once a listener is added.
- *
- * `lastValue` is the last payload native sent, not a fresh reading: it is
- * `undefined` before the first event, and for the queue and active track it
- * can be stale after an in-place change (a favorite toggle). Use the getter
- * (`getQueue`, `getActiveTrack`, …) when you need the current value.
+ * It listens to native from module load. The remote-control exports and
+ * `onGate` use `LazyNativeEmitter`, which listens only once a listener is
+ * added. It keeps no payload: use the getter (`getQueue`, `getActiveTrack`, …)
+ * for the current value.
  *
  * @example
  * ```typescript
@@ -29,16 +25,17 @@ export class NativeUpdatedValue<T> {
   private listeners = new Set<Callback<T>>()
 
   /**
-   * The last payload native sent, or `undefined` before the first. Not a fresh
-   * reading: use the matching getter (`getQueue`, …) for the current value.
+   * Events received so far, so a hook can tell whether one landed between its
+   * render and its subscription.
+   * @internal
    */
-  lastValue: T | undefined = undefined
+  eventCount = 0
 
   /** @internal */
   constructor(setter: (callback: (data: T) => void) => void) {
     // Install native callback immediately at module load
     setter((data: T) => {
-      this.lastValue = data
+      this.eventCount++
       for (const listener of this.listeners) {
         listener(data)
       }
@@ -60,7 +57,7 @@ export class NativeUpdatedValue<T> {
    * Creates a native value subscription.
    *
    * @param setter - Function that sets the native callback property
-   * @returns The subscription instance with lastValue and addListener
+   * @returns The subscription instance
    * @internal
    */
   static emitterize<T>(

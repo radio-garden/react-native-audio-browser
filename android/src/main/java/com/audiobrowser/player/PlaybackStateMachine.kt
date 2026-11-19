@@ -19,7 +19,16 @@ sealed interface PlaybackEvent {
     val shouldPlayWhenReady: Boolean,
   ) : PlaybackEvent
 
-  data class MediaItemTransition(val hasTrack: Boolean, val isPlaying: Boolean) : PlaybackEvent
+  /**
+   * [loads] is false when the engine idles, so nothing loads the track. Read after the command's
+   * own prepare(): onEvents runs once the command returns.
+   */
+  data class MediaItemTransition(
+    val hasTrack: Boolean,
+    val isPlaying: Boolean,
+    val loads: Boolean,
+    val shouldPlayWhenReady: Boolean,
+  ) : PlaybackEvent
 
   /**
    * An input of [Player.shouldPlayWhenReady] changed: the intent, or a playback suppression such as
@@ -53,9 +62,10 @@ object PlaybackStateMachine {
             // a load finished, so consumers can drop their loading indicator.
             if (event.shouldPlayWhenReady) emptyList() else listOf(PlaybackState.READY)
           MediaPlayer.STATE_IDLE ->
-            // A terminal error and stop() both idle ExoPlayer; NONE would clear the ERROR or
-            // STOPPED state the session shows.
-            if (current == PlaybackState.ERROR || current == PlaybackState.STOPPED) emptyList()
+            // A terminal error, stop() and a pause during a retry all idle ExoPlayer; NONE would
+            // clear the state the session shows.
+            if (current in setOf(PlaybackState.ERROR, PlaybackState.STOPPED, PlaybackState.PAUSED))
+              emptyList()
             else listOf(PlaybackState.NONE)
           MediaPlayer.STATE_ENDED ->
             // An emptied queue also reports STATE_ENDED: nothing loaded, not played to the end.
@@ -64,7 +74,15 @@ object PlaybackStateMachine {
         }
       is PlaybackEvent.MediaItemTransition ->
         when {
-          !event.hasTrack -> emptyList()
+          // An emptied queue. STOPPED holds: the service clears the queue just before stop(), and
+          // the events arrive after it.
+          !event.hasTrack ->
+            if (current == PlaybackState.STOPPED) emptyList() else listOf(PlaybackState.NONE)
+          // Removing the current track after a stop, an error or a cancelled retry: play() loads
+          // the new one. With the intent up PAUSED would read as playing; ERROR's toggle reloads.
+          !event.loads ->
+            if (current == PlaybackState.STOPPED || event.shouldPlayWhenReady) emptyList()
+            else listOf(PlaybackState.PAUSED)
           // Already playing (gapless auto-advance): no IsPlayingChanged follows, so run the whole
           // sequence here or the state sticks on LOADING.
           event.isPlaying ->
@@ -74,11 +92,11 @@ object PlaybackStateMachine {
       is PlaybackEvent.ShouldPlayWhenReadyChanged ->
         when {
           // stop() and a natural end both clear the intent themselves; STOPPED and ENDED must not
-          // turn into PAUSED.
-          !event.shouldPlayWhenReady &&
-            current != PlaybackState.STOPPED &&
-            current != PlaybackState.ENDED -> listOf(PlaybackState.PAUSED)
-          !event.shouldPlayWhenReady -> emptyList()
+          // turn into PAUSED. A pause holds ERROR, as on iOS.
+          !event.shouldPlayWhenReady ->
+            if (current in setOf(PlaybackState.STOPPED, PlaybackState.ENDED, PlaybackState.ERROR))
+              emptyList()
+            else listOf(PlaybackState.PAUSED)
           // Resuming while ExoPlayer still buffers: no state change of its own follows, and the
           // READY after it is dropped while playing, so report the load now.
           current == PlaybackState.PAUSED && event.exoState == MediaPlayer.STATE_BUFFERING ->

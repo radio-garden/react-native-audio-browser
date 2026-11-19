@@ -34,6 +34,8 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.OutputMonitor
 import com.audiobrowser.util.OutputSwitcher
 import com.audiobrowser.util.SystemVolumeMonitor
+import com.audiobrowser.util.awaitNestedOrTimeout
+import com.audiobrowser.util.awaitOrTimeout
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
@@ -91,20 +93,19 @@ import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 @Keep
@@ -151,7 +152,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // connected list, holding a binder and a listener.
       mediaBrowserFuture?.let { MediaBrowser.releaseFuture(it) }
       mediaBrowserFuture = null
-      setupPromise = null
 
       serviceBinding.unbind(this)
 
@@ -232,7 +232,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private val onBatteryWarningPending: (Boolean) -> Unit = { pending ->
     post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(pending)) }
   }
-  private var setupPromise: ((Unit) -> Unit)? = null
+  // Every setupPlayer waiting for the service awaits it. Replaced on disconnect, after
+  // cancelChildren has rejected its waiters, and on a dead binding, after failing them.
+  private var connectionReady = CompletableDeferred<Unit>()
 
   // Staged by setup options or by setters called before the player exists; last write wins, and
   // [applyPendingPlayerState] consumes them.
@@ -487,7 +489,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   ): FormattedNavigationError {
     val default = defaultFormattedError(error)
     val formatter = _configuration.formatNavigationError ?: return default
-    return formattedOrDefault(mainScope, default) {
+    return formattedOrDefault(default) {
       formatter(
           FormatNavigationErrorParams(
             error,
@@ -496,7 +498,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             BrowserPathHelper.navigationErrorKind(path),
           )
         )
-        .await()
+        .awaitOrTimeout()
     }
   }
 
@@ -590,6 +592,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                     track,
                     player.tracks,
                     index.toDouble(),
+                    startPosition = null,
                     intercepted = {},
                     defaultBehavior = {
                       player.skipTo(index)
@@ -612,6 +615,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   track,
                   tracks,
                   startIndex.toDouble(),
+                  startPosition = null,
                   intercepted = {},
                   defaultBehavior = {
                     // The Player itself: this class's overrides block on main, where this runs.
@@ -627,6 +631,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   track,
                   arrayOf(track),
                   0.0,
+                  startPosition = null,
                   intercepted = {},
                   defaultBehavior = { player.load(track) },
                 )
@@ -643,6 +648,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 track,
                 arrayOf(track),
                 0.0,
+                startPosition = null,
                 intercepted = {},
                 defaultBehavior = { player.load(track) },
               )
@@ -660,7 +666,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun search(query: String): Promise<Array<Track>> {
-    return Promise.async(mainScope) {
+    return promise {
       Timber.d("Searching for: $query")
       // Rejects with the error a browse would raise but leaves the navigation error unset: a failed
       // search must not replace the displayed page's state (mirrors iOS HybridAudioBrowser.search).
@@ -747,15 +753,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * Whether [request] is gated, and with which chrome. No active gate allows; a gate without a
    * resolver gates with its stored chrome and never asks JS. A resolver that throws, rejects or
    * times out fails closed, gating rather than serving content; only a successful `gated: false`
-   * allows. Chrome falls back from the resolver's to the stored one to [builtInGate].
+   * allows. Chrome falls back from the resolver's to the stored one to [builtInGate]. A caller
+   * cancelled while it waits gets the cancellation.
    */
   suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
     val s = gateState
     if (!s.active) return GateOutcome(false, null)
     if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate)
-    val decision =
-      runCatching { resolveGate(request).await().await() }.getOrNull()
-        ?: return GateOutcome(true, s.chrome ?: builtInGate)
+    val result = runCatching { resolveGate(request).awaitNestedOrTimeout() }
+    currentCoroutineContext().ensureActive()
+    val decision = result.getOrNull() ?: return GateOutcome(true, s.chrome ?: builtInGate)
     if (!decision.gated) return GateOutcome(false, null)
     return GateOutcome(true, decision.gate ?: s.chrome ?: builtInGate)
   }
@@ -777,7 +784,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
-    return Promise.async(mainScope) {
+    return promise {
       setupOptions.update(options)
       // Staged to apply together with the engine below, or at service connect. Last write wins
       // against the imperative setters.
@@ -789,21 +796,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         it.player.applyOptions(updateOptions)
         it.player.setup(setupOptions)
         applyPendingPlayerState(it.player)
-        return@async
+        return@promise
       }
 
-      suspendCoroutine<Unit> { continuation ->
-        Timber.d("Binding to AudioBrowserService")
-        val bound = serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)
-
-        if (!bound) {
-          continuation.resumeWithException(
-            RuntimeException("Failed to bind to AudioBrowserService")
-          )
-        } else {
-          setupPromise = { continuation.resume(Unit) }
-        }
+      if (!serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)) {
+        throw RuntimeException("Failed to bind to AudioBrowserService")
       }
+      connectionReady.await()
     }
   }
 
@@ -978,6 +977,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getQueue(): Array<Track> = readPlayer(emptyArray()) { it.tracks }
 
+  override fun getQueueVersion(): Double = readPlayer(-1.0) { it.queueVersion.toDouble() }
+
   override fun getTrack(index: Double): Track? =
     readPlayer(null) { player ->
       try {
@@ -1008,6 +1009,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getNowPlaying(): NowPlayingMetadata? =
     readPlayer(null) { player -> player.nowPlaying.getNowPlaying() }
+
+  override fun getTimedMetadata(): TimedMetadata? =
+    readPlayer(null) { player -> player.nowPlaying.timedMetadata }
 
   // ============================================================================
   // MARK: Network Connectivity
@@ -1150,8 +1154,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       val sessionToken = SessionToken(context, ComponentName(context, Service::class.java))
       mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
-      setupPromise?.invoke(Unit)
-      setupPromise = null
+      connectionReady.complete(Unit)
     }
   }
 
@@ -1162,7 +1165,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       pendingRepeatMode = null
     }
     pendingPlayWhenReady?.let {
-      player.playWhenReady = it
+      player.applySetupPlayWhenReady(it)
       pendingPlayWhenReady = null
     }
   }
@@ -1171,12 +1174,30 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     mainScope.coroutineContext.cancelChildren()
     mediaBrowserFuture = null
     connectedService = null
+    connectionReady = CompletableDeferred()
     Timber.d("AudioBrowser.onServiceDisconnected()")
+  }
+
+  // Android never reconnects a dead binding: release it so the next setupPlayer binds afresh.
+  override fun onBindingDied(name: ComponentName) = dropDeadBinding()
+
+  override fun onNullBinding(name: ComponentName) = dropDeadBinding()
+
+  private fun dropDeadBinding() {
+    serviceBinding.unbind(this)
+    connectionReady.completeExceptionally(IllegalStateException("AudioBrowserService binding died"))
+    connectionReady = CompletableDeferred()
   }
 
   // ============================================================================
   // MARK: Internal Helpers
   // ============================================================================
+
+  private fun <T> promise(run: suspend () -> T): Promise<T> {
+    val promise = Promise<T>()
+    mainScope.launchSettled({ it.fold(promise::resolve, promise::reject) }, run)
+    return promise
+  }
 
   private fun launchInScope(block: suspend () -> Unit) {
     mainScope.launch { block() }
@@ -1476,9 +1497,6 @@ private fun NativeRouteEntry.strippingJSCallbacks() =
     artwork = artwork?.strippingJSCallbacks(),
   )
 
-// The budget [Player.awaitBrowser] gives JS, the other JS wait a browse serve blocks on.
-private val FORMATTER_TIMEOUT = 10.seconds
-
 /**
  * The navigation error [e] raises, shared by failed navigations, the rejection
  * [AudioBrowser.search] hands JS and the Android Auto browse-error tile, so one failure is named
@@ -1545,22 +1563,33 @@ internal fun defaultFormattedError(error: NavigationError): FormattedNavigationE
   return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
 }
 
-/**
- * The app's formatted error from [format], or [default] when it returns null, throws, or outruns
- * [FORMATTER_TIMEOUT].
- *
- * [format] runs in [scope] and is awaited through the Deferred because Nitro's `Promise.await`
- * parks in a plain `suspendCoroutine` that cancellation does not unpark; awaiting the Deferred is
- * cancellable, so the timeout releases the caller instead of holding it until JS answers, which for
- * a browse serve may be never.
- */
+/** The app's formatted error from [format], or [default] when it returns null or throws. */
 internal suspend fun formattedOrDefault(
-  scope: CoroutineScope,
   default: FormattedNavigationError,
   format: suspend () -> FormattedNavigationError?,
-): FormattedNavigationError {
-  val hop = scope.async { runCatching { format() }.getOrNull() }
-  return withTimeoutOrNull(FORMATTER_TIMEOUT) { hop.await() } ?: default
+): FormattedNavigationError =
+  try {
+    format()
+  } catch (e: CancellationException) {
+    throw e
+  } catch (e: Exception) {
+    null
+  } ?: default
+
+/**
+ * Runs [run] in this scope and hands its outcome to [settle] once. Unlike Nitro's `Promise.async`,
+ * a scope cancelled before [run] starts still settles, with the cancellation, and [run] never runs.
+ */
+@OptIn(DelicateCoroutinesApi::class)
+internal fun <T> CoroutineScope.launchSettled(settle: (Result<T>) -> Unit, run: suspend () -> T) {
+  launch(start = CoroutineStart.ATOMIC) {
+    settle(
+      runCatching {
+        ensureActive()
+        run()
+      }
+    )
+  }
 }
 
 private fun httpStatusText(statusCode: Int): String {

@@ -350,6 +350,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void toggleActiveTrackFavorited() = 0;
       virtual void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) = 0;
       virtual std::vector<Track> getQueue() = 0;
+      virtual double getQueueVersion() = 0;
       virtual std::optional<Track> getTrack(double index) = 0;
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;
@@ -357,6 +358,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) = 0;
       virtual void clearNowPlayingFlash() = 0;
       virtual std::optional<NowPlayingMetadata> getNowPlaying() = 0;
+      virtual std::optional<TimedMetadata> getTimedMetadata() = 0;
       virtual bool getOnline() = 0;
       virtual double getSystemVolume() = 0;
       virtual void setSystemVolume(double volume) = 0;

@@ -10,8 +10,6 @@ on:
     paths:
       - '.github/workflows/ios-build.yml'
       - 'apps/example-native/ios/**'
-      - 'apps/example-native/Gemfile'
-      - 'apps/example-native/Gemfile.lock'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/ios/**'
       - 'cpp/**'
@@ -25,8 +23,6 @@ on:
     paths:
       - '.github/workflows/ios-build.yml'
       - 'apps/example-native/ios/**'
-      - 'apps/example-native/Gemfile'
-      - 'apps/example-native/Gemfile.lock'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/ios/**'
       - 'cpp/**'
@@ -61,17 +57,15 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 26.2
+          xcode-version: 26.4.1
 
       - name: Install dependencies
         run: yarn install
 
-      - name: Setup Ruby (bundle)
+      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: apps/example-native/ios
 
       - name: Install xcpretty
         run: gem install xcpretty

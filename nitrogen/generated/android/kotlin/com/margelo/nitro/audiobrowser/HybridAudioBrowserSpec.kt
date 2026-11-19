@@ -1025,6 +1025,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun getQueueVersion(): Double
+  
+  @DoNotStrip
+  @Keep
   abstract fun getTrack(index: Double): Track?
   
   @DoNotStrip
@@ -1050,6 +1054,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getNowPlaying(): NowPlayingMetadata?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getTimedMetadata(): TimedMetadata?
   
   @DoNotStrip
   @Keep

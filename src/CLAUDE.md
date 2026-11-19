@@ -39,8 +39,8 @@ error until it was unified.
 Two emitter classes, picked by what the event _is_:
 
 - `NativeUpdatedValue` — state with a current value (playback, options,
-  progress). Subscribes to native at module load so no update is missed, and
-  caches `lastValue` so hooks can read synchronously.
+  progress). Subscribes to native at module load so no update is missed; hooks
+  read the matching getter, never a cached payload.
 - `LazyNativeEmitter` — discrete events with no current value (remote controls,
   gate hits). Assigns the native callback on the first `addListener`, so an
   event nobody listens to costs nothing.

@@ -2155,6 +2155,18 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func getQueueVersion() -> bridge.Result_double_ {
+    do {
+      let __result = try self.__implementation.getQueueVersion()
+      let __resultCpp = __result
+      return bridge.create_Result_double_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_double_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func getTrack(index: Double) -> bridge.Result_std__optional_Track__ {
     do {
       let __result = try self.__implementation.getTrack(index: index)
@@ -2256,6 +2268,24 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_NowPlayingMetadata__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getTimedMetadata() -> bridge.Result_std__optional_TimedMetadata__ {
+    do {
+      let __result = try self.__implementation.getTimedMetadata()
+      let __resultCpp = { () -> bridge.std__optional_TimedMetadata_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_TimedMetadata_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_TimedMetadata__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_TimedMetadata__(__exceptionPtr)
     }
   }
   

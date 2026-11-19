@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Subscribable = {
   addListener(callback: (event: unknown) => void): () => void
+  eventCount: number
 }
+
+const eventCountOf = (emitters: readonly Subscribable[]) =>
+  emitters.reduce((sum, emitter) => sum + emitter.eventCount, 0)
 
 /**
  * Hook for a native-fetched value that must stay fresh across SEVERAL event
@@ -10,10 +14,8 @@ type Subscribable = {
  * (`onActiveTrackChanged`) but is also mutated in place by a favorite toggle
  * (`onFavoriteChanged`).
  *
- * Unlike {@link useNativeUpdatedValue}, this never reads a cached event
- * payload: every trigger re-reads `getter()`, and the mount effect re-reads
- * once after the subscriptions attach (so an event firing between render and
- * effect cannot be missed). The getters are cheap synchronous Nitro calls.
+ * Every trigger re-reads `getter()`, and the mount effect re-reads it only if
+ * an event landed since the render read, so none is missed.
  *
  * @param getter - Synchronous native getter for the current value
  * @param emitters - Event sources that invalidate the value (a stable,
@@ -23,10 +25,15 @@ export function useNativeValueRefreshedBy<T>(
   getter: () => T,
   emitters: readonly Subscribable[]
 ): T {
+  const eventCountAtRender = useRef(eventCountOf(emitters))
   const [value, setValue] = useState(getter)
 
   useEffect(() => {
-    setValue(getter())
+    if (eventCountOf(emitters) !== eventCountAtRender.current) {
+      setValue(getter())
+    }
+    // A re-run, for another getter or emitters, always reads afresh.
+    eventCountAtRender.current = NaN
     const cleanups = emitters.map((emitter) =>
       emitter.addListener(() => setValue(getter()))
     )

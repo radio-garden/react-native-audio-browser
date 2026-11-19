@@ -1,4 +1,6 @@
-import NitroModules
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// The Browse Gate: the app's block on browsing and searching from external surfaces,
 /// decided per request. It never blocks the Player, the Queue or Now Playing.
@@ -53,5 +55,16 @@ final class BrowseGate {
       guard decision.gated else { return nil }
       return decision.gate ?? defaultChrome ?? Self.builtInChrome
     }
+  }
+
+  /// The chrome to show if `request` is gated, as `decide(_:)` answers, and the gate passed to
+  /// `report`, unless the caller was cancelled: a cancelled decision fails closed, but the user
+  /// never met this gate.
+  func decide(_ request: NativeGateRequest, report: (GateEvent) -> Void) async -> Gate? {
+    let chrome = await decide(request)
+    if chrome != nil, !Task.isCancelled {
+      report(GateEvent(reason: request.reason))
+    }
+    return chrome
   }
 }

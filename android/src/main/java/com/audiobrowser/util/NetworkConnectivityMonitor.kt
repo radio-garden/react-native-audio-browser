@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
-/** Whether the default network has INTERNET and VALIDATED. Monitoring starts on construction. */
+/** Whether the default network has INTERNET. Monitoring starts on construction. */
 class NetworkConnectivityMonitor(private val context: Context) {
   private val connectivityManager =
     context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -34,12 +34,10 @@ class NetworkConnectivityMonitor(private val context: Context) {
   private fun capabilitiesOf(network: Network): NetworkCapabilities? =
     connectivityManager.getNetworkCapabilities(network)
 
-  // INTERNET alone is also true behind a captive portal; VALIDATED means the system reached the
-  // internet through it.
+  // Not VALIDATED: some networks never validate (a failing Private DNS, some hotspots and
+  // corporate Wi-Fi) yet reach the stream, and the retry loop makes no connection while offline.
   private fun isOnline(capabilities: NetworkCapabilities?): Boolean =
-    capabilities != null &&
-      capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-      capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
   private val networkCallback =
     object : ConnectivityManager.NetworkCallback() {

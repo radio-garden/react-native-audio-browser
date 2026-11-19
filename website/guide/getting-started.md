@@ -6,7 +6,7 @@ description: 'Install react-native-audio-browser and its react-native-nitro-modu
 
 ## Installation
 
-The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. `react-native-nitro-modules` 0.35 or later is a required peer dependency — install it alongside:
+The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. Building for iOS needs Xcode 26.4 or later (Swift 6.3): Swift 6.2 has a bug that makes the library crash on iOS below 18, so the library refuses to compile with it. `react-native-nitro-modules` 0.35 or later is a required peer dependency — install it alongside:
 
 ::: code-group
 

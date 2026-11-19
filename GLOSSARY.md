@@ -325,9 +325,9 @@ _Avoid_: isRetrying, error flag.
 
 ### First-Connect Budget / Recovery Budget
 
-The two duration bounds on automatic retry, selected per load by whether it has ever rendered audio (`hasPlayed`). A load that never played gets a short budget, counting only a contiguous online stretch; once playback has proven the source works, it gets a long one. The defaults are on [`RetryConfig`](https://audiobrowser.dev/api/features/player/#retryconfig).
+The two duration bounds on automatic retry. The recovery budget gives up after two minutes of silence: the listener wants audio and hears none, and only 5 s of audio in a row ends it. A load that has never rendered audio (`hasPlayed`) also gives up 12 s after its first failure within one online stretch: the first-connect budget. The defaults are on [`RetryConfig`](https://audiobrowser.dev/api/features/player/#retryconfig).
 
-Durations bound the give-up promise; attempt counts only pace the backoff. See ADR 0004.
+Durations bound the give-up promise; `maxRetries` counts only connections in a row that delivered nothing. See ADRs 0004 and 0014.
 
 _Avoid_: retry limit, timeout (both suggest a single number).
 

@@ -14,18 +14,19 @@ import com.audiobrowser.formattedOrDefault
 import com.audiobrowser.navigationErrorFor
 import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.JsPromise
+import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.NavigationError
 import com.margelo.nitro.audiobrowser.NavigationErrorType
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -215,23 +216,41 @@ class BrowseTilesTest {
   }
 
   @Test
-  fun `the formatter hop keeps the app's answer`() = runTest {
+  fun `the formatter keeps the app's answer`() = runTest {
     val custom = FormattedNavigationError("No favorites yet", "Tap the heart.")
     assertEquals(
       custom,
-      formattedOrDefault(backgroundScope, FormattedNavigationError("Nothing here", null)) { custom },
+      formattedOrDefault(FormattedNavigationError("Nothing here", null)) { custom },
     )
   }
 
   @Test
-  fun `the formatter hop falls back to the default on null and on a throw`() = runTest {
+  fun `a formatter's cancelled caller gets the cancellation, not the default`() =
+    runTest(timeout = 5.seconds) {
+      val js = JsPromise<FormattedNavigationError?>()
+      var returned = false
+      val result =
+        backgroundScope.launch {
+          formattedOrDefault(FormattedNavigationError("Nothing here", null)) {
+            js.promise.awaitOrTimeout()
+          }
+          returned = true
+        }
+      runCurrent()
+
+      result.cancel()
+      runCurrent()
+
+      assertTrue(result.isCompleted)
+      assertFalse(returned)
+    }
+
+  @Test
+  fun `the formatter falls back to the default on null and on a throw`() = runTest {
     val default = FormattedNavigationError("Nothing here", null)
 
-    assertEquals(default, formattedOrDefault(backgroundScope, default) { null })
-    assertEquals(
-      default,
-      formattedOrDefault(backgroundScope, default) { throw IllegalStateException("boom") },
-    )
+    assertEquals(default, formattedOrDefault(default) { null })
+    assertEquals(default, formattedOrDefault(default) { throw IllegalStateException("boom") })
   }
 
   @Test
@@ -436,25 +455,5 @@ class BrowseTilesTest {
   fun `the failure sentinel is distinct from the empty one and dead-ends too`() {
     assertNotEquals(BrowserPathHelper.EMPTY_PATH, BrowserPathHelper.ERROR_PATH)
     assertTrue(BrowserPathHelper.isDeadEndPath(BrowserPathHelper.ERROR_PATH))
-  }
-
-  @Test
-  fun `a formatter parked in a non-cancellable wait falls back without hanging`() = runTest {
-    val default = FormattedNavigationError("Nothing here", null)
-    var parked: Continuation<FormattedNavigationError?>? = null
-
-    try {
-      // Nitro's Promise.await parks like this, in suspendCoroutine, which cancellation never
-      // unparks; the hop must be abandoned, not waited on.
-      val formatted =
-        formattedOrDefault(backgroundScope, default) {
-          suspendCoroutine { continuation -> parked = continuation }
-        }
-
-      assertNotNull(parked)
-      assertEquals(default, formatted)
-    } finally {
-      parked?.resume(null)
-    }
   }
 }

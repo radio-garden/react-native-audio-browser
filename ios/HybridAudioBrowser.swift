@@ -55,6 +55,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browserManager = BrowserManager()
   let browseGate = BrowseGate()
   let trackSelector: TrackSelector
+  @MainActor private(set) var initialNavigation: Task<Void, Never>?
   @MainActor private(set) lazy var audioSession = AudioSessionController()
   // Player state set before the player exists, by setup options or the setters; last write wins,
   // consumed when the player comes up.
@@ -121,14 +122,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // Copied on the setter's thread: the Task below outlives this call, and Nitro can reassign
       // `configuration` (a C++ struct holding std::string/std::function) from the JS thread.
       let configuredPath = configuration.path
-      onMainActor { browserManager.config = BrowserConfig(from: configuration) }
+      onMainActor {
+        browserManager.config = BrowserConfig(from: configuration)
+        browserManager.clearContent()
+        initialNavigation?.cancel()
+        initialNavigation = Task {
+          let tabs = try? await browserManager.queryTabs()
+          guard !Task.isCancelled else { return }
+          navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
+        }
+      }
 
       Task { @MainActor in
         playerAndConfiguredBrowser.check()
-      }
-      Task {
-        let tabs = try? await browserManager.queryTabs()
-        navigate(configuredPath ?? tabs?.first?.path ?? "/", clearError: true)
       }
     }
   }
@@ -256,7 +262,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       }
       browseGate.resolve = { [weak self] request in
         guard let self else { throw CancellationError() }
-        return try await resolveGate(request).await().await()
+        return try await resolveGate(request).awaitNestedOrTimeout()
       }
       // Unconditional: `shared` is weak, so after a reload the old instance may be gone while
       // CarPlay is still subscribed to its emitters.

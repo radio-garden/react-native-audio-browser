@@ -19,6 +19,8 @@ class TransformingDataSourceTest {
 
   private val openedUrls = mutableListOf<String>()
 
+  private val openedHeaders = mutableListOf<Map<String, String>>()
+
   private var failNextOpen = false
 
   private inner class RecordingDataSource(
@@ -26,6 +28,7 @@ class TransformingDataSourceTest {
   ) : DataSource {
     override fun open(dataSpec: DataSpec): Long {
       openedUrls.add(dataSpec.uri.toString())
+      openedHeaders.add(dataSpec.httpRequestHeaders)
       if (failNextOpen) {
         failNextOpen = false
         throw IOException("simulated load failure")
@@ -61,6 +64,24 @@ class TransformingDataSourceTest {
       contentType = null,
       userAgent = null,
     )
+
+  /** Every Range header [spec] opens upstream with, whatever its case. */
+  private fun rangesOf(
+    spec: DataSpec,
+    config: MediaRequestConfig = config("https://cdn.example.com", "/s.mp3"),
+  ): List<String> {
+    TransformingDataSource.Factory(upstreamFactory) { config }.createDataSource().open(spec)
+    return openedHeaders.last().filterKeys { it.equals("Range", ignoreCase = true) }.values.toList()
+  }
+
+  private val icy = mapOf("Icy-MetaData" to "1")
+
+  private fun progressive(position: Long = 0) =
+    DataSpec.Builder()
+      .setUri("/listen/abc/channel.mp3".toUri())
+      .setPosition(position)
+      .setHttpRequestHeaders(icy)
+      .build()
 
   private fun tokenConfig(token: Int) =
     MediaRequestConfig(
@@ -168,5 +189,43 @@ class TransformingDataSourceTest {
     factory.createDataSource().open(DataSpec(segment.toUri()))
 
     assertEquals(segment, openedUrls.last())
+  }
+
+  @Test
+  fun `a progressive read from the start asks for an open-ended range`() {
+    assertEquals(listOf("bytes=0-"), rangesOf(progressive()))
+  }
+
+  @Test
+  fun `a progressive read from a later position adds no range of its own`() {
+    assertEquals(emptyList<String>(), rangesOf(progressive(position = 4096)))
+  }
+
+  @Test
+  fun `a bounded read adds no range of its own`() {
+    val spec =
+      DataSpec.Builder()
+        .setUri("/listen/abc/channel.mp3".toUri())
+        .setLength(1024)
+        .setHttpRequestHeaders(icy)
+        .build()
+
+    assertEquals(emptyList<String>(), rangesOf(spec))
+  }
+
+  @Test
+  fun `an hls read adds no range`() {
+    assertEquals(
+      emptyList<String>(),
+      rangesOf(DataSpec("https://cdn.example.com/playlist.m3u8".toUri())),
+    )
+  }
+
+  @Test
+  fun `a range from the request config is kept`() {
+    val config =
+      config("https://cdn.example.com", "/s.mp3").copy(headers = mapOf("range" to "bytes=5-"))
+
+    assertEquals(listOf("bytes=5-"), rangesOf(progressive(), config))
   }
 }

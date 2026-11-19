@@ -197,4 +197,25 @@ struct AsyncLoadingTests {
     let hasError = !spy.retryableErrors.isEmpty || spy.unplayableCount > 0
     #expect(hasError, "expected a retryable error or unplayable callback for non-existent file")
   }
+
+  @Test(arguments: [(0.0, 0.0, 1.0), (500, 0.5, 0.5), (5000, 5, 1)])
+  func aShortStartBufferIsOneSecond_orTheConfiguredOneWhenShorter(
+    configuredMs: Double, expected: Double, expectedShort: Double,
+  ) async throws {
+    let url = try makeSilentAudioFile()
+    defer { try? FileManager.default.removeItem(at: url) }
+    var buffers: [Double] = []
+    for shortStartBuffer in [false, true] {
+      let (loader, spy) = makeLoader()
+      loader.bufferDuration = configuredMs
+      loader.resolveAndLoad(src: url.absoluteString, shortStartBuffer: shortStartBuffer)
+      let deadline = ContinuousClock.now + .seconds(5)
+      while spy.preparedItems.isEmpty, ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      let item = try #require(spy.preparedItems.first)
+      buffers.append(item.preferredForwardBufferDuration)
+    }
+    #expect(buffers == [expected, expectedShort])
+  }
 }

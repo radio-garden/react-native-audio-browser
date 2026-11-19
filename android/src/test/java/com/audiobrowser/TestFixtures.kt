@@ -36,6 +36,7 @@ object TestFixtures {
     favorited: Boolean? = null,
     disabled: Boolean? = null,
     style: TrackStyle? = null,
+    live: Boolean? = null,
   ) =
     Track(
       id = id,
@@ -55,7 +56,7 @@ object TestFixtures {
       style = style,
       disabled = disabled,
       favorited = favorited,
-      live = null,
+      live = live,
       icyCharset = null,
     )
 

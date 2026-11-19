@@ -26,21 +26,12 @@ function makeEmitter<T>() {
 }
 
 describe('useNativeUpdatedValue', () => {
-  it('falls back to the getter when nothing has fired yet', () => {
+  it('reads the getter', () => {
     const { emitter } = makeEmitter<string>()
     const { result } = renderHook(() =>
       useNativeUpdatedValue(() => 'a', emitter)
     )
     expect(result.current).toBe('a')
-  })
-
-  it('prefers lastValue over the getter', () => {
-    const { emitter, fire } = makeEmitter<string>()
-    fire('fromNative')
-    const getter = vi.fn(() => 'fromGetter')
-    const { result } = renderHook(() => useNativeUpdatedValue(getter, emitter))
-    expect(result.current).toBe('fromNative')
-    expect(getter).not.toHaveBeenCalled()
   })
 
   it('updates when the emitter fires', () => {
@@ -52,30 +43,47 @@ describe('useNativeUpdatedValue', () => {
     expect(result.current).toBe('b')
   })
 
-  it('extracts eventKey from both lastValue and later events', () => {
+  it('extracts eventKey from events', () => {
     const { emitter, fire } = makeEmitter<{ volume: number }>()
-    fire({ volume: 0.5 })
     const { result } = renderHook(() =>
-      useNativeUpdatedValue(() => 0, emitter, 'volume')
+      useNativeUpdatedValue(() => 0.5, emitter, 'volume')
     )
     expect(result.current).toBe(0.5)
     fire({ volume: 0.9 })
     expect(result.current).toBe(0.9)
   })
 
-  // The reason the effect re-reads `lastValue` instead of going straight to
-  // `addListener`. Nothing reads the value again until the next native event, so
-  // a value landing in this window would otherwise be missed permanently.
-  it('re-syncs a value that lands between the render read and the effect', () => {
+  it('re-reads a change that lands between the render read and the effect', () => {
     const { emitter, fireDuringRender } = makeEmitter<string>()
-    // Firing from inside the getter puts the emit exactly where the race is:
-    // after the useState initializer has read, before the effect subscribes.
+    let native = 'atRender'
     const getter = () => {
-      fireDuringRender('landedMidRender')
-      return 'staleAtRender'
+      const value = native
+      if (value === 'atRender') {
+        native = 'changed'
+        fireDuringRender('changed')
+      }
+      return value
     }
     const { result } = renderHook(() => useNativeUpdatedValue(getter, emitter))
-    expect(result.current).toBe('landedMidRender')
+    expect(result.current).toBe('changed')
+  })
+
+  it('calls the getter once when no event lands before subscribing', () => {
+    const { emitter, fire } = makeEmitter<string>()
+    fire('earlier')
+    const getter = vi.fn(() => 'a')
+    renderHook(() => useNativeUpdatedValue(getter, emitter))
+    expect(getter).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps an event over an inline getter on re-render', () => {
+    const { emitter, fire } = makeEmitter<string>()
+    const { result, rerender } = renderHook(() =>
+      useNativeUpdatedValue(() => 'a', emitter)
+    )
+    fire('b')
+    rerender()
+    expect(result.current).toBe('b')
   })
 
   it('stops updating after unmount', () => {

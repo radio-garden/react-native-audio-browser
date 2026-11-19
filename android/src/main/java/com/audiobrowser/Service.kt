@@ -5,6 +5,7 @@ import android.app.SearchManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.provider.MediaStore
@@ -37,6 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.isActive
 import timber.log.Timber
 
 /**
@@ -150,6 +153,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     mediaSession =
       MediaLibrarySession.Builder(this, player.forwardingPlayer, player.getMediaSessionCallback())
         .setBitmapLoader(CacheBitmapLoader(coilBitmapLoader))
+        .setPeriodicPositionUpdateEnabled(periodicPositionUpdatesEnabled())
         // https://github.com/androidx/media/issues/1218
         .setSessionActivity(
           PendingIntent.getActivity(
@@ -170,6 +174,13 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       Timber.d("HeadlessTaskService bind result: $headlessBound")
     }
   }
+
+  /** The app's [PERIODIC_POSITION_UPDATES] manifest meta-data; true when it declares none. */
+  private fun periodicPositionUpdatesEnabled(): Boolean =
+    packageManager
+      .getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+      .metaData
+      ?.getBoolean(PERIODIC_POSITION_UPDATES, true) ?: true
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Timber.d("onStartCommand: action=${intent?.action}")
@@ -244,18 +255,11 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     super.onRebind(intent)
   }
 
+  @OptIn(UnstableApi::class)
   override fun onTaskRemoved(rootIntent: Intent?) {
     val appKilledPlaybackBehavior = player.appKilledPlaybackBehavior
 
     Timber.d("player = $player, appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
-
-    // The system UI's controller backs the notification, so it doesn't count as external.
-    val hasExternalControllers =
-      mediaSession.connectedControllers.any { controller ->
-        controller.packageName != packageName && controller.packageName != "com.android.systemui"
-      }
-
-    Timber.d("hasExternalControllers = $hasExternalControllers")
 
     when (appKilledPlaybackBehavior) {
       AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> {
@@ -264,30 +268,25 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       }
 
       AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> {
-        if (hasExternalControllers) {
-          Timber.d("External controllers still connected - deferring aggressive cleanup")
+        // Only a car keeps the session through a swipe: the Bluetooth stack connects as a
+        // controller whenever Bluetooth is on, with or without a device.
+        val carConnected =
+          mediaSession.connectedControllers.any {
+            mediaSession.isAutomotiveController(it) || mediaSession.isAutoCompanionController(it)
+          }
+        if (carConnected) {
+          Timber.d("A car is connected - pausing instead of stopping")
           player.pause()
           stopForeground(STOP_FOREGROUND_REMOVE)
-        } else if (moduleBound) {
-          Timber.d("AudioBrowser still bound - stopping playback but keeping the player")
-          stopPlaybackAndRemoveNotification()
-          // Ends the service once AudioBrowser unbinds.
-          stopSelf()
         } else {
-          Timber.d("No external controllers - proceeding with service shutdown")
-          try {
-            if (::mediaSession.isInitialized) {
-              mediaSession.release()
-            }
-            stopPlaybackAndRemoveNotification()
-            tearDownArtworkProvider()
-            player.destroy()
-            scope.cancel()
-            stopSelf()
-          } catch (e: Exception) {
-            Timber.e(e, "Error during aggressive cleanup in onTaskRemoved")
-            stopSelf()
-          }
+          Timber.d("No car connected - stopping playback, moduleBound = $moduleBound")
+          stopPlaybackAndRemoveNotification()
+          // Ends a waiting play-from-search, also while AudioBrowser is bound.
+          scope.coroutineContext.cancelChildren()
+          // AudioBrowser keeps the player. Otherwise tear down now: a media controller still bound
+          // keeps the service alive after stopSelf().
+          if (!moduleBound) tearDown()
+          stopSelf()
         }
       }
 
@@ -298,6 +297,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   }
 
   private fun stopPlaybackAndRemoveNotification() {
+    // Before clear(), which leaves no track to save.
+    player.playbackStateStore.stopPeriodicSave()
     // Before stop(), while a mid-ramp fade can still restore the volume.
     player.sleepTimer.clear()
     player.clear()
@@ -305,8 +306,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     stopForeground(STOP_FOREGROUND_REMOVE)
   }
 
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
+
+    // Cancelled with the session's release. A client still bound keeps the service alive after
+    // a swipe's shutdown, and Media3 throws on adding a released session.
+    if (!scope.isActive) return null
 
     // No setup() here: default options would replace the ones setupPlayer applied.
     if (player.getCallbacks() == null) {
@@ -334,16 +339,17 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     onBatteryWarningPendingChanged?.invoke(true)
   }
 
-  /**
-   * Cancels the artwork provider's scope and clears its holder. Idempotent. Call it before
-   * player.destroy() on every teardown path, so no in-flight load reaches a destroyed player.
-   */
-  private fun tearDownArtworkProvider() {
+  /** Idempotent: a swipe's shutdown runs it, and onDestroy runs it again. */
+  private fun tearDown() {
+    // Before player.destroy(), so no in-flight artwork load reaches a destroyed player.
     artworkProviderDeps?.let {
       it.scope.cancel()
       CoilArtworkLoaderHolder.clearIf(it)
     }
     artworkProviderDeps = null
+    if (::mediaSession.isInitialized) mediaSession.release()
+    player.destroy()
+    scope.cancel()
   }
 
   override fun onDestroy() {
@@ -355,18 +361,20 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       headlessBound = false
     }
 
-    tearDownArtworkProvider()
-
-    Timber.d("Releasing media session and destroying player")
-    if (::mediaSession.isInitialized) {
-      mediaSession.release()
-    }
-    player.destroy()
+    tearDown()
 
     super.onDestroy()
   }
 
   inner class LocalBinder : Binder() {
     val service = this@Service
+  }
+
+  companion object {
+    /**
+     * Application meta-data that, set to false, stops media3's periodic position update: the
+     * session re-sending External Surfaces the playback state every 3 s while playing or loading.
+     */
+    const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
   }
 }

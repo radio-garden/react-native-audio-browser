@@ -140,6 +140,20 @@ class BrowserManagerInvalidationTest {
   }
 
   @Test
+  fun `a page in flight across invalidateContentCache of its path is not cached`() {
+    across({ browserManager.invalidateContentCache("/page") }) { browserManager.resolve("/page") }
+
+    assertEquals("nl", runBlocking { browserManager.resolve("/page") }.title)
+  }
+
+  @Test
+  fun `a page in flight across invalidateContentCache of another path is cached`() {
+    across({ browserManager.invalidateContentCache("/other") }) { browserManager.resolve("/page") }
+
+    assertEquals("en", runBlocking { browserManager.resolve("/page") }.title)
+  }
+
+  @Test
   fun `a page in flight across a config change is cached`() {
     across({ browserManager.config = config() }) { browserManager.resolve("/page") }
 

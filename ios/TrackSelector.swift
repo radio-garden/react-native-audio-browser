@@ -67,7 +67,12 @@ class TrackSelector {
       return .none
     }
 
-    let event = TrackLoadEvent(track: track, queue: playback.queue, startIndex: Double(playback.index))
+    let event = TrackLoadEvent(
+      track: track,
+      queue: playback.queue,
+      startIndex: Double(playback.index),
+      startPosition: nil,
+    )
     if await browserManager.awaitTrackLoadHandler(event: event) {
       return .intercepted
     }

@@ -89,10 +89,13 @@ if [ -n "$(matching 'android/*.kt')" ]; then
   # edits get formatted too. Only staged files are re-staged, so the commit is
   # unaffected either way.
   gradlew=apps/example-native/android/gradlew
+  if [ -z "$ANDROID_HOME" ] && [ -z "$ANDROID_SDK_ROOT" ] && [ -d "$HOME/Library/Android/sdk" ]; then
+    export ANDROID_HOME="$HOME/Library/Android/sdk"
+  fi
   if [ -x "$gradlew" ]; then
     (cd apps/example-native/android && ./gradlew -q --build-cache \
       :react-native-audio-browser:ktfmtFormat >/dev/null 2>&1) ||
-      echo "pre-commit: ktfmt failed (needs a JDK and \`yarn install\`), skipping" >&2
+      echo "pre-commit: ktfmt failed, skipping; run \`yarn android:format\` (needs a JDK, \`yarn install\` and ANDROID_HOME)" >&2
   else
     echo "pre-commit: $gradlew missing, skipping ktfmt" >&2
   fi

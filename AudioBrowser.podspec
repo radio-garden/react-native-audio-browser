@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "16.0", :visionos => 1.0 }
   s.source       = { :git => "https://github.com/puckey/react-native-audio-browser.git", :tag => "#{s.version}" }
 
-  s.swift_version = '6.2'
+  s.swift_version = '6.3'
 
   s.source_files = [
     # Implementation (Swift)

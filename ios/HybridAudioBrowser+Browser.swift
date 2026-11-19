@@ -6,10 +6,14 @@ import NitroModules
 import os.log
 
 public extension HybridAudioBrowser {
-  /// Navigates the in-app browser, reporting a failure as the navigation error. The clear is
-  /// synchronous, so JS hears it before the navigation that may set the error again.
+  /// Navigates the in-app browser, superseding a configuration's pending start path, and reports
+  /// a failure as the navigation error. The clear is synchronous, so JS hears it before the
+  /// navigation that may set the error again.
   internal func navigate(_ path: String, clearError: Bool) {
-    if clearError { onMainActor { navigationError.clear() } }
+    onMainActor {
+      initialNavigation?.cancel()
+      if clearError { navigationError.clear() }
+    }
     Task { @MainActor in await loadPath(path) }
   }
 
@@ -84,7 +88,7 @@ public extension HybridAudioBrowser {
       return browserManager.path == path
     }
     externalContentChangedEmitter.emit(path)
-    if isCurrentPath { navigate(path, clearError: false) }
+    if isCurrentPath { Task { @MainActor in await loadPath(path) } }
   }
 
   func invalidateAllContent() throws {

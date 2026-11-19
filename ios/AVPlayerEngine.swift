@@ -112,7 +112,8 @@ final class AVPlayerEngine: PlayerEngine {
 
   var resumePosition: Double? {
     guard let item = avPlayer.currentItem, !item.duration.isIndefinite else { return nil }
-    return item.currentTime().seconds
+    let seconds = item.currentTime().seconds
+    return seconds.isFinite ? seconds : nil
   }
 
   var liveEdge: Double? {
@@ -120,6 +121,14 @@ final class AVPlayerEngine: PlayerEngine {
           range.duration.seconds > 0
     else { return nil }
     return range.end.seconds
+  }
+
+  var liveWindowSeconds: Double? {
+    guard let item = avPlayer.currentItem, item.duration.isIndefinite,
+          let seconds = item.seekableTimeRanges.last?.timeRangeValue.duration.seconds,
+          seconds.isFinite, seconds > 0
+    else { return nil }
+    return seconds
   }
 
   var isPlaybackLikelyToKeepUp: Bool {
@@ -137,9 +146,9 @@ final class AVPlayerEngine: PlayerEngine {
 
   // MARK: - Loading
 
-  func resolveAndLoad(src: String, track: Track) {
+  func resolveAndLoad(src: String, track: Track, shortStartBuffer: Bool) {
     icyCharset = track.icyCharset
-    mediaLoader.resolveAndLoad(src: src, track: track)
+    mediaLoader.resolveAndLoad(src: src, track: track, shortStartBuffer: shortStartBuffer)
   }
 
   func cancelLoading() {
@@ -156,15 +165,26 @@ final class AVPlayerEngine: PlayerEngine {
     avPlayer.replaceCurrentItem(with: nil)
   }
 
+  func replaceItemWithNowPlayingCarrier() {
+    dropAsset()
+    let carrier = AVPlayerItem(asset: AVMutableComposition())
+    nowPlayingInfoController.prepareItem(carrier)
+    avPlayer.replaceCurrentItem(with: carrier)
+  }
+
   func stopObservingItem() {
     itemObserver?.invalidate()
     itemObserver = nil
   }
 
+  var playerFailed: Bool { avPlayer.status == .failed }
+
   func recreate() {
     playerObserver?.invalidate()
     nowPlayingInfoController.unlinkPlayer()
+    let volume = avPlayer.volume
     avPlayer = AVPlayer()
+    avPlayer.volume = volume
     setUpAVPlayer()
   }
 
@@ -185,6 +205,10 @@ final class AVPlayerEngine: PlayerEngine {
 
   func pause() {
     avPlayer.pause()
+  }
+
+  func capForwardBuffer(_ seconds: Double?) {
+    avPlayer.currentItem?.preferredForwardBufferDuration = seconds ?? bufferDuration / 1000
   }
 
   func setRate(_ rate: Float, playing: Bool) {
@@ -231,6 +255,10 @@ final class AVPlayerEngine: PlayerEngine {
     nowPlayingUpdater.receivedTimedMetadata(metadata)
   }
 
+  func clearTimedMetadata() {
+    nowPlayingUpdater.clearTimedMetadata()
+  }
+
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     remoteCommandController.updateRepeatMode(mode)
   }
@@ -263,7 +291,7 @@ final class AVPlayerEngine: PlayerEngine {
   private func playerDidEmit(_ event: PlayerObserver.Event) {
     switch event {
     case let .status(status):
-      if status == .failed { reportFailure(nil) }
+      if status == .failed { reportFailure(avPlayer.error) }
     case let .timeControlStatus(status):
       let mapped: PlayerTimeControlStatus
       switch status {
@@ -280,6 +308,9 @@ final class AVPlayerEngine: PlayerEngine {
 
   private func itemDidEmit(_ event: ItemObserver.Event) {
     switch event {
+    case .readyToPlay:
+      // Ends the short start buffer `MediaLoader.resolveAndLoad` may have given the item.
+      avPlayer.currentItem?.preferredForwardBufferDuration = bufferDuration / 1000
     case let .likelyToKeepUp(isLikely): onEvent?(.likelyToKeepUp(isLikely))
     case let .failed(error), let .failedToPlayToEnd(error): reportFailure(error)
     case .playedToEnd: onEvent?(.playedToEnd)

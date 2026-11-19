@@ -183,6 +183,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("toggleActiveTrackFavorited", &HybridAudioBrowserSpec::toggleActiveTrackFavorited);
       prototype.registerHybridMethod("setQueue", &HybridAudioBrowserSpec::setQueue);
       prototype.registerHybridMethod("getQueue", &HybridAudioBrowserSpec::getQueue);
+      prototype.registerHybridMethod("getQueueVersion", &HybridAudioBrowserSpec::getQueueVersion);
       prototype.registerHybridMethod("getTrack", &HybridAudioBrowserSpec::getTrack);
       prototype.registerHybridMethod("getActiveTrackIndex", &HybridAudioBrowserSpec::getActiveTrackIndex);
       prototype.registerHybridMethod("getActiveTrack", &HybridAudioBrowserSpec::getActiveTrack);
@@ -190,6 +191,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("flashNowPlaying", &HybridAudioBrowserSpec::flashNowPlaying);
       prototype.registerHybridMethod("clearNowPlayingFlash", &HybridAudioBrowserSpec::clearNowPlayingFlash);
       prototype.registerHybridMethod("getNowPlaying", &HybridAudioBrowserSpec::getNowPlaying);
+      prototype.registerHybridMethod("getTimedMetadata", &HybridAudioBrowserSpec::getTimedMetadata);
       prototype.registerHybridMethod("getOnline", &HybridAudioBrowserSpec::getOnline);
       prototype.registerHybridMethod("getSystemVolume", &HybridAudioBrowserSpec::getSystemVolume);
       prototype.registerHybridMethod("setSystemVolume", &HybridAudioBrowserSpec::setSystemVolume);

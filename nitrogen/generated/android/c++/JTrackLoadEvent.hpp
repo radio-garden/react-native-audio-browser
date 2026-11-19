@@ -62,6 +62,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> queue = this->getFieldValue(fieldQueue);
       static const auto fieldStartIndex = clazz->getField<double>("startIndex");
       double startIndex = this->getFieldValue(fieldStartIndex);
+      static const auto fieldStartPosition = clazz->getField<jni::JDouble>("startPosition");
+      jni::local_ref<jni::JDouble> startPosition = this->getFieldValue(fieldStartPosition);
       return TrackLoadEvent(
         track->toCpp(),
         [&](auto&& __input) {
@@ -74,7 +76,8 @@ namespace margelo::nitro::audiobrowser {
           }
           return __vector;
         }(queue),
-        startIndex
+        startIndex,
+        startPosition != nullptr ? std::make_optional(startPosition->value()) : std::nullopt
       );
     }
 
@@ -84,7 +87,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrackLoadEvent::javaobject> fromCpp(const TrackLoadEvent& value) {
-      using JSignature = JTrackLoadEvent(jni::alias_ref<JTrack>, jni::alias_ref<jni::JArrayClass<JTrack>>, double);
+      using JSignature = JTrackLoadEvent(jni::alias_ref<JTrack>, jni::alias_ref<jni::JArrayClass<JTrack>>, double, jni::alias_ref<jni::JDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -100,7 +103,8 @@ namespace margelo::nitro::audiobrowser {
           }
           return __array;
         }(value.queue),
-        value.startIndex
+        value.startIndex,
+        value.startPosition.has_value() ? jni::JDouble::valueOf(value.startPosition.value()) : nullptr
       );
     }
   };

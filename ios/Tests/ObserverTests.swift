@@ -49,6 +49,23 @@ struct ItemObserverTests {
     observer.invalidate()
   }
 
+  @Test func reportsTheItemBecomingReady() async throws {
+    let url = try makeSilentAudioFile()
+    defer { try? FileManager.default.removeItem(at: url) }
+
+    let item = AVPlayerItem(url: url)
+    var events: [ItemObserver.Event] = []
+    let observer = ItemObserver(item: item) { events.append($0) }
+    let player = AVPlayer(playerItem: item)
+    let deadline = ContinuousClock.now + .seconds(5)
+    while !events.map(label).contains("readyToPlay"), ContinuousClock.now < deadline {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(events.map(label).contains("readyToPlay"))
+    observer.invalidate()
+    _ = player
+  }
+
   @Test func dropsADeliveryThatLandsAfterInvalidate() async {
     let item = makeItem()
     var events: [ItemObserver.Event] = []
@@ -71,6 +88,7 @@ struct ItemObserverTests {
   private func label(_ event: ItemObserver.Event) -> String {
     switch event {
     case .likelyToKeepUp: "likelyToKeepUp"
+    case .readyToPlay: "readyToPlay"
     case .failed: "failed"
     case .playedToEnd: "playedToEnd"
     case .failedToPlayToEnd: "failedToPlayToEnd"

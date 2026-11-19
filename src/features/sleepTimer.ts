@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
@@ -109,14 +109,13 @@ export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
  * @returns true if any sleep timer is active, false otherwise
  */
 export function useSleepTimerActive(): boolean {
+  const eventCountAtRender = useRef(onSleepTimerChanged.eventCount)
   const [isActive, setIsActive] = useState(() => getSleepTimer() !== null)
 
   useEffect(() => {
-    // Re-sync before subscribing: a change between the initial read above and this effect would
-    // otherwise be missed for good. `undefined` means nothing has fired yet, whereas `null` is a
-    // real value — the timer being cleared — so it has to re-sync too.
-    const { lastValue } = onSleepTimerChanged
-    if (lastValue !== undefined) setIsActive(lastValue !== null)
+    if (onSleepTimerChanged.eventCount !== eventCountAtRender.current) {
+      setIsActive(getSleepTimer() !== null)
+    }
     return onSleepTimerChanged.addListener((timer) => {
       setIsActive(timer !== null)
     })
@@ -142,6 +141,7 @@ export function useSleepTimer(params?: {
   const updateInterval = params?.updateInterval ?? 1000
   const inactive = params?.inactive ?? false
 
+  const eventCountAtRender = useRef(onSleepTimerChanged.eventCount)
   const [state, setState] = useState<SleepTimerState | undefined>(() => {
     const timerState = getSleepTimer()
     return addSecondsLeft(timerState)
@@ -150,9 +150,9 @@ export function useSleepTimer(params?: {
   const time = state && 'time' in state ? state.time : undefined
 
   useEffect(() => {
-    // Re-sync before subscribing — see useSleepTimerActive.
-    const { lastValue } = onSleepTimerChanged
-    if (lastValue !== undefined) setState(addSecondsLeft(lastValue))
+    if (onSleepTimerChanged.eventCount !== eventCountAtRender.current) {
+      setState(addSecondsLeft(getSleepTimer()))
+    }
     return onSleepTimerChanged.addListener((event) => {
       setState(addSecondsLeft(event))
     })

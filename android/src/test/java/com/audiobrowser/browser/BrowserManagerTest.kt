@@ -8,9 +8,18 @@ import com.audiobrowser.TestFixtures.sectionStyle
 import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam
+import com.margelo.nitro.audiobrowser.Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -115,6 +124,39 @@ class BrowserManagerTest {
   }
 
   // MARK: - expandQueueFromContextualPath
+
+  @Test
+  fun `expandQueueFromContextualPath hands a cancelled caller the cancellation, not a fallback`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>()
+      browserManager.config =
+        BrowserConfig(
+          routes =
+            arrayOf(
+              staticRoute("/home", resolvedTrack(path = "/home"))
+                .copy(
+                  browseStatic = null,
+                  browseCallback =
+                    Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam {
+                      silent.promise
+                    },
+                )
+            )
+        )
+      var returned = false
+      val expanded =
+        backgroundScope.launch {
+          browserManager.expandQueueFromContextualPath(contextual("/home", "c"))
+          returned = true
+        }
+      runCurrent()
+
+      expanded.cancel()
+      runCurrent()
+
+      assertTrue(expanded.isCompleted)
+      assertFalse(returned)
+    }
 
   @Test
   fun `expandQueueFromContextualPath scopes the queue to the tapped section`() = runBlocking {

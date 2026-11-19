@@ -49,11 +49,21 @@ public extension HybridAudioBrowser {
   }
 
   func seekTo(position: Double) throws {
+    guard let position = finite(position, "seekTo") else { return }
     onMainActor { player?.seek(to: position) }
   }
 
   func seekBy(offset: Double) throws {
+    guard let offset = finite(offset, "seekBy") else { return }
     onMainActor { player?.seek(by: offset) }
+  }
+
+  private func finite(_ seconds: Double, _ method: String) -> Double? {
+    guard seconds.isFinite else {
+      logger.error("\(method, privacy: .public) ignored a non-finite time: \(seconds)")
+      return nil
+    }
+    return seconds
   }
 
   func seekToLiveEdge() throws {
@@ -122,7 +132,7 @@ public extension HybridAudioBrowser {
   func retry() throws {
     // Re-resolves rather than replaying the cached URL: short-lived URLs or tokens may have
     // expired since the failure.
-    onMainActor { player?.reloadResolving(startFromCurrentTime: true) }
+    onMainActor { player?.retryNow() }
   }
 
   // MARK: - Sleep Timer
@@ -187,7 +197,7 @@ public extension HybridAudioBrowser {
   func skip(index: Double, initialPosition: Double?) throws {
     try onMainActor {
       try player?.skipTo(Int(index))
-      if let position = initialPosition {
+      if let position = initialPosition.flatMap({ finite($0, "skip") }) {
         player?.seek(to: position)
       }
     }
@@ -196,7 +206,7 @@ public extension HybridAudioBrowser {
   func skipToNext(initialPosition: Double?) throws {
     onMainActor {
       player?.next()
-      if let position = initialPosition {
+      if let position = initialPosition.flatMap({ finite($0, "skipToNext") }) {
         player?.seek(to: position)
       }
     }
@@ -205,7 +215,7 @@ public extension HybridAudioBrowser {
   func skipToPrevious(initialPosition: Double?) throws {
     onMainActor {
       player?.previous()
-      if let position = initialPosition {
+      if let position = initialPosition.flatMap({ finite($0, "skipToPrevious") }) {
         player?.seek(to: position)
       }
     }
@@ -249,13 +259,17 @@ public extension HybridAudioBrowser {
       try player.setQueue(
         tracks,
         initialIndex: startIndex.map { Int($0) } ?? 0,
-        startPositionMs: startPosition.map { $0 * 1000 },
+        startPositionMs: startPosition.flatMap { finite($0, "setQueue") }.map { $0 * 1000 },
       )
     }
   }
 
   func getQueue() throws -> [Track] {
     onMainActor { player?.tracks ?? [] }
+  }
+
+  func getQueueVersion() throws -> Double {
+    onMainActor { Double(player?.queueVersion ?? -1) }
   }
 
   func getTrack(index: Double) throws -> Track? {
@@ -296,6 +310,10 @@ public extension HybridAudioBrowser {
 
   func getNowPlaying() throws -> NowPlayingMetadata? {
     onMainActor { engine?.nowPlayingUpdater.nowPlaying }
+  }
+
+  func getTimedMetadata() throws -> TimedMetadata? {
+    onMainActor { engine?.nowPlayingUpdater.timedMetadata }
   }
 
   // MARK: - Network

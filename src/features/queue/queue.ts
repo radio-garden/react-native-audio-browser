@@ -179,6 +179,16 @@ export function getQueue(): Track[] {
   return nativeBrowser.getQueue() as unknown as Track[]
 }
 
+/**
+ * Gets the queue's version: it changes when the queue's tracks or their order
+ * change, whoever changed them (a `setQueue`, a pick in CarPlay or Android
+ * Auto, `add`, `remove`, `move`), and never repeats while the app runs. Equal
+ * readings mean the queue is the same, without copying it across the bridge.
+ */
+export function getQueueVersion(): number {
+  return nativeBrowser.getQueueVersion()
+}
+
 // MARK: - Event Callbacks
 
 /**

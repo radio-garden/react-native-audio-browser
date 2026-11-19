@@ -222,6 +222,7 @@ namespace margelo::nitro::audiobrowser {
     void toggleActiveTrackFavorited() override;
     void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) override;
     std::vector<Track> getQueue() override;
+    double getQueueVersion() override;
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
@@ -229,6 +230,7 @@ namespace margelo::nitro::audiobrowser {
     void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) override;
     void clearNowPlayingFlash() override;
     std::optional<NowPlayingMetadata> getNowPlaying() override;
+    std::optional<TimedMetadata> getTimedMetadata() override;
     bool getOnline() override;
     double getSystemVolume() override;
     void setSystemVolume(double volume) override;

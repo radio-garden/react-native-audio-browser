@@ -3,10 +3,12 @@ package com.audiobrowser.player
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import kotlin.math.pow
 
 /**
- * Ramps the player volume to silence over a duration (the sleep timer's fade), on the main looper.
- * The gain follows a squared curve: a linear gain ramp sounds like a late cutoff, not a fade.
+ * Ramps the player volume to silence by a deadline (the sleep timer's fade), on the main looper.
+ * The gain falls linearly in decibels to [FLOOR_DECIBELS], so every second of the fade is heard as
+ * one; a gain that falls linearly or squared spends its last seconds inaudible.
  */
 class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Float) -> Unit) {
   private val handler = Handler(Looper.getMainLooper())
@@ -19,21 +21,24 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
   val isActive: Boolean
     get() = originalVolume != null
 
-  fun start(durationSeconds: Double) {
+  /**
+   * Starts a fade that reaches silence at [endUptimeMs] ([SystemClock.uptimeMillis]),
+   * [durationSeconds] after it would have begun. Started late, it joins the ramp where it would be
+   * by now.
+   */
+  fun start(endUptimeMs: Long, durationSeconds: Double) {
     // Restarting mid-fade keeps the first fade's baseline, not the partly faded current volume.
     val baseVolume = originalVolume ?: getVolume()
     cancel(restoreVolume = false)
     originalVolume = baseVolume
     if (durationSeconds <= 0) return
 
-    val startTime = SystemClock.uptimeMillis()
     val durationMs = durationSeconds * 1000
     val runnable =
       object : Runnable {
         override fun run() {
-          val progress = ((SystemClock.uptimeMillis() - startTime) / durationMs).coerceAtMost(1.0)
-          val remaining = (1 - progress).toFloat()
-          setVolume(baseVolume * remaining * remaining)
+          val progress = 1 - (endUptimeMs - SystemClock.uptimeMillis()) / durationMs
+          setVolume(baseVolume * gain(progress))
           if (progress < 1.0) {
             handler.postDelayed(this, STEP_INTERVAL_MS)
           } else {
@@ -70,5 +75,11 @@ class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Fl
 
   companion object {
     private const val STEP_INTERVAL_MS = 50L
+    const val FLOOR_DECIBELS = -50.0
+
+    /** The gain, relative to the pre-fade volume, [progress] (0..1) of the way through a fade. */
+    fun gain(progress: Double): Float =
+      if (progress >= 1) 0f
+      else 10.0.pow(FLOOR_DECIBELS * progress.coerceAtLeast(0.0) / 20).toFloat()
   }
 }

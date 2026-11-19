@@ -12,6 +12,7 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 final class ItemObserver: NSObject {
   enum Event {
     case likelyToKeepUp(Bool)
+    case readyToPlay
     case failed(Error?)
     case playedToEnd
     case failedToPlayToEnd(Error?)
@@ -37,9 +38,15 @@ final class ItemObserver: NSObject {
         Task { @MainActor in self?.emit(.likelyToKeepUp(isLikely)) }
       },
       item.observe(\.status, options: [.new]) { [weak self] item, _ in
-        guard item.status == .failed else { return }
-        let error = item.error
-        Task { @MainActor in self?.emit(.failed(error)) }
+        switch item.status {
+        case .readyToPlay:
+          Task { @MainActor in self?.emit(.readyToPlay) }
+        case .failed:
+          let error = item.error
+          Task { @MainActor in self?.emit(.failed(error)) }
+        default:
+          break
+        }
       },
     ]
     notificationTokens = [

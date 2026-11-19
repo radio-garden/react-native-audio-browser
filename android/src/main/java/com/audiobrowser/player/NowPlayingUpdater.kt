@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -67,7 +68,9 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   /** Customizes the lines asynchronously; a null result or a throw leaves the default lines. */
   var formatter: (suspend (FormatNowPlayingParams) -> NowPlayingUpdate?)? = null
 
-  @Volatile private var latestTimedMetadata: TimedMetadata? = null
+  @Volatile
+  var timedMetadata: TimedMetadata? = null
+    private set
 
   private var override: NowPlayingUpdate? = null
 
@@ -183,13 +186,18 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   fun clearOverride() {
     override = null
     cancelFlash()
-    latestTimedMetadata = null
+    timedMetadata = null
     forgetPublished()
+  }
+
+  /** Call when the stream stops: its title no longer applies. The caller renders. */
+  fun clearTimedMetadata() {
+    timedMetadata = null
   }
 
   /** Records live (ICY/ID3) metadata; re-renders only when a formatter would use it. */
   fun onTimedMetadataReceived(timed: TimedMetadata) {
-    latestTimedMetadata = timed
+    timedMetadata = timed
     if (enabled && formatter != null) {
       render()
     }
@@ -244,7 +252,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       val params =
         FormatNowPlayingParams(
           track,
-          latestTimedMetadata,
+          timedMetadata,
           surface.playWhenReady,
           stalled,
           surface.playbackError,
@@ -253,6 +261,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
         val formatted =
           try {
             activeFormatter(params)
+          } catch (e: CancellationException) {
+            throw e
           } catch (e: Exception) {
             Timber.e(e, "NowPlaying formatter threw; using default")
             null
