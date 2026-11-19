@@ -74,7 +74,7 @@ final class HttpClient: @unchecked Sendable {
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
     // A `User-Agent` header wins over `userAgent`, as in the media and artwork paths.
-    if httpRequest.headers?.hasHeader("User-Agent") != true {
+    if urlRequest.value(forHTTPHeaderField: "User-Agent") == nil {
       urlRequest.setValue(httpRequest.userAgent, forHTTPHeaderField: "User-Agent")
     }
 
@@ -139,13 +139,6 @@ final class HttpClient: @unchecked Sendable {
 
   private static func path(_ context: DecodingError.Context) -> String {
     context.codingPath.map(\.stringValue).joined(separator: ".")
-  }
-}
-
-extension [String: String] {
-  /// Whether these headers set `name`, in any case: HTTP header names are case-insensitive.
-  func hasHeader(_ name: String) -> Bool {
-    keys.contains { $0.caseInsensitiveCompare(name) == .orderedSame }
   }
 }
 

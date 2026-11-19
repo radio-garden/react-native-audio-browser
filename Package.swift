@@ -68,6 +68,7 @@ let package = Package(
         "Extension/URLError+Connectivity.swift",
         "Extension/NavigationError+Conversion.swift",
         "Extension/Capability+RemoteCommand.swift",
+        "Extension/Dictionary+Headers.swift",
         "Http/HttpClient.swift",
         "Util/Emitter.swift",
         "Util/Connectivity.swift",
