@@ -71,7 +71,11 @@ public extension HybridAudioBrowser {
   }
 
   func setVolume(level: Double) throws {
-    onMainActor { engine?.volume = Float(level) }
+    guard let volume = clampedVolume(level) else {
+      logger.error("setVolume ignored a NaN level")
+      return
+    }
+    onMainActor { engine?.volume = volume }
   }
 
   func getVolume() throws -> Double {

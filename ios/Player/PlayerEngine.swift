@@ -28,6 +28,11 @@ enum EngineEvent {
   case timedMetadata(TimedMetadata)
 }
 
+/// `level` clamped to the engine's 0–1 volume; nil for NaN, which is nearer neither end.
+func clampedVolume(_ level: Double) -> Float? {
+  level.isNaN ? nil : Float(min(max(level, 0), 1))
+}
+
 /// The media stack under the Player: the AVPlayer and its items, loading, now playing, remote
 /// commands and the audio session. It carries out what the Player decides and reports what it
 /// observes through `onEvent`; it holds no playback policy (ADR 0012). Tests use a mock.
