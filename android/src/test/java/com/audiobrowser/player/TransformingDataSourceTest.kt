@@ -125,6 +125,22 @@ class TransformingDataSourceTest {
   }
 
   @Test
+  fun `a source prepared again resolves the media url on its next open, and once`() {
+    var resolves = 0
+    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+    val spec = DataSpec("/listen/abc/channel.mp3".toUri())
+
+    factory.mediaSourcePrepared()
+    factory.createDataSource().open(spec)
+    factory.createDataSource().open(spec)
+    factory.mediaSourcePrepared()
+    factory.createDataSource().open(spec)
+    factory.createDataSource().open(spec)
+
+    assertEquals(listOf(1, 1, 2, 2), openedUrls.map { it.substringAfter("token=").toInt() })
+  }
+
+  @Test
   fun `a failed segment load does not trigger a media re-resolve`() {
     var resolves = 0
     val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }

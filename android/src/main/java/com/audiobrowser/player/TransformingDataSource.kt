@@ -17,8 +17,10 @@ import timber.log.Timber
  * `createMediaSource`, deadlocks while a synchronous Nitro call such as `seekTo` holds the JS
  * thread.
  *
- * The first open resolves the media URL and caches the result on the [Factory]; later opens of
- * other URLs (HLS segments, keys) keep their own URL and reuse the cached headers and user agent.
+ * The first open resolves the media URL and caches the result on the [Factory]. A later open of the
+ * media URL (a seek, a playlist refresh) reuses it, unless the source was prepared again or the
+ * last open failed: the URL or its token may have expired. Opens of other URLs (HLS segments, keys)
+ * keep their own URL and reuse the cached headers and user agent.
  */
 class TransformingDataSource(private val upstream: DataSource, private val factory: Factory) :
   DataSource {
@@ -51,16 +53,10 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     val (finalUrl, headers, userAgent) =
       when {
         cached == null -> resolveAndCache(originalUrl)
-        // Re-open of the media URL (a retry) reuses the resolved URL: the original may be
-        // schemeless ("/listen/<id>/x.mp3"), which DefaultDataSource routes to a file and fails.
-        // After a failed load it re-resolves once instead, since the URL or token may have expired.
+        // The resolved URL, never the original: that may be schemeless ("/listen/<id>/x.mp3"),
+        // which DefaultDataSource routes to a file and fails.
         originalUrl == factory.cachedOriginalUrl ->
-          if (factory.reresolveOnNextMediaOpen) {
-            factory.reresolveOnNextMediaOpen = false
-            resolveAndCache(originalUrl)
-          } else {
-            cached
-          }
+          if (factory.resolveOnNextMediaOpen) resolveAndCache(originalUrl) else cached
         // An already-absolute segment or key URL: keep it, reuse the headers.
         else -> Triple(originalUrl, cached.second, cached.third)
       }
@@ -88,13 +84,14 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
     } catch (e: IOException) {
       // Only a media-URL failure refreshes the URL; a failed segment or key leaves it alone.
       if (originalUrl == factory.cachedOriginalUrl) {
-        factory.reresolveOnNextMediaOpen = true
+        factory.resolveOnNextMediaOpen = true
       }
       throw e
     }
   }
 
   private fun resolveAndCache(originalUrl: String): Triple<String, Map<String, String>, String> {
+    factory.resolveOnNextMediaOpen = false
     val resolved = resolveRequestConfig(originalUrl)
     factory.cachedTransform = resolved
     factory.cachedOriginalUrl = originalUrl
@@ -164,8 +161,17 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
 
     @Volatile internal var cachedOriginalUrl: String? = null
 
-    // Set by a failed media-URL open; the next media-URL open re-resolves and clears it.
-    @Volatile internal var reresolveOnNextMediaOpen: Boolean = false
+    // Set by a failed media-URL open and by [mediaSourcePrepared]; the next media-URL open
+    // resolves again and clears it.
+    @Volatile internal var resolveOnNextMediaOpen: Boolean = false
+
+    /**
+     * The engine prepared the track's media source: at first, or again after a stop or an error.
+     * Called on ExoPlayer's playback thread, before the source opens anything.
+     */
+    fun mediaSourcePrepared() {
+      resolveOnNextMediaOpen = true
+    }
 
     override fun createDataSource(): DataSource {
       return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)

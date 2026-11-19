@@ -92,23 +92,20 @@ neither ICY nor HLS ID3. Every web error is terminal.
 
 If your stream URLs are signed or short-lived, build them in
 [`media.resolve`](/guide/browser#media-and-artwork) — the per-track layer of
-the stream request. When a reconnect re-runs it depends on the platform:
+the stream request. Every reload of the track re-runs it, so a URL that
+expired while the track was paused or during an outage is re-signed instead
+of re-failing:
 
-- **iOS** re-runs it on every reload: automatic retry, network restore,
-  play-from-`'error'` and a live-edge reconnect. A URL that expired during
-  the outage is re-signed instead of re-failing.
-- **Android** reuses the URL it resolved, and re-runs `media.resolve` only
-  after an attempt to open that URL has failed. A URL that expired
-  mid-stream therefore costs one failed attempt.
+- a play after a stop, from `'error'`, or after a pause that closed a live
+  stream's connection (see [Pausing a live stream](#pausing-a-live-stream));
+- [`retry()`](/guide/errors#manual-retry), and a
+  [live-edge reconnect](#the-live-edge);
+- on iOS and Android, each reconnect of the
+  [automatic retry](/guide/errors#automatic-retry). Web has no automatic
+  retry.
 
-  With `retry` on, a status that retrying can't fix (a 401 or 403, say; see
-  [which failures qualify](/guide/errors#automatic-retry)) puts playback in
-  `'error'`, and the next [`retry()`](/guide/errors#manual-retry) or play
-  command re-resolves. With `retry` off, ExoPlayer's own few retries cover any
-  status, and the first of them re-resolves.
-
-- **Web** re-runs it on every reload: play-from-`'error'` or after a stop,
-  `retry()` and a live-edge reconnect. Web has no automatic retry.
+A seek within the open stream doesn't re-run it. If your resolver calls your
+backend, each of these reconnects waits on that call.
 
 ```ts
 import { configureBrowser } from 'react-native-audio-browser'
@@ -139,9 +136,8 @@ On a stream with a seekable live window (HLS with a sliding window) it seeks
 to the window's edge; on a non-seekable one (typical ICY radio) it
 reconnects instead — a fresh connection _is_ the live edge.
 
-On iOS and web the reconnect re-runs `media.resolve`. On Android it reuses the
-resolved URL, so an expired one re-resolves only after that first attempt
-fails (see [Fresh URLs on reconnect](#fresh-urls-on-reconnect)).
+The reconnect re-runs `media.resolve` (see
+[Fresh URLs on reconnect](#fresh-urls-on-reconnect)).
 General seeking is in [Playback](/guide/playback).
 
 ## Pausing a live stream
