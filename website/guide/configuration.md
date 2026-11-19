@@ -43,9 +43,9 @@ both platforms. The setup-only fields behave differently on each:
 - **Android** reconfigures in place. The fields you pass are merged over the
   previous ones, and the audio engine is only rebuilt when a construction-bound
   field (buffers, wake mode, …) changed. Two fields are exceptions. Left out,
-  `remoteOutputs` turns the remote outputs off again, and `nowPlaying` turns
-  the default mapping back on. A `nowPlaying` formatter stays until another
-  function replaces it: passing `true` or leaving it out does not drop it.
+  `remoteOutputs` turns the remote outputs off again, and `nowPlaying` goes
+  back to `true`: the track's own title and artist replace an earlier
+  formatter, so pass the formatter again to keep it.
 - **iOS** replaces the player, built from that call's options alone. The queue
   is cleared, and a setup-only field you leave out (`ios.category`,
   `ios.buffer`, `retry`, …) goes back to its default, so pass the full `ios` and
