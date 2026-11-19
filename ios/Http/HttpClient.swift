@@ -1,6 +1,11 @@
 import Foundation
 import os.log
 
+/// A response that failed with its HTTP status.
+protocol HttpStatusError: LocalizedError {
+  var code: Int { get }
+}
+
 /// Counterpart of the Kotlin `HttpClient`; change request building and error messages in both.
 final class HttpClient: @unchecked Sendable {
   static let defaultUserAgent = "react-native-audio-browser"
@@ -20,7 +25,7 @@ final class HttpClient: @unchecked Sendable {
   }
 
   /// A non-2xx response.
-  struct HttpException: LocalizedError {
+  struct HttpException: HttpStatusError {
     let code: Int
     let responseBody: String
 
@@ -36,18 +41,26 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
+  /// A 2xx response whose body does not decode as the type asked for.
+  struct UndecodableResponse: HttpStatusError {
+    let code: Int
+    let reason: String
+
+    var errorDescription: String? {
+      reason
+    }
+  }
+
   enum HttpClientError: LocalizedError {
     case invalidUrl(String)
     case unsupportedMethod(HttpMethod)
     case notHttp
-    case undecodable(String)
 
     var errorDescription: String? {
       switch self {
       case let .invalidUrl(url): "Invalid URL: \(url)"
       case let .unsupportedMethod(method): "Unsupported HTTP method: \(method.stringValue)"
       case .notHttp: "Invalid response type"
-      case let .undecodable(reason): reason
       }
     }
   }
@@ -98,7 +111,8 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
-  /// Sends `httpRequest` and decodes a 2xx body as `T`; any other status throws `HttpException`.
+  /// Sends `httpRequest` and decodes a 2xx body as `T`, throwing `UndecodableResponse` when it
+  /// does not decode; any other status throws `HttpException`.
   /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
     let (code, data) = try await request(httpRequest)
@@ -107,12 +121,24 @@ final class HttpClient: @unchecked Sendable {
     }
     do {
       return try JSONDecoder().decode(type, from: data)
-    } catch let DecodingError.keyNotFound(key, context) {
-      throw HttpClientError.undecodable("Missing required key '\(key.stringValue)' at path: \(Self.path(context))")
-    } catch let DecodingError.typeMismatch(type, context) {
-      throw HttpClientError.undecodable("Type mismatch for \(type) at path: \(Self.path(context))")
-    } catch let DecodingError.valueNotFound(type, context) {
-      throw HttpClientError.undecodable("Value not found for \(type) at path: \(Self.path(context))")
+    } catch {
+      throw UndecodableResponse(code: code, reason: Self.reason(error))
+    }
+  }
+
+  private static func reason(_ error: Error) -> String {
+    guard let error = error as? DecodingError else { return error.localizedDescription }
+    return switch error {
+    case let .keyNotFound(key, context):
+      "Missing required key '\(key.stringValue)' at path: \(path(context))"
+    case let .typeMismatch(type, context):
+      "Type mismatch for \(type) at path: \(path(context))"
+    case let .valueNotFound(type, context):
+      "Value not found for \(type) at path: \(path(context))"
+    case let .dataCorrupted(context):
+      context.debugDescription
+    @unknown default:
+      error.localizedDescription
     }
   }
 

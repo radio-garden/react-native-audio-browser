@@ -221,8 +221,8 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
  * in `BrowserConfiguration`, or falls back to built-in English titles with the
  * error's own message. An HTTP error's title is its status text,
  * system-localized on iOS; on Android an English name for common codes. It is
- * `Server Error` when there is no status code, for codes Android does not
- * name, and always on web.
+ * `Server Error` when there is no status code, for a 2xx (a response that
+ * did not parse), for codes Android does not name, and always on web.
  *
  * CarPlay and Android Auto format their own browse errors with the same
  * `formatNavigationError` callback, so the copy matches across your app and
