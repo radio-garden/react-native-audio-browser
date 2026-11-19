@@ -8,6 +8,19 @@ import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
 
 object SearchParamsFactory {
+  /** A free-text search, as a car's search surface gives it. */
+  fun fromQuery(query: String): SearchParams =
+    SearchParams(
+      mode = null,
+      query = query,
+      genre = null,
+      artist = null,
+      album = null,
+      title = null,
+      playlist = null,
+      reference = MediaReference.UNKNOWN,
+    )
+
   /**
    * The search a play-from-search request asks for, from its query and the extras of
    * https://developer.android.com/guide/components/intents-common#PlaySearch. The intent and the
@@ -43,7 +56,7 @@ object SearchParamsFactory {
    * The search [mediaItem] asks to play, or null when it names an item. Media3 gives the legacy
    * `playFromSearch` and `prepareFromSearch` as one item with the query and no media id.
    */
-  fun fromPlayFromSearch(mediaItem: MediaItem): SearchParams? {
+  fun voiceSearchOf(mediaItem: MediaItem): SearchParams? {
     if (mediaItem.mediaId != MediaItem.DEFAULT_MEDIA_ID) return null
     val request = mediaItem.requestMetadata
     return request.searchQuery?.let { fromPlayFromSearch(it, request.extras) }

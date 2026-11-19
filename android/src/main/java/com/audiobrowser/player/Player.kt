@@ -1116,37 +1116,41 @@ internal constructor(
    */
   suspend fun playFromSearch(params: SearchParams): Boolean {
     return try {
-      val audioBrowser = awaitBrowser()
-      // Gated like browsing, or voice search would be a way around the gate.
-      val gateOutcome =
-        audioBrowser.gateDecision(
-          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
-        )
-      if (gateOutcome.gated) {
-        Timber.i("playFromSearch refused — request is gated")
-        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
-        return false
-      }
-      val browserManager = audioBrowser.browserManager
-
-      Timber.d(
-        "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
-      )
-      val tracks = browserManager.searchPlayable(params)
-
-      if (tracks != null && tracks.isNotEmpty()) {
-        Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
-        setQueue(tracks)
-        play()
-        true
-      } else {
-        Timber.w("No tracks found for search: ${params}")
-        false
-      }
+      val tracks = voiceSearch(params) ?: return false
+      Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
+      setQueue(tracks)
+      play()
+      true
     } catch (e: Exception) {
       currentCoroutineContext().ensureActive()
       Timber.e(e, "Error handling voice search: ${params}")
       false
+    }
+  }
+
+  /**
+   * The playable results of a voice search, from the first. Gated like browsing, or voice search
+   * would be a way around the gate.
+   *
+   * @return null when gated (after onGate) or when nothing playable is found
+   * @throws Exception when the browser is not registered in time or the search callback fails
+   */
+  suspend fun voiceSearch(params: SearchParams): Array<Track>? {
+    val audioBrowser = awaitBrowser()
+    val gateOutcome =
+      audioBrowser.gateDecision(
+        NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
+      )
+    if (gateOutcome.gated) {
+      Timber.i("Voice search refused: request is gated")
+      audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+      return null
+    }
+    Timber.d(
+      "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
+    )
+    return audioBrowser.browserManager.searchPlayable(params).also {
+      if (it == null) Timber.w("No tracks found for search: ${params}")
     }
   }
 
