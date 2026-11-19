@@ -106,9 +106,11 @@ of re-failing:
   retry.
 
 A seek within the open stream doesn't re-run it. On Android, the automatic
-retry of an HLS stream reloads its playlists and segments with the URL and
-headers already resolved, and re-runs `media.resolve` only after a request for
-the stream's own URL fails. If your resolver calls your backend, each of these
+retry of an HLS stream, and a skip or a repeat back to one, reload its
+playlists and segments with the URL and headers already resolved; they re-run
+`media.resolve` only when they request the stream's own URL again (a `src`
+that is itself a media playlist, at its next refresh), or after such a request
+fails. If your resolver calls your backend, each of these
 reconnects waits on that call.
 
 ```ts
