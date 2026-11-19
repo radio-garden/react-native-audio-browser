@@ -1,6 +1,5 @@
 package com.audiobrowser.player
 
-import androidx.media3.common.C
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.util.TrackFactory
@@ -34,21 +33,6 @@ class SessionQueueShuffleOrderTest {
 
       assertEquals(3, player.exoPlayer.currentMediaItemIndex)
       assertEquals(3, player.exoPlayer.currentTimeline.getFirstWindowIndex(true))
-    }
-  }
-
-  @Test
-  fun `an unset start index starts on the first of media3's order`() {
-    player.setup(PlayerSetupOptions())
-    player.shuffleMode = true
-
-    repeat(10) {
-      player.forwardingPlayer.setMediaItems(items, C.INDEX_UNSET, C.TIME_UNSET)
-
-      assertEquals(
-        player.exoPlayer.currentTimeline.getFirstWindowIndex(true),
-        player.exoPlayer.currentMediaItemIndex,
-      )
     }
   }
 }

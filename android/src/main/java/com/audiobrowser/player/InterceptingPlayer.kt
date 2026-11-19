@@ -207,7 +207,7 @@ internal class InterceptingPlayer(
     }
 
   // Media3 sets here the queue of a track picked on an external surface and of playback
-  // resumption. An unset start index starts on the first of the engine's own order.
+  // resumption. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
     super.setMediaItems(mediaItems, startIndex, startPositionMs)
     if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
