@@ -650,7 +650,10 @@ export class Player {
 
   public setVolume(volume: number): void {
     const element = this.requireElement()
-    if (Number.isNaN(volume)) return
+    if (Number.isNaN(volume)) {
+      console.error('setVolume ignored a NaN level')
+      return
+    }
     element.volume = Math.min(1, Math.max(0, volume))
   }
 

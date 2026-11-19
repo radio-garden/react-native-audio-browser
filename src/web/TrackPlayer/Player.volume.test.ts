@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Player } from './Player'
 
 // Refuses what a media element refuses: a non-finite volume, and one outside
@@ -38,9 +38,12 @@ describe('Player.setVolume', () => {
     expect(player.getVolume()).toBe(expected)
   })
 
-  it('leaves the volume as it is for NaN', () => {
+  it('leaves the volume as it is for NaN, and logs an error', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const player = new VolumeTestPlayer(0.5)
     player.setVolume(NaN)
     expect(player.getVolume()).toBe(0.5)
+    expect(error).toHaveBeenCalledWith('setVolume ignored a NaN level')
+    error.mockRestore()
   })
 })
