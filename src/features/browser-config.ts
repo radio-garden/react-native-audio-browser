@@ -60,9 +60,12 @@ function isTransformableRequestConfig(
 
 function isRouteConfig(source: unknown): source is RouteConfig {
   if (!isObjectValue(source)) return false
-  // `browse`/`media` keys only exist on RouteConfig. `artwork` also exists on
-  // a static ResolvedTrack — but there it is a string URL, while RouteConfig's
-  // is a config object, so only an object-valued `artwork` marks a RouteConfig.
+  // A static ResolvedTrack page's `artwork` may be an object too (an
+  // ArtworkVariants pair), so its required `title` rules it out first — no
+  // RouteConfig field is named `title`.
+  if ('title' in source) return false
+  // `browse`/`media` keys only exist on RouteConfig. Its `artwork` is a config
+  // object, never a string URL.
   return (
     'browse' in source || 'media' in source || isObjectValue(source.artwork)
   )
