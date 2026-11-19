@@ -108,14 +108,11 @@ enum BrowserPathHelper {
     return "\(url)\(separator)\(queryString)"
   }
 
-  /// `path` joined to `baseUrl` with one slash; `path` alone when it is a full http(s) URL or
-  /// there is no base, and the base alone when `path` is empty or only slashes.
+  /// `path` joined to `baseUrl` with one slash; `path` alone when it has a scheme (`file:`,
+  /// `data:`, `HTTPS:`, …), starts with `//` or there is no base, and the base alone when `path`
+  /// is empty or only slashes.
   static func buildUrl(baseUrl: String?, path: String) -> String {
-    if path.hasPrefix("http://") || path.hasPrefix("https://") {
-      return path
-    }
-
-    guard let baseUrl else {
+    guard let baseUrl, !isAbsoluteUrl(path) else {
       return path
     }
 
@@ -134,6 +131,10 @@ enum BrowserPathHelper {
     }
 
     return "\(normalizedBase)/\(normalizedPath)"
+  }
+
+  private static func isAbsoluteUrl(_ url: String) -> Bool {
+    url.range(of: "^([A-Za-z][A-Za-z0-9+.-]*:|//)", options: .regularExpression) != nil
   }
 }
 
