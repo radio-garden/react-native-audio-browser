@@ -1145,7 +1145,16 @@ class BrowserManager {
       response.fold(
         onSuccess = { httpResponse ->
           if (httpResponse.isSuccessful) {
-            val jsonResolvedTrack = json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
+            val jsonResolvedTrack =
+              try {
+                json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
+              } catch (e: Exception) {
+                throw HttpStatusException(
+                  httpResponse.code,
+                  "Server returned ${httpResponse.code} with a response that is not a page: ${e.message}",
+                  e,
+                )
+              }
             jsonResolvedTrack.toNitro()
           } else {
             Timber.w(
@@ -1219,7 +1228,9 @@ class BrowserManager {
 
 class ContentNotFoundException(val path: String) : Exception("Content not found")
 
-class HttpStatusException(val statusCode: Int, message: String) : Exception(message)
+/** A non-2xx response, or a 2xx response whose body does not parse. */
+class HttpStatusException(val statusCode: Int, message: String, cause: Throwable? = null) :
+  Exception(message, cause)
 
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
