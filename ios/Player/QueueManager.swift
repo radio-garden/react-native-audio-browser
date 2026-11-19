@@ -138,12 +138,13 @@ class QueueManager {
 
   // MARK: - Navigation (returns QueueNavigationResult)
 
-  // Shared by `next()` and `canNext` so the button and the navigation agree. Shuffle wraps
-  // whatever the repeat mode, as Media3 does; sequential order wraps only on repeat-queue.
+  // Shared by `next()` and `canNext` so the button and the navigation agree. Wraps only on
+  // repeat-queue, shuffled or not, as Media3 does.
   private var nextIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
-      shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
+      shuffleOrder.getNextIndex(after: currentIndex)
+        ?? (repeatMode == .queue ? shuffleOrder.firstIndex : nil)
     } else if currentIndex + 1 < tracks.count {
       currentIndex + 1
     } else {
@@ -156,7 +157,8 @@ class QueueManager {
   private var previousIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
-      shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
+      shuffleOrder.getPreviousIndex(before: currentIndex)
+        ?? (repeatMode == .queue ? shuffleOrder.lastIndex : nil)
     } else if currentIndex - 1 >= 0 {
       currentIndex - 1
     } else {
