@@ -206,6 +206,7 @@ struct JsonResolvedTrack: Codable {
   var src: String? = nil
   var style: JsonStyle? = nil
   var disabled: Bool? = nil
+  var favorited: Bool? = nil
   var live: Bool? = nil
   var icyCharset: String? = nil
   var carPlaySiriListButton: String? = nil
@@ -227,6 +228,7 @@ struct JsonTrack: Codable {
   var request: JsonTrackRequest? = nil
   var style: JsonStyle? = nil
   var disabled: Bool? = nil
+  var favorited: Bool? = nil
   var live: Bool? = nil
   var icyCharset: String? = nil
 }
@@ -298,7 +300,7 @@ extension JsonResolvedTrack {
       genre: genre,
       duration: duration,
       disabled: disabled,
-      favorited: nil,
+      favorited: favorited,
       live: live,
       icyCharset: icyCharset,
     )
@@ -324,7 +326,7 @@ extension JsonTrack {
       duration: duration,
       style: style?.toTrackStyle(),
       disabled: disabled,
-      favorited: nil,
+      favorited: favorited,
       live: live,
       icyCharset: icyCharset,
     )
