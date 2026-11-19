@@ -76,7 +76,7 @@ interface ShakaBufferingEvent extends CustomEvent {
 }
 
 export class Player {
-  protected hasInitialized = false
+  private setup?: Promise<void>
   protected element?: HTMLMediaElement
   protected player?: shaka.Player
   protected _current?: Track = undefined
@@ -138,8 +138,15 @@ export class Player {
     if (typeof window === 'undefined') return
     // Re-setup reconfigures: web has no construction-bound engine options, so
     // there's nothing to rebuild — the caller re-applies options/state on top.
-    if (this.hasInitialized === true) return
+    // Overlapping calls share the one build; a failed build can be retried.
+    this.setup ??= this.buildPlayer().catch((error: unknown) => {
+      this.setup = undefined
+      throw error
+    })
+    await this.setup
+  }
 
+  private async buildPlayer(): Promise<void> {
     const shaka = (await import('shaka-player/dist/shaka-player.compiled'))
       .default
     // Install built-in polyfills to patch browser incompatibilities.
@@ -230,8 +237,6 @@ export class Player {
     if (__DEV__) {
       window.rnab = this.player
     }
-
-    this.hasInitialized = true
   }
 
   /**
