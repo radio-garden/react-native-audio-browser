@@ -40,7 +40,14 @@ public extension HybridAudioBrowser {
 
   func navigateTrack(track: Track) throws {
     Task { @MainActor in
-      guard let player else { return }
+      if let path = TrackSelector.browsePath(of: track) {
+        navigate(path, clearError: true)
+        return
+      }
+      guard let player else {
+        logger.warning("navigateTrack before the player is set up: ignored")
+        return
+      }
       let result = await trackSelector.select(track: track, player: player)
       switch result {
       case let .play(intent):

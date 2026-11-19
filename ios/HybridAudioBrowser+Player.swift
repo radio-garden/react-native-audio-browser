@@ -6,6 +6,23 @@ import NitroModules
 import os.log
 
 public extension HybridAudioBrowser {
+  private func warnDropped(_ message: String) {
+    logger.warning("\(message, privacy: .public)")
+  }
+
+  /// Runs `command` on the player; before setup it is dropped with a warning.
+  private func commandPlayer(_ name: String, _ command: @MainActor (Player) throws -> Void) rethrows {
+    try onMainActor {
+      try runPlayerCommand(name, on: player, warn: warnDropped) { try command($0) }
+    }
+  }
+
+  private func commandEngine(_ name: String, _ command: @MainActor (AVPlayerEngine) -> Void) {
+    onMainActor {
+      runPlayerCommand(name, on: engine, warn: warnDropped) { command($0) }
+    }
+  }
+
   // MARK: - Playback Control
 
   func load(track: Track) throws {
@@ -18,23 +35,23 @@ public extension HybridAudioBrowser {
   }
 
   func reset() throws {
-    onMainActor { player?.clear() }
+    commandPlayer("reset") { $0.clear() }
   }
 
   func play() throws {
-    onMainActor { player?.play() }
+    commandPlayer("play") { $0.play() }
   }
 
   func pause() throws {
-    onMainActor { player?.pause() }
+    commandPlayer("pause") { $0.pause() }
   }
 
   func togglePlayback() throws {
-    onMainActor { player?.togglePlayback() }
+    commandPlayer("togglePlayback") { $0.togglePlayback() }
   }
 
   func stop() throws {
-    onMainActor { player?.stop() }
+    commandPlayer("stop") { $0.stop() }
   }
 
   func setPlayWhenReady(playWhenReady: Bool) throws {
@@ -50,12 +67,12 @@ public extension HybridAudioBrowser {
 
   func seekTo(position: Double) throws {
     guard let position = finite(position, "seekTo") else { return }
-    onMainActor { player?.seek(to: position) }
+    commandPlayer("seekTo") { $0.seek(to: position) }
   }
 
   func seekBy(offset: Double) throws {
     guard let offset = finite(offset, "seekBy") else { return }
-    onMainActor { player?.seek(by: offset) }
+    commandPlayer("seekBy") { $0.seek(by: offset) }
   }
 
   private func finite(_ seconds: Double, _ method: String) -> Double? {
@@ -67,11 +84,11 @@ public extension HybridAudioBrowser {
   }
 
   func seekToLiveEdge() throws {
-    onMainActor { player?.seekToLiveEdge() }
+    commandPlayer("seekToLiveEdge") { $0.seekToLiveEdge() }
   }
 
   func setVolume(level: Double) throws {
-    onMainActor { engine?.volume = Float(level) }
+    commandEngine("setVolume") { $0.volume = Float(level) }
   }
 
   func getVolume() throws -> Double {
@@ -79,7 +96,7 @@ public extension HybridAudioBrowser {
   }
 
   func setRate(rate: Double) throws {
-    onMainActor { player?.rate = Float(rate) }
+    commandPlayer("setRate") { $0.rate = Float(rate) }
   }
 
   func getRate() throws -> Double {
@@ -133,7 +150,7 @@ public extension HybridAudioBrowser {
   }
 
   func retry() throws {
-    onMainActor { player?.retryNow() }
+    commandPlayer("retry") { $0.retryNow() }
   }
 
   // MARK: - Sleep Timer
@@ -145,15 +162,13 @@ public extension HybridAudioBrowser {
   }
 
   func setSleepTimer(seconds: Double, fadeDuration: Double?) throws {
-    onMainActor {
-      player?.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
+    commandPlayer("setSleepTimer") {
+      $0.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
     }
   }
 
   func setSleepTimerToEndOfTrack() throws {
-    onMainActor {
-      player?.sleepTimerManager.setToEndOfTrack()
-    }
+    commandPlayer("setSleepTimerToEndOfTrack") { $0.sleepTimerManager.setToEndOfTrack() }
   }
 
   func clearSleepTimer() throws -> Bool {
@@ -165,8 +180,7 @@ public extension HybridAudioBrowser {
   // MARK: - Queue Management
 
   func add(tracks: [Track], insertBeforeIndex: Double?) throws {
-    try onMainActor {
-      guard let player else { return }
+    try commandPlayer("add") { player in
       if let index = insertBeforeIndex {
         try player.add(tracks, at: Int(index))
       } else {
@@ -176,14 +190,11 @@ public extension HybridAudioBrowser {
   }
 
   func move(fromIndex: Double, toIndex: Double) throws {
-    try onMainActor {
-      try player?.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex))
-    }
+    try commandPlayer("move") { try $0.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex)) }
   }
 
   func remove(indexes: [Double]) throws {
-    try onMainActor {
-      guard let player else { return }
+    try commandPlayer("remove") { player in
       for index in indexes.sorted().reversed() {
         try player.remove(Int(index))
       }
@@ -191,38 +202,38 @@ public extension HybridAudioBrowser {
   }
 
   func removeUpcomingTracks() throws {
-    onMainActor { player?.removeUpcomingTracks() }
+    commandPlayer("removeUpcomingTracks") { $0.removeUpcomingTracks() }
   }
 
   func skip(index: Double, initialPosition: Double?) throws {
-    try onMainActor {
-      try player?.skipTo(Int(index))
+    try commandPlayer("skip") { player in
+      try player.skipTo(Int(index))
       if let position = initialPosition.flatMap({ finite($0, "skip") }) {
-        player?.seek(to: position)
+        player.seek(to: position)
       }
     }
   }
 
   func skipToNext(initialPosition: Double?) throws {
-    onMainActor {
-      player?.next()
+    commandPlayer("skipToNext") { player in
+      player.next()
       if let position = initialPosition.flatMap({ finite($0, "skipToNext") }) {
-        player?.seek(to: position)
+        player.seek(to: position)
       }
     }
   }
 
   func skipToPrevious(initialPosition: Double?) throws {
-    onMainActor {
-      player?.previous()
+    commandPlayer("skipToPrevious") { player in
+      player.previous()
       if let position = initialPosition.flatMap({ finite($0, "skipToPrevious") }) {
-        player?.seek(to: position)
+        player.seek(to: position)
       }
     }
   }
 
   func setActiveTrackFavorited(favorited: Bool) throws {
-    try favoriteActiveTrack(favorited)
+    try commandPlayer("setActiveTrackFavorited") { _ in try favoriteActiveTrack(favorited) }
   }
 
   /// Sets the active track's favorite state, in the favorite set first so the now-playing heart
@@ -248,12 +259,13 @@ public extension HybridAudioBrowser {
   }
 
   func toggleActiveTrackFavorited() throws {
-    try favoriteActiveTrack(!isActiveTrackFavorited())
+    try commandPlayer("toggleActiveTrackFavorited") { _ in
+      try favoriteActiveTrack(!isActiveTrackFavorited())
+    }
   }
 
   func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws {
-    try onMainActor {
-      guard let player else { return }
+    try commandPlayer("setQueue") { player in
       try player.setQueue(
         tracks,
         initialIndex: startIndex.map { Int($0) } ?? 0,
@@ -293,15 +305,15 @@ public extension HybridAudioBrowser {
   // MARK: - Now Playing
 
   func updateNowPlaying(update: NowPlayingUpdate?) throws {
-    onMainActor { engine?.nowPlayingUpdater.setOverride(update) }
+    commandEngine("updateNowPlaying") { $0.nowPlayingUpdater.setOverride(update) }
   }
 
   func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
-    onMainActor { engine?.nowPlayingUpdater.flash(update, durationMs: durationMs) }
+    commandEngine("flashNowPlaying") { $0.nowPlayingUpdater.flash(update, durationMs: durationMs) }
   }
 
   func clearNowPlayingFlash() throws {
-    onMainActor { engine?.nowPlayingUpdater.clearFlash() }
+    commandEngine("clearNowPlayingFlash") { $0.nowPlayingUpdater.clearFlash() }
   }
 
   func getNowPlaying() throws -> NowPlayingMetadata? {

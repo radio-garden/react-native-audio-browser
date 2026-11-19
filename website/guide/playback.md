@@ -21,8 +21,8 @@ this page is about playing the one that's already active. The system surfaces
 > `setRate` and `setVolume` keep their value for the next track. `play()` and
 > `togglePlayback()` raise the play intent as `setPlayWhenReady(true)` does, so
 > the next track loaded starts playing (on web, Chrome keeps that intent and
-> Firefox drops it). On iOS and Android, play, pause, stop, seek, rate and
-> volume calls made before `setupPlayer` has resolved are dropped; on web they
+> Firefox drops it). On iOS, play, pause, stop, seek, rate and volume calls
+> made before `setupPlayer` has resolved are dropped with a warning; on web they
 > throw `SetupNotCalledError`. On every platform `setPlayWhenReady` is kept and
 > applied at setup. Two have argument rules: `setRate` and
 > `trackPlaybackTime`, both covered below.
@@ -150,7 +150,7 @@ function PlayPauseButton() {
 actually coming out yet (it may still be loading or buffering). Setting it does
 what `play()` / `pause()` do, with two exceptions. Before `setupPlayer`
 resolves, `setPlayWhenReady` is kept and applied at setup, while `play()` is
-dropped on iOS and Android and throws on web.
+dropped on iOS and throws on web.
 
 On Android, `setPlayWhenReady(true)` doesn't restart a stopped or failed player;
 `play()` or `retry()` does:
