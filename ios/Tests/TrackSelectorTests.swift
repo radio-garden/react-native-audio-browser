@@ -491,6 +491,26 @@ struct SelectionOrderTests {
     }
   }
 
+  @Test func laterInterceptedSelection_supersedesTheOlderOne() async {
+    let (selector, browser, player) = makeSelector()
+    let older = await selectHeldInExpansion(selector, browser, player)
+
+    browser.trackLoadHandlerResult = true
+    let newer = await selector.select(track: Track(id: "newer", src: "newer.mp3"), player: player)
+    guard case .intercepted = newer else {
+      Issue.record("expected .intercepted, got \(newer)")
+      return
+    }
+
+    browser.release()
+    let olderResult = await older.value()
+    guard case .superseded = olderResult else {
+      Issue.record("expected .superseded, got \(String(describing: olderResult))")
+      return
+    }
+    #expect(browser.trackLoadEvents.map(\.track.id) == ["newer"])
+  }
+
   @Test func laterBrowse_leavesTheOlderSelectionToPlay() async {
     let (selector, browser, player) = makeSelector()
     let older = await selectHeldInExpansion(selector, browser, player)
