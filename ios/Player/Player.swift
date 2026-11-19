@@ -460,8 +460,9 @@ final class Player {
   /// iOS has already paused the AVPlayer, but that pause is swallowed while the intent holds, so
   /// the paused state is forced here.
   func handleInterruptionBegan() {
-    // A nested interruption keeps the intent the first one captured.
-    shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
+    // A nested interruption keeps what the first one captured. `.error` holds the intent with
+    // nothing playing: there is nothing to resume.
+    shouldResumeAfterInterruption = shouldResumeAfterInterruption || playingState.playing
     pause()
     if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
