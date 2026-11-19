@@ -1482,6 +1482,50 @@ struct SessionReleaseTests {
 
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
+
+  /// `.error` keeps the play intent, so the release cannot wait for a pause.
+  @Test @MainActor
+  func terminalError_requestsRelease_withTheIntentHeld() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.transition(.errorOccurred(.playbackFailed))
+
+    #expect(c.playWhenReady == true)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(c.canReleaseAudioSession == true)
+  }
+
+  /// The debounced release asks again when it fires: a play from `.error` in between keeps the
+  /// session.
+  @Test @MainActor
+  func playFromError_holdsTheSession() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.transition(.errorOccurred(.playbackFailed))
+    eh.activateAudioSessionCount = 0
+
+    c.play()
+
+    #expect(c.state == .loading)
+    #expect(c.canReleaseAudioSession == false)
+    #expect(eh.activateAudioSessionCount == 1)
+  }
+
+  @Test @MainActor
+  func canReleaseAudioSession_waitsForAnInterruptionThatMayResume() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    #expect(c.canReleaseAudioSession == false)
+
+    c.handleInterruptionBegan()
+    #expect(c.playWhenReady == false)
+    #expect(c.canReleaseAudioSession == false)
+
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(c.canReleaseAudioSession == true)
+  }
 }
 
 // MARK: - Media-stack effects of a publish
