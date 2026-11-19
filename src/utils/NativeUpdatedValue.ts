@@ -1,3 +1,5 @@
+import { callListener } from './callListener'
+
 type Callback<T> = (arg: T) => void
 
 /**
@@ -37,7 +39,7 @@ export class NativeUpdatedValue<T> {
     setter((data: T) => {
       this.eventCount++
       for (const listener of this.listeners) {
-        listener(data)
+        callListener(listener, data)
       }
     })
   }
