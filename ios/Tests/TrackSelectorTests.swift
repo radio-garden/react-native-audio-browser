@@ -13,13 +13,34 @@ private final class BrowserMock: TrackSelectionBrowser {
   var trackLoadEvents: [TrackLoadEvent] = []
   var expandedPaths: [String] = []
 
+  /// Expansions of these paths, and track-load handlers for these track ids, answer only after
+  /// `release()`.
+  var held: Set<String> = []
+  private(set) var waiting: [CheckedContinuation<Void, Never>] = []
+
+  func release() {
+    let resuming = waiting
+    waiting = []
+    held = []
+    for continuation in resuming {
+      continuation.resume()
+    }
+  }
+
+  private func hold(_ key: String?) async {
+    guard let key, held.contains(key) else { return }
+    await withCheckedContinuation { waiting.append($0) }
+  }
+
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     trackLoadEvents.append(event)
+    await hold(event.track.id)
     return trackLoadHandlerResult
   }
 
   func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     expandedPaths.append(path)
+    await hold(path)
     if let error = expandQueueError {
       throw error
     }
@@ -45,6 +66,14 @@ private func makeSelector() -> (TrackSelector, BrowserMock, PlayerMock) {
   let player = PlayerMock()
   let selector = TrackSelector(browserManager: browser)
   return (selector, browser, player)
+}
+
+@MainActor
+private func yieldUntil(_ condition: () -> Bool, sourceLocation: SourceLocation = #_sourceLocation) async {
+  for _ in 0 ..< 1000 where !condition() {
+    await Task.yield()
+  }
+  #expect(condition(), sourceLocation: sourceLocation)
 }
 
 // MARK: - Browsable Track
@@ -387,5 +416,110 @@ struct DisabledTrackTests {
       return
     }
     #expect(browser.expandedPaths.isEmpty)
+  }
+}
+
+// MARK: - Selection Order
+
+@Suite("selection order")
+@MainActor
+struct SelectionOrderTests {
+  /// A selection running beside the test, and its result once it has one.
+  @MainActor
+  private final class PendingSelection {
+    private var result: TrackSelector.SelectionResult?
+
+    init(_ selector: TrackSelector, _ track: Track, _ player: PlayerMock) {
+      Task { result = await selector.select(track: track, player: player) }
+    }
+
+    func value() async -> TrackSelector.SelectionResult? {
+      await yieldUntil { result != nil }
+      return result
+    }
+  }
+
+  /// Starts selecting a contextual track whose expansion stays held until `browser.release()`.
+  private func selectHeldInExpansion(
+    _ selector: TrackSelector, _ browser: BrowserMock, _ player: PlayerMock,
+  ) async -> PendingSelection {
+    let path = BrowserPathHelper.build(parentPath: "/library/radio", trackId: "older")
+    browser.held = [path]
+    browser.expandQueueResult = (tracks: [Track(id: "older", src: "older.mp3")], selectedIndex: 0)
+    let selection = PendingSelection(selector, Track(id: "older", path: path, src: "older.mp3"), player)
+    await yieldUntil { browser.waiting.count == 1 }
+    return selection
+  }
+
+  @Test func olderExpansionFinishingLast_isSupersededAndNotOfferedToTheApp() async {
+    let (selector, browser, player) = makeSelector()
+    let older = await selectHeldInExpansion(selector, browser, player)
+
+    let newer = await selector.select(track: Track(id: "newer", src: "newer.mp3"), player: player)
+    guard case let .play(.loadTrack(loaded)) = newer else {
+      Issue.record("expected .play(.loadTrack), got \(newer)")
+      return
+    }
+    #expect(loaded.id == "newer")
+
+    browser.release()
+    let olderResult = await older.value()
+    guard case .superseded = olderResult else {
+      Issue.record("expected .superseded, got \(String(describing: olderResult))")
+      return
+    }
+    #expect(browser.trackLoadEvents.map(\.track.id) == ["newer"])
+  }
+
+  @Test func olderTrackLoadHandlerFinishingLast_isSuperseded() async {
+    let (selector, browser, player) = makeSelector()
+    browser.held = ["older"]
+    let older = PendingSelection(selector, Track(id: "older", src: "older.mp3"), player)
+    await yieldUntil { browser.waiting.count == 1 }
+
+    let newer = await selector.select(track: Track(id: "newer", src: "newer.mp3"), player: player)
+    guard case .play = newer else {
+      Issue.record("expected .play, got \(newer)")
+      return
+    }
+
+    browser.release()
+    let olderResult = await older.value()
+    guard case .superseded = olderResult else {
+      Issue.record("expected .superseded, got \(String(describing: olderResult))")
+      return
+    }
+  }
+
+  @Test func laterBrowse_leavesTheOlderSelectionToPlay() async {
+    let (selector, browser, player) = makeSelector()
+    let older = await selectHeldInExpansion(selector, browser, player)
+
+    let browse = await selector.select(track: Track(id: "folder", path: "/library"), player: player)
+    guard case .browse = browse else {
+      Issue.record("expected .browse, got \(browse)")
+      return
+    }
+
+    browser.release()
+    let olderResult = await older.value()
+    guard case .play(.setQueue) = olderResult else {
+      Issue.record("expected .play(.setQueue), got \(String(describing: olderResult))")
+      return
+    }
+  }
+
+  @Test func laterDisabledTrack_leavesTheOlderSelectionToPlay() async {
+    let (selector, browser, player) = makeSelector()
+    let older = await selectHeldInExpansion(selector, browser, player)
+
+    _ = await selector.select(track: Track(id: "gone", src: "gone.mp3", disabled: true), player: player)
+
+    browser.release()
+    let olderResult = await older.value()
+    guard case .play(.setQueue) = olderResult else {
+      Issue.record("expected .play(.setQueue), got \(String(describing: olderResult))")
+      return
+    }
   }
 }

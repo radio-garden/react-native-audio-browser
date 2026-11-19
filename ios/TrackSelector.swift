@@ -19,6 +19,8 @@ import os.log
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
   private nonisolated(unsafe) let browserManager: any TrackSelectionBrowser
+  /// Bumped by every selection that plays; one that finds it bumped has been superseded.
+  private var latestSelection: UInt = 0
 
   nonisolated init(browserManager: any TrackSelectionBrowser) {
     self.browserManager = browserManager
@@ -32,6 +34,8 @@ class TrackSelector {
     case intercepted
     /// The track has no `src`; the caller navigates to `path`.
     case browse(path: String)
+    /// A later selection began to play before this one resolved; the caller plays nothing.
+    case superseded
     case none
   }
 
@@ -47,6 +51,8 @@ class TrackSelector {
   /// the current queue when it came from the same parent, else the parent expanded into a queue
   /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
   /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
+  /// Of the playbacks still resolving, only the latest plays: an earlier one is `superseded`,
+  /// and is not offered to the app once it is.
   func select(
     track: Track,
     player: some TrackSelectionPlayer,
@@ -56,10 +62,14 @@ class TrackSelector {
       return .none
     }
 
+    let selection: UInt
     let playback: PlannedPlayback
     if let path = track.path, BrowserPathHelper.isContextual(path) {
+      selection = beginSelection()
       playback = await contextualPlayback(path, track: track, player: player)
+      guard selection == latestSelection else { return .superseded }
     } else if track.src != nil {
+      selection = beginSelection()
       playback = .single(track)
     } else if let path = track.path {
       return .browse(path: path)
@@ -76,10 +86,16 @@ class TrackSelector {
     if await browserManager.awaitTrackLoadHandler(event: event) {
       return .intercepted
     }
+    guard selection == latestSelection else { return .superseded }
     return .play(playback.intent)
   }
 
   // MARK: - Private Helpers
+
+  private func beginSelection() -> UInt {
+    latestSelection &+= 1
+    return latestSelection
+  }
 
   /// What a selection plays, and the queue and index the track-load handler is shown.
   private struct PlannedPlayback {

@@ -106,8 +106,9 @@ ios/
 ├── PlaybackEvent.swift               # PlaybackEvent enum (transition triggers)
 ├── TrackSelector.swift               # @MainActor shared track selection decision tree
 │                                     # Used by HybridAudioBrowser and CarPlaySession
-│                                     # Returns SelectionResult enum (play/intercepted/browse/none)
-│                                     # Handles contextual URL expansion, queue reuse, handler interception
+│                                     # Returns SelectionResult enum (play/intercepted/browse/superseded/none)
+│                                     # Handles contextual URL expansion, queue reuse, handler interception;
+│                                     # of the selections still resolving, only the latest plays
 ├── Browser/
 │   ├── BrowserManager.swift          # @MainActor state (path/content/tabs), caches, favorites, load,
 │   │                                 #   search cache, queue expansion
