@@ -133,11 +133,15 @@ export interface NavigationErrorEvent {
 // MARK: - Getters
 
 /**
- * Gets the current playback error, if any.
- * @returns The current error or undefined if there is no error
+ * Gets the current terminal playback error, if any. An error the player is
+ * still retrying (`retrying: true`) is on `getPlayback().error` instead.
+ * @returns The error of the `error` state, or undefined outside it
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  return nativeBrowser.getPlaybackError()
+  // Native also holds the retrying error here, which no `onPlaybackError`
+  // announces or clears.
+  const error = nativeBrowser.getPlaybackError()
+  return error?.retrying ? undefined : error
 }
 
 // MARK: - Event Callbacks
@@ -155,8 +159,9 @@ export const onPlaybackError =
 // MARK: - Hooks
 
 /**
- * Hook that returns the current playback error and updates when it changes.
- * @returns The current playback error or undefined
+ * Hook that returns the current terminal playback error and updates when it
+ * changes. An error the player is still retrying is on `usePlayback().error`.
+ * @returns The current terminal playback error or undefined
  */
 export function usePlaybackError(): PlaybackError | undefined {
   return useNativeUpdatedValue(getPlaybackError, onPlaybackError, 'error')
