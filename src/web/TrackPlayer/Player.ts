@@ -196,7 +196,8 @@ export class Player {
       // is meaningful — reporting `paused` first flashes a state Android never
       // reports, mid-queue or at the true end.
       if (element.ended) return
-      this.onElementPaused()
+      // A `play()` that overtook this event owns the intent.
+      this.onElementPaused(element.paused)
     })
     element.addEventListener('play', () => {
       // A `pause()` that overtook this event owns the intent.
@@ -557,9 +558,10 @@ export class Player {
    * It stands while a load is in flight and after an error: there the element
    * pauses because it is being emptied.
    */
-  private onElementPaused(): void {
+  private onElementPaused(stillPaused: boolean): void {
     const hasAsset = this.current !== undefined
     if (
+      stillPaused &&
       hasAsset &&
       !this._isStopped &&
       !this._loadInProgress &&

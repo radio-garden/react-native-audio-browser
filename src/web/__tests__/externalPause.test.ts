@@ -68,6 +68,16 @@ describe('an element pause the library did not ask for', () => {
     expect(h.browser.getPlayWhenReady()).toBe(true)
     expect(h.browser.getPlayback().state).toBe('error')
   })
+
+  it('keeps the intent when a play() has overtaken the pause event', async () => {
+    await playTrackA()
+
+    const element = (h.browser as unknown as { element: HTMLMediaElement })
+      .element
+    element.dispatchEvent(new Event('pause'))
+
+    expect(h.browser.getPlayWhenReady()).toBe(true)
+  })
 })
 
 describe('an element play the library did not ask for', () => {
