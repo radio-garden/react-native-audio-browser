@@ -131,8 +131,8 @@ data class PlayerSetupOptions(
 
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
-    options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
-    // Unlike the fields above, an absent value turns remote outputs off.
+    // Unlike the fields above, an absent value removes the formatter and turns remote outputs off.
+    nowPlayingMetadataFormatter = options.nowPlayingMetadataFormatter
     remoteOutputs = options.remoteOutputs
   }
 }
