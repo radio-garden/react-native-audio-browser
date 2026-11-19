@@ -46,7 +46,7 @@ class NavigateTrackTest {
     mock(AudioBrowser::class.java, CALLS_REAL_METHODS).apply {
       set("mainScope", MainScope())
       set("connectedService", service.get())
-      set("browserManager", browserManager)
+      set("browserManager", this@NavigateTrackTest.browserManager)
       set(
         "_configuration",
         NativeBrowserConfiguration(
