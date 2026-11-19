@@ -365,6 +365,30 @@ describe('parity — what native emits for the same flow', () => {
   })
 
   /**
+   * An emptied queue leaves nothing to resume, so native reports `none` rather
+   * than `stopped`: iOS's `clear()` unloads the item (`Player.swift`), and
+   * Android maps an engine with no media items to `NONE`
+   * (`PlaybackStateMachine.kt`, `AudioBrowser.reset`).
+   */
+  it.each([
+    ['reset()', () => h.browser.reset()],
+    ['setQueue([])', () => h.browser.setQueue([])]
+  ])('reports none after %s', async (_name, empty) => {
+    h.browser.setPlayWhenReady(true)
+    h.browser.load(trackA)
+    await h.flush()
+    await h.completeLoad()
+    h.clear()
+
+    empty()
+    await h.flush()
+
+    expect(h.recorded).toContain('state:none')
+    expect(h.recorded).not.toContain('state:stopped')
+    expect(h.browser.getPlayback().state).toBe('none')
+  })
+
+  /**
    * Native shows each now-playing line from the flash, else the override, else
    * the track (`NowPlayingUpdater.kt`), so the end of a flash brings the
    * override back rather than the track's own metadata.

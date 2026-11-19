@@ -194,7 +194,7 @@ export class QueuePlayer extends Player {
     // in the background — it only releases the Shaka source.
     this.queue.clear()
     this.current = undefined
-    this.stop()
+    this.halt(State.None)
   }
 
   public removeUpcomingTracks(): void {

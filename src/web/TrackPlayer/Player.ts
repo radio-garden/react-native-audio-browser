@@ -417,6 +417,17 @@ export class Player {
   }
 
   public stop(onComplete?: () => void): void {
+    this.halt(State.Stopped, onComplete)
+  }
+
+  /**
+   * Unloads the player and drops the play intent, ending in `state`:
+   * `stopped` for a stop, `none` when no queue is left to resume.
+   */
+  protected halt(
+    state: typeof State.Stopped | typeof State.None,
+    onComplete?: () => void
+  ): void {
     const player = this.requirePlayer()
 
     // Whatever was loading no longer owns the player: its continuations, at
@@ -431,7 +442,7 @@ export class Player {
     this._loadInProgress = false
     this._pendingSeek = undefined
     this.playWhenReady = false
-    this.state = { state: State.Stopped }
+    this.state = { state }
 
     player
       .unload()
