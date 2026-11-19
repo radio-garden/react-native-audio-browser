@@ -61,7 +61,7 @@ struct UnparsableResponseTests {
     (#"{"path": "/library", "title": "Library", "duration": "12"}"#, "Type mismatch for Double at path: duration"),
   ])
   func aPageIsAnHttpErrorWithItsStatus(body: String, reason: String) async throws {
-    let result = await navigationError(status: 200, body: body, as: JsonResolvedTrack.self)
+    let result = await navigationError(status: 200, body: body, as: JsonBrowsePage.self)
     let error = try #require(result)
 
     #expect(error.code == .httpError)
