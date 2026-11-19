@@ -262,9 +262,8 @@ unsubscribe()
   matters.
 - **Nothing throws.** Every function here is synchronous; the setters return
   `void` and `clearSleepTimer` returns a boolean. No `try/catch` needed.
-- **Set it after setup.** On iOS and Android, a setter called before
-  `setupPlayer` has resolved is ignored without an error, and `getSleepTimer`
-  stays `null`.
+- **Set it after setup.** On iOS, a setter called before `setupPlayer` has
+  resolved is ignored with a warning, and `getSleepTimer` stays `null`.
 - **End of track when the track changes early, on iOS.** Any change of current
   track before it ends (a skip, a new queue) cancels an end-of-track timer, and
   `onSleepTimerChanged` fires with `null`.

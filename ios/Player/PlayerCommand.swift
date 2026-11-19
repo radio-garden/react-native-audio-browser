@@ -1,5 +1,5 @@
 /// Runs `command` on `target`, the player or its engine. Without one, as before setup, the command
-/// is dropped and `warn` gets a line naming the call (mirrors Android `commandPlayer`).
+/// is dropped and `warn` gets a line naming the call.
 func runPlayerCommand<Target>(
   _ name: String,
   on target: Target?,

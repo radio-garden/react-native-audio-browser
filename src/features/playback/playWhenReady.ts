@@ -24,7 +24,7 @@ export function getPlayWhenReady(): boolean {
 /**
  * Sets whether the player will play automatically when it is ready to do so.
  * Before setupPlayer resolves, the value is kept and applied at setup, while
- * play() is dropped on iOS and Android. On Android, `true` does not restart a
+ * play() is dropped on iOS. On Android, `true` does not restart a
  * stopped or failed player; call play() or retry() for that.
  */
 export function setPlayWhenReady(playWhenReady: boolean): void {

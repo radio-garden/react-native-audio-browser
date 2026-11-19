@@ -10,7 +10,7 @@ public extension HybridAudioBrowser {
     logger.warning("\(message, privacy: .public)")
   }
 
-  /// Runs `command` on the player; before setup it is dropped with a warning, as on Android.
+  /// Runs `command` on the player; before setup it is dropped with a warning.
   private func commandPlayer(_ name: String, _ command: @MainActor (Player) throws -> Void) rethrows {
     try onMainActor {
       try runPlayerCommand(name, on: player, warn: warnDropped) { try command($0) }

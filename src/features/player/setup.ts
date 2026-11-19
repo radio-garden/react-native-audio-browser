@@ -753,6 +753,10 @@ function nonEmpty<K extends string, T extends object>(
  * category and `buffer`, `retry`, …) go back to their defaults. Runtime options set earlier
  * carry over on both.
  *
+ * On iOS, until it resolves, player calls are dropped with a warning and `load`
+ * throws; `setPlayWhenReady`, `setRepeatMode` and `setShuffle` are kept and
+ * applied. See the [basic usage guide](https://audiobrowser.dev/guide/basic-usage#set-up-the-player).
+ *
  * @param options - The options to initialize the player with.
  *
  * @example

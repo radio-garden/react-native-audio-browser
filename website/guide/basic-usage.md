@@ -65,12 +65,14 @@ import { setupPlayer } from 'react-native-audio-browser'
 await setupPlayer()
 ```
 
-Await it before calling the player. On iOS and Android, a playback, queue,
-sleep timer, favorite or now-playing call made before `setupPlayer` resolves is
-dropped, with a warning naming the call in the device log. `setPlayWhenReady`,
-`setRepeatMode` and `setShuffle` are kept and applied at setup, and `load`
-throws. On iOS, `navigate` with a track is dropped the same way, even a
-Browsable one; `navigate` with a path works before setup.
+Await it before calling the player. On iOS there is no player until it
+resolves: a call that changes playback, the queue, the sleep timer, the active
+track's favorite or the now-playing override is dropped, with a warning naming
+the call in the device log, and so is `navigate` with a playable track.
+`setPlayWhenReady`, `setRepeatMode` and `setShuffle` are kept and applied at
+setup, and `load` throws. On Android the player exists once its service
+connects, soon after the library is imported, so these calls run even without
+`setupPlayer`; only a call in that first moment is dropped.
 
 ## Define a browse tree
 
