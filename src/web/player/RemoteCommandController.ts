@@ -38,6 +38,7 @@ export type RemoteCommandHost = Pick<
   | 'getPlayback'
   | 'getPlayingState'
   | 'getProgress'
+  | 'getRate'
 >
 
 /**
@@ -136,12 +137,18 @@ export class RemoteCommandController {
     }
   }
 
-  /** Pushes the latest scrubber position to the OS controls. */
-  updateProgress(): void {
+  /**
+   * Reports the position, duration and rate to the OS controls, which advance
+   * the scrubber from them on their own until the next report.
+   */
+  syncPositionState(): void {
+    if (!this.mediaSession.reportsPosition) return
     const { duration, position } = this.host.getProgress()
-    // The web player has no variable-rate playback, so the rate is always 1.
-    // (Live radio has no seekable timeline anyway — the position is cleared.)
-    this.mediaSession.setPositionState({ duration, position, playbackRate: 1 })
+    this.mediaSession.setPositionState({
+      duration,
+      position,
+      playbackRate: this.host.getRate()
+    })
   }
 
   /** Removes handlers and clears metadata/state. Call on teardown. */

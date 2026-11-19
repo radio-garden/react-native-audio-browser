@@ -53,6 +53,7 @@ function makeHost(
     getPlayback: vi.fn(() => ({ state: 'playing' })) as any,
     getPlayingState: vi.fn(() => ({ playing: true, buffering: false })),
     getProgress: vi.fn(() => ({ position: 0, duration: 0, buffered: 0 })),
+    getRate: vi.fn(() => 1),
     ...overrides
   }
 }
@@ -156,16 +157,26 @@ describe('RemoteCommandController', () => {
     expect(session.playbackState).toBe('none')
   })
 
-  it('pushes scrubber position from host progress', () => {
+  it('reports the position state from host progress and rate', () => {
     const host = makeHost({
-      getProgress: vi.fn(() => ({ position: 30, duration: 180, buffered: 0 }))
+      getProgress: vi.fn(() => ({ position: 30, duration: 180, buffered: 0 })),
+      getRate: vi.fn(() => 1.5)
     })
-    new RemoteCommandController(host).updateProgress()
+    new RemoteCommandController(host).syncPositionState()
 
     expect(session.setPositionState).toHaveBeenCalledWith({
       duration: 180,
       position: 30,
-      playbackRate: 1
+      playbackRate: 1.5
     })
+  })
+
+  it('leaves the host unread when the browser takes no position state', () => {
+    vi.stubGlobal('navigator', {})
+    const host = makeHost()
+    new RemoteCommandController(host).syncPositionState()
+
+    expect(host.getProgress).not.toHaveBeenCalled()
+    expect(host.getRate).not.toHaveBeenCalled()
   })
 })

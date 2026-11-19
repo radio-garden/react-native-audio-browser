@@ -311,6 +311,7 @@ export class NativeAudioBrowser
     this.onPlaybackChanged(newState)
     this.refreshPlayingState()
     this.remoteCommands.syncPlaybackState()
+    this.syncPositionState()
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
@@ -352,6 +353,16 @@ export class NativeAudioBrowser
     this.remoteCommands.setMetadata(metadata)
   }
 
+  protected override onTimelineChanged(): void {
+    this.syncPositionState()
+  }
+
+  private syncPositionState(): void {
+    // The state can change before setup has built the element.
+    if (!this.element) return
+    this.remoteCommands.syncPositionState()
+  }
+
   protected setupProgressUpdates(interval?: number) {
     // Match Android: emit progress during loading, buffering, and playing.
     this.progressTimer.start(
@@ -368,7 +379,6 @@ export class NativeAudioBrowser
           ...progress,
           track: this.queue.currentIndex || 0
         })
-        this.remoteCommands.updateProgress()
       }
     )
   }
@@ -734,7 +744,7 @@ export class NativeAudioBrowser
 
       try {
         // Once, here: duration reaches the media session through
-        // `updateProgress()` on each tick, so only metadata needs publishing.
+        // `onTimelineChanged()`, so only metadata needs publishing.
         // Android publishes from the same transition handler that announces.
         const nowPlaying = this.getNowPlaying()
         if (nowPlaying) {

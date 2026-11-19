@@ -78,6 +78,11 @@ export class MediaSessionManager {
     this.session.playbackState = state
   }
 
+  /** Whether the browser takes a position state at all. */
+  get reportsPosition(): boolean {
+    return this.session?.setPositionState !== undefined
+  }
+
   /**
    * Reports the scrubber position. Live streams (infinite or unknown duration)
    * have no meaningful position, so the state is cleared instead.
