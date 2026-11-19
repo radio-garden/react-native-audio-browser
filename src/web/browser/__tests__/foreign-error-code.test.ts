@@ -10,13 +10,22 @@ import { NavigationErrorManager } from '../NavigationErrorManager'
 const libraryError = (): Error =>
   Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
 
-/** A configured BrowserManager whose HTTP client rejects every request with `requestError`. */
-function makeManager(
-  configuration: NativeBrowserConfiguration,
-  requestError: unknown = new Error('unexpected request')
-): { manager: BrowserManager; errors: NavigationErrorManager } {
+/**
+ * A configured BrowserManager whose HTTP client rejects every request the way
+ * the real HttpClient does: with a `network-error`.
+ */
+function makeManager(configuration: NativeBrowserConfiguration): {
+  manager: BrowserManager
+  errors: NavigationErrorManager
+} {
   const httpClient = {
-    executeRequest: vi.fn(() => Promise.reject(requestError))
+    executeRequest: vi.fn(() =>
+      Promise.reject(
+        Object.assign(new Error('unexpected request'), {
+          code: 'network-error'
+        })
+      )
+    )
   } as unknown as HttpClient
   const errors = new NavigationErrorManager()
   const manager = new BrowserManager(httpClient, new FavoriteManager(), errors)
@@ -40,7 +49,6 @@ describe('a failure whose error carries a code that is not a navigation error co
     () => {
       path: string
       configuration: NativeBrowserConfiguration
-      requestError?: unknown
     }
   > = {
     'a browseCallback rejecting with a DOMException': () => ({
@@ -66,27 +74,34 @@ describe('a failure whose error carries a code that is not a navigation error co
         ]
       }
     }),
-    'a browseConfig request rejecting with a library error': () => ({
-      path: '/a',
-      configuration: {
-        routes: [
-          { path: '/a', browseConfig: { baseUrl: 'https://api.example.com' } }
-        ]
-      },
-      requestError: libraryError()
-    }),
-    'the implicit default request rejecting with a DOMException': () => ({
-      path: '/a',
-      configuration: { browse: { baseUrl: 'https://api.example.com' } },
-      requestError: new DOMException('aborted', 'AbortError')
-    })
+    'a browseConfig route whose requestResolver rejects with a library error':
+      () => ({
+        path: '/a',
+        configuration: {
+          requestResolver: () => Promise.reject(libraryError()),
+          routes: [
+            {
+              path: '/a',
+              browseConfig: { baseUrl: 'https://api.example.com' }
+            }
+          ]
+        }
+      }),
+    'the implicit default request whose browseResolver rejects with a DOMException':
+      () => ({
+        path: '/a',
+        configuration: {
+          browseResolver: () =>
+            Promise.reject(new DOMException('aborted', 'AbortError'))
+        }
+      })
   }
 
   it.each(Object.keys(cases))(
     'is published as a network-error: %s',
     async (name) => {
-      const { path, configuration, requestError } = cases[name]!()
-      const { manager, errors } = makeManager(configuration, requestError)
+      const { path, configuration } = cases[name]!()
+      const { manager, errors } = makeManager(configuration)
 
       await manager.navigatePath(path)
 
