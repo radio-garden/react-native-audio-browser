@@ -1,3 +1,4 @@
+import type { NavigationErrorType } from '../../features'
 import type {
   RequestConfig,
   TransformableRequestConfig,
@@ -10,6 +11,19 @@ import type {
 } from '../../types'
 import { artworkUrl as resolveArtworkUrl } from '../../utils/artwork'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+
+/**
+ * A request layer's `transform` or `transformSync` threw. Carries the
+ * navigation error code a failed browse or search resolve reports.
+ */
+export class TransformError extends Error {
+  readonly code = 'callback-error' satisfies NavigationErrorType
+
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause })
+    this.name = 'TransformError'
+  }
+}
 
 /**
  * Appends query parameters to a URL, handling existing query strings.
@@ -121,12 +135,12 @@ export const RequestConfigBuilder = {
    * A layer with a transform wins completely — it receives the base (plus route
    * params) and its result replaces the base; the layer's own static fields are
    * ignored. A layer without a transform merges its static fields over the base.
-   * `path` is carried from the base — only a transform may change it. A
-   * throwing transform falls back to the base, so the layer is skipped and the
-   * ladder continues.
+   * `path` is carried from the base — only a transform may change it.
    *
    * Mirrors native's BrowserManager.applyLayer so web resolves the shared
    * `request` → `<kind>` → route chain identically across platforms.
+   *
+   * @throws {TransformError} when the layer's transform throws
    */
   async applyLayer(
     base: RequestConfig,
@@ -144,17 +158,7 @@ export const RequestConfigBuilder = {
         if (layer.transformSync) cfg = layer.transformSync(cfg, params)
         return cfg
       } catch (e) {
-        // A throwing transform costs its own layer, not the ladder: the layers
-        // under it stand, so a relative path still gets the shared `baseUrl`
-        // and a media request keeps the shared credential. One catch around
-        // the pair, as native has it, so a sync stage that throws after a
-        // successful async one also falls back to the layer's input rather
-        // than to a half-applied config.
-        console.error(
-          'Failed to apply transform function, using base config',
-          e
-        )
-        return base
+        throw new TransformError(e)
       }
     }
     return {
@@ -166,6 +170,28 @@ export const RequestConfigBuilder = {
       body: layer.body ?? base.body,
       contentType: layer.contentType ?? base.contentType,
       userAgent: layer.userAgent ?? base.userAgent
+    }
+  },
+
+  /**
+   * {@link applyLayer} for media and artwork, where a throwing transform costs
+   * its own layer and not the ladder: the layers under it stand, so a relative
+   * path still gets the shared `baseUrl` and a media request keeps the shared
+   * credential.
+   */
+  async applyLayerOrBase(
+    base: RequestConfig,
+    layer: TransformableRequestConfig | undefined
+  ): Promise<RequestConfig> {
+    try {
+      return await this.applyLayer(base, layer)
+    } catch (e) {
+      if (!(e instanceof TransformError)) throw e
+      console.error(
+        'Failed to apply transform function, using base config',
+        e.cause
+      )
+      return base
     }
   },
 
@@ -220,9 +246,9 @@ export const RequestConfigBuilder = {
    *
    * The resolved URL is returned in `path`, with `baseUrl` already folded into
    * it. Best-effort throughout, but at two levels: a throwing transform or
-   * resolver costs only its own layer (see {@link applyLayer}), and the catch
-   * here is the backstop for anything left — a malformed `baseUrl` reaching
-   * `buildUrl`, say — which falls back to the bare `src`.
+   * resolver costs only its own layer (see {@link applyLayerOrBase}), and the
+   * catch here is the backstop for anything left — a malformed `baseUrl`
+   * reaching `buildUrl`, say — which falls back to the bare `src`.
    *
    * The chain is `request` → `media` → `media.resolve(track)`, matching
    * native's. See {@link applyMediaResolve} for why the per-track resolver goes
@@ -245,8 +271,8 @@ export const RequestConfigBuilder = {
       // The layers are applied one at a time rather than through `applyLayers`
       // so the media layer's own header contribution stays visible; each
       // transform still runs exactly once.
-      const shared = await this.applyLayer({ path: src }, requestConfig)
-      const layered = await this.applyLayer(shared, mediaConfig)
+      const shared = await this.applyLayerOrBase({ path: src }, requestConfig)
+      const layered = await this.applyLayerOrBase(shared, mediaConfig)
       const config = await this.applyMediaResolve(layered, mediaConfig, track)
       // buildUrl folds in baseUrl *and* appends `query`; both are cleared on
       // the way out so the resolved url can't be rebuilt and double-applied.
@@ -406,7 +432,7 @@ export const RequestConfigBuilder = {
     try {
       // Step 0: Apply the shared request layer, with track.artwork as the path.
       // Its transform (if any) runs for artwork too — e.g. a dynamic baseUrl.
-      const baseConfig = await this.applyLayer(
+      const baseConfig = await this.applyLayerOrBase(
         { path: artworkUrl },
         requestConfig
       )
