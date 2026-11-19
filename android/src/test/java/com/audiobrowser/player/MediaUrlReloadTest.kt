@@ -27,13 +27,18 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 
 /**
  * An ExoPlayer loading through [MediaFactory] a track whose request config mints a new token each
  * time it runs, from a server that records the token and status of every request.
+ *
+ * SDK 28: from 33, media3 asks AudioManager.getAudioDevicesForAttributes, which Robolectric answers
+ * with null.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class MediaUrlReloadTest {
 
   private val context = RuntimeEnvironment.getApplication()
