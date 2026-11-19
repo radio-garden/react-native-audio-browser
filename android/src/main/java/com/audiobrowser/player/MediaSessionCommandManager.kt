@@ -252,11 +252,6 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
         player.forwardingPlayer.seekForward()
         true
       }
-      CUSTOM_ACTION_FAVORITE -> {
-        // Unreached: MediaSessionCallback.onCustomCommand handles the favorite itself.
-        Timber.Forest.d("Favorite command received")
-        true
-      }
       else -> {
         Timber.Forest.w("Received unexpected custom command: ${command.customAction}")
         false
