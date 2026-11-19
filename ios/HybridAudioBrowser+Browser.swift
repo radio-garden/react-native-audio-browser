@@ -82,7 +82,7 @@ public extension HybridAudioBrowser {
       return browserManager.path == path
     }
     externalContentChangedEmitter.emit(path)
-    if isCurrentPath { Task { @MainActor in await loadPath(path) } }
+    if isCurrentPath { Task { @MainActor in await loadPath(path, bypassCache: true) } }
   }
 
   func invalidateAllContent() throws {
