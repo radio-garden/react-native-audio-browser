@@ -305,6 +305,21 @@ class QueueManager {
     return .tracksOnly
   }
 
+  /// Replaces, in place, each track `transform` returns a track for.
+  @discardableResult
+  func replaceEach(_ transform: (Track) -> Track?) -> QueueChange {
+    var updated = tracks
+    var replaced = false
+    for (index, track) in tracks.enumerated() {
+      guard let replacement = transform(track) else { continue }
+      updated[index] = replacement
+      replaced = true
+    }
+    guard replaced else { return .none }
+    tracks = updated
+    return .tracksOnly
+  }
+
   /// Removes the tracks after the current one in queue order, not shuffle order.
   @discardableResult
   func removeUpcomingTracks() -> QueueChange {

@@ -521,6 +521,12 @@ final class Player {
     try afterQueueMutation(queue.replace(index, track))
   }
 
+  /// Replaces, in place, each track `transform` returns a track for; the current track keeps
+  /// playing.
+  func replaceEach(_ transform: (Track) -> Track?) {
+    afterQueueMutation(queue.replaceEach(transform))
+  }
+
   func setQueue(
     _ newTracks: [Track],
     initialIndex: Int = 0,

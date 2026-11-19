@@ -3,6 +3,7 @@ import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeValueRefreshedBy } from '../../utils/useNativeValueRefreshedBy'
 import { onFavoriteChanged } from '../favorites'
+import { onQueueChanged } from './queue'
 
 /**
  * Event data for when the active track changes.
@@ -57,11 +58,16 @@ export const onActiveTrackChanged =
 // MARK: - Hooks
 
 // Module-level so the hook's subscription identity is stable across renders.
-const activeTrackInvalidators = [onActiveTrackChanged, onFavoriteChanged]
+const activeTrackInvalidators = [
+  onActiveTrackChanged,
+  onFavoriteChanged,
+  onQueueChanged
+]
 
 /**
  * Hook that returns the current active track, updating on transitions AND on
- * in-place mutations of the active track (favorite toggles).
+ * in-place mutations of the active track (favorite toggles, and a queued copy
+ * replaced in place, as `setFavorites` does on iOS).
  * @returns The current active track or undefined
  */
 export function useActiveTrack(): Track | undefined {

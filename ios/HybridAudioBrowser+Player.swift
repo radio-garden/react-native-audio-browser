@@ -233,7 +233,6 @@ public extension HybridAudioBrowser {
     try onMainActor {
       guard let player, let track = player.currentTrack, let identity = track.identity else { return false }
       browserManager.setFavorited(identity: identity, favorited: favorited)
-      // Hydration never overrides a track's own flag, so the queued copy must carry it.
       let updated = track.copying(favorited: favorited)
       try player.replace(player.queue.currentIndex, updated)
       // The only emit: a favorite toggle mutates the active track in place, so
@@ -289,8 +288,8 @@ public extension HybridAudioBrowser {
   }
 
   func getActiveTrack() throws -> Track? {
-    // The now-playing track is loaded outside the browse cache: a missing `favorited` is filled
-    // from the favorite set, but a track's own value wins, so writers must update the queued copy too.
+    // A queued track that carries no `favorited` (a queue set from JS) is filled from the
+    // favorite set; one that carries it is kept current by `setFavorites` and the heart toggle.
     onMainActor { player?.currentTrack.map(browserManager.hydrateFavorite) }
   }
 

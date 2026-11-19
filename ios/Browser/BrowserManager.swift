@@ -96,10 +96,15 @@ final class BrowserManager {
 
   // MARK: - Favorites
 
-  func setFavorites(_ favorites: [String]) {
-    if self.favorites.replace(with: favorites) {
-      favoritesChanged.emit(())
-    }
+  /// Replaces the favorites and restamps the page on screen. `restampQueue` gets the restamp
+  /// to apply to each queued track (nil: the track stands), before `favoritesChanged`, whose
+  /// listeners read the queue.
+  func setFavorites(_ favorites: [String], restampQueue: ((Track) -> Track?) -> Void) {
+    let changed = self.favorites.replace(with: favorites)
+    guard !changed.isEmpty else { return }
+    restampContent(changed: changed)
+    restampQueue { self.favorites.restamp($0, changed: changed) }
+    favoritesChanged.emit(())
   }
 
   func setFavoriteEnabled(_ enabled: Bool) {
@@ -108,6 +113,12 @@ final class BrowserManager {
 
   func setFavorited(identity: String, favorited: Bool) {
     favorites.set(identity, favorited: favorited)
+    restampContent(changed: [identity])
+  }
+
+  private func restampContent(changed: Set<String>) {
+    guard let content, let restamped = favorites.restamp(content, changed: changed) else { return }
+    self.content = restamped
   }
 
   func hydrateFavorite(_ track: Track) -> Track {
