@@ -184,7 +184,6 @@ export class BrowserManager {
    * Navigates to a specific path.
    */
   async navigatePath(path: string): Promise<void> {
-    this.navigationErrorManager.clearNavigationError()
     await this.navigate(path)
   }
 
@@ -232,6 +231,7 @@ export class BrowserManager {
     // Increment navigation ID and capture for this navigation
     // This prevents stale responses from overwriting newer ones
     const navigationId = ++this.currentNavigationId
+    this.navigationErrorManager.clearNavigationError()
 
     try {
       // Update path and clear content immediately to show loading state
