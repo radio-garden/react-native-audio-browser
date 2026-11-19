@@ -100,6 +100,7 @@ export class QueueManager {
   }
 
   setShuffleEnabled(enabled: boolean): void {
+    if (this._shuffleEnabled === enabled) return
     this._shuffleEnabled = enabled
     if (enabled) this.regenerateShuffleOrder()
   }
