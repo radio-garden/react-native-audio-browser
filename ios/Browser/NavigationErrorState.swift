@@ -43,14 +43,15 @@ final class NavigationErrorState {
   }
 
   /// Follows one load of the current page, which returns whether it published its content:
-  /// a throw is reported, and a load that a newer one superseded changes nothing.
+  /// published content clears the error, a throw is reported, and a load that a newer one
+  /// superseded changes nothing.
   func follow(
     _ load: () async throws -> Bool,
     describe: (Error) -> NavigationError,
     format: (NavigationError) async -> FormattedNavigationError,
   ) async {
     do {
-      _ = try await load()
+      if try await load() { clear() }
     } catch {
       await report(describe(error), format: format)
     }

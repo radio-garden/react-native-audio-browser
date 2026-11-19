@@ -120,7 +120,6 @@ final class BrowserManager {
   /// `bypassCache` refetches it and keeps the current content on screen meanwhile. A newer load
   /// supersedes this one: its result or error is dropped, so a slow failing /a cannot show its
   /// error over a fast /b's content.
-  @discardableResult
   func load(_ path: String, bypassCache: Bool = false) async throws -> Bool {
     currentNavigationId += 1
     let navigationId = currentNavigationId
@@ -175,20 +174,12 @@ final class BrowserManager {
     (contentGeneration, pageGenerations[path])
   }
 
-  /// Clears every cache and the resolved request layers, then re-queries the tabs and reloads
-  /// the current path, independently: a failed reload goes to `reloadFailed` with its path, and
-  /// a failed tabs query keeps the current tabs.
-  func invalidateAll(reloadFailed: @escaping @MainActor (Error, String) async -> Void) {
+  /// Clears every cache and the resolved request layers, then re-queries the tabs; a failed
+  /// query keeps the current tabs. Reloading the current path is the caller's.
+  func invalidateAll() {
     clearContent()
     requests.invalidateLayers()
     Task { _ = try? await queryTabs() }
-    Task {
-      do {
-        try await load(path, bypassCache: true)
-      } catch {
-        await reloadFailed(error, path)
-      }
-    }
   }
 
   /// Clears the cached pages and the last search; a fetch in flight caches nothing.
