@@ -178,13 +178,14 @@ export function useSleepTimer(params?: {
     }
 
     // In order to make time update reaching 0 sync with firing of completion,
-    // first wait for the next interval to start before starting update loop
+    // first wait until a whole number of intervals is left before starting
+    // update loop
     const initialTimeoutId = setTimeout(
       () => {
         update()
         intervalId = setInterval(update, updateInterval)
       },
-      updateInterval - (time % updateInterval)
+      (time - Date.now()) % updateInterval
     )
     let intervalId: ReturnType<typeof setInterval> | undefined
     const clear = () => {
