@@ -278,7 +278,7 @@ internal constructor(
         browserRegistered = CompletableDeferred()
       }
       field = value
-      // applyOptions tells only the browser attached when the capabilities change.
+      // Covers a browser assigned after its options were applied.
       value?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
     }
 
