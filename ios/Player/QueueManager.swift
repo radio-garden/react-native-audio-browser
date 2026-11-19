@@ -141,16 +141,34 @@ class QueueManager {
   // Shared by `next()` and `canNext` so the button and the navigation agree. Shuffle wraps
   // whatever the repeat mode, as Media3 does; sequential order wraps only on repeat-queue.
   private var nextIndex: Int? {
-    guard currentTrack != nil, tracks.count > 1 else { return nil }
+    guard currentTrack != nil else { return nil }
+    return nextIndex(after: currentIndex)
+  }
+
+  private func nextIndex(after index: Int) -> Int? {
+    guard tracks.count > 1 else { return nil }
     let candidate: Int? = if shuffleEnabled {
-      shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
-    } else if currentIndex + 1 < tracks.count {
-      currentIndex + 1
+      shuffleOrder.getNextIndex(after: index) ?? shuffleOrder.firstIndex
+    } else if index + 1 < tracks.count {
+      index + 1
     } else {
       repeatMode == .queue ? 0 : nil
     }
-    guard let candidate, candidate != currentIndex else { return nil }
+    guard let candidate, candidate != index else { return nil }
     return candidate
+  }
+
+  /// The indices `next()` goes through from the current track, until it would stop or come back
+  /// to it: shuffled when shuffle is on, wrapped where `next()` wraps.
+  var upNextIndices: [Int] {
+    guard currentTrack != nil else { return [] }
+    var indices: [Int] = []
+    var index = currentIndex
+    while indices.count < tracks.count - 1, let next = nextIndex(after: index), next != currentIndex {
+      indices.append(next)
+      index = next
+    }
+    return indices
   }
 
   private var previousIndex: Int? {

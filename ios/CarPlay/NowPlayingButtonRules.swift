@@ -20,10 +20,10 @@ enum NowPlayingButtonRules {
     skipToQueueItem != false
   }
 
-  /// Whether the Up Next button is on: the option allows it, a pick is allowed, and the queue has
-  /// another track to go to.
-  static func upNextEnabled(option: Bool, skipToQueueItem: Bool?, trackCount: Int) -> Bool {
-    option && queueItemPickAllowed(skipToQueueItem) && trackCount > 1
+  /// Whether the Up Next button is on: the option allows it, a pick is allowed, and a track
+  /// follows the current one.
+  static func upNextEnabled(option: Bool, skipToQueueItem: Bool?, upNextCount: Int) -> Bool {
+    option && queueItemPickAllowed(skipToQueueItem) && upNextCount > 0
   }
 
   static func repeatMode(after mode: RepeatMode) -> RepeatMode {
