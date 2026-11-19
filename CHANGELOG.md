@@ -1,3 +1,9 @@
+## [1.0.0-next.2](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.1...v1.0.0-next.2) (2026-11-19)
+
+### Bug Fixes
+
+* **ios:** hold stopped and ended tracks against late AVPlayer events ([2dcd8a3](https://github.com/radio-garden/react-native-audio-browser/commit/2dcd8a35672fbb4b75b816ed4ac96dd81d834e7c))
+
 ## [1.0.0-next.1](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0...v1.0.0-next.1) (2026-11-18)
 
 ### ⚠ BREAKING CHANGES
