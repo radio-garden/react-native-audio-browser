@@ -20,6 +20,9 @@ export interface PlaybackQueueEndedEvent {
 
 /**
  * Adds one or more tracks to the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param tracks - The tracks to add to the queue.
  * @param insertBeforeIndex - (Optional) The index to insert the tracks before.
  * By default the tracks will be added to the end of the queue.
@@ -29,6 +32,9 @@ export interface PlaybackQueueEndedEvent {
 export function add(tracks: Track[], insertBeforeIndex?: number): void
 /**
  * Adds a track to the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param track - The track to add to the queue.
  * @param insertBeforeIndex - (Optional) The index to insert the track before.
  * By default the track will be added to the end of the queue.
@@ -54,6 +60,9 @@ export function load(track: Track): void {
 
 /**
  * Move a track within the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param fromIndex - The index of the track to be moved.
  * @param toIndex - The index to move the track to. On iOS and Android an index
  * past the end moves the track to the end of the queue; the web throws.
@@ -73,6 +82,8 @@ export function move(fromIndex: number, toIndex: number): void {
  * removing the last track with repeat `off` makes the first track active but
  * ends playback.
  *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param indexes - The indexes of the tracks to be removed.
  * @throws If an index is outside the queue. Android checks every index before
  * removing any, and also throws if an index appears twice. iOS removes from the
@@ -90,6 +101,8 @@ export function remove(indexes: number[]): void
  * removing the last track with repeat `off` makes the first track active but
  * ends playback.
  *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param index - The index of the track to be removed.
  * @throws If `index` is outside the queue, on iOS and Android; the web
  * ignores it.
@@ -104,6 +117,8 @@ export function remove(indexOrIndexes: number | number[]): void {
 /**
  * Removes every track after the active track's index in the queue. With
  * shuffle on, this is queue order, not the shuffled play order.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function removeUpcomingTracks(): void {
   nativeBrowser.removeUpcomingTracks()
@@ -111,6 +126,9 @@ export function removeUpcomingTracks(): void {
 
 /**
  * Skips to a track in the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param index - The index of the track to skip to.
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  * @throws If `index` is outside the queue.
@@ -121,6 +139,9 @@ export function skip(index: number, initialPosition?: number): void {
 
 /**
  * Skips to the next track in the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param initialPosition - (Optional) The position in seconds to start the next
  * track from. On iOS and Android, with no next track the active track seeks to
  * it instead; on the web the call does nothing.
@@ -131,6 +152,9 @@ export function skipToNext(initialPosition?: number): void {
 
 /**
  * Skips to the previous track in the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param initialPosition - (Optional) The position in seconds to start the
  * previous track from. On iOS and Android, with no previous track the active
  * track seeks to it instead; on the web the call does nothing.
@@ -145,6 +169,8 @@ export function skipToPrevious(initialPosition?: number): void {
  * On iOS and Android this does not change the play/pause state: the player
  * keeps playing if it was playing and stays paused if it was paused. On the
  * web it stops playback. Call `play` after it to start playback.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  *
  * @param tracks - The tracks to set as the queue.
  * @param startIndex - (Optional) The index of the track to make active.

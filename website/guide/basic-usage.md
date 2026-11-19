@@ -65,6 +65,13 @@ import { setupPlayer } from 'react-native-audio-browser'
 await setupPlayer()
 ```
 
+Await it before calling the player. On iOS and Android, a playback, queue,
+sleep timer, favorite or now-playing call made before `setupPlayer` resolves is
+dropped, with a warning naming the call in the device log. `setPlayWhenReady`,
+`setRepeatMode` and `setShuffle` are kept and applied at setup, and `load`
+throws. On iOS, `navigate` with a track is dropped the same way, even a
+Browsable one; `navigate` with a path works before setup.
+
 ## Define a browse tree
 
 Describe the tree with `configureBrowser`: **tabs** along the top, and **routes** that resolve each path to its children. The simplest source is static data declared inline:

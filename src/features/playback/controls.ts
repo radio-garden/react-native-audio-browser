@@ -4,6 +4,8 @@ import { nativeBrowser } from '../../native'
 
 /**
  * Resets the player stopping the current track and clearing the queue.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function reset(): void {
   nativeBrowser.reset()
@@ -11,6 +13,8 @@ export function reset(): void {
 
 /**
  * Plays or resumes the current track.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function play(): void {
   nativeBrowser.play()
@@ -18,6 +22,8 @@ export function play(): void {
 
 /**
  * Pauses the current track.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function pause(): void {
   nativeBrowser.pause()
@@ -25,6 +31,8 @@ export function pause(): void {
 
 /**
  * Toggles playback between play and pause.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function togglePlayback(): void {
   nativeBrowser.togglePlayback()
@@ -34,6 +42,8 @@ export function togglePlayback(): void {
  * Stops playback. The track stays current, and play() starts it again.
  * iOS rewinds a non-live track to the start; Android and web keep the
  * position, so play() resumes where it stopped.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function stop(): void {
   nativeBrowser.stop()
@@ -46,6 +56,8 @@ export function stop(): void {
  * failed, without setting the play intent, so after stop() it loads the item
  * but does not play it.
  *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @see {@link PlaybackState}
  * @see {@link usePlayback}
  */
@@ -55,6 +67,9 @@ export function retry(): void {
 
 /**
  * Seeks to a specified time position in the current track.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param position - The position to seek to in seconds.
  */
 export function seekTo(position: number): void {
@@ -67,6 +82,8 @@ export function seekTo(position: number): void {
  * to the window's edge; a non-seekable stream (e.g. ICY radio) reconnects
  * to rejoin live. iOS re-runs `media.resolve` on the reconnect; Android
  * reuses the resolved URL and re-resolves only after it fails to open.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
  */
 export function seekToLiveEdge(): void {
   nativeBrowser.seekToLiveEdge()
@@ -74,6 +91,9 @@ export function seekToLiveEdge(): void {
 
 /**
  * Seeks by a relative time offset in the current track.
+ *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param offset - The time offset to seek by in seconds.
  */
 export function seekBy(offset: number): void {

@@ -19,6 +19,8 @@ export function getRate(): number {
  * of play/pause, and setting it while paused never starts playback. Use
  * {@link play} / {@link pause} for that.
  *
+ * Before `setupPlayer` resolves, iOS and Android drop it with a warning.
+ *
  * @param rate - The playback rate to change to, where 0.5 would be half speed,
  * 1 would be regular speed, 2 would be double speed etc. Must be greater than
  * zero; platforms disagree on what a non-positive rate does (iOS ignores it,
