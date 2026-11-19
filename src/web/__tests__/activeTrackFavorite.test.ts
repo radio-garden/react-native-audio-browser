@@ -70,6 +70,16 @@ describe('favoriting the active track', () => {
     expect(favoriteEvents.map((event) => event.favorited)).toEqual([true])
   })
 
+  it('toggles on a track without a flag whose identity joined the favorites cache after it loaded', async () => {
+    await playTrack()
+    h.browser.setFavorites(['a'])
+
+    h.browser.toggleActiveTrackFavorited()
+
+    expect(h.browser.getActiveTrack()?.favorited).toBe(true)
+    expect(favoriteEvents.map((event) => event.favorited)).toEqual([true])
+  })
+
   it('survives a load that was still resolving its url', async () => {
     const resolver = deferredResolver()
     h.browser.configuration = resolver.configuration
