@@ -59,8 +59,10 @@ describe('a track entering the queue', () => {
     expect(h.browser.getActiveTrack()).toMatchObject(hydrated)
   })
 
-  it('emits no queue change when a skip loads a queued track', () => {
-    h.browser.setQueue([declared, trackB], 0)
+  it('emits no queue change when a skip loads a track favorited after it was queued', () => {
+    h.browser.setFavorites([])
+    h.browser.setQueue([trackB, declared], 0)
+    h.browser.setFavorites(['a'])
     h.clear()
 
     h.browser.skipToNext()
