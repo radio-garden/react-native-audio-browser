@@ -109,7 +109,6 @@ export class BrowserManager {
    */
   set path(value: string | undefined) {
     if (this.hasValidConfiguration()) {
-      this.navigationErrorManager.clearNavigationError()
       const pathToNavigate =
         value ?? this._configuration.path ?? this.getDefaultPath()
       if (pathToNavigate) {
@@ -160,7 +159,6 @@ export class BrowserManager {
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
     this._layerGeneration += 1
-    this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
     // Determine initial path
@@ -231,12 +229,12 @@ export class BrowserManager {
     // Increment navigation ID and capture for this navigation
     // This prevents stale responses from overwriting newer ones
     const navigationId = ++this.currentNavigationId
-    this.navigationErrorManager.clearNavigationError()
 
     try {
-      // Update path and clear content immediately to show loading state
+      // Update path and clear content and error immediately to show loading state
       this._path = path
       this._content = undefined
+      this.navigationErrorManager.clearNavigationError()
       this.onPathChanged(path)
       this.onContentChanged(undefined)
 
