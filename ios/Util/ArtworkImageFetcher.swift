@@ -9,14 +9,15 @@ enum ArtworkImageFetcher {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "ArtworkImageFetcher")
 
   /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
-  /// falls back to the cached copy. `svgScale` wins over `downsampleTo`.
+  /// falls back to the cached copy.
+  /// - Parameter fitting: Fits the image into `size` points at `scale`, rasterizing it as an SVG
+  ///   when `isSvg`; nil keeps the image as fetched.
   /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
   ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
   static func fetchImage(
     from source: ImageSource,
-    svgScale: CGFloat? = nil,
-    downsampleTo: (size: CGSize, scale: CGFloat)? = nil,
+    fitting: (size: CGSize, scale: CGFloat, isSvg: Bool)? = nil,
     waitsForConnectivity: Bool = false,
   ) async -> UIImage? {
     guard let url = URL(string: source.uri) else { return nil }
@@ -33,14 +34,14 @@ enum ArtworkImageFetcher {
       options.append(.requestModifier(modifier))
     }
     let processor: (any ImageProcessor)?
-    if let svgScale {
-      processor = SVGProcessor(size: nil, scale: svgScale)
-    } else if let downsampleTo {
+    if let fitting, fitting.isSvg {
+      processor = SVGProcessor(slot: fitting.size, scale: fitting.scale)
+    } else if let fitting {
       // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
       // return the original. cacheOriginalImage keeps the original on disk so another target
       // size re-processes it instead of downloading it again.
-      processor = DownsamplingImageProcessor(size: downsampleTo.size)
-      options.append(.scaleFactor(downsampleTo.scale))
+      processor = DownsamplingImageProcessor(size: fitting.size)
+      options.append(.scaleFactor(fitting.scale))
       options.append(.cacheOriginalImage)
     } else {
       processor = nil

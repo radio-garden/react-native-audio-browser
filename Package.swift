@@ -69,6 +69,7 @@ let package = Package(
         "Extension/ChapterMetadata+AVFoundation.swift",
         "Extension/URLError+Connectivity.swift",
         "Extension/NavigationError+Conversion.swift",
+        "Extension/CGSize+AspectFit.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Extension/Dictionary+Headers.swift",
         "Http/HttpClient.swift",
