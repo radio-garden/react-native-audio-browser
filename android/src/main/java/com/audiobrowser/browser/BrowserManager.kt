@@ -709,8 +709,14 @@ class BrowserManager {
     return content
   }
 
-  /** Re-resolves the current path, bypassing the cache. Errors are logged, never thrown. */
-  suspend fun refresh() {
+  /**
+   * Re-resolves the current path, bypassing the cache, and returns whether it published the
+   * content. Overtaken by a later navigation or refresh, it publishes nothing and returns false,
+   * its failure only logged.
+   *
+   * @throws Exception when resolution fails and nothing has overtaken it
+   */
+  suspend fun refresh(): Boolean {
     val navigationId = ++currentNavigationId
 
     val currentPath = path
@@ -720,11 +726,15 @@ class BrowserManager {
       contentCache.remove(currentPath)
       val content = resolve(currentPath, useCache = false)
 
-      if (navigationId == currentNavigationId) {
-        this.content = content
-      }
+      if (navigationId != currentNavigationId) return false
+      this.content = content
+      return true
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
-      Timber.e(e, "Error refreshing content for path: $currentPath")
+      if (navigationId == currentNavigationId) throw e
+      Timber.e(e, "Error in overtaken refresh for path: $currentPath")
+      return false
     }
   }
 

@@ -697,7 +697,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     launchInScope { connectedService?.player?.notifyContentChanged(path) }
 
     if (browserManager.getPath() == path) {
-      mainScope.launch { browserManager.refresh() }
+      refreshContent()
     }
   }
 
@@ -713,7 +713,24 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       runCatching { browserManager.queryTabs() }
         .onFailure { Timber.e(it, "Re-querying tabs failed") }
     }
-    mainScope.launch { browserManager.refresh() }
+    refreshContent()
+  }
+
+  /**
+   * Reloads the current path. A reload that publishes clears the navigation error; one that fails
+   * reports it, unless a later navigation or reload has overtaken it.
+   */
+  private fun refreshContent() {
+    mainScope.launch {
+      val path = browserManager.getPath()
+      try {
+        if (browserManager.refresh()) clearNavigationError()
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        handleBrowserException(e, path, "refreshing path: $path")
+      }
+    }
   }
 
   override fun setFavorites(favorites: Array<String>) {
