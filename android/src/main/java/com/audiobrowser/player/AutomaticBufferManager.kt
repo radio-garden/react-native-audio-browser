@@ -279,7 +279,8 @@ class AutomaticBufferManager(
       Timber.d("Insufficient timing data, using 1.5x fallback")
       return (currentConfig.bufferForPlaybackAfterRebufferMs * 1.5)
         .toInt()
-        .coerceIn(defaultConfig.bufferForPlaybackAfterRebufferMs, maxRebufferBufferMs)
+        .coerceAtMost(maxRebufferBufferMs)
+        .coerceAtLeast(defaultConfig.bufferForPlaybackAfterRebufferMs)
     }
 
     val drainRateMsPerSec = (initialBufferMs.toFloat() / (playbackDurationMs / 1000f))
@@ -295,7 +296,8 @@ class AutomaticBufferManager(
     // The current threshold as the floor: it never drops within an item.
     return neededBufferMs
       .toInt()
-      .coerceIn(currentConfig.bufferForPlaybackAfterRebufferMs, maxRebufferBufferMs)
+      .coerceAtMost(maxRebufferBufferMs)
+      .coerceAtLeast(currentConfig.bufferForPlaybackAfterRebufferMs)
   }
 
   // endregion
