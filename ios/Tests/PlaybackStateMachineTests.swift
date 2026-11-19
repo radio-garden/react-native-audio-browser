@@ -98,17 +98,19 @@ struct AVPlayerPausedTests {
     #expect(nextPlaybackState(from: .stopped, on: .avPlayerPaused(hasAsset: false)) == nil)
   }
 
-  @Test func fromError_hasAssetTrue_isSuppressed() {
+  @Test func fromError_isSuppressed() {
     #expect(nextPlaybackState(from: .error, on: .avPlayerPaused(hasAsset: true)) == nil)
+    #expect(nextPlaybackState(from: .error, on: .avPlayerPaused(hasAsset: false)) == nil)
   }
 
-  @Test func fromEnded_hasAssetTrue_isSuppressed() {
+  @Test func fromEnded_isSuppressed() {
     #expect(nextPlaybackState(from: .ended, on: .avPlayerPaused(hasAsset: true)) == nil)
+    #expect(nextPlaybackState(from: .ended, on: .avPlayerPaused(hasAsset: false)) == nil)
   }
 
   @Test func hasAssetFalse_transitionsToNone() {
-    let nonStoppedStates = allStates.filter { $0 != .stopped }
-    for state in nonStoppedStates {
+    let validStates = allStates.filter { $0 != .stopped && $0 != .error && $0 != .ended }
+    for state in validStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: false)) == PlaybackState.none,
         "Expected .none from \(state) with hasAsset: false",
