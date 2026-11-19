@@ -242,28 +242,6 @@
     var reason: GateReason
   }
 
-  enum NavigationErrorType {
-    case contentNotFound
-    case networkError
-    case httpError
-    case callbackError
-    case unknownError
-    case emptyContent
-    case timeout
-  }
-
-  struct NavigationError {
-    var code: NavigationErrorType
-    var message: String
-    var statusCode: Double?
-    var statusCodeSuccess: Bool?
-  }
-
-  struct FormattedNavigationError {
-    var title: String
-    var message: String?
-  }
-
   struct ImageContext {
     var width: Double?
     var height: Double?
