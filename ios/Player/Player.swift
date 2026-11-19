@@ -939,7 +939,7 @@ final class Player {
       recoverIfAirPlayStalled(transitioningTo: status, waitingForNoItem: waitingForNoItem)
       timeControlStatusDidChange(status)
     case .audioDidStart:
-      if !awaitingItem { transition(.audioFrameDecoded) }
+      if !awaitingItem, playWhenReady { transition(.audioFrameDecoded) }
     case .playedToEnd:
       itemDidPlayToEnd()
     case .stalled:

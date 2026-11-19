@@ -280,6 +280,17 @@ struct PlayerEngineEventTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
 
+  /// An on-demand pause keeps its item, whose first audio can be reported after the pause.
+  @Test func audioReportedAfterAPauseKeepsItPaused() throws {
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    engine.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+    #expect(player.state == .paused)
+
+    engine.emit(.audioDidStart)
+    #expect(player.state == .paused)
+  }
+
   @Test func aPauseWhileLoadingReachesTheEngine_aPlayDoesNot() throws {
     let (player, engine, _) = try makeLoading()
     player.setPlayWhenReady(true)
