@@ -78,7 +78,7 @@ struct UpNextIndicesTests {
     }
     let upNext = q.upNextIndices
     var walked: [Int] = []
-    while q.next() == .trackChanged {
+    for _ in 0 ..< q.tracks.count where q.next() == .trackChanged {
       walked.append(q.currentIndex)
     }
     #expect(upNext == walked)
