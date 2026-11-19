@@ -125,12 +125,17 @@ export class RemoteCommandController {
     this.mediaSession.setMetadata(metadata)
   }
 
-  /** Reflects the current playing/paused/stopped state in the OS controls. */
+  /**
+   * Reflects the current playing/paused/stopped state in the OS controls.
+   * Buffering reads as paused: the browser advances the scrubber while
+   * playing, and the position state cannot carry a rate of 0.
+   */
   syncPlaybackState(): void {
     const playback = this.host.getPlayback()
+    const { playing, buffering } = this.host.getPlayingState()
     if (playback.state === 'none') {
       this.mediaSession.setPlaybackState('none')
-    } else if (this.host.getPlayingState().playing) {
+    } else if (playing && !buffering) {
       this.mediaSession.setPlaybackState('playing')
     } else {
       this.mediaSession.setPlaybackState('paused')

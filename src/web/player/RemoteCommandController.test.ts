@@ -152,6 +152,10 @@ describe('RemoteCommandController', () => {
     controller.syncPlaybackState()
     expect(session.playbackState).toBe('playing')
 
+    playingState.buffering = true
+    controller.syncPlaybackState()
+    expect(session.playbackState).toBe('paused')
+
     ;(playback as { state: string }).state = 'none'
     controller.syncPlaybackState()
     expect(session.playbackState).toBe('none')

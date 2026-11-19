@@ -10,6 +10,7 @@ import { LifecycleHarness, trackA } from './lifecycleHarness'
 
 let h: LifecycleHarness
 let setPositionState: ReturnType<typeof vi.fn>
+let playbackStates: string[]
 let element: HTMLMediaElement
 
 function setDuration(seconds: number): void {
@@ -21,11 +22,14 @@ function setDuration(seconds: number): void {
 
 beforeEach(async () => {
   setPositionState = vi.fn()
+  playbackStates = []
   vi.stubGlobal('navigator', {
     onLine: true,
     mediaSession: {
       metadata: null,
-      playbackState: 'none',
+      set playbackState(state: string) {
+        playbackStates.push(state)
+      },
       setActionHandler: () => {},
       setPositionState
     }
@@ -41,6 +45,7 @@ beforeEach(async () => {
   await h.flush()
   await h.completeLoad()
   setPositionState.mockClear()
+  playbackStates = []
 })
 
 afterEach(() => {
@@ -103,5 +108,23 @@ describe('media session position state', () => {
     element.dispatchEvent(new Event('emptied'))
 
     expect(setPositionState).toHaveBeenLastCalledWith()
+  })
+
+  it('holds the scrubber at the stalled position until playback resumes', async () => {
+    h.setPosition(30)
+
+    await h.rebuffer()
+
+    expect(playbackStates).toEqual(['paused'])
+    expect(setPositionState).toHaveBeenLastCalledWith({
+      duration: 100,
+      position: 30,
+      playbackRate: 1
+    })
+
+    element.dispatchEvent(new Event('playing'))
+    await h.flush()
+
+    expect(playbackStates).toEqual(['paused', 'playing'])
   })
 })
