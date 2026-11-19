@@ -90,8 +90,8 @@ public extension HybridAudioBrowser {
     onMainActor {
       Progress(
         position: player?.currentTime ?? 0,
-        duration: engine?.duration ?? 0,
-        buffered: engine?.bufferedPosition ?? 0,
+        duration: player?.duration ?? 0,
+        buffered: player?.bufferedPosition ?? 0,
       )
     }
   }

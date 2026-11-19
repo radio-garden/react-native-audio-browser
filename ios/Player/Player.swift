@@ -29,9 +29,9 @@ final class Player {
     guard let self, queue.currentIndex >= 0 else { return }
     let progressEvent = PlaybackProgressUpdatedEvent(
       track: Double(queue.currentIndex),
-      position: engine.currentTime,
-      duration: engine.duration,
-      buffered: engine.bufferedPosition,
+      position: currentTime,
+      duration: duration,
+      buffered: bufferedPosition,
     )
     callbacks?.playerDidUpdateProgress(progressEvent)
   }
@@ -101,8 +101,7 @@ final class Player {
   ) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        of: $0, state: state, position: deferredSeek.target ?? (enginePositionIsCurrent ? engine.currentTime : 0),
-        repeatMode: repeatMode,
+        of: $0, state: state, position: currentTime, repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
     }
@@ -118,6 +117,27 @@ final class Player {
   /// nor while it awaits the next one.
   private var enginePositionIsCurrent: Bool {
     !awaitingItem && load?.itemPrepared == true
+  }
+
+  /// Whether the engine's item is one of this Load's, which a reload of the track keeps until the
+  /// next is prepared.
+  private var engineItemIsCurrent: Bool {
+    load?.itemPrepared == true
+  }
+
+  /// The current track's position: a pending seek's target, and 0 before the engine reports it.
+  var currentTime: Double {
+    deferredSeek.target ?? (enginePositionIsCurrent ? engine.currentTime : 0)
+  }
+
+  /// The current track's duration, 0 until one of its items is in the engine.
+  var duration: Double {
+    engineItemIsCurrent ? engine.duration : 0
+  }
+
+  /// How far the current track is buffered, 0 until one of its items is in the engine.
+  var bufferedPosition: Double {
+    engineItemIsCurrent ? engine.bufferedPosition : 0
   }
 
   private var resumePosition: TimeInterval? {
@@ -140,7 +160,6 @@ final class Player {
   var queueVersion: Int { queue.version }
   var queueSourcePath: String? { queue.queueSourcePath }
   var currentTrack: Track? { queue.currentTrack }
-  var currentTime: Double { engine.currentTime }
   var nitroPlaybackError: PlaybackError? { errorStatus.nitroError }
 
   var repeatMode: RepeatMode {
@@ -642,6 +661,8 @@ final class Player {
     defer { pushSkipAvailability() }
     sleepTimerManager.onTrackChanged()
 
+    // Read before the new Load replaces the one it belongs to.
+    let lastPosition = currentTime
     engine.cancelLoading()
     beginLoad()
     if let start { deferredSeek.capture(start) }
@@ -649,7 +670,6 @@ final class Player {
     // Published by the .trackLoading or .trackUnloaded transition below, even when it is a no-op.
     errorStatus = .none
 
-    let lastPosition = engine.currentTime
     let shouldContinuePlayback = playWhenReady
     engine.nowPlayingTrackChanged()
     if let currentTrack {

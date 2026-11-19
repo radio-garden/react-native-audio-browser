@@ -46,6 +46,18 @@ struct PlayerProgressTests {
     #expect(player.currentTime == 30)
   }
 
+  /// A reload of the same track leaves its previous item in the engine, which still says how long
+  /// the track is.
+  @Test func aReloadOfTheTrackKeepsItsDurationAndReportsWhereItResumes() throws {
+    let (player, _, _) = try makePlayingFirstOfThree()
+
+    player.retryNow()
+    #expect(player.state == .loading)
+    #expect(player.currentTime == 120)
+    #expect(player.duration == 300)
+    #expect(player.bufferedPosition == 180)
+  }
+
   @Test func aTrackSkippedWhileItLoadedWasLeftAtItsOwnPosition() throws {
     let (player, _, callbacks) = try makePlayingFirstOfThree()
 
