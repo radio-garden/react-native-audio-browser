@@ -15,13 +15,8 @@ export class NowPlayingManager {
   // Event callback
   onNowPlayingChanged: (metadata: NowPlayingMetadata) => void = () => {}
 
-  /** @param current reads the current track and its duration at each render. */
-  constructor(
-    private readonly current: () => {
-      track: Track | undefined
-      duration: number
-    }
-  ) {}
+  /** @param current reads the current track at each render. */
+  constructor(private readonly current: () => Track | undefined) {}
 
   /** Sets the override, or clears it with `undefined`, and publishes. */
   updateNowPlaying(update: NowPlayingUpdate | undefined): void {
@@ -45,7 +40,7 @@ export class NowPlayingManager {
 
   /** The metadata as rendered, or undefined with no track. */
   getNowPlaying(): NowPlayingMetadata | undefined {
-    const { track, duration } = this.current()
+    const track = this.current()
     if (!track) return undefined
     const { flash, override } = this
 
@@ -57,7 +52,7 @@ export class NowPlayingManager {
       description: track.description,
       mediaId: getTrackIdentity(track) ?? track.path,
       genre: track.genre,
-      duration
+      duration: track.duration
     }
   }
 

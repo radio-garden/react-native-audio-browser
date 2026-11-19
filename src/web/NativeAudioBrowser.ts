@@ -247,10 +247,7 @@ export class NativeAudioBrowser
     this.favoriteManager = new FavoriteManager()
     this.navigationErrorManager = new NavigationErrorManager()
     this.optionsManager = new OptionsManager()
-    this.nowPlayingManager = new NowPlayingManager(() => ({
-      track: this.getActiveTrack(),
-      duration: this.getProgress().duration
-    }))
+    this.nowPlayingManager = new NowPlayingManager(() => this.getActiveTrack())
     this.remoteCommands = new RemoteCommandController(this)
 
     this.browserManager = new BrowserManager(

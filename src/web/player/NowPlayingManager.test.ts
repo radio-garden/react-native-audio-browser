@@ -9,7 +9,7 @@ const track = {
   album: 'Track Album'
 } as Track
 
-const playing = () => ({ track, duration: 0 })
+const playing = () => track
 
 describe('NowPlayingManager', () => {
   it('applies the same override fields on push and pull', () => {
@@ -44,6 +44,15 @@ describe('NowPlayingManager', () => {
       artist: 'Track Artist',
       album: 'Track Album'
     })
+  })
+
+  it("reports the track's own duration, or none when it has none", () => {
+    let current: Track = { ...track, duration: 30 }
+    const manager = new NowPlayingManager(() => current)
+    expect(manager.getNowPlaying()?.duration).toBe(30)
+
+    current = track
+    expect(manager.getNowPlaying()?.duration).toBeUndefined()
   })
 
   describe('flash', () => {
