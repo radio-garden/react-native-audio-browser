@@ -21,11 +21,11 @@ import type { PlaybackState } from '../../features'
  * `onPlaybackActiveTrackChanged`, and native emits those the other way round —
  * see the note in `NativeAudioBrowser.load`.
  *
- * Deliberate *commands* (stop, error) set their terminal state directly rather
- * than flowing through here — they are intentions, not observations. The two
- * iOS-only events `trackUnloaded` and `audioFrameDecoded` are omitted: web has
- * no unload-to-none source, and a decoded frame is indistinguishable from
- * `playing` in the browser.
+ * Deliberate *commands* (stop, error, emptying the queue) set their terminal
+ * state directly rather than flowing through here — they are intentions, not
+ * observations. The two iOS-only events `trackUnloaded` and `audioFrameDecoded`
+ * are omitted: web unloads to `none` only by command, and a decoded frame is
+ * indistinguishable from `playing` in the browser.
  */
 export type PlaybackEvent =
   | { type: 'trackLoading' }

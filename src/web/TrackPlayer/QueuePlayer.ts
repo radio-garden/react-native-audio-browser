@@ -179,22 +179,18 @@ export class QueuePlayer extends Player {
         break
       case 'emptied':
         this.current = undefined
-        this.stop()
+        this.halt(State.None)
         break
     }
   }
 
-  public stop(onComplete?: () => void): void {
-    super.stop(onComplete)
-  }
-
   public reset(): void {
     // Clear queue state synchronously so subsequent add()/load() calls
-    // see a clean slate. The async player.unload() in stop() can finish
+    // see a clean slate. The async player.unload() in halt() can finish
     // in the background — it only releases the Shaka source.
     this.queue.clear()
     this.current = undefined
-    this.stop()
+    this.halt(State.None)
   }
 
   public removeUpcomingTracks(): void {

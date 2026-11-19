@@ -1021,10 +1021,13 @@ export class NativeAudioBrowser
     this.clearSleepTimerIfFading()
   }
 
-  override stop(): void {
-    // `Player.stop()` cancels the load attempt, so an in-flight load's
-    // continuation cannot re-arm the player and revive it out of Stopped.
-    super.stop()
+  protected override halt(
+    state: 'stopped' | 'none',
+    onComplete?: () => void
+  ): void {
+    // `Player.halt()` cancels the load attempt, so an in-flight load's
+    // continuation cannot re-arm the player and revive it.
+    super.halt(state, onComplete)
     this.clearSleepTimerIfFading()
   }
 
@@ -1058,6 +1061,7 @@ export class NativeAudioBrowser
     // Before the queue is touched, so a call before `setupPlayer()` throws
     // rather than half-applying.
     this.requireElement()
+    if (tracks.length === 0) return this.reset()
     const hasStart =
       startIndex !== undefined && tracks[startIndex] !== undefined
     // Loading the start track supersedes the old one; a stop would drop the

@@ -417,21 +417,32 @@ export class Player {
   }
 
   public stop(onComplete?: () => void): void {
+    this.halt(State.Stopped, onComplete)
+  }
+
+  /**
+   * Unloads the player and drops the play intent, ending in `state`:
+   * `stopped` for a stop, `none` once the queue is emptied.
+   */
+  protected halt(
+    state: typeof State.Stopped | typeof State.None,
+    onComplete?: () => void
+  ): void {
     const player = this.requirePlayer()
 
     // Whatever was loading no longer owns the player: its continuations, at
     // either boundary, must not revive it.
     this.cancelLoadAttempt()
 
-    // Match Android: stop sets playWhenReady=false and state=stopped,
-    // but keeps the current track so play() can resume — from where it
-    // stopped, which ExoPlayer preserves across its own stop/prepare pair.
+    // Match Android: a stop keeps the current track so play() can resume —
+    // from where it stopped, which ExoPlayer preserves across its own
+    // stop/prepare pair.
     this.rememberResumePosition()
     this._isStopped = true
     this._loadInProgress = false
     this._pendingSeek = undefined
     this.playWhenReady = false
-    this.state = { state: State.Stopped }
+    this.state = { state }
 
     player
       .unload()
