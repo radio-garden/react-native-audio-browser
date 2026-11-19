@@ -206,7 +206,8 @@ export class QueueManager {
     if (insertBeforeIndex !== -1 && insertBeforeIndex !== undefined) {
       // Match Android/iOS, which throw here: a negative index other than the
       // -1 sentinel would splice from the end and mis-shift the current
-      // pointer; past-the-end would silently append under a lying index.
+      // pointer; past-the-end would silently append under a lying index. A
+      // fraction throws too, as `skip` does here, where native truncates it.
       if (
         !Number.isInteger(insertBeforeIndex) ||
         insertBeforeIndex < 0 ||
