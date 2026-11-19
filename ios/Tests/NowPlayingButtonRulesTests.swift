@@ -41,6 +41,12 @@ struct NowPlayingButtonRulesTests {
     #expect(NowPlayingButtonRules.rate(after: 1, in: []) == nil)
   }
 
+  @Test func queueItemPick_isAllowedUnlessTheCapabilityIsFalse() {
+    #expect(NowPlayingButtonRules.queueItemPickAllowed(nil))
+    #expect(NowPlayingButtonRules.queueItemPickAllowed(true))
+    #expect(!NowPlayingButtonRules.queueItemPickAllowed(false))
+  }
+
   @Test func upNext_needsMoreThanOneTrack_withTheCapabilityUnsetOrOn() {
     #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, trackCount: 2))
     #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: true, trackCount: 2))

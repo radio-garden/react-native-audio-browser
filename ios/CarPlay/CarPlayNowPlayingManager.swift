@@ -331,7 +331,7 @@ final class CarPlayNowPlayingManager {
       listItem(track) { [weak self] _, completion in
         defer { completion() }
         // The list can outlive the capability: it stays pushed when the button turns off.
-        guard let self, audioBrowser.playerOptions.capabilities.skipToQueueItem != false else { return }
+        guard let self, NowPlayingButtonRules.queueItemPickAllowed(audioBrowser.playerOptions.capabilities.skipToQueueItem) else { return }
         logger.info("Skipping to track at index \(index): \(track.title)")
         do {
           try player?.skipTo(index, playWhenReady: true)

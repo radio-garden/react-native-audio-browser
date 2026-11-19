@@ -190,36 +190,6 @@ handleRemoteNext(() => {
 handleRemoteNext(undefined)
 ```
 
-### Picking a queue item
-
-Next and previous are not the only way an external surface changes the track.
-A surface that draws the queue lets the listener pick any item in it: the
-Android Auto queue list, a watch or a Bluetooth now-playing list on Android,
-and the CarPlay Up Next list on iOS. A pick has no `handleRemote*` override. It
-is governed by the `skipToQueueItem` capability, which is on by default:
-
-```ts
-updateOptions({
-  capabilities: {
-    skipToNext: false,
-    skipToPrevious: false,
-    skipToQueueItem: false
-  }
-})
-```
-
-With `skipToQueueItem: false`:
-
-- **Android** stops offering the command to controllers, and drops a pick that
-  a controller sends anyway. A seek within the current track is not affected.
-- **iOS** turns the CarPlay Up Next button off, whatever
-  `ios.carPlayUpNextButton` says. Rows of an Up Next list that is already open
-  do nothing.
-- **Web** has no such surface, so the capability is ignored.
-
-Your own calls are never restricted: [`skip`](/api/features/queue/#skip) and
-[`setQueue`](/api/features/queue/#setqueue) work whatever the capability says.
-
 Overrides exist for `play`, `pause`, `next`, `previous`, `stop`, `seek`,
 `jumpForward`, and `jumpBackward`. The ones carrying data receive a typed event:
 
@@ -252,6 +222,41 @@ on the platform:
   handler's `interval`. To jump by the interval on Android, override the control
   and call `seekBy(±interval)`.
 - **Web** seeks by the offset the browser sends, or 10s when it sends none.
+
+### Picking a queue item
+
+Next and previous are not the only way an external surface changes the track.
+A surface that draws the queue lets the listener pick any item in it: the
+Android Auto queue list, a watch or a Bluetooth now-playing list on Android,
+and the CarPlay Up Next list on iOS. A pick has no `handleRemote*` override. It
+is governed by the `skipToQueueItem` capability, which is on by default:
+
+```ts
+updateOptions({
+  capabilities: {
+    skipToNext: false,
+    skipToPrevious: false,
+    skipToQueueItem: false
+  }
+})
+```
+
+With `skipToQueueItem: false`:
+
+- **Android** stops offering the command to controllers, and drops a pick that
+  a controller sends anyway. A controller may still show the queue; a pick in
+  it does nothing. A seek within the current track is not affected.
+- **iOS** turns the CarPlay Up Next button off, whatever
+  `ios.carPlayUpNextButton` says. Rows of an Up Next list that is already open
+  do nothing.
+- **Web** has no such surface, so the capability is ignored.
+
+Your own calls are never restricted: [`skip`](/api/features/queue/#skip) and
+[`setQueue`](/api/features/queue/#setqueue) work whatever the capability says.
+
+The capability covers the pick of a queue item, not queue edits: on Android a
+controller that replaces or reorders the queue's items can still change what
+plays.
 
 ## Listening to presses
 

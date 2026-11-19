@@ -61,9 +61,13 @@ export interface PlayerCapabilities {
    *
    * - Android: a controller's pick of a queue item (the Android Auto queue
    *   list, a watch, a Bluetooth now-playing list). When `false`, the session
-   *   stops offering the command and refuses one sent anyway.
+   *   stops offering the command and refuses one sent anyway. A controller may
+   *   still show the queue; a pick in it does nothing.
    * - iOS: the CarPlay Up Next list. When `false`, the Up Next button is off
    *   whatever `ios.carPlayUpNextButton` says.
+   *
+   * Covers the pick of a queue item, not queue edits: on Android a controller
+   * that replaces or reorders the queue's items can still change what plays.
    *
    * `skip()` and `setQueue()` called by the app are never restricted.
    * @default true
