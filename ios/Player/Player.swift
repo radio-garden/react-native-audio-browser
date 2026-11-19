@@ -405,6 +405,8 @@ final class Player {
       // must not play it under the error.
       engine.pause()
       retry.cancel()
+      // The intent holds through .error: no pause follows to request the release.
+      if playWhenReady { evaluateSessionRelease() }
     default: break
     }
 
@@ -479,14 +481,18 @@ final class Player {
     }
   }
 
-  /// Requests a session release once playback is deliberately stopped: no intent, no
-  /// interruption to resume from, and no retry pending, whose reconnect needs the session. The
-  /// engine debounces it.
+  /// Whether nothing needs the audio session: playback is deliberately stopped or has failed for
+  /// good (`.error` keeps the intent), with no interruption to resume from and no retry pending,
+  /// whose reconnect needs the session.
+  var canReleaseAudioSession: Bool {
+    (!playWhenReady || state == .error)
+      && !shouldResumeAfterInterruption
+      && retry.pendingTask == nil
+  }
+
+  /// Requests a session release when nothing needs the session. The engine debounces it.
   private func evaluateSessionRelease() {
-    guard !playWhenReady,
-          !shouldResumeAfterInterruption,
-          retry.pendingTask == nil
-    else { return }
+    guard canReleaseAudioSession else { return }
     engine.scheduleAudioSessionRelease()
   }
 

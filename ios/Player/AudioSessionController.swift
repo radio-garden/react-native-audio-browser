@@ -4,7 +4,7 @@ import NitroModules
 /// What `AudioSessionController` tells the player about the audio session.
 @MainActor
 protocol AudioSessionPlayer: AnyObject {
-  var playWhenReady: Bool { get }
+  var canReleaseAudioSession: Bool { get }
   var willResumeAfterInterruption: Bool { get }
   func handleInterruptionBegan()
   func handleInterruptionEnded(shouldResume: Bool)
@@ -108,7 +108,7 @@ final class AudioSessionController {
   func scheduleRelease() {
     releaseWork?.cancel()
     let release = DispatchWorkItem { [weak self] in
-      guard let self, player?.playWhenReady == false else { return }
+      guard let self, player?.canReleaseAudioSession == true else { return }
       releaseWork = nil
       activationQueue.async {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
