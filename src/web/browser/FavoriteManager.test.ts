@@ -82,3 +82,44 @@ describe('FavoriteManager identity matching', () => {
     expect(tracks?.[1]?.favorited).toBeUndefined()
   })
 })
+
+describe('FavoriteManager restamping', () => {
+  it('setFavorites reports the identities whose state changed', () => {
+    const manager = new FavoriteManager()
+    const changes = [['a', 'b'], ['b', 'a'], ['b', 'c'], []].map((ids) => [
+      ...manager.setFavorites(ids)
+    ])
+    expect(changes.map((ids) => ids.sort())).toEqual([
+      ['a', 'b'],
+      [],
+      ['a', 'c'],
+      ['b', 'c']
+    ])
+  })
+
+  it('overwrites the flag of a track whose identity changed', () => {
+    const manager = new FavoriteManager()
+    manager.setFavorites(['abc123'])
+    const changed = manager.setFavorites([])
+    expect(
+      manager.restamp({ ...withId, favorited: true }, changed)?.favorited
+    ).toBe(false)
+  })
+
+  it('leaves a track whose identity did not change, or that agrees', () => {
+    const manager = new FavoriteManager()
+    const changed = manager.setFavorites(['abc123'])
+    expect(manager.restamp({ ...srcOnly, favorited: true }, changed)).toBe(
+      undefined
+    )
+    expect(manager.restamp({ ...withId, favorited: true }, changed)).toBe(
+      undefined
+    )
+  })
+
+  it('leaves an unset flag on a track that is not a favorite', () => {
+    const manager = new FavoriteManager()
+    manager.setFavorites(['abc123'])
+    expect(manager.restamp(withId, manager.setFavorites([]))).toBe(undefined)
+  })
+})

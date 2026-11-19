@@ -579,8 +579,27 @@ export class NativeAudioBrowser
     this.browserManager.invalidateAllContent()
   }
 
+  /**
+   * Restamps `favorited` on every copy of a track whose favorite state
+   * changed: the current content, then the queue and the active track in
+   * place, which is not a track change.
+   */
   setFavorites(favorites: string[]): void {
-    this.favoriteManager.setFavorites(favorites)
+    const changed = this.favoriteManager.setFavorites(favorites)
+    if (changed.size === 0) return
+    const restamp = (track: Track) =>
+      this.favoriteManager.restamp(track, changed)
+    this.browserManager.restampContent(restamp)
+
+    let replaced = false
+    this.queue.tracks.forEach((track, index) => {
+      const updated = restamp(track)
+      if (!updated) return
+      this.queue.replaceTrack(index, updated)
+      if (track === this.current) this.replaceCurrent(updated)
+      replaced = true
+    })
+    if (replaced) this.emitQueueChanged()
   }
 
   // MARK: Player init and config

@@ -133,6 +133,28 @@ export class BrowserManager {
   }
 
   /**
+   * Replaces each track of the current content that `restamp` returns a
+   * track for, and emits the content when any was replaced.
+   */
+  restampContent(restamp: (track: Track) => Track | undefined): void {
+    const sections = this._content?.sections
+    if (!this._content || !sections) return
+    let replaced = false
+    const updated = sections.map((section) => ({
+      ...section,
+      children: section.children.map((track) => {
+        const replacement = restamp(track)
+        if (!replacement) return track
+        replaced = true
+        return replacement
+      })
+    }))
+    if (!replaced) return
+    this._content = { ...this._content, sections: updated }
+    this.onContentChanged(this._content)
+  }
+
+  /**
    * Gets the current browser configuration.
    */
   get configuration(): NativeBrowserConfiguration {
