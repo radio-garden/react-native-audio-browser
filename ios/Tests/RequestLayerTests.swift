@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import AudioBrowserTestable
@@ -79,10 +80,23 @@ struct RequestLayerTests {
     #expect(applied == Config(path: "/page", baseUrl: "https://b"))
   }
 
-  @Test func aFailingTransformThrows() async {
-    struct Boom: Error {}
-    await #expect(throws: Boom.self) {
+  @Test func aFailingTransformThrowsACallbackErrorWithItsMessage() async {
+    struct Boom: LocalizedError {
+      var errorDescription: String? { "token expired" }
+    }
+    do {
       _ = try await RequestLayer.apply(Config(), transforms: [{ _ in throw Boom() }], to: Config())
+      Issue.record("apply returned")
+    } catch let BrowserError.callbackError(message) {
+      #expect(message == "token expired")
+    } catch {
+      Issue.record("threw \(error)")
+    }
+  }
+
+  @Test func aCancelledTransformStaysACancellation() async {
+    await #expect(throws: CancellationError.self) {
+      _ = try await RequestLayer.apply(Config(), transforms: [{ _ in throw CancellationError() }], to: Config())
     }
   }
 

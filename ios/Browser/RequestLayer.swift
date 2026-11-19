@@ -76,7 +76,8 @@ enum RequestLayer {
   }
 
   /// Applies one layer. With transforms, they replace its static fields entirely, each handed
-  /// the one before's result; without, its static fields apply over `base`.
+  /// the one before's result; without, its static fields apply over `base`. A transform that
+  /// throws anything but a cancellation throws `BrowserError.callbackError`.
   nonisolated(nonsending) static func apply<C: RequestFields>(
     _ layer: C,
     transforms: [nonisolated(nonsending)(C) async throws -> C],
@@ -85,7 +86,13 @@ enum RequestLayer {
     guard !transforms.isEmpty else { return applyStatic(layer, to: base) }
     var result = base
     for transform in transforms {
-      result = try await transform(result)
+      do {
+        result = try await transform(result)
+      } catch let error as CancellationError {
+        throw error
+      } catch {
+        throw BrowserError.callbackError(error.localizedDescription)
+      }
     }
     return result
   }
