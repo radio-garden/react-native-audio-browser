@@ -3,7 +3,12 @@ import type { Track } from '../types'
 import { NativeAudioBrowser } from './NativeAudioBrowser'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
-type Resolved = { tracks: Track[]; startIndex: number; startPositionMs: number }
+type Resolved = {
+  tracks: Track[]
+  startIndex: number
+  startPositionMs: number
+  sourcePath?: string
+}
 
 /** A browser whose queue expansions resolve when the test says so. */
 class TestBrowser extends NativeAudioBrowser {
@@ -38,7 +43,8 @@ class TestBrowser extends NativeAudioBrowser {
     this.pending.get(track.src!)!({
       tracks: queue,
       startIndex: queue.indexOf(track),
-      startPositionMs: 0
+      startPositionMs: 0,
+      sourcePath: BrowserPathHelper.stripTrackId(track.path!)
     })
     await tick()
   }
@@ -52,7 +58,7 @@ function contextualTrack(parentPath: string, id: string): Track {
     id,
     src,
     title: id,
-    path: BrowserPathHelper.build(parentPath, src)
+    path: BrowserPathHelper.build(parentPath, id)
   }
 }
 
@@ -77,9 +83,6 @@ describe('NativeAudioBrowser track selection order', () => {
     const y2 = contextualTrack('/p2', 'y2')
     browser.navigateTrack(y)
     await browser.resolveExpansion(y, [y, y2])
-    ;(
-      browser as unknown as { browserManager: { queueSourcePath: string } }
-    ).browserManager.queueSourcePath = '/p2'
 
     browser.navigateTrack(x)
     browser.navigateTrack(y2)
@@ -87,6 +90,29 @@ describe('NativeAudioBrowser track selection order', () => {
 
     expect(browser.getQueue().map((track) => track.id)).toEqual(['y', 'y2'])
     expect(browser.getActiveTrack()?.id).toBe('y2')
+  })
+
+  it('a superseded expansion does not record its parent as the queue source', async () => {
+    const browser = new TestBrowser()
+    const zOnP1 = contextualTrack('/p1', 'z')
+    const zOnP2 = contextualTrack('/p2', 'z')
+    browser.navigateTrack(x)
+    browser.navigateTrack(y)
+    await browser.resolveExpansion(y, [y, zOnP2])
+    await browser.resolveExpansion(x, [x, zOnP1])
+
+    // z on /p1 is not the queue's: its selection expands /p1 rather than
+    // skipping to the copy of z the /p2 queue holds.
+    browser.navigateTrack(zOnP1)
+    await tick()
+    expect(browser.getActiveTrack()?.path).toBe(y.path)
+
+    await browser.resolveExpansion(zOnP1, [x, zOnP1])
+
+    expect(browser.getQueue().map((track) => track.path)).toEqual([
+      x.path,
+      zOnP1.path
+    ])
   })
 
   it('a pending expansion does not replace a later track with no path', async () => {

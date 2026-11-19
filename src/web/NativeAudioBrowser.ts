@@ -111,6 +111,11 @@ export class NativeAudioBrowser
     typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
   private offlineHandler: (() => void) | undefined
+  /**
+   * Counts the selections of a track to play, so a queue expansion that
+   * resolves after a later selection can tell it is no longer the latest.
+   */
+  private trackSelection = 0
   private sleepFader = new VolumeFader(
     () => this.getVolume(),
     (volume) => this.setVolume(volume)
@@ -471,47 +476,6 @@ export class NativeAudioBrowser
   }
 
   /**
-   * Expands a contextual URL into a full queue and starts playback.
-   *
-   * @param track The track with contextual URL
-   * @param selection The selection's number, from {@link trackSelection}
-   * @returns false if expansion yielded nothing and the track is still to be
-   *   loaded on its own; true if the queue played or a later selection took over
-   */
-  private async expandQueueAndPlay(
-    track: Track,
-    selection: number
-  ): Promise<boolean> {
-    const result = await this.browserManager.resolveMediaItemsForPlayback(
-      [track],
-      0,
-      0
-    )
-
-    if (selection !== this.trackSelection) {
-      return true
-    }
-
-    if (result.tracks.length === 0) {
-      return false
-    }
-
-    await this.handleLoad(track, result.tracks, result.startIndex, () => {
-      // setQueue stops playback, so start it explicitly: selecting a track
-      // is an intent to play (matches the skip-to-existing-queue-track path).
-      this.setQueue(result.tracks, result.startIndex)
-      this.play()
-    })
-    return true
-  }
-
-  /**
-   * Counts the selections of a track to play, so a queue expansion that
-   * resolves after a later selection can tell it is no longer the latest.
-   */
-  private trackSelection = 0
-
-  /**
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
@@ -539,8 +503,23 @@ export class NativeAudioBrowser
           }
           // Otherwise expand the queue from the contextual URL, falling back to
           // loading the single track if expansion yields nothing.
-          if (await this.expandQueueAndPlay(track, selection)) return
-          await this.playSingleTrack(track)
+          const result = await this.browserManager.resolveMediaItemsForPlayback(
+            [track],
+            0,
+            0
+          )
+          if (selection !== this.trackSelection) return
+          if (result.tracks.length === 0) {
+            await this.playSingleTrack(track)
+            return
+          }
+          this.browserManager.queueSourcePath = result.sourcePath
+          await this.handleLoad(track, result.tracks, result.startIndex, () => {
+            // setQueue stops playback, so start it explicitly: selecting a track
+            // is an intent to play (matches the skip-to-existing-queue-track path).
+            this.setQueue(result.tracks, result.startIndex)
+            this.play()
+          })
           return
         }
 
