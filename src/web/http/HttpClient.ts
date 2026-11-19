@@ -14,7 +14,7 @@ function requestError(
 ): RequestError {
   const error = new Error(message) as RequestError
   error.code = code
-  error.statusCode = statusCode
+  if (statusCode !== undefined) error.statusCode = statusCode
   return error
 }
 
@@ -30,19 +30,17 @@ const TIMEOUT_MS = 30_000
  */
 export class HttpClient {
   /**
-   * Executes an HTTP request and returns its JSON body as `decode`, a
-   * synchronous function, reads it.
+   * Executes an HTTP request and returns its JSON body as `decode` reads it.
    *
    * Rejects with an error carrying a navigation error `code`: `http-error`
    * with `statusCode` for a non-2xx status, and for a 2xx body that is not
-   * JSON or that `decode` throws on; `network-error` when no complete response
-   * arrives.
+   * JSON or that `decode` throws or rejects on; `network-error` when no
+   * complete response arrives.
    */
   async executeRequest<T>(
     config: RequestConfig,
     decode: (body: unknown) => T
   ): Promise<T> {
-    // Use RequestConfigBuilder to build the URL
     const url = RequestConfigBuilder.buildUrl(config)
     const headers = config.headers ?? {}
     const method = config.method ?? 'GET'
@@ -66,7 +64,6 @@ export class HttpClient {
           `Request timed out after ${TIMEOUT_MS}ms`
         )
       }
-      // Network error (fetch failed, CORS, etc.)
       console.error(`Network error fetching ${url}:`, error)
       throw requestError(
         'network-error',
@@ -85,7 +82,7 @@ export class HttpClient {
     }
 
     try {
-      return decode(JSON.parse(text))
+      return await decode(JSON.parse(text))
     } catch (error: unknown) {
       throw requestError(
         'http-error',

@@ -45,6 +45,20 @@ describe('HttpClient.executeRequest', () => {
     })
   })
 
+  it('rejects with http-error and the status when an async decoder rejects', async () => {
+    answer('{}', { status: 200 })
+
+    await expect(
+      new HttpClient().executeRequest(config, async () => {
+        throw new Error('expected a page object')
+      })
+    ).rejects.toMatchObject({
+      code: 'http-error',
+      statusCode: 200,
+      message: 'expected a page object'
+    })
+  })
+
   it('rejects with http-error and the status for a non-2xx response', async () => {
     answer('Not Found', { status: 404, statusText: 'Not Found' })
 
