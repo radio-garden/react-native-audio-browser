@@ -147,7 +147,6 @@ export class RemoteCommandController {
    * the scrubber from them on their own until the next report.
    */
   syncPositionState(): void {
-    if (!this.mediaSession.reportsPosition) return
     const { duration, position } = this.host.getProgress()
     this.mediaSession.setPositionState({
       duration,

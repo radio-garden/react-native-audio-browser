@@ -353,7 +353,7 @@ export class NativeAudioBrowser
     this.remoteCommands.setMetadata(metadata)
   }
 
-  protected override onTimelineChanged(): void {
+  protected override onPlaybackClockChanged(): void {
     this.syncPositionState()
   }
 
@@ -744,7 +744,7 @@ export class NativeAudioBrowser
 
       try {
         // Once, here: duration reaches the media session through
-        // `onTimelineChanged()`, so only metadata needs publishing.
+        // `onPlaybackClockChanged()`, so only metadata needs publishing.
         // Android publishes from the same transition handler that announces.
         const nowPlaying = this.getNowPlaying()
         if (nowPlaying) {

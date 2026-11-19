@@ -174,13 +174,4 @@ describe('RemoteCommandController', () => {
       playbackRate: 1.5
     })
   })
-
-  it('leaves the host unread when the browser takes no position state', () => {
-    vi.stubGlobal('navigator', {})
-    const host = makeHost()
-    new RemoteCommandController(host).syncPositionState()
-
-    expect(host.getProgress).not.toHaveBeenCalled()
-    expect(host.getRate).not.toHaveBeenCalled()
-  })
 })

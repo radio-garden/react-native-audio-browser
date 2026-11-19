@@ -15,6 +15,7 @@ class TestBrowser extends NativeAudioBrowser {
     super()
     // Minimal fakes so transport calls run without setupPlayer/DOM.
     this.element = {
+      buffered: { length: 0 },
       play: () => {
         this.playCalls++
         return Promise.resolve()
