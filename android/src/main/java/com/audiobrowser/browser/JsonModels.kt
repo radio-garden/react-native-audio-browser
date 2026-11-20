@@ -56,6 +56,7 @@ data class JsonResolvedTrack(
   val src: String? = null,
   val style: JsonElement? = null,
   val disabled: Boolean? = null,
+  val favorited: Boolean? = null,
   val live: Boolean? = null,
   val icyCharset: String? = null,
   val carPlaySiriListButton: String? = null,
@@ -79,6 +80,7 @@ data class JsonTrack(
   val request: JsonTrackRequest? = null,
   val style: JsonElement? = null,
   val disabled: Boolean? = null,
+  val favorited: Boolean? = null,
   val live: Boolean? = null,
   val icyCharset: String? = null,
 )
@@ -165,7 +167,7 @@ fun JsonResolvedTrack.toNitro(requestedPath: String): ResolvedTrack {
     src = src,
     style = style.toSectionStyle(),
     disabled = disabled,
-    favorited = null,
+    favorited = favorited,
     live = live,
     icyCharset = icyCharset,
   )
@@ -189,7 +191,7 @@ fun JsonTrack.toNitro(): Track {
     src = src,
     style = style.toTrackStyle(),
     disabled = disabled,
-    favorited = null,
+    favorited = favorited,
     live = live,
     icyCharset = icyCharset,
   )

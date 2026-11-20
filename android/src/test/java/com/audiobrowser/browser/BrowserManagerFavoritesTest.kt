@@ -3,7 +3,11 @@ package com.audiobrowser.browser
 import com.audiobrowser.TestFixtures.resolvedTrack
 import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.TestFixtures.track
+import com.audiobrowser.TestFixtures.transformableConfig
+import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import kotlinx.coroutines.runBlocking
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -91,6 +95,51 @@ class BrowserManagerFavoritesTest {
     val resolved = browserManager.resolve("/home")
 
     assertEquals(mapOf("A" to false), favoritedByTitle(resolved.flattenedChildren?.toTypedArray()))
+  }
+
+  @Test
+  fun `favorited in an HTTP route's response wins over hydration`() = runBlocking {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setBody(
+          """{"path":"/home","title":"Home","children":[
+            {"title":"A","src":"https://s/a.mp3","favorited":true},
+            {"title":"B","src":"https://s/b.mp3","favorited":false}
+          ]}"""
+        )
+    )
+    server.start()
+    try {
+      browserManager.config =
+        BrowserConfig(
+          request = transformableConfig(baseUrl = server.url("/").toString().trimEnd('/')),
+          routes =
+            arrayOf(
+              NativeRouteEntry(
+                path = "/home",
+                browseCallback = null,
+                browseConfig = transformableConfig(),
+                browseStatic = null,
+                searchCallback = null,
+                searchConfig = null,
+                media = null,
+                artwork = null,
+              )
+            ),
+        )
+      browserManager.setFavoriteEnabled(true)
+      browserManager.setFavorites(listOf("https://s/b.mp3"))
+
+      val resolved = browserManager.resolve("/home")
+
+      assertEquals(
+        mapOf("A" to true, "B" to false),
+        favoritedByTitle(resolved.flattenedChildren?.toTypedArray()),
+      )
+    } finally {
+      server.shutdown()
+    }
   }
 
   @Test
