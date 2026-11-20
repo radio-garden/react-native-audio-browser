@@ -184,7 +184,11 @@ internal class RemoteSwitchingPlayer(
 
   private fun noteReport(remote: Route.Remote) {
     val load = remote.load as? Load.Playing ?: return
-    if (!reportsPosition(remote, load)) return
+    if (!reportsPosition(remote, load)) {
+      // Where it stopped reporting is the last it can be known to have played to.
+      load.lastPosition = PositionSupplier.getConstant(load.lastPosition.get())
+      return
+    }
     val receiver = remote.receiver
     val running =
       PositionSupplier.getExtrapolating(
@@ -573,7 +577,9 @@ internal class RemoteSwitchingPlayer(
               .setContentPositionMs(position(load.positionMs))
           is Load.Ended ->
             setPlaybackState(STATE_ENDED).setContentPositionMs(position(load.positionMs))
-          is Load.Playing -> if (!holds) setPlaybackState(STATE_IDLE).setContentPositionMs(0)
+          is Load.Playing ->
+            if (!holds)
+              setPlaybackState(STATE_IDLE).setContentPositionMs(position(positionOn(remote)))
         }
         if (queue.isEmpty) setPlaybackState(STATE_IDLE)
         if (pendingAutoTransition) {
@@ -640,7 +646,7 @@ internal class RemoteSwitchingPlayer(
     when (val load = remote.load) {
       is Load.Idle -> load(remote, load.positionMs)
       is Load.Failed -> load(remote, load.positionMs)
-      is Load.Playing -> if (!receiverHolds(remote, load.item)) load(remote, C.TIME_UNSET)
+      is Load.Playing -> if (!receiverHolds(remote, load.item)) load(remote, positionOn(remote))
       else -> Unit
     }
     return done()

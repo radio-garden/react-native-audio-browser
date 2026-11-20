@@ -334,6 +334,35 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a handback long after the receiver went idle resumes where it stopped`() {
+    playOnReceiver(positionMs = 70_000)
+
+    // Stopped from another sender: idle, which reports no failure.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.update()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(60))
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+  }
+
+  @Test
+  fun `a prepare after the receiver dropped the item loads it where it last played`() {
+    playOnReceiver(positionMs = 70_000)
+    remote.player.item = null
+    remote.player.update()
+    idle()
+    assertEquals(70_000, player.currentPosition)
+
+    player.prepare()
+    idle()
+
+    assertEquals(70_000, remote.player.loads.last().positionMs)
+  }
+
+  @Test
   fun `a live item failing on the receiver resumes at the phone's live edge`() {
     live += "a"
     playOnReceiver(positionMs = 70_000)

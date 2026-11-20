@@ -143,6 +143,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var positionMs = 0L
   var durationMs = C.TIME_UNSET
   var speed = 1f
+  /** Overrides the position of every state, earlier ones too, until a load or a seek. */
   private var quietPositionMs: Long? = null
   var intent = false
   var readiness = STATE_IDLE
