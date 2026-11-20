@@ -84,7 +84,11 @@ export class Player {
   protected _state: Playback = { state: State.None }
   protected _isStopped = false
   protected _loadInProgress = false
-  protected _pendingSeek: number | undefined
+  /**
+   * The seeks that arrived during a load. Without a `position`, `offset`
+   * applies to wherever the load itself starts.
+   */
+  protected _pendingSeek: { position?: number; offset: number } | undefined
   /**
    * Headers for the track currently loaded, applied by the request filter
    * installed in `setupPlayer`. On the instance rather than per request so the
@@ -400,7 +404,9 @@ export class Player {
 
         // Execute any pending seek that arrived during loading
         if (this._pendingSeek !== undefined) {
-          this.requireElement().currentTime = this._pendingSeek
+          const element = this.requireElement()
+          const { position = element.currentTime, offset } = this._pendingSeek
+          element.currentTime = position + offset
           this._pendingSeek = undefined
         }
 
@@ -618,7 +624,10 @@ export class Player {
 
   public seekBy(offset: number): void {
     if (this._loadInProgress) {
-      this._pendingSeek = (this._pendingSeek ?? 0) + offset
+      this._pendingSeek = {
+        position: this._pendingSeek?.position,
+        offset: (this._pendingSeek?.offset ?? 0) + offset
+      }
       return
     }
     const element = this.requireElement()
@@ -627,7 +636,7 @@ export class Player {
 
   public seekTo(seconds: number): void {
     if (this._loadInProgress) {
-      this._pendingSeek = seconds
+      this._pendingSeek = { position: seconds, offset: 0 }
       return
     }
     const element = this.requireElement()
