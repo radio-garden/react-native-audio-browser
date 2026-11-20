@@ -192,6 +192,17 @@ class TransformingDataSourceTest {
   }
 
   @Test
+  fun `a src with a scheme opens as it is under a base url`() {
+    val src = "content://media/external/audio/media/42"
+    val factory =
+      TransformingDataSource.Factory(upstreamFactory) { config("https://api.example.com", src) }
+
+    factory.createDataSource().open(DataSpec(src.toUri()))
+
+    assertEquals(src, openedUrls.last())
+  }
+
+  @Test
   fun `a progressive read from the start asks for an open-ended range`() {
     assertEquals(listOf("bytes=0-"), rangesOf(progressive()))
   }

@@ -60,4 +60,25 @@ class BrowserPathHelperTest {
     )
     assertEquals(NavigationErrorKind.BROWSE, BrowserPathHelper.navigationErrorKind("/__searchable"))
   }
+
+  @Test
+  fun `buildUrl returns a url with a scheme without the base`() {
+    val base = "https://api.example.com"
+    val urls =
+      listOf(
+        "HTTPS://other.example.com/a.mp3",
+        "content://media/external/audio/media/42",
+        "file:///sdcard/Music/a.mp3",
+        "android.resource://com.example.app/raw/chime",
+        "data:image/png;base64,iVBORw0KGgo=",
+      )
+    urls.forEach { assertEquals(it, BrowserPathHelper.buildUrl(base, it)) }
+  }
+
+  @Test
+  fun `buildUrl keeps a path with a colon after its first slash relative`() {
+    val base = "https://api.example.com"
+    assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "/shows/a:b"))
+    assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "shows/a:b"))
+  }
 }

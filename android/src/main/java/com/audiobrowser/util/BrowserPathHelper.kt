@@ -11,6 +11,8 @@ import java.net.URLEncoder
  * playable-only track while keeping its parent for queue restoration (docs/adr/0009).
  */
 object BrowserPathHelper {
+  private val URI_SCHEME = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
+
   const val ROOT_PATH = "/__root"
 
   /** Full search paths are `/__search?q=<query>`; see [createSearchPath]. */
@@ -117,15 +119,11 @@ object BrowserPathHelper {
   }
 
   /**
-   * Joins [baseUrl] and [path] with exactly one slash. Returns [path] unchanged when it is already
-   * an http(s) URL or [baseUrl] is null.
+   * Joins [baseUrl] and [path] with exactly one slash. Returns [path] unchanged when it has a URI
+   * scheme (`content:`, `file:`, `HTTPS:`, …) or [baseUrl] is null.
    */
   fun buildUrl(baseUrl: String?, path: String): String {
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path
-    }
-
-    if (baseUrl == null) {
+    if (baseUrl == null || URI_SCHEME.containsMatchIn(path)) {
       return path
     }
 
