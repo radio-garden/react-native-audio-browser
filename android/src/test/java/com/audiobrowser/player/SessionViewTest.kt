@@ -138,7 +138,7 @@ class SessionViewTest {
   }
 
   @Test
-  fun `a reconnect attempt tells the session nothing it was already told`() {
+  fun `a reconnect attempt's events tell the session nothing it was already told`() {
     val server = ServerSocket(0)
     val connections = AtomicInteger()
     val drop = CountDownLatch(1)
@@ -205,7 +205,11 @@ class SessionViewTest {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
-    session = MediaSession.Builder(context, player.forwardingPlayer).build()
+    // Media3's 3 s re-sends run while the engine loads: a slow connection adds them to the counts.
+    session =
+      MediaSession.Builder(context, player.forwardingPlayer)
+        .setPeriodicPositionUpdateEnabled(false)
+        .build()
     player.setMediaSession(session)
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters
