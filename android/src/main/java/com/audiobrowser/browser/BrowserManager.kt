@@ -937,25 +937,6 @@ class BrowserManager {
     return tabs
   }
 
-  /**
-   * Resolves the tabs, then returns the path a configuration opens at: [configured], else the first
-   * tab's, else "/". A failed tabs query keeps the previous tabs and falls back as if there were
-   * none. Waits on JS callbacks: never call it through runBlocking from a Nitro setter, which runs
-   * on the JS thread those callbacks need.
-   */
-  suspend fun startPath(configured: String?): String? {
-    val tabs =
-      try {
-        queryTabs()
-      } catch (e: CancellationException) {
-        throw e
-      } catch (e: Exception) {
-        Timber.e(e, "Failed to query the tabs")
-        emptyArray()
-      }
-    return configured ?: if (tabs.isNotEmpty()) tabs[0].path else "/"
-  }
-
   companion object {
     internal const val DEFAULT_ROUTE_PATH = "__default__"
 

@@ -100,6 +100,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
@@ -384,6 +385,28 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     return _configuration.routes?.any { it.path != BrowserManager.SEARCH_ROUTE_PATH } == true
   }
 
+  // Suspends because queryTabs() invokes JS callbacks, which run on the JS thread. Never call it
+  // through runBlocking from a Nitro setter: that runs on the JS thread and deadlocks waiting for
+  // callbacks that need it.
+  private suspend fun getDefaultPath(): String? {
+    return try {
+      browserManager.config = buildConfig()
+      val tabs = browserManager.queryTabs()
+      if (tabs.isNotEmpty()) {
+        Timber.d("Using first tab as default path: ${tabs[0].path}")
+        tabs[0].path
+      } else {
+        Timber.d("Using root path as default: /")
+        "/"
+      }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to get default path, falling back to /")
+      "/"
+    }
+  }
+
   // ============================================================================
   // MARK: Browser Properties
   // ============================================================================
@@ -399,7 +422,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
         navigationJob =
           mainScope.launch {
-            val path = browserManager.startPath(value) ?: return@launch
+            val path = value ?: getDefaultPath() ?: return@launch
             try {
               browserManager.navigate(path)
             } catch (e: CancellationException) {
@@ -437,8 +460,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       navigationJob?.cancel()
 
       navigationJob =
-        mainScope.launch {
-          val path = browserManager.startPath(value.path) ?: return@launch
+        mainScope.launchConfigurationStart(value.path, browserManager::queryTabs) { path ->
           try {
             browserManager.navigate(path)
           } catch (e: CancellationException) {
@@ -1602,4 +1624,21 @@ private fun httpStatusText(statusCode: Int): String {
     504 -> "Gateway Timeout"
     else -> "Server Error"
   }
+}
+
+/**
+ * Starts a configuration: queries the tabs, and navigates to [configuredPath], else the first
+ * tab's, else "/". A failed tabs query keeps the previous tabs and falls back as if there were
+ * none. Cancelling the returned navigation, as a later navigation does, leaves the tabs query
+ * running.
+ */
+internal fun CoroutineScope.launchConfigurationStart(
+  configuredPath: String?,
+  queryTabs: suspend () -> Array<Track>,
+  navigate: suspend (String) -> Unit,
+): Job {
+  val tabs = async {
+    runCatching { queryTabs() }.onFailure { Timber.e(it, "Querying the tabs failed") }.getOrNull()
+  }
+  return launch { navigate(configuredPath ?: tabs.await()?.firstOrNull()?.path ?: "/") }
 }
