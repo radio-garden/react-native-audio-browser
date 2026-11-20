@@ -13,6 +13,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.StuckPlayerException
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import com.audiobrowser.Callbacks
+import com.audiobrowser.ReconnectHangingServer
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
@@ -24,9 +25,9 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
+import java.io.Closeable
 import java.io.IOException
 import java.net.ServerSocket
-import java.net.Socket
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -76,7 +77,7 @@ class PlayerRetryTest {
   private val scope = CoroutineScope(Dispatchers.Unconfined)
   private val callbacks = mock(Callbacks::class.java)
 
-  private val servers = mutableListOf<ServerSocket>()
+  private val servers = mutableListOf<Closeable>()
 
   @After
   fun release() {
@@ -624,27 +625,13 @@ class PlayerRetryTest {
   @Test
   fun `an engine error that arrives after a pause cancelled its reconnect is not terminal`() {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = ReconnectHangingServer()
     servers += server
-    val connections = AtomicInteger()
-    // Ends the first connection unanswered, then holds each reconnect open without an answer.
-    thread(isDaemon = true) {
-      val held = mutableListOf<Socket>()
-      while (!server.isClosed) {
-        try {
-          val socket = server.accept()
-          if (connections.incrementAndGet() == 1) socket.close() else held += socket
-        } catch (_: IOException) {
-          held.forEach { it.close() }
-          return@thread
-        }
-      }
-    }
-    play("http://127.0.0.1:${server.localPort}/live", retryPolicy = RetryPolicy.Infinite())
+    play(server.url, retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
     idleUntil("a reconnect in flight") {
       ShadowSystemClock.advanceBy(Duration.ofMillis(100))
-      connections.get() >= 2
+      server.connections.get() >= 2
     }
 
     // The connection's failure report, posted before the pause and dropped by it.
