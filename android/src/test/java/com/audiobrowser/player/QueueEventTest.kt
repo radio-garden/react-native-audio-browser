@@ -26,16 +26,21 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * What JS hears of an in-place replace of queued items. The engine reports it as a playlist change,
- * but [RemoteSwitchingPlayer] reports it as a source update, so both session players run each test.
+ * but [RemoteSwitchingPlayer] reports it as a source update, playing locally or casting, so each
+ * session player runs every test.
  */
 abstract class QueueEventTest {
   /** Null for the bare engine as the session player. */
   abstract val remoteOutputs: RemoteOutputsOptions?
 
-  private val looper = Looper.getMainLooper()
+  /** Runs once the queue is set, before the test. */
+  open fun route() {}
+
+  protected val looper: Looper = Looper.getMainLooper()
+  protected val castRemote = FakeRemote(looper)
   private val app = RuntimeEnvironment.getApplication()
-  private val player =
-    Player(app, castRemote = { _, _ -> null }, sonosRemote = { _, _ -> FakeRemote(looper) })
+  protected val player =
+    Player(app, castRemote = { _, _ -> castRemote }, sonosRemote = { _, _ -> FakeRemote(looper) })
   private val callbacks = mock(Callbacks::class.java)
   private lateinit var session: MediaSession
   private val a = TestFixtures.track(title = "a", src = "https://s/a.mp3", favorited = false)
@@ -53,6 +58,7 @@ abstract class QueueEventTest {
     player.setCallbacks(callbacks)
     player.setQueue(arrayOf(a, b))
     idle()
+    route()
     clearInvocations(callbacks)
   }
 
@@ -63,7 +69,7 @@ abstract class QueueEventTest {
     TrackFactory.favoriteEnabled = false
   }
 
-  private fun idle() = shadowOf(looper).idle()
+  protected fun idle() = shadowOf(looper).idle()
 
   private fun calls(name: String) =
     mockingDetails(callbacks).invocations.filter { it.method.name == name }

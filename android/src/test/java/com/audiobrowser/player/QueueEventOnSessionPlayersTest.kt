@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
+import org.junit.Assert.fail
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -19,4 +20,21 @@ class QueueEventOnEngineTest : QueueEventTest() {
 class QueueEventOnRemoteSwitchingPlayerTest : QueueEventTest() {
   override val remoteOutputs: RemoteOutputsOptions? =
     RemoteOutputsOptions(cast = null, castReceiverApplicationId = null, sonos = true)
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class QueueEventWhileCastingTest : QueueEventTest() {
+  override val remoteOutputs: RemoteOutputsOptions? =
+    RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+
+  override fun route() {
+    castRemote.startSession()
+    repeat(500) {
+      if (!player.localEngine.isActive) return
+      Thread.sleep(10)
+      idle()
+    }
+    fail("never handed over to the receiver")
+  }
 }

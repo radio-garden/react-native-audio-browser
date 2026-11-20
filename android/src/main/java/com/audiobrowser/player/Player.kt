@@ -507,18 +507,18 @@ internal constructor(
   private var reportedTracks = emptyList<Track>()
 
   /**
-   * Moves [queueVersion] and returns true when the queue's tracks differ from those at the last
-   * call. Call it on every timeline change: the reason does not tell, since the engine reports an
-   * in-place replace of items as a playlist change but `RemoteSwitchingPlayer` as a source update,
-   * and an engine rebuild, a now-playing restamp or the playback thread's own source update leave
-   * every track as it was.
+   * The queue's tracks when they differ from those at the last call, moving [queueVersion]; null
+   * when they don't. Call it on every timeline change: the reason does not tell, since the engine
+   * reports an in-place replace of items as a playlist change but `RemoteSwitchingPlayer` as a
+   * source update, and an engine rebuild, a now-playing restamp or the playback thread's own source
+   * update leave every track as it was.
    */
-  internal fun queueTracksChanged(): Boolean {
-    val current = tracks.toList()
-    if (current == reportedTracks) return false
-    reportedTracks = current
+  internal fun changedQueueTracks(): Array<Track>? {
+    val current = tracks
+    if (current.asList() == reportedTracks) return null
+    reportedTracks = current.toList()
     queueVersion = ++lastQueueVersion
-    return true
+    return current
   }
 
   /** The path the queue was expanded from, so selecting from the same source skips re-expanding. */
