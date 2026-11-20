@@ -1,6 +1,9 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.TestFixtures.throwingTransform
 import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.navigationErrorFor
+import com.margelo.nitro.audiobrowser.NavigationErrorType
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -8,10 +11,6 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Static layers only: Nitro Promises (transforms, resolvers) cannot be constructed on the JVM, so
- * transforms are covered by RequestConfigBuilderTest and the Swift suite.
- */
 class BrowserManagerBuildApiRequestTest {
 
   private lateinit var bm: BrowserManager
@@ -103,6 +102,24 @@ class BrowserManagerBuildApiRequestTest {
       fail("expected ContentNotFoundException")
     } catch (e: ContentNotFoundException) {
       assertEquals("/nowhere", e.path)
+    }
+  }
+
+  @Test
+  fun `a route transform that throws fails with callback-error`() = runTest {
+    bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
+    try {
+      bm.buildApiRequest(
+        kindConfig = null,
+        routeConfig = transformableConfig().copy(transform = throwingTransform("token expired")),
+        path = "/library",
+        params = emptyMap(),
+      )
+      fail("expected CallbackException")
+    } catch (e: CallbackException) {
+      val error = navigationErrorFor(e)
+      assertEquals(NavigationErrorType.CALLBACK_ERROR, error.code)
+      assertEquals("token expired", error.message)
     }
   }
 }

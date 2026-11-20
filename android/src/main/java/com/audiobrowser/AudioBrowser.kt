@@ -25,6 +25,7 @@ import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.indexOfTappedTrack
+import com.audiobrowser.extension.toQueueIndex
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.Player
@@ -573,6 +574,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     navigationJob?.cancel()
 
     val path = track.path
+    val playAlone: suspend () -> Unit = {
+      player.load(track)
+      player.play()
+    }
     navigationJob =
       mainScope.launch {
         try {
@@ -633,7 +638,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   0.0,
                   startPosition = null,
                   intercepted = {},
-                  defaultBehavior = { player.load(track) },
+                  defaultBehavior = playAlone,
                 )
               }
             }
@@ -650,7 +655,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 0.0,
                 startPosition = null,
                 intercepted = {},
-                defaultBehavior = { player.load(track) },
+                defaultBehavior = playAlone,
               )
             }
             else -> {
@@ -938,16 +943,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun add(tracks: Array<Track>, insertBeforeIndex: Double?) =
     commandPlayer("add") { player ->
-      val inputIndex = insertBeforeIndex?.toInt() ?: -1
+      val inputIndex = insertBeforeIndex?.toQueueIndex() ?: -1
       player.add(tracks, inputIndex)
     }
 
   override fun move(fromIndex: Double, toIndex: Double) =
-    commandPlayer("move") { player -> player.move(fromIndex.toInt(), toIndex.toInt()) }
+    commandPlayer("move") { player ->
+      player.move(fromIndex.toQueueIndex(), toIndex.toQueueIndex())
+    }
 
   override fun remove(indexes: DoubleArray) =
     commandPlayer("remove") { player ->
-      val indexList = indexes.map { it.toInt() }
+      val indexList = indexes.map { it.toQueueIndex() }
       player.remove(indexList)
     }
 
@@ -956,7 +963,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun skip(index: Double, initialPosition: Double?) =
     commandPlayer("skip") { player ->
-      player.skipTo(index.toInt())
+      player.skipTo(index.toQueueIndex())
 
       if (initialPosition != null && initialPosition >= 0) {
         player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
@@ -983,7 +990,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun setQueue(tracks: Array<Track>, startIndex: Double?, startPosition: Double?) =
     commandPlayer("setQueue") { player ->
-      player.setQueue(tracks, startIndex?.toInt() ?: 0, ((startPosition ?: 0.0) * 1000).toLong())
+      player.setQueue(
+        tracks,
+        startIndex?.toQueueIndex() ?: 0,
+        ((startPosition ?: 0.0) * 1000).toLong(),
+      )
     }
 
   override fun setActiveTrackFavorited(favorited: Boolean): Unit =
@@ -1002,7 +1013,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun getTrack(index: Double): Track? =
     readPlayer(null) { player ->
       try {
-        player.getTrack(index.toInt())
+        player.getTrack(index.toQueueIndex())
       } catch (e: IllegalArgumentException) {
         null
       }

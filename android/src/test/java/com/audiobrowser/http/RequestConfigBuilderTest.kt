@@ -2,7 +2,10 @@ package com.audiobrowser.http
 
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.TestFixtures.mediaConfig
+import com.audiobrowser.TestFixtures.throwingTransform
+import com.audiobrowser.TestFixtures.throwingTransformSync
 import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.util.JsPromise
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__
 import com.margelo.nitro.audiobrowser.HttpMethod
@@ -293,7 +296,7 @@ class RequestConfigBuilderTest {
   }
 
   @Test
-  fun `mergeConfig MediaRequestConfig static fields merge over base and preserve callbacks`() =
+  fun `mergeConfigOrBase MediaRequestConfig static fields merge over base and preserve callbacks`() =
     runTest {
       val base =
         RequestConfig(
@@ -307,7 +310,7 @@ class RequestConfigBuilderTest {
           userAgent = "base-ua",
         )
       val override = mediaConfig(headers = mapOf("x-media" to "2"), query = mapOf("token" to "abc"))
-      val merged = RequestConfigBuilder.mergeConfig(base, override)
+      val merged = RequestConfigBuilder.mergeConfigOrBase(base, override)
       assertEquals("/stream.mp3", merged.path)
       assertEquals("https://media.example.com", merged.baseUrl)
       assertEquals("1", merged.headers?.get("x-base"))
@@ -327,12 +330,66 @@ class RequestConfigBuilderTest {
     }
 
   @Test
-  fun `mergeConfig MediaRequestConfig carries the base path over a static media path`() = runTest {
+  fun `mergeConfigOrBase MediaRequestConfig carries the base path over a static media path`() =
+    runTest {
+      val base =
+        RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
+      val media = mediaConfig(path = "/static-media-path")
+      val merged = RequestConfigBuilder.mergeConfigOrBase(base, media)
+      assertEquals("/stream/123", merged.path)
+    }
+
+  @Test
+  fun `mergeConfig TransformableRequestConfig throws a CallbackException when a transform throws`() =
+    runTest {
+      val base =
+        RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+      val layer = transformableConfig().copy(transform = throwingTransform("token expired"))
+      try {
+        RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+        fail("expected CallbackException")
+      } catch (e: CallbackException) {
+        assertEquals("token expired", e.message)
+      }
+    }
+
+  @Test
+  fun `a throwing transformSync's CallbackException carries its message without the JS stack`() =
+    runTest {
+      val base =
+        RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+      val layer =
+        transformableConfig()
+          .copy(
+            transformSync =
+              throwingTransformSync(
+                "token expired\n\nError: token expired\n    at transformSync (:11:92)"
+              )
+          )
+      try {
+        RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+        fail("expected CallbackException")
+      } catch (e: CallbackException) {
+        assertEquals("token expired", e.message)
+      }
+    }
+
+  @Test
+  fun `mergeConfigOrBase skips a layer whose transform throws`() = runTest {
     val base =
-      RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
-    val media = mediaConfig(path = "/static-media-path")
-    val merged = RequestConfigBuilder.mergeConfig(base, media)
-    assertEquals("/stream/123", merged.path)
+      RequestConfig(null, "/stream.mp3", "https://media.example.com", null, null, null, null, null)
+    val layer = transformableConfig().copy(transform = throwingTransform("token expired"))
+    assertEquals(base, RequestConfigBuilder.mergeConfigOrBase(base, layer))
+  }
+
+  @Test
+  fun `mergeConfigOrBase MediaRequestConfig skips a layer whose transform throws`() = runTest {
+    val base =
+      RequestConfig(null, "/stream.mp3", "https://media.example.com", null, null, null, null, null)
+    val media = mediaConfig().copy(transform = throwingTransform("token expired"))
+    val merged = RequestConfigBuilder.mergeConfigOrBase(base, media)
+    assertEquals("https://media.example.com", merged.baseUrl)
+    assertEquals("/stream.mp3", merged.path)
   }
 
   @Test

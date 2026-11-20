@@ -39,7 +39,13 @@ class JsonArtworkTest {
       )
     assertEquals(
       "https://e.example/d.png",
-      resolved.toNitro().children?.first()?.artwork?.asSecondOrNull()?.dark,
+      resolved
+        .toNitro(requestedPath = "/requested")
+        .children
+        ?.first()
+        ?.artwork
+        ?.asSecondOrNull()
+        ?.dark,
     )
   }
 

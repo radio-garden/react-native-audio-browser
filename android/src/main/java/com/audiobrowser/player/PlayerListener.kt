@@ -87,6 +87,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         player.dropFailureReports()
       }
     }
+    // The periodic save runs only while set to play.
+    if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK && !player.playWhenReady) {
+      player.playbackStateStore.save()
+    }
   }
 
   override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

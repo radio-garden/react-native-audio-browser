@@ -35,7 +35,7 @@ class JsonStyleTest {
           {"style":{"display":"grid","gridWrap":false},"children":[{"title":"C","src":"s"}]}
         ]}"""
       )
-    val style = resolved.toNitro().sections?.first()?.style
+    val style = resolved.toNitro(requestedPath = "/requested").sections?.first()?.style
     assertEquals(StyleDisplay.GRID, style?.display)
     assertEquals(false, style?.gridWrap)
   }
@@ -48,7 +48,7 @@ class JsonStyleTest {
           {"title":"C","src":"s","style":"grid"}
         ]}"""
       )
-    val nitro = resolved.toNitro()
+    val nitro = resolved.toNitro(requestedPath = "/requested")
     assertNull(nitro.style)
     assertNull(nitro.children?.first()?.style)
   }
@@ -79,7 +79,7 @@ class JsonStyleTest {
           {"style":{"display":"grid","gridWrap":"false"},"children":[{"title":"C","src":"s"}]}
         ]}"""
       )
-    val style = resolved.toNitro().sections?.first()?.style
+    val style = resolved.toNitro(requestedPath = "/requested").sections?.first()?.style
     assertEquals(StyleDisplay.GRID, style?.display)
     assertNull(style?.gridWrap)
   }
@@ -125,7 +125,7 @@ class JsonStyleTest {
            "children":[{"title":"C","src":"s"}]}
         ]}"""
       )
-    val style = resolved.toNitro().sections?.first()?.style
+    val style = resolved.toNitro(requestedPath = "/requested").sections?.first()?.style
     assertEquals(GridTile.CARD, style?.gridTile)
     assertEquals("#1e3a8a", style?.cardTint)
     assertEquals(CardImage.BACKGROUND, style?.cardImage)
@@ -140,7 +140,7 @@ class JsonStyleTest {
            "children":[{"title":"C","src":"s"}]}
         ]}"""
       )
-    val style = resolved.toNitro().sections?.first()?.style
+    val style = resolved.toNitro(requestedPath = "/requested").sections?.first()?.style
     assertEquals(GridTile.IMAGE, style?.gridTile)
     assertEquals(ImageShape.CIRCULAR, style?.imageShape)
   }
@@ -158,6 +158,6 @@ class JsonStyleTest {
           {"style":{"gridTile":"hexagon"},"children":[{"title":"C","src":"s"}]}
         ]}"""
       )
-    assertNull(resolved.toNitro().sections?.first()?.style)
+    assertNull(resolved.toNitro(requestedPath = "/requested").sections?.first()?.style)
   }
 }

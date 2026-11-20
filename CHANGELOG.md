@@ -1,3 +1,40 @@
+## [1.0.0-next.4](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.3...v1.0.0-next.4) (2026-11-20)
+
+### Bug Fixes
+
+* **android:** accept a page without a path, and a tabs page without a title ([f45091c](https://github.com/radio-garden/react-native-audio-browser/commit/f45091cf54b1e4413e2b8acd4c49ca23737145b7)), closes [#375](https://github.com/radio-garden/react-native-audio-browser/issues/375)
+* **android:** decode `favorited` from a route's response ([5196ceb](https://github.com/radio-garden/react-native-audio-browser/commit/5196ceb43f498681109e8c0c02de5fc1c86a02a8)), closes [#377](https://github.com/radio-garden/react-native-audio-browser/issues/377)
+* **android:** fail a navigation with callback-error when a request transform throws ([5e494ac](https://github.com/radio-garden/react-native-audio-browser/commit/5e494ac288d94ed53cde57ceebb81a603af8e0b0)), closes [#380](https://github.com/radio-garden/react-native-audio-browser/issues/380) [#395](https://github.com/radio-garden/react-native-audio-browser/issues/395)
+* **android:** give a protocol-relative URL the scheme of baseUrl ([2238ed6](https://github.com/radio-garden/react-native-audio-browser/commit/2238ed6835299ae4c44883745e279aed86a3f7e7))
+* **android:** hydrate favorites when setupPlayer runs before the service connects ([8a95254](https://github.com/radio-garden/react-native-audio-browser/commit/8a952542406cd2f22b61d763cebda1b0b060850a))
+* **android:** keep playing on the Cast receiver while its session is suspended ([3dcaf5d](https://github.com/radio-garden/react-native-audio-browser/commit/3dcaf5db195810ac593e27a96aeb1f0f2545ce70))
+* **android:** keep the JS stack out of a throwing transformSync's callback-error ([76abbea](https://github.com/radio-garden/react-native-audio-browser/commit/76abbea44fd1f10dcf55fe5a9c4bb4ee18b36f88))
+* **android:** leave a protocol-relative URL as it is, as web and iOS do ([705a87f](https://github.com/radio-garden/react-native-audio-browser/commit/705a87fb185414d2f94162e2267aa288f1b9b962)), closes [#353](https://github.com/radio-garden/react-native-audio-browser/issues/353) [#406](https://github.com/radio-garden/react-native-audio-browser/issues/406)
+* **android:** leave URLs with a scheme out of baseUrl ([300b718](https://github.com/radio-garden/react-native-audio-browser/commit/300b71820fc7b882405c0efa1730639dc584aeda))
+* **android:** match a User-Agent or Content-Type header in any case ([e6680df](https://github.com/radio-garden/react-native-audio-browser/commit/e6680df2895140f9657c3eeb646b54b182d5e5fa)), closes [#352](https://github.com/radio-garden/react-native-audio-browser/issues/352) [#135](https://github.com/radio-garden/react-native-audio-browser/issues/135)
+* **android:** move a media User-Agent header in any case to the default's key ([c65d999](https://github.com/radio-garden/react-native-audio-browser/commit/c65d999204e2442cfc92ce29adb78ac4fa38bcb5))
+* **android:** move every User-Agent spelling of a media request, keeping the last ([758e85e](https://github.com/radio-garden/react-native-audio-browser/commit/758e85e36a22ecda725c51fa67ff0131852fabb6))
+* **android:** play a Playable track selected through navigate(track) ([a938393](https://github.com/radio-garden/react-native-audio-browser/commit/a9383936af4ab0562c37c7728e0880f89cdce84d))
+* **android:** play a voice search that arrives through the media session ([1e10845](https://github.com/radio-garden/react-native-audio-browser/commit/1e108456c57f6a02825e6417f9caf801b7b1b4b2))
+* **android:** re-resolve after a dropped read and on a return to a queue item ([6e48fa3](https://github.com/radio-garden/react-native-audio-browser/commit/6e48fa33cf6651928209f2d02cf81a52cff4fc92))
+* **android:** re-resolve the media URL on every reload, as iOS and web do ([8a1e288](https://github.com/radio-garden/react-native-audio-browser/commit/8a1e288309617b30e61233fedaef2dc6dda063b7))
+* **android:** recover a contextual path's parent without rewriting it ([2b5ca76](https://github.com/radio-garden/react-native-audio-browser/commit/2b5ca76bd905b3e2fe9024299d85c5e526b8c5c0)), closes [#356](https://github.com/radio-garden/react-native-audio-browser/issues/356) [#374](https://github.com/radio-garden/react-native-audio-browser/issues/374)
+* **android:** replay at a Cast resume only the stop made during the suspension ([d3d9e17](https://github.com/radio-garden/react-native-audio-browser/commit/d3d9e1750600c2ef8e143422801650daf3528859))
+* **android:** save the resume snapshot when a seek lands while paused ([b42584f](https://github.com/radio-garden/react-native-audio-browser/commit/b42584f23d1928cbd41cb9276884d61e7f239fbb)), closes [#365](https://github.com/radio-garden/react-native-audio-browser/issues/365)
+* **android:** send the item loaded during a Cast suspension at the resume ([a55c288](https://github.com/radio-garden/react-native-audio-browser/commit/a55c2882010937d4a84983c2d3eea18a6bfe1377))
+* **android:** stop the Cast receiver at the resume after a stop during a suspension ([b35c944](https://github.com/radio-garden/react-native-audio-browser/commit/b35c9443d581dc8c420008669c52f2832458fb7c))
+* **android:** throw on an index that is NaN, infinite or beyond Int, instead of using track 0 ([29da41a](https://github.com/radio-garden/react-native-audio-browser/commit/29da41ab6ee1a98313f5f69630ed6b42d4f73e20)), closes [#369](https://github.com/radio-garden/react-native-audio-browser/issues/369)
+
+### Code Refactors
+
+* **android:** gate both voice search routes in one place ([b31a64e](https://github.com/radio-garden/react-native-audio-browser/commit/b31a64e246d5ad1fc2bf9b56cfb5d0137abc3984))
+* **android:** name the media layer merge mergeConfigOrBase ([ac40586](https://github.com/radio-garden/react-native-audio-browser/commit/ac4058699b62648fe3f922b7ba95df580602c68a))
+
+### Documentation
+
+* **guide:** list a return to a track, and scope Android's HLS retry ([37f98e1](https://github.com/radio-garden/react-native-audio-browser/commit/37f98e1331369871e885b7e993d313e19040b98f))
+* **guide:** scope a return to an HLS track on Android ([566fb6b](https://github.com/radio-garden/react-native-audio-browser/commit/566fb6b653b9493c222d4fd786740773fa5e144d))
+
 ## [1.0.0-next.3](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.2...v1.0.0-next.3) (2026-11-19)
 
 ### Bug Fixes

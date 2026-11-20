@@ -8,7 +8,6 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
-import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.OptIn
@@ -29,10 +28,8 @@ import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.CoilArtworkLoader
 import com.audiobrowser.util.CoilArtworkLoaderHolder
 import com.audiobrowser.util.CoilBitmapLoader
+import com.audiobrowser.util.SearchParamsFactory
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
-import com.margelo.nitro.audiobrowser.MediaReference
-import com.margelo.nitro.audiobrowser.SearchMode
-import com.margelo.nitro.audiobrowser.SearchParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -188,7 +185,11 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     intent
       ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
       ?.let { searchIntent ->
-        val searchParams = parseSearchIntent(searchIntent)
+        val searchParams =
+          SearchParamsFactory.fromPlayFromSearch(
+            searchIntent.getStringExtra(SearchManager.QUERY) ?: "",
+            searchIntent.extras,
+          )
         Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: $searchParams")
         // A search that plays has waited for AudioBrowser, whose MediaBrowser connecting hands
         // the notification to Media3.
@@ -200,42 +201,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     if (intent?.isForegroundStartKey() == true) holdForeground()
 
     return super.onStartCommand(intent, flags, startId)
-  }
-
-  /** See https://developer.android.com/guide/components/intents-common#PlaySearch */
-  private fun parseSearchIntent(intent: Intent): SearchParams {
-    val query = intent.getStringExtra(SearchManager.QUERY) ?: ""
-
-    val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
-
-    // The focus picks a vertical. Genre, artist and album focuses are filters, carried by the
-    // extras
-    // below, so they yield no mode. Android has no station or podcast focus: those verticals are
-    // iOS-only.
-    val mode =
-      when (mediaFocus) {
-        "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
-        "vnd.android.cursor.item/audio" -> SearchMode.SONG
-        MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
-        else -> null
-      }
-
-    val genre = intent.getStringExtra("android.intent.extra.genre")
-    val artist = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ARTIST)
-    val album = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ALBUM)
-    val title = intent.getStringExtra(MediaStore.EXTRA_MEDIA_TITLE)
-    val playlist = intent.getStringExtra("android.intent.extra.playlist")
-
-    return SearchParams(
-      mode = mode,
-      query = query,
-      genre = genre,
-      artist = artist,
-      album = album,
-      title = title,
-      playlist = playlist,
-      reference = MediaReference.UNKNOWN,
-    )
   }
 
   override fun onBind(intent: Intent?): IBinder? {

@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,6 +23,8 @@ class TransformingDataSourceTest {
   private val openedHeaders = mutableListOf<Map<String, String>>()
 
   private var failNextOpen = false
+
+  private var failNextRead = false
 
   private inner class RecordingDataSource(
     private val responseHeaders: Map<String, List<String>> = emptyMap()
@@ -36,7 +39,13 @@ class TransformingDataSourceTest {
       return C.LENGTH_UNSET.toLong()
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int = C.RESULT_END_OF_INPUT
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+      if (failNextRead) {
+        failNextRead = false
+        throw IOException("simulated dropped connection")
+      }
+      return C.RESULT_END_OF_INPUT
+    }
 
     override fun addTransferListener(transferListener: TransferListener) {}
 
@@ -125,6 +134,79 @@ class TransformingDataSourceTest {
   }
 
   @Test
+  fun `a reloaded track resolves the media url on its next open, and once`() {
+    var resolves = 0
+    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+    val spec = DataSpec("/listen/abc/channel.mp3".toUri())
+
+    factory.resolveOnNextMediaOpen = true
+    factory.createDataSource().open(spec)
+    factory.createDataSource().open(spec)
+    factory.resolveOnNextMediaOpen = true
+    factory.createDataSource().open(spec)
+    factory.createDataSource().open(spec)
+
+    assertEquals(listOf(1, 1, 2, 2), openedUrls.map { it.substringAfter("token=").toInt() })
+  }
+
+  @Test
+  fun `a dropped read of the media url resolves it on the next open`() {
+    var resolves = 0
+    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+    val spec = DataSpec("/listen/abc/channel.mp3".toUri())
+
+    readDropped(factory, spec)
+    factory.createDataSource().open(spec)
+    factory.createDataSource().open(spec)
+
+    assertEquals(listOf(1, 2, 2), openedUrls.map { it.substringAfter("token=").toInt() })
+  }
+
+  @Test
+  fun `a read that a cancelled load interrupts keeps the media url`() {
+    var resolves = 0
+    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+    val spec = DataSpec("/listen/abc/channel.mp3".toUri())
+
+    Thread.currentThread().interrupt()
+    try {
+      readDropped(factory, spec)
+    } finally {
+      Thread.interrupted()
+    }
+    factory.createDataSource().open(spec)
+
+    assertEquals(listOf(1, 1), openedUrls.map { it.substringAfter("token=").toInt() })
+  }
+
+  @Test
+  fun `a dropped segment read does not trigger a media re-resolve`() {
+    var resolves = 0
+    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+    val mediaUrl = "/listen/abc/playlist.m3u8".toUri()
+
+    factory.createDataSource().open(DataSpec(mediaUrl))
+    readDropped(factory, DataSpec("https://cdn.example.com/seg-1.ts".toUri()))
+    factory.createDataSource().open(DataSpec(mediaUrl))
+
+    assertTrue(
+      "media url stays token=1, got ${openedUrls.last()}",
+      openedUrls.last().contains("token=1"),
+    )
+  }
+
+  /** Opens [spec] and reads from it over a connection that drops. */
+  private fun readDropped(factory: TransformingDataSource.Factory, spec: DataSpec) {
+    val source = factory.createDataSource()
+    source.open(spec)
+    failNextRead = true
+    try {
+      source.read(ByteArray(1), 0, 1)
+      fail("the read should have dropped")
+    } catch (_: IOException) {}
+  }
+
+  @Test
   fun `a failed segment load does not trigger a media re-resolve`() {
     var resolves = 0
     val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
@@ -192,6 +274,17 @@ class TransformingDataSourceTest {
   }
 
   @Test
+  fun `a src with a scheme opens as it is under a base url`() {
+    val src = "content://media/external/audio/media/42"
+    val factory =
+      TransformingDataSource.Factory(upstreamFactory) { config("https://api.example.com", src) }
+
+    factory.createDataSource().open(DataSpec(src.toUri()))
+
+    assertEquals(src, openedUrls.last())
+  }
+
+  @Test
   fun `a progressive read from the start asks for an open-ended range`() {
     assertEquals(listOf("bytes=0-"), rangesOf(progressive()))
   }
@@ -219,6 +312,39 @@ class TransformingDataSourceTest {
       emptyList<String>(),
       rangesOf(DataSpec("https://cdn.example.com/playlist.m3u8".toUri())),
     )
+  }
+
+  /** The User-Agent headers, in any case, a media open with [headers]/[userAgent] passes on. */
+  private fun userAgentsOf(headers: Map<String, String>, userAgent: String?): Map<String, String> {
+    val config =
+      config("https://cdn.example.com", "/s.mp3").copy(headers = headers, userAgent = userAgent)
+    TransformingDataSource.Factory(upstreamFactory) { config }
+      .createDataSource()
+      .open(progressive())
+    return openedHeaders.last().filterKeys { it.equals("User-Agent", ignoreCase = true) }
+  }
+
+  @Test
+  fun `a user-agent header in any case goes on under the exact name`() {
+    for (name in listOf("User-Agent", "user-agent", "USER-AGENT")) {
+      assertEquals(
+        name,
+        mapOf("User-Agent" to "MyApp/1.0"),
+        userAgentsOf(mapOf(name to "MyApp/1.0"), null),
+      )
+      assertEquals(
+        name,
+        mapOf("User-Agent" to "Field/1.0"),
+        userAgentsOf(mapOf(name to "MyApp/1.0"), "Field/1.0"),
+      )
+    }
+  }
+
+  @Test
+  fun `of two user-agent spellings the last one goes on`() {
+    val headers = mapOf("user-agent" to "first", "USER-AGENT" to "last")
+    assertEquals(mapOf("User-Agent" to "last"), userAgentsOf(headers, null))
+    assertEquals(mapOf("User-Agent" to "Field/1.0"), userAgentsOf(headers, "Field/1.0"))
   }
 
   @Test

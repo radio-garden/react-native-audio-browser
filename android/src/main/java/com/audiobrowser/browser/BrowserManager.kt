@@ -9,6 +9,7 @@ import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.FALLBACK_TIMEOUT
+import com.audiobrowser.util.SearchParamsFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.awaitCancellable
@@ -35,6 +36,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import timber.log.Timber
 
@@ -770,18 +772,7 @@ class BrowserManager {
   }
 
   suspend fun searchPlayable(query: String): Array<Track>? {
-    return searchPlayable(
-      SearchParams(
-        query = query,
-        mode = null,
-        genre = null,
-        artist = null,
-        album = null,
-        title = null,
-        playlist = null,
-        reference = MediaReference.UNKNOWN,
-      )
-    )
+    return searchPlayable(SearchParamsFactory.fromQuery(query))
   }
 
   /**
@@ -818,18 +809,7 @@ class BrowserManager {
   }
 
   suspend fun search(query: String): ResolvedTrack {
-    return search(
-      SearchParams(
-        query = query,
-        mode = null,
-        genre = null,
-        artist = null,
-        album = null,
-        title = null,
-        playlist = null,
-        reference = MediaReference.UNKNOWN,
-      )
-    )
+    return search(SearchParamsFactory.fromQuery(query))
   }
 
   /**
@@ -1181,7 +1161,12 @@ class BrowserManager {
           if (httpResponse.isSuccessful) {
             val jsonResolvedTrack =
               try {
-                json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
+                json.decodeFromString<JsonResolvedTrack>(httpResponse.body).also {
+                  // A browse page needs its title (BrowserSource); the tabs page does not.
+                  if (it.title == null && path != TABS_ROUTE_PATH) {
+                    throw SerializationException("Field 'title' is required for a browse page")
+                  }
+                }
               } catch (e: Exception) {
                 throw HttpStatusException(
                   httpResponse.code,
@@ -1189,7 +1174,7 @@ class BrowserManager {
                   e,
                 )
               }
-            jsonResolvedTrack.toNitro()
+            jsonResolvedTrack.toNitro(requestedPath = path)
           } else {
             Timber.w(
               "HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}"
@@ -1268,7 +1253,7 @@ class HttpStatusException(val statusCode: Int, message: String, cause: Throwable
 
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-class CallbackException(message: String) : Exception(message)
+class CallbackException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /** Mirrors NativeBrowserConfiguration from JS. */
 data class BrowserConfig(

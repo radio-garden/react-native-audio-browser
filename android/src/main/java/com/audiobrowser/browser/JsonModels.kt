@@ -40,8 +40,8 @@ data class JsonSection(
 @Serializable
 data class JsonResolvedTrack(
   val id: String? = null,
-  val path: String,
-  val title: String,
+  val path: String? = null,
+  val title: String? = null,
   val subtitle: String? = null,
   val icon: String? = null,
   val artwork: JsonArtwork? = null,
@@ -56,6 +56,7 @@ data class JsonResolvedTrack(
   val src: String? = null,
   val style: JsonElement? = null,
   val disabled: Boolean? = null,
+  val favorited: Boolean? = null,
   val live: Boolean? = null,
   val icyCharset: String? = null,
   val carPlaySiriListButton: String? = null,
@@ -79,6 +80,7 @@ data class JsonTrack(
   val request: JsonTrackRequest? = null,
   val style: JsonElement? = null,
   val disabled: Boolean? = null,
+  val favorited: Boolean? = null,
   val live: Boolean? = null,
   val icyCharset: String? = null,
 )
@@ -140,14 +142,17 @@ fun JsonSection.toNitro(): Section {
   )
 }
 
-fun JsonResolvedTrack.toNitro(): ResolvedTrack {
+/**
+ * The page, with [requestedPath] as its path when it has none and an empty title when it has none.
+ */
+fun JsonResolvedTrack.toNitro(requestedPath: String): ResolvedTrack {
   return ResolvedTrack(
     id = id,
-    path = path,
+    path = path ?: requestedPath,
     sections = sections?.map { it.toNitro() }?.toTypedArray(),
     children = children?.map { it.toNitro() }?.toTypedArray(),
     carPlaySiriListButton = carPlaySiriListButton.toCarPlaySiriListButtonPosition(),
-    title = title,
+    title = title ?: "",
     subtitle = subtitle,
     artwork = artwork?.toNitro(),
     artworkSource = null,
@@ -162,7 +167,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     src = src,
     style = style.toSectionStyle(),
     disabled = disabled,
-    favorited = null,
+    favorited = favorited,
     live = live,
     icyCharset = icyCharset,
   )
@@ -186,7 +191,7 @@ fun JsonTrack.toNitro(): Track {
     src = src,
     style = style.toTrackStyle(),
     disabled = disabled,
-    favorited = null,
+    favorited = favorited,
     live = live,
     icyCharset = icyCharset,
   )

@@ -12,10 +12,19 @@ internal interface RemotePlayback {
    * The receiver of the current session; read it only while [isSessionAvailable]. It plays one item
    * at a time: setting an item loads it there from the given position, and plays it if
    * `playWhenReady` is set, without [MediaPlayer.prepare]. A new session can bring a new player.
+   * While [isSuspended], it drops every command.
    */
   val player: MediaPlayer
 
+  /** True while [isSuspended] too: the session is kept, and the receiver plays on. */
   val isSessionAvailable: Boolean
+
+  /**
+   * The session is kept but out of reach: nothing sent to [player] arrives, and its state stands
+   * still until the session resumes.
+   */
+  val isSuspended: Boolean
+    get() = false
 
   /** Calls [listener] on the main thread; null stops the calls. */
   fun setListener(listener: Listener?)
@@ -24,7 +33,7 @@ internal interface RemotePlayback {
   fun release()
 
   interface Listener {
-    /** [isSessionAvailable] or [player] changed. */
+    /** [isSessionAvailable], [isSuspended] or [player] changed. */
     fun onSessionChanged()
 
     /**

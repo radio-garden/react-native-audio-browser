@@ -135,7 +135,11 @@ class MediaFactory(
       factory.setLoadErrorHandlingPolicy(
         RetryLoadErrorHandlingPolicy(sources, { isCurrent(mediaItem) }, cache, onLoadFailure)
       )
-    val source = factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+    val source =
+      ResolvingOnReloadSource(
+        factory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem),
+        transformingFactory,
+      )
     // Adaptive sources retry in place: the policy never ends their connection.
     return if (retrying && sources != RetryLoadErrorHandlingPolicy.Sources.ADAPTIVE)
       ConnectionEndSource(source)

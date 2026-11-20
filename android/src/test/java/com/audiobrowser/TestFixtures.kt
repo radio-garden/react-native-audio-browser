@@ -1,14 +1,18 @@
 package com.audiobrowser
 
+import com.audiobrowser.util.JsPromise
 import com.audiobrowser.util.artworkOf
 import com.margelo.nitro.audiobrowser.ArtworkRendering
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.CardImage
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__
 import com.margelo.nitro.audiobrowser.GridTile
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
@@ -85,6 +89,23 @@ object TestFixtures {
       contentType = null,
       userAgent = null,
     )
+
+  /** A layer `transform` whose JS promise rejects with [message]. */
+  fun throwingTransform(message: String) =
+    Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
+      _,
+      _ ->
+      val js = JsPromise<RequestConfig>().apply { reject(Exception(message)) }
+      JsPromise<Promise<RequestConfig>>().apply { resolve(js.promise) }.promise
+    }
+
+  /** A layer `transformSync` whose JS call throws: Nitro rejects with the JSError's `what()`. */
+  fun throwingTransformSync(what: String) =
+    Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
+      _,
+      _ ->
+      JsPromise<RequestConfig>().apply { reject(Exception(what)) }.promise
+    }
 
   fun mediaConfig(
     baseUrl: String? = null,
@@ -167,6 +188,26 @@ object TestFixtures {
       favorited = null,
       live = null,
       icyCharset = null,
+    )
+
+  fun browserConfiguration() =
+    NativeBrowserConfiguration(
+      path = null,
+      request = null,
+      requestResolver = null,
+      browse = null,
+      browseResolver = null,
+      media = null,
+      artwork = null,
+      nowPlayingArtwork = null,
+      routes = null,
+      singleTrack = null,
+      handleTrackLoad = null,
+      androidControllerOfflineError = null,
+      viewMoreTitle = null,
+      carPlayLoadingTitle = null,
+      resolveAlbumPath = null,
+      formatNavigationError = null,
     )
 
   /**
