@@ -504,17 +504,21 @@ internal constructor(
   var queueVersion = 0
     private set
 
-  private var versionedMediaIds = emptyList<String>()
+  private var reportedTracks = emptyList<Track>()
 
   /**
-   * Compares media ids: an engine rebuild sets the same items again and reports a playlist change.
+   * Moves [queueVersion] and returns true when the queue's tracks differ from those at the last
+   * call. Call it on every timeline change: the reason does not tell, since the engine reports an
+   * in-place replace of items as a playlist change but `RemoteSwitchingPlayer` as a source update,
+   * and an engine rebuild, a now-playing restamp or the playback thread's own source update leave
+   * every track as it was.
    */
-  internal fun onPlaylistChanged() {
-    val mediaIds =
-      (0 until sessionPlayer.mediaItemCount).map { sessionPlayer.getMediaItemAt(it).mediaId }
-    if (mediaIds == versionedMediaIds) return
-    versionedMediaIds = mediaIds
+  internal fun queueTracksChanged(): Boolean {
+    val current = tracks.toList()
+    if (current == reportedTracks) return false
+    reportedTracks = current
     queueVersion = ++lastQueueVersion
+    return true
   }
 
   /** The path the queue was expanded from, so selecting from the same source skips re-expanding. */
@@ -923,30 +927,17 @@ internal constructor(
    * then follows the current track.
    */
   internal fun applyFavoriteChange(change: FavoriteChange) {
-    if (restampQueue { change.restamp(it) }) {
-      queueVersion = ++lastQueueVersion
-      callbacks?.onPlaybackQueueChanged(tracks)
-    }
+    restampQueue { change.restamp(it) }
     updateFavoriteButtonState(currentTrack?.favorited)
   }
 
   /**
-   * True while [restampQueue] replaces the queue. ExoPlayer reports that replacement as a playlist
-   * change on an unprepared queue and as a source update on a prepared one, so the queue event is
-   * the caller's to send, not the listener's.
-   */
-  internal var restampingQueue = false
-    private set
-
-  /**
    * Replaces each queued item whose track [transform] returns with that track and its heart rating,
-   * in one replacement: no transition, and the current track keeps playing. It sends no queue
-   * event.
-   *
-   * @return whether any item was replaced
+   * in one replacement: one queue event when a track changed, no transition, and the current track
+   * keeps playing.
    */
-  private fun restampQueue(transform: (Track) -> Track?): Boolean {
-    if (!::sessionPlayer.isInitialized) return false
+  private fun restampQueue(transform: (Track) -> Track?) {
+    if (!::sessionPlayer.isInitialized) return
     var replaced = false
     val items =
       (0 until sessionPlayer.mediaItemCount).map { index ->
@@ -956,14 +947,7 @@ internal constructor(
         replaced = true
         item.restamped(restamped) { setFavorite(restamped.favorited) }
       }
-    if (!replaced) return false
-    restampingQueue = true
-    try {
-      sessionPlayer.replaceMediaItems(0, items.size, items)
-    } finally {
-      restampingQueue = false
-    }
-    return true
+    if (replaced) sessionPlayer.replaceMediaItems(0, items.size, items)
   }
 
   private fun restampMediaItem(

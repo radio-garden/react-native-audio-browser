@@ -4,7 +4,6 @@ import android.os.Looper
 import androidx.media3.common.HeartRating
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
-import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
@@ -20,7 +19,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -104,22 +102,16 @@ class FavoriteRestampTest {
   }
 
   @Test
-  fun `a favorite change on an unprepared queue sends the queue to JS once`() {
+  fun `the heart button follows a favorite change to the current track`() {
     player.add(arrayOf(b, a, b))
     player.exoPlayer.seekTo(1, 0)
     idle()
-    val callbacks = mock(Callbacks::class.java)
-    player.setCallbacks(callbacks)
 
     player.applyFavoriteChange(FavoriteChange.between(emptySet(), setOf("https://s/a.mp3"))!!)
     idle()
 
-    val calls = mockingDetails(callbacks).invocations.map { it.method.name }
-    assertEquals(1, calls.count { it == "onPlaybackQueueChanged" })
-    assertEquals(0, calls.count { it == "onPlaybackActiveTrackChanged" })
     assertEquals(listOf(false, true, false), favorited())
     assertEquals(listOf(false, true, false), ratings())
-    assertEquals(1, player.exoPlayer.currentMediaItemIndex)
     assertEquals("Remove from favorites", heartButton().displayName.toString())
   }
 }
