@@ -29,6 +29,15 @@ struct CapabilityRemoteCommandTests {
     }
   }
 
+  @Test func togglePlayPauseGoesUnlessPlayAndPauseAreBothFalse() {
+    #expect(PlayerCapabilities(play: false).remoteCommands.contains(.togglePlayPause))
+    #expect(PlayerCapabilities(pause: false).remoteCommands.contains(.togglePlayPause))
+    #expect(
+      PlayerCapabilities(play: false, pause: false).remoteCommands
+        == Set(RemoteCommand.allCases).subtracting([.play, .pause, .togglePlayPause]),
+    )
+  }
+
   @Test func favoriteEnablesNoCommand() {
     #expect(PlayerCapabilities(favorite: false).remoteCommands == Set(RemoteCommand.allCases))
   }

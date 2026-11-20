@@ -11,6 +11,7 @@ import Testing
 struct RemoteCommandControllerTests {
   final class SpyCallbacks: RemoteCommandCallbacks {
     var events: [String] = []
+    var remoteIsPlaying = false
     func remotePlay() { events.append("play") }
     func remotePause() { events.append("pause") }
     func remoteStop() { events.append("stop") }
@@ -121,6 +122,42 @@ struct RemoteCommandControllerTests {
     #expect(!center.playCommand.isEnabled)
     #expect(!center.pauseCommand.isEnabled)
     #expect(!center.skipForwardCommand.isEnabled)
+  }
+
+  @Test func togglePlayPauseIsEnabledAndDisabledWithTheOthers() {
+    let (controller, _) = makeController()
+    let center = MPRemoteCommandCenter.shared()
+    #expect(!center.togglePlayPauseCommand.isEnabled)
+
+    controller.enable(commands: [.play, .pause, .togglePlayPause])
+    #expect(center.togglePlayPauseCommand.isEnabled)
+
+    controller.enable(commands: [.stop])
+    #expect(!center.togglePlayPauseCommand.isEnabled)
+  }
+
+  @Test func togglePlayPausePausesWhilePlayingAndPlaysOtherwise() {
+    let (controller, spy) = makeController()
+    controller.enable(commands: [.play, .pause, .togglePlayPause])
+
+    #expect(controller.togglePlayPauseTarget == .play)
+
+    spy.remoteIsPlaying = true
+    #expect(controller.togglePlayPauseTarget == .pause)
+  }
+
+  @Test func togglePlayPauseRunsNothingWhenItsTargetIsNotEnabled() {
+    let (controller, spy) = makeController()
+    spy.remoteIsPlaying = true
+
+    controller.enable(commands: [.play, .togglePlayPause])
+    #expect(controller.togglePlayPauseTarget == nil)
+
+    spy.remoteIsPlaying = false
+    #expect(controller.togglePlayPauseTarget == .play)
+
+    controller.enable(commands: [.pause, .togglePlayPause])
+    #expect(controller.togglePlayPauseTarget == nil)
   }
 
   @Test func skipAvailabilityAppliesOnRefreshAndEnable() {

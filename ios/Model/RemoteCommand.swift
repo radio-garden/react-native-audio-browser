@@ -5,6 +5,7 @@ import Foundation
 enum RemoteCommand: CaseIterable, Hashable {
   case play
   case pause
+  case togglePlayPause
   case stop
   case next
   case previous

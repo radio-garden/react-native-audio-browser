@@ -108,12 +108,20 @@ final class RemoteCommandController {
     if enabledCommands.contains(.previous) { center.previousTrackCommand.isEnabled = canPrevious }
   }
 
+  /// The command a `togglePlayPause` runs: pause while playing, else play. `nil` when that
+  /// command is not enabled.
+  var togglePlayPauseTarget: RemoteCommand? {
+    let target: RemoteCommand = callbacks?.remoteIsPlaying == true ? .pause : .play
+    return enabledCommands.contains(target) ? target : nil
+  }
+
   // MARK: - Private
 
   private func mpCommand(for command: RemoteCommand) -> MPRemoteCommand {
     switch command {
     case .play: center.playCommand
     case .pause: center.pauseCommand
+    case .togglePlayPause: center.togglePlayPauseCommand
     case .stop: center.stopCommand
     case .next: center.nextTrackCommand
     case .previous: center.previousTrackCommand
@@ -157,6 +165,9 @@ final class RemoteCommandController {
     switch command {
     case .play: callbacks?.remotePlay()
     case .pause: callbacks?.remotePause()
+    case .togglePlayPause:
+      guard let target = togglePlayPauseTarget else { return .commandFailed }
+      return handle(event, for: target)
     case .stop: callbacks?.remoteStop()
     case .next: callbacks?.remoteNext()
     case .previous: callbacks?.remotePrevious()
