@@ -2,6 +2,7 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.TestFixtures.transformableConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
+import com.margelo.nitro.audiobrowser.Track
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +159,20 @@ class BrowserManagerInvalidationTest {
     across({ browserManager.config = config() }) { browserManager.resolve("/page") }
 
     assertEquals("en", runBlocking { browserManager.resolve("/page") }.title)
+  }
+
+  @Test
+  fun `tabs queried for a configuration without them are empty, and emitted once`() = runBlocking {
+    browserManager.queryTabs()
+    val emitted = mutableListOf<List<Track>>()
+    browserManager.setOnTabsChanged { emitted += it.toList() }
+
+    browserManager.config = config().copy(routes = emptyArray())
+    browserManager.clearContentCache()
+    browserManager.queryTabs()
+
+    assertEquals(0, browserManager.getTabs()?.size)
+    assertEquals(listOf(emptyList<Track>()), emitted)
   }
 
   @Test

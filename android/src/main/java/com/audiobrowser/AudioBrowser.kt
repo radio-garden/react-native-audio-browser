@@ -101,6 +101,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
@@ -211,7 +212,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     BrowserManager().apply {
       setOnPathChanged { path -> onPathChanged(path) }
       setOnContentChanged { content -> onContentChanged(content) }
-      setOnTabsChanged { tabs -> onTabsChanged(tabs) }
+      setOnTabsChanged { tabs ->
+        onTabsChanged(tabs)
+        connectedService?.player?.notifyTabsChanged()
+      }
       setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
     }
 
@@ -460,8 +464,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       navigationJob?.cancel()
 
       navigationJob =
-        mainScope.launch {
-          val path = value.path ?: getDefaultPath() ?: return@launch
+        mainScope.launchConfigurationStart(value.path, browserManager::queryTabs) { path ->
           try {
             browserManager.navigate(path)
           } catch (e: CancellationException) {
@@ -1635,4 +1638,21 @@ private fun httpStatusText(statusCode: Int): String {
     504 -> "Gateway Timeout"
     else -> "Server Error"
   }
+}
+
+/**
+ * Starts a configuration: queries the tabs, and navigates to [configuredPath], else the first
+ * tab's, else "/". A failed tabs query keeps the previous tabs and falls back as if there were
+ * none. Cancelling the returned navigation, as a later navigation does, leaves the tabs query
+ * running.
+ */
+internal fun CoroutineScope.launchConfigurationStart(
+  configuredPath: String?,
+  queryTabs: suspend () -> Array<Track>,
+  navigate: suspend (String) -> Unit,
+): Job {
+  val tabs = async {
+    runCatching { queryTabs() }.onFailure { Timber.e(it, "Querying the tabs failed") }.getOrNull()
+  }
+  return launch { navigate(configuredPath ?: tabs.await()?.firstOrNull()?.path ?: "/") }
 }
