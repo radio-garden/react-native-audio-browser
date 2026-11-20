@@ -17,6 +17,9 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
+#include <exception>
+#include <stdexcept>
+#include <jsi/jsi.h>
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
@@ -140,7 +143,7 @@ namespace margelo::nitro::audiobrowser {
               });
               __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
                 jni::ThreadScope::WithClassLoader([&]() {
-                  auto __jniError = jni::getJavaExceptionForCppException([&]() -> std::exception_ptr {
+                  auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
                     if (__error == nullptr) return __error;
                     try {
                       std::rethrow_exception(__error);
@@ -149,7 +152,7 @@ namespace margelo::nitro::audiobrowser {
                     } catch (...) {
                       return __error;
                     }
-                  }());
+                  }(__error));
                   __promise->cthis()->reject(__jniError);
                 });
               });
@@ -159,7 +162,7 @@ namespace margelo::nitro::audiobrowser {
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
           jni::ThreadScope::WithClassLoader([&]() {
-            auto __jniError = jni::getJavaExceptionForCppException([&]() -> std::exception_ptr {
+            auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
               if (__error == nullptr) return __error;
               try {
                 std::rethrow_exception(__error);
@@ -168,7 +171,7 @@ namespace margelo::nitro::audiobrowser {
               } catch (...) {
                 return __error;
               }
-            }());
+            }(__error));
             __promise->cthis()->reject(__jniError);
           });
         });

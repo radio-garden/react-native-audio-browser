@@ -1,3 +1,4 @@
+import { ErrorType } from '../types/ErrorType.js';
 import { withoutJSStack } from '../c++/withoutJSStack.js';
 import { indent } from '../../utils.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
@@ -114,6 +115,8 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JPromise.hpp',
                         space: 'system',
                     });
+                    // Not upstream: its rejection goes through withoutJSStack.
+                    imports.push(...new ErrorType().getRequiredImports('c++'));
                     const promiseType = getTypeAs(this.type, PromiseType);
                     if (promiseType.resultingType.kind === 'void') {
                         // Promise<void> uses JUnit
@@ -699,6 +702,7 @@ export class KotlinCxxBridgedType {
       __promise->cthis()->resolve(${indent(bridge.parseFromCppToKotlin('__result', 'c++', true), '      ')});
     });
   });`;
+                        // Not upstream: withoutJSStack.
                         return `
 [&]() {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
@@ -720,6 +724,7 @@ export class KotlinCxxBridgedType {
             case 'error':
                 switch (language) {
                     case 'c++':
+                        // Not upstream: withoutJSStack.
                         return `jni::getJavaExceptionForCppException(${withoutJSStack(parameterName)})`;
                     default:
                         return parameterName;

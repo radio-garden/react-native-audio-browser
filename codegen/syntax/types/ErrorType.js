@@ -34,6 +34,8 @@ export class ErrorType {
                 name: 'exception',
                 space: 'system',
             });
+            // Not upstream: for withoutJSStack.
+            imports.push({ language: 'c++', name: 'stdexcept', space: 'system' }, { language: 'c++', name: 'jsi/jsi.h', space: 'system' });
         }
         return imports;
     }
