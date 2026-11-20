@@ -99,11 +99,11 @@ internal class RemoteSwitchingPlayer(
     /** [item] went to the receiver, which doesn't report holding it yet. */
     class Sent(val item: MediaItem, val positionMs: Long) : Load
 
-    /** The receiver holds [item]: what it reports is the current item's. */
-    class Playing(val item: MediaItem) : Load {
-      /** Where the receiver last reported [item] loaded, running on while it played. */
-      var lastPosition: PositionSupplier? = null
-    }
+    /**
+     * The receiver holds [item]: what it reports is the current item's. [lastPosition] is where it
+     * last reported [item] loaded, running on while it played; until then, where it was sent from.
+     */
+    class Playing(val item: MediaItem, var lastPosition: PositionSupplier) : Load
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
@@ -197,11 +197,12 @@ internal class RemoteSwitchingPlayer(
       else PositionSupplier { minOf(running.get(), durationMs) }
   }
 
-  /** Whether the receiver holds [load]'s item loaded, so that its position is the item's. */
-  private fun reportsPosition(remote: Route.Remote, load: Load.Playing): Boolean {
-    val state = remote.receiver.playbackState
-    return receiverHolds(remote, load.item) && (state == STATE_READY || state == STATE_BUFFERING)
-  }
+  /**
+   * Whether the receiver holds [load]'s item, not idle, so that its position is the item's. Cast's
+   * player takes a failed status, idle at 0, before the failure is reported.
+   */
+  private fun reportsPosition(remote: Route.Remote, load: Load.Playing): Boolean =
+    receiverHolds(remote, load.item) && remote.receiver.playbackState != STATE_IDLE
 
   private fun enter(remote: Route.Remote, load: Load) {
     remote.load = load
@@ -343,8 +344,11 @@ internal class RemoteSwitchingPlayer(
       is Load.Sent -> load.positionMs
       is Load.Failed -> load.positionMs
       is Load.Playing ->
-        if (load.item.isRemoteLive || !receiverHolds(remote, load.item)) C.TIME_UNSET
-        else remote.receiver.currentPosition
+        when {
+          load.item.isRemoteLive -> C.TIME_UNSET
+          reportsPosition(remote, load) -> remote.receiver.currentPosition
+          else -> load.lastPosition.get()
+        }
       is Load.Ended -> C.TIME_UNSET
     }
 
@@ -471,6 +475,8 @@ internal class RemoteSwitchingPlayer(
   private fun onReceiverPlaying() {
     val remote = remoteRoute ?: return
     val changed = followReceiver(remote)
+    // Sonos reports each poll this way, a seek made in its own app included.
+    noteReport(remote)
     when (remote.load) {
       is Load.Playing -> {
         remote.reportedPlaying = true
@@ -510,21 +516,10 @@ internal class RemoteSwitchingPlayer(
     val remoteError =
       if (error.errorCode == PlaybackException.ERROR_CODE_REMOTE_ERROR) error
       else PlaybackException(error.message, error, PlaybackException.ERROR_CODE_REMOTE_ERROR)
-    val positionMs = failedAt(remote)
+    val positionMs = positionOn(remote)
     cancelLoad(remote)
     remote.load = Load.Failed(remoteError, positionMs)
     invalidateState()
-  }
-
-  /**
-   * Where a failed item goes on from. Cast's player takes the failed status, idle at 0, before the
-   * failure is reported, so a receiver no longer reporting a position counts from its last report.
-   */
-  private fun failedAt(remote: Route.Remote): Long {
-    val load = remote.load as? Load.Playing
-    val last =
-      load?.takeUnless { it.item.isRemoteLive || reportsPosition(remote, it) }?.lastPosition
-    return last?.get() ?: positionOn(remote)
   }
 
   private fun receiverHolds(remote: Route.Remote, item: MediaItem) =
@@ -611,7 +606,7 @@ internal class RemoteSwitchingPlayer(
     when (val load = remote.load) {
       is Load.Sent ->
         if (receiverHolds(remote, load.item)) {
-          remote.load = Load.Playing(load.item)
+          remote.load = Load.Playing(load.item, PositionSupplier.getConstant(load.positionMs))
           playIntent = remote.receiver.playWhenReady
           if (remote.reportedPlaying) disarmStart(remote)
           return true

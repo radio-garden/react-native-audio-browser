@@ -143,6 +143,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var positionMs = 0L
   var durationMs = C.TIME_UNSET
   var speed = 1f
+  private var quietPositionMs: Long? = null
   var intent = false
   var readiness = STATE_IDLE
   var volume = 10
@@ -178,6 +179,11 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
 
   fun update() = invalidateState()
 
+  /** Moves the position without an event, as a speaker's poll finds a seek made elsewhere. */
+  fun positionQuietly(positionMs: Long) {
+    quietPositionMs = positionMs
+  }
+
   /** Reports a stream title for whatever it plays, as a receiver's poll does; a load clears it. */
   fun title(title: String) {
     metadata = Metadata(0, IcyInfo(title.toByteArray(), title, null))
@@ -193,7 +199,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
         }
       )
       .setCurrentMediaItemIndex(if (item == null) C.INDEX_UNSET else 0)
-      .setContentPositionMs(positionMs)
+      .setContentPositionMs(positionMs.let { at -> PositionSupplier { quietPositionMs ?: at } })
       .setPlayWhenReady(intent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
       .setPlaybackState(if (item == null) STATE_IDLE else readiness)
       .setPlaybackParameters(PlaybackParameters(speed))
@@ -214,6 +220,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
     uid = Any()
     metadata = null
     positionMs = if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs
+    quietPositionMs = null
     readiness = STATE_READY
     if (lagging) held = loaded else item = loaded
     return done()
@@ -242,6 +249,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   ): ListenableFuture<*> {
     seeks += positionMs
     this.positionMs = positionMs
+    quietPositionMs = null
     return done()
   }
 

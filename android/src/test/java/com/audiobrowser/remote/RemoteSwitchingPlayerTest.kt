@@ -269,6 +269,71 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a Sonos failure resumes where its last poll found it, after a seek in its own app`() {
+    playOnReceiver(positionMs = 70_000)
+
+    // The poll reads the speaker after a seek made in the Sonos app, which sends no event.
+    remote.player.positionQuietly(100_000)
+    remote.playing()
+    idle()
+    // Sonos fails idle, keeping its frozen position.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.update()
+    idle()
+    remote.fail()
+    remote.endSession()
+    idle()
+
+    assertEquals(100_000, local.positionMs)
+  }
+
+  @Test
+  fun `a Cast failure resumes where a seek from another sender left the receiver`() {
+    playOnReceiver(positionMs = 70_000)
+
+    remote.player.positionMs = 100_000
+    remote.player.update()
+    idle()
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(100_000, local.positionMs)
+  }
+
+  @Test
+  fun `a load failing as it arrives on the receiver resumes where it was sent from`() {
+    playLocally(listOf("a"), positionMs = 45_000)
+    remote.startSession()
+    remote.player.lagging = true
+    idle()
+
+    // The receiver shows the item first in Cast's failed status, idle at 0.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.positionMs = 0
+    remote.player.catchUp()
+    idle()
+    remote.fail()
+    remote.endSession()
+    idle()
+
+    assertEquals(45_000, local.positionMs)
+  }
+
+  @Test
+  fun `the session ending after the receiver dropped the item resumes where it last played`() {
+    playOnReceiver(positionMs = 70_000)
+
+    remote.player.item = null
+    remote.player.update()
+    idle()
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+  }
+
+  @Test
   fun `a live item failing on the receiver resumes at the phone's live edge`() {
     live += "a"
     playOnReceiver(positionMs = 70_000)
