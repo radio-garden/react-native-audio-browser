@@ -14,11 +14,10 @@ import { SearchManager } from '../SearchManager'
 describe('search result artwork', () => {
   it('applies a resolver-only request layer', async () => {
     const httpClient = {
-      executeRequest: vi
-        .fn()
-        .mockResolvedValue([
-          { title: 'Hit', src: '/hit.mp3', artwork: '/art/hit.jpg' }
-        ])
+      executeRequest: vi.fn(
+        async (_config: unknown, decode: (body: unknown) => unknown) =>
+          decode([{ title: 'Hit', src: '/hit.mp3', artwork: '/art/hit.jpg' }])
+      )
     } as unknown as HttpClient
     const manager = new BrowserManager(
       httpClient,

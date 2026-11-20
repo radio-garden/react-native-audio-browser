@@ -18,7 +18,10 @@ function makeSearchManager(
   }
 ): SearchManager {
   const httpClient = {
-    executeRequest: vi.fn().mockImplementation(respond)
+    executeRequest: vi.fn(
+      async (_config: unknown, decode: (body: unknown) => unknown) =>
+        decode(await respond())
+    )
   } as unknown as HttpClient
   const browserManager = new BrowserManager(
     httpClient,

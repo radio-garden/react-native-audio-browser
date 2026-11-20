@@ -2,20 +2,20 @@ import type { NavigationErrorType } from '../../features'
 import type { RequestConfig } from '../../types'
 import { RequestConfigBuilder } from './RequestConfigBuilder'
 
-type HttpError = Error & {
-  isHttpError: true
-  status: number
-  statusText: string
+type RequestError = Error & {
+  code: NavigationErrorType
+  statusCode?: number
 }
 
-function isHttpError(error: unknown): error is HttpError {
-  return (
-    error instanceof Error &&
-    'isHttpError' in error &&
-    (error as HttpError).isHttpError === true &&
-    typeof (error as HttpError).status === 'number' &&
-    typeof (error as HttpError).statusText === 'string'
-  )
+function requestError(
+  code: NavigationErrorType,
+  message: string,
+  statusCode?: number
+): RequestError {
+  const error = new Error(message) as RequestError
+  error.code = code
+  if (statusCode !== undefined) error.statusCode = statusCode
+  return error
 }
 
 const TIMEOUT_MS = 30_000
@@ -30,11 +30,17 @@ const TIMEOUT_MS = 30_000
  */
 export class HttpClient {
   /**
-   * Executes an HTTP request and returns the JSON response.
-   * Throws navigation errors for HTTP and network failures.
+   * Executes an HTTP request and returns its JSON body as `decode` reads it.
+   *
+   * Rejects with an error carrying a navigation error `code`: `http-error`
+   * with `statusCode` for a non-2xx status, and for a 2xx body that is not
+   * JSON or that `decode` throws or rejects on; `network-error` when no
+   * complete response arrives.
    */
-  async executeRequest(config: RequestConfig): Promise<unknown> {
-    // Use RequestConfigBuilder to build the URL
+  async executeRequest<T>(
+    config: RequestConfig,
+    decode: (body: unknown) => T
+  ): Promise<T> {
     const url = RequestConfigBuilder.buildUrl(config)
     const headers = config.headers ?? {}
     const method = config.method ?? 'GET'
@@ -42,54 +48,47 @@ export class HttpClient {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
+    let response: Response
+    let text: string
     try {
-      const response = await fetch(url, {
+      response = await fetch(url, {
         method,
         headers,
         signal: controller.signal
       })
-
-      if (!response.ok) {
-        const error = new Error(
-          `HTTP ${response.status}: ${response.statusText}`
-        ) as HttpError
-        error.isHttpError = true
-        error.status = response.status
-        error.statusText = response.statusText
-        throw error
-      }
-
-      // await so JSON parse errors are caught by the surrounding try/catch
-      return await response.json()
+      text = response.ok ? await response.text() : ''
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        const navError = new Error(
+        throw requestError(
+          'network-error',
           `Request timed out after ${TIMEOUT_MS}ms`
-        ) as Error & { code: NavigationErrorType }
-        navError.code = 'network-error'
-        throw navError
+        )
       }
-      // Distinguish between network errors and HTTP errors
-      if (isHttpError(error)) {
-        const navError = new Error(error.message) as Error & {
-          code: NavigationErrorType
-          statusCode: number
-        }
-        navError.code = 'http-error'
-        navError.statusCode = error.status
-        throw navError
-      }
-
-      // Network error (fetch failed, CORS, etc.)
-      const message = error instanceof Error ? error.message : 'Failed to fetch'
       console.error(`Network error fetching ${url}:`, error)
-      const navError = new Error(message) as Error & {
-        code: NavigationErrorType
-      }
-      navError.code = 'network-error'
-      throw navError
+      throw requestError(
+        'network-error',
+        error instanceof Error ? error.message : 'Failed to fetch'
+      )
     } finally {
       clearTimeout(timeoutId)
+    }
+
+    if (!response.ok) {
+      throw requestError(
+        'http-error',
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      )
+    }
+
+    try {
+      return await decode(JSON.parse(text))
+    } catch (error: unknown) {
+      throw requestError(
+        'http-error',
+        error instanceof Error ? error.message : String(error),
+        response.status
+      )
     }
   }
 }
