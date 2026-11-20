@@ -126,7 +126,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.startRetryLoad()
 
     // Emits on its own: the incoming track may hold LOADING/BUFFERING and emit no state change.
-    player.clearRetryingError()
+    player.hideRetryingError()
 
     player.playbackStateStore.save()
     player.playbackStateStore.resetPeriodicSave()

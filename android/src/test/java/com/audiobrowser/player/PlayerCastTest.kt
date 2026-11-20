@@ -6,11 +6,13 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.remote.FakeReceiver
 import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
+import java.net.UnknownHostException
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,8 +50,9 @@ class PlayerCastTest {
   fun cast() {
     player.setup(
       PlayerSetupOptions(
+        retryPolicy = RetryPolicy.Infinite(),
         remoteOutputs =
-          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null)
+          RemoteOutputsOptions(cast = true, castReceiverApplicationId = null, sonos = null),
       )
     )
     player.setCallbacks(callbacks)
@@ -153,6 +156,32 @@ class PlayerCastTest {
 
     assertTrue(player.sleepTimer.get().isFirst)
     assertFalse(receiver.loads.last().autoplay)
+  }
+
+  @Test
+  fun `a connection that fails before the hand-back is heard is retried, not an error`() {
+    // The playback thread can fail an offline load before the main thread hears of the hand-back
+    // that prepared it. Robolectric starts offline.
+    player.exoPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          if (playbackState != MediaPlayer.STATE_BUFFERING) return
+          player.exoPlayer.removeListener(this)
+          player.onLoadFailure(UnknownHostException(), inPlace = false)
+        }
+      }
+    )
+
+    remote.endSession()
+    idle()
+    player.playerListener.onPlayerError(
+      PlaybackException("offline", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+    )
+    idle()
+
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
+    assertEquals(true, player.getPlayback().error?.retrying)
+    assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
   }
 
   private fun calls(name: String) =

@@ -639,6 +639,7 @@ internal constructor(
     loadControl = engine.loadControl
     mediaFactory = engine.mediaFactory
     exoPlayer = engine.exoPlayer
+    exoPlayer.addListener(engineTrackChanges)
     // A reconnect the old loop held between connections: the engine is carried idle and unprepared.
     val heldIdle = retryLoop?.reconnecting == true && localEngine.isActive
     retryLoop?.suspend()
@@ -1275,6 +1276,16 @@ internal constructor(
     retryingErrorGeneration++
   }
 
+  /**
+   * The engine's own transition, heard as the track is set and before it connects. The session's
+   * can come after the connection started: a hand-back from a remote output prepares the engine
+   * before the switch reports it.
+   */
+  private val engineTrackChanges =
+    object : MediaPlayer.Listener {
+      override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = dropFailureReports()
+    }
+
   private fun showRetryingError(error: PlaybackError) {
     // Paused, the retry would run unseen and its failure be terminal. STOPPED, ERROR and ENDED
     // reach here only from a post that raced them.
@@ -1354,12 +1365,17 @@ internal constructor(
     retryLoop?.engineStopped()
   }
 
+  /** Drops the retrying error and the failure reports still on their way. */
+  internal fun clearRetryingError() {
+    dropFailureReports()
+    hideRetryingError()
+  }
+
   /**
    * Drops the retrying error of a track that is gone. The new track may stay LOADING or BUFFERING
    * with no state change to emit the clear.
    */
-  internal fun clearRetryingError() {
-    dropFailureReports()
+  internal fun hideRetryingError() {
     if (playbackError?.retrying != true) return
     playbackError = null
     callbacks?.onPlaybackChanged(Playback(playbackState, null))
