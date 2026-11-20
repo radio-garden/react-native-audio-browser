@@ -83,6 +83,7 @@ let package = Package(
         "Util/AwaitCallback.swift",
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
+        "Util/RoutePickerSourceLifetime.swift",
         "Observer/PlayerObserver.swift",
         "Observer/ItemObserver.swift",
       ]

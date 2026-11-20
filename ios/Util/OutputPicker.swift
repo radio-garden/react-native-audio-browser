@@ -6,6 +6,7 @@ import UIKit
 @MainActor
 enum OutputPicker {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "OutputPicker")
+  private static let delegate = SourceRemovingDelegate()
 
   static func present() {
     guard let windowScene = UIApplication.shared.activeWindowScene,
@@ -24,7 +25,9 @@ enum OutputPicker {
     // button can sit below the top-level subviews.
     let routePicker = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
     routePicker.alpha = 0.01
+    routePicker.delegate = delegate
     topController.view.addSubview(routePicker)
+    delegate.lifetime.added(routePicker)
 
     if let button = firstButton(in: routePicker) {
       button.sendActions(for: .touchUpInside)
@@ -32,9 +35,8 @@ enum OutputPicker {
       logger.error("openOutputPicker: no UIButton found inside AVRoutePickerView")
     }
 
-    // On iPad the picker's popover anchors to this view, so it outlives the tap.
     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-      routePicker.removeFromSuperview()
+      delegate.lifetime.settled(routePicker)
     }
   }
 
@@ -44,5 +46,18 @@ enum OutputPicker {
       if let button = firstButton(in: subview) { return button }
     }
     return nil
+  }
+}
+
+@MainActor
+private final class SourceRemovingDelegate: NSObject, @preconcurrency AVRoutePickerViewDelegate {
+  let lifetime = RoutePickerSourceLifetime<AVRoutePickerView> { $0.removeFromSuperview() }
+
+  func routePickerViewWillBeginPresentingRoutes(_ routePicker: AVRoutePickerView) {
+    lifetime.willBeginPresenting(routePicker)
+  }
+
+  func routePickerViewDidEndPresentingRoutes(_ routePicker: AVRoutePickerView) {
+    lifetime.didEndPresenting(routePicker)
   }
 }
