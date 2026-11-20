@@ -1,8 +1,8 @@
 import NitroModules
 
 /// Awaits for JS callbacks in place of Nitro's `await()`, which ignores cancellation: see
-/// `awaitCallback`. The nested forms are for a callback returning a promise, which crosses the
-/// bridge as `Promise<Promise<U>>`.
+/// `awaitCallback`. A rejection throws a `JSCallbackError`. The nested forms are for a callback
+/// returning a promise, which crosses the bridge as `Promise<Promise<U>>`.
 extension Promise {
   func awaitCancellable() async throws -> T {
     try await awaitCallback(subscribe)
@@ -12,6 +12,11 @@ extension Promise {
   /// fallback.
   func awaitOrTimeout() async throws -> T {
     try await awaitCallback(timeout: callbackFallbackTimeout, subscribe)
+  }
+
+  /// `awaitCancellable` for a promise a JS callback returned.
+  func awaitJSPromise() async throws -> T {
+    try await awaitCallback(subscribeJS)
   }
 
   func awaitNested<U>() async throws -> U where T == Promise<U> {
@@ -24,10 +29,14 @@ extension Promise {
   }
 
   private func subscribe(_ deliver: @escaping @Sendable (Result<T, Error>) -> Void) {
-    then { deliver(.success($0)) }.catch { deliver(.failure($0)) }
+    then { deliver(.success($0)) }.catch { deliver(.failure(JSCallbackError($0))) }
+  }
+
+  private func subscribeJS(_ deliver: @escaping @Sendable (Result<T, Error>) -> Void) {
+    then { deliver(.success($0)) }.catch { deliver(.failure(JSCallbackError(jsPromiseRejection: $0))) }
   }
 
   private func subscribeNested<U>(_ deliver: @escaping @Sendable (Result<U, Error>) -> Void) where T == Promise<U> {
-    then { $0.subscribe(deliver) }.catch { deliver(.failure($0)) }
+    then { $0.subscribeJS(deliver) }.catch { deliver(.failure(JSCallbackError($0))) }
   }
 }
