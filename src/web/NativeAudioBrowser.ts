@@ -586,6 +586,7 @@ export class NativeAudioBrowser
   // MARK: Player init and config
   async setupPlayer(options: NativeSetupPlayerOptions): Promise<void> {
     await super.setupPlayer(options)
+    this.remoteCommands.registerHandlers()
     // Apply the launch options and initial state bundled in setup — same
     // atomic contract as the native platforms.
     if (options.options) this.updateOptions(options.options)

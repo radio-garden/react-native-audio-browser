@@ -119,6 +119,14 @@ export class RemoteCommandController {
     })
   }
 
+  /**
+   * Starts routing the OS media controls into the host. The host calls this
+   * once it is set up: a default transport action throws before that.
+   */
+  registerHandlers(): void {
+    this.mediaSession.registerHandlers()
+  }
+
   /** Publishes now-playing metadata to the OS media controls. */
   setMetadata(metadata: NowPlayingMetadata): void {
     this.mediaSession.setMetadata(metadata)
