@@ -32,19 +32,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// listeners on the previous instance's emitters would go silent.
   static let instanceChangedEmitter = Emitter<Void>()
 
-  // React Native posts this when a JS reload starts, before the old runtime is destroyed: the
-  // earliest sign this instance's JS callbacks go stale (the replacement's `init` drops them only
-  // once the new runtime is up). Observed by name, so the library needs no React-Core dependency.
-  @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
-    forName: Notification.Name("RCTTriggerReloadCommandNotification"),
-    object: nil,
-    queue: .main,
-  ) { _ in
-    MainActor.assumeIsolated {
-      HybridAudioBrowser.shared?.dropStaleJSCallbacks()
-    }
-  }
-
   // MARK: - Private Properties
 
   // Main-confined by convention, not annotation: `deinit` reads it and can't hop. Reach it from
@@ -243,10 +230,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     trackSelector = TrackSelector(browserManager: browserManager)
     super.init()
 
+    // Nitro constructs a hybrid object on its runtime's JS thread, and React Native ends that
+    // thread when it tears the runtime down, whatever started the teardown.
+    let jsThread = Thread.current
     // Stops the previous instance's player (a JS reload) so two streams never play at once.
     onMainActor {
-      // Statics are lazy: touching the observer installs it from the first instance on.
-      _ = HybridAudioBrowser.reloadObserver
+      runtimeEndObserver = ThreadExitObserver(jsThread) { [weak self] in self?.dropStaleJSCallbacks() }
       HybridAudioBrowser.shared?.destroyPlayer()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
@@ -272,12 +261,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   @MainActor private var didDropJSCallbacks = false
+  @MainActor private var runtimeEndObserver: ThreadExitObserver?
 
   /// Drops every JS callback native code can invoke on its own (browse resolvers,
   /// `handleTrackLoad`, `resolveAlbumPath`, `formatNavigationError`, `resolveGate`, the now-playing
   /// formatter), so native code still bound here (CarPlay mid-reload) serves the data-only config
-  /// rather than failing on a runtime that is going away; `resolveGate` reverts to its fail-closed
-  /// default. One-shot: the reload notification and the replacement's `init` both reach the dying
+  /// rather than failing on a runtime that is gone; `resolveGate` reverts to its fail-closed
+  /// default. One-shot: the end of the runtime and the replacement's `init` both reach the dying
   /// instance, and a second strip would re-run the config setter's cascade.
   @MainActor
   private func dropStaleJSCallbacks() {

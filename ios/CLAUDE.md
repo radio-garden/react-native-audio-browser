@@ -224,6 +224,7 @@ ios/
 │   ├── ConcurrentMap.swift           # Array.concurrentMap: task group, results in order (tested)
 │   ├── ReadyValue.swift              # Waits for a provider to have a value (cold start)
 │   ├── GenerationMemo.swift          # Value computed once per generation, shared by its callers
+│   ├── ThreadExitObserver.swift      # Main-actor callback when a thread exits (the end of a JS runtime)
 │   ├── NetworkMonitor.swift          # NWPathMonitor wrapper; `changed` emitter
 │   ├── Connectivity.swift            # NetworkStatusProviding; which path status counts as online
 │   ├── OutputPicker.swift            # @MainActor system audio route picker
