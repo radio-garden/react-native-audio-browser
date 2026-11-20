@@ -48,6 +48,8 @@ namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `FindTrackParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FindTrackParams; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
@@ -232,6 +234,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
+#include "FindTrackParams.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
@@ -1966,6 +1969,131 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
+  // pragma MARK: std::optional<Track>
+  /**
+   * Specialized version of `std::optional<Track>`.
+   */
+  using std__optional_Track_ = std::optional<Track>;
+  inline std::optional<Track> create_std__optional_Track_(const Track& value) noexcept {
+    return std::optional<Track>(value);
+  }
+  inline bool has_value_std__optional_Track_(const std::optional<Track>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::optional<Track>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::optional<Track>>>`.
+   */
+  using std__shared_ptr_Promise_std__optional_Track___ = std::shared_ptr<Promise<std::optional<Track>>>;
+  inline std::shared_ptr<Promise<std::optional<Track>>> create_std__shared_ptr_Promise_std__optional_Track___() noexcept {
+    return Promise<std::optional<Track>>::create();
+  }
+  inline PromiseHolder<std::optional<Track>> wrap_std__shared_ptr_Promise_std__optional_Track___(std::shared_ptr<Promise<std::optional<Track>>> promise) noexcept {
+    return PromiseHolder<std::optional<Track>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<Track>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<Track>&)>`.
+   */
+  using Func_void_std__optional_Track_ = std::function<void(const std::optional<Track>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<Track>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_Track__Wrapper final {
+  public:
+    explicit Func_void_std__optional_Track__Wrapper(std::function<void(const std::optional<Track>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::optional<Track>& /* result */)>>(std::move(func))) {}
+    inline void call(std::optional<Track> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<Track>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_Track_ create_Func_void_std__optional_Track_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_Track__Wrapper wrap_Func_void_std__optional_Track_(Func_void_std__optional_Track_ value) noexcept {
+    return Func_void_std__optional_Track__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& / * params * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>> call(FindTrackParams params) const noexcept {
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<std::optional<Track>>>>::rejected(std::current_exception());
+      }
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>`.
+   */
+  using std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track_____ = std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>;
+  inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track_____() noexcept {
+    return Promise<std::shared_ptr<Promise<std::optional<Track>>>>::create();
+  }
+  inline PromiseHolder<std::shared_ptr<Promise<std::optional<Track>>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track_____(std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>> promise) noexcept {
+    return PromiseHolder<std::shared_ptr<Promise<std::optional<Track>>>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>&)>`.
+   */
+  using Func_void_std__shared_ptr_Promise_std__optional_Track___ = std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__shared_ptr_Promise_std__optional_Track____Wrapper final {
+  public:
+    explicit Func_void_std__shared_ptr_Promise_std__optional_Track____Wrapper(std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::shared_ptr<Promise<std::optional<Track>>> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__shared_ptr_Promise_std__optional_Track___ create_Func_void_std__shared_ptr_Promise_std__optional_Track___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__shared_ptr_Promise_std__optional_Track____Wrapper wrap_Func_void_std__shared_ptr_Promise_std__optional_Track___(Func_void_std__shared_ptr_Promise_std__optional_Track___ value) noexcept {
+    return Func_void_std__shared_ptr_Promise_std__optional_Track____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& / * params * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::optional<Gate>
   /**
    * Specialized version of `std::optional<Gate>`.
@@ -2881,21 +3009,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_TimedMetadata create_Func_void_TimedMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_TimedMetadata_Wrapper wrap_Func_void_TimedMetadata(Func_void_TimedMetadata value) noexcept {
     return Func_void_TimedMetadata_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<Track>
-  /**
-   * Specialized version of `std::optional<Track>`.
-   */
-  using std__optional_Track_ = std::optional<Track>;
-  inline std::optional<Track> create_std__optional_Track_(const Track& value) noexcept {
-    return std::optional<Track>(value);
-  }
-  inline bool has_value_std__optional_Track_(const std::optional<Track>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
-    return optional.value();
   }
   
   // pragma MARK: std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>

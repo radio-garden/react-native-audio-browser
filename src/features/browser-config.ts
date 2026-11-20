@@ -295,6 +295,7 @@ export function toNativeConfig(
     viewMoreTitle: config.viewMoreTitle,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
     resolveAlbumPath: config.resolveAlbumPath,
-    formatNavigationError: config.formatNavigationError
+    formatNavigationError: config.formatNavigationError,
+    findTrack: config.findTrack
   }
 }

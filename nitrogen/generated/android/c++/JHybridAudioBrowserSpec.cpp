@@ -79,6 +79,8 @@ namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `NavigationErrorKind` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorKind; }
+// Forward declaration of `FindTrackParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FindTrackParams; }
 // Forward declaration of `GateDecision` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct GateDecision; }
 // Forward declaration of `NativeGateRequest` to properly resolve imports.
@@ -311,6 +313,9 @@ namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 #include "JFormatNavigationErrorParams.hpp"
 #include "NavigationErrorKind.hpp"
 #include "JNavigationErrorKind.hpp"
+#include "FindTrackParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams.hpp"
+#include "JFindTrackParams.hpp"
 #include "GateDecision.hpp"
 #include "NativeGateRequest.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest.hpp"

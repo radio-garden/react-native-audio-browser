@@ -49,6 +49,7 @@ import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.TrackFactory.setFavorite
 import com.audiobrowser.util.awaitOrTimeout
 import com.audiobrowser.util.isAutomotive
+import com.audiobrowser.util.withTimeoutAsFailure
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -70,16 +71,16 @@ import com.margelo.nitro.audiobrowser.Track
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 /**
@@ -107,8 +108,14 @@ internal constructor(
   internal val context: Context,
   castRemote: (Context, String?) -> RemotePlayback?,
   sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+  private val browserRegistrationTimeout: Duration = 10.seconds,
 ) {
   constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
+
+  internal constructor(
+    context: Context,
+    browserRegistrationTimeout: Duration,
+  ) : this(context, ::createCastRemote, ::SonosRemote, browserRegistrationTimeout)
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
@@ -317,13 +324,15 @@ internal constructor(
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
    *
-   * @throws TimeoutCancellationException if it is not registered within 10 seconds
+   * @throws TimeoutException if it is not registered within [browserRegistrationTimeout]
    */
   suspend fun awaitBrowser(): AudioBrowser =
     try {
-      withTimeout(10.seconds) { browserRegistered.await() }
-    } catch (e: TimeoutCancellationException) {
-      Timber.e("Timed out waiting for browser registration (10s)")
+      withTimeoutAsFailure(browserRegistrationTimeout, "Browser registration") {
+        browserRegistered.await()
+      }
+    } catch (e: TimeoutException) {
+      Timber.e(e)
       throw e
     }
 
@@ -505,6 +514,14 @@ internal constructor(
    * repeats in the process, so equal readings mean the same queue even across players.
    */
   var queueVersion = 0
+    private set
+
+  /**
+   * Moves whenever the app replaces what plays: a new queue, a load, a skip or a clear. Not on an
+   * edit that leaves the playing item playing, such as adding up next or restamping a track.
+   */
+  @Volatile
+  internal var playGeneration = 0
     private set
 
   private var reportedTracks = emptyList<Track>()
@@ -725,6 +742,7 @@ internal constructor(
 
   /** Replaces the current track, keeping the rest of the queue; on an empty queue, adds it. */
   fun load(track: Track) {
+    playGeneration++
     if (sessionPlayer.mediaItemCount == 0) {
       add(track)
     } else {
@@ -746,6 +764,7 @@ internal constructor(
   fun add(tracks: Array<Track>, atIndex: Int = -1) {
     validateInsertIndex(atIndex)
     val count = sessionPlayer.mediaItemCount
+    if (count == 0) playGeneration++
     sessionPlayer.addMediaItems(
       if (atIndex == -1) count else atIndex,
       TrackFactory.toMedia3(tracks),
@@ -774,6 +793,7 @@ internal constructor(
    * rebuild carries an ended engine idle, and it stays ended as an ended engine does.
    */
   private inline fun loadAfter(move: () -> Unit) {
+    playGeneration++
     val index = sessionPlayer.currentMediaItemIndex
     move()
     if (playbackState == PlaybackState.ENDED && sessionPlayer.currentMediaItemIndex == index) return
@@ -793,6 +813,7 @@ internal constructor(
   /** @throws IllegalArgumentException if [index] is out of bounds. */
   fun skipTo(index: Int) {
     validateIndex(index)
+    playGeneration++
     sessionPlayer.seekTo(index, C.TIME_UNSET)
     sessionPlayer.prepare()
   }
@@ -803,6 +824,7 @@ internal constructor(
     startPositionMs: Long = 0,
     sourcePath: String? = null,
   ) {
+    playGeneration++
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
     leadShuffleOrder(startIndex, mediaItems.size)
@@ -1139,6 +1161,8 @@ internal constructor(
       setQueue(tracks)
       play()
       true
+    } catch (e: RequestGatedException) {
+      false
     } catch (e: Exception) {
       currentCoroutineContext().ensureActive()
       Timber.e(e, "Error handling voice search: ${params}")
@@ -1150,7 +1174,8 @@ internal constructor(
    * The playable results of a voice search, from the first. Gated like browsing, or voice search
    * would be a way around the gate.
    *
-   * @return null when gated (after onGate) or when nothing playable is found
+   * @return null when nothing playable is found
+   * @throws RequestGatedException when gated, after onGate
    * @throws Exception when the browser is not registered in time or the search callback fails
    */
   suspend fun voiceSearch(params: SearchParams): Array<Track>? {
@@ -1162,7 +1187,7 @@ internal constructor(
     if (gateOutcome.gated) {
       Timber.i("Voice search refused: request is gated")
       audioBrowser.onGate(GateEvent(GateReason.SEARCH))
-      return null
+      throw RequestGatedException()
     }
     Timber.d(
       "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
@@ -1208,6 +1233,7 @@ internal constructor(
   }
 
   fun clear() {
+    playGeneration++
     sessionPlayer.clearMediaItems()
     queueSourcePath = null
   }
@@ -1597,3 +1623,6 @@ internal constructor(
     var lastQueueVersion = 0
   }
 }
+
+/** A request the consumer's gate refused: app state, which onGate reports, not a failure. */
+internal class RequestGatedException : IllegalStateException("Request is gated")
