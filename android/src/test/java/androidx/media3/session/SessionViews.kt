@@ -39,3 +39,9 @@ internal fun MediaSession.countLegacyStateUpdates(): () -> Int {
   )
   return { count }
 }
+
+/**
+ * Whether a runnable waits on the session's application handler, which its release empties. A
+ * posted runnable's message is `what` 0.
+ */
+internal fun MediaSession.hasRunnablePending() = impl.applicationHandler.hasMessages(0)
