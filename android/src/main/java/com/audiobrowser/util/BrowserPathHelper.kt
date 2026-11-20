@@ -120,11 +120,17 @@ object BrowserPathHelper {
 
   /**
    * Joins [baseUrl] and [path] with exactly one slash. Returns [path] unchanged when it has a URI
-   * scheme (`content:`, `file:`, `HTTPS:`, …) or [baseUrl] is null.
+   * scheme (`content:`, `file:`, `HTTPS:`, …) or [baseUrl] is null. A protocol-relative `//host/…`
+   * [path] takes the scheme of [baseUrl].
    */
   fun buildUrl(baseUrl: String?, path: String): String {
     if (baseUrl == null || URI_SCHEME.containsMatchIn(path)) {
       return path
+    }
+
+    if (path.startsWith("//")) {
+      val scheme = Uri.parse(baseUrl).scheme ?: return path
+      return "$scheme:$path"
     }
 
     val normalizedBase = "${baseUrl.trimEnd('/')}/"

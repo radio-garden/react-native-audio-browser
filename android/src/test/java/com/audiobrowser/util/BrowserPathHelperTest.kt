@@ -81,4 +81,16 @@ class BrowserPathHelperTest {
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "/shows/a:b"))
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "shows/a:b"))
   }
+
+  @Test
+  fun `buildUrl gives a protocol-relative url the scheme of the base`() {
+    assertEquals(
+      "https://cdn.example.com/a.mp3",
+      BrowserPathHelper.buildUrl("https://api.example.com", "//cdn.example.com/a.mp3"),
+    )
+    assertEquals(
+      "//cdn.example.com/a.mp3",
+      BrowserPathHelper.buildUrl(null, "//cdn.example.com/a.mp3"),
+    )
+  }
 }
