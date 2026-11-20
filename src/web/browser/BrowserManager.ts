@@ -28,6 +28,20 @@ import {
  * Coordinates between HTTP client, favorite manager, and error manager.
  * Matches Android's BrowserManager architecture.
  */
+/**
+ * How long a caller joins the running layer resolution before starting
+ * another; the same bound native gives a silent JS callback.
+ */
+const LAYER_RUN_SHARE_MS = 10_000
+
+/** One generation's layer resolution: its newest run, and its first result. */
+type LayerResolution = {
+  generation: number
+  first: Promise<void>
+  resolveFirst: () => void
+  newest?: { started: number; promise: Promise<void> }
+}
+
 export class BrowserManager {
   private _path: string | undefined
   private _tabs: Track[] | undefined
@@ -43,10 +57,7 @@ export class BrowserManager {
   private _resolvedLayerGeneration = -1
   private _resolvedRequest?: TransformableRequestConfig
   private _resolvedBrowse?: TransformableRequestConfig
-  // Dedupes concurrent resolution within a generation (config-set triggers an
-  // initial navigate that can overlap with an explicit navigatePath), so a
-  // resolver is invoked exactly once per generation even under concurrency.
-  private _layerResolution?: { generation: number; promise: Promise<void> }
+  private _layerResolution?: LayerResolution
 
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
@@ -551,40 +562,59 @@ export class BrowserManager {
    * Ensures the request/browse layer configs are resolved for the current
    * generation. Any present resolver is invoked once per generation and the
    * result cached; a static config (no resolver) passes through unchanged.
+   *
+   * A caller joins the newest run only while it is younger than
+   * {@link LAYER_RUN_SHARE_MS}; past that it starts another, so one silent
+   * resolver does not hold every later caller. The generation's first result
+   * releases the callers of every run, and a run's failure only its own.
    */
-  private async ensureLayersResolved(): Promise<void> {
-    if (this._resolvedLayerGeneration === this._layerGeneration) return
-    // Reuse an in-flight resolution for the same generation so concurrent
-    // navigations (e.g. config-set's initial navigate overlapping an explicit
-    // navigatePath) don't each invoke the resolver.
-    if (this._layerResolution?.generation === this._layerGeneration) {
-      return this._layerResolution.promise
+  private ensureLayersResolved(): Promise<void> {
+    if (this._resolvedLayerGeneration === this._layerGeneration) {
+      return Promise.resolve()
     }
     const generation = this._layerGeneration
-    const promise = (async () => {
-      const cfg = this._configuration
-      const resolvedRequest = cfg.requestResolver
-        ? await cfg.requestResolver()
-        : cfg.request
-      const resolvedBrowse = cfg.browseResolver
-        ? await cfg.browseResolver()
-        : cfg.browse
-      // Only commit if no newer generation superseded us mid-resolution.
-      if (this._layerGeneration === generation) {
-        this._resolvedRequest = resolvedRequest
-        this._resolvedBrowse = resolvedBrowse
-        this._resolvedLayerGeneration = generation
-      }
-    })().catch((err) => {
-      // A failed resolution must not wedge the generation — clear the in-flight
-      // cache so the next navigation retries (e.g. a transient async resolver error).
-      if (this._layerResolution?.generation === generation) {
-        this._layerResolution = undefined
-      }
-      throw err
-    })
-    this._layerResolution = { generation, promise }
-    return promise
+    if (this._layerResolution?.generation !== generation) {
+      let resolveFirst!: () => void
+      const first = new Promise<void>((resolve) => (resolveFirst = resolve))
+      this._layerResolution = { generation, first, resolveFirst }
+    }
+    const resolution = this._layerResolution
+    const newest = resolution.newest
+    const run =
+      newest && Date.now() - newest.started < LAYER_RUN_SHARE_MS
+        ? newest.promise
+        : this.startLayerRun(resolution)
+    return Promise.race([run, resolution.first])
+  }
+
+  private startLayerRun(resolution: LayerResolution): Promise<void> {
+    const { generation } = resolution
+    const run = {
+      started: Date.now(),
+      promise: (async () => {
+        const cfg = this._configuration
+        const resolvedRequest = cfg.requestResolver
+          ? await cfg.requestResolver()
+          : cfg.request
+        const resolvedBrowse = cfg.browseResolver
+          ? await cfg.browseResolver()
+          : cfg.browse
+        if (
+          this._layerGeneration === generation &&
+          this._resolvedLayerGeneration !== generation
+        ) {
+          this._resolvedRequest = resolvedRequest
+          this._resolvedBrowse = resolvedBrowse
+          this._resolvedLayerGeneration = generation
+          resolution.resolveFirst()
+        }
+      })().catch((err: unknown) => {
+        if (resolution.newest === run) resolution.newest = undefined
+        throw err
+      })
+    }
+    resolution.newest = run
+    return run.promise
   }
 
   /**

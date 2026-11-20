@@ -175,4 +175,126 @@ struct GenerationMemoTests {
     gate.release()
     #expect(try await withinTimeLimit { try await later.value } == 7)
   }
+
+  /// Runs that each suspend until released on their own, numbered from 0 in start order.
+  @MainActor
+  final class Runs {
+    private var waiters: [CheckedContinuation<Result<Int, Error>, Never>?] = []
+    var count: Int { waiters.count }
+
+    func run() async throws -> Int {
+      try await withCheckedContinuation { waiters.append($0) }.get()
+    }
+
+    func release(_ index: Int, _ result: Result<Int, Error>) {
+      guard waiters.indices.contains(index) else {
+        Issue.record("no run \(index)")
+        return
+      }
+      waiters[index]?.resume(returning: result)
+      waiters[index] = nil
+    }
+
+    func waitForRuns(_ count: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
+      for _ in 0 ..< 1000 where self.count < count {
+        await Task.yield()
+      }
+      if self.count < count {
+        Issue.record("expected \(count) runs, saw \(self.count)", sourceLocation: sourceLocation)
+      }
+    }
+  }
+
+  @MainActor
+  final class TestClock {
+    var now = ContinuousClock.now
+  }
+
+  @Test func aCallerPastTheBoundStartsAnotherRunWhoseValueReleasesEveryCaller() async throws {
+    let clock = TestClock()
+    let memo = GenerationMemo<Int>(shareFor: .seconds(10), now: { clock.now })
+    let runs = Runs()
+    let early = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    clock.now += .seconds(11)
+    let late = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(2)
+    runs.release(1, .success(2))
+    #expect(try await withinTimeLimit { try await late.value } == 2)
+    #expect(try await withinTimeLimit { try await early.value } == 2)
+    runs.release(0, .success(1))
+  }
+
+  @Test func aCallerWithinTheBoundJoinsTheRun() async throws {
+    let clock = TestClock()
+    let memo = GenerationMemo<Int>(shareFor: .seconds(10), now: { clock.now })
+    let runs = Runs()
+    let early = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    clock.now += .seconds(9)
+    let late = Task { try await memo.value { try await runs.run() } }
+    for _ in 0 ..< 100 {
+      await Task.yield()
+    }
+    #expect(runs.count == 1)
+    runs.release(0, .success(1))
+    #expect(try await withinTimeLimit { try await late.value } == 1)
+    #expect(try await withinTimeLimit { try await early.value } == 1)
+  }
+
+  @Test func theBoundCountsFromTheNewestRun() async throws {
+    let clock = TestClock()
+    let memo = GenerationMemo<Int>(shareFor: .seconds(10), now: { clock.now })
+    let runs = Runs()
+    let first = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    clock.now += .seconds(11)
+    let second = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(2)
+    clock.now += .seconds(5)
+    let third = Task { try await memo.value { try await runs.run() } }
+    for _ in 0 ..< 100 {
+      await Task.yield()
+    }
+    #expect(runs.count == 2)
+    runs.release(1, .success(2))
+    #expect(try await withinTimeLimit { try await third.value } == 2)
+    #expect(try await withinTimeLimit { try await first.value } == 2)
+    _ = try await second.value
+    runs.release(0, .success(1))
+  }
+
+  @Test func theFirstValueOfAGenerationIsKeptOverALaterRunsValue() async throws {
+    let clock = TestClock()
+    let memo = GenerationMemo<Int>(shareFor: .seconds(10), now: { clock.now })
+    let runs = Runs()
+    let early = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    clock.now += .seconds(11)
+    let late = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(2)
+    runs.release(1, .success(2))
+    _ = try await withinTimeLimit { try await late.value }
+    _ = try await withinTimeLimit { try await early.value }
+    runs.release(0, .success(1))
+    for _ in 0 ..< 100 {
+      await Task.yield()
+    }
+    #expect(try await memo.value { 3 } == 2)
+  }
+
+  @Test func aLaterRunsFailureLeavesTheEarlierRunsCallersWaiting() async throws {
+    let clock = TestClock()
+    let memo = GenerationMemo<Int>(shareFor: .seconds(10), now: { clock.now })
+    let runs = Runs()
+    let early = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    clock.now += .seconds(11)
+    let late = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(2)
+    runs.release(1, .failure(Failure()))
+    await #expect(throws: Failure.self) { try await withinTimeLimit { try await late.value } }
+    runs.release(0, .success(1))
+    #expect(try await withinTimeLimit { try await early.value } == 1)
+  }
 }

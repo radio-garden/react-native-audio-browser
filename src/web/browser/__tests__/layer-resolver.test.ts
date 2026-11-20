@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import type { TransformableRequestConfig } from '../../../types'
 import type { HttpClient } from '../../http/HttpClient'
 import { BrowserManager } from '../BrowserManager'
 import { FavoriteManager } from '../FavoriteManager'
@@ -99,6 +100,62 @@ describe('BrowserManager layer resolver', () => {
 
     expect(await manager.resolvedRequestConfig()).toEqual({
       baseUrl: 'https://static.example.com'
+    })
+  })
+
+  describe('a resolver that stays silent', () => {
+    const silent = new Promise<never>(() => {})
+    const now = vi.spyOn(Date, 'now')
+    afterEach(() => now.mockReset())
+
+    function managerWithResolver(
+      answers: Array<Promise<TransformableRequestConfig>>
+    ) {
+      const manager = makeManager()
+      const resolver = vi.fn(() => answers.shift() ?? silent)
+      manager.configuration = { path: '/', requestResolver: resolver }
+      return { manager, resolver }
+    }
+
+    it('is joined by a caller within ten seconds', async () => {
+      now.mockReturnValue(0)
+      const { manager, resolver } = managerWithResolver([])
+      void manager.resolvedRequestConfig()
+      now.mockReturnValue(9_999)
+      void manager.resolvedRequestConfig()
+      await Promise.resolve()
+      expect(resolver).toHaveBeenCalledTimes(1)
+    })
+
+    it('is not joined after ten seconds, and the next answer releases every caller', async () => {
+      now.mockReturnValue(0)
+      const { manager, resolver } = managerWithResolver([
+        silent,
+        Promise.resolve({ baseUrl: 'https://late.example.com' })
+      ])
+      const early = manager.resolvedRequestConfig()
+      now.mockReturnValue(10_000)
+      expect(await manager.resolvedRequestConfig()).toEqual({
+        baseUrl: 'https://late.example.com'
+      })
+      expect(await early).toEqual({ baseUrl: 'https://late.example.com' })
+      expect(resolver).toHaveBeenCalledTimes(2)
+    })
+
+    it("leaves the earlier callers waiting on a later run's failure", async () => {
+      now.mockReturnValue(0)
+      let answer!: (config: TransformableRequestConfig) => void
+      const { manager } = managerWithResolver([
+        new Promise((resolve) => (answer = resolve)),
+        Promise.reject(new Error('later run failed'))
+      ])
+      const early = manager.resolvedRequestConfig()
+      now.mockReturnValue(10_000)
+      await expect(manager.resolvedRequestConfig()).rejects.toThrow(
+        'later run failed'
+      )
+      answer({ baseUrl: 'https://early.example.com' })
+      expect(await early).toEqual({ baseUrl: 'https://early.example.com' })
     })
   })
 })
