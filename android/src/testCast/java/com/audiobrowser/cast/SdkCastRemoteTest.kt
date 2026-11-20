@@ -8,14 +8,27 @@ import com.audiobrowser.remote.RemotePlayback
 import com.google.android.gms.cast.CastStatusCodes
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
+import com.google.android.gms.cast.framework.media.RemoteMediaClient
+import com.google.android.gms.cast.framework.media.RemoteMediaClient.MediaChannelResult
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.common.api.PendingResult
+import com.google.android.gms.common.api.ResultCallback
+import com.google.android.gms.common.api.Status
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyBoolean
+import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
@@ -34,13 +47,34 @@ class SdkCastRemoteTest {
 
   private val cast = mock(Cast::class.java)
   private val player = mock(RemoteCastPlayer::class.java)
-  private val session = mock(CastSession::class.java)
+  private val client = mock(RemoteMediaClient::class.java)
+  private val session = mock(CastSession::class.java).also {
+    `when`(it.remoteMediaClient).thenReturn(client)
+  }
+
+  /** The status requests sent, oldest first. */
+  private val requests = mutableListOf<PendingResult<MediaChannelResult>>()
+
+  init {
+    `when`(client.requestStatus()).thenAnswer {
+      @Suppress("UNCHECKED_CAST")
+      (mock(PendingResult::class.java) as PendingResult<MediaChannelResult>).also { requests += it }
+    }
+  }
+
+  private var networkRegained: (() -> Unit)? = null
+  private var networkWatched = false
 
   /** [RemotePlayback.isSessionAvailable] as each session change the listener heard of saw it. */
   private val seen = mutableListOf<Boolean>()
 
   private val remote =
-    SdkCastRemote(cast, player).apply {
+    SdkCastRemote(cast, player) { onRegained ->
+        networkRegained = onRegained
+        networkWatched = true
+        return@SdkCastRemote { networkWatched = false }
+      }
+      .apply {
       setListener(
         object : RemotePlayback.Listener {
           override fun onSessionChanged() {
@@ -184,6 +218,7 @@ class SdkCastRemoteTest {
     assertFalse(remote.isSessionAvailable)
     assertFalse(remote.isSuspended)
     assertEquals(listOf(false), seen)
+    verify(client).unregisterCallback(any())
   }
 
   // After a loss it reports neither as a suspension nor as an end, the SDK can give up on the
@@ -218,5 +253,121 @@ class SdkCastRemoteTest {
 
     assertFalse(remote.isSessionAvailable)
     assertEquals(emptyList<Boolean>(), seen)
+  }
+
+  /** Answers the last status request as the SDK does: [statusCode], or a timeout for no answer. */
+  private fun answer(statusCode: Int) {
+    @Suppress("UNCHECKED_CAST")
+    val captor =
+      ArgumentCaptor.forClass(ResultCallback::class.java)
+        as ArgumentCaptor<ResultCallback<MediaChannelResult>>
+    verify(requests.last()).setResultCallback(captor.capture(), anyLong(), eq(TimeUnit.MILLISECONDS))
+    val result = mock(MediaChannelResult::class.java)
+    `when`(result.status).thenReturn(Status(statusCode))
+    captor.value.onResult(result)
+  }
+
+  @Test
+  fun `a session whose receiver no longer answers once the network is back is gone, and ended`() {
+    startSession(First.PLAYER)
+    seen.clear()
+
+    networkRegained!!()
+    answer(CommonStatusCodes.TIMEOUT)
+
+    assertFalse(remote.isSessionAvailable)
+    assertEquals(listOf(false), seen)
+    verify(cast).endCurrentSession(false)
+  }
+
+  @Test
+  fun `a session whose receiver answers once the network is back stays`() {
+    startSession(First.PLAYER)
+    seen.clear()
+
+    networkRegained!!()
+    answer(CommonStatusCodes.SUCCESS)
+
+    assertTrue(remote.isSessionAvailable)
+    assertEquals(emptyList<Boolean>(), seen)
+    verify(cast, never()).endCurrentSession(anyBoolean())
+  }
+
+  // A request fails at once while suspended, and is replaced or cancelled by others: only a
+  // receiver's silence tells of the quiet reconnect.
+  @Test
+  fun `a request that fails without the receiver's silence leaves the session`() {
+    startSession(First.PLAYER)
+
+    for (statusCode in
+      listOf(CommonStatusCodes.ERROR, CastStatusCodes.REPLACED, CastStatusCodes.CANCELED)) {
+      networkRegained!!()
+      answer(statusCode)
+    }
+
+    assertTrue(remote.isSessionAvailable)
+    verify(cast, never()).endCurrentSession(anyBoolean())
+  }
+
+  @Test
+  fun `the network's return asks nothing of a suspended session, which the SDK resumes or ends`() {
+    startSession(First.PLAYER)
+    suspendSession(First.PLAYER)
+
+    networkRegained!!()
+
+    verify(client, never()).requestStatus()
+  }
+
+  @Test
+  fun `no answer from a session that suspended meanwhile leaves it to the SDK`() {
+    startSession(First.PLAYER)
+    networkRegained!!()
+
+    suspendSession(First.PLAYER)
+    answer(CommonStatusCodes.TIMEOUT)
+
+    assertTrue(remote.isSessionAvailable)
+    verify(cast, never()).endCurrentSession(anyBoolean())
+  }
+
+  @Test
+  fun `no answer from a session that suspended and resumed meanwhile leaves it`() {
+    startSession(First.PLAYER)
+    networkRegained!!()
+
+    suspendSession(First.PLAYER)
+    resumeSession(First.PLAYER)
+    answer(CommonStatusCodes.TIMEOUT)
+
+    assertTrue(remote.isSessionAvailable)
+    verify(cast, never()).endCurrentSession(anyBoolean())
+  }
+
+  @Test
+  fun `the network's return asks nothing without a session`() {
+    networkRegained!!()
+
+    verify(client, never()).requestStatus()
+  }
+
+  @Test
+  fun `the network returning again asks nothing more while the receiver has yet to answer`() {
+    startSession(First.PLAYER)
+
+    networkRegained!!()
+    networkRegained!!()
+    verify(client, times(1)).requestStatus()
+
+    answer(CommonStatusCodes.SUCCESS)
+    networkRegained!!()
+    verify(client, times(2)).requestStatus()
+  }
+
+  @Test
+  fun `release stops watching the network`() {
+    remote.release()
+
+    assertFalse(networkWatched)
   }
 }
