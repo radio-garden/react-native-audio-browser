@@ -97,14 +97,32 @@ namespace margelo::nitro::audiobrowser {
               __promise->cthis()->resolve(JTransformableRequestConfig::fromCpp(__result));
             });
             __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-              auto __jniError = jni::getJavaExceptionForCppException(__error);
+              auto __jniError = jni::getJavaExceptionForCppException([&]() -> std::exception_ptr {
+                if (__error == nullptr) return __error;
+                try {
+                  std::rethrow_exception(__error);
+                } catch (const facebook::jsi::JSError& __jsError) {
+                  return std::make_exception_ptr(std::runtime_error(__jsError.getMessage()));
+                } catch (...) {
+                  return __error;
+                }
+              }());
               __promise->cthis()->reject(__jniError);
             });
             return __localPromise;
           }());
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-          auto __jniError = jni::getJavaExceptionForCppException(__error);
+          auto __jniError = jni::getJavaExceptionForCppException([&]() -> std::exception_ptr {
+            if (__error == nullptr) return __error;
+            try {
+              std::rethrow_exception(__error);
+            } catch (const facebook::jsi::JSError& __jsError) {
+              return std::make_exception_ptr(std::runtime_error(__jsError.getMessage()));
+            } catch (...) {
+              return __error;
+            }
+          }());
           __promise->cthis()->reject(__jniError);
         });
         return __localPromise;
