@@ -81,6 +81,7 @@ let package = Package(
         "Util/SupersedingTask.swift",
         "Util/Deadline.swift",
         "Util/AwaitCallback.swift",
+        "Util/JSCallbackError.swift",
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
         "Observer/PlayerObserver.swift",

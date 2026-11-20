@@ -36,7 +36,7 @@ internal suspend fun <T> Promise<T>.awaitOrTimeout(): T =
 
 /** [awaitNested], failing as [awaitOrTimeout] does; the timeout covers both promises. */
 internal suspend fun <T> Promise<Promise<T>>.awaitNestedOrTimeout(): T =
-  withTimeoutAsFailure(FALLBACK_TIMEOUT, "JS callback") { settled().awaitJsPromise() }
+  withTimeoutAsFailure(FALLBACK_TIMEOUT, "JS callback") { awaitNested() }
 
 /**
  * [withTimeout], failing with a [TimeoutException] rather than cancelling: a caller's `future` then
@@ -60,7 +60,7 @@ private suspend fun <T> Promise<T>.settled(rejection: (Throwable) -> Throwable =
     catch { c.resumeWithException(rejection(it)) }
   }
 
-private val JS_ERROR_NAME = Regex("""^(?:[A-Za-z_$][\w$]*)?Error: """)
+private val JS_ERROR_NAME = Regex("""^(?:[A-Za-z_$][A-Za-z0-9_$]*)?Error: """)
 
 private fun withoutErrorName(rejection: Throwable): Throwable {
   val message = rejection.message ?: return rejection
