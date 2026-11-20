@@ -47,18 +47,17 @@ struct NowPlayingButtonRulesTests {
     #expect(!NowPlayingButtonRules.queueItemPickAllowed(false))
   }
 
-  @Test func upNext_needsMoreThanOneTrack_withTheCapabilityUnsetOrOn() {
-    #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, trackCount: 2))
-    #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: true, trackCount: 2))
-    #expect(!NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, trackCount: 1))
-    #expect(!NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, trackCount: 0))
+  @Test func upNext_needsATrackAfterTheCurrentOne_withTheCapabilityUnsetOrOn() {
+    #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, upNextCount: 1))
+    #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: true, upNextCount: 1))
+    #expect(!NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, upNextCount: 0))
   }
 
   @Test func upNext_isOffWithoutTheOption() {
-    #expect(!NowPlayingButtonRules.upNextEnabled(option: false, skipToQueueItem: true, trackCount: 2))
+    #expect(!NowPlayingButtonRules.upNextEnabled(option: false, skipToQueueItem: true, upNextCount: 1))
   }
 
   @Test func upNext_isOffWithoutTheCapability_whateverTheOption() {
-    #expect(!NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: false, trackCount: 2))
+    #expect(!NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: false, upNextCount: 1))
   }
 }

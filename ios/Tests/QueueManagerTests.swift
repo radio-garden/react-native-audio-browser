@@ -9,6 +9,111 @@ private func tracks(_ ids: String...) -> [Track] {
   ids.map { Track(id: $0) }
 }
 
+// MARK: - upNextIndices
+
+@Suite("upNextIndices")
+@MainActor
+struct UpNextIndicesTests {
+  @Test func sequential_listsTheTracksAfterTheCurrentOne_withoutIt() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"), initialIndex: 1)
+    q.repeatMode = .off
+    #expect(q.upNextIndices == [2, 3])
+  }
+
+  @Test func sequential_lastTrack_repeatOff_isEmpty() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
+    q.repeatMode = .off
+    #expect(q.upNextIndices.isEmpty)
+  }
+
+  @Test func sequential_repeatQueue_wrapsToTheTracksBeforeTheCurrentOne() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"), initialIndex: 2)
+    q.repeatMode = .queue
+    #expect(q.upNextIndices == [3, 0, 1])
+  }
+
+  @Test func repeatTrack_listsWhatNextGoesTo() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
+    q.repeatMode = .track
+    #expect(q.upNextIndices == [2])
+  }
+
+  @Test func singleTrack_isEmpty_whateverTheRepeatMode() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    for mode in [RepeatMode.off, .track, .queue] {
+      q.repeatMode = mode
+      #expect(q.upNextIndices.isEmpty)
+    }
+  }
+
+  @Test func emptyQueue_isEmpty() {
+    #expect(QueueManager().upNextIndices.isEmpty)
+  }
+
+  @Test func shuffle_followsTheOrderNextWalks() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d", "e"), initialIndex: 2)
+    q.shuffleEnabled = true
+    let upNext = q.upNextIndices
+    var walked: [Int] = []
+    for _ in 0 ..< 4 {
+      _ = q.next()
+      walked.append(q.currentIndex)
+    }
+    #expect(upNext == walked)
+    #expect(!upNext.contains(2))
+  }
+
+  @Test func shuffle_fromTheMiddleOfTheOrder_stopsAtItsEndAsNextDoes() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d", "e"))
+    q.shuffleEnabled = true
+    for _ in 0 ..< 2 {
+      _ = q.next()
+    }
+    let upNext = q.upNextIndices
+    var walked: [Int] = []
+    for _ in 0 ..< q.tracks.count where q.next() == .trackChanged {
+      walked.append(q.currentIndex)
+    }
+    #expect(upNext == walked)
+    #expect(upNext.count == 2)
+  }
+
+  @Test func shuffle_fromTheMiddleOfTheOrder_wrapsAsNextDoes() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d", "e"))
+    q.repeatMode = .queue
+    q.shuffleEnabled = true
+    for _ in 0 ..< 2 {
+      _ = q.next()
+    }
+    let current = q.currentIndex
+    let upNext = q.upNextIndices
+    var walked: [Int] = []
+    for _ in 0 ..< 4 {
+      _ = q.next()
+      walked.append(q.currentIndex)
+    }
+    #expect(upNext == walked)
+    #expect(!upNext.contains(current))
+  }
+
+  @Test func followsTheCurrentTrack() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"))
+    q.repeatMode = .queue
+    #expect(q.upNextIndices == [1, 2])
+    _ = q.next()
+    #expect(q.upNextIndices == [2, 0])
+  }
+}
+
 // MARK: - Navigation: next()
 
 @Suite("next()")

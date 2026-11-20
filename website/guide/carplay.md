@@ -617,7 +617,7 @@ You can also change them later with `updateOptions({ ios: { carPlayNowPlayingBut
 - **More than five entries log a warning.** Five is CarPlay's limit for the row; the count includes repeats.
 - **A [gate](/guide/gate) hides them.** While a gate is active the row is empty. The transport controls stay.
 
-The **Up Next** button is separate. It opens the queue and shows only when the queue has more than one track. Set `ios.carPlayUpNextButton: false` to never show it. It also needs the [`skipToQueueItem`](/guide/remote-controls#picking-a-queue-item) capability, which is on by default.
+The **Up Next** button is separate. It opens the tracks that follow the current one, in the order `skipToNext` plays them: shuffled when shuffle is on, wrapping past the end on repeat-queue, never the current track. It shows only when a track follows the current one. Set `ios.carPlayUpNextButton: false` to never show it. It also needs the [`skipToQueueItem`](/guide/remote-controls#picking-a-queue-item) capability, which is on by default.
 
 ## Playing Indicator
 

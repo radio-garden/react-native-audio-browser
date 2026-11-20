@@ -28,6 +28,14 @@ final class CarPlayNowPlayingManager {
 
   private var builtRow: BuiltButtonRow?
 
+  /// An open list is rebuilt only when this changes: a rebuild reloads every row's artwork.
+  private struct BuiltUpNext: Equatable {
+    let queueVersion: Int
+    let indices: [Int]
+  }
+
+  private var builtUpNext: BuiltUpNext?
+
   /// Resolved on track change, not on tap, so the album line shows only when a destination exists.
   private var albumArtistDestination: String?
   private let albumPathResolution = SupersedingTask<String, String>()
@@ -68,9 +76,15 @@ final class CarPlayNowPlayingManager {
       audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.refresh() },
       browserManager.favoritesChanged.subscribeOnMain { [weak self] in self?.refreshButtons() },
       audioBrowser.favoriteChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
-      audioBrowser.repeatModeChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
-      audioBrowser.shuffleChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshButtons() },
-      audioBrowser.queueChangedEmitter.subscribeOnMain { [weak self] in self?.queueChanged($0) },
+      audioBrowser.repeatModeChangedEmitter.subscribeOnMain { [weak self] _ in
+        self?.refreshButtons()
+        self?.refreshUpNext()
+      },
+      audioBrowser.shuffleChangedEmitter.subscribeOnMain { [weak self] _ in
+        self?.refreshButtons()
+        self?.refreshUpNext()
+      },
+      audioBrowser.queueChangedEmitter.subscribeOnMain { [weak self] _ in self?.refreshUpNext() },
       audioBrowser.showNowPlayingRequestedEmitter.subscribeOnMain { [weak self] in self?.showNowPlaying() },
       audioBrowser.activeTrackChangedEmitter.subscribeOnMain { [weak self] _ in
         // The player's current track is authoritative again.
@@ -91,7 +105,7 @@ final class CarPlayNowPlayingManager {
   }
 
   func refresh() {
-    updateUpNextButton()
+    refreshUpNext()
     refreshButtons()
     updateAlbumArtistDestination()
   }
@@ -226,14 +240,6 @@ final class CarPlayNowPlayingManager {
     }
   }
 
-  // MARK: - Queue Changes
-
-  private func queueChanged(_ tracks: [Track]) {
-    updateUpNextButton()
-    guard let upNextTemplate else { return }
-    upNextTemplate.updateSections([createUpNextSection(tracks: tracks)])
-  }
-
   // MARK: - Private - Button Handlers
 
   private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
@@ -290,45 +296,50 @@ final class CarPlayNowPlayingManager {
     navigate(destination, title)
   }
 
-  private func updateUpNextButton() {
+  private func refreshUpNext() {
+    let indices = player?.upNextIndices ?? []
     let options = audioBrowser.playerOptions
     CPNowPlayingTemplate.shared.isUpNextButtonEnabled = NowPlayingButtonRules.upNextEnabled(
       option: options.carPlayUpNextButton,
       skipToQueueItem: options.capabilities.skipToQueueItem,
-      trackCount: player?.tracks.count ?? 0,
+      upNextCount: indices.count,
     )
+    guard let upNextTemplate else { return }
+    let built = BuiltUpNext(queueVersion: player?.queueVersion ?? 0, indices: indices)
+    guard built != builtUpNext else { return }
+    builtUpNext = built
+    upNextTemplate.updateSections([createUpNextSection(indices)])
   }
 
   fileprivate func handleUpNextButtonTapped() {
-    let tracks = player?.tracks ?? []
-
-    guard !tracks.isEmpty else {
-      logger.debug("No tracks in queue for Up Next")
+    let indices = player?.upNextIndices ?? []
+    guard !indices.isEmpty else {
+      logger.debug("No tracks after the current one for Up Next")
       return
     }
-
-    logger.info("Showing Up Next queue with \(tracks.count) tracks")
 
     // System-localized, or what the app set.
     let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
     let template = CPListTemplate(
       title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,
-      sections: [createUpNextSection(tracks: tracks)],
+      sections: [createUpNextSection(indices)],
     )
 
     upNextTemplate = template
+    builtUpNext = BuiltUpNext(queueVersion: player?.queueVersion ?? 0, indices: indices)
 
     interfaceController.safePush(template, animated: true)
   }
 
-  private func createUpNextSection(tracks: [Track]) -> CPListSection {
+  private func createUpNextSection(_ indices: [Int]) -> CPListSection {
+    let tracks = player?.tracks ?? []
     let maxItems = CPListTemplate.maximumItemCount
-    if tracks.count > maxItems {
-      logger.info("Up Next queue has \(tracks.count) tracks, clamping to CarPlay's limit of \(maxItems)")
+    if indices.count > maxItems {
+      logger.info("Up Next has \(indices.count) tracks, clamping to CarPlay's limit of \(maxItems)")
     }
-    // A prefix keeps item positions equal to queue indices.
-    let items = tracks.prefix(maxItems).enumerated().map { index, track -> CPListItem in
-      listItem(track) { [weak self] _, completion in
+    let items = indices.prefix(maxItems).map { index -> CPListItem in
+      let track = tracks[index]
+      return listItem(track) { [weak self] _, completion in
         defer { completion() }
         // The list can outlive the capability: it stays pushed when the button turns off.
         guard let self, NowPlayingButtonRules.queueItemPickAllowed(audioBrowser.playerOptions.capabilities.skipToQueueItem) else { return }
