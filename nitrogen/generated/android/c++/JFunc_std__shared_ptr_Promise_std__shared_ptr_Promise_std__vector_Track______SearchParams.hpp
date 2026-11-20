@@ -120,31 +120,39 @@ namespace margelo::nitro::audiobrowser {
         jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
         jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
         __result->addOnResolvedListener([=](const std::shared_ptr<Promise<std::vector<Track>>>& __result) {
-          __promise->cthis()->resolve([&]() {
-            jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
-            jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
-            __result->addOnResolvedListener([=](const std::vector<Track>& __result) {
-              __promise->cthis()->resolve([&](auto&& __input) {
-                size_t __size = __input.size();
-                jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
-                for (size_t __i = 0; __i < __size; __i++) {
-                  const auto& __element = __input[__i];
-                  auto __elementJni = JTrack::fromCpp(__element);
-                  __array->setElement(__i, *__elementJni);
-                }
-                return __array;
-              }(__result));
-            });
-            __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-              auto __jniError = jni::getJavaExceptionForCppException(__error);
-              __promise->cthis()->reject(__jniError);
-            });
-            return __localPromise;
-          }());
+          jni::ThreadScope::WithClassLoader([&]() {
+            __promise->cthis()->resolve([&]() {
+              jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
+              jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
+              __result->addOnResolvedListener([=](const std::vector<Track>& __result) {
+                jni::ThreadScope::WithClassLoader([&]() {
+                  __promise->cthis()->resolve([&](auto&& __input) {
+                    size_t __size = __input.size();
+                    jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
+                    for (size_t __i = 0; __i < __size; __i++) {
+                      const auto& __element = __input[__i];
+                      auto __elementJni = JTrack::fromCpp(__element);
+                      __array->setElement(__i, *__elementJni);
+                    }
+                    return __array;
+                  }(__result));
+                });
+              });
+              __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
+                jni::ThreadScope::WithClassLoader([&]() {
+                  auto __jniError = jni::getJavaExceptionForCppException(__error);
+                  __promise->cthis()->reject(__jniError);
+                });
+              });
+              return __localPromise;
+            }());
+          });
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-          auto __jniError = jni::getJavaExceptionForCppException(__error);
-          __promise->cthis()->reject(__jniError);
+          jni::ThreadScope::WithClassLoader([&]() {
+            auto __jniError = jni::getJavaExceptionForCppException(__error);
+            __promise->cthis()->reject(__jniError);
+          });
         });
         return __localPromise;
       }();

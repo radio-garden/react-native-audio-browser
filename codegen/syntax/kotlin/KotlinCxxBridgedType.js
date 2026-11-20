@@ -680,6 +680,10 @@ export class KotlinCxxBridgedType {
                         const promise = getTypeAs(this.type, PromiseType);
                         const resolvingType = promise.resultingType.getCode('c++');
                         const bridge = new KotlinCxxBridgedType(promise.resultingType);
+                        // Not upstream: a C++ Promise can settle on a thread whose class loader
+                        // cannot find Nitro's Kotlin callback classes (the JS thread tearing its
+                        // runtime down destroys a pending Promise, which rejects). The lookup throws
+                        // out of the Promise's destructor and aborts; Nitro's ~JPromise scopes it so.
                         if (promise.resultingType.kind === 'void') {
                             // void: resolve()
                             return `
@@ -687,11 +691,15 @@ export class KotlinCxxBridgedType {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
   jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
   ${parameterName}->addOnResolvedListener([=]() {
-    __promise->cthis()->resolve(JUnit::instance());
+    jni::ThreadScope::WithClassLoader([&]() {
+      __promise->cthis()->resolve(JUnit::instance());
+    });
   });
   ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
-    auto __jniError = jni::getJavaExceptionForCppException(__error);
-    __promise->cthis()->reject(__jniError);
+    jni::ThreadScope::WithClassLoader([&]() {
+      auto __jniError = jni::getJavaExceptionForCppException(__error);
+      __promise->cthis()->reject(__jniError);
+    });
   });
   return __localPromise;
 }()
@@ -704,11 +712,15 @@ export class KotlinCxxBridgedType {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
   jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
   ${parameterName}->addOnResolvedListener([=](const ${resolvingType}& __result) {
-    __promise->cthis()->resolve(${indent(bridge.parseFromCppToKotlin('__result', 'c++', true), '    ')});
+    jni::ThreadScope::WithClassLoader([&]() {
+      __promise->cthis()->resolve(${indent(bridge.parseFromCppToKotlin('__result', 'c++', true), '      ')});
+    });
   });
   ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
-    auto __jniError = jni::getJavaExceptionForCppException(__error);
-    __promise->cthis()->reject(__jniError);
+    jni::ThreadScope::WithClassLoader([&]() {
+      auto __jniError = jni::getJavaExceptionForCppException(__error);
+      __promise->cthis()->reject(__jniError);
+    });
   });
   return __localPromise;
 }()
