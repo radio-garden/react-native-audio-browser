@@ -32,6 +32,7 @@ import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -369,9 +370,10 @@ class BrowserManager {
       if (searchQuery != null) {
         Timber.d("Handling search playback request for query: $searchQuery")
 
-        val searchResults = search(searchQuery)
         val searchTracks =
-          searchResults.flattenedChildren?.filterNot { it.disabled == true }?.toTypedArray()
+          (getCachedSearchResults(searchQuery) ?: searchedOrNull(searchQuery))
+            ?.filterNot { it.disabled == true }
+            ?.toTypedArray()
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           val mediaId = mediaItem.mediaId
@@ -763,6 +765,15 @@ class BrowserManager {
       return false
     }
   }
+
+  /** A fresh search's results, or null when it fails. */
+  private suspend fun searchedOrNull(query: String): Array<Track>? =
+    try {
+      search(query).flattenedChildren?.toTypedArray()
+    } catch (e: Exception) {
+      if (e is CancellationException && e !is TimeoutCancellationException) throw e
+      null
+    }
 
   /** Returns the results of the most recent search when [query] matches it, else null. */
   fun getCachedSearchResults(query: String): Array<Track>? {

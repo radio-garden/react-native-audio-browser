@@ -1,5 +1,6 @@
 package com.audiobrowser.browser
 
+import androidx.media3.common.MediaItem
 import com.audiobrowser.TestFixtures.transformableConfig
 import com.audiobrowser.navigationErrorFor
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
@@ -61,6 +62,12 @@ class BrowserManagerSearchFailureTest {
     )
   }
 
+  private fun tappedSearchResult(mediaId: String) =
+    MediaItem.Builder()
+      .setMediaId(mediaId)
+      .setRequestMetadata(MediaItem.RequestMetadata.Builder().setSearchQuery("jazz").build())
+      .build()
+
   @Test
   fun `a non-2xx search is an http-error with its status`() {
     val error = navigationErrorOfSearch(MockResponse().setResponseCode(503))
@@ -103,5 +110,46 @@ class BrowserManagerSearchFailureTest {
     val results = runBlocking { browserManager.searchPlayable("jazz") }
 
     assertNull(results)
+  }
+
+  @Test
+  fun `a tapped search result plays the cached results without searching again`() {
+    server.enqueue(
+      MockResponse()
+        .setBody(
+          """[{"title":"A","src":"https://s/a.mp3"},{"title":"B","src":"https://s/b.mp3"}]"""
+        )
+    )
+    runBlocking { browserManager.search("jazz") }
+
+    val playback = runBlocking {
+      browserManager.resolveMediaItemsForPlayback(
+        listOf(tappedSearchResult("https://s/b.mp3")),
+        0,
+        0,
+      )
+    }
+
+    assertEquals(
+      listOf("https://s/a.mp3", "https://s/b.mp3"),
+      playback.mediaItems.map { it.mediaId },
+    )
+    assertEquals(1, playback.startIndex)
+    assertEquals(1, server.requestCount)
+  }
+
+  @Test
+  fun `a tapped search result whose search fails plays on its own`() {
+    server.enqueue(MockResponse().setResponseCode(503))
+
+    val playback = runBlocking {
+      browserManager.resolveMediaItemsForPlayback(
+        listOf(tappedSearchResult("https://s/b.mp3")),
+        0,
+        0,
+      )
+    }
+
+    assertEquals(listOf("https://s/b.mp3"), playback.mediaItems.map { it.mediaId })
   }
 }
