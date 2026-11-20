@@ -17,11 +17,21 @@ enum PlaybackEvent {
 }
 
 extension PlaybackEvent {
-  /// The event for a public log line: a failure without the URL it may carry.
+  /// The event for a public log line: no URL, title or track. A failure omits the URL it may carry.
   var logDescription: String {
     switch self {
+    case .stopped: "stopped"
+    case .trackLoading: "trackLoading"
+    case .trackUnloaded: "trackUnloaded"
+    case .trackEndedNaturally: "trackEndedNaturally"
+    case .loadSeekCompleted: "loadSeekCompleted"
+    case let .avPlayerPaused(hasAsset): "avPlayerPaused(hasAsset: \(hasAsset))"
+    case .avPlayerWaiting: "avPlayerWaiting"
+    case .avPlayerPlaying: "avPlayerPlaying"
+    case .audioFrameDecoded: "audioFrameDecoded"
+    case .bufferingSufficient: "bufferingSufficient"
     case .errorOccurred: "errorOccurred"
-    default: String(describing: self)
+    case .retryCancelled: "retryCancelled"
     }
   }
 }

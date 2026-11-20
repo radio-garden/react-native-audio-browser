@@ -1871,7 +1871,8 @@ struct LateEngineEventTests {
     let (player, engine, _) = try makePlaying(live: true)
     engine.pauseAndCarrierOrder.removeAll()
     player.stop()
-    #expect(engine.pauseAndCarrierOrder.first == "pause")
-    #expect(engine.pauseAndCarrierOrder.contains("carrier"))
+    let pause = try #require(engine.pauseAndCarrierOrder.firstIndex(of: .pause))
+    let carrier = try #require(engine.pauseAndCarrierOrder.firstIndex(of: .carrier))
+    #expect(pause < carrier)
   }
 }
