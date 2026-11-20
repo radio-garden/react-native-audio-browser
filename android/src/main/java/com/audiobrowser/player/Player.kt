@@ -333,7 +333,8 @@ internal constructor(
 
   private var cache: SimpleCache? = null
 
-  private var destroyed = false
+  internal var destroyed = false
+    private set
 
   private val progressTimer: PlaybackTimer by lazy {
     PlaybackTimer(
