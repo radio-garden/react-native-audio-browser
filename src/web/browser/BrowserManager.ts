@@ -109,7 +109,6 @@ export class BrowserManager {
    */
   set path(value: string | undefined) {
     if (this.hasValidConfiguration()) {
-      this.navigationErrorManager.clearNavigationError()
       const pathToNavigate =
         value ?? this._configuration.path ?? this.getDefaultPath()
       if (pathToNavigate) {
@@ -160,7 +159,6 @@ export class BrowserManager {
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
     this._layerGeneration += 1
-    this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
     // Determine initial path
@@ -184,7 +182,6 @@ export class BrowserManager {
    * Navigates to a specific path.
    */
   async navigatePath(path: string): Promise<void> {
-    this.navigationErrorManager.clearNavigationError()
     await this.navigate(path)
   }
 
@@ -234,9 +231,10 @@ export class BrowserManager {
     const navigationId = ++this.currentNavigationId
 
     try {
-      // Update path and clear content immediately to show loading state
+      // Update path and clear content and error immediately to show loading state
       this._path = path
       this._content = undefined
+      this.navigationErrorManager.clearNavigationError()
       this.onPathChanged(path)
       this.onContentChanged(undefined)
 
