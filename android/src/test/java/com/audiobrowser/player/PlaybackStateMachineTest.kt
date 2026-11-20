@@ -250,9 +250,18 @@ class PlaybackStateMachineTest {
   // MARK: stopped
 
   @Test
-  fun `stopped holds against a late buffering and a late playing`() {
+  fun `stopped holds against a late playing`() {
     assertEquals(
       emptyList<PlaybackState>(),
+      on(PlaybackEvent.IsPlayingChanged(isPlaying = true), from = PlaybackState.STOPPED),
+    )
+  }
+
+  @Test
+  fun `a prepare after a stop reports buffering`() {
+    // retry() or a controller's prepare: the engine loads without the play intent.
+    assertEquals(
+      listOf(PlaybackState.BUFFERING),
       on(
         PlaybackEvent.ExoPlaybackStateChanged(
           MediaPlayer.STATE_BUFFERING,
@@ -261,10 +270,6 @@ class PlaybackStateMachineTest {
         ),
         from = PlaybackState.STOPPED,
       ),
-    )
-    assertEquals(
-      emptyList<PlaybackState>(),
-      on(PlaybackEvent.IsPlayingChanged(isPlaying = true), from = PlaybackState.STOPPED),
     )
   }
 
