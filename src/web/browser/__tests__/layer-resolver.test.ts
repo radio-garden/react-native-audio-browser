@@ -101,4 +101,55 @@ describe('BrowserManager layer resolver', () => {
       baseUrl: 'https://static.example.com'
     })
   })
+
+  it('rejects with a failed resolution and retries it on the next request', async () => {
+    let calls = 0
+    const manager = makeManager()
+    manager.configuration = {
+      path: '/',
+      requestResolver: async () => {
+        calls += 1
+        if (calls === 1) throw new Error('token refresh failed')
+        return { baseUrl: 'https://api.example.com' }
+      }
+    }
+
+    await expect(manager.resolvedRequestConfig()).rejects.toThrow(
+      'token refresh failed'
+    )
+    expect(await manager.resolvedRequestConfig()).toEqual({
+      baseUrl: 'https://api.example.com'
+    })
+  })
+
+  it.each(['resolve', 'reject'] as const)(
+    'returns the current generation when a reconfigure lands mid-resolution and the stale resolver should %s',
+    async (settleStale) => {
+      const settlers: Array<Record<typeof settleStale, () => void>> = []
+      const resolverReturning = (token: string) => () =>
+        new Promise<{ headers: Record<string, string> }>((resolve, reject) => {
+          settlers.push({
+            resolve: () => resolve({ headers: { Authorization: token } }),
+            reject: () => reject(new Error(`${token} failed`))
+          })
+        })
+      const manager = makeManager()
+      manager.configuration = {
+        path: '/',
+        requestResolver: resolverReturning('first')
+      }
+      const request = manager.resolvedRequestConfig()
+      manager.configuration = {
+        path: '/',
+        requestResolver: resolverReturning('second')
+      }
+
+      settlers[0]![settleStale]()
+      // The stale generation must settle before the current one resolves, or the bug hides.
+      await new Promise((resolve) => setTimeout(resolve))
+      settlers[1]!.resolve()
+
+      expect(await request).toEqual({ headers: { Authorization: 'second' } })
+    }
+  )
 })

@@ -553,7 +553,13 @@ export class BrowserManager {
    * result cached; a static config (no resolver) passes through unchanged.
    */
   private async ensureLayersResolved(): Promise<void> {
-    if (this._resolvedLayerGeneration === this._layerGeneration) return
+    // A generation bump mid-resolution leaves the awaited one uncommitted.
+    while (this._resolvedLayerGeneration !== this._layerGeneration) {
+      await this.resolveLayers()
+    }
+  }
+
+  private resolveLayers(): Promise<void> {
     // Reuse an in-flight resolution for the same generation so concurrent
     // navigations (e.g. config-set's initial navigate overlapping an explicit
     // navigatePath) don't each invoke the resolver.
@@ -581,6 +587,7 @@ export class BrowserManager {
       if (this._layerResolution?.generation === generation) {
         this._layerResolution = undefined
       }
+      if (this._layerGeneration !== generation) return
       throw err
     })
     this._layerResolution = { generation, promise }
