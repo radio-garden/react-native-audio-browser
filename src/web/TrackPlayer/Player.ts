@@ -478,11 +478,19 @@ export class Player {
   }
 
   /**
+   * Web's equivalent of ExoPlayer's STATE_IDLE: stopped or failed, so no
+   * playable source is attached.
+   */
+  protected get isIdle(): boolean {
+    return this._isStopped || this.state.state === State.Error
+  }
+
+  /**
    * Android's `prepare()`, which both `play()` and `retry()` call.
    *
-   * It early-returns unless ExoPlayer is STATE_IDLE, so it reconnects after an
-   * error or a stop and never re-buffers a healthy stream; `error`/`_isStopped`
-   * is web's equivalent of idle. Re-preparing re-resolves the URL, which is the
+   * It early-returns unless ExoPlayer is STATE_IDLE ({@link isIdle}), so it
+   * reconnects after an error or a stop and never re-buffers a healthy stream.
+   * Re-preparing re-resolves the URL, which is the
    * whole point — a signed URL or token may have expired since the failure, and
    * replaying the cached one just fails again. iOS says the same thing in its
    * own `retry()`: "Re-resolve rather than replay the cached URL".
@@ -492,7 +500,7 @@ export class Player {
    */
   protected reprepare(): boolean {
     if (!this.current) return false
-    if (this.state.state !== State.Error && !this._isStopped) return false
+    if (!this.isIdle) return false
 
     // Not for live: `currentTime` there is elapsed time on a connection that no
     // longer exists, and a fresh connection already *is* the live edge. Seeking

@@ -254,6 +254,70 @@ describe('QueuePlayer skip while stopped', () => {
   })
 })
 
+describe('QueuePlayer skip to the failed active track', () => {
+  class FailedSkipPlayer extends QueuePlayer {
+    loads = 0
+    media = { currentTime: 0, play: () => Promise.resolve(), pause: () => {} }
+
+    constructor() {
+      super()
+      this.element = this.media as unknown as HTMLMediaElement
+      this.player = {
+        load: () => {
+          this.loads++
+          // A new source starts at zero and reports `loading`, as Shaka does.
+          this.media.currentTime = 0
+          this.dispatch({ type: 'trackLoading' })
+          return Promise.resolve()
+        },
+        unload: () => Promise.resolve()
+      } as unknown as typeof this.player
+    }
+    failAt(position: number): void {
+      this.media.currentTime = position
+      this.onError({ code: 1001, message: 'HTTP 404' })
+    }
+  }
+
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+  const failedPlayer = async (playWhenReady: boolean) => {
+    const player = new FailedSkipPlayer()
+    player.add([{ src: 'https://example.com/a.mp3' } as Track])
+    await tick()
+    if (playWhenReady) player.play()
+    player.failAt(42)
+    return player
+  }
+
+  it('reloads without a play intent', async () => {
+    const player = await failedPlayer(false)
+
+    player.skip(0)
+
+    expect(player.loads).toBe(2)
+  })
+
+  it('starts from the beginning, not from where playback failed', async () => {
+    const player = await failedPlayer(true)
+
+    player.skip(0)
+    await tick()
+
+    expect(player.loads).toBe(2)
+    expect(player.media.currentTime).toBe(0)
+  })
+
+  it('starts from the requested position', async () => {
+    const player = await failedPlayer(true)
+
+    player.skip(0, 7)
+    await tick()
+
+    expect(player.media.currentTime).toBe(7)
+  })
+})
+
 describe('QueuePlayer queue advance', () => {
   it('advances the queue when a track ends naturally', () => {
     const player = new TestQueuePlayer()
