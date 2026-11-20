@@ -26,7 +26,7 @@ enum BrowserPathHelper {
 
   static func createSearchPath(_ query: String) -> String {
     let encodedQuery =
-      query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+      query.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? query
     return "\(searchPathPrefix)?q=\(encodedQuery)"
   }
 
