@@ -308,7 +308,7 @@ final class CarPlayNowPlayingManager {
     let built = BuiltUpNext(queueVersion: player?.queueVersion ?? 0, indices: indices)
     guard built != builtUpNext else { return }
     builtUpNext = built
-    upNextTemplate.updateSections([createUpNextSection(indices)])
+    upNextTemplate.updateSections([createUpNextSection(built)])
   }
 
   fileprivate func handleUpNextButtonTapped() {
@@ -320,29 +320,44 @@ final class CarPlayNowPlayingManager {
 
     // System-localized, or what the app set.
     let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
+    let built = BuiltUpNext(queueVersion: player?.queueVersion ?? 0, indices: indices)
     let template = CPListTemplate(
       title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,
-      sections: [createUpNextSection(indices)],
+      sections: [createUpNextSection(built)],
     )
 
     upNextTemplate = template
-    builtUpNext = BuiltUpNext(queueVersion: player?.queueVersion ?? 0, indices: indices)
+    builtUpNext = built
 
     interfaceController.safePush(template, animated: true)
   }
 
-  private func createUpNextSection(_ indices: [Int]) -> CPListSection {
+  private func createUpNextSection(_ built: BuiltUpNext) -> CPListSection {
     let tracks = player?.tracks ?? []
     let maxItems = CPListTemplate.maximumItemCount
-    if indices.count > maxItems {
-      logger.info("Up Next has \(indices.count) tracks, clamping to CarPlay's limit of \(maxItems)")
+    if built.indices.count > maxItems {
+      logger.info("Up Next has \(built.indices.count) tracks, clamping to CarPlay's limit of \(maxItems)")
     }
-    let items = indices.prefix(maxItems).map { index -> CPListItem in
+    let items = built.indices.prefix(maxItems).map { index -> CPListItem in
       let track = tracks[index]
       return listItem(track) { [weak self] _, completion in
         defer { completion() }
+        guard let self else { return }
         // The list can outlive the capability: it stays pushed when the button turns off.
-        guard let self, NowPlayingButtonRules.queueItemPickAllowed(audioBrowser.playerOptions.capabilities.skipToQueueItem) else { return }
+        switch NowPlayingButtonRules.queueItemPick(
+          skipToQueueItem: audioBrowser.playerOptions.capabilities.skipToQueueItem,
+          rowQueueVersion: built.queueVersion,
+          queueVersion: player?.queueVersion,
+        ) {
+        case .skip:
+          break
+        case .refuse:
+          return
+        case .rebuild:
+          logger.info("Up Next pick of \(track.title) came after a queue change; rebuilding the list")
+          refreshUpNext()
+          return
+        }
         logger.info("Skipping to track at index \(index): \(track.title)")
         do {
           try player?.skipTo(index, playWhenReady: true)
