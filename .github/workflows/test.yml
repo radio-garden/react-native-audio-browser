@@ -50,6 +50,15 @@ jobs:
       - name: Glossary
         run: yarn vocab-check
 
+      - name: Generated bridge matches codegen
+        run: |
+          yarn codegen
+          git add --all nitrogen/generated
+          if ! git --no-pager diff --cached --exit-code -- nitrogen/generated; then
+            echo "::error title=Stale generated bridge::nitrogen/generated differs from what the codegen emits. Run \`corepack yarn codegen\` and commit nitrogen/generated."
+            exit 1
+          fi
+
   ios:
     # These three job names are the required status check contexts on main's
     # ruleset. Renaming one leaves its context permanently pending and blocks
