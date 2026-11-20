@@ -1,3 +1,4 @@
+import { withoutJSStack } from '../c++/withoutJSStack.js';
 import { NitroConfig } from '../../config/NitroConfig.js';
 import { indent } from '../../utils.js';
 import { getForwardDeclaration } from '../c++/getForwardDeclaration.js';
@@ -594,6 +595,8 @@ case ${i}:
                 switch (language) {
                     case 'swift':
                         return `RuntimeError.from(cppError: ${cppParameterName})`;
+                    case 'c++':
+                        return withoutJSStack(cppParameterName);
                     default:
                         return cppParameterName;
                 }

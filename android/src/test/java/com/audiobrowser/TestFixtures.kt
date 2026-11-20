@@ -99,12 +99,11 @@ object TestFixtures {
       JsPromise<Promise<RequestConfig>>().apply { resolve(js.promise) }.promise
     }
 
-  /** A layer `transformSync` whose JS call throws: Nitro rejects with the JSError's `what()`. */
-  fun throwingTransformSync(what: String) =
+  fun throwingTransformSync(message: String) =
     Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
       _,
       _ ->
-      JsPromise<RequestConfig>().apply { reject(Exception(what)) }.promise
+      JsPromise<RequestConfig>().apply { reject(Exception(message)) }.promise
     }
 
   fun mediaConfig(

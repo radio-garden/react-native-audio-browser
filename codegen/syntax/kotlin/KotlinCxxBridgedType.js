@@ -1,3 +1,4 @@
+import { withoutJSStack } from '../c++/withoutJSStack.js';
 import { indent } from '../../utils.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
 import { getReferencedTypes } from '../getReferencedTypes.js';
@@ -704,7 +705,7 @@ export class KotlinCxxBridgedType {
   jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);${onResolved}
   ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
     jni::ThreadScope::WithClassLoader([&]() {
-      auto __jniError = jni::getJavaExceptionForCppException(__error);
+      auto __jniError = jni::getJavaExceptionForCppException(${indent(withoutJSStack('__error'), '      ')});
       __promise->cthis()->reject(__jniError);
     });
   });
@@ -719,7 +720,7 @@ export class KotlinCxxBridgedType {
             case 'error':
                 switch (language) {
                     case 'c++':
-                        return `jni::getJavaExceptionForCppException(${parameterName})`;
+                        return `jni::getJavaExceptionForCppException(${withoutJSStack(parameterName)})`;
                     default:
                         return parameterName;
                 }
