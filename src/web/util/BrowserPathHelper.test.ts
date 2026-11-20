@@ -35,6 +35,18 @@ describe('BrowserPathHelper contextual URL round-trip', () => {
     expect(BrowserPathHelper.stripTrackId(url)).toBe('/library')
   })
 
+  it.each([
+    '/genre/hip hop',
+    '/genres/Électro',
+    '/list?genre=hip%20hop',
+    '/stations?tags=jazz,blues',
+    '/list?ids=[1]',
+    '/page#top'
+  ])('strips back to the parent path as it was browsed: %s', (parent) => {
+    const url = BrowserPathHelper.build(parent, 'id 1/é', 2)
+    expect(BrowserPathHelper.stripTrackId(url)).toBe(parent)
+  })
+
   it('extracts no index from an index-less contextual URL', () => {
     const url = BrowserPathHelper.build('/library', 'song.mp3')
     expect(BrowserPathHelper.extractIndex(url)).toBeUndefined()
