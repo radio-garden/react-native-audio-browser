@@ -65,8 +65,7 @@ export function seekTo(position: number): void {
  * Jump to the live edge of the current track; no-op unless the track
  * declares `live: true`. A stream with a seekable live window (HLS) seeks
  * to the window's edge; a non-seekable stream (e.g. ICY radio) reconnects
- * to rejoin live. iOS re-runs `media.resolve` on the reconnect; Android
- * reuses the resolved URL and re-resolves only after it fails to open.
+ * to rejoin live, re-running `media.resolve` for a fresh URL.
  */
 export function seekToLiveEdge(): void {
   nativeBrowser.seekToLiveEdge()
