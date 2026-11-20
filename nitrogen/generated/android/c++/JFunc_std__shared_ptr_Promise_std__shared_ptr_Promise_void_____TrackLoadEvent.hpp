@@ -76,15 +76,27 @@ namespace margelo::nitro::audiobrowser {
               __promise->resolve();
             });
             __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-              jni::JniException __jniError(__throwable);
-              __promise->reject(std::make_exception_ptr(__jniError));
+              __promise->reject([](jni::alias_ref<jni::JThrowable> __throwable) -> std::exception_ptr {
+                try {
+                  auto __message = __throwable->getMessage();
+                  return std::make_exception_ptr(std::runtime_error(__message ? __message->toStdString() : __throwable->toString()));
+                } catch (...) {
+                  return std::make_exception_ptr(jni::JniException(__throwable));
+                }
+              }(__throwable));
             });
             return __promise;
           }());
         });
         __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-          jni::JniException __jniError(__throwable);
-          __promise->reject(std::make_exception_ptr(__jniError));
+          __promise->reject([](jni::alias_ref<jni::JThrowable> __throwable) -> std::exception_ptr {
+            try {
+              auto __message = __throwable->getMessage();
+              return std::make_exception_ptr(std::runtime_error(__message ? __message->toStdString() : __throwable->toString()));
+            } catch (...) {
+              return std::make_exception_ptr(jni::JniException(__throwable));
+            }
+          }(__throwable));
         });
         return __promise;
       }();

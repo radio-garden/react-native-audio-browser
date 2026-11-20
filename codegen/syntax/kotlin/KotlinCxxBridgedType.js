@@ -1,4 +1,5 @@
 import { ErrorType } from '../types/ErrorType.js';
+import { withoutJavaStack } from '../c++/withoutJavaStack.js';
 import { withoutJSStack } from '../c++/withoutJSStack.js';
 import { indent } from '../../utils.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
@@ -987,6 +988,7 @@ __promise->resolve(${resultingType.parseFromKotlinToCpp('__result', 'c++', true)
 __promise->resolve();
           `.trim();
                         }
+                        // Not upstream: withoutJavaStack.
                         return `
 [&]() {
   auto __promise = Promise<${actualCppType}>::create();
@@ -994,8 +996,7 @@ __promise->resolve();
     ${indent(resolveBody, '    ')}
   });
   ${parameterName}->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-    jni::JniException __jniError(__throwable);
-    __promise->reject(std::make_exception_ptr(__jniError));
+    __promise->reject(${indent(withoutJavaStack('__throwable'), '    ')});
   });
   return __promise;
 }()
@@ -1007,7 +1008,8 @@ __promise->resolve();
             case 'error':
                 switch (language) {
                     case 'c++':
-                        return `std::make_exception_ptr(jni::JniException(${parameterName}))`;
+                        // Not upstream: withoutJavaStack.
+                        return withoutJavaStack(parameterName);
                     default:
                         return parameterName;
                 }
