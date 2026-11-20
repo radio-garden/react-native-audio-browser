@@ -574,6 +574,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     navigationJob?.cancel()
 
     val path = track.path
+    val playAlone: suspend () -> Unit = {
+      player.load(track)
+      player.play()
+    }
     navigationJob =
       mainScope.launch {
         try {
@@ -634,7 +638,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   0.0,
                   startPosition = null,
                   intercepted = {},
-                  defaultBehavior = { player.load(track) },
+                  defaultBehavior = playAlone,
                 )
               }
             }
@@ -651,7 +655,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 0.0,
                 startPosition = null,
                 intercepted = {},
-                defaultBehavior = { player.load(track) },
+                defaultBehavior = playAlone,
               )
             }
             else -> {
