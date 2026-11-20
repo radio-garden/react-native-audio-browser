@@ -1,17 +1,24 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
+import android.os.Looper
 import android.provider.MediaStore
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
+import androidx.media3.session.legacy.PlaybackStateCompat
+import androidx.media3.session.legacyState
+import androidx.media3.session.recordLegacyErrors
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.buildService
+import com.audiobrowser.goOnline
 import com.audiobrowser.session
 import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.FormattedNavigationError
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -31,6 +38,8 @@ import org.mockito.Mockito.RETURNS_DEFAULTS
 import org.mockito.Mockito.mock
 import org.mockito.stubbing.Answer
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 
 /**
  * Media3 turns a legacy controller's `playFromSearch` into a set of one media item that has the
@@ -63,8 +72,15 @@ class SessionVoiceSearchTest {
     controller.destroy()
   }
 
-  private fun browserWhoseSearchAnswers(vararg results: Track, gated: Boolean = false) {
-    val answer = JsPromise<Array<Track>>().apply { resolve(arrayOf(*results)) }
+  private fun browserWhoseSearchAnswers(
+    vararg results: Track,
+    gated: Boolean = false,
+    failure: Throwable? = null,
+  ) {
+    val answer =
+      JsPromise<Array<Track>>().apply {
+        if (failure != null) reject(failure) else resolve(arrayOf(*results))
+      }
     val bridge = JsPromise<Promise<Array<Track>>>().apply { resolve(answer.promise) }
     val browserManager =
       BrowserManager().apply {
@@ -87,7 +103,16 @@ class SessionVoiceSearchTest {
               )
           )
       }
-    val configuration = TestFixtures.browserConfiguration()
+    val configuration =
+      TestFixtures.browserConfiguration()
+        .copy(
+          formatNavigationError =
+            Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams {
+              JsPromise<FormattedNavigationError?>()
+                .apply { resolve(FormattedNavigationError("${it.error.code} ${it.kind}", it.path)) }
+                .promise
+            }
+        )
     val onGate: (GateEvent) -> Unit = { gateEvents += it }
     player.browser =
       mock(
@@ -99,6 +124,7 @@ class SessionVoiceSearchTest {
             it.method.name == "getOnGate" -> onGate
             it.method.name == "getConfiguration" -> configuration
             it.method.name.startsWith("getBrowserManager") -> browserManager
+            it.method.name.startsWith("resolveFormattedError") -> it.callRealMethod()
             else -> RETURNS_DEFAULTS.answer(it)
           }
         },
@@ -169,5 +195,55 @@ class SessionVoiceSearchTest {
 
     assertEquals(listOf(GateEvent(GateReason.SEARCH)), gateEvents)
     assertEquals(emptyList<SearchParams>(), searches)
+  }
+
+  @Test
+  fun `a search without a playable result tells the car the app's empty copy, keeping the state`() {
+    goOnline(RuntimeEnvironment.getApplication())
+    browserWhoseSearchAnswers(
+      TestFixtures.track(title = "unavailable", src = "https://s/x.mp3", disabled = true)
+    )
+    val errors = service.session.recordLegacyErrors()
+    val stateBefore = service.session.legacyState()
+
+    assertThrows(ExecutionException::class.java) { playFromSearch("zqx qqq") }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(listOf(stateBefore to "EMPTY_CONTENT SEARCH\n/__search?q=zqx+qqq"), errors())
+    assertEquals(PlaybackStateCompat.STATE_NONE, service.session.legacyState())
+  }
+
+  @Test
+  fun `a search without a result while offline tells the car it is offline`() {
+    browserWhoseSearchAnswers()
+    val errors = service.session.recordLegacyErrors()
+
+    assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(listOf("NETWORK_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
+  }
+
+  @Test
+  fun `a failed search tells the car it failed`() {
+    goOnline(RuntimeEnvironment.getApplication())
+    browserWhoseSearchAnswers(failure = RuntimeException("search source down"))
+    val errors = service.session.recordLegacyErrors()
+
+    assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(listOf("UNKNOWN_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
+  }
+
+  @Test
+  fun `a gated search tells the car nothing, the gate speaks for it`() {
+    browserWhoseSearchAnswers(TestFixtures.track(title = "a"), gated = true)
+    val errors = service.session.recordLegacyErrors()
+
+    assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(emptyList<Pair<Int, String>>(), errors())
   }
 }

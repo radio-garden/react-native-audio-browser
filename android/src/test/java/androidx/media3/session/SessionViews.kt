@@ -36,3 +36,18 @@ internal fun MediaSession.countLegacyStateUpdates(): () -> Int {
   )
   return { count }
 }
+
+/** Records each error legacy controllers are told from now on, with the state it came in. */
+internal fun MediaSession.recordLegacyErrors(): () -> List<Pair<Int, String>> {
+  val errors = mutableListOf<Pair<Int, String>>()
+  impl.mediaSessionLegacyStub.sessionCompat.controller.registerCallback(
+    object : MediaControllerCompat.Callback() {
+      override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
+        val message = state?.errorMessage ?: return
+        errors += state.state to message.toString()
+      }
+    },
+    Handler(Looper.getMainLooper()),
+  )
+  return { errors.toList() }
+}

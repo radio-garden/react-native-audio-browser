@@ -19,6 +19,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionError
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.browser.FavoriteChange
@@ -32,6 +33,7 @@ import com.audiobrowser.extension.identity
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.navigationErrorFor
 import com.audiobrowser.remote.RemoteOutputsController
 import com.audiobrowser.remote.RemotePlayback
 import com.audiobrowser.remote.RemoteUrls
@@ -56,6 +58,8 @@ import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.NativeGateRequest
+import com.margelo.nitro.audiobrowser.NavigationError
+import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -71,6 +75,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -1148,7 +1153,9 @@ internal constructor(
 
   /**
    * The playable results of a voice search, from the first. Gated like browsing, or voice search
-   * would be a way around the gate.
+   * would be a way around the gate. A search that finds nothing playable, or fails, tells
+   * controllers why in the app's words for a search (ADR 0001), offline as offline, as a non-fatal
+   * error: what played keeps playing.
    *
    * @return null when gated (after onGate) or when nothing playable is found
    * @throws Exception when the browser is not registered in time or the search callback fails
@@ -1167,9 +1174,36 @@ internal constructor(
     Timber.d(
       "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
     )
-    return audioBrowser.browserManager.searchPlayable(params).also {
-      if (it == null) Timber.w("No tracks found for search: ${params}")
+    val tracks =
+      try {
+        audioBrowser.browserManager.searchPlayable(params)
+      } catch (e: Exception) {
+        if (e is CancellationException && e !is TimeoutCancellationException) throw e
+        sendSearchError(audioBrowser, params, navigationErrorFor(e))
+        throw e
+      }
+    if (tracks == null) {
+      Timber.w("No tracks found for search: ${params}")
+      // An HTTP search source answers a failed request with no tracks.
+      val offline = !networkMonitor.isOnline.value
+      sendSearchError(audioBrowser, params, if (offline) offlineError() else emptyContentError())
     }
+    return tracks
+  }
+
+  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+  private suspend fun sendSearchError(
+    audioBrowser: AudioBrowser,
+    params: SearchParams,
+    error: NavigationError,
+  ) {
+    val formatted =
+      audioBrowser.resolveFormattedError(error, BrowserPathHelper.createSearchPath(params.query))
+    val message = listOfNotNull(formatted.title, formatted.message).joinToString("\n")
+    val code =
+      if (error.code == NavigationErrorType.NETWORK_ERROR) SessionError.ERROR_IO
+      else SessionError.ERROR_UNKNOWN
+    mainHandler.post { mediaSession.sendError(SessionError(code, message)) }
   }
 
   /** An ended queue stays ended, as on an ended engine. */
