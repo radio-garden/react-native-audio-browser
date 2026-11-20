@@ -95,6 +95,19 @@ class BrowserManagerSearchFailureTest {
   }
 
   @Test
+  fun `a search whose request is malformed is an unknown-error, not a network-error`() {
+    browserManager.config =
+      browserManager.config.copy(request = transformableConfig(baseUrl = "ftp://example.com"))
+
+    val error =
+      navigationErrorFor(
+        assertThrows(Exception::class.java) { runBlocking { browserManager.search("jazz") } }
+      )
+
+    assertEquals(NavigationErrorType.UNKNOWN_ERROR, error.code)
+  }
+
+  @Test
   fun `a failed search does not become the cached search`() {
     server.enqueue(MockResponse().setResponseCode(500))
 

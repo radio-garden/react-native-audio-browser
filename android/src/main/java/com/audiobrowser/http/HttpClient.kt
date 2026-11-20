@@ -5,8 +5,6 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -21,11 +19,6 @@ class HttpClient {
     const val DEFAULT_USER_AGENT = "react-native-audio-browser"
     const val DEFAULT_CONTENT_TYPE = "application/json"
     private const val TIMEOUT_SECONDS = 30L
-  }
-
-  val json = Json {
-    ignoreUnknownKeys = true
-    isLenient = true
   }
 
   /**
@@ -61,13 +54,7 @@ class HttpClient {
     val userAgent: String = DEFAULT_USER_AGENT,
   )
 
-  data class HttpResponse(
-    val code: Int,
-    val body: String,
-    val headers: Map<String, String>,
-    /** HTTP reason phrase, e.g. "Not Found"; OkHttp leaves it empty over HTTP/2. */
-    val message: String,
-  ) {
+  data class HttpResponse(val code: Int, val body: String, val headers: Map<String, String>) {
     val isSuccessful: Boolean
       get() = code in 200..299
   }
@@ -123,12 +110,7 @@ class HttpClient {
         val responseHeaders = response.headers.toMap()
 
         Result.success(
-          HttpResponse(
-            code = response.code,
-            body = responseBody,
-            headers = responseHeaders,
-            message = response.message,
-          )
+          HttpResponse(code = response.code, body = responseBody, headers = responseHeaders)
         )
       } catch (e: IOException) {
         Timber.e(e, "HTTP request failed")
@@ -138,43 +120,4 @@ class HttpClient {
         Result.failure(e)
       }
     }
-
-  /** Fails with [HttpException] on a non-2xx response. */
-  suspend inline fun <reified T> requestJson(httpRequest: HttpRequest): Result<T> {
-    return request(httpRequest).mapCatching { response ->
-      if (!response.isSuccessful) {
-        throw HttpException(response.code, response.body, response.message)
-      }
-      json.decodeFromString<T>(response.body)
-    }
-  }
-
-  /** Fails with [HttpException] on a non-2xx response. */
-  suspend fun requestJsonElement(httpRequest: HttpRequest): Result<JsonElement> {
-    return request(httpRequest).mapCatching { response ->
-      if (!response.isSuccessful) {
-        throw HttpException(response.code, response.body, response.message)
-      }
-      json.parseToJsonElement(response.body)
-    }
-  }
-
-  /** Its message is the JSON body's `error` field when there is one, else [reasonPhrase]. */
-  class HttpException(val code: Int, val responseBody: String, val reasonPhrase: String) :
-    Exception(formatMessage(code, responseBody, reasonPhrase)) {
-    companion object {
-      private fun formatMessage(code: Int, responseBody: String, reasonPhrase: String): String {
-        try {
-          val json = org.json.JSONObject(responseBody)
-          val errorMessage = json.optString("error", null)
-          if (!errorMessage.isNullOrBlank()) {
-            return errorMessage
-          }
-        } catch (_: Exception) {
-          // Not JSON: fall back to the reason phrase.
-        }
-        return reasonPhrase
-      }
-    }
-  }
 }

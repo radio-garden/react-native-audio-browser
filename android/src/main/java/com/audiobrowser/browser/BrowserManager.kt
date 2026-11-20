@@ -30,6 +30,7 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
+import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -1212,7 +1213,8 @@ class BrowserManager {
    * throwing.
    *
    * @throws HttpStatusException for a non-2xx response, or a 2xx body that is not [expected]
-   * @throws NetworkException when the request fails
+   * @throws NetworkException when the request fails in transit; a request [HttpClient] refuses (an
+   *   invalid URL, an unsupported method) throws as it is
    */
   private suspend inline fun <reified T> fetchJson(
     httpRequest: HttpClient.HttpRequest,
@@ -1221,6 +1223,7 @@ class BrowserManager {
   ): T {
     val httpResponse =
       httpClient.request(httpRequest).getOrElse { exception ->
+        if (exception !is IOException) throw exception
         throw NetworkException("Network request failed: ${exception.message}", exception)
       }
     if (!httpResponse.isSuccessful) {

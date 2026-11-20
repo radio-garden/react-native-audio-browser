@@ -320,7 +320,7 @@ graph TD
 
 ### HTTP Layer
 
-- **HttpClient.kt**: OkHttp wrapper (`request`, `requestJson<T>`). Standard OkHttp + logging
+- **HttpClient.kt**: OkHttp wrapper (`request`). Standard OkHttp + logging
   interceptor; does **not** install the AIA TLS toolkit itself.
 - **RequestConfigBuilder.kt**: Converts Nitro config objects to HTTP requests, merging static config
   layers and composing async/sync transform/resolve callbacks. Delegates URL building to
