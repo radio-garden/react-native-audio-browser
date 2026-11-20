@@ -225,7 +225,6 @@ class PlaybackStateMachineTest {
       )
     assertEquals(listOf(PlaybackState.BUFFERING), on(resumed, from = PlaybackState.PAUSED))
     assertEquals(emptyList<PlaybackState>(), on(resumed, from = PlaybackState.LOADING))
-    assertEquals(emptyList<PlaybackState>(), on(resumed, from = PlaybackState.STOPPED))
     // Exo READY: PLAYING follows from IsPlayingChanged.
     assertEquals(
       emptyList<PlaybackState>(),
@@ -246,5 +245,57 @@ class PlaybackStateMachineTest {
       on(PlaybackEvent.IsPlayingChanged(isPlaying = true), from = PlaybackState.READY),
     )
     assertEquals(emptyList<PlaybackState>(), on(PlaybackEvent.IsPlayingChanged(isPlaying = false)))
+  }
+
+  // MARK: stopped
+
+  @Test
+  fun `stopped holds against a late buffering and a late playing`() {
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_BUFFERING,
+          mediaItemCount = 1,
+          shouldPlayWhenReady = false,
+        ),
+        from = PlaybackState.STOPPED,
+      ),
+    )
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(PlaybackEvent.IsPlayingChanged(isPlaying = true), from = PlaybackState.STOPPED),
+    )
+  }
+
+  @Test
+  fun `a play after a stop reports buffering, then playing`() {
+    // The play's prepare, with the intent it raised.
+    assertEquals(
+      listOf(PlaybackState.BUFFERING),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_BUFFERING,
+          mediaItemCount = 1,
+          shouldPlayWhenReady = true,
+        ),
+        from = PlaybackState.STOPPED,
+      ),
+    )
+    // A suppression lifting while the play's prepare still buffers.
+    assertEquals(
+      listOf(PlaybackState.BUFFERING),
+      on(
+        PlaybackEvent.ShouldPlayWhenReadyChanged(
+          shouldPlayWhenReady = true,
+          exoState = MediaPlayer.STATE_BUFFERING,
+        ),
+        from = PlaybackState.STOPPED,
+      ),
+    )
+    assertEquals(
+      listOf(PlaybackState.PLAYING),
+      on(PlaybackEvent.IsPlayingChanged(isPlaying = true), from = PlaybackState.BUFFERING),
+    )
   }
 }

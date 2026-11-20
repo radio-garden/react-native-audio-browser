@@ -55,7 +55,10 @@ object PlaybackStateMachine {
     when (event) {
       is PlaybackEvent.ExoPlaybackStateChanged ->
         when (event.exoState) {
-          MediaPlayer.STATE_BUFFERING -> listOf(PlaybackState.BUFFERING)
+          MediaPlayer.STATE_BUFFERING ->
+            // STOPPED holds until a play: a play intent or a load leaves it.
+            if (current == PlaybackState.STOPPED && !event.shouldPlayWhenReady) emptyList()
+            else listOf(PlaybackState.BUFFERING)
           MediaPlayer.STATE_READY ->
             // While playing, READY is a transient before PLAYING (which IsPlayingChanged brings)
             // and would flash a settled state mid-startup. While paused it is the only signal that
@@ -99,11 +102,13 @@ object PlaybackStateMachine {
             else listOf(PlaybackState.PAUSED)
           // Resuming while ExoPlayer still buffers: no state change of its own follows, and the
           // READY after it is dropped while playing, so report the load now.
-          current == PlaybackState.PAUSED && event.exoState == MediaPlayer.STATE_BUFFERING ->
-            listOf(PlaybackState.BUFFERING)
+          current in setOf(PlaybackState.PAUSED, PlaybackState.STOPPED) &&
+            event.exoState == MediaPlayer.STATE_BUFFERING -> listOf(PlaybackState.BUFFERING)
           else -> emptyList()
         }
       is PlaybackEvent.IsPlayingChanged ->
-        if (event.isPlaying) listOf(PlaybackState.PLAYING) else emptyList()
+        // A play after a stop reaches PLAYING through BUFFERING.
+        if (event.isPlaying && current != PlaybackState.STOPPED) listOf(PlaybackState.PLAYING)
+        else emptyList()
     }
 }
