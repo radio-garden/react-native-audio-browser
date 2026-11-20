@@ -4,7 +4,7 @@ import type {
   Track,
   TransformableRequestConfig
 } from '../../types'
-import { RequestConfigBuilder } from './RequestConfigBuilder'
+import { RequestConfigBuilder, TransformError } from './RequestConfigBuilder'
 
 /**
  * Composition tests for the sync/async `transform` split. These lock down the
@@ -52,27 +52,30 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
     expect(out.query).toEqual({ stage: 'sync' })
   })
 
-  it('falls back to the base when a transform throws', async () => {
+  it('throws a callback-error TransformError when a transform throws', async () => {
     const layer: TransformableRequestConfig = {
       transform: async () => {
         throw new Error('boom')
       }
     }
-    const out = await RequestConfigBuilder.applyLayer(base, layer)
-    expect(out).toEqual(base)
+    const result = RequestConfigBuilder.applyLayer(base, layer)
+    await expect(result).rejects.toBeInstanceOf(TransformError)
+    await expect(result).rejects.toMatchObject({
+      code: 'callback-error',
+      message: 'boom'
+    })
   })
 
-  it('falls back to the base when the sync stage throws after the async one', async () => {
+  it('throws a TransformError when the sync stage throws after the async one', async () => {
     const layer: TransformableRequestConfig = {
       transform: async (req) => ({ ...req, headers: { a: '1' } }),
       transformSync: () => {
         throw new Error('boom')
       }
     }
-    const out = await RequestConfigBuilder.applyLayer(base, layer)
-    // the layer's input, not the half-applied config — matches native's single
-    // catch around the pair
-    expect(out).toEqual(base)
+    await expect(
+      RequestConfigBuilder.applyLayer(base, layer)
+    ).rejects.toMatchObject({ code: 'callback-error', message: 'boom' })
   })
 
   it('falls back to a static field merge when no transform is set', async () => {
