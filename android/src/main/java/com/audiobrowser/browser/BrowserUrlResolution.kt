@@ -41,7 +41,7 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
   requestConfig?.let { base = RequestConfigBuilder.mergeConfigOrBase(base, it) }
   val mediaLayered =
     if (mediaConfig != null) {
-      RequestConfigBuilder.mergeConfig(base, mediaConfig)
+      RequestConfigBuilder.mergeConfigOrBase(base, mediaConfig)
     } else {
       MediaRequestConfig(
         resolve = null,

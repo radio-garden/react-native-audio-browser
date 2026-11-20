@@ -135,7 +135,7 @@ object RequestConfigBuilder {
     }
 
   /** The layer rule of [mergeConfigOrBase], keeping [override]'s resolve callbacks. */
-  suspend fun mergeConfig(
+  suspend fun mergeConfigOrBase(
     base: RequestConfig,
     override: MediaRequestConfig,
     routeParams: Map<String, String>? = null,
