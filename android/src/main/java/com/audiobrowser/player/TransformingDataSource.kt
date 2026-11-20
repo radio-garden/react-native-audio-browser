@@ -69,7 +69,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       putAll(dataSpec.httpRequestHeaders)
       putAll(headers)
       val headerAgent =
-        keys.firstOrNull { it.equals("User-Agent", ignoreCase = true) }?.let { remove(it) }
+        keys.filter { it.equals("User-Agent", ignoreCase = true) }.map { remove(it) }.lastOrNull()
       // Under this exact name, so it replaces MediaFactory's default rather than sitting beside it.
       val agent = if (userAgent != DEFAULT_USER_AGENT) userAgent else headerAgent
       agent?.let { put("User-Agent", it) }
