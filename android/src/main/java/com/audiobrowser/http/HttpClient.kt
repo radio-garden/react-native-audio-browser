@@ -88,7 +88,7 @@ class HttpClient {
           Headers.Builder()
             .apply {
               httpRequest.headers?.forEach { (name, value) -> add(name, value) }
-              // A `User-Agent` header in any case wins over `userAgent`, as on iOS.
+              // A `User-Agent` header in any case wins over `userAgent`.
               if (get("User-Agent") == null) add("User-Agent", httpRequest.userAgent)
             }
             .build()

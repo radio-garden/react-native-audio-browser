@@ -98,8 +98,10 @@ class MediaFactoryTest {
 
   @Test
   fun `a user-agent header in any case wins over the default`() {
+    // Enough headers that media3's header map holds a second spelling before the default's key.
+    val others = mapOf("X-A" to "1", "X-B" to "1", "X-C" to "1")
     for (name in listOf("User-Agent", "user-agent", "USER-AGENT")) {
-      assertEquals(name, listOf("MyApp/1.0"), sentUserAgents(mapOf(name to "MyApp/1.0")))
+      assertEquals(name, listOf("MyApp/1.0"), sentUserAgents(others + (name to "MyApp/1.0")))
     }
   }
 
