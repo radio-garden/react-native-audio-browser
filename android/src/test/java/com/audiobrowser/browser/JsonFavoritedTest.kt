@@ -27,7 +27,7 @@ class JsonFavoritedTest {
             {"children":[{"title":"A","src":"a","favorited":true},{"title":"B","src":"b"}]}
           ]}"""
         )
-        .toNitro()
+        .toNitro(requestedPath = "/requested")
     assertEquals(true, page.favorited)
     assertEquals(listOf(true, null), page.sections?.first()?.children?.map { it.favorited })
   }
