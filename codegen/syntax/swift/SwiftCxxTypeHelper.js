@@ -353,6 +353,18 @@ return ${returnBridge.parseFromCppToSwift('__result', 'c++')};
     else {
         callCppFuncBody = `_function->operator()(${callParamsForward.join(', ')});`;
     }
+    if (type.returnType.kind === 'promise') {
+        // Not upstream (margelo/nitro#1481): `AsyncJSCallback::call` throws once its runtime is gone,
+        // and a throw out of this `noexcept` call aborts. A rejected Promise is a failure Swift handles.
+        // Delete once upstream `AsyncJSCallback::call` rejects instead of throwing, or this wrapper catches.
+        callCppFuncBody = `
+try {
+  ${indent(callCppFuncBody, '  ')}
+} catch (...) {
+  return Promise<${type.returnType.resultingType.getCode('c++')}>::rejected(std::current_exception());
+}
+    `.trim();
+    }
     let body;
     if (type.returnType.kind === 'void') {
         body = `

@@ -925,8 +925,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
-      auto __result = _function->operator()(request, routeParams);
-      return __result;
+      try {
+        auto __result = _function->operator()(request, routeParams);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<RequestConfig>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
@@ -997,8 +1001,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<RequestConfig>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
-      auto __result = _function->operator()(request, routeParams);
-      return __result;
+      try {
+        auto __result = _function->operator()(request, routeParams);
+        return __result;
+      } catch (...) {
+        return Promise<RequestConfig>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
@@ -1084,8 +1092,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>> call() const noexcept {
-      auto __result = _function->operator()();
-      return __result;
+      try {
+        auto __result = _function->operator()();
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>> _function;
@@ -1156,8 +1168,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(Track track) const noexcept {
-      auto __result = _function->operator()(track);
-      return __result;
+      try {
+        auto __result = _function->operator()(track);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<RequestConfig>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> _function;
@@ -1194,8 +1210,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_RequestConfig___Track_Wrapper(std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<RequestConfig>> call(Track track) const noexcept {
-      auto __result = _function->operator()(track);
-      return __result;
+      try {
+        auto __result = _function->operator()(track);
+        return __result;
+      } catch (...) {
+        return Promise<RequestConfig>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>> _function;
@@ -1262,8 +1282,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(MediaTransformParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<RequestConfig>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> _function;
@@ -1300,8 +1324,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_RequestConfig___MediaTransformParams_Wrapper(std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<RequestConfig>> call(MediaTransformParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<RequestConfig>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>> _function;
@@ -1466,8 +1494,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_Wrapper(std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>> call(BrowserSourceCallbackParam param) const noexcept {
-      auto __result = _function->operator()(param);
-      return __result;
+      try {
+        auto __result = _function->operator()(param);
+        return __result;
+      } catch (...) {
+        return Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>> _function;
@@ -1553,8 +1585,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call(SearchParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<std::vector<Track>>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> _function;
@@ -1685,8 +1721,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>> call(TrackLoadEvent event) const noexcept {
-      auto __result = _function->operator()(event);
-      return __result;
+      try {
+        auto __result = _function->operator()(event);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<void>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)>> _function;
@@ -1757,8 +1797,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__string___Wrapper(std::function<std::shared_ptr<Promise<std::string>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::string>>()>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::string>> call() const noexcept {
-      auto __result = _function->operator()();
-      return __result;
+      try {
+        auto __result = _function->operator()();
+        return __result;
+      } catch (...) {
+        return Promise<std::string>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::string>>()>> _function;
@@ -1807,8 +1851,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__optional_std__string____Track_Wrapper(std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::optional<std::string>>> call(Track track) const noexcept {
-      auto __result = _function->operator()(track);
-      return __result;
+      try {
+        auto __result = _function->operator()(track);
+        return __result;
+      } catch (...) {
+        return Promise<std::optional<std::string>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>> _function;
@@ -1879,8 +1927,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_Wrapper(std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> call(FormatNavigationErrorParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::optional<FormattedNavigationError>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> _function;
@@ -1978,8 +2030,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>> call(FindTrackParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<std::optional<Track>>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>> _function;
@@ -2114,8 +2170,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> call(NativeGateRequest request) const noexcept {
-      auto __result = _function->operator()(request);
-      return __result;
+      try {
+        auto __result = _function->operator()(request);
+        return __result;
+      } catch (...) {
+        return Promise<std::shared_ptr<Promise<GateDecision>>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>> _function;
@@ -2706,8 +2766,12 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   public:
     explicit Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_Wrapper(std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>(std::move(func))) {}
     inline std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>> call(FormatNowPlayingParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
+      try {
+        auto __result = _function->operator()(params);
+        return __result;
+      } catch (...) {
+        return Promise<std::optional<NowPlayingUpdate>>::rejected(std::current_exception());
+      }
     }
   private:
     std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> _function;

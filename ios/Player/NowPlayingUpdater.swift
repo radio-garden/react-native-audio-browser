@@ -18,7 +18,14 @@ final class NowPlayingUpdater {
 
   /// When false the override and formatter are ignored.
   private let enabled: Bool
-  var formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
+  var formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)? {
+    didSet { formatterGeneration &+= 1 }
+  }
+
+  // A formatter whose runtime is gone fails on every render: log the first failure of each run.
+  // A success ends the run.
+  private var formatterGeneration: UInt = 0
+  private var loggedFailureGeneration: UInt?
 
   private weak var networkStatus: (any NetworkStatusProviding)?
 
@@ -168,11 +175,13 @@ final class NowPlayingUpdater {
     // Nitro resolves the promise on the JS thread, and a main-isolated closure run off-main traps
     // in `_swift_task_checkIsolated`; `@Sendable` drops the inherited isolation, then the Task hops
     // back to the main actor.
+    let formatterGeneration = formatterGeneration
     formatter(params)
       .then { @Sendable [weak self] formatted in
-        guard let self, let formatted else { return }
+        guard let self else { return }
         Task { @MainActor in
-          guard self.renderGeneration == generation else { return }
+          if self.loggedFailureGeneration == formatterGeneration { self.loggedFailureGeneration = nil }
+          guard let formatted, self.renderGeneration == generation else { return }
           self.apply(.resolve(track: track, formatted: formatted, override: override), for: track)
           self.formattedTrackId = trackId
         }
@@ -180,7 +189,9 @@ final class NowPlayingUpdater {
       .catch { @Sendable [weak self] error in
         let message = error.localizedDescription
         Task { @MainActor in
-          self?.logger.error("nowPlayingMetadataFormatter failed: \(message)")
+          guard let self, self.loggedFailureGeneration != formatterGeneration else { return }
+          self.loggedFailureGeneration = formatterGeneration
+          self.logger.error("nowPlayingMetadataFormatter failed: \(message); failures until its next success are not logged")
         }
       }
   }
