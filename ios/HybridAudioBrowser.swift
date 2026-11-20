@@ -275,11 +275,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Drops every JS callback native code can invoke on its own (browse resolvers,
   /// `handleTrackLoad`, `resolveAlbumPath`, `formatNavigationError`, `resolveGate`, the now-playing
-  /// formatter): calling into a dead runtime aborts the process (Nitro throws across a `noexcept`
-  /// boundary). Native code still bound here (CarPlay mid-reload) keeps the data-only config, and
-  /// `resolveGate` reverts to its fail-closed default. One-shot: the reload notification and the
-  /// replacement's `init` both reach the dying instance, and a second strip would re-run the
-  /// config setter's cascade.
+  /// formatter), so native code still bound here (CarPlay mid-reload) serves the data-only config
+  /// rather than failing on a runtime that is going away; `resolveGate` reverts to its fail-closed
+  /// default. One-shot: the reload notification and the replacement's `init` both reach the dying
+  /// instance, and a second strip would re-run the config setter's cascade.
   @MainActor
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }

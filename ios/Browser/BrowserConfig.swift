@@ -62,8 +62,8 @@ struct BrowserConfig {
   }
 
   /// A copy with every JS function dropped, nested ones included, keeping the static fields.
-  /// Safe to hold after its JS runtime is gone, where invoking a callback aborts the process
-  /// (see `HybridAudioBrowser.dropStaleJSCallbacks`); callers take their static fallbacks.
+  /// For after its JS runtime is gone (see `HybridAudioBrowser.dropStaleJSCallbacks`); callers
+  /// take their static fallbacks.
   func strippingJSCallbacks() -> BrowserConfig {
     // Built from empty: a field added later is dropped unless it is copied here.
     var stripped = BrowserConfig()
