@@ -311,6 +311,14 @@ func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void>
 
 Use Nitro's Promise helpers for async operations.
 
+#### A JS-callback await needs no timeout to end with its runtime
+
+`awaitCallback` waits without a bound unless its caller has a fallback, because a callback may be
+slow on purpose. It still ends when the runtime does: a call after Nitro's Dispatcher is gone
+rejects at once (the generated wrapper's catch), a call queued or in flight is held by objects the
+runtime frees, and Nitro's `Promise` rejects when it is destroyed pending. A timeout added for
+teardown would only cut short the slow callbacks.
+
 #### Chaining `.then`/`.catch` on a JS-callback Promise from an `@MainActor` type
 
 When you invoke a JS callback that returns a `Promise<T>` (a `formatNavigationError` / now-playing
