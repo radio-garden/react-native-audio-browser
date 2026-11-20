@@ -833,8 +833,7 @@ internal constructor(
     applyFavoriteChange(FavoriteChange.toggle(identity, favorited))
 
     // The active track is mutated in place, so the active-track event stays transition-only.
-    val updatedTrack = this.currentTrack ?: currentTrack
-    callbacks?.onFavoriteChanged(FavoriteChangedEvent(updatedTrack, favorited))
+    callbacks?.onFavoriteChanged(FavoriteChangedEvent(this.currentTrack!!, favorited))
     return true
   }
 
@@ -920,38 +919,31 @@ internal constructor(
     )
 
   /**
-   * One replacement for the whole queue: each separate one is a timeline change and a queue event
-   * to JS.
+   * Restamps every queued copy of a track whose favorite state [change] moved. The heart button
+   * then follows the current track.
    */
-  private fun restampFavorites() {
-    if (!::sessionPlayer.isInitialized || sessionPlayer.mediaItemCount == 0) return
-    val items =
-      (0 until sessionPlayer.mediaItemCount).map { index ->
-        val item = sessionPlayer.getMediaItemAt(index)
-        val track = item.localConfiguration?.tag as? Track ?: return@map item
-        item.restamped(track) { setFavorite(track.favorited) }
-      }
-    sessionPlayer.replaceMediaItems(0, items.size, items)
+  internal fun applyFavoriteChange(change: FavoriteChange) {
+    restampQueue { change.restamp(it) }
+    updateFavoriteButtonState(currentTrack?.favorited)
   }
 
   /**
-   * Restamps every queued copy of a track whose favorite state [change] moved, in one replacement:
-   * one queue event, no transition, and the current track keeps playing. The heart button then
-   * follows the current track.
+   * Replaces each queued item whose track [transform] returns with that track and its heart rating,
+   * in one replacement: one timeline change and queue event, no transition, and the current track
+   * keeps playing.
    */
-  internal fun applyFavoriteChange(change: FavoriteChange) {
+  private fun restampQueue(transform: (Track) -> Track?) {
     if (!::sessionPlayer.isInitialized) return
     var replaced = false
     val items =
       (0 until sessionPlayer.mediaItemCount).map { index ->
         val item = sessionPlayer.getMediaItemAt(index)
         val track = item.localConfiguration?.tag as? Track ?: return@map item
-        val restamped = change.restamp(track) ?: return@map item
+        val restamped = transform(track) ?: return@map item
         replaced = true
         item.restamped(restamped) { setFavorite(restamped.favorited) }
       }
     if (replaced) sessionPlayer.replaceMediaItems(0, items.size, items)
-    updateFavoriteButtonState(currentTrack?.favorited)
   }
 
   private fun restampMediaItem(
@@ -1470,7 +1462,7 @@ internal constructor(
       browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
       TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
       if (previousOptions.capabilities.favoriteEnabled != options.capabilities.favoriteEnabled) {
-        restampFavorites()
+        restampQueue { it }
       }
     }
 

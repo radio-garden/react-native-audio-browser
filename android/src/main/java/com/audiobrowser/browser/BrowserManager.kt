@@ -183,8 +183,13 @@ class BrowserManager {
   // The content cache keeps each response's own `favorited`, as the next resolve applies it.
   private fun restampFavorites(change: FavoriteChange) {
     content?.let { change.restamp(it) }?.let { content = it }
+    // A track without a value follows the set at read time, through hydration.
     change.identities.forEach { identity ->
-      trackCache.get(identity)?.let { change.restamp(it) }?.let { cacheTrack(it) }
+      trackCache
+        .get(identity)
+        ?.takeIf { it.favorited != null }
+        ?.let { change.restamp(it) }
+        ?.let { cacheTrack(it) }
     }
   }
 
