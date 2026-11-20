@@ -12,6 +12,7 @@ import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageShape
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
@@ -187,6 +188,26 @@ object TestFixtures {
       favorited = null,
       live = null,
       icyCharset = null,
+    )
+
+  fun browserConfiguration() =
+    NativeBrowserConfiguration(
+      path = null,
+      request = null,
+      requestResolver = null,
+      browse = null,
+      browseResolver = null,
+      media = null,
+      artwork = null,
+      nowPlayingArtwork = null,
+      routes = null,
+      singleTrack = null,
+      handleTrackLoad = null,
+      androidControllerOfflineError = null,
+      viewMoreTitle = null,
+      carPlayLoadingTitle = null,
+      resolveAlbumPath = null,
+      formatNavigationError = null,
     )
 
   /**

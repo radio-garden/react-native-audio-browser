@@ -24,6 +24,7 @@ import com.audiobrowser.navigationErrorFor
 import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFavorites
+import com.audiobrowser.util.SearchParamsFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.isAutomotive
 import com.google.common.collect.ImmutableList
@@ -34,13 +35,11 @@ import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
-import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NavigationError
 import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
-import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
@@ -56,9 +55,9 @@ import timber.log.Timber
 
 /**
  * Everything the MediaLibrarySession serves except transport, which reaches the player through
- * [InterceptingPlayer]; Assistant's play-from-search arrives as an intent in the service. Callbacks
- * answering through [scope] run on IO, so anything touching ExoPlayer hops to [Dispatchers.Main];
- * the rest answer on the Media3 application thread.
+ * [InterceptingPlayer]. Play-from-search arrives here as a set of one item that has only a query,
+ * and as an intent in the service. Callbacks answering through [scope] run on IO, so anything
+ * touching ExoPlayer hops to [Dispatchers.Main]; the rest answer on the Media3 application thread.
  */
 class MediaSessionCallback(private val player: Player) :
   MediaLibraryService.MediaLibrarySession.Callback {
@@ -95,19 +94,6 @@ class MediaSessionCallback(private val player: Player) :
       this
     }
   }
-
-  // Car search surfaces give free text only. Mirrors BrowserManager's query→SearchParams.
-  private fun searchParams(query: String): SearchParams =
-    SearchParams(
-      mode = null,
-      query = query,
-      genre = null,
-      artist = null,
-      album = null,
-      title = null,
-      playlist = null,
-      reference = MediaReference.UNKNOWN,
-    )
 
   private fun createGateMediaItem(gate: Gate): MediaItem =
     createErrorMediaItem(
@@ -614,7 +600,11 @@ class MediaSessionCallback(private val player: Player) :
 
       val searchOutcome =
         audioBrowser.gateDecision(
-          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = searchParams(query))
+          NativeGateRequest(
+            reason = GateReason.SEARCH,
+            path = null,
+            search = SearchParamsFactory.fromQuery(query),
+          )
         )
       // Search is gated with the browse tree, or it would route around the gate. One result: the
       // gate tile (see onGetSearchResult).
@@ -721,7 +711,11 @@ class MediaSessionCallback(private val player: Player) :
 
       val searchOutcome =
         audioBrowser.gateDecision(
-          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = searchParams(query))
+          NativeGateRequest(
+            reason = GateReason.SEARCH,
+            path = null,
+            search = SearchParamsFactory.fromQuery(query),
+          )
         )
       // The one result onSearch announced for a gated search.
       if (searchOutcome.gated) {
@@ -860,8 +854,21 @@ class MediaSessionCallback(private val player: Player) :
         }
       }
 
+      val voiceSearch = mediaItems.singleOrNull()?.let { SearchParamsFactory.voiceSearchOf(it) }
       val result =
-        browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+        if (voiceSearch != null) {
+          // A failed future leaves current playback untouched.
+          val found =
+            player.voiceSearch(voiceSearch)
+              ?: throw IllegalStateException("Voice search gated or without a playable result")
+          MediaSession.MediaItemsWithStartPosition(
+            found.map { TrackFactory.toMedia3(it) },
+            0,
+            startPositionMs,
+          )
+        } else {
+          browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+        }
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
       // setQueue reads an unset index as "keep the current one". Media3 still gets it unset on the

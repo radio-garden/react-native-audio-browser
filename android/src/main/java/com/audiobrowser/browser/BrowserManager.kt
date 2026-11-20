@@ -9,6 +9,7 @@ import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.FALLBACK_TIMEOUT
+import com.audiobrowser.util.SearchParamsFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.awaitCancellable
@@ -747,18 +748,7 @@ class BrowserManager {
   }
 
   suspend fun searchPlayable(query: String): Array<Track>? {
-    return searchPlayable(
-      SearchParams(
-        query = query,
-        mode = null,
-        genre = null,
-        artist = null,
-        album = null,
-        title = null,
-        playlist = null,
-        reference = MediaReference.UNKNOWN,
-      )
-    )
+    return searchPlayable(SearchParamsFactory.fromQuery(query))
   }
 
   /**
@@ -795,18 +785,7 @@ class BrowserManager {
   }
 
   suspend fun search(query: String): ResolvedTrack {
-    return search(
-      SearchParams(
-        query = query,
-        mode = null,
-        genre = null,
-        artist = null,
-        album = null,
-        title = null,
-        playlist = null,
-        reference = MediaReference.UNKNOWN,
-      )
-    )
+    return search(SearchParamsFactory.fromQuery(query))
   }
 
   /**
