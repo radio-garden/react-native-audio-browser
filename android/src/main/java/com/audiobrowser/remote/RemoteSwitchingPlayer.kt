@@ -103,7 +103,10 @@ internal class RemoteSwitchingPlayer(
      * The receiver holds [item]: what it reports is the current item's. [lastPosition] is where it
      * last reported [item] loaded, running on while it played; until then, where it was sent from.
      */
-    class Playing(val item: MediaItem, var lastPosition: PositionSupplier) : Load
+    class Playing(val item: MediaItem, var lastPosition: PositionSupplier) : Load {
+      /** Whether the receiver has reported [item] past its first buffering. */
+      var wasReady = false
+    }
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
@@ -190,6 +193,10 @@ internal class RemoteSwitchingPlayer(
       return
     }
     val receiver = remote.receiver
+    // Cast reports a load buffering at 0 before its first PLAYING or PAUSED (Media3's ready) at
+    // the position it was sent from.
+    if (receiver.playbackState != STATE_BUFFERING) load.wasReady = true
+    else if (!load.wasReady) return
     val running =
       PositionSupplier.getExtrapolating(
         receiver.currentPosition,

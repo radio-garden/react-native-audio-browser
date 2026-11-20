@@ -321,6 +321,25 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a load failing while it first buffers on the receiver resumes where it was sent from`() {
+    playLocally(listOf("a"), positionMs = 45_000)
+    remote.startSession()
+    remote.player.lagging = true
+    idle()
+
+    // On a Streamer, a load to 46 s reported BUFFERING at 0.0 for about 0.3 s, then 46.3.
+    remote.player.readiness = MediaPlayer.STATE_BUFFERING
+    remote.player.positionMs = 0
+    remote.player.catchUp()
+    idle()
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(45_000, local.positionMs)
+  }
+
+  @Test
   fun `the session ending after the receiver dropped the item resumes where it last played`() {
     playOnReceiver(positionMs = 70_000)
 
