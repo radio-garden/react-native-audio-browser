@@ -1091,7 +1091,7 @@ export class NativeAudioBrowser
   }
 
   getQueueVersion(): number {
-    return this.queueVersion
+    return this.player ? this.queueVersion : -1
   }
 
   getActiveTrackIndex(): number | undefined {
