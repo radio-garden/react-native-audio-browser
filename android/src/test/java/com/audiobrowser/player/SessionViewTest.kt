@@ -23,6 +23,7 @@ import java.net.ServerSocket
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.After
@@ -139,39 +140,9 @@ class SessionViewTest {
 
   @Test
   fun `a reconnect attempt's events tell the session nothing it was already told`() {
-    val server = ServerSocket(0)
-    val connections = AtomicInteger()
-    val drop = CountDownLatch(1)
-    // Serves five seconds of a stream until the drop, then ends each connection unanswered.
-    thread(isDaemon = true) {
-      server.accept().use { socket ->
-        val request = socket.getInputStream().bufferedReader()
-        while (!request.readLine().isNullOrEmpty()) Unit
-        socket.getOutputStream().run {
-          write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\n\r\n".toByteArray())
-          write(silentWavBytes(Duration.ofMinutes(1)), 0, 40_000)
-          flush()
-        }
-        drop.await(30, TimeUnit.SECONDS)
-      }
-      while (!server.isClosed) {
-        try {
-          server.accept().close()
-          connections.incrementAndGet()
-        } catch (_: IOException) {
-          return@thread
-        }
-      }
-    }
+    val server = LiveServer()
     try {
-      play(RetryPolicy.Infinite(), "http://127.0.0.1:${server.localPort}/live", live = true)
-      idleUntil("PLAYING") { player.playbackState == PlaybackState.PLAYING }
-      drop.countDown()
-      // Stands in for the drop, which the engine never reads: its disabled audio track stops it
-      // reading the stream.
-      player.exoPlayer.stop()
-      player.exoPlayer.prepare()
-      idleUntil("the first reconnect") { connections.get() >= 1 }
+      server.playThenDrop()
       val states = session.countLegacyStateUpdates()
       val timelines = AtomicInteger()
       player.forwardingPlayer.addListener(
@@ -182,7 +153,7 @@ class SessionViewTest {
         }
       )
 
-      idleUntil("three more reconnects") { connections.get() >= 4 }
+      idleUntil("three more reconnects") { server.connections.get() >= 4 }
 
       assertEquals(PlaybackState.BUFFERING, player.playbackState)
       assertEquals(0, states())
@@ -190,6 +161,63 @@ class SessionViewTest {
     } finally {
       server.close()
     }
+  }
+
+  /**
+   * Serves five seconds of a live stream until [playThenDrop] drops it, then ends each reconnect
+   * unanswered after [reconnectHangMs] of real time.
+   */
+  private inner class LiveServer(private val reconnectHangMs: Long = 0) {
+    private val server = ServerSocket(0)
+    private val drop = CountDownLatch(1)
+    val connections = AtomicInteger()
+    val hanging = AtomicBoolean()
+
+    init {
+      thread(isDaemon = true) {
+        server.accept().use { socket ->
+          val request = socket.getInputStream().bufferedReader()
+          while (!request.readLine().isNullOrEmpty()) Unit
+          socket.getOutputStream().run {
+            write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\n\r\n".toByteArray())
+            write(silentWavBytes(Duration.ofMinutes(1)), 0, 40_000)
+            flush()
+          }
+          drop.await(30, TimeUnit.SECONDS)
+        }
+        while (!server.isClosed) {
+          try {
+            server.accept().use {
+              hanging.set(true)
+              Thread.sleep(reconnectHangMs)
+              hanging.set(false)
+            }
+            connections.incrementAndGet()
+          } catch (_: IOException) {
+            return@thread
+          }
+        }
+      }
+    }
+
+    /** Plays the stream, drops it, and returns once the first reconnect has ended. */
+    fun playThenDrop(periodicPositionUpdates: Boolean = false) {
+      play(
+        RetryPolicy.Infinite(),
+        "http://127.0.0.1:${server.localPort}/live",
+        live = true,
+        periodicPositionUpdates = periodicPositionUpdates,
+      )
+      idleUntil("PLAYING") { player.playbackState == PlaybackState.PLAYING }
+      drop.countDown()
+      // Stands in for the drop, which the engine never reads: its disabled audio track stops it
+      // reading the stream.
+      player.exoPlayer.stop()
+      player.exoPlayer.prepare()
+      idleUntil("the first reconnect") { connections.get() >= 1 }
+    }
+
+    fun close() = server.close()
   }
 
   private fun failTerminally() {
@@ -201,6 +229,7 @@ class SessionViewTest {
     retryPolicy: RetryPolicy,
     src: String = "https://127.0.0.1:9/stream",
     live: Boolean? = null,
+    periodicPositionUpdates: Boolean = false,
   ) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
@@ -208,7 +237,7 @@ class SessionViewTest {
     // Media3's 3 s re-sends run while the engine loads: a slow connection adds them to the counts.
     session =
       MediaSession.Builder(context, player.forwardingPlayer)
-        .setPeriodicPositionUpdateEnabled(false)
+        .setPeriodicPositionUpdateEnabled(periodicPositionUpdates)
         .build()
     player.setMediaSession(session)
     player.exoPlayer.trackSelectionParameters =
