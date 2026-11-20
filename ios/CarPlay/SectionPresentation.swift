@@ -64,4 +64,11 @@ enum SectionPresentation: Equatable {
     case .plain, nil: .rowElements
     }
   }
+
+  /// The track an image row's tile tap at `index` selects: nil when the index is outside
+  /// `tracks` or the track is disabled.
+  static func tappedTile(at index: Int, in tracks: [Track]) -> Track? {
+    guard tracks.indices.contains(index), tracks[index].disabled != true else { return nil }
+    return tracks[index]
+  }
 }

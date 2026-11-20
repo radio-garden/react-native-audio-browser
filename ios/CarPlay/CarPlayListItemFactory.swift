@@ -320,11 +320,11 @@ final class CarPlayListItemFactory {
 
     // Keeps a disabled tile inert even if the surface delivers the tap.
     item.listImageRowHandler = { [onItemSelected] _, index, completion in
-      guard index < tracks.count, tracks[index].disabled != true else {
+      guard let track = SectionPresentation.tappedTile(at: index, in: tracks) else {
         completion()
         return
       }
-      onItemSelected(tracks[index], completion)
+      onItemSelected(track, completion)
     }
 
     for (index, track) in tracks.enumerated() {
