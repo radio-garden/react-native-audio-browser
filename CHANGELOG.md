@@ -1,3 +1,39 @@
+## [1.0.0-next.5](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.4...v1.0.0-next.5) (2026-11-20)
+
+### Features
+
+* add a skipToQueueItem capability for picks of a queue item ([b8635fe](https://github.com/radio-garden/react-native-audio-browser/commit/b8635feb217c76818ffdceffb070a73fedd35881))
+
+### Bug Fixes
+
+* **android:** hold stopped against a late buffering or playing event ([60cc91d](https://github.com/radio-garden/react-native-audio-browser/commit/60cc91d9abe0ae7cb17b22d5aa7074ab09146f02))
+* **android:** keep a configuration's tabs query apart from its navigation ([146684c](https://github.com/radio-garden/react-native-audio-browser/commit/146684c52046482da0b4b72e8e877d59ed4d2c53))
+* **android:** let setFavorites change tracks that are already queued or on screen ([8e63179](https://github.com/radio-garden/react-native-audio-browser/commit/8e63179b001e2c54abe9b6cbdfa382678d796873)), closes [#343](https://github.com/radio-garden/react-native-audio-browser/issues/343)
+* **android:** re-query the tabs on every configuration ([92ab94b](https://github.com/radio-garden/react-native-audio-browser/commit/92ab94bc04023b8d65ce2f087394bc535e61425a))
+* **android:** report buffering for a prepare after a stop ([b28589e](https://github.com/radio-garden/react-native-audio-browser/commit/b28589efdb11949192e284c69252c9e22e362209))
+* **android:** restamp the content cache on a favorite change ([6e93715](https://github.com/radio-garden/react-native-audio-browser/commit/6e93715dddfafa527cd43a4ea0859ba41ea60f95))
+* **android:** send the queue event of a favorite restamp itself ([8431d8f](https://github.com/radio-garden/react-native-audio-browser/commit/8431d8fce3d86aa1e2b3b4f299e5671d60fb42ef))
+* **android:** send the queue to JS whenever its tracks change ([d304791](https://github.com/radio-garden/react-native-audio-browser/commit/d30479186d64c076d470d2007e2fda0d01c445b2))
+* **android:** tell Android Auto the root changed when the tabs do ([543e2f0](https://github.com/radio-garden/react-native-audio-browser/commit/543e2f0dea29d26125daf3654fe02f785e28cd32))
+* **ios:** hold a stopped track against a late played-to-end ([5282a4c](https://github.com/radio-garden/react-native-audio-browser/commit/5282a4ce59f49dd3fb54b808881a41587b24ccaf)), closes [#401](https://github.com/radio-garden/react-native-audio-browser/issues/401) [#401](https://github.com/radio-garden/react-native-audio-browser/issues/401)
+* **ios:** ignore an image row tap at a negative index ([9a7c9e2](https://github.com/radio-garden/react-native-audio-browser/commit/9a7c9e20e509a0dca0ea23f87d7b04a52513bb54))
+* **ios:** leave file:, data: and protocol-relative URLs out of baseUrl ([3e3ee92](https://github.com/radio-garden/react-native-audio-browser/commit/3e3ee92de6375a2d78291103c5b8ba0a46082406))
+* **ios:** list only the tracks after the current one in CarPlay's Up Next ([fd041f2](https://github.com/radio-garden/react-native-audio-browser/commit/fd041f296e756e17d41f79cf25d9305b4a0084b4))
+* **ios:** log each playback state transition ([5d18ad8](https://github.com/radio-garden/react-native-audio-browser/commit/5d18ad86ee4db78896af8c2e0004ca905bb88b35)), closes [#401](https://github.com/radio-garden/react-native-audio-browser/issues/401)
+* **ios:** name every event case in the public transition log ([246db5c](https://github.com/radio-garden/react-native-audio-browser/commit/246db5c2a94f317d10c33ce95b3655b7ca43d309))
+* **ios:** rebuild Up Next instead of skipping when its row predates a queue change ([3e10bc2](https://github.com/radio-garden/react-native-audio-browser/commit/3e10bc2859c17d3bf2035df8a53ad7786270922b))
+* **ios:** reload a failed track on a skip to the active index ([fe70b4a](https://github.com/radio-garden/react-native-audio-browser/commit/fe70b4a649d65df59ec4ec233774a61667654e7c)), closes [#376](https://github.com/radio-garden/react-native-audio-browser/issues/376)
+
+### Code Refactors
+
+* **android:** gather the stopped rule of the playback state machine ([c38f01f](https://github.com/radio-garden/react-native-audio-browser/commit/c38f01f1f7585f2f58918cfb9313323536236a56))
+* **android:** restamp the queue in one place ([8e54e71](https://github.com/radio-garden/react-native-audio-browser/commit/8e54e71b052accb1f0c083db9abdfdd233461428))
+* **ios:** drop QueueManager's nextTracks and previousTracks ([43528fa](https://github.com/radio-garden/react-native-audio-browser/commit/43528fad7b7e32c4557a314532fd5041b80855e6))
+
+### Documentation
+
+* state what skipToQueueItem covers, and give iOS one rule for a pick ([50a2db9](https://github.com/radio-garden/react-native-audio-browser/commit/50a2db93e5400844e878cdf12aa580e4e827fec0))
+
 ## [1.0.0-next.4](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.3...v1.0.0-next.4) (2026-11-20)
 
 ### Bug Fixes
