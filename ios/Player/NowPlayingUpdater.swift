@@ -22,7 +22,8 @@ final class NowPlayingUpdater {
     didSet { formatterGeneration &+= 1 }
   }
 
-  // A formatter whose runtime is gone fails on every render: log only its first failure.
+  // A formatter whose runtime is gone fails on every render: log the first failure of each run.
+  // A success ends the run.
   private var formatterGeneration: UInt = 0
   private var loggedFailureGeneration: UInt?
 
@@ -177,9 +178,10 @@ final class NowPlayingUpdater {
     let formatterGeneration = formatterGeneration
     formatter(params)
       .then { @Sendable [weak self] formatted in
-        guard let self, let formatted else { return }
+        guard let self else { return }
         Task { @MainActor in
-          guard self.renderGeneration == generation else { return }
+          if self.loggedFailureGeneration == formatterGeneration { self.loggedFailureGeneration = nil }
+          guard let formatted, self.renderGeneration == generation else { return }
           self.apply(.resolve(track: track, formatted: formatted, override: override), for: track)
           self.formattedTrackId = trackId
         }
@@ -189,7 +191,7 @@ final class NowPlayingUpdater {
         Task { @MainActor in
           guard let self, self.loggedFailureGeneration != formatterGeneration else { return }
           self.loggedFailureGeneration = formatterGeneration
-          self.logger.error("nowPlayingMetadataFormatter failed: \(message); its later failures are not logged")
+          self.logger.error("nowPlayingMetadataFormatter failed: \(message); failures until its next success are not logged")
         }
       }
   }
