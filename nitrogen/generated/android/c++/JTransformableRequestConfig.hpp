@@ -19,8 +19,11 @@
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include <NitroModules/Promise.hpp>
+#include <exception>
 #include <functional>
+#include <jsi/jsi.h>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 

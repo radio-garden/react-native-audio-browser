@@ -17,7 +17,7 @@ const IOS_BRIDGE = join(
   'nitrogen/generated/ios/AudioBrowser-Swift-Cxx-Bridge.cpp'
 )
 const UNWRAP =
-  /^\[&\]\(\) -> std::exception_ptr \{\n.*catch \(const facebook::jsi::JSError& /s
+  /^\[\]\(const std::exception_ptr& __error\) -> std::exception_ptr \{\n.*catch \(const facebook::jsi::JSError& /s
 
 /** What each C++ error is converted from on its way to Kotlin. */
 const toKotlin = (code: string) =>

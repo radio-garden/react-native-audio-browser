@@ -596,6 +596,7 @@ case ${i}:
                     case 'swift':
                         return `RuntimeError.from(cppError: ${cppParameterName})`;
                     case 'c++':
+                        // Not upstream: withoutJSStack.
                         return withoutJSStack(cppParameterName);
                     default:
                         return cppParameterName;
