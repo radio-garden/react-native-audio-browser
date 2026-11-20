@@ -28,22 +28,23 @@ namespace detail {
     }
   }
 
-  template <typename Make, typename Apply>
-  inline void settle(const facebook::jni::global_ref<JPromise::javaobject>& promise, Make&& make, Apply&& apply) noexcept {
+  template <typename Make, typename SettleWith>
+  inline void settle(const facebook::jni::global_ref<JPromise::javaobject>& promise, Make&& make, SettleWith settleWith) noexcept {
     bool made = false;
     std::exception_ptr failure;
     try {
       facebook::jni::ThreadScope::WithClassLoader([&]() {
+        JPromise* target = promise->cthis();
         auto argument = make();
         made = true;
-        apply(argument);
+        (target->*settleWith)(argument);
       });
       return;
     } catch (...) {
       failure = std::current_exception();
     }
     if (made) {
-      // The promise holds its result; a Kotlin listener (or the lookup that calls it) threw.
+      // A Kotlin listener (or the lookup that calls it) threw, or JPromise could not store the result.
       logSettleError("A Promise listener failed", failure);
       return;
     }
@@ -61,17 +62,17 @@ namespace detail {
  * Resolves `promise` with what `makeValue` returns, inside the app class loader, and never throws: ~Promise
  * runs a pending C++ Promise's listeners, where a throw ends in std::terminate. When `makeValue` throws,
  * `promise` is rejected with that instead, so its awaiters do not wait forever. When a Kotlin listener throws,
- * `promise` has already settled: it is logged.
+ * `promise` has already settled: it is logged, as is JPromise failing to store the value when memory runs out.
  */
 template <typename MakeValue>
 inline void resolveKotlinPromise(const facebook::jni::global_ref<JPromise::javaobject>& promise, MakeValue&& makeValue) noexcept {
-  detail::settle(promise, std::forward<MakeValue>(makeValue), [&](const auto& value) { promise->cthis()->resolve(value); });
+  detail::settle(promise, std::forward<MakeValue>(makeValue), &JPromise::resolve);
 }
 
 /** Rejects `promise` with what `makeError` returns, as resolveKotlinPromise resolves it. */
 template <typename MakeError>
 inline void rejectKotlinPromise(const facebook::jni::global_ref<JPromise::javaobject>& promise, MakeError&& makeError) noexcept {
-  detail::settle(promise, std::forward<MakeError>(makeError), [&](const auto& error) { promise->cthis()->reject(error); });
+  detail::settle(promise, std::forward<MakeError>(makeError), &JPromise::reject);
 }
 
 } // namespace margelo::nitro::audiobrowser
