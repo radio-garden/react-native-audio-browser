@@ -32,6 +32,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// listeners on the previous instance's emitters would go silent.
   static let instanceChangedEmitter = Emitter<Void>()
 
+  // React Native posts this when a reload command starts, before the old runtime is torn down:
+  // the earliest sign this instance's JS callbacks go stale. A reload from React Native DevTools
+  // posts none; the end of the runtime's JS thread (`runtimeEndObserver`) covers every reload.
+  // Observed by name, so the library needs no React-Core dependency.
+  @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
+    forName: Notification.Name("RCTTriggerReloadCommandNotification"),
+    object: nil,
+    queue: .main,
+  ) { _ in
+    MainActor.assumeIsolated {
+      HybridAudioBrowser.shared?.dropStaleJSCallbacks()
+    }
+  }
+
+  private static let jsThreadName = "com.facebook.react.runtime.JavaScript"
+
   // MARK: - Private Properties
 
   // Main-confined by convention, not annotation: `deinit` reads it and can't hop. Reach it from
@@ -235,7 +251,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let jsThread = Thread.current
     // Stops the previous instance's player (a JS reload) so two streams never play at once.
     onMainActor {
-      runtimeEndObserver = ThreadExitObserver(jsThread) { [weak self] in self?.dropStaleJSCallbacks() }
+      // Statics are lazy: touching the observer installs it from the first instance on.
+      _ = HybridAudioBrowser.reloadObserver
+      if jsThread.name == Self.jsThreadName {
+        runtimeEndObserver = ThreadExitObserver(jsThread) { [weak self] in self?.dropStaleJSCallbacks() }
+      } else {
+        logger.warning("Constructed off React Native's JS thread: callbacks are stripped only on a reload command or by a replacement instance")
+      }
       HybridAudioBrowser.shared?.destroyPlayer()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
@@ -261,14 +283,17 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   @MainActor private var didDropJSCallbacks = false
+  // Owned here: once nothing native holds this instance (no CarPlay session), there is nothing
+  // left to strip for.
   @MainActor private var runtimeEndObserver: ThreadExitObserver?
 
   /// Drops every JS callback native code can invoke on its own (browse resolvers,
   /// `handleTrackLoad`, `resolveAlbumPath`, `formatNavigationError`, `resolveGate`, the now-playing
   /// formatter), so native code still bound here (CarPlay mid-reload) serves the data-only config
   /// rather than failing on a runtime that is gone; `resolveGate` reverts to its fail-closed
-  /// default. One-shot: the end of the runtime and the replacement's `init` both reach the dying
-  /// instance, and a second strip would re-run the config setter's cascade.
+  /// default. One-shot: the reload notification, the end of the runtime and the replacement's
+  /// `init` can all reach the dying instance, and a second strip would re-run the config setter's
+  /// cascade.
   @MainActor
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }

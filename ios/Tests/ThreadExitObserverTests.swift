@@ -13,14 +13,19 @@ struct ThreadExitObserverTests {
     init() {
       let gate = gate
       thread = Thread { gate.wait() }
-    }
-
-    func start() {
       thread.start()
     }
 
     func finish() {
       gate.signal()
+    }
+
+    /// Blocks the main actor until the thread has exited, so an exit hop is queued but not run.
+    func finishAndJoin() {
+      finish()
+      while !thread.isFinished {
+        usleep(1000)
+      }
     }
   }
 
@@ -34,11 +39,11 @@ struct ThreadExitObserverTests {
     }
   }
 
-  /// Gives a thread that was told to finish the time to exit and the main queue a turn.
-  func settle(until done: () -> Bool = { false }) async throws {
-    let deadline = ContinuousClock.now + .seconds(1)
+  /// Gives the main queue its turns until `done`, or a fixed time when nothing should happen.
+  func settle(until done: () -> Bool = { false }, limit: Duration = .milliseconds(200)) async throws {
+    let deadline = ContinuousClock.now + limit
     while !done(), ContinuousClock.now < deadline {
-      try await Task.sleep(for: .milliseconds(10))
+      try await Task.sleep(for: .milliseconds(5))
     }
   }
 
@@ -46,12 +51,11 @@ struct ThreadExitObserverTests {
     let held = HeldThread()
     let exits = Exits()
     let observer = ThreadExitObserver(held.thread) { exits.record() }
-    held.start()
     try await settle()
     #expect(exits.count == 0)
 
     held.finish()
-    try await settle { exits.count > 0 }
+    try await settle(until: { exits.count > 0 }, limit: .seconds(2))
     #expect(exits.count == 1)
     #expect(exits.ranOnMain)
     withExtendedLifetime(observer) {}
@@ -62,27 +66,30 @@ struct ThreadExitObserverTests {
     let other = HeldThread()
     let exits = Exits()
     let observer = ThreadExitObserver(held.thread) { exits.record() }
-    held.start()
-    other.start()
-    other.finish()
+    other.finishAndJoin()
     try await settle()
     #expect(exits.count == 0)
-
-    held.finish()
-    try await settle { exits.count > 0 }
-    #expect(exits.count == 1)
     withExtendedLifetime(observer) {}
+    held.finish()
   }
 
   @Test func aReleasedObserverDoesNotRun() async throws {
     let held = HeldThread()
     let exits = Exits()
-    var observer: ThreadExitObserver? = ThreadExitObserver(held.thread) { exits.record() }
-    held.start()
-    observer = nil
-    held.finish()
+    _ = ThreadExitObserver(held.thread) { exits.record() }
+    held.finishAndJoin()
     try await settle()
     #expect(exits.count == 0)
-    #expect(observer == nil)
+  }
+
+  @Test func anObserverReleasedAfterTheExitBeforeItsHopDoesNotRun() async throws {
+    let held = HeldThread()
+    let exits = Exits()
+    var observer: ThreadExitObserver? = ThreadExitObserver(held.thread) { exits.record() }
+    held.finishAndJoin()
+    withExtendedLifetime(observer) {}
+    observer = nil
+    try await settle()
+    #expect(exits.count == 0)
   }
 }
