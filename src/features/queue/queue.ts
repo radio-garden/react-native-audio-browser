@@ -142,9 +142,9 @@ export function skipToPrevious(initialPosition?: number): void {
 /**
  * Sets (replaces) the queue.
  *
- * On iOS and Android this does not change the play/pause state: the player
- * keeps playing if it was playing and stays paused if it was paused. On the
- * web it stops playback. Call `play` after it to start playback.
+ * This does not change the play/pause state: the player keeps playing if it
+ * was playing and stays paused if it was paused. On the web, omitting
+ * `startIndex` stops playback.
  *
  * @param tracks - The tracks to set as the queue.
  * @param startIndex - (Optional) The index of the track to make active.
