@@ -19,13 +19,10 @@ final class NowPlayingUpdater {
   /// When false the override and formatter are ignored.
   private let enabled: Bool
   var formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)? {
-    didSet { formatterGeneration &+= 1 }
+    didSet { formatterFailures.formatterChanged() }
   }
 
-  // A formatter whose runtime is gone fails on every render: log the first failure of each run.
-  // A success ends the run.
-  private var formatterGeneration: UInt = 0
-  private var loggedFailureGeneration: UInt?
+  private var formatterFailures = FormatterFailureLog()
 
   private weak var networkStatus: (any NetworkStatusProviding)?
 
@@ -175,22 +172,20 @@ final class NowPlayingUpdater {
     // Nitro resolves the promise on the JS thread, and a main-isolated closure run off-main traps
     // in `_swift_task_checkIsolated`; `@Sendable` drops the inherited isolation, then the Task hops
     // back to the main actor.
-    let formatterGeneration = formatterGeneration
+    let formatterGeneration = formatterFailures.generation
     formatter(params)
       .then { @Sendable [weak self] formatted in
         guard let self else { return }
         Task { @MainActor in
-          if self.loggedFailureGeneration == formatterGeneration { self.loggedFailureGeneration = nil }
+          self.formatterFailures.succeeded(generation: formatterGeneration)
           guard let formatted, self.renderGeneration == generation else { return }
           self.apply(.resolve(track: track, formatted: formatted, override: override), for: track)
           self.formattedTrackId = trackId
         }
       }
       .catch { @Sendable [weak self] error in
-        let message = error.localizedDescription
         Task { @MainActor in
-          guard let self, self.loggedFailureGeneration != formatterGeneration else { return }
-          self.loggedFailureGeneration = formatterGeneration
+          guard let self, let message = self.formatterFailures.failed(error, generation: formatterGeneration) else { return }
           self.logger.error("nowPlayingMetadataFormatter failed: \(message); failures until its next success are not logged")
         }
       }

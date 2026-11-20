@@ -32,6 +32,7 @@ let package = Package(
         "Player/PlaybackFailure.swift",
         "Player/ErrorStatus.swift",
         "Player/NowPlayingLines.swift",
+        "Player/FormatterFailureLog.swift",
         "Player/RetryLoop.swift",
         "Player/SilenceBudget.swift",
         "Player/ReconnectPacer.swift",
