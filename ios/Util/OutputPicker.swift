@@ -2,13 +2,14 @@ import AVKit
 import os.log
 import UIKit
 
-/// Presents the system audio route picker over the topmost view controller.
+/// Presents the system audio route picker over the topmost view controller from a source view at
+/// `anchor`, a rect in the key window's coordinates, or at the window's top-left corner without one.
 @MainActor
 enum OutputPicker {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "OutputPicker")
   private static let delegate = SourceRemovingDelegate()
 
-  static func present() {
+  static func present(anchor: CGRect?) {
     guard let windowScene = UIApplication.shared.activeWindowScene,
           let window = windowScene.windows.first(where: { $0.isKeyWindow }),
           var topController = window.rootViewController
@@ -23,8 +24,12 @@ enum OutputPicker {
     // AVRoutePickerView has no API to present its picker, so its internal button is tapped. The
     // view must be visible to the system (a hidden source view suppresses the picker), and the
     // button can sit below the top-level subviews.
-    let routePicker = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+    let routePicker = AVRoutePickerView(
+      frame: topController.view.convert(RoutePickerSourceFrame.inWindow(anchor: anchor), from: nil),
+    )
     routePicker.alpha = 0.01
+    // Sized to the anchor, the view would take the taps meant for what lies under it.
+    routePicker.isUserInteractionEnabled = false
     routePicker.delegate = delegate
     topController.view.addSubview(routePicker)
     delegate.lifetime.added(routePicker)

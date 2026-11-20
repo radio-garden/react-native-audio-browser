@@ -346,7 +346,8 @@ public extension HybridAudioBrowser {
     true
   }
 
-  func openOutputPicker() throws {
-    DispatchQueue.main.async { OutputPicker.present() }
+  func openOutputPicker(anchor: OutputPickerAnchor?) throws {
+    let rect = anchor.map { CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height) }
+    DispatchQueue.main.async { OutputPicker.present(anchor: rect) }
   }
 }

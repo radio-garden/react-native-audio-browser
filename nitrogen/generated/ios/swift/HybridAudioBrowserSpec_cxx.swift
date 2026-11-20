@@ -2343,9 +2343,9 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func openOutputPicker() -> bridge.Result_void_ {
+  public final func openOutputPicker(anchor: bridge.std__optional_OutputPickerAnchor_) -> bridge.Result_void_ {
     do {
-      try self.__implementation.openOutputPicker()
+      try self.__implementation.openOutputPicker(anchor: anchor.value)
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

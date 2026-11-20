@@ -40,7 +40,8 @@ import type {
 } from '../features'
 import type {
   AudioBrowser as AudioBrowserSpec,
-  Output
+  Output,
+  OutputPickerAnchor
 } from '../specs/audio-browser.nitro'
 import type {
   ResolvedTrack,
@@ -1247,7 +1248,7 @@ export class NativeAudioBrowser
     return undefined
   }
 
-  openOutputPicker(): void {
+  openOutputPicker(_anchor?: OutputPickerAnchor): void {
     // No-op on web
   }
 

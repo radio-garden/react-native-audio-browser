@@ -120,6 +120,8 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `OutputPickerAnchor` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 // Forward declaration of `OutputType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class OutputType; }
 // Forward declaration of `Output` to properly resolve imports.
@@ -269,6 +271,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
 #include "Output.hpp"
+#include "OutputPickerAnchor.hpp"
 #include "OutputType.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
@@ -3446,6 +3449,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_Output create_Func_void_Output(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_Output_Wrapper wrap_Func_void_Output(Func_void_Output value) noexcept {
     return Func_void_Output_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<OutputPickerAnchor>
+  /**
+   * Specialized version of `std::optional<OutputPickerAnchor>`.
+   */
+  using std__optional_OutputPickerAnchor_ = std::optional<OutputPickerAnchor>;
+  inline std::optional<OutputPickerAnchor> create_std__optional_OutputPickerAnchor_(const OutputPickerAnchor& value) noexcept {
+    return std::optional<OutputPickerAnchor>(value);
+  }
+  inline bool has_value_std__optional_OutputPickerAnchor_(const std::optional<OutputPickerAnchor>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline OutputPickerAnchor get_std__optional_OutputPickerAnchor_(const std::optional<OutputPickerAnchor>& optional) noexcept {
+    return optional.value();
   }
   
   // pragma MARK: std::optional<EqualizerSettings>
