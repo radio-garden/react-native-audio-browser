@@ -6,8 +6,8 @@ import com.margelo.nitro.audiobrowser.Track
 
 /**
  * A change to the favorite set: the [identities] whose state changed, and the set after it. Every
- * copy of a track already stamped with `favorited` (on the page on screen, in the track cache, in
- * the queue) follows it through [restamp].
+ * copy of a track already stamped with `favorited` (on the page on screen, in the content and track
+ * caches, in the queue) follows it through [restamp].
  */
 class FavoriteChange(val identities: Set<String>, private val favorites: Set<String>) {
   /**
@@ -22,8 +22,14 @@ class FavoriteChange(val identities: Set<String>, private val favorites: Set<Str
     return if (track.favorited == favorited) null else track.copy(favorited = favorited)
   }
 
-  /** A copy of [page] with its changed tracks restamped; null when none changed. */
-  fun restamp(page: ResolvedTrack): ResolvedTrack? {
+  /**
+   * As [restamp], for a track that carries `favorited`. One without follows the set through
+   * hydration, and stamping it would keep a value after favoriting is turned off.
+   */
+  fun restampStamped(track: Track): Track? = if (track.favorited == null) null else restamp(track)
+
+  /** A copy of [page] with each track [transform] returns replaced; null when none is. */
+  fun restamp(page: ResolvedTrack, transform: (Track) -> Track? = { restamp(it) }): ResolvedTrack? {
     val sections = page.sections ?: return null
     var replaced = false
     val updated =
@@ -31,7 +37,7 @@ class FavoriteChange(val identities: Set<String>, private val favorites: Set<Str
         section.copy(
           children =
             section.children
-              .map { track -> restamp(track)?.also { replaced = true } ?: track }
+              .map { track -> transform(track)?.also { replaced = true } ?: track }
               .toTypedArray()
         )
       }

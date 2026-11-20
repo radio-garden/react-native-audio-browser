@@ -152,7 +152,7 @@ class BrowserManager {
 
   /**
    * Sets the favorited track identities (id when non-blank, else src) and restamps the content on
-   * screen and the track cache. Main thread only.
+   * screen, the content cache and the track cache. Main thread only.
    *
    * @return the change, for the queue to follow; null when the set already held these identities
    */
@@ -180,16 +180,17 @@ class BrowserManager {
     restampFavorites(FavoriteChange.toggle(identity, favorited))
   }
 
-  // The content cache keeps each response's own `favorited`, as the next resolve applies it.
   private fun restampFavorites(change: FavoriteChange) {
     content?.let { change.restamp(it) }?.let { content = it }
-    // A track without a value follows the set at read time, through hydration.
+    // A cache hit re-keys the track cache from the cached page, so the page must follow too.
+    synchronized(cacheLock) {
+      contentCache.snapshot().forEach { (path, page) ->
+        change.restamp(page) { change.restampStamped(it) }?.let { contentCache.put(path, it) }
+      }
+    }
+    // Search results reach the track cache without a page in the content cache.
     change.identities.forEach { identity ->
-      trackCache
-        .get(identity)
-        ?.takeIf { it.favorited != null }
-        ?.let { change.restamp(it) }
-        ?.let { cacheTrack(it) }
+      trackCache.get(identity)?.let { change.restampStamped(it) }?.let { cacheTrack(it) }
     }
   }
 

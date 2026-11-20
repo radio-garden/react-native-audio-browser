@@ -180,7 +180,10 @@ class BrowserManagerFavoritesTest {
     browserManager.resolve("/home")
 
     browserManager.setFavorites(emptyList())
+    // A content-cache hit, as Android Auto serves the page again, re-keys the track cache.
+    val served = browserManager.resolve("/home")
 
+    assertEquals(mapOf("A" to false), favoritedByTitle(served.flattenedChildren?.toTypedArray()))
     assertEquals(false, browserManager.getCachedTrack("stable-a")?.favorited)
     assertEquals(false, browserManager.getCachedTrack("https://s/a.mp3")?.favorited)
   }

@@ -42,6 +42,13 @@ class FavoriteChangeTest {
   }
 
   @Test
+  fun `restampStamped leaves an unset flag to hydration`() {
+    val change = change(emptySet(), setOf("a"))
+    assertNull(change.restampStamped(track(src = "a")))
+    assertEquals(true, change.restampStamped(track(src = "a", favorited = false))?.favorited)
+  }
+
+  @Test
   fun `restamp leaves a track that already agrees`() {
     assertNull(change(emptySet(), setOf("a")).restamp(track(src = "a", favorited = true)))
   }
