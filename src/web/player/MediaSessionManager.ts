@@ -19,6 +19,14 @@ export interface MediaSessionActions {
   jumpBackward(interval: number): void
 }
 
+/**
+ * Whether a track of this duration gets a position state; live streams
+ * (infinite or unknown duration) have no seekable timeline.
+ */
+export function hasPositionState(duration: number): boolean {
+  return Number.isFinite(duration) && duration > 0
+}
+
 /** Fallback skip interval (seconds) when the browser omits a seek offset. */
 const DEFAULT_SEEK_INTERVAL = 10
 
@@ -89,7 +97,7 @@ export class MediaSessionManager {
   }): void {
     if (!this.session?.setPositionState) return
     const { duration, position, playbackRate } = state
-    if (!Number.isFinite(duration) || duration <= 0) {
+    if (!hasPositionState(duration)) {
       // No seekable timeline (live radio) — clear any stale position.
       this.session.setPositionState()
       return
