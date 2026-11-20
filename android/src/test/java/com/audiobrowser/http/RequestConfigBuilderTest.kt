@@ -3,6 +3,7 @@ package com.audiobrowser.http
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.TestFixtures.mediaConfig
 import com.audiobrowser.TestFixtures.throwingTransform
+import com.audiobrowser.TestFixtures.throwingTransformSync
 import com.audiobrowser.TestFixtures.transformableConfig
 import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.util.JsPromise
@@ -344,6 +345,27 @@ class RequestConfigBuilderTest {
       val base =
         RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
       val layer = transformableConfig().copy(transform = throwingTransform("token expired"))
+      try {
+        RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+        fail("expected CallbackException")
+      } catch (e: CallbackException) {
+        assertEquals("token expired", e.message)
+      }
+    }
+
+  @Test
+  fun `a throwing transformSync's CallbackException carries its message without the JS stack`() =
+    runTest {
+      val base =
+        RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+      val layer =
+        transformableConfig()
+          .copy(
+            transformSync =
+              throwingTransformSync(
+                "token expired\n\nError: token expired\n    at transformSync (:11:92)"
+              )
+          )
       try {
         RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
         fail("expected CallbackException")
