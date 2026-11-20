@@ -993,6 +993,122 @@ class RemoteSwitchingPlayerTest {
     assertTrue(remote.player.loads.isEmpty())
   }
 
+  @Test
+  fun `a skip while the session is suspended goes to the receiver at the resume`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.suspendSession()
+
+    player.seekToNextMediaItem()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertTrue(player.isRemote)
+    assertNull(player.playerError)
+    assertEquals(listOf("a"), remote.player.loads.map { it.item.mediaId })
+
+    remote.resumeSession()
+    idle()
+    remote.playing()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals("b", remote.player.currentMediaItem?.mediaId)
+    assertNull(player.playerError)
+  }
+
+  @Test
+  fun `a load the receiver never showed before a suspension goes to it again at the resume`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.player.lagging = true
+    player.seekToNextMediaItem()
+    idle()
+
+    remote.suspendSession()
+    shadowOf(looper).idleFor(Duration.ofSeconds(31))
+    assertNull(player.playerError)
+    remote.player.lagging = false
+    remote.resumeSession()
+    idle()
+
+    assertEquals(listOf("a", "b", "b"), remote.player.loads.map { it.item.mediaId })
+    assertEquals("b", remote.player.currentMediaItem?.mediaId)
+  }
+
+  @Test
+  fun `a resume after the receiver took the item sends nothing more`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.playing()
+
+    remote.suspendSession()
+    remote.resumeSession()
+    idle()
+
+    assertEquals(listOf("a"), remote.player.loads.map { it.item.mediaId })
+    assertTrue(player.isRemote)
+  }
+
+  @Test
+  fun `a stop while the session is suspended stops the receiver at the resume`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.suspendSession()
+
+    player.stop()
+    idle()
+    assertEquals(0, remote.player.stops)
+
+    remote.resumeSession()
+    idle()
+
+    assertEquals(1, remote.player.stops)
+    assertEquals(MediaPlayer.STATE_IDLE, player.playbackState)
+  }
+
+  @Test
+  fun `a resume stops nothing that wasn't stopped during the suspension`() {
+    local.setMediaItems(items("a"))
+    idle()
+    remote.startSession()
+    idle()
+    remote.player.item = item("theirs")
+    remote.player.update()
+
+    remote.suspendSession()
+    remote.resumeSession()
+    idle()
+
+    assertEquals(0, remote.player.stops)
+  }
+
+  @Test
+  fun `a load after a stop during the suspension replaces the stop`() {
+    playLocally(listOf("a", "b"))
+    remote.startSession()
+    idle()
+    remote.playing()
+    remote.suspendSession()
+
+    player.stop()
+    player.seekToNextMediaItem()
+    player.prepare()
+    idle()
+    remote.resumeSession()
+    idle()
+
+    assertEquals(0, remote.player.stops)
+    assertEquals(listOf("a", "b"), remote.player.loads.map { it.item.mediaId })
+  }
+
   private fun playLocally(ids: List<String>, index: Int = 0, positionMs: Long = 0) {
     local.setMediaItems(items(*ids.toTypedArray()), index, positionMs)
     local.playWhenReady = true

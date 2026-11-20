@@ -61,10 +61,16 @@ internal fun createCastRemote(context: Context, receiverApplicationId: String?):
   return SdkCastRemote(Cast.getSingletonInstance(context), player)
 }
 
-private class SdkCastRemote(private val cast: Cast, override val player: RemoteCastPlayer) :
+internal class SdkCastRemote(private val cast: Cast, override val player: RemoteCastPlayer) :
   RemotePlayback {
   private var listener: RemotePlayback.Listener? = null
   private var client: RemoteMediaClient? = null
+
+  /**
+   * Kept through a suspension, while the receiver plays on out of reach: [player] lets go of its
+   * session then as it does at an end, so only the SDK's own end or failed resume clears this.
+   */
+  private var hasSession = player.isCastSessionAvailable
 
   private val ends = CastEnds()
 
@@ -94,17 +100,20 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
 
       override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) = watch(session)
 
-      override fun onSessionEnded(session: CastSession, error: Int) = watch(null)
+      override fun onSessionEnded(session: CastSession, error: Int) {
+        watch(null)
+        sessionGone()
+      }
 
       override fun onSessionStarting(session: CastSession) = Unit
 
       override fun onSessionStartFailed(session: CastSession, error: Int) = Unit
 
-      override fun onSessionEnding(session: CastSession) = Unit
+      override fun onSessionEnding(session: CastSession) = sessionGone()
 
       override fun onSessionResuming(session: CastSession, sessionId: String) = Unit
 
-      override fun onSessionResumeFailed(session: CastSession, error: Int) = Unit
+      override fun onSessionResumeFailed(session: CastSession, error: Int) = sessionGone()
 
       override fun onSessionSuspended(session: CastSession, reason: Int) = Unit
     }
@@ -112,6 +121,24 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
   init {
     cast.addSessionManagerListener(sessions)
     watch(cast.currentCastSession)
+    player.setSessionAvailabilityListener(
+      object : SessionAvailabilityListener {
+        override fun onCastSessionAvailable() {
+          hasSession = true
+          listener?.onSessionChanged()
+        }
+
+        override fun onCastSessionUnavailable() {
+          listener?.onSessionChanged()
+        }
+      }
+    )
+  }
+
+  private fun sessionGone() {
+    if (!hasSession) return
+    hasSession = false
+    listener?.onSessionChanged()
   }
 
   private fun watch(session: CastSession?) {
@@ -120,20 +147,16 @@ private class SdkCastRemote(private val cast: Cast, override val player: RemoteC
     client = session?.remoteMediaClient
     client?.registerCallback(statusCallback)
   }
+
   override val isSessionAvailable: Boolean
-    get() = player.isCastSessionAvailable
+    get() = hasSession
+
+  /** [player] has no client between letting go of the session and taking it up again. */
+  override val isSuspended: Boolean
+    get() = hasSession && !player.isCastSessionAvailable
 
   override fun setListener(listener: RemotePlayback.Listener?) {
     this.listener = listener
-    player.setSessionAvailabilityListener(
-      listener?.let {
-        object : SessionAvailabilityListener {
-          override fun onCastSessionAvailable() = it.onSessionChanged()
-
-          override fun onCastSessionUnavailable() = it.onSessionChanged()
-        }
-      }
-    )
   }
 
   override fun release() {
