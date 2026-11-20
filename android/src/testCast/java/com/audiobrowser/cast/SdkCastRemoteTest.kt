@@ -185,4 +185,38 @@ class SdkCastRemoteTest {
     assertFalse(remote.isSuspended)
     assertEquals(listOf(false), seen)
   }
+
+  // After a loss it reports neither as a suspension nor as an end, the SDK can give up on the
+  // session it holds with a failed start; the player only logs that, and keeps the session.
+  @Test
+  fun `a held session whose start fails is gone, and the listener hears of it`() {
+    startSession(First.PLAYER)
+    seen.clear()
+
+    toRemote.onSessionStartFailed(session, CastStatusCodes.NETWORK_ERROR)
+
+    assertFalse(remote.isSessionAvailable)
+    assertEquals(listOf(false), seen)
+  }
+
+  @Test
+  fun `a suspended session whose start fails is gone, and the listener hears of it`() {
+    startSession(First.PLAYER)
+    suspendSession(First.PLAYER)
+    seen.clear()
+
+    toRemote.onSessionStartFailed(session, CastStatusCodes.NETWORK_ERROR)
+
+    assertFalse(remote.isSessionAvailable)
+    assertFalse(remote.isSuspended)
+    assertEquals(listOf(false), seen)
+  }
+
+  @Test
+  fun `a start that fails without a session tells the listener nothing`() {
+    toRemote.onSessionStartFailed(session, CastStatusCodes.NETWORK_ERROR)
+
+    assertFalse(remote.isSessionAvailable)
+    assertEquals(emptyList<Boolean>(), seen)
+  }
 }

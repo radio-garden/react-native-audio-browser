@@ -68,7 +68,8 @@ internal class SdkCastRemote(private val cast: Cast, override val player: Remote
 
   /**
    * Kept through a suspension, while the receiver plays on out of reach: [player] lets go of its
-   * session then as it does at an end, so only the SDK's own end or failed resume clears this.
+   * session then as it does at an end, so only the SDK's own end or failed resume or start clears
+   * this.
    */
   private var hasSession = player.isCastSessionAvailable
 
@@ -100,20 +101,20 @@ internal class SdkCastRemote(private val cast: Cast, override val player: Remote
 
       override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) = watch(session)
 
-      override fun onSessionEnded(session: CastSession, error: Int) {
-        watch(null)
-        sessionGone()
-      }
+      override fun onSessionEnded(session: CastSession, error: Int) = letGo()
 
       override fun onSessionStarting(session: CastSession) = Unit
 
-      override fun onSessionStartFailed(session: CastSession, error: Int) = Unit
+      /** Also how the SDK gives up on the held session after a loss it reported nothing of. */
+      override fun onSessionStartFailed(session: CastSession, error: Int) {
+        if (hasSession) letGo()
+      }
 
       override fun onSessionEnding(session: CastSession) = sessionGone()
 
       override fun onSessionResuming(session: CastSession, sessionId: String) = Unit
 
-      override fun onSessionResumeFailed(session: CastSession, error: Int) = sessionGone()
+      override fun onSessionResumeFailed(session: CastSession, error: Int) = letGo()
 
       override fun onSessionSuspended(session: CastSession, reason: Int) = Unit
     }
@@ -133,6 +134,11 @@ internal class SdkCastRemote(private val cast: Cast, override val player: Remote
         }
       }
     )
+  }
+
+  private fun letGo() {
+    watch(null)
+    sessionGone()
   }
 
   private fun sessionGone() {
