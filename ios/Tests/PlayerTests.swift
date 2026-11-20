@@ -1335,6 +1335,60 @@ struct PublishingTests {
   }
 }
 
+// MARK: - Skip to the failed active track
+
+@Suite("Player - skip to the failed active track")
+struct SkipToFailedTrackTests {
+  /// A player whose only track failed at 42 s.
+  @MainActor
+  private func failedPlayer() throws -> (Player, MockPlayerEngine) {
+    let (c, eh, _, _) = makeCoordinator()
+    try loadTrack(c)
+    eh.emit(.itemPrepared(likelyToKeepUp: false))
+    c.transition(.errorOccurred(.playbackFailed))
+    eh.resumePosition = 42
+    return (c, eh)
+  }
+
+  @Test @MainActor
+  func reloadsWithoutAPlayIntent_fromTheStart() throws {
+    let (c, eh) = try failedPlayer()
+    c.seek(to: 30)
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    try c.skipTo(0)
+
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
+    #expect(c.state == .loading)
+    #expect(!c.playWhenReady)
+    #expect((c.deferredSeek.target ?? 0) == 0)
+  }
+
+  @Test @MainActor
+  func withAPlayIntent_loadsOnce_fromTheStart() throws {
+    let (c, eh) = try failedPlayer()
+    let resolvesBefore = eh.resolveAndLoadCalls.count
+
+    try c.skipTo(0, playWhenReady: true)
+
+    #expect(eh.resolveAndLoadCalls.count == resolvesBefore + 1)
+    #expect(c.playWhenReady)
+    #expect((c.deferredSeek.target ?? 0) == 0)
+  }
+
+  @Test @MainActor
+  func startsFromTheRequestedPosition() throws {
+    let (c, _) = try failedPlayer()
+
+    // What the bridge's `skip(index, initialPosition)` does.
+    try c.skipTo(0)
+    c.seek(to: 7)
+
+    #expect(c.state == .loading)
+    #expect(c.deferredSeek.target == 7)
+  }
+}
+
 // MARK: - Load
 
 @Suite("Player - Load")
