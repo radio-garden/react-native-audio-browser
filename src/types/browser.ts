@@ -1083,7 +1083,9 @@ export type BrowserConfiguration = {
    * the `id` asked about, whatever `id` it carries, and is remembered for the
    * process. A track without `src`, a throw, or no answer within 10 seconds
    * fails the play, and the car is told. Once this is set, such an `id` is
-   * never browsed as a path.
+   * never browsed as a path. A queue the app sets, loads, skips or clears
+   * while this answers wins, and the car's play is dropped, so don't restore
+   * a queue at startup while a car may be playing.
    *
    * The Gate doesn't apply: a play by `id` is hearing, not finding, so the
    * resolver isn't asked and `onGate` doesn't fire. To refuse one, return

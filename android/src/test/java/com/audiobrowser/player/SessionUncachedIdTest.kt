@@ -346,6 +346,46 @@ class SessionUncachedIdTest {
     assertEquals(emptyList<Int>(), errorsSentToTheCar(waitMs = 200))
   }
 
+  @Test
+  fun `a new queue from the app while a car's play is finding its track drops the car's play`() {
+    val answer = CompletableDeferred<Track>()
+    browserWith { answer.await() }
+
+    val carPlay = requestPlay("U1eRRwaa")
+    waitUntil { asked.isNotEmpty() }
+    player.setQueue(arrayOf(station("app")))
+    shadowOf(Looper.getMainLooper()).idle()
+    answer.complete(station("U1eRRwaa"))
+
+    assertThrows(CancellationException::class.java) { carPlay.get(5, TimeUnit.SECONDS) }
+  }
+
+  @Test
+  fun `a favorite restamp while a car's play is finding its track does not drop it`() {
+    assertCarPlaySurvives { player.replaceTrack(0, station("app").copy(favorited = true)) }
+  }
+
+  @Test
+  fun `an up-next add while a car's play is finding its track does not drop it`() {
+    assertCarPlaySurvives { player.add(station("next")) }
+  }
+
+  /** A car play of an unbrowsed id plays, though [meanwhile] edits the queue during its find. */
+  private fun assertCarPlaySurvives(meanwhile: () -> Unit) {
+    val answer = CompletableDeferred<Track>()
+    browserWith { answer.await() }
+    player.load(station("app"))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    val carPlay = requestPlay("U1eRRwaa")
+    waitUntil { asked.isNotEmpty() }
+    meanwhile()
+    shadowOf(Looper.getMainLooper()).idle()
+    answer.complete(station("U1eRRwaa"))
+
+    assertEquals("U1eRRwaa", carPlay.get(5, TimeUnit.SECONDS).mediaItems.single().mediaId)
+  }
+
   private fun waitUntil(condition: () -> Boolean) {
     repeat(250) {
       if (condition()) return

@@ -513,8 +513,15 @@ internal constructor(
    * Changes whenever the queue's tracks or their order change, whoever changed them, and never
    * repeats in the process, so equal readings mean the same queue even across players.
    */
-  @Volatile
   var queueVersion = 0
+    private set
+
+  /**
+   * Moves whenever the app replaces what plays: a new queue, a load, a skip or a clear. Not on an
+   * edit that leaves the playing item playing, such as adding up next or restamping a track.
+   */
+  @Volatile
+  internal var playGeneration = 0
     private set
 
   private var reportedTracks = emptyList<Track>()
@@ -735,6 +742,7 @@ internal constructor(
 
   /** Replaces the current track, keeping the rest of the queue; on an empty queue, adds it. */
   fun load(track: Track) {
+    playGeneration++
     if (sessionPlayer.mediaItemCount == 0) {
       add(track)
     } else {
@@ -756,6 +764,7 @@ internal constructor(
   fun add(tracks: Array<Track>, atIndex: Int = -1) {
     validateInsertIndex(atIndex)
     val count = sessionPlayer.mediaItemCount
+    if (count == 0) playGeneration++
     sessionPlayer.addMediaItems(
       if (atIndex == -1) count else atIndex,
       TrackFactory.toMedia3(tracks),
@@ -784,6 +793,7 @@ internal constructor(
    * rebuild carries an ended engine idle, and it stays ended as an ended engine does.
    */
   private inline fun loadAfter(move: () -> Unit) {
+    playGeneration++
     val index = sessionPlayer.currentMediaItemIndex
     move()
     if (playbackState == PlaybackState.ENDED && sessionPlayer.currentMediaItemIndex == index) return
@@ -803,6 +813,7 @@ internal constructor(
   /** @throws IllegalArgumentException if [index] is out of bounds. */
   fun skipTo(index: Int) {
     validateIndex(index)
+    playGeneration++
     sessionPlayer.seekTo(index, C.TIME_UNSET)
     sessionPlayer.prepare()
   }
@@ -813,6 +824,7 @@ internal constructor(
     startPositionMs: Long = 0,
     sourcePath: String? = null,
   ) {
+    playGeneration++
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
     leadShuffleOrder(startIndex, mediaItems.size)
@@ -1221,6 +1233,7 @@ internal constructor(
   }
 
   fun clear() {
+    playGeneration++
     sessionPlayer.clearMediaItems()
     queueSourcePath = null
   }

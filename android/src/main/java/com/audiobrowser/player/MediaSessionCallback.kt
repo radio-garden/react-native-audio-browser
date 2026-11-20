@@ -837,7 +837,7 @@ class MediaSessionCallback(private val player: Player) :
       )
     }
 
-    return setMediaItems(mediaItems, startIndex, startPositionMs, player.queueVersion).also {
+    return setMediaItems(mediaItems, startIndex, startPositionMs, player.playGeneration).also {
       request ->
       // Media3 does not queue play requests: an earlier one still finding its track would replace
       // this one when it lands. A consumer's handleTrackLoad already running for it is not undone.
@@ -852,7 +852,7 @@ class MediaSessionCallback(private val player: Player) :
     mediaItems: List<MediaItem>,
     startIndex: Int,
     startPositionMs: Long,
-    queueAtRequest: Int,
+    playGenerationAtRequest: Int,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
     scope.future {
       val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
@@ -928,9 +928,9 @@ class MediaSessionCallback(private val player: Player) :
       // default branch, where it means a reset.
       val handlerIndex = result.startIndex.takeIf { it != C.INDEX_UNSET } ?: 0
       val selectedTrack = tracks.getOrElse(handlerIndex) { tracks.first() }
-      // The app changed the queue while this request was finding its tracks: the newer choice
+      // The app replaced what plays while this request was finding its tracks: the newer choice
       // stands.
-      if (player.queueVersion != queueAtRequest) {
+      if (player.playGeneration != playGenerationAtRequest) {
         throw CancellationException("Play request superseded by a queue change")
       }
 
