@@ -1843,4 +1843,36 @@ struct LateEngineEventTests {
     player.play()
     #expect(engine.resolveAndLoadCalls.count == 1)
   }
+
+  /// The stop keeps the on-demand item under observation, rewound to 0: its end, delivered after
+  /// the stop, is not the track ending.
+  @Test(arguments: [false, true])
+  func aLatePlayedToEndAfterAStopLeavesTheQueueAlone(withANextTrack: Bool) throws {
+    let (player, engine, callbacks) = try makePlaying()
+    if withANextTrack {
+      try player.add([Track(id: "t2", src: "https://example.com/b.mp3", title: "B")])
+    }
+    player.stop()
+    let loads = engine.resolveAndLoadCalls.count
+    let playbackChanges = callbacks.playbackChanges.count
+    let activeTrackChanges = callbacks.activeTrackChanges.count
+
+    engine.emit(.playedToEnd)
+
+    #expect(player.queue.currentIndex == 0)
+    #expect(player.state == .stopped)
+    #expect(engine.resolveAndLoadCalls.count == loads)
+    #expect(callbacks.playbackChanges.count == playbackChanges)
+    #expect(callbacks.activeTrackChanges.count == activeTrackChanges)
+    #expect(callbacks.queueEndedEvents.isEmpty)
+  }
+
+  @Test func aLiveStopPausesBeforeTheCarrierGoesIn() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.pauseAndCarrierOrder.removeAll()
+    player.stop()
+    let pause = try #require(engine.pauseAndCarrierOrder.firstIndex(of: .pause))
+    let carrier = try #require(engine.pauseAndCarrierOrder.firstIndex(of: .carrier))
+    #expect(pause < carrier)
+  }
 }

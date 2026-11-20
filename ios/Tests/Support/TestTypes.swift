@@ -55,6 +55,9 @@ final class MockPlayerEngine: PlayerEngine {
   var carrierCount = 0
   var stopObservingItemCount = 0
   var recreateCount = 0
+  enum ItemCall { case pause, carrier }
+  /// Pauses and carrier swaps, in the order the Player called them.
+  var pauseAndCarrierOrder: [ItemCall] = []
 
   func resolveAndLoad(src: String, track _: Track, shortStartBuffer: Bool) {
     resolveAndLoadCalls.append(src)
@@ -76,6 +79,7 @@ final class MockPlayerEngine: PlayerEngine {
 
   func replaceItemWithNowPlayingCarrier() {
     carrierCount += 1
+    pauseAndCarrierOrder.append(.carrier)
     hasItem = true
     hasLoadedAsset = false
     resumePosition = nil
@@ -100,7 +104,11 @@ final class MockPlayerEngine: PlayerEngine {
   func play() { startPlaybackCallCount += 1 }
   var forwardBufferCaps: [Double?] = []
   func capForwardBuffer(_ seconds: Double?) { forwardBufferCaps.append(seconds) }
-  func pause() { pausePlaybackCallCount += 1 }
+  func pause() {
+    pausePlaybackCallCount += 1
+    pauseAndCarrierOrder.append(.pause)
+  }
+
   func setRate(_ rate: Float, playing: Bool) { rates.append((rate, playing)) }
   private var seeksInFlight: [@MainActor (Bool) -> Void] = []
 
