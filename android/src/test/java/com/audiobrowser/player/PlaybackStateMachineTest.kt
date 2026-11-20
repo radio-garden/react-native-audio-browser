@@ -287,7 +287,8 @@ class PlaybackStateMachineTest {
         from = PlaybackState.STOPPED,
       ),
     )
-    // A suppression lifting while the play's prepare still buffers.
+    // The intent rising over a buffering engine: nothing sends this today; it keeps the hold on
+    // IsPlayingChanged from stranding a play.
     assertEquals(
       listOf(PlaybackState.BUFFERING),
       on(
