@@ -114,7 +114,8 @@ class FavoriteRestampTest {
     player.exoPlayer.addListener(
       object : MediaPlayer.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-          timelineChanges++
+          // A source update arrives from the playback thread whenever the item prepares.
+          if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) timelineChanges++
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -142,7 +143,8 @@ class FavoriteRestampTest {
     player.exoPlayer.addListener(
       object : MediaPlayer.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-          timelineChanges++
+          // A source update arrives from the playback thread whenever the item prepares.
+          if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) timelineChanges++
         }
       }
     )
