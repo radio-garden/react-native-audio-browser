@@ -691,7 +691,7 @@ export class KotlinCxxBridgedType {
                         const bridge = new KotlinCxxBridgedType(promise.resultingType);
                         // Not upstream: settleKotlinPromise (android/src/main/cpp/SettleKotlinPromise.hpp).
                         const settle = (body) => `
-    settleKotlinPromise([&]() {
+    settleKotlinPromise(__promise, [&]() {
       ${indent(body, '      ')}
     });`;
                         const onResolved = promise.resultingType.kind === 'void'

@@ -84,12 +84,12 @@ namespace margelo::nitro::audiobrowser {
         jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
         jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
         __result->addOnResolvedListener([=](const std::optional<FormattedNavigationError>& __result) {
-          settleKotlinPromise([&]() {
+          settleKotlinPromise(__promise, [&]() {
             __promise->cthis()->resolve(__result.has_value() ? JFormattedNavigationError::fromCpp(__result.value()) : nullptr);
           });
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-          settleKotlinPromise([&]() {
+          settleKotlinPromise(__promise, [&]() {
             auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
               if (__error == nullptr) return __error;
               try {

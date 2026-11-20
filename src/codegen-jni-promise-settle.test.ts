@@ -25,7 +25,7 @@ const unguarded = (code: string) =>
     const lines = body.split('\n')
     const indent = lines[0]?.match(/^ */)?.[0] ?? ''
     return (
-      lines[0] !== `${indent}settleKotlinPromise([&]() {` ||
+      lines[0] !== `${indent}settleKotlinPromise(__promise, [&]() {` ||
       lines.at(-1) !== `${indent}});`
     )
   })

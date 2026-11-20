@@ -99,17 +99,17 @@ namespace margelo::nitro::audiobrowser {
         jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
         jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
         __result->addOnResolvedListener([=](const std::shared_ptr<Promise<GateDecision>>& __result) {
-          settleKotlinPromise([&]() {
+          settleKotlinPromise(__promise, [&]() {
             __promise->cthis()->resolve([&]() {
               jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
               jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
               __result->addOnResolvedListener([=](const GateDecision& __result) {
-                settleKotlinPromise([&]() {
+                settleKotlinPromise(__promise, [&]() {
                   __promise->cthis()->resolve(JGateDecision::fromCpp(__result));
                 });
               });
               __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-                settleKotlinPromise([&]() {
+                settleKotlinPromise(__promise, [&]() {
                   auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
                     if (__error == nullptr) return __error;
                     try {
@@ -128,7 +128,7 @@ namespace margelo::nitro::audiobrowser {
           });
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-          settleKotlinPromise([&]() {
+          settleKotlinPromise(__promise, [&]() {
             auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
               if (__error == nullptr) return __error;
               try {
