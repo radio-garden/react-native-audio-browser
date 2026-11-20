@@ -82,4 +82,17 @@ struct SectionPresentationTests {
     #expect(SectionPresentation.effectiveAccessorySymbol(TrackStyle()) == nil)
     #expect(SectionPresentation.effectiveAccessorySymbol(nil) == nil)
   }
+
+  @Test func tappedTile_selectsAnEnabledTrackInRange() {
+    let tiles = [Track(id: "a"), Track(id: "b", disabled: true)]
+    #expect(SectionPresentation.tappedTile(at: 0, in: tiles)?.id == "a")
+    #expect(SectionPresentation.tappedTile(at: 1, in: tiles) == nil)
+  }
+
+  @Test func tappedTile_outsideTheTracks_selectsNothing() {
+    let tiles = [Track(id: "a")]
+    #expect(SectionPresentation.tappedTile(at: -1, in: tiles) == nil)
+    #expect(SectionPresentation.tappedTile(at: 1, in: tiles) == nil)
+    #expect(SectionPresentation.tappedTile(at: 0, in: []) == nil)
+  }
 }

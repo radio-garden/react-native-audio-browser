@@ -179,8 +179,7 @@ struct NextTests {
 
       #expect(q.shuffleOrder.isFirst(start))
       #expect(!q.isLastInPlaybackOrder)
-      #expect(q.nextTracks.count == 5)
-      #expect(q.previousTracks.isEmpty)
+      #expect(q.upNextIndices.count == 5)
     }
   }
 
@@ -196,7 +195,7 @@ struct NextTests {
 
       #expect(q.shuffleOrder.isFirst(start))
       #expect(!q.isLastInPlaybackOrder)
-      #expect(q.nextTracks.count == 5)
+      #expect(q.upNextIndices.count == 5)
     }
   }
 
@@ -242,7 +241,7 @@ struct NextTests {
 
       #expect(q.currentTrack?.id == "a")
       #expect(!q.isLastInPlaybackOrder)
-      #expect(q.nextTracks.count == 5)
+      #expect(q.upNextIndices.count == 5)
     }
   }
 
@@ -525,8 +524,7 @@ struct AddTests {
 
       #expect(q.shuffleOrder.isFirst(start))
       #expect(!q.isLastInPlaybackOrder)
-      #expect(q.nextTracks.count == 5)
-      #expect(q.previousTracks.isEmpty)
+      #expect(q.upNextIndices.count == 5)
     }
   }
 }
@@ -569,8 +567,7 @@ struct AddAtTests {
 
     #expect(q.shuffleOrder.isFirst(0))
     #expect(!q.isLastInPlaybackOrder)
-    #expect(q.nextTracks.count == 5)
-    #expect(q.previousTracks.isEmpty)
+    #expect(q.upNextIndices.count == 5)
   }
 
   @Test func invalidIndex_throws() {
@@ -933,36 +930,6 @@ struct ComputedPropertyTests {
     #expect(q.currentTrack == nil)
   }
 
-  @Test func nextTracks_sequential() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b", "c", "d"), initialIndex: 1)
-    let next = q.nextTracks
-    #expect(next.count == 2)
-    #expect(next[0].id == "c")
-    #expect(next[1].id == "d")
-  }
-
-  @Test func nextTracks_atEnd_isEmpty() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b"), initialIndex: 1)
-    #expect(q.nextTracks.isEmpty)
-  }
-
-  @Test func previousTracks_sequential() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b", "c", "d"), initialIndex: 2)
-    let prev = q.previousTracks
-    #expect(prev.count == 2)
-    #expect(prev[0].id == "a")
-    #expect(prev[1].id == "b")
-  }
-
-  @Test func previousTracks_atStart_isEmpty() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b"))
-    #expect(q.previousTracks.isEmpty)
-  }
-
   @Test func isLastInPlaybackOrder_sequential() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
@@ -971,50 +938,11 @@ struct ComputedPropertyTests {
     #expect(q.isLastInPlaybackOrder == true)
   }
 
-  @Test func nextTracks_shuffle_matchesNavigation() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b", "c", "d"))
-    q.shuffleEnabled = true
-    let nextFromProp = q.nextTracks.map { $0.id! }
-    var nextFromNav: [String] = []
-    for _ in 0 ..< nextFromProp.count {
-      _ = q.next()
-      nextFromNav.append(q.currentTrack!.id!)
-    }
-    #expect(nextFromProp == nextFromNav)
-  }
-
-  @Test func previousTracks_shuffle_matchesNavigation() {
-    let q = QueueManager()
-    q.setQueue(tracks("a", "b", "c", "d"))
-    q.shuffleEnabled = true
-    for _ in 0 ..< 3 {
-      _ = q.next()
-    }
-    let prevFromProp = q.previousTracks.map { $0.id! }
-    var prevFromNav: [String] = []
-    for _ in 0 ..< prevFromProp.count {
-      _ = q.previous()
-      prevFromNav.insert(q.currentTrack!.id!, at: 0)
-    }
-    #expect(prevFromProp == prevFromNav)
-  }
-
-  @Test func nextTracks_emptyQueue_isEmpty() {
-    let q = QueueManager()
-    #expect(q.nextTracks.isEmpty)
-  }
-
-  @Test func previousTracks_emptyQueue_isEmpty() {
-    let q = QueueManager()
-    #expect(q.previousTracks.isEmpty)
-  }
-
   @Test func isLastInPlaybackOrder_shuffle() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"))
     q.shuffleEnabled = true
-    while !q.nextTracks.isEmpty {
+    while !q.upNextIndices.isEmpty {
       _ = q.next()
     }
     #expect(q.isLastInPlaybackOrder == true)

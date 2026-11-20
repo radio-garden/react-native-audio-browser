@@ -47,6 +47,21 @@ struct NowPlayingButtonRulesTests {
     #expect(!NowPlayingButtonRules.queueItemPickAllowed(false))
   }
 
+  @Test func queueItemPick_skipsOnTheQueueTheRowWasBuiltFor() {
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: nil, rowQueueVersion: 7, queueVersion: 7) == .skip)
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: true, rowQueueVersion: 7, queueVersion: 7) == .skip)
+  }
+
+  @Test func queueItemPick_afterAQueueChange_rebuildsInsteadOfSkipping() {
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: nil, rowQueueVersion: 7, queueVersion: 8) == .rebuild)
+  }
+
+  @Test func queueItemPick_refusedWithTheCapabilityOffOrNoPlayer() {
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: false, rowQueueVersion: 7, queueVersion: 7) == .refuse)
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: false, rowQueueVersion: 7, queueVersion: 8) == .refuse)
+    #expect(NowPlayingButtonRules.queueItemPick(skipToQueueItem: nil, rowQueueVersion: 7, queueVersion: nil) == .refuse)
+  }
+
   @Test func upNext_needsATrackAfterTheCurrentOne_withTheCapabilityUnsetOrOn() {
     #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: nil, upNextCount: 1))
     #expect(NowPlayingButtonRules.upNextEnabled(option: true, skipToQueueItem: true, upNextCount: 1))

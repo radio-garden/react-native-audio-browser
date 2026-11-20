@@ -20,6 +20,20 @@ enum NowPlayingButtonRules {
     skipToQueueItem != false
   }
 
+  enum QueueItemPick: Equatable {
+    case skip
+    case refuse
+    /// The queue changed after the row was built, so its index may name another track.
+    case rebuild
+  }
+
+  /// What a pick of an Up Next row built for `rowQueueVersion` does, against the queue's
+  /// `queueVersion` now (nil without a player).
+  static func queueItemPick(skipToQueueItem: Bool?, rowQueueVersion: Int, queueVersion: Int?) -> QueueItemPick {
+    guard queueItemPickAllowed(skipToQueueItem), let queueVersion else { return .refuse }
+    return queueVersion == rowQueueVersion ? .skip : .rebuild
+  }
+
   /// Whether the Up Next button is on: the option allows it, a pick is allowed, and a track
   /// follows the current one.
   static func upNextEnabled(option: Bool, skipToQueueItem: Bool?, upNextCount: Int) -> Bool {

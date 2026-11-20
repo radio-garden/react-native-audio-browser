@@ -65,42 +65,6 @@ class QueueManager {
     return tracks[currentIndex]
   }
 
-  /// In playback order, so shuffled when shuffle is on; no wrap.
-  var nextTracks: [Track] {
-    guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
-
-    if shuffleEnabled {
-      var result: [Track] = []
-      var index = currentIndex
-      while let nextIndex = shuffleOrder.getNextIndex(after: index) {
-        result.append(tracks[nextIndex])
-        index = nextIndex
-      }
-      return result
-    }
-
-    guard currentIndex < tracks.count - 1 else { return [] }
-    return Array(tracks[currentIndex + 1 ..< tracks.count])
-  }
-
-  /// In playback order, so shuffled when shuffle is on; no wrap.
-  var previousTracks: [Track] {
-    guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
-
-    if shuffleEnabled {
-      var result: [Track] = []
-      var index = currentIndex
-      while let prevIndex = shuffleOrder.getPreviousIndex(before: index) {
-        result.insert(tracks[prevIndex], at: 0)
-        index = prevIndex
-      }
-      return result
-    }
-
-    guard currentIndex > 0 else { return [] }
-    return Array(tracks[0 ..< currentIndex])
-  }
-
   var isLastInPlaybackOrder: Bool {
     if shuffleEnabled {
       return shuffleOrder.isLast(currentIndex)
