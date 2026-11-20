@@ -152,10 +152,19 @@ class BrowserManager {
    */
   val artworkResolutions = ArtworkResolutionRegistry()
 
-  /** Sets the favorited track identities (id when non-blank, else src). */
-  fun setFavorites(favorites: List<String>) {
-    favoriteIds = favorites.toSet()
+  /**
+   * Sets the favorited track identities (id when non-blank, else src) and restamps the content on
+   * screen, the content cache and the track cache. Main thread only.
+   *
+   * @return the change, for the queue to follow; null when the set already held these identities
+   */
+  fun setFavorites(favorites: List<String>): FavoriteChange? {
+    val replaced = favorites.toSet()
+    val change = FavoriteChange.between(favoriteIds, replaced)
+    favoriteIds = replaced
     Timber.d("Set ${favoriteIds.size} favorite IDs")
+    change?.let(::restampFavorites)
+    return change
   }
 
   fun setFavoriteEnabled(enabled: Boolean) {
@@ -170,6 +179,21 @@ class BrowserManager {
         favoriteIds - identity
       }
     Timber.d("Updated favorite for '$identity' to $favorited (total: ${favoriteIds.size})")
+    restampFavorites(FavoriteChange.toggle(identity, favorited))
+  }
+
+  private fun restampFavorites(change: FavoriteChange) {
+    content?.let { change.restamp(it) }?.let { content = it }
+    // A cache hit re-keys the track cache from the cached page, so the page must follow too.
+    synchronized(cacheLock) {
+      contentCache.snapshot().forEach { (path, page) ->
+        change.restamp(page) { change.restampStamped(it) }?.let { contentCache.put(path, it) }
+      }
+    }
+    // Search results reach the track cache without a page in the content cache.
+    change.identities.forEach { identity ->
+      trackCache.get(identity)?.let { change.restampStamped(it) }?.let { cacheTrack(it) }
+    }
   }
 
   /**

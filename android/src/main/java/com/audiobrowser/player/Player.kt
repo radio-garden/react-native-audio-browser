@@ -21,6 +21,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
+import com.audiobrowser.browser.FavoriteChange
 import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.resolveMediaUrl
@@ -506,17 +507,21 @@ internal constructor(
   var queueVersion = 0
     private set
 
-  private var versionedMediaIds = emptyList<String>()
+  private var reportedTracks = emptyList<Track>()
 
   /**
-   * Compares media ids: an engine rebuild sets the same items again and reports a playlist change.
+   * The queue's tracks when they differ from those at the last call, moving [queueVersion]; null
+   * when they don't. Call it on every timeline change: the reason does not tell, since the engine
+   * reports an in-place replace of items as a playlist change but `RemoteSwitchingPlayer` as a
+   * source update, and an engine rebuild, a now-playing restamp or the playback thread's own source
+   * update leave every track as it was.
    */
-  internal fun onPlaylistChanged() {
-    val mediaIds =
-      (0 until sessionPlayer.mediaItemCount).map { sessionPlayer.getMediaItemAt(it).mediaId }
-    if (mediaIds == versionedMediaIds) return
-    versionedMediaIds = mediaIds
+  internal fun changedQueueTracks(): Array<Track>? {
+    val current = tracks
+    if (current.asList() == reportedTracks) return null
+    reportedTracks = current.toList()
     queueVersion = ++lastQueueVersion
+    return current
   }
 
   /** The path the queue was expanded from, so selecting from the same source skips re-expanding. */
@@ -821,28 +826,21 @@ internal constructor(
   }
 
   /**
-   * @return false only when there is no current track, so MediaSession callers can report an
-   *   invalid state instead of a success the controller then watches revert.
+   * Sets the active track's favorite state in the browser's favorite set, then restamps every copy
+   * of the track, on the page on screen and in the queue.
+   *
+   * @return false when there is no current track or it has no identity, so MediaSession callers can
+   *   report an invalid state instead of a success the controller then watches revert.
    */
   fun setActiveTrackFavorited(favorited: Boolean): Boolean {
     val currentTrack = this.currentTrack ?: return false
+    val identity = currentTrack.identity ?: return false
 
-    currentTrack.identity?.let { identity ->
-      browser?.browserManager?.updateFavorite(identity, favorited)
-    }
+    browser?.browserManager?.updateFavorite(identity, favorited)
+    applyFavoriteChange(FavoriteChange.toggle(identity, favorited))
 
-    val index = sessionPlayer.currentMediaItemIndex
-    // Still applied: the favorite is persisted above, and there is no heart to revert.
-    if (index == C.INDEX_UNSET) return true
-
-    val updatedTrack = currentTrack.copy(favorited = favorited)
-    restampMediaItem(index, updatedTrack) { setFavorite(favorited) }
-
-    updateFavoriteButtonState(favorited)
-
-    // The only emit: a favorite toggle mutates the active track in place, so the track and queue
-    // change events stay transition-only.
-    callbacks?.onFavoriteChanged(FavoriteChangedEvent(updatedTrack, favorited))
+    // The active track is mutated in place, so the active-track event stays transition-only.
+    callbacks?.onFavoriteChanged(FavoriteChangedEvent(this.currentTrack!!, favorited))
     return true
   }
 
@@ -928,18 +926,31 @@ internal constructor(
     )
 
   /**
-   * One replacement for the whole queue: each separate one is a timeline change and a queue event
-   * to JS.
+   * Restamps every queued copy of a track whose favorite state [change] moved. The heart button
+   * then follows the current track.
    */
-  private fun restampFavorites() {
-    if (!::sessionPlayer.isInitialized || sessionPlayer.mediaItemCount == 0) return
+  internal fun applyFavoriteChange(change: FavoriteChange) {
+    restampQueue { change.restamp(it) }
+    updateFavoriteButtonState(currentTrack?.favorited)
+  }
+
+  /**
+   * Replaces each queued item whose track [transform] returns with that track and its heart rating,
+   * in one replacement: one queue event when a track changed, no transition, and the current track
+   * keeps playing.
+   */
+  private fun restampQueue(transform: (Track) -> Track?) {
+    if (!::sessionPlayer.isInitialized) return
+    var replaced = false
     val items =
       (0 until sessionPlayer.mediaItemCount).map { index ->
         val item = sessionPlayer.getMediaItemAt(index)
         val track = item.localConfiguration?.tag as? Track ?: return@map item
-        item.restamped(track) { setFavorite(track.favorited) }
+        val restamped = transform(track) ?: return@map item
+        replaced = true
+        item.restamped(restamped) { setFavorite(restamped.favorited) }
       }
-    sessionPlayer.replaceMediaItems(0, items.size, items)
+    if (replaced) sessionPlayer.replaceMediaItems(0, items.size, items)
   }
 
   private fun restampMediaItem(
@@ -1462,7 +1473,7 @@ internal constructor(
       browser?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
       TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
       if (previousOptions.capabilities.favoriteEnabled != options.capabilities.favoriteEnabled) {
-        restampFavorites()
+        restampQueue { it }
       }
     }
 
