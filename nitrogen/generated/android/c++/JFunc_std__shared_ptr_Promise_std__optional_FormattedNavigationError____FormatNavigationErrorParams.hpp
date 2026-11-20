@@ -20,6 +20,7 @@
 #include <exception>
 #include <stdexcept>
 #include <jsi/jsi.h>
+#include "SettleKotlinPromise.hpp"
 #include "JFormattedNavigationError.hpp"
 #include <string>
 #include "JFormatNavigationErrorParams.hpp"
@@ -83,12 +84,12 @@ namespace margelo::nitro::audiobrowser {
         jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
         jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
         __result->addOnResolvedListener([=](const std::optional<FormattedNavigationError>& __result) {
-          jni::ThreadScope::WithClassLoader([&]() {
+          settleKotlinPromise([&]() {
             __promise->cthis()->resolve(__result.has_value() ? JFormattedNavigationError::fromCpp(__result.value()) : nullptr);
           });
         });
         __result->addOnRejectedListener([=](const std::exception_ptr& __error) {
-          jni::ThreadScope::WithClassLoader([&]() {
+          settleKotlinPromise([&]() {
             auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
               if (__error == nullptr) return __error;
               try {

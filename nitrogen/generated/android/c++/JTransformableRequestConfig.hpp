@@ -16,6 +16,7 @@
 #include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
 #include "RequestConfig.hpp"
+#include "SettleKotlinPromise.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include <NitroModules/Promise.hpp>

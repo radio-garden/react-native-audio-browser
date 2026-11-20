@@ -53,6 +53,7 @@
 #include <exception>
 #include <stdexcept>
 #include <jsi/jsi.h>
+#include "SettleKotlinPromise.hpp"
 #include "JBrowseResult.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -87,12 +88,12 @@ namespace margelo::nitro::audiobrowser {
           jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
           jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
           std::get<2>(variant)->addOnResolvedListener([=](const std::variant<ResolvedTrack, BrowseError>& __result) {
-            jni::ThreadScope::WithClassLoader([&]() {
+            settleKotlinPromise([&]() {
               __promise->cthis()->resolve(JBrowseResult::fromCpp(__result));
             });
           });
           std::get<2>(variant)->addOnRejectedListener([=](const std::exception_ptr& __error) {
-            jni::ThreadScope::WithClassLoader([&]() {
+            settleKotlinPromise([&]() {
               auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
                 if (__error == nullptr) return __error;
                 try {

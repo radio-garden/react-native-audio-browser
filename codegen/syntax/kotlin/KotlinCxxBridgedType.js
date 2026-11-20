@@ -115,8 +115,13 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JPromise.hpp',
                         space: 'system',
                     });
-                    // Not upstream: its rejection goes through withoutJSStack.
+                    // Not upstream: its rejection goes through withoutJSStack, and it settles through settleKotlinPromise.
                     imports.push(...new ErrorType().getRequiredImports('c++'));
+                    imports.push({
+                        language: 'c++',
+                        name: 'SettleKotlinPromise.hpp',
+                        space: 'user',
+                    });
                     const promiseType = getTypeAs(this.type, PromiseType);
                     if (promiseType.resultingType.kind === 'void') {
                         // Promise<void> uses JUnit
@@ -684,34 +689,25 @@ export class KotlinCxxBridgedType {
                         const promise = getTypeAs(this.type, PromiseType);
                         const resolvingType = promise.resultingType.getCode('c++');
                         const bridge = new KotlinCxxBridgedType(promise.resultingType);
-                        // Not upstream: a C++ Promise can settle on a thread whose class loader
-                        // cannot find Nitro's Kotlin callback classes (the JS thread tearing its
-                        // runtime down destroys a pending Promise, which rejects). The lookup throws
-                        // out of the Promise's destructor and aborts; Nitro's ~JPromise scopes it so.
-                        // Drop the scope once Nitro's JPromise settles its listeners in it itself.
+                        // Not upstream: settleKotlinPromise (android/src/main/cpp/SettleKotlinPromise.hpp).
+                        const settle = (body) => `
+    settleKotlinPromise([&]() {
+      ${indent(body, '      ')}
+    });`;
                         const onResolved = promise.resultingType.kind === 'void'
                             ? `
-  ${parameterName}->addOnResolvedListener([=]() {
-    jni::ThreadScope::WithClassLoader([&]() {
-      __promise->cthis()->resolve(JUnit::instance());
-    });
+  ${parameterName}->addOnResolvedListener([=]() {${settle('__promise->cthis()->resolve(JUnit::instance());')}
   });`
                             : `
-  ${parameterName}->addOnResolvedListener([=](const ${resolvingType}& __result) {
-    jni::ThreadScope::WithClassLoader([&]() {
-      __promise->cthis()->resolve(${indent(bridge.parseFromCppToKotlin('__result', 'c++', true), '      ')});
-    });
+  ${parameterName}->addOnResolvedListener([=](const ${resolvingType}& __result) {${settle(`__promise->cthis()->resolve(${bridge.parseFromCppToKotlin('__result', 'c++', true)});`)}
   });`;
                         // Not upstream: withoutJSStack.
                         return `
 [&]() {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
   jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);${onResolved}
-  ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
-    jni::ThreadScope::WithClassLoader([&]() {
-      auto __jniError = jni::getJavaExceptionForCppException(${indent(withoutJSStack('__error'), '      ')});
-      __promise->cthis()->reject(__jniError);
-    });
+  ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {${settle(`auto __jniError = jni::getJavaExceptionForCppException(${withoutJSStack('__error')});
+__promise->cthis()->reject(__jniError);`)}
   });
   return __localPromise;
 }()

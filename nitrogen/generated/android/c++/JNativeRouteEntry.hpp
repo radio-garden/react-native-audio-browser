@@ -70,6 +70,7 @@
 #include "SearchParams.hpp"
 #include "Section.hpp"
 #include "SectionStyle.hpp"
+#include "SettleKotlinPromise.hpp"
 #include "StyleDisplay.hpp"
 #include "Track.hpp"
 #include "TrackRequest.hpp"

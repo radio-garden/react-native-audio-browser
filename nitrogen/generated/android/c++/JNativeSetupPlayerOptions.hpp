@@ -84,6 +84,7 @@
 #include "RemoteOutputsOptions.hpp"
 #include "RepeatMode.hpp"
 #include "RetryConfig.hpp"
+#include "SettleKotlinPromise.hpp"
 #include "StallReason.hpp"
 #include "StyleDisplay.hpp"
 #include "TimedMetadata.hpp"

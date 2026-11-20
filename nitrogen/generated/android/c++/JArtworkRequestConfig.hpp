@@ -39,6 +39,7 @@
 #include "JVariant_String_ArtworkVariants.hpp"
 #include "MediaTransformParams.hpp"
 #include "RequestConfig.hpp"
+#include "SettleKotlinPromise.hpp"
 #include "StyleDisplay.hpp"
 #include "Track.hpp"
 #include "TrackRequest.hpp"
