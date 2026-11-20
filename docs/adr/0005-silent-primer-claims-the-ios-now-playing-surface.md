@@ -29,7 +29,7 @@ It does not check whether the app has rendered audio before, so a load that fail
 
 The carrier item exists because `MPNowPlayingSession` auto-publishing reads metadata from the linked player's current item (`item.nowPlayingInfo`). A failed load otherwise leaves the player item-less, and the framework warns that direct info-center writes are unsupported under automatic publishing.
 
-The carrier is not observed at the item level, so its `.failed` status cannot double-report the error the loader already delivered. Retry reloads leave it in place, and a successful load replaces it with the real, observed item.
+The carrier is not observed at the item level, so its `.failed` status cannot double-report the error the loader already delivered. Retry reloads keep a carrier in place (a live stream's reload swaps in a fresh one for its ended item, #299), and a successful load replaces it with the real, observed item.
 
 ## Considered options
 

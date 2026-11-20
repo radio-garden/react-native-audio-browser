@@ -30,7 +30,13 @@ func makeMetadataItem(
 final class MockPlayerEngine: PlayerEngine {
   var onEvent: (@MainActor (EngineEvent) -> Void)?
 
+  /// As AVPlayerEngine: a prepared item is in the player before its event goes out.
   func emit(_ event: EngineEvent) {
+    if case .itemPrepared = event {
+      hasItem = true
+      hasLoadedAsset = true
+      itemIsCarrier = false
+    }
     onEvent?(event)
   }
 
@@ -49,6 +55,8 @@ final class MockPlayerEngine: PlayerEngine {
 
   var resolveAndLoadCalls: [String] = []
   var shortStartBufferRequests: [Bool] = []
+  var itemIsCarrier = false
+  var carrierAtLoad: [Bool] = []
   var cancelLoadingCount = 0
   var dropAssetCount = 0
   var clearItemCount = 0
@@ -62,6 +70,7 @@ final class MockPlayerEngine: PlayerEngine {
   func resolveAndLoad(src: String, track _: Track, shortStartBuffer: Bool) {
     resolveAndLoadCalls.append(src)
     shortStartBufferRequests.append(shortStartBuffer)
+    carrierAtLoad.append(itemIsCarrier)
   }
 
   func cancelLoading() { cancelLoadingCount += 1 }
@@ -73,6 +82,7 @@ final class MockPlayerEngine: PlayerEngine {
   func clearItem() {
     clearItemCount += 1
     hasItem = false
+    itemIsCarrier = false
     hasLoadedAsset = false
     resumePosition = nil
   }
@@ -81,8 +91,12 @@ final class MockPlayerEngine: PlayerEngine {
     carrierCount += 1
     pauseAndCarrierOrder.append(.carrier)
     hasItem = true
+    itemIsCarrier = true
     hasLoadedAsset = false
     resumePosition = nil
+    currentTime = 0
+    duration = 0
+    bufferedPosition = 0
     liveEdge = nil
     liveWindowSeconds = nil
   }

@@ -119,8 +119,8 @@ final class Player {
     !awaitingItem && load?.itemPrepared == true
   }
 
-  /// Whether the engine's item is one of this Load's, which a reload of the track keeps until the
-  /// next is prepared.
+  /// Whether the engine's item is one of this Load's, which a reload of an on-demand track keeps
+  /// until the next is prepared; a live track's gives way to the now-playing carrier.
   private var engineItemIsCurrent: Bool {
     load?.itemPrepared == true
   }
@@ -931,6 +931,8 @@ final class Player {
       engine.cancelLoading()
       engine.stopObservingItem()
       engine.pause()
+      // Without a loaded asset the item is already the carrier: a parked stream's.
+      if currentTrack?.live == true, engine.hasLoadedAsset { engine.replaceItemWithNowPlayingCarrier() }
     }
     if let target { deferredSeek.capture(target) }
     transition(.trackLoading)

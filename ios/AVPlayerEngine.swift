@@ -367,8 +367,8 @@ final class AVPlayerEngine: PlayerEngine {
   // `MPNowPlayingSession` publishes only through the linked player's current item, so a load that
   // fails before an item exists (a dead host on a cold start) shows nothing on the lock screen or
   // CarPlay. The failed asset's item carries the publishing, unobserved so its `.failed` status
-  // cannot re-report the loader's error. A successful load replaces it; a retry leaves it in
-  // place, so the surface doesn't flicker.
+  // cannot re-report the loader's error. A successful load replaces it; a retry keeps a carrier
+  // in its place, so the surface doesn't flicker.
   private func attachPublishingCarrierItemIfNeeded() {
     guard avPlayer.currentItem == nil, let asset = mediaLoader.asset else { return }
     logger.notice("Attaching publishing-carrier item for failed load")
