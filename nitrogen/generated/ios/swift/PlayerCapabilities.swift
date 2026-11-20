@@ -18,7 +18,7 @@ public extension PlayerCapabilities {
   /**
    * Create a new instance of `PlayerCapabilities`.
    */
-  init(play: Bool?, pause: Bool?, stop: Bool?, seekTo: Bool?, skipToNext: Bool?, skipToPrevious: Bool?, jumpForward: Bool?, jumpBackward: Bool?, favorite: Bool?, shuffleMode: Bool?, repeatMode: Bool?, playbackRate: Bool?) {
+  init(play: Bool?, pause: Bool?, stop: Bool?, seekTo: Bool?, skipToNext: Bool?, skipToPrevious: Bool?, skipToQueueItem: Bool?, jumpForward: Bool?, jumpBackward: Bool?, favorite: Bool?, shuffleMode: Bool?, repeatMode: Bool?, playbackRate: Bool?) {
     self.init({ () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = play {
         return bridge.create_std__optional_bool_(__unwrappedValue)
@@ -51,6 +51,12 @@ public extension PlayerCapabilities {
       }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = skipToPrevious {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = skipToQueueItem {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
@@ -159,6 +165,18 @@ public extension PlayerCapabilities {
     return { () -> Bool? in
       if bridge.has_value_std__optional_bool_(self.__skipToPrevious) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__skipToPrevious)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var skipToQueueItem: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__skipToQueueItem) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__skipToQueueItem)
         return __unwrapped
       } else {
         return nil

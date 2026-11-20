@@ -51,6 +51,7 @@ class LiveSeekCommandTest {
       seekTo = seekTo,
       skipToNext = null,
       skipToPrevious = null,
+      skipToQueueItem = null,
       jumpForward = null,
       jumpBackward = null,
       favorite = null,

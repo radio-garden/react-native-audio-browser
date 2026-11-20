@@ -62,6 +62,7 @@
     var seekTo: Bool?
     var skipToNext: Bool?
     var skipToPrevious: Bool?
+    var skipToQueueItem: Bool?
     var jumpForward: Bool?
     var jumpBackward: Bool?
     var favorite: Bool?

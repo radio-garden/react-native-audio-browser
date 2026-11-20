@@ -117,15 +117,16 @@ updateOptions({
 })
 ```
 
-| Capability                      | Default | Notes                                          |
-| ------------------------------- | ------- | ---------------------------------------------- |
-| `play` / `pause` / `stop`       | `true`  | Core transport.                                |
-| `seekTo`                        | `true`  | Scrub the timeline.                            |
-| `skipToNext` / `skipToPrevious` | `true`  | Move between queue items.                      |
-| `jumpForward` / `jumpBackward`  | `false` | Podcast/audiobook seek by interval.            |
-| `playbackRate`                  | `true`  | Speed control (Control Center / CarPlay).      |
-| `shuffleMode` / `repeatMode`    | `true`  | Shuffle / repeat toggles.                      |
-| `favorite`                      | `false` | The heart — see [Favorites](/guide/favorites). |
+| Capability                      | Default | Notes                                                                                                                   |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `play` / `pause` / `stop`       | `true`  | Core transport.                                                                                                         |
+| `seekTo`                        | `true`  | Scrub the timeline.                                                                                                     |
+| `skipToNext` / `skipToPrevious` | `true`  | Move between queue items.                                                                                               |
+| `skipToQueueItem`               | `true`  | Pick any queue item from an external surface — see [Picking a queue item](/guide/remote-controls#picking-a-queue-item). |
+| `jumpForward` / `jumpBackward`  | `false` | Podcast/audiobook seek by interval.                                                                                     |
+| `playbackRate`                  | `true`  | Speed control (Control Center / CarPlay).                                                                               |
+| `shuffleMode` / `repeatMode`    | `true`  | Shuffle / repeat toggles.                                                                                               |
+| `favorite`                      | `false` | The heart — see [Favorites](/guide/favorites).                                                                          |
 
 ## Controls & progress
 
