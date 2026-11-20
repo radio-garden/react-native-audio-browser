@@ -30,8 +30,13 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -294,13 +299,42 @@ class BrowserManager {
   }
 
   /**
+   * The track for [id]: the cached one, else the one `findTrack` answers (see [findUncachedTrack]).
+   */
+  suspend fun trackFor(id: String): Track? = getCachedTrack(id) ?: findUncachedTrack(id)
+
+  /**
+   * Whether [id] is `findTrack`'s alone to answer: a bare id while `findTrack` is set. Such an id
+   * is never browsed as a path.
+   */
+  fun answersOnlyByFindTrack(id: String): Boolean =
+    config.findTrack != null && BrowserPathHelper.isBareId(id)
+
+  private val findScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+  private val findsInFlight = ConcurrentHashMap<String, Deferred<Track?>>()
+
+  /**
    * The playable track the consumer's `findTrack` answers for [id], carrying [id] as its own, and
-   * cached as a browsed track is. Null when [id] is a path or http(s) URL, or when `findTrack` is
-   * unset, answers nothing, answers a track without `src`, throws, or outruns [FALLBACK_TIMEOUT].
+   * cached under [id] alone. Concurrent calls for one id share one `findTrack` call, which a
+   * caller's cancellation leaves running for the others. Null when [id] is a path or http(s) URL,
+   * or when `findTrack` is unset, answers nothing, answers a track without `src`, throws, or
+   * outruns [FALLBACK_TIMEOUT].
    */
   suspend fun findUncachedTrack(id: String): Track? {
     if (!BrowserPathHelper.isBareId(id)) return null
     val findTrack = config.findTrack ?: return null
+    val found =
+      findsInFlight
+        .computeIfAbsent(id) {
+          findScope
+            .async(start = CoroutineStart.LAZY) { find(findTrack, id) }
+            .also { lookup -> lookup.invokeOnCompletion { findsInFlight.remove(id, lookup) } }
+        }
+        .await()
+    return found?.let(::hydrateFavorite)
+  }
+
+  private suspend fun find(findTrack: suspend (String) -> Track?, id: String): Track? {
     val track =
       try {
         findTrack(id)
@@ -314,27 +348,21 @@ class BrowserManager {
       Timber.w("findTrack found no playable track for id='$id'")
       return null
     }
-    // A controller matches its now-playing row by the id it sent.
-    val found = track.copy(id = id)
-    cacheTrack(found)
-    return hydrateFavorite(found)
+    // A controller matches its now-playing row by the id it sent. Not under its path or src: a
+    // found track must not answer for a browse path it names.
+    return track.copy(id = id).also { trackCache.put(id, it) }
   }
 
   /**
    * A cache miss is reachable: a controller can replay a mediaId this process never browsed (a
    * search result or the last track after process death). When the mediaId is a playable URL, or
    * the item's requestMetadata carries the playable uri (stamped by TrackFactory), it builds a
-   * minimal track from the item's metadata; otherwise it asks [findUncachedTrack].
+   * minimal track from the item's metadata on a cache miss; otherwise it asks [trackFor].
    *
    * @throws IllegalStateException when the mediaId is neither cached, a playable URL, nor found
    */
   private suspend fun resolveMediaItemToTrack(mediaItem: MediaItem): Track {
     val mediaId = mediaItem.mediaId
-
-    getCachedTrack(mediaId)?.let { cachedTrack ->
-      Timber.d("Resolved mediaId='$mediaId' from cache: '${cachedTrack.title}'")
-      return cachedTrack
-    }
 
     val fallbackSrc =
       if (BrowserPathHelper.isHttpUrl(mediaId)) {
@@ -342,38 +370,43 @@ class BrowserManager {
       } else {
         mediaItem.requestMetadata.mediaUri?.toString()
       }
-    if (fallbackSrc != null) {
-      Timber.w("Cache MISS for mediaId='$mediaId' - building minimal track from media item")
-      val metadata = mediaItem.mediaMetadata
-      return hydrateFavorite(
-        Track(
-          // A mediaId distinct from the playable uri is the stable id; keeping it lets the car's
-          // now-playing row match.
-          id = mediaId.takeIf { it != fallbackSrc },
-          path = null,
-          src = fallbackSrc,
-          artwork = artworkOf(metadata.artworkUri?.toString()),
-          artworkSource = null,
-          request = null,
-          title = metadata.title?.toString() ?: mediaId,
-          subtitle = metadata.artist?.toString(),
-          artist = null,
-          albumPath = null,
-          album = metadata.albumTitle?.toString(),
-          description = metadata.description?.toString(),
-          genre = metadata.genre?.toString(),
-          duration = null,
-          style = null,
-          disabled = null,
-          favorited = null,
-          live = null,
-          icyCharset = null,
-        )
-      )
+    if (fallbackSrc == null) {
+      return trackFor(mediaId)
+        ?: throw IllegalStateException("MediaItem neither cached nor found: $mediaId")
     }
 
-    return findUncachedTrack(mediaId)
-      ?: throw IllegalStateException("MediaItem neither cached nor found: $mediaId")
+    getCachedTrack(mediaId)?.let { cachedTrack ->
+      Timber.d("Resolved mediaId='$mediaId' from cache: '${cachedTrack.title}'")
+      return cachedTrack
+    }
+
+    Timber.w("Cache MISS for mediaId='$mediaId' - building minimal track from media item")
+    val metadata = mediaItem.mediaMetadata
+    return hydrateFavorite(
+      Track(
+        // A mediaId distinct from the playable uri is the stable id; keeping it lets the car's
+        // now-playing row match.
+        id = mediaId.takeIf { it != fallbackSrc },
+        path = null,
+        src = fallbackSrc,
+        artwork = artworkOf(metadata.artworkUri?.toString()),
+        artworkSource = null,
+        request = null,
+        title = metadata.title?.toString() ?: mediaId,
+        subtitle = metadata.artist?.toString(),
+        artist = null,
+        albumPath = null,
+        album = metadata.albumTitle?.toString(),
+        description = metadata.description?.toString(),
+        genre = metadata.genre?.toString(),
+        duration = null,
+        style = null,
+        disabled = null,
+        favorited = null,
+        live = null,
+        icyCharset = null,
+      )
+    )
   }
 
   /**

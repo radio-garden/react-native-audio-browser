@@ -72,6 +72,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -107,8 +108,14 @@ internal constructor(
   internal val context: Context,
   castRemote: (Context, String?) -> RemotePlayback?,
   sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+  private val browserRegistrationTimeout: Duration = 10.seconds,
 ) {
   constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
+
+  internal constructor(
+    context: Context,
+    browserRegistrationTimeout: Duration,
+  ) : this(context, ::createCastRemote, ::SonosRemote, browserRegistrationTimeout)
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
@@ -314,8 +321,6 @@ internal constructor(
     }
   }
 
-  internal var browserRegistrationTimeout = 10.seconds
-
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
    *
@@ -508,6 +513,7 @@ internal constructor(
    * Changes whenever the queue's tracks or their order change, whoever changed them, and never
    * repeats in the process, so equal readings mean the same queue even across players.
    */
+  @Volatile
   var queueVersion = 0
     private set
 

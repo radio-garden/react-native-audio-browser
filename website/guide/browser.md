@@ -477,7 +477,9 @@ configureBrowser({
 })
 ```
 
-It is called for an `id` that is neither browsed in this process, a path, nor an http(s) URL, both for a play and for an item lookup. Return a Track with a `src`, or `undefined` for an `id` you don't know. The answer plays and is reported under the `id` the car sent, and it is remembered, so the same `id` is not asked again. An answer without `src`, a throw, or no answer within 10 seconds fails the play, and the car is told it failed.
+It is called for an `id` that is neither browsed in this process, a path, nor an http(s) URL, both for a play and for an item lookup. Return a Track with a `src`, or `undefined` for an `id` you don't know. The answer plays and is reported under the `id` the car sent, and it is remembered, so the same `id` is not asked again. An answer without `src`, a throw, or no answer within 10 seconds fails the play, and the car is told it failed. Once `findTrack` is set, such an `id` is never browsed as a path.
+
+The [Gate](/guide/gate) doesn't apply to these plays: they are hearing, not finding, so the resolver isn't asked and `onGate` doesn't fire. To refuse one, return `undefined` from `findTrack`; the play fails as for an unknown `id`.
 
 A car can start your app's process with no activity in the foreground. React Native pauses JavaScript timers there, so anything in `findTrack` that waits on a timer does not run until an activity opens.
 

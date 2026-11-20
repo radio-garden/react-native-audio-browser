@@ -14,13 +14,16 @@ import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.buildService
 import com.audiobrowser.session
 import com.google.common.util.concurrent.ListenableFuture
+import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.Track
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,11 +68,18 @@ class SessionUncachedIdTest {
   private fun station(id: String) =
     TestFixtures.track(title = "Station", id = id, src = "https://s/$id.mp3")
 
-  private fun browserWith(ready: Boolean = true, findTrack: (suspend (String) -> Track?)?) {
-    val browserManager =
+  private lateinit var browserManager: BrowserManager
+
+  private fun browserWith(
+    ready: Boolean = true,
+    routes: Array<NativeRouteEntry>? = null,
+    findTrack: (suspend (String) -> Track?)?,
+  ) {
+    browserManager =
       BrowserManager().apply {
         config =
           BrowserConfig(
+            routes = routes,
             findTrack =
               findTrack?.let { find ->
                 val asking: suspend (String) -> Track? = { id ->
@@ -77,7 +87,7 @@ class SessionUncachedIdTest {
                   find(id)
                 }
                 asking
-              }
+              },
           )
       }
     val configuration = TestFixtures.browserConfiguration()
@@ -118,12 +128,12 @@ class SessionUncachedIdTest {
       .get(5, TimeUnit.SECONDS)
 
   /**
-   * The error codes sent to the car, waiting up to 5 s for the first. The library reports from the
-   * thread that failed the future, then posts to Main, so the report can land after `get()`
+   * The error codes sent to the car, waiting up to [waitMs] for the first. The library reports from
+   * the thread that failed the future, then posts to Main, so the report can land after `get()`
    * returns.
    */
-  private fun errorsSentToTheCar(): List<Int> {
-    repeat(250) {
+  private fun errorsSentToTheCar(waitMs: Long = 5_000): List<Int> {
+    repeat((waitMs / 20).toInt()) {
       shadowOf(Looper.getMainLooper()).idle()
       val sent =
         mockingDetails(session).invocations.filter {
@@ -247,13 +257,100 @@ class SessionUncachedIdTest {
   }
 
   @Test
-  fun `a play whose browser is never configured fails and tells the controller`() {
-    browserWith(ready = false) { id -> station(id) }
-    player.browserRegistrationTimeout = 100.milliseconds
+  fun `a play and an item lookup for the same id in flight ask the consumer once`() {
+    val answer = CompletableDeferred<Track>()
+    browserWith { answer.await() }
 
-    val request = requestPlay("U1eRRwaa")
+    val lookup = player.getMediaSessionCallback().onGetItem(service.session, car, "U1eRRwaa")
+    val play = requestPlay("U1eRRwaa")
+    waitUntil { asked.isNotEmpty() }
+    answer.complete(station("U1eRRwaa"))
 
-    assertThrows(ExecutionException::class.java) { request.get(5, TimeUnit.SECONDS) }
-    assertEquals(listOf(SessionError.ERROR_UNKNOWN), errorsSentToTheCar())
+    assertEquals(LibraryResult.RESULT_SUCCESS, lookup.get(5, TimeUnit.SECONDS).resultCode)
+    assertEquals("U1eRRwaa", play.get(5, TimeUnit.SECONDS).mediaItems.single().mediaId)
+    assertEquals(listOf("U1eRRwaa"), asked)
+  }
+
+  @Test
+  fun `a found track is remembered under the id only, not its path or src`() {
+    browserWith {
+      TestFixtures.track(title = "Station", id = "x", src = "https://s/a.mp3")
+        .copy(path = "/page/a")
+    }
+
+    playFromMediaId("U1eRRwaa")
+
+    assertNull(browserManager.getCachedTrack("/page/a"))
+    assertNull(browserManager.getCachedTrack("https://s/a.mp3"))
+  }
+
+  @Test
+  fun `an item lookup for an id the consumer does not know is not browsed as a path`() {
+    browserWith(
+      routes =
+        arrayOf(
+          TestFixtures.staticRoute(BrowserManager.DEFAULT_ROUTE_PATH, TestFixtures.resolvedTrack())
+        )
+    ) {
+      null
+    }
+
+    assertEquals(SessionError.ERROR_BAD_VALUE, getItem("U1eRRwaa").resultCode)
+  }
+
+  @Test
+  fun `a newer play cancels an earlier one still finding its track`() {
+    val answer = CompletableDeferred<Track>()
+    browserWith { answer.await() }
+
+    val earlier = requestPlay("U1eRRwaa")
+    waitUntil { asked.isNotEmpty() }
+    val newer =
+      player
+        .getMediaSessionCallback()
+        .onSetMediaItems(
+          session,
+          car,
+          mutableListOf(
+            MediaItem.Builder()
+              .setMediaId("B")
+              .setRequestMetadata(
+                MediaItem.RequestMetadata.Builder()
+                  .setMediaUri(android.net.Uri.parse("https://s/b.mp3"))
+                  .build()
+              )
+              .build()
+          ),
+          C.INDEX_UNSET,
+          C.TIME_UNSET,
+        )
+
+    assertEquals("B", newer.get(5, TimeUnit.SECONDS).mediaItems.single().mediaId)
+    answer.complete(station("U1eRRwaa"))
+    assertThrows(CancellationException::class.java) { earlier.get(5, TimeUnit.SECONDS) }
+    assertEquals(emptyList<Int>(), errorsSentToTheCar(waitMs = 200))
+  }
+
+  @Test
+  fun `a play from the app while a car's play is finding its track is not replaced by it`() {
+    val answer = CompletableDeferred<Track>()
+    browserWith { answer.await() }
+
+    val carPlay = requestPlay("U1eRRwaa")
+    waitUntil { asked.isNotEmpty() }
+    player.load(station("app"))
+    shadowOf(Looper.getMainLooper()).idle()
+    answer.complete(station("U1eRRwaa"))
+
+    assertThrows(CancellationException::class.java) { carPlay.get(5, TimeUnit.SECONDS) }
+    assertEquals(emptyList<Int>(), errorsSentToTheCar(waitMs = 200))
+  }
+
+  private fun waitUntil(condition: () -> Boolean) {
+    repeat(250) {
+      if (condition()) return
+      Thread.sleep(20)
+    }
+    throw AssertionError("condition not met within 5 s")
   }
 }

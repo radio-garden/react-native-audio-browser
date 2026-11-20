@@ -1082,7 +1082,12 @@ export type BrowserConfiguration = {
    * `undefined` when the `id` names nothing playable. The answer plays under
    * the `id` asked about, whatever `id` it carries, and is remembered for the
    * process. A track without `src`, a throw, or no answer within 10 seconds
-   * fails the play, and the car is told.
+   * fails the play, and the car is told. Once this is set, such an `id` is
+   * never browsed as a path.
+   *
+   * The Gate doesn't apply: a play by `id` is hearing, not finding, so the
+   * resolver isn't asked and `onGate` doesn't fire. To refuse one, return
+   * `undefined`; the play fails as for an unknown `id`.
    *
    * @example
    * ```typescript
