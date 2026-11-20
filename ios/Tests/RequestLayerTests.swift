@@ -118,6 +118,12 @@ struct RequestLayerTests {
     #expect(RequestLayer.buildUrl(Config(path: "/a", baseUrl: "https://host", query: ["q": "x"])) == "https://host/a?q=x")
   }
 
+  @Test func buildUrlLeavesFileSrcOutOfSharedBaseUrl() {
+    let file = "file:///var/mobile/Containers/Data/Application/x/Documents/a.mp3"
+    let merged = RequestLayer.merge(Config.base(path: file), Config(baseUrl: "https://api.example.com"))
+    #expect(RequestLayer.buildUrl(merged) == file)
+  }
+
   @Test func mergeDictsIsNilSafe() {
     #expect(RequestLayer.mergeDicts(nil, nil) == nil)
     #expect(RequestLayer.mergeDicts(["a": "1"], nil) == ["a": "1"])

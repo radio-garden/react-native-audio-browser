@@ -35,6 +35,24 @@ import Testing
   #expect(result == "http://example.com/api/search")
 }
 
+@Test func buildUrlKeepsPathWithColonAfterFirstSlashRelative() {
+  #expect(BrowserPathHelper.buildUrl(baseUrl: "https://api.example.com", path: "/shows/a:b")
+    == "https://api.example.com/shows/a:b")
+  #expect(BrowserPathHelper.buildUrl(baseUrl: "https://api.example.com", path: "shows/a:b")
+    == "https://api.example.com/shows/a:b")
+}
+
+@Test(arguments: [
+  "HTTPS://other.example.com/a.mp3",
+  "file:///var/mobile/Containers/Data/Application/x/Documents/a.mp3",
+  "data:image/png;base64,iVBORw0KGgo=",
+  "blob:https://app.example.com/0b1c2d3e",
+  "//cdn.example.com/a.mp3",
+])
+func buildUrlReturnsUrlWithSchemeWithoutBase(url: String) {
+  #expect(BrowserPathHelper.buildUrl(baseUrl: "https://api.example.com", path: url) == url)
+}
+
 // MARK: - appendQuery
 
 @Test func appendQueryAddsParamsWithQuestionMark() {
