@@ -20,6 +20,9 @@ internal fun MediaSession.controllerState() = impl.playerInfo.playbackState
 /** The player error media3 controllers were last told. */
 internal fun MediaSession.controllerError() = impl.playerInfo.playerError
 
+/** Whether media3 controllers were last told the player loads. */
+internal fun MediaSession.controllerLoading() = impl.playerInfo.isLoading
+
 /** Whether media3 controllers were last told it plays. */
 internal fun MediaSession.controllerPlaying() = impl.playerInfo.isPlaying
 

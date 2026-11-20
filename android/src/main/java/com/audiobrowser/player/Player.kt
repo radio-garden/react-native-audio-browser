@@ -19,6 +19,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.setPeriodicPositionUpdatesPaused
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.browser.FavoriteChange
@@ -365,8 +366,19 @@ internal constructor(
   internal var lastTrack: Track? = null
   internal var lastIndex: Int? = null
 
+  /**
+   * Application thread only: a retrying error pauses the session's periodic position updates. A
+   * hanging connection keeps the engine loading, and while it loads media3 re-sends legacy
+   * controllers the same state every 3 s.
+   */
   var playbackError: PlaybackError? = null
-    internal set
+    internal set(value) {
+      val wasRetrying = field?.retrying == true
+      field = value
+      val retrying = value?.retrying == true
+      if (retrying != wasRetrying && ::mediaSession.isInitialized)
+        mediaSession.setPeriodicPositionUpdatesPaused(retrying)
+    }
 
   internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
@@ -1520,6 +1532,7 @@ internal constructor(
 
   fun setMediaSession(mediaSession: MediaSession) {
     this.mediaSession = mediaSession
+    if (playbackError?.retrying == true) mediaSession.setPeriodicPositionUpdatesPaused(true)
   }
 
   fun getOptions(): PlayerUpdateOptions {
