@@ -131,6 +131,61 @@ class BrowserManagerFavoritesTest {
   }
 
   @Test
+  fun `setFavorites restamps the content on screen and emits it`() = runBlocking {
+    servePage(
+      "/home",
+      track(title = "A", id = "stable-a", src = "https://s/a.mp3"),
+      track(title = "B", id = "stable-b", src = "https://s/b.mp3"),
+    )
+    browserManager.setFavoriteEnabled(true)
+    browserManager.setFavorites(listOf("stable-b"))
+    browserManager.navigate("/home")
+    val emitted = mutableListOf<Map<String, Boolean?>?>()
+    browserManager.setOnContentChanged {
+      emitted.add(favoritedByTitle(it?.flattenedChildren?.toTypedArray()))
+    }
+
+    browserManager.setFavorites(listOf("stable-a"))
+
+    val expected = mapOf("A" to true, "B" to false)
+    assertEquals(
+      expected,
+      favoritedByTitle(browserManager.getContent()?.flattenedChildren?.toTypedArray()),
+    )
+    assertEquals(listOf(expected), emitted)
+  }
+
+  @Test
+  fun `setFavorites that changes no track on screen emits nothing`() = runBlocking {
+    servePage("/home", track(title = "A", id = "stable-a", src = "https://s/a.mp3"))
+    browserManager.setFavoriteEnabled(true)
+    browserManager.setFavorites(listOf("stable-a"))
+    browserManager.navigate("/home")
+    var emits = 0
+    browserManager.setOnContentChanged { emits++ }
+
+    browserManager.setFavorites(listOf("stable-a", "elsewhere"))
+
+    assertEquals(0, emits)
+  }
+
+  @Test
+  fun `a removed favorite does not come back through the track cache`() = runBlocking {
+    servePage(
+      "/home",
+      track(title = "A", id = "stable-a", src = "https://s/a.mp3", favorited = true),
+    )
+    browserManager.setFavoriteEnabled(true)
+    browserManager.setFavorites(listOf("stable-a"))
+    browserManager.resolve("/home")
+
+    browserManager.setFavorites(emptyList())
+
+    assertEquals(false, browserManager.getCachedTrack("stable-a")?.favorited)
+    assertEquals(false, browserManager.getCachedTrack("https://s/a.mp3")?.favorited)
+  }
+
+  @Test
   fun `getCachedTrack re-hydrates favorites by identity`() = runBlocking {
     servePage("/home", track(title = "A", id = "stable-a", src = "https://s/a.mp3"))
     browserManager.setFavoriteEnabled(true)

@@ -734,7 +734,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun setFavorites(favorites: Array<String>) {
-    browserManager.setFavorites(favorites.toList())
+    runBlockingOnMain {
+      val change = browserManager.setFavorites(favorites.toList()) ?: return@runBlockingOnMain
+      connectedPlayer?.applyFavoriteChange(change)
+    }
   }
 
   // MARK: Gate

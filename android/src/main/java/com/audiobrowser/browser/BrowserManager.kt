@@ -150,10 +150,19 @@ class BrowserManager {
    */
   val artworkResolutions = ArtworkResolutionRegistry()
 
-  /** Sets the favorited track identities (id when non-blank, else src). */
-  fun setFavorites(favorites: List<String>) {
-    favoriteIds = favorites.toSet()
+  /**
+   * Sets the favorited track identities (id when non-blank, else src) and restamps the content on
+   * screen and the track cache. Main thread only.
+   *
+   * @return the change, for the queue to follow; null when the set already held these identities
+   */
+  fun setFavorites(favorites: List<String>): FavoriteChange? {
+    val replaced = favorites.toSet()
+    val change = FavoriteChange.between(favoriteIds, replaced)
+    favoriteIds = replaced
     Timber.d("Set ${favoriteIds.size} favorite IDs")
+    change?.let(::restampFavorites)
+    return change
   }
 
   fun setFavoriteEnabled(enabled: Boolean) {
@@ -168,6 +177,15 @@ class BrowserManager {
         favoriteIds - identity
       }
     Timber.d("Updated favorite for '$identity' to $favorited (total: ${favoriteIds.size})")
+    restampFavorites(FavoriteChange.toggle(identity, favorited))
+  }
+
+  // The content cache keeps each response's own `favorited`, as the next resolve applies it.
+  private fun restampFavorites(change: FavoriteChange) {
+    content?.let { change.restamp(it) }?.let { content = it }
+    change.identities.forEach { identity ->
+      trackCache.get(identity)?.let { change.restamp(it) }?.let { cacheTrack(it) }
+    }
   }
 
   /**
