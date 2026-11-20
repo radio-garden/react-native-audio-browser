@@ -366,19 +366,8 @@ internal constructor(
   internal var lastTrack: Track? = null
   internal var lastIndex: Int? = null
 
-  /**
-   * Application thread only: a retrying error pauses the session's periodic position updates. A
-   * hanging connection keeps the engine loading, and while it loads media3 re-sends legacy
-   * controllers the same state every 3 s.
-   */
   var playbackError: PlaybackError? = null
-    internal set(value) {
-      val wasRetrying = field?.retrying == true
-      field = value
-      val retrying = value?.retrying == true
-      if (retrying != wasRetrying && ::mediaSession.isInitialized)
-        mediaSession.setPeriodicPositionUpdatesPaused(retrying)
-    }
+    internal set
 
   internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
@@ -393,7 +382,10 @@ internal constructor(
 
   /**
    * Re-derives [playingState] from [shouldPlayWhenReady] and [playbackState], emitting when it
-   * changed. Its only writer: call it wherever either input changes.
+   * changed. Its only writer: call it wherever either input changes. While it buffers, the
+   * session's periodic position updates pause: a hanging connection keeps the engine loading, and
+   * while it loads media3 re-sends legacy controllers the same state every 3 s. Application thread
+   * only.
    */
   internal fun refreshPlayingState() {
     val newPlayingState = PlayingStateFactory.derive(shouldPlayWhenReady, playbackState)
@@ -401,6 +393,8 @@ internal constructor(
     Timber.d(
       "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
     )
+    if (newPlayingState.buffering != playingState.buffering && ::mediaSession.isInitialized)
+      mediaSession.setPeriodicPositionUpdatesPaused(newPlayingState.buffering)
     playingState = newPlayingState
     callbacks?.onPlaybackPlayingState(playingState)
   }
@@ -1532,7 +1526,7 @@ internal constructor(
 
   fun setMediaSession(mediaSession: MediaSession) {
     this.mediaSession = mediaSession
-    if (playbackError?.retrying == true) mediaSession.setPeriodicPositionUpdatesPaused(true)
+    if (playingState.buffering) mediaSession.setPeriodicPositionUpdatesPaused(true)
   }
 
   fun getOptions(): PlayerUpdateOptions {
