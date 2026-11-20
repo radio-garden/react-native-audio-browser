@@ -1,7 +1,6 @@
 package com.audiobrowser.util
 
 import android.net.Uri
-import androidx.core.net.toUri
 import com.margelo.nitro.audiobrowser.NavigationErrorKind
 import java.net.URLEncoder
 
@@ -60,28 +59,19 @@ object BrowserPathHelper {
   }
 
   /**
-   * The parent path: [url] without `__trackId` and `__index`, its other query parameters kept.
-   * Returns a non-contextual [url] unchanged.
+   * The parent path: [url] without `__trackId` and `__index`, every other character as written, so
+   * it equals the parent [build] was given. Returns a non-contextual [url] unchanged.
    */
   fun stripTrackId(url: String): String {
     if (!isContextual(url)) {
       return url
     }
-
-    val uri = url.toUri()
-
-    val builder = uri.buildUpon()
-    builder.clearQuery()
-
-    uri.queryParameterNames.forEach { paramName ->
-      if (paramName != CONTEXTUAL_TRACK_PARAM && paramName != CONTEXTUAL_INDEX_PARAM) {
-        uri.getQueryParameters(paramName).forEach { value ->
-          builder.appendQueryParameter(paramName, value)
-        }
+    val (head, pairs) = splitQuery(url) ?: return url
+    val kept =
+      pairs.filterNot {
+        it.startsWith("$CONTEXTUAL_TRACK_PARAM=") || it.startsWith("$CONTEXTUAL_INDEX_PARAM=")
       }
-    }
-
-    return builder.build().toString()
+    return if (kept.isEmpty()) head else "$head?${kept.joinToString("&")}"
   }
 
   /**
@@ -97,23 +87,31 @@ object BrowserPathHelper {
   }
 
   /** The decoded `__trackId`, or null when [path] is not contextual. */
-  fun extractTrackId(path: String): String? {
-    if (!isContextual(path)) {
-      return null
-    }
-
-    val uri = Uri.parse(path)
-    return uri.getQueryParameter(CONTEXTUAL_TRACK_PARAM)
-  }
+  fun extractTrackId(path: String): String? = contextualValue(CONTEXTUAL_TRACK_PARAM, path)
 
   /** The `__index`, or null when [path] is not contextual or its index is missing or negative. */
-  fun extractIndex(path: String): Int? {
+  fun extractIndex(path: String): Int? =
+    contextualValue(CONTEXTUAL_INDEX_PARAM, path)?.toIntOrNull()?.takeIf { it >= 0 }
+
+  /**
+   * [path] cut at its first `?`: what precedes it, and the `name=value` pairs after it as written.
+   */
+  private fun splitQuery(path: String): Pair<String, List<String>>? {
+    val mark = path.indexOf('?')
+    if (mark < 0) {
+      return null
+    }
+    return path.substring(0, mark) to path.substring(mark + 1).split('&')
+  }
+
+  /** The percent-decoded value of [name] in a contextual [path]; null when there is none. */
+  private fun contextualValue(name: String, path: String): String? {
     if (!isContextual(path)) {
       return null
     }
-
-    val raw = Uri.parse(path).getQueryParameter(CONTEXTUAL_INDEX_PARAM) ?: return null
-    return raw.toIntOrNull()?.takeIf { it >= 0 }
+    val prefix = "$name="
+    val pair = splitQuery(path)?.second?.firstOrNull { it.startsWith(prefix) } ?: return null
+    return Uri.decode(pair.substring(prefix.length))
   }
 
   /**
