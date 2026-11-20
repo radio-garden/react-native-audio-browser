@@ -6,6 +6,7 @@ import androidx.media3.exoplayer.source.MediaPeriod
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import com.audiobrowser.TestFixtures.mediaConfig
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
@@ -74,6 +75,42 @@ class MediaFactoryTest {
         checkNotNull(requests.poll(5, TimeUnit.SECONDS)) { "the media url never opened" }
       assertEquals("http://127.0.0.1:9/queued.mp3", url)
       assertEquals(queued, track)
+    }
+  }
+
+  /** Every User-Agent line the media request carries when its config has [headers]/[userAgent]. */
+  private fun sentUserAgents(
+    headers: Map<String, String>,
+    userAgent: String? = null,
+  ): List<String> =
+    MockWebServer().use { server ->
+      var agents = emptyList<String>()
+      server.enqueue(MockResponse().setBody("").setHeader("Content-Type", "audio/mpeg"))
+      val src = server.url("/s.mp3").toString()
+      val config = mediaConfig(path = src, headers = headers).copy(userAgent = userAgent)
+      loading(mediaFactory { _, _ -> config }, track(id = "ua", src = src)) {
+        val request =
+          checkNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "the media url never opened" }
+        agents = request.headers.values("User-Agent")
+      }
+      agents
+    }
+
+  @Test
+  fun `a user-agent header in any case wins over the default`() {
+    for (name in listOf("User-Agent", "user-agent", "USER-AGENT")) {
+      assertEquals(name, listOf("MyApp/1.0"), sentUserAgents(mapOf(name to "MyApp/1.0")))
+    }
+  }
+
+  @Test
+  fun `the userAgent field wins over a user-agent header in any case`() {
+    for (name in listOf("User-Agent", "user-agent", "USER-AGENT")) {
+      assertEquals(
+        name,
+        listOf("Field/1.0"),
+        sentUserAgents(mapOf(name to "MyApp/1.0"), "Field/1.0"),
+      )
     }
   }
 

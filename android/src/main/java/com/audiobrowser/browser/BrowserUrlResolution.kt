@@ -259,10 +259,11 @@ private fun buildHeadersMap(
 ): Map<String, String>? {
   val mergedHeaders = mutableMapOf<String, String>()
   headers?.let { mergedHeaders.putAll(it) }
-  if (userAgent != null && !mergedHeaders.containsKey("User-Agent")) {
+  fun hasHeader(name: String) = mergedHeaders.keys.any { it.equals(name, ignoreCase = true) }
+  if (userAgent != null && !hasHeader("User-Agent")) {
     mergedHeaders["User-Agent"] = userAgent
   }
-  if (contentType != null && !mergedHeaders.containsKey("Content-Type")) {
+  if (contentType != null && !hasHeader("Content-Type")) {
     mergedHeaders["Content-Type"] = contentType
   }
   return mergedHeaders.ifEmpty { null }

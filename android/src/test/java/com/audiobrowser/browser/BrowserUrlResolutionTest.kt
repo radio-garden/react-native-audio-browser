@@ -241,6 +241,18 @@ class BrowserUrlResolutionTest {
   }
 
   @Test
+  fun `a user-agent or content-type header in any case wins over the field`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request =
+          transformableConfig(headers = mapOf("user-agent" to "mine", "CONTENT-TYPE" to "mine"))
+            .copy(userAgent = "UA", contentType = "image/png")
+      )
+    val source = bm.unattributedArtworkSource("https://img.example.com/a.png")
+    assertEquals(mapOf("user-agent" to "mine", "CONTENT-TYPE" to "mine"), source?.headers)
+  }
+
+  @Test
   fun `unattributedArtworkSource returns null when there are no static headers`() = runTest {
     bm.config = BrowserConfig()
     assertNull(bm.unattributedArtworkSource("https://img/x.png"))

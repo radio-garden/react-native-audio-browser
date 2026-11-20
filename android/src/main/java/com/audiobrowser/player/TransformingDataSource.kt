@@ -69,6 +69,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       putAll(dataSpec.httpRequestHeaders)
       putAll(headers)
       if (userAgent != DEFAULT_USER_AGENT) {
+        keys.removeAll { it.equals("User-Agent", ignoreCase = true) }
         put("User-Agent", userAgent)
       }
     }
