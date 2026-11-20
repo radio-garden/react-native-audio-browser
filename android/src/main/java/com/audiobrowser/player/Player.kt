@@ -1158,7 +1158,7 @@ internal constructor(
    * error: what played keeps playing.
    *
    * @return null when gated (after onGate) or when nothing playable is found
-   * @throws Exception when the browser is not registered in time or the search callback fails
+   * @throws Exception when the browser is not registered in time or the search fails
    */
   suspend fun voiceSearch(params: SearchParams): Array<Track>? {
     val audioBrowser = awaitBrowser()
@@ -1179,17 +1179,19 @@ internal constructor(
         audioBrowser.browserManager.searchPlayable(params)
       } catch (e: Exception) {
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
-        sendSearchError(audioBrowser, params, navigationErrorFor(e))
+        sendSearchError(audioBrowser, params, offlineErrorOr { navigationErrorFor(e) })
         throw e
       }
     if (tracks == null) {
       Timber.w("No tracks found for search: ${params}")
-      // An HTTP search source answers a failed request with no tracks.
-      val offline = !networkMonitor.isOnline.value
-      sendSearchError(audioBrowser, params, if (offline) offlineError() else emptyContentError())
+      // Offline, no result most likely means the search could not reach its source.
+      sendSearchError(audioBrowser, params, offlineErrorOr { emptyContentError() })
     }
     return tracks
   }
+
+  private inline fun offlineErrorOr(error: () -> NavigationError): NavigationError =
+    if (networkMonitor.isOnline.value) error() else offlineError()
 
   @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   private suspend fun sendSearchError(
