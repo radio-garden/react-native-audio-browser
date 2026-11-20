@@ -14,10 +14,11 @@ struct FormatterFailureLog {
     if loggedGeneration == generation { loggedGeneration = nil }
   }
 
-  /// The message to log for `error`, or nil when its run's first failure is already logged.
-  mutating func failed(_ error: Error, generation: UInt) -> String? {
+  /// The message to log for the formatter's rejection, or nil when its run's first failure is
+  /// already logged.
+  mutating func failed(_ rejection: Error, generation: UInt) -> String? {
     guard loggedGeneration != generation else { return nil }
     loggedGeneration = generation
-    return error.localizedDescription
+    return JSCallbackError(rejection).message
   }
 }

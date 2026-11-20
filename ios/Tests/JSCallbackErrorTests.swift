@@ -4,11 +4,6 @@ import Testing
 
 @Suite("JSCallbackError")
 struct JSCallbackErrorTests {
-  /// Nitro's `RuntimeError` before 0.37.2: an `Error` whose message is only its `description`.
-  struct NitroRuntimeError: Error, CustomStringConvertible {
-    let description: String
-  }
-
   @Test func givesARejectionsMessageAsItsLocalizedDescription() {
     let error = JSCallbackError(NitroRuntimeError(description: "token expired"))
     #expect(error.localizedDescription == "token expired")
