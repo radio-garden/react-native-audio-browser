@@ -88,13 +88,13 @@ namespace margelo::nitro::audiobrowser {
           jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
           jni::global_ref<JPromise::javaobject> __promise = jni::make_global(__localPromise);
           std::get<2>(variant)->addOnResolvedListener([=](const std::variant<ResolvedTrack, BrowseError>& __result) {
-            settleKotlinPromise(__promise, [&]() {
-              __promise->cthis()->resolve(JBrowseResult::fromCpp(__result));
+            resolveKotlinPromise(__promise, [&]() {
+              return JBrowseResult::fromCpp(__result);
             });
           });
           std::get<2>(variant)->addOnRejectedListener([=](const std::exception_ptr& __error) {
-            settleKotlinPromise(__promise, [&]() {
-              auto __jniError = jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
+            rejectKotlinPromise(__promise, [&]() {
+              return jni::getJavaExceptionForCppException([](const std::exception_ptr& __error) -> std::exception_ptr {
                 if (__error == nullptr) return __error;
                 try {
                   std::rethrow_exception(__error);
@@ -104,7 +104,6 @@ namespace margelo::nitro::audiobrowser {
                   return __error;
                 }
               }(__error));
-              __promise->cthis()->reject(__jniError);
             });
           });
           return __localPromise;

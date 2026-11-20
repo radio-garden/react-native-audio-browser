@@ -19,14 +19,15 @@ const cppToKotlinListeners = (code: string) =>
     .filter(([, , params]) => !params?.includes('jni::alias_ref'))
     .map(([, , , body]) => body ?? '')
 
-/** Listeners whose body is anything but one settleKotlinPromise call. */
+/** Listeners whose body is anything but one resolveKotlinPromise or rejectKotlinPromise call. */
 const unguarded = (code: string) =>
   cppToKotlinListeners(code).filter((body) => {
     const lines = body.split('\n')
     const indent = lines[0]?.match(/^ */)?.[0] ?? ''
     return (
-      lines[0] !== `${indent}settleKotlinPromise(__promise, [&]() {` ||
-      lines.at(-1) !== `${indent}});`
+      !/^ *(?:resolve|reject)KotlinPromise\(__promise, \[&\]\(\) \{$/.test(
+        lines[0] ?? ''
+      ) || lines.at(-1) !== `${indent}});`
     )
   })
 
@@ -34,13 +35,16 @@ describe('codegen: a C++ Promise settling a Kotlin Promise', () => {
   it.each([
     ['a value', new StringType()],
     ['void', new VoidType()]
-  ])('settles it for %s through settleKotlinPromise', (_, result) => {
-    const code = new KotlinCxxBridgedType(
-      new PromiseType(result)
-    ).parseFromCppToKotlin('promise', 'c++')
-    expect(cppToKotlinListeners(code)).toHaveLength(2)
-    expect(unguarded(code)).toEqual([])
-  })
+  ])(
+    'settles it for %s through resolveKotlinPromise or rejectKotlinPromise',
+    (_, result) => {
+      const code = new KotlinCxxBridgedType(
+        new PromiseType(result)
+      ).parseFromCppToKotlin('promise', 'c++')
+      expect(cppToKotlinListeners(code)).toHaveLength(2)
+      expect(unguarded(code)).toEqual([])
+    }
+  )
 
   describe('in the committed bridge', () => {
     const files = readdirSync(GENERATED)
@@ -51,7 +55,7 @@ describe('codegen: a C++ Promise settling a Kotlin Promise', () => {
       expect(files.flatMap(cppToKotlinListeners).length).toBeGreaterThan(0)
     })
 
-    it('settle it through settleKotlinPromise', () => {
+    it('settle it through resolveKotlinPromise or rejectKotlinPromise', () => {
       expect(files.flatMap(unguarded)).toEqual([])
     })
   })
