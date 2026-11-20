@@ -977,6 +977,7 @@ export class NativeAudioBrowser
   }
 
   setShuffleEnabled(enabled: boolean): void {
+    if (this.queue.shuffleEnabled === enabled) return
     super.setShuffleEnabled(enabled)
     this.onPlaybackShuffleModeChanged(enabled)
   }
