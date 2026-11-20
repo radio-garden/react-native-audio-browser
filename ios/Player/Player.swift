@@ -438,6 +438,8 @@ final class Player {
     // A stop during a deferred park leaves the previous track's item in the engine: closed too.
     if holdsLiveConnection || pendingIdleLivePark != nil {
       cancelIdleLivePark()
+      // Paused first: a playing AVPlayer can report the carrier as playing after the stop.
+      engine.pause()
       closeLiveConnection()
     }
     // Before the transition, whose render the formatter reads the intent from.
@@ -1028,6 +1030,8 @@ final class Player {
   /// stalls instead, which is the stall watch's. A live stream's is a dropped connection, a
   /// failure for the retry loop, since AVPlayer will not play on from an item it has ended.
   private func itemDidPlayToEnd() {
+    // stop() keeps an on-demand item under observation: its end can land after the stop.
+    guard state != .stopped else { return }
     guard currentTrack?.live == true else { return trackDidPlayToEnd() }
     // The engine stops observing the item it replaces: an end delivered during the load is stale.
     guard state != .loading else { return }
