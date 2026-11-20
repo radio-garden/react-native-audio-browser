@@ -142,6 +142,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
   var item: MediaItem? = null
   var positionMs = 0L
   var durationMs = C.TIME_UNSET
+  var speed = 1f
   var intent = false
   var readiness = STATE_IDLE
   var volume = 10
@@ -195,6 +196,7 @@ internal class FakeReceiver(looper: Looper) : SimpleBasePlayer(looper) {
       .setContentPositionMs(positionMs)
       .setPlayWhenReady(intent, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
       .setPlaybackState(if (item == null) STATE_IDLE else readiness)
+      .setPlaybackParameters(PlaybackParameters(speed))
       .setDeviceInfo(DEVICE_INFO)
       .setDeviceVolume(volume)
       .apply { metadata?.let(::setTimedMetadata) }

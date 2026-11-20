@@ -8,6 +8,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.common.SimpleBasePlayer.PositionSupplier
 import androidx.media3.common.Timeline
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -99,7 +100,10 @@ internal class RemoteSwitchingPlayer(
     class Sent(val item: MediaItem, val positionMs: Long) : Load
 
     /** The receiver holds [item]: what it reports is the current item's. */
-    class Playing(val item: MediaItem) : Load
+    class Playing(val item: MediaItem) : Load {
+      /** Where the receiver last reported [item] loaded, running on while it played. */
+      var lastPosition: PositionSupplier? = null
+    }
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
@@ -172,10 +176,32 @@ internal class RemoteSwitchingPlayer(
         val remote = remoteRoute ?: return
         if (player !== remote.receiver) return
         val changed = followReceiver(remote)
+        noteReport(remote)
         if (remote.startTimeout != null && started(remote)) disarmStart(remote)
         if (changed) invalidateState()
       }
     }
+
+  private fun noteReport(remote: Route.Remote) {
+    val load = remote.load as? Load.Playing ?: return
+    if (!reportsPosition(remote, load)) return
+    val receiver = remote.receiver
+    val running =
+      PositionSupplier.getExtrapolating(
+        receiver.currentPosition,
+        if (receiver.isPlaying) receiver.playbackParameters.speed else 0f,
+      )
+    val durationMs = receiver.duration
+    load.lastPosition =
+      if (durationMs == C.TIME_UNSET) running
+      else PositionSupplier { minOf(running.get(), durationMs) }
+  }
+
+  /** Whether the receiver holds [load]'s item loaded, so that its position is the item's. */
+  private fun reportsPosition(remote: Route.Remote, load: Load.Playing): Boolean {
+    val state = remote.receiver.playbackState
+    return receiverHolds(remote, load.item) && (state == STATE_READY || state == STATE_BUFFERING)
+  }
 
   private fun enter(remote: Route.Remote, load: Load) {
     remote.load = load
@@ -484,10 +510,21 @@ internal class RemoteSwitchingPlayer(
     val remoteError =
       if (error.errorCode == PlaybackException.ERROR_CODE_REMOTE_ERROR) error
       else PlaybackException(error.message, error, PlaybackException.ERROR_CODE_REMOTE_ERROR)
-    val positionMs = positionOn(remote)
+    val positionMs = failedAt(remote)
     cancelLoad(remote)
     remote.load = Load.Failed(remoteError, positionMs)
     invalidateState()
+  }
+
+  /**
+   * Where a failed item goes on from. Cast's player takes the failed status, idle at 0, before the
+   * failure is reported, so a receiver no longer reporting a position counts from its last report.
+   */
+  private fun failedAt(remote: Route.Remote): Long {
+    val load = remote.load as? Load.Playing
+    val last =
+      load?.takeUnless { it.item.isRemoteLive || reportsPosition(remote, it) }?.lastPosition
+    return last?.get() ?: positionOn(remote)
   }
 
   private fun receiverHolds(remote: Route.Remote, item: MediaItem) =
