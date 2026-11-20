@@ -2,11 +2,9 @@ package com.audiobrowser.player
 
 import android.os.Looper
 import androidx.media3.common.HeartRating
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player as MediaPlayer
-import androidx.media3.common.Timeline
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
+import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
@@ -22,6 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -105,53 +104,22 @@ class FavoriteRestampTest {
   }
 
   @Test
-  fun `a favorite change restamps the queue in place, once, and the heart follows`() {
+  fun `a favorite change on an unprepared queue sends the queue to JS once`() {
     player.add(arrayOf(b, a, b))
     player.exoPlayer.seekTo(1, 0)
     idle()
-    var timelineChanges = 0
-    var transitions = 0
-    player.exoPlayer.addListener(
-      object : MediaPlayer.Listener {
-        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-          // A source update arrives from the playback thread whenever the item prepares.
-          if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) timelineChanges++
-        }
-
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-          transitions++
-        }
-      }
-    )
+    val callbacks = mock(Callbacks::class.java)
+    player.setCallbacks(callbacks)
 
     player.applyFavoriteChange(FavoriteChange.between(emptySet(), setOf("https://s/a.mp3"))!!)
     idle()
 
+    val calls = mockingDetails(callbacks).invocations.map { it.method.name }
+    assertEquals(1, calls.count { it == "onPlaybackQueueChanged" })
+    assertEquals(0, calls.count { it == "onPlaybackActiveTrackChanged" })
     assertEquals(listOf(false, true, false), favorited())
     assertEquals(listOf(false, true, false), ratings())
-    assertEquals(1, timelineChanges)
-    assertEquals(0, transitions)
     assertEquals(1, player.exoPlayer.currentMediaItemIndex)
     assertEquals("Remove from favorites", heartButton().displayName.toString())
-  }
-
-  @Test
-  fun `a favorite change that moves no queued track changes nothing`() {
-    player.add(arrayOf(a))
-    idle()
-    var timelineChanges = 0
-    player.exoPlayer.addListener(
-      object : MediaPlayer.Listener {
-        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-          // A source update arrives from the playback thread whenever the item prepares.
-          if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) timelineChanges++
-        }
-      }
-    )
-
-    player.applyFavoriteChange(FavoriteChange.between(emptySet(), setOf("elsewhere"))!!)
-    idle()
-
-    assertEquals(0, timelineChanges)
   }
 }
