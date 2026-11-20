@@ -1,4 +1,5 @@
-import { afterEach, describe, it, expect, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import type { TransformableRequestConfig } from '../../../types'
 import type { HttpClient } from '../../http/HttpClient'
 import { BrowserManager } from '../BrowserManager'
@@ -104,58 +105,46 @@ describe('BrowserManager layer resolver', () => {
   })
 
   describe('a resolver that stays silent', () => {
-    const silent = new Promise<never>(() => {})
-    const now = vi.spyOn(Date, 'now')
-    afterEach(() => now.mockReset())
-
-    function managerWithResolver(
-      answers: Array<Promise<TransformableRequestConfig>>
-    ) {
-      const manager = makeManager()
-      const resolver = vi.fn(() => answers.shift() ?? silent)
-      manager.configuration = { path: '/', requestResolver: resolver }
-      return { manager, resolver }
-    }
-
-    it('is joined by a caller within ten seconds', async () => {
-      now.mockReturnValue(0)
-      const { manager, resolver } = managerWithResolver([])
-      void manager.resolvedRequestConfig()
-      now.mockReturnValue(9_999)
-      void manager.resolvedRequestConfig()
-      await Promise.resolve()
-      expect(resolver).toHaveBeenCalledTimes(1)
+    let now: MockInstance<() => number>
+    beforeEach(() => {
+      now = vi.spyOn(performance, 'now').mockReturnValue(0)
     })
+    afterEach(() => now.mockRestore())
 
-    it('is not joined after ten seconds, and the next answer releases every caller', async () => {
-      now.mockReturnValue(0)
-      const { manager, resolver } = managerWithResolver([
-        silent,
+    it('is called again by a request past the bound', async () => {
+      const answers = [
+        new Promise<never>(() => {}),
         Promise.resolve({ baseUrl: 'https://late.example.com' })
-      ])
-      const early = manager.resolvedRequestConfig()
+      ]
+      const manager = makeManager()
+      manager.configuration = {
+        path: '/',
+        requestResolver: () => answers.shift() ?? new Promise<never>(() => {})
+      }
+      void manager.resolvedRequestConfig()
+      await new Promise((resolve) => setTimeout(resolve, 0))
       now.mockReturnValue(10_000)
       expect(await manager.resolvedRequestConfig()).toEqual({
         baseUrl: 'https://late.example.com'
       })
-      expect(await early).toEqual({ baseUrl: 'https://late.example.com' })
-      expect(resolver).toHaveBeenCalledTimes(2)
     })
+  })
 
-    it("leaves the earlier callers waiting on a later run's failure", async () => {
-      now.mockReturnValue(0)
-      let answer!: (config: TransformableRequestConfig) => void
-      const { manager } = managerWithResolver([
-        new Promise((resolve) => (answer = resolve)),
-        Promise.reject(new Error('later run failed'))
-      ])
-      const early = manager.resolvedRequestConfig()
-      now.mockReturnValue(10_000)
-      await expect(manager.resolvedRequestConfig()).rejects.toThrow(
-        'later run failed'
+  it('never hands a request the layer of a configuration it replaced', async () => {
+    const answers: Array<(config: TransformableRequestConfig) => void> = []
+    const requestResolver = () =>
+      new Promise<TransformableRequestConfig>((resolve) =>
+        answers.push(resolve)
       )
-      answer({ baseUrl: 'https://early.example.com' })
-      expect(await early).toEqual({ baseUrl: 'https://early.example.com' })
-    })
+    const manager = makeManager()
+    manager.configuration = { path: '/', requestResolver }
+    const pending = manager.resolvedRequestConfig()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    manager.configuration = { path: '/', requestResolver }
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    answers[0]!({ baseUrl: 'https://old.example.com' })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    answers[1]!({ baseUrl: 'https://new.example.com' })
+    expect(await pending).toEqual({ baseUrl: 'https://new.example.com' })
   })
 })

@@ -297,4 +297,18 @@ struct GenerationMemoTests {
     runs.release(0, .success(1))
     #expect(try await withinTimeLimit { try await early.value } == 1)
   }
+
+  @Test func aNewGenerationsValueReleasesTheCallersOfAnEarlierSilentRun() async throws {
+    let memo = GenerationMemo<Int>()
+    let runs = Runs()
+    let early = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(1)
+    memo.invalidate()
+    let late = Task { try await memo.value { try await runs.run() } }
+    await runs.waitForRuns(2)
+    runs.release(1, .success(2))
+    #expect(try await withinTimeLimit { try await late.value } == 2)
+    #expect(try await withinTimeLimit { try await early.value } == 2)
+    runs.release(0, .success(1))
+  }
 }

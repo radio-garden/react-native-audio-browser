@@ -85,7 +85,7 @@ function splitLayer(
     const resolve = layer as RequestConfigResolver
     // Normalize the sync-or-async resolver to Promise-only for the bridge so it
     // never sees a `T | Promise<T>` variant (which misreads the async case).
-    // Resolvers run once per content generation, so the wrap costs nothing.
+    // Resolvers run rarely, so the wrap costs nothing.
     return { resolver: () => Promise.resolve(resolve()) }
   }
   return { config: layer as TransformableRequestConfig }
