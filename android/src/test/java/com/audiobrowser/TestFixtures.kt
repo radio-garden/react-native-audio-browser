@@ -90,12 +90,15 @@ object TestFixtures {
       userAgent = null,
     )
 
-  /** A layer `transform` whose JS promise rejects with [message]. */
-  fun throwingTransform(message: String) =
+  /**
+   * A layer `transform` whose JS promise rejects with a [name] error of [message]: Nitro gives the
+   * rejection as `name: message`.
+   */
+  fun throwingTransform(message: String, name: String = "Error") =
     Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ {
       _,
       _ ->
-      val js = JsPromise<RequestConfig>().apply { reject(Exception(message)) }
+      val js = JsPromise<RequestConfig>().apply { reject(Exception("$name: $message")) }
       JsPromise<Promise<RequestConfig>>().apply { resolve(js.promise) }.promise
     }
 

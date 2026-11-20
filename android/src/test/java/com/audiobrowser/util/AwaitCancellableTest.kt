@@ -1,5 +1,6 @@
 package com.audiobrowser.util
 
+import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
@@ -87,7 +88,7 @@ class AwaitCancellableTest {
   @Test
   fun `a nested promise's timeout covers both layers`() =
     runTest(timeout = 5.seconds) {
-      val outer = JsPromise<com.margelo.nitro.core.Promise<String>>()
+      val outer = JsPromise<Promise<String>>()
       val inner = JsPromise<String>()
       val result = backgroundScope.async { runCatching { outer.promise.awaitNestedOrTimeout() } }
       runCurrent()
@@ -104,7 +105,7 @@ class AwaitCancellableTest {
   @Test
   fun `a nested promise answers with the inner value`() =
     runTest(timeout = 5.seconds) {
-      val outer = JsPromise<com.margelo.nitro.core.Promise<String>>()
+      val outer = JsPromise<Promise<String>>()
       val inner = JsPromise<String>()
       val result = backgroundScope.async { outer.promise.awaitNestedOrTimeout() }
       runCurrent()
@@ -133,4 +134,44 @@ class AwaitCancellableTest {
       assertTrue(result.isCompleted)
       assertEquals(Result.success(null), result.await())
     }
+
+  @Test
+  fun `a nested promise's rejection leaves out Nitro's error name`() =
+    runTest(timeout = 5.seconds) {
+      assertEquals("token expired", nestedRejection("Error: token expired"))
+      assertEquals("bad header", nestedRejection("TypeError: bad header"))
+      assertEquals("upstream: 503", nestedRejection("Error: upstream: 503"))
+    }
+
+  @Test
+  fun `a nested promise's rejection keeps a name that is not an error name`() =
+    runTest(timeout = 5.seconds) {
+      assertEquals("Timeout: took 30s", nestedRejection("Timeout: took 30s"))
+      assertEquals("ErrorCode: 7", nestedRejection("ErrorCode: 7"))
+    }
+
+  @Test
+  fun `a throw before the nested promise keeps its message whole`() =
+    runTest(timeout = 5.seconds) {
+      val outer = JsPromise<Promise<String>>()
+      outer.reject(RuntimeException("Error: thrown\n\nwith a blank line"))
+      val message = runCatching { outer.promise.awaitNested() }.exceptionOrNull()?.message
+      assertEquals("Error: thrown\n\nwith a blank line", message)
+    }
+
+  @Test
+  fun `a JS promise's rejection leaves out Nitro's error name`() =
+    runTest(timeout = 5.seconds) {
+      val js = JsPromise<String>().apply { reject(RuntimeException("RangeError: too far")) }
+      assertEquals(
+        "too far",
+        runCatching { js.promise.awaitJsPromise() }.exceptionOrNull()?.message,
+      )
+    }
+
+  private suspend fun nestedRejection(what: String): String? {
+    val inner = JsPromise<String>().apply { reject(RuntimeException(what)) }
+    val outer = JsPromise<Promise<String>>().apply { resolve(inner.promise) }
+    return runCatching { outer.promise.awaitNested() }.exceptionOrNull()?.message
+  }
 }

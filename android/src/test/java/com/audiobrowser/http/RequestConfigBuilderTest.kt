@@ -368,6 +368,20 @@ class RequestConfigBuilderTest {
   }
 
   @Test
+  fun `a transform rejecting with a TypeError gives its message alone`() = runTest {
+    val base =
+      RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+    val layer =
+      transformableConfig().copy(transform = throwingTransform("bad header", name = "TypeError"))
+    try {
+      RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+      fail("expected CallbackException")
+    } catch (e: CallbackException) {
+      assertEquals("bad header", e.message)
+    }
+  }
+
+  @Test
   fun `mergeConfigOrBase skips a layer whose transform throws`() = runTest {
     val base =
       RequestConfig(null, "/stream.mp3", "https://media.example.com", null, null, null, null, null)

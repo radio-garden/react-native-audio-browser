@@ -9,6 +9,7 @@ import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.BrowseResult
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_
 import kotlin.time.Duration.Companion.seconds
@@ -121,6 +122,37 @@ class BrowserManagerTest {
       resolved.flattenedChildren?.map { it.path },
     )
     assertEquals("/library", browserManager.getPath())
+  }
+
+  @Test
+  fun `a browse callback's rejected promise fails with its message alone`() = runBlocking {
+    val rejected = JsPromise<BrowseResult>().apply { reject(RuntimeException("Error: Offline")) }
+    browserManager.config =
+      BrowserConfig(
+        routes =
+          arrayOf(
+            staticRoute("/home", resolvedTrack(path = "/home"))
+              .copy(
+                browseStatic = null,
+                browseCallback =
+                  Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam {
+                    JsPromise<Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_>()
+                      .apply {
+                        resolve(
+                          Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_.create(
+                            rejected.promise
+                          )
+                        )
+                      }
+                      .promise
+                  },
+              )
+          )
+      )
+
+    val failure = runCatching { browserManager.navigate("/home") }.exceptionOrNull()
+
+    assertEquals("Offline", failure?.message)
   }
 
   // MARK: - expandQueueFromContextualPath
