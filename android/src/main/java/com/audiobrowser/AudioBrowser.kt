@@ -211,7 +211,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     BrowserManager().apply {
       setOnPathChanged { path -> onPathChanged(path) }
       setOnContentChanged { content -> onContentChanged(content) }
-      setOnTabsChanged { tabs -> onTabsChanged(tabs) }
+      setOnTabsChanged { tabs ->
+        onTabsChanged(tabs)
+        connectedService?.player?.notifyTabsChanged()
+      }
       setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
     }
 

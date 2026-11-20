@@ -38,6 +38,7 @@ import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
 import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
+import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
@@ -1532,6 +1533,14 @@ internal constructor(
 
   fun invalidateAllContent() {
     mediaSessionCallback.invalidateAllContent()
+  }
+
+  /**
+   * Tells controllers subscribed to the root, whose children are the tabs, to re-query it. Safe
+   * from any thread.
+   */
+  fun notifyTabsChanged() {
+    mediaSessionCallback.notifyContentChanged(BrowserPathHelper.ROOT_PATH)
   }
 
   /** From the connected media browser (e.g. Android Auto), when it gives one. */
