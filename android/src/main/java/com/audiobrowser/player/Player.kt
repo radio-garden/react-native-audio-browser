@@ -278,6 +278,8 @@ internal constructor(
         browserRegistered = CompletableDeferred()
       }
       field = value
+      // Covers a browser assigned after its options were applied.
+      value?.browserManager?.setFavoriteEnabled(options.capabilities.favoriteEnabled)
     }
 
   /**
