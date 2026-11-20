@@ -37,9 +37,9 @@ abstract class QueueEventTest {
   open fun route() {}
 
   protected val looper: Looper = Looper.getMainLooper()
-  protected val castRemote = FakeRemote(looper)
+  internal val castRemote = FakeRemote(looper)
   private val app = RuntimeEnvironment.getApplication()
-  protected val player =
+  internal val player =
     Player(app, castRemote = { _, _ -> castRemote }, sonosRemote = { _, _ -> FakeRemote(looper) })
   private val callbacks = mock(Callbacks::class.java)
   private lateinit var session: MediaSession
