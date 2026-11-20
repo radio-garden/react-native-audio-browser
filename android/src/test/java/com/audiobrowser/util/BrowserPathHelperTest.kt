@@ -36,6 +36,28 @@ class BrowserPathHelperTest {
   }
 
   @Test
+  fun `build round-trips a parent that is not a canonical URL`() {
+    val identity = "id 1/é"
+    listOf(
+        "/genres/Hip Hop",
+        "/genres/Électro",
+        "/list?genre=hip+hop",
+        "/list?tag=c%2B%2B",
+        "/list?sort=a%2Fb",
+        "/list?ids=[1]",
+        "/sale/50%",
+        "/list?x=%E9",
+        "/page#top",
+      )
+      .forEach { parent ->
+        val url = BrowserPathHelper.build(parent, identity, 2)
+        assertEquals(url, parent, BrowserPathHelper.stripTrackId(url))
+        assertEquals(url, identity, BrowserPathHelper.extractTrackId(url))
+        assertEquals(url, 2, BrowserPathHelper.extractIndex(url))
+      }
+  }
+
+  @Test
   fun `extractIndex returns null without a stamped index`() {
     val url = BrowserPathHelper.build("/library", "song.mp3")
     assertNull(BrowserPathHelper.extractIndex(url))
