@@ -464,6 +464,23 @@ In the video branch, returning without calling the player tells the library the 
 
 Native **awaits the promise your handler returns**. Anything you `await` inside, such as an auth check or a fetch, delays the tap being treated as handled. Keep slow work out of the handler, or start it without awaiting it.
 
+### Playing an id that was never browsed
+
+Android only. A car can ask to play a row's `id` in a process that never showed that row: it resumes the last track after the app was closed, or acts on a voice pick. The library knows which track an `id` names only from browsing, so give it **`findTrack`** to answer the rest:
+
+```ts
+configureBrowser({
+  findTrack: async ({ id }) => {
+    const item = await api.item(id)
+    return item && { id, title: item.name, src: item.audioUrl }
+  }
+})
+```
+
+It is called for an `id` that is neither browsed in this process, a path, nor an http(s) URL, both for a play and for an item lookup. Return a Track with a `src`, or `undefined` for an `id` you don't know. The answer plays and is reported under the `id` the car sent, and it is remembered, so the same `id` is not asked again. An answer without `src`, a throw, or no answer within 10 seconds fails the play, and the car is told it failed.
+
+A car can start your app's process with no activity in the foreground. React Native pauses JavaScript timers there, so anything in `findTrack` that waits on a timer does not run until an activity opens.
+
 ## Reading and driving browse state
 
 The Browser exposes its current state through getters, React hooks, and event emitters — so your in-app UI can mirror exactly what the car shows.

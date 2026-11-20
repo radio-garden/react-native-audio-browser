@@ -1070,6 +1070,31 @@ export type BrowserConfiguration = {
    * ```
    */
   formatNavigationError?: FormatNavigationErrorCallback
+
+  /**
+   * Finds the playable track for an `id` the library has not browsed in this
+   * process. A car plays a row's `id` after the app's process died, as when it
+   * resumes the last track or acts on a voice pick; only browsing remembers
+   * which track an `id` names, so without this such a play fails.
+   *
+   * Called for an `id` that is neither browsed, a path, nor an http(s) URL,
+   * for a play and for an item lookup. Return a {@link Track} with a `src`, or
+   * `undefined` when the `id` names nothing playable. The answer plays under
+   * the `id` asked about, whatever `id` it carries, and is remembered for the
+   * process. A track without `src`, a throw, or no answer within 10 seconds
+   * fails the play, and the car is told.
+   *
+   * @example
+   * ```typescript
+   * findTrack: async ({ id }) => {
+   *   const item = await api.item(id)
+   *   return item && { id, title: item.name, src: item.audioUrl }
+   * }
+   * ```
+   *
+   * @platform android
+   */
+  findTrack?: FindTrackCallback
 }
 
 /**
@@ -1189,6 +1214,20 @@ export type FormatNavigationErrorCallback = (
  * `undefined` to leave the line untappable. See {@link BrowserConfiguration.resolveAlbumPath | resolveAlbumPath}.
  */
 export type ResolveAlbumPathCallback = (track: Track) => string | undefined
+
+/** The id a {@link FindTrackCallback} is asked about. */
+export interface FindTrackParams {
+  /** The `id` of the row the car plays. */
+  id: string
+}
+
+/**
+ * Finds the playable track for an id the library has not browsed. See
+ * {@link BrowserConfiguration.findTrack | findTrack}.
+ */
+export type FindTrackCallback = (
+  params: FindTrackParams
+) => Promise<Track | undefined>
 
 /** Supplies the title of the appended "view more" row. See `viewMoreTitle`. */
 export type ViewMoreTitleCallback = () => string

@@ -131,4 +131,12 @@ object BrowserPathHelper {
   }
 
   private fun isAbsoluteUrl(url: String): Boolean = ABSOLUTE_URL.containsMatchIn(url)
+
+  /** An http(s) URL, which plays as it is. */
+  fun isHttpUrl(mediaId: String): Boolean =
+    mediaId.startsWith("http://") || mediaId.startsWith("https://")
+
+  /** A mediaId that is neither blank, a browse path, nor an http(s) URL: a track's `id` alone. */
+  fun isBareId(mediaId: String): Boolean =
+    mediaId.isNotBlank() && !mediaId.startsWith("/") && !isHttpUrl(mediaId)
 }

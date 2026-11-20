@@ -294,14 +294,41 @@ class BrowserManager {
   }
 
   /**
-   * A cache miss is reachable: a controller can replay a mediaId this process never browsed (a
-   * search result after process death). When the mediaId is a playable URL, or the item's
-   * requestMetadata carries the playable uri (stamped by TrackFactory), it builds a minimal track
-   * from the item's metadata.
-   *
-   * @throws IllegalStateException when the mediaId is not cached and no playable URL is available
+   * The playable track the consumer's `findTrack` answers for [id], carrying [id] as its own, and
+   * cached as a browsed track is. Null when [id] is a path or http(s) URL, or when `findTrack` is
+   * unset, answers nothing, answers a track without `src`, throws, or outruns [FALLBACK_TIMEOUT].
    */
-  private fun resolveMediaItemToTrack(mediaItem: MediaItem): Track {
+  suspend fun findUncachedTrack(id: String): Track? {
+    if (!BrowserPathHelper.isBareId(id)) return null
+    val findTrack = config.findTrack ?: return null
+    val track =
+      try {
+        findTrack(id)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        Timber.e(e, "findTrack failed for id='$id'")
+        return null
+      }
+    if (track?.src == null) {
+      Timber.w("findTrack found no playable track for id='$id'")
+      return null
+    }
+    // A controller matches its now-playing row by the id it sent.
+    val found = track.copy(id = id)
+    cacheTrack(found)
+    return hydrateFavorite(found)
+  }
+
+  /**
+   * A cache miss is reachable: a controller can replay a mediaId this process never browsed (a
+   * search result or the last track after process death). When the mediaId is a playable URL, or
+   * the item's requestMetadata carries the playable uri (stamped by TrackFactory), it builds a
+   * minimal track from the item's metadata; otherwise it asks [findUncachedTrack].
+   *
+   * @throws IllegalStateException when the mediaId is neither cached, a playable URL, nor found
+   */
+  private suspend fun resolveMediaItemToTrack(mediaItem: MediaItem): Track {
     val mediaId = mediaItem.mediaId
 
     getCachedTrack(mediaId)?.let { cachedTrack ->
@@ -310,7 +337,7 @@ class BrowserManager {
     }
 
     val fallbackSrc =
-      if (mediaId.startsWith("http://") || mediaId.startsWith("https://")) {
+      if (BrowserPathHelper.isHttpUrl(mediaId)) {
         mediaId
       } else {
         mediaItem.requestMetadata.mediaUri?.toString()
@@ -345,7 +372,8 @@ class BrowserManager {
       )
     }
 
-    throw IllegalStateException("MediaItem not found in cache: $mediaId")
+    return findUncachedTrack(mediaId)
+      ?: throw IllegalStateException("MediaItem neither cached nor found: $mediaId")
   }
 
   /**
@@ -355,7 +383,7 @@ class BrowserManager {
    * are dropped and the start index shifts to match.
    *
    * @throws IllegalStateException when the start track is disabled, every track is disabled, or a
-   *   mediaId is neither cached nor a playable URL
+   *   mediaId is neither cached, a playable URL, nor found by `findTrack`
    */
   suspend fun resolveMediaItemsForPlayback(
     mediaItems: List<MediaItem>,
@@ -426,7 +454,7 @@ class BrowserManager {
 
     val resolvedTracks = mediaItems.map { resolveMediaItemToTrack(it) }
 
-    // Refusal fails the future: Media3 surfaces an error to the controller and current playback
+    // Refusal fails the future, which the session reports to the controller, and current playback
     // stays untouched, where an empty item list would clear the timeline. Android Auto and
     // Assistant request playback through Media3's legacy path, which passes C.INDEX_UNSET for
     // "the first item": normalize before the guard, or the refusal misses the cars.
@@ -1276,6 +1304,7 @@ data class BrowserConfig(
   val singleTrack: Boolean = false,
   val androidControllerOfflineError: Boolean = true,
   val viewMoreTitle: (() -> Promise<String>)? = null,
+  val findTrack: (suspend (id: String) -> Track?)? = null,
 ) {
   val hasSearch: Boolean
     get() {
