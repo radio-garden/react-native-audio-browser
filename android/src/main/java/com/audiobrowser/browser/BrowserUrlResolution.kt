@@ -38,10 +38,10 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
       contentType = null,
       userAgent = null,
     )
-  requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it) }
+  requestConfig?.let { base = RequestConfigBuilder.mergeConfigOrBase(base, it) }
   val mediaLayered =
     if (mediaConfig != null) {
-      RequestConfigBuilder.mergeConfig(base, mediaConfig)
+      RequestConfigBuilder.mergeConfigOrBase(base, mediaConfig)
     } else {
       MediaRequestConfig(
         resolve = null,
@@ -95,7 +95,7 @@ suspend fun BrowserManager.resolveArtworkUrl(
         userAgent = null,
       )
     resolvedRequestConfig()?.let {
-      mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, emptyMap())
+      mergedConfig = RequestConfigBuilder.mergeConfigOrBase(mergedConfig, it, emptyMap())
     }
     if (trackArtwork != null) {
       mergedConfig = mergedConfig.copy(path = trackArtwork)

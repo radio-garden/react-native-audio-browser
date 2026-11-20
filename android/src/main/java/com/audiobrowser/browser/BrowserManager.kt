@@ -1250,7 +1250,7 @@ class HttpStatusException(val statusCode: Int, message: String, cause: Throwable
 
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-class CallbackException(message: String) : Exception(message)
+class CallbackException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /** Mirrors NativeBrowserConfiguration from JS. */
 data class BrowserConfig(
