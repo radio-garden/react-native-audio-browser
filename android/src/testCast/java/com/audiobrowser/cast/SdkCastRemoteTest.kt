@@ -6,6 +6,8 @@ import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.PlaybackException
 import com.audiobrowser.remote.RemotePlayback
 import com.google.android.gms.cast.CastStatusCodes
+import com.google.android.gms.cast.MediaInfo
+import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
@@ -26,6 +28,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
@@ -68,8 +71,12 @@ class SdkCastRemoteTest {
   /** [RemotePlayback.isSessionAvailable] as each session change the listener heard of saw it. */
   private val seen = mutableListOf<Boolean>()
 
+  private var lastSent: String? = null
+
+  private val failures = mutableListOf<PlaybackException>()
+
   private val remote =
-    SdkCastRemote(cast, player) { onRegained ->
+    SdkCastRemote(cast, player, { lastSent }) { onRegained ->
         networkRegained = onRegained
         networkWatched = true
         return@SdkCastRemote { networkWatched = false }
@@ -85,7 +92,9 @@ class SdkCastRemoteTest {
 
           override fun onEnded() = Unit
 
-          override fun onFailed(error: PlaybackException) = Unit
+          override fun onFailed(error: PlaybackException) {
+            failures += error
+          }
         }
       )
     }
@@ -362,6 +371,37 @@ class SdkCastRemoteTest {
     answer(CommonStatusCodes.SUCCESS)
     networkRegained!!()
     verify(client, times(2)).requestStatus()
+  }
+
+  /** The receiver's media status: idle for [idleReason], with [contentId]'s media, if any. */
+  private fun receiverReports(contentId: String?, idleReason: Int) {
+    val status = mock(MediaStatus::class.java)
+    `when`(status.playerState).thenReturn(MediaStatus.PLAYER_STATE_IDLE)
+    `when`(status.idleReason).thenReturn(idleReason)
+    val media =
+      contentId?.let { id ->
+        mock(MediaInfo::class.java).also { `when`(it.contentId).thenReturn(id) }
+      }
+    `when`(status.mediaInfo).thenReturn(media)
+    `when`(client.mediaStatus).thenReturn(status)
+    val captor = ArgumentCaptor.forClass(RemoteMediaClient.Callback::class.java)
+    verify(client, atLeastOnce()).registerCallback(captor.capture())
+    captor.value.onStatusUpdated()
+  }
+
+  @Test
+  fun `a failure reported after the next load went is not that load's`() {
+    startSession(First.PLAYER)
+    lastSent = "a#cast-send-1"
+    receiverReports("a#cast-send-1", MediaStatus.IDLE_REASON_NONE)
+    lastSent = "a#cast-send-2"
+
+    receiverReports(null, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(0, failures.size)
+
+    receiverReports("a#cast-send-2", MediaStatus.IDLE_REASON_NONE)
+    receiverReports(null, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(1, failures.size)
   }
 
   @Test

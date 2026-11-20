@@ -8,6 +8,7 @@ import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaQueueItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -40,6 +41,16 @@ class SendingMediaItemConverterTest {
     assertNotEquals(first, second)
     assertTrue(first.startsWith("a"))
     assertTrue(second.startsWith("a"))
+  }
+
+  @Test
+  fun `the last item sent is the one whose content id it gave last`() {
+    assertNull(converter.lastSent)
+
+    converter.toMediaQueueItem(item("a", live = true))
+    val last = converter.toMediaQueueItem(item("b", live = true)).media!!.contentId
+
+    assertEquals(last, converter.lastSent)
   }
 
   @Test

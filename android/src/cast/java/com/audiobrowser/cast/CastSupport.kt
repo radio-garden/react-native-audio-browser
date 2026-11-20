@@ -61,11 +61,10 @@ internal fun createCastRemote(context: Context, receiverApplicationId: String?):
   } else if (initialized != receiver) {
     Timber.w("Cast: the receiver %s takes effect after a restart; %s stays", receiver, initialized)
   }
-  val player =
-    RemoteCastPlayer.Builder(context)
-      .setMediaItemConverter(SendingMediaItemConverter())
-      .build()
-  return SdkCastRemote(Cast.getSingletonInstance(context), player) { onRegained ->
+  val converter = SendingMediaItemConverter()
+  val player = RemoteCastPlayer.Builder(context).setMediaItemConverter(converter).build()
+  return SdkCastRemote(Cast.getSingletonInstance(context), player, converter::lastSent) {
+    onRegained ->
     val connectivity = context.getSystemService(ConnectivityManager::class.java)
     val callback =
       object : ConnectivityManager.NetworkCallback() {
@@ -84,6 +83,8 @@ internal fun interface NetworkWatch {
 internal class SdkCastRemote(
   private val cast: Cast,
   override val player: RemoteCastPlayer,
+  /** The content id of the last load [player] sent. */
+  lastSent: () -> String?,
   networkWatch: NetworkWatch,
 ) : RemotePlayback {
   private var listener: RemotePlayback.Listener? = null
@@ -96,7 +97,7 @@ internal class SdkCastRemote(
    */
   private var hasSession = player.isCastSessionAvailable
 
-  private val ends = CastEnds()
+  private val ends = CastEnds(lastSent)
 
   /** The status request [askReceiver] waits on the answer to. */
   private var asking: PendingResult<RemoteMediaClient.MediaChannelResult>? = null
@@ -234,9 +235,10 @@ private const val RECEIVER_ANSWER_TIMEOUT_MS = 10_000L
 /**
  * The end or failure of each load a receiver's media statuses report, once. A load is told by its
  * content id, which [SendingMediaItemConverter] makes its own; a failed load's status carries no
- * media, so it counts as the last load seen.
+ * media, so it counts as the last load seen. While the last load seen is not [lastSent]'s, a
+ * report is an earlier load's, and is dropped.
  */
-internal class CastEnds {
+internal class CastEnds(private val lastSent: () -> String?) {
   enum class Report {
     ENDED,
     FAILED,
@@ -253,6 +255,8 @@ internal class CastEnds {
         MediaStatus.IDLE_REASON_ERROR -> Report.FAILED
         else -> return null
       }
+    val seen = lastContentId
+    if (seen != null && seen != lastSent()) return null
     val key = lastContentId to idleReason
     if (key == reported) return null
     reported = key
@@ -274,10 +278,14 @@ internal class SendingMediaItemConverter : MediaItemConverter {
   private val default = DefaultMediaItemConverter()
   private var sends = 0L
 
-  override fun toMediaQueueItem(mediaItem: MediaItem): MediaQueueItem =
-    default.toMediaQueueItem(
-      mediaItem.buildUpon().setMediaId("${mediaItem.mediaId}$SEND_SEPARATOR${sends++}").build()
-    )
+  var lastSent: String? = null
+    private set
+
+  override fun toMediaQueueItem(mediaItem: MediaItem): MediaQueueItem {
+    val contentId = "${mediaItem.mediaId}$SEND_SEPARATOR${sends++}"
+    lastSent = contentId
+    return default.toMediaQueueItem(mediaItem.buildUpon().setMediaId(contentId).build())
+  }
 
   /**
    * [MediaItem.EMPTY] for an item the receiver reports without media (not yet loaded), which the
