@@ -15,3 +15,13 @@ enum PlaybackEvent {
   /// A pause cancelled a pending retry.
   case retryCancelled
 }
+
+extension PlaybackEvent {
+  /// The event for a public log line: a failure without the URL it may carry.
+  var logDescription: String {
+    switch self {
+    case .errorOccurred: "errorOccurred"
+    default: String(describing: self)
+    }
+  }
+}

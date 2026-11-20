@@ -161,3 +161,18 @@ struct BufferingSufficientTests {
     }
   }
 }
+
+// MARK: - logDescription
+
+@Suite("PlaybackEvent.logDescription — public, so free of URLs")
+struct PlaybackEventLogDescriptionTests {
+  @Test func namesTheCaseAndItsFlag() {
+    #expect(PlaybackEvent.avPlayerWaiting.logDescription == "avPlayerWaiting")
+    #expect(PlaybackEvent.avPlayerPaused(hasAsset: true).logDescription == "avPlayerPaused(hasAsset: true)")
+  }
+
+  @Test func aFailureOmitsItsURL() {
+    let event = PlaybackEvent.errorOccurred(.invalidSourceUrl("https://example.com/secret?token=1"))
+    #expect(event.logDescription == "errorOccurred")
+  }
+}

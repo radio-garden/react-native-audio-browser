@@ -402,6 +402,20 @@
     case buffering
     case error
     case ended
+
+    var stringValue: String {
+      switch self {
+      case .none: "none"
+      case .ready: "ready"
+      case .playing: "playing"
+      case .paused: "paused"
+      case .stopped: "stopped"
+      case .loading: "loading"
+      case .buffering: "buffering"
+      case .error: "error"
+      case .ended: "ended"
+      }
+    }
   }
 
   struct TrackMetadata: Equatable {

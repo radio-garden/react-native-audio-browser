@@ -317,6 +317,9 @@ final class Player {
       return
     }
     state = newState
+    logger.debug(
+      "\(oldState.stringValue, privacy: .public) → \(newState.stringValue, privacy: .public) on \(event.logDescription, privacy: .public)",
+    )
     applySideEffects(old: oldState, new: newState)
     publish()
     saveSnapshotWhileNothingPlays()
