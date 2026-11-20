@@ -1,7 +1,10 @@
 package androidx.media3.session
 
-/** Media3's own default, which [MediaSession] has no getter for. */
-private const val PERIODIC_POSITION_UPDATE_DELAY_MS = 3_000L
+/**
+ * Media3's own default, which [MediaSession] has no getter for; PeriodicPositionUpdatesTest pins
+ * it.
+ */
+internal const val PERIODIC_POSITION_UPDATE_DELAY_MS = 3_000L
 
 /**
  * Pauses or resumes the session's periodic position updates through media3's package-private
