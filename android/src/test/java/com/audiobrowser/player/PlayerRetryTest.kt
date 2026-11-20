@@ -26,6 +26,7 @@ import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.IOException
 import java.net.ServerSocket
+import java.net.Socket
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -46,9 +47,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.notNull
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -586,6 +589,87 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `an engine error that arrives after a stop is not terminal`() {
+    goOnline(context)
+    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Infinite())
+    awaitRetry("a pending retry")
+    player.stop()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    deliverLateEngineError()
+
+    assertEquals(Playback(PlaybackState.STOPPED, null), player.getPlayback())
+    verify(callbacks, never()).onPlaybackError(notNull())
+  }
+
+  @Test
+  fun `an engine error that arrives after a live pause is not terminal`() {
+    goOnline(context)
+    play(
+      folder.silentWavUri(Duration.ofMinutes(1)),
+      retryPolicy = RetryPolicy.Infinite(),
+      live = true,
+    )
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+
+    deliverLateEngineError()
+
+    assertEquals(Playback(PlaybackState.PAUSED, null), player.getPlayback())
+    verify(callbacks, never()).onPlaybackError(notNull())
+  }
+
+  @Test
+  fun `an engine error that arrives after a pause cancelled its reconnect is not terminal`() {
+    goOnline(context)
+    val server = ServerSocket(0)
+    servers += server
+    val connections = AtomicInteger()
+    // Ends the first connection unanswered, then holds each reconnect open without an answer.
+    thread(isDaemon = true) {
+      val held = mutableListOf<Socket>()
+      while (!server.isClosed) {
+        try {
+          val socket = server.accept()
+          if (connections.incrementAndGet() == 1) socket.close() else held += socket
+        } catch (_: IOException) {
+          held.forEach { it.close() }
+          return@thread
+        }
+      }
+    }
+    play("http://127.0.0.1:${server.localPort}/live", retryPolicy = RetryPolicy.Infinite())
+    awaitRetry("a pending retry")
+    idleUntil("a reconnect in flight") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+      connections.get() >= 2
+    }
+
+    // The connection's failure report, posted before the pause and dropped by it.
+    player.onLoadFailure(IOException("refused"), inPlace = false)
+    player.pause()
+    shadowOf(Looper.getMainLooper()).idle()
+    assertEquals(MediaPlayer.STATE_IDLE, player.exoPlayer.playbackState)
+    deliverLateEngineError()
+
+    assertEquals(Playback(PlaybackState.PAUSED, null), player.getPlayback())
+    verify(callbacks, never()).onPlaybackError(notNull())
+  }
+
+  @Test
+  fun `an engine error that arrives after a give-up is not a second terminal error`() {
+    failTerminally()
+    val error = player.playbackError
+
+    deliverLateEngineError()
+
+    assertEquals(Playback(PlaybackState.ERROR, error), player.getPlayback())
+    verify(callbacks, times(1)).onPlaybackError(notNull())
+  }
+
+  @Test
   fun `a failure report that arrives after a reconnect is not the new connection's`() {
     goOnline(context)
     play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
@@ -671,6 +755,13 @@ class PlayerRetryTest {
 
     assertEquals(PlaybackState.ERROR, player.playbackState)
     assertEquals("playback-stalled", player.playbackError?.code)
+  }
+
+  private fun deliverLateEngineError() {
+    player.playerListener.onPlayerError(
+      PlaybackException("refused", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+    )
+    shadowOf(Looper.getMainLooper()).idle()
   }
 
   private fun stuck() =

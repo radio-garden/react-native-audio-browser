@@ -58,7 +58,7 @@ internal class RetryLoop(
 
   /**
    * Whether the policy reported the current connection's end. Outlives [failedAtMs] when the engine
-   * is stopped, as its error may already be on its way.
+   * is stopped: a report still on its way is the stopped connection's.
    */
   private var endReported = false
 
