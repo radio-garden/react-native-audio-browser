@@ -175,7 +175,10 @@ export class BrowserManager {
       initialPath = staticTabs[0]?.path ?? '/'
     }
 
-    if (initialPath) {
+    if (
+      initialPath &&
+      (this.hasValidConfiguration() || this.hasBrowseLayer())
+    ) {
       void this.navigate(initialPath)
     }
   }
@@ -643,6 +646,9 @@ export class BrowserManager {
    * Resolves content for a specific path using configured routes.
    * Like the native resolve pipelines, the returned page is canonical
    * sectioned shape — `children` sugar is normalized away at this seam.
+   *
+   * @throws a `content-not-found` error when no route matches the path and no
+   *   request or browse layer can fetch it
    */
   private async resolveContent(
     path: string
@@ -699,15 +705,8 @@ export class BrowserManager {
     }
 
     // Implicit default — no matching route, fetch the path via the layered
-    // request → browse chain. Only attempt this when there's something to fetch
-    // (a configured request or browse layer, static or resolver); otherwise
-    // there's no content.
-    if (
-      this._configuration.request ||
-      this._configuration.requestResolver ||
-      this._configuration.browse ||
-      this._configuration.browseResolver
-    ) {
+    // request → browse chain.
+    if (this.hasBrowseLayer()) {
       try {
         return normalizePage(
           await this.resolveFromConfig(
@@ -724,7 +723,11 @@ export class BrowserManager {
       }
     }
 
-    return undefined
+    const notFound = new Error('Content not found') as Error & {
+      code: NavigationErrorType
+    }
+    notFound.code = 'content-not-found'
+    throw notFound
   }
 
   /**
@@ -773,6 +776,19 @@ export class BrowserManager {
     return (
       this._configuration.routes !== undefined &&
       this._configuration.routes.length > 0
+    )
+  }
+
+  /**
+   * Whether a request or browse layer, static or resolver, can fetch a path
+   * that matches no route.
+   */
+  private hasBrowseLayer(): boolean {
+    return Boolean(
+      this._configuration.request ||
+      this._configuration.requestResolver ||
+      this._configuration.browse ||
+      this._configuration.browseResolver
     )
   }
 
