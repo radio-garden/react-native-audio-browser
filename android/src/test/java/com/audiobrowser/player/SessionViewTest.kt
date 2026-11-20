@@ -1,14 +1,17 @@
 package com.audiobrowser.player
 
 import android.os.Looper
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaSession
+import androidx.media3.session.controllerLoading
 import androidx.media3.session.controllerTitle
 import androidx.media3.session.countLegacyStateUpdates
 import androidx.media3.session.legacy.PlaybackStateCompat
 import androidx.media3.session.legacyState
+import androidx.media3.session.periodicPositionUpdateDelayMs
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
@@ -20,13 +23,16 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.IOException
 import java.net.ServerSocket
+import java.net.Socket
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -138,40 +144,11 @@ class SessionViewTest {
   }
 
   @Test
-  fun `a reconnect attempt tells the session nothing it was already told`() {
-    val server = ServerSocket(0)
-    val connections = AtomicInteger()
-    val drop = CountDownLatch(1)
-    // Serves five seconds of a stream until the drop, then ends each connection unanswered.
-    thread(isDaemon = true) {
-      server.accept().use { socket ->
-        val request = socket.getInputStream().bufferedReader()
-        while (!request.readLine().isNullOrEmpty()) Unit
-        socket.getOutputStream().run {
-          write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\n\r\n".toByteArray())
-          write(silentWavBytes(Duration.ofMinutes(1)), 0, 40_000)
-          flush()
-        }
-        drop.await(30, TimeUnit.SECONDS)
-      }
-      while (!server.isClosed) {
-        try {
-          server.accept().close()
-          connections.incrementAndGet()
-        } catch (_: IOException) {
-          return@thread
-        }
-      }
-    }
+  fun `a reconnect attempt's events tell the session nothing it was already told`() {
+    val server = LiveServer()
     try {
-      play(RetryPolicy.Infinite(), "http://127.0.0.1:${server.localPort}/live", live = true)
-      idleUntil("PLAYING") { player.playbackState == PlaybackState.PLAYING }
-      drop.countDown()
-      // Stands in for the drop, which the engine never reads: its disabled audio track stops it
-      // reading the stream.
-      player.exoPlayer.stop()
-      player.exoPlayer.prepare()
-      idleUntil("the first reconnect") { connections.get() >= 1 }
+      server.playThenDrop()
+      idleUntil("the first reconnect") { server.connections.get() >= 1 }
       val states = session.countLegacyStateUpdates()
       val timelines = AtomicInteger()
       player.forwardingPlayer.addListener(
@@ -182,7 +159,7 @@ class SessionViewTest {
         }
       )
 
-      idleUntil("three more reconnects") { connections.get() >= 4 }
+      idleUntil("three more reconnects") { server.connections.get() >= 4 }
 
       assertEquals(PlaybackState.BUFFERING, player.playbackState)
       assertEquals(0, states())
@@ -190,6 +167,152 @@ class SessionViewTest {
     } finally {
       server.close()
     }
+  }
+
+  @Test
+  fun `a hanging reconnect re-sends legacy controllers nothing while media3 controllers hear it load`() {
+    val server = LiveServer(reconnectHangMs = 2_000)
+    try {
+      server.playThenDrop(periodicPositionUpdates = true)
+      idleUntil("a hanging reconnect") { server.hanging.get() }
+      val states = session.countLegacyStateUpdates()
+      val hangMs = measureHang { server.connections.get() >= 1 }
+      val loading = session.controllerLoading()
+      idleUntil("two more reconnects") { server.connections.get() >= 3 }
+
+      assertTrue("a hang of $hangMs ms outlasts no periodic update", hangMs > 3_000)
+      assertEquals(PlaybackState.BUFFERING, player.playbackState)
+      assertEquals(true, loading)
+      assertEquals(0, states())
+
+      server.answer()
+      idleUntil("PLAYING") { player.playbackState == PlaybackState.PLAYING }
+      val recoveredAtMs = SystemClock.uptimeMillis()
+      val recoveredStates = states()
+      idleUntil("a periodic update") {
+        states() > recoveredStates || SystemClock.uptimeMillis() - recoveredAtMs > 3_500
+      }
+
+      assertTrue("no periodic update after recovering", states() > recoveredStates)
+    } finally {
+      server.close()
+    }
+  }
+
+  @Test
+  fun `a hanging first connect re-sends legacy controllers nothing`() {
+    val server = LiveServer(reconnectHangMs = 2_000, answerFirst = false)
+    try {
+      server.play(periodicPositionUpdates = true)
+      idleUntil("a hanging connect") { server.hanging.get() }
+      val states = session.countLegacyStateUpdates()
+      val hangMs = measureHang { server.connections.get() >= 1 }
+
+      assertTrue("a hang of $hangMs ms outlasts no periodic update", hangMs > 3_000)
+      assertEquals(0, states())
+    } finally {
+      server.close()
+    }
+  }
+
+  @Test
+  fun `an engine rebuild during a hang keeps periodic updates paused`() {
+    val server = LiveServer(reconnectHangMs = 2_000, answerFirst = false)
+    try {
+      server.play(periodicPositionUpdates = true)
+      idleUntil("a hanging connect") { server.hanging.get() }
+
+      player.setup(PlayerSetupOptions(retryPolicy = RetryPolicy.Infinite(), maxBuffer = 120_000.0))
+      shadowOf(Looper.getMainLooper()).idle()
+
+      assertEquals(true, player.playingState.buffering)
+      assertEquals(0L, session.periodicPositionUpdateDelayMs())
+    } finally {
+      server.close()
+    }
+  }
+
+  /** The shadow time until [ended], from now. */
+  private fun measureHang(ended: () -> Boolean): Long {
+    val startMs = SystemClock.uptimeMillis()
+    idleUntil("the hang's end", ended)
+    return SystemClock.uptimeMillis() - startMs
+  }
+
+  /**
+   * Serves five seconds of a live stream until [playThenDrop] drops it, then ends each reconnect
+   * unanswered after [reconnectHangMs] of real time, until [answer]. Without [answerFirst], the
+   * first connection is such a reconnect too.
+   */
+  private inner class LiveServer(
+    private val reconnectHangMs: Long = 0,
+    answerFirst: Boolean = true,
+  ) {
+    private val server = ServerSocket(0)
+    private val drop = CountDownLatch(1)
+    private val answering = AtomicBoolean()
+    val connections = AtomicInteger()
+    val hanging = AtomicBoolean()
+
+    init {
+      thread(isDaemon = true) {
+        if (answerFirst)
+          server.accept().use { socket ->
+            serve(socket)
+            drop.await(30, TimeUnit.SECONDS)
+          }
+        while (!server.isClosed) {
+          try {
+            server.accept().use { socket ->
+              if (answering.get()) {
+                serve(socket)
+                Thread.sleep(30_000)
+              } else {
+                hanging.set(true)
+                Thread.sleep(reconnectHangMs)
+                hanging.set(false)
+              }
+            }
+            connections.incrementAndGet()
+          } catch (_: IOException) {
+            return@thread
+          }
+        }
+      }
+    }
+
+    private fun serve(socket: Socket) {
+      val request = socket.getInputStream().bufferedReader()
+      while (!request.readLine().isNullOrEmpty()) Unit
+      socket.getOutputStream().run {
+        write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\n\r\n".toByteArray())
+        write(silentWavBytes(Duration.ofMinutes(1)), 0, 40_000)
+        flush()
+      }
+    }
+
+    /** Serves the next reconnect as the first connection. */
+    fun answer() = answering.set(true)
+
+    fun play(periodicPositionUpdates: Boolean = false) =
+      play(
+        RetryPolicy.Infinite(),
+        "http://127.0.0.1:${server.localPort}/live",
+        live = true,
+        periodicPositionUpdates = periodicPositionUpdates,
+      )
+
+    fun playThenDrop(periodicPositionUpdates: Boolean = false) {
+      play(periodicPositionUpdates)
+      idleUntil("PLAYING") { player.playbackState == PlaybackState.PLAYING }
+      drop.countDown()
+      // Stands in for the drop, which the engine never reads: its disabled audio track stops it
+      // reading the stream.
+      player.exoPlayer.stop()
+      player.exoPlayer.prepare()
+    }
+
+    fun close() = server.close()
   }
 
   private fun failTerminally() {
@@ -201,11 +324,16 @@ class SessionViewTest {
     retryPolicy: RetryPolicy,
     src: String = "https://127.0.0.1:9/stream",
     live: Boolean? = null,
+    periodicPositionUpdates: Boolean = false,
   ) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
-    session = MediaSession.Builder(context, player.forwardingPlayer).build()
+    // Media3's 3 s re-sends run while the engine loads: a slow connection adds them to the counts.
+    session =
+      MediaSession.Builder(context, player.forwardingPlayer)
+        .setPeriodicPositionUpdateEnabled(periodicPositionUpdates)
+        .build()
     player.setMediaSession(session)
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters

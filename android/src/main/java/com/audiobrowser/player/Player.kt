@@ -19,6 +19,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.setPeriodicPositionUpdatesPaused
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.browser.FavoriteChange
@@ -225,7 +226,7 @@ internal constructor(
               PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
             )
         )
-        exoPlayer.stop()
+        stopEngine()
       }
     }
 
@@ -332,7 +333,8 @@ internal constructor(
 
   private var cache: SimpleCache? = null
 
-  private var destroyed = false
+  internal var destroyed = false
+    private set
 
   private val progressTimer: PlaybackTimer by lazy {
     PlaybackTimer(
@@ -381,7 +383,10 @@ internal constructor(
 
   /**
    * Re-derives [playingState] from [shouldPlayWhenReady] and [playbackState], emitting when it
-   * changed. Its only writer: call it wherever either input changes.
+   * changed. Its only writer: call it wherever either input changes. While it buffers, the
+   * session's periodic position updates pause: a hanging connection keeps the engine loading, and
+   * while it loads media3 re-sends legacy controllers the same state every 3 s. Application thread
+   * only.
    */
   internal fun refreshPlayingState() {
     val newPlayingState = PlayingStateFactory.derive(shouldPlayWhenReady, playbackState)
@@ -389,6 +394,8 @@ internal constructor(
     Timber.d(
       "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
     )
+    if (newPlayingState.buffering != playingState.buffering && ::mediaSession.isInitialized)
+      mediaSession.setPeriodicPositionUpdatesPaused(newPlayingState.buffering)
     playingState = newPlayingState
     callbacks?.onPlaybackPlayingState(playingState)
   }
@@ -1202,7 +1209,7 @@ internal constructor(
     playWhenReady = false
     // The next play is a new Load.
     retryLoop?.suspend()
-    sessionPlayer.stop()
+    stopEngine(sessionPlayer)
     playerListener.fenceOutgoingMetadata()
     // Idle at its end, the next prepare would end it again at once.
     if (ended) sessionPlayer.seekToDefaultPosition()
@@ -1360,9 +1367,15 @@ internal constructor(
     // Before the stop: the state machine holds PAUSED through the IDLE that follows.
     setPlaybackState(PlaybackState.PAUSED)
     clearRetryingError()
-    exoPlayer.stop()
+    stopEngine()
     // An engine the loop already holds idle leaves no IDLE for the listener to see.
     retryLoop?.engineStopped()
+  }
+
+  /** Stops [engine]; an error the local engine delivers before its next prepare is dropped. */
+  private fun stopEngine(engine: MediaPlayer = exoPlayer) {
+    playerListener.engineStopping()
+    engine.stop()
   }
 
   /** Drops the retrying error and the failure reports still on their way. */
@@ -1530,6 +1543,7 @@ internal constructor(
 
   fun setMediaSession(mediaSession: MediaSession) {
     this.mediaSession = mediaSession
+    if (playingState.buffering) mediaSession.setPeriodicPositionUpdatesPaused(true)
   }
 
   fun getOptions(): PlayerUpdateOptions {

@@ -312,8 +312,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       CoilArtworkLoaderHolder.clearIf(it)
     }
     artworkProviderDeps = null
-    if (::mediaSession.isInitialized) mediaSession.release()
     player.destroy()
+    if (::mediaSession.isInitialized) mediaSession.release()
     scope.cancel()
   }
 

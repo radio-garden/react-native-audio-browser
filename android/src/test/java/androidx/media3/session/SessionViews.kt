@@ -20,8 +20,19 @@ internal fun MediaSession.controllerState() = impl.playerInfo.playbackState
 /** The player error media3 controllers were last told. */
 internal fun MediaSession.controllerError() = impl.playerInfo.playerError
 
+/** Whether media3 controllers were last told the player loads. */
+internal fun MediaSession.controllerLoading() = impl.playerInfo.isLoading
+
 /** Whether media3 controllers were last told it plays. */
 internal fun MediaSession.controllerPlaying() = impl.playerInfo.isPlaying
+
+/** The delay of the session's periodic position updates: 0 while they pause. */
+internal fun MediaSession.periodicPositionUpdateDelayMs() =
+  MediaSessionImpl::class
+    .java
+    .getDeclaredField("sessionPositionUpdateDelayMs")
+    .apply { isAccessible = true }
+    .getLong(impl)
 
 /** Counts the playback states legacy controllers are told from now on. */
 internal fun MediaSession.countLegacyStateUpdates(): () -> Int {
@@ -36,3 +47,9 @@ internal fun MediaSession.countLegacyStateUpdates(): () -> Int {
   )
   return { count }
 }
+
+/**
+ * Whether a runnable waits on the session's application handler, which its release empties. A
+ * posted runnable's message is `what` 0.
+ */
+internal fun MediaSession.hasRunnablePending() = impl.applicationHandler.hasMessages(0)

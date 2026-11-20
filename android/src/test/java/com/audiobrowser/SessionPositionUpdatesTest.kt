@@ -4,10 +4,14 @@ import android.os.Bundle
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.session.countLegacyStateUpdates
+import androidx.media3.session.hasRunnablePending
+import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -23,7 +27,8 @@ import org.robolectric.shadows.ShadowSystemClock
 
 /**
  * What the service's session tells External Surfaces while playback runs with nothing changing,
- * with and without the app's [Service.PERIODIC_POSITION_UPDATES] meta-data.
+ * with and without the app's [Service.PERIODIC_POSITION_UPDATES] meta-data, and what it is left to
+ * run once the service is destroyed.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -39,9 +44,11 @@ class SessionPositionUpdatesTest {
   private val player
     get() = service.player
 
+  private var destroyed = false
+
   @After
   fun destroy() {
-    controller.destroy()
+    if (!destroyed) controller.destroy()
   }
 
   @Test
@@ -62,6 +69,27 @@ class SessionPositionUpdatesTest {
     player.pause()
     advance(Duration.ofMillis(500))
     assertTrue(updates() > 0)
+  }
+
+  @Test
+  fun `a teardown while a reconnect hangs leaves the released session no periodic update to run`() {
+    startService(metaData = null)
+    ReconnectHangingServer().use { server ->
+      // Before the setup: the retry loop it builds reads the network once.
+      goOnline(application)
+      player.setup(PlayerSetupOptions(retryPolicy = RetryPolicy.Infinite()))
+      player.load(TestFixtures.track(src = server.url))
+      player.play()
+      advanceUntil("a hanging reconnect") {
+        player.playbackError?.retrying == true && player.exoPlayer.isLoading
+      }
+      val session = service.session
+
+      controller.destroy()
+      destroyed = true
+
+      assertFalse(session.hasRunnablePending())
+    }
   }
 
   private fun startService(metaData: Bundle?) {

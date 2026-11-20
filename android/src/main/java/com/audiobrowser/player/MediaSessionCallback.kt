@@ -914,7 +914,9 @@ class MediaSessionCallback(private val player: Player) :
         object : FutureCallback<MediaSession.MediaItemsWithStartPosition> {
           override fun onSuccess(result: MediaSession.MediaItemsWithStartPosition) {}
 
-          override fun onFailure(t: Throwable) = player.onPlaybackResumptionFailed()
+          override fun onFailure(t: Throwable) {
+            if (!player.destroyed) player.onPlaybackResumptionFailed()
+          }
         },
         ContextCompat.getMainExecutor(player.context),
       )
