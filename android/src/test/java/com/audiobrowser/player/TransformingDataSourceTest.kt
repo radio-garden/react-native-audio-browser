@@ -232,6 +232,39 @@ class TransformingDataSourceTest {
     )
   }
 
+  /** The User-Agent headers, in any case, a media open with [headers]/[userAgent] passes on. */
+  private fun userAgentsOf(headers: Map<String, String>, userAgent: String?): Map<String, String> {
+    val config =
+      config("https://cdn.example.com", "/s.mp3").copy(headers = headers, userAgent = userAgent)
+    TransformingDataSource.Factory(upstreamFactory) { config }
+      .createDataSource()
+      .open(progressive())
+    return openedHeaders.last().filterKeys { it.equals("User-Agent", ignoreCase = true) }
+  }
+
+  @Test
+  fun `a user-agent header in any case goes on under the exact name`() {
+    for (name in listOf("User-Agent", "user-agent", "USER-AGENT")) {
+      assertEquals(
+        name,
+        mapOf("User-Agent" to "MyApp/1.0"),
+        userAgentsOf(mapOf(name to "MyApp/1.0"), null),
+      )
+      assertEquals(
+        name,
+        mapOf("User-Agent" to "Field/1.0"),
+        userAgentsOf(mapOf(name to "MyApp/1.0"), "Field/1.0"),
+      )
+    }
+  }
+
+  @Test
+  fun `of two user-agent spellings the last one goes on`() {
+    val headers = mapOf("user-agent" to "first", "USER-AGENT" to "last")
+    assertEquals(mapOf("User-Agent" to "last"), userAgentsOf(headers, null))
+    assertEquals(mapOf("User-Agent" to "Field/1.0"), userAgentsOf(headers, "Field/1.0"))
+  }
+
   @Test
   fun `a range from the request config is kept`() {
     val config =
