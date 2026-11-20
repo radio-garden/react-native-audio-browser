@@ -62,7 +62,7 @@ class BrowserPathHelperTest {
   }
 
   @Test
-  fun `buildUrl returns a url with a scheme without the base`() {
+  fun `buildUrl returns a url with a scheme or a leading double slash without the base`() {
     val base = "https://api.example.com"
     val urls =
       listOf(
@@ -71,6 +71,7 @@ class BrowserPathHelperTest {
         "file:///sdcard/Music/a.mp3",
         "android.resource://com.example.app/raw/chime",
         "data:image/png;base64,iVBORw0KGgo=",
+        "//cdn.example.com/a.mp3",
       )
     urls.forEach { assertEquals(it, BrowserPathHelper.buildUrl(base, it)) }
   }
@@ -80,17 +81,5 @@ class BrowserPathHelperTest {
     val base = "https://api.example.com"
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "/shows/a:b"))
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "shows/a:b"))
-  }
-
-  @Test
-  fun `buildUrl gives a protocol-relative url the scheme of the base`() {
-    assertEquals(
-      "https://cdn.example.com/a.mp3",
-      BrowserPathHelper.buildUrl("https://api.example.com", "//cdn.example.com/a.mp3"),
-    )
-    assertEquals(
-      "//cdn.example.com/a.mp3",
-      BrowserPathHelper.buildUrl(null, "//cdn.example.com/a.mp3"),
-    )
   }
 }

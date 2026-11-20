@@ -11,7 +11,7 @@ import java.net.URLEncoder
  * playable-only track while keeping its parent for queue restoration (docs/adr/0009).
  */
 object BrowserPathHelper {
-  private val URI_SCHEME = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
+  private val ABSOLUTE_URL = Regex("^([a-z][a-z0-9+.-]*:|//)", RegexOption.IGNORE_CASE)
 
   const val ROOT_PATH = "/__root"
 
@@ -120,21 +120,17 @@ object BrowserPathHelper {
 
   /**
    * Joins [baseUrl] and [path] with exactly one slash. Returns [path] unchanged when it has a URI
-   * scheme (`content:`, `file:`, `HTTPS:`, …) or [baseUrl] is null. A protocol-relative `//host/…`
-   * [path] takes the scheme of [baseUrl].
+   * scheme (`content:`, `file:`, `HTTPS:`, …), starts with `//` or [baseUrl] is null.
    */
   fun buildUrl(baseUrl: String?, path: String): String {
-    if (baseUrl == null || URI_SCHEME.containsMatchIn(path)) {
+    if (baseUrl == null || isAbsoluteUrl(path)) {
       return path
-    }
-
-    if (path.startsWith("//")) {
-      val scheme = Uri.parse(baseUrl).scheme ?: return path
-      return "$scheme:$path"
     }
 
     val normalizedBase = "${baseUrl.trimEnd('/')}/"
     val normalizedPath = path.trimStart('/')
     return "$normalizedBase$normalizedPath"
   }
+
+  private fun isAbsoluteUrl(url: String): Boolean = ABSOLUTE_URL.containsMatchIn(url)
 }
