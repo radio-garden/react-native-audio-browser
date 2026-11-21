@@ -1,6 +1,7 @@
 import Foundation
 
-enum BrowserError: LocalizedError {
+/// Its message is also its `description`, which Nitro hands to JS when a promise rejects with it.
+enum BrowserError: LocalizedError, CustomStringConvertible {
   case contentNotFound(path: String)
   case invalidConfiguration(String)
   case callbackError(String)
@@ -11,6 +12,10 @@ enum BrowserError: LocalizedError {
     case let .invalidConfiguration(message): "Invalid configuration: \(message)"
     case let .callbackError(message): message
     }
+  }
+
+  var description: String {
+    errorDescription ?? ""
   }
 }
 

@@ -62,4 +62,9 @@ struct BrowserErrorTests {
       _ = try await BrowserError.fromCallback { () async throws -> Int in throw CancellationError() }
     }
   }
+
+  @Test func describesItselfByItsMessageAsNitroHandsItToJS() {
+    #expect(String(describing: BrowserError.callbackError("search is down")) == "search is down")
+    #expect(String(describing: BrowserError.contentNotFound(path: "/a")) == "Content not found")
+  }
 }
