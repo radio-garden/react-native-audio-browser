@@ -17,6 +17,7 @@ import com.audiobrowser.buildService
 import com.audiobrowser.goOnline
 import com.audiobrowser.session
 import com.audiobrowser.util.JsPromise
+import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams
@@ -35,7 +36,10 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.RETURNS_DEFAULTS
+import org.mockito.Mockito.any
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.mockito.stubbing.Answer
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -133,10 +137,11 @@ class SessionVoiceSearchTest {
   }
 
   /** What Media3 sets for the legacy `playFromSearch(query, extras)`. */
-  private fun playFromSearch(
+  private fun requestFromSearch(
     query: String,
     extras: Bundle? = null,
-  ): MediaSession.MediaItemsWithStartPosition {
+    session: MediaSession = service.session,
+  ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     val item =
       MediaItem.Builder()
         .setMediaId(MediaItem.DEFAULT_MEDIA_ID)
@@ -146,15 +151,11 @@ class SessionVoiceSearchTest {
         .build()
     return player
       .getMediaSessionCallback()
-      .onSetMediaItems(
-        service.session,
-        legacyController,
-        mutableListOf(item),
-        C.INDEX_UNSET,
-        C.TIME_UNSET,
-      )
-      .get(5, TimeUnit.SECONDS)
+      .onSetMediaItems(session, legacyController, mutableListOf(item), C.INDEX_UNSET, C.TIME_UNSET)
   }
+
+  private fun playFromSearch(query: String, extras: Bundle? = null) =
+    requestFromSearch(query, extras).get(5, TimeUnit.SECONDS)
 
   @Test
   fun `a search that names no item queues the playable results from the first`() {
@@ -190,8 +191,16 @@ class SessionVoiceSearchTest {
   @Test
   fun `a gated search is refused before it runs, and reports the gate`() {
     browserWhoseSearchAnswers(TestFixtures.track(title = "a"), gated = true)
+    val session = mock(MediaSession::class.java)
 
-    assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
+    val request = requestFromSearch("jazz", session = session)
+    assertThrows(ExecutionException::class.java) { request.get(5, TimeUnit.SECONDS) }
+    // A report would come from the failing thread after get() returns: give it the time one takes.
+    Thread.sleep(200)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    // A gate is app state, not a failure: the controller is told nothing.
+    verify(session, never()).sendError(any(), any())
 
     assertEquals(listOf(GateEvent(GateReason.SEARCH)), gateEvents)
     assertEquals(emptyList<SearchParams>(), searches)

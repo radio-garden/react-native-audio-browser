@@ -9,6 +9,7 @@
 import type {
   ArtworkRequestConfig,
   BrowserSourceCallback,
+  FindTrackCallback,
   ResolveAlbumPathCallback,
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
@@ -82,4 +83,6 @@ export interface NativeBrowserConfiguration {
   carPlayLoadingTitle?: string
   resolveAlbumPath?: ResolveAlbumPathCallback
   formatNavigationError?: FormatNavigationErrorCallback
+
+  findTrack?: FindTrackCallback
 }

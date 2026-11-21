@@ -93,6 +93,7 @@ class HandleTrackLoadSeekTest {
         carPlayLoadingTitle = null,
         resolveAlbumPath = null,
         formatNavigationError = null,
+        findTrack = null,
       )
     val browserManager = BrowserManager()
     player.browser =

@@ -66,6 +66,7 @@ class NavigateTrackTest {
           carPlayLoadingTitle = null,
           resolveAlbumPath = null,
           formatNavigationError = null,
+          findTrack = null,
         ),
       )
     }

@@ -8,7 +8,7 @@ A **Gate** replaces the browse content on **CarPlay**, **Android Auto** and **An
 
 Use it when part of your catalog is premium, login-only or region-locked, and you want to block it in the car without building a separate UI there.
 
-One rule worth keeping in mind: **a Gate blocks _finding_, never _hearing_.** Whatever is already playing keeps going, a voice "resume" is never gated, and the queue is left alone.
+One rule worth keeping in mind: **a Gate blocks _finding_, never _hearing_.** Whatever is already playing keeps going, a voice "resume" is never gated, and the queue is left alone. On Android, a car's play of an `id` through [`findTrack`](/guide/browser#playing-an-id-that-was-never-browsed) isn't gated either.
 
 A voice request to play something new is a search. The Gate refuses it unless your resolver lets search through (see [Gating some requests, not others](#gating-some-requests-not-others)).
 

@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?, findTrack: ((_ params: FindTrackParams) -> Promise<Promise<Track?>>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -135,6 +135,15 @@ public extension NativeBrowserConfiguration {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams in
           let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__unwrappedValue)
           return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__closureWrapper.toUnsafe())
+        }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______ in
+      if let __unwrappedValue = findTrack {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -443,6 +452,44 @@ public extension NativeBrowserConfiguration {
                 return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
               }()
               let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__optional_FormattedNavigationError___(__result)
+              __promiseHolder.addOnResolvedListener(__resolverCpp)
+              __promiseHolder.addOnRejectedListener(__rejecterCpp)
+              return __promise
+            }()
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var findTrack: ((_ params: FindTrackParams) -> Promise<Promise<Track?>>)? {
+    return { () -> ((_ params: FindTrackParams) -> Promise<Promise<Track?>>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______(self.__findTrack) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______const_FindTrackParams_____params______(self.__findTrack)
+        return { () -> (FindTrackParams) -> Promise<Promise<Track?>> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(__unwrapped)
+          return { (__params: FindTrackParams) -> Promise<Promise<Track?>> in
+            let __result = __wrappedFunction.call(__params)
+            return { () -> Promise<Promise<Track?>> in
+              let __promise = Promise<Promise<Track?>>()
+              let __resolver = { (__result: Promise<Track?>) in
+                __promise.resolve(withResult: __result)
+              }
+              let __rejecter = { (__error: Error) in
+                __promise.reject(withError: __error)
+              }
+              let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__optional_Track___ in
+                let __closureWrapper = Func_void_std__shared_ptr_Promise_std__optional_Track___(__resolver)
+                return bridge.create_Func_void_std__shared_ptr_Promise_std__optional_Track___(__closureWrapper.toUnsafe())
+              }()
+              let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+              }()
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track_____(__result)
               __promiseHolder.addOnResolvedListener(__resolverCpp)
               __promiseHolder.addOnRejectedListener(__rejecterCpp)
               return __promise
