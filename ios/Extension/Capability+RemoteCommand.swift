@@ -6,8 +6,10 @@ import Foundation
 
 extension PlayerCapabilities {
   /// The remote commands to enable: each capability's command unless it is set to false, so an
-  /// unset one counts as enabled. `favorite` enables none: no iOS 16+ surface invokes
-  /// `likeCommand`; CarPlay has its own heart button and Siri its affinity intent.
+  /// unset one counts as enabled. `togglePlayPause` is enabled unless `play` and `pause` are
+  /// both false: a headset click and a one-button remote send only that command. `favorite`
+  /// enables none: no iOS 16+ surface invokes `likeCommand`; CarPlay has its own heart button
+  /// and Siri its affinity intent.
   var remoteCommands: Set<RemoteCommand> {
     let enabled: [(Bool?, RemoteCommand)] = [
       (play, .play),
@@ -22,6 +24,8 @@ extension PlayerCapabilities {
       (repeatMode, .changeRepeatMode),
       (playbackRate, .changePlaybackRate),
     ]
-    return Set(enabled.compactMap { $0.0 == false ? nil : $0.1 })
+    var commands = Set(enabled.compactMap { $0.0 == false ? nil : $0.1 })
+    if play != false || pause != false { commands.insert(.togglePlayPause) }
+    return commands
   }
 }

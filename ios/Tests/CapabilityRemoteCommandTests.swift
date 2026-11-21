@@ -29,6 +29,17 @@ struct CapabilityRemoteCommandTests {
     }
   }
 
+  @Test func togglePlayPauseIsEnabledWithPlayOrPause() {
+    #expect(PlayerCapabilities(play: false).remoteCommands.contains(.togglePlayPause))
+    #expect(PlayerCapabilities(pause: false).remoteCommands.contains(.togglePlayPause))
+  }
+
+  @Test func togglePlayPauseIsDisabledWithoutPlayAndPause() {
+    let commands = PlayerCapabilities(play: false, pause: false).remoteCommands
+    #expect(!commands.contains(.togglePlayPause))
+    #expect(commands == Set(RemoteCommand.allCases).subtracting([.play, .pause, .togglePlayPause]))
+  }
+
   @Test func skipToQueueItemEnablesNoCommand() {
     #expect(PlayerCapabilities(skipToQueueItem: false).remoteCommands == Set(RemoteCommand.allCases))
   }

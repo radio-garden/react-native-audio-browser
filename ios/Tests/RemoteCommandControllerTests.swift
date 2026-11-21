@@ -11,6 +11,7 @@ import Testing
 struct RemoteCommandControllerTests {
   final class SpyCallbacks: RemoteCommandCallbacks {
     var events: [String] = []
+    var isPlaying = false
     func remotePlay() { events.append("play") }
     func remotePause() { events.append("pause") }
     func remoteStop() { events.append("stop") }
@@ -33,6 +34,16 @@ struct RemoteCommandControllerTests {
 
     let spy = SpyCallbacks()
     return (RemoteCommandController(remoteCommandCenter: center, callbacks: spy), spy)
+  }
+
+  @Test func togglePlayPauseMapsToItsCommand() {
+    let (controller, _) = makeController()
+    let center = MPRemoteCommandCenter.shared()
+
+    controller.enable(commands: [.togglePlayPause])
+
+    #expect(center.togglePlayPauseCommand.isEnabled)
+    #expect(!center.playCommand.isEnabled)
   }
 
   @Test func changedJumpIntervalKeepsCommandEnabled() {
@@ -169,5 +180,40 @@ struct RemoteCommandControllerTests {
     #expect(center.changeShuffleModeCommand.currentShuffleType == .items)
     #expect(center.changeRepeatModeCommand.currentRepeatType == .all)
     #expect(center.changeShuffleModeCommand.isEnabled)
+  }
+}
+
+/// The toggle's decision, apart from the command center, so not serialized with it.
+@Suite("RemoteCommandCallbacks.remoteTogglePlayPause")
+@MainActor
+struct RemoteTogglePlayPauseTests {
+  @Test func togglePausesWhenPlaying() {
+    let spy = RemoteCommandControllerTests.SpyCallbacks()
+    spy.isPlaying = true
+    spy.remoteTogglePlayPause()
+    #expect(spy.events == ["pause"])
+  }
+
+  @Test func togglePlaysWhenNotPlaying() {
+    let spy = RemoteCommandControllerTests.SpyCallbacks()
+    spy.remoteTogglePlayPause()
+    #expect(spy.events == ["play"])
+  }
+
+  /// After a terminal error the play intent stays raised, but the Player is not playing: a click
+  /// must reload, not pause.
+  @Test func togglePlaysAfterATerminalError() {
+    let player = makePlayer()
+    player.setPlayWhenReady(true)
+    player.transition(.avPlayerPlaying)
+    #expect(player.playingState.playing)
+    player.transition(.errorOccurred(.playbackFailed))
+    #expect(player.playWhenReady)
+
+    let spy = RemoteCommandControllerTests.SpyCallbacks()
+    spy.isPlaying = player.playingState.playing
+    spy.remoteTogglePlayPause()
+
+    #expect(spy.events == ["play"])
   }
 }
