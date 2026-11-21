@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -18,6 +19,7 @@ import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
 import com.audiobrowser.browser.styleResolvedSections
 import com.audiobrowser.browser.untitledSection
+import com.audiobrowser.defaultFormattedError
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toTrack
 import com.audiobrowser.navigationErrorFor
@@ -31,6 +33,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -42,11 +45,13 @@ import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
+import java.util.concurrent.Future
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
@@ -243,11 +248,19 @@ class MediaSessionCallback(private val player: Player) :
       "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSpecialPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
     return scope.future {
-      children(session, browser, parentId, page, pageSize, params).also {
-        if (parentId == BrowserPathHelper.ROOT_PATH && page == 0) {
-          rootTile = deadEndTileOf(it.value.orEmpty())
+      try {
+          children(session, browser, parentId, page, pageSize, params)
+        } catch (e: Exception) {
+          if (e is CancellationException) throw e
+          Timber.e(e, "Browse of $parentId failed before it could be served")
+          sendBrowseError(session, browser, offline = false)
+          LibraryResult.ofItemList(ImmutableList.of(unservedBrowseErrorItem(e)), params)
         }
-      }
+        .also {
+          if (parentId == BrowserPathHelper.ROOT_PATH && page == 0) {
+            rootTile = deadEndTileOf(it.value.orEmpty())
+          }
+        }
     }
   }
 
@@ -343,8 +356,8 @@ class MediaSessionCallback(private val player: Player) :
 
       LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
     } catch (e: Exception) {
-      // A cancelled browse (the controller left) is not a failure; awaitBrowser's timeout is.
-      if (e is CancellationException && e !is TimeoutCancellationException) throw e
+      // A cancelled browse (the controller left) is not a failure.
+      if (e is CancellationException) throw e
       Timber.e(e, "Error getting children for parentId: $parentId")
       // A tile, not ofError(): see createErrorMediaItem and
       // https://github.com/androidx/media/issues/2901
@@ -363,22 +376,32 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Sends [browser] a non-fatal [SessionError] alongside the error tile. Current Android Auto
    * renders nothing for it (https://github.com/androidx/media/issues/2901); it is the correct
-   * Media3 signal and shows if Android Auto starts reading it. Dispatched to Main: the session and
-   * its legacy stub are application-thread bound.
+   * Media3 signal and shows if Android Auto starts reading it.
    */
-  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   private fun sendBrowseError(
     session: MediaLibraryService.MediaLibrarySession,
     browser: MediaSession.ControllerInfo,
     offline: Boolean,
   ) {
-    val message =
-      player.context.getString(
-        if (offline) com.audiobrowser.R.string.audio_browser_offline_error
-        else com.audiobrowser.R.string.audio_browser_browse_error
-      )
-    val code = if (offline) SessionError.ERROR_IO else SessionError.ERROR_UNKNOWN
-    scope.launch(Dispatchers.Main) { session.sendError(browser, SessionError(code, message)) }
+    val (code, message) =
+      if (offline) {
+        SessionError.ERROR_IO to com.audiobrowser.R.string.audio_browser_offline_error
+      } else {
+        SessionError.ERROR_UNKNOWN to com.audiobrowser.R.string.audio_browser_browse_error
+      }
+    sendSessionError(session, browser, code, message)
+  }
+
+  /** Dispatched to Main: the session and its legacy stub are application-thread bound. */
+  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+  private fun sendSessionError(
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    code: Int,
+    @StringRes message: Int,
+  ) {
+    val text = player.context.getString(message)
+    scope.launch(Dispatchers.Main) { session.sendError(controller, SessionError(code, text)) }
   }
 
   /**
@@ -420,97 +443,111 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<MediaItem>> {
     Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
     return scope.future {
-      if (mediaId == BrowserPathHelper.ROOT_PATH) {
-        return@future LibraryResult.ofItem(
-          MediaItem.Builder()
-            .setMediaId(mediaId)
-            .setMediaMetadata(
-              MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
-            )
-            .build(),
-          null,
-        )
-      }
-
-      if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
-        return@future LibraryResult.ofItem(
-          createOfflineMediaItem(
-            player
-              .awaitBrowser()
-              .resolveFormattedError(offlineError(), BrowserPathHelper.OFFLINE_PATH)
-          ),
-          null,
-        )
-      }
-
-      if (mediaId == BrowserPathHelper.ERROR_PATH) {
-        return@future LibraryResult.ofItem(
-          createBrowseErrorMediaItem(
-            player
-              .awaitBrowser()
-              .resolveFormattedError(browseFailureError(), BrowserPathHelper.ERROR_PATH)
-          ),
-          null,
-        )
-      }
-
-      if (mediaId == BrowserPathHelper.EMPTY_PATH) {
-        return@future LibraryResult.ofItem(
-          createEmptyMediaItem(
-            player
-              .awaitBrowser()
-              .resolveFormattedError(emptyContentError(), BrowserPathHelper.EMPTY_PATH)
-          ),
-          null,
-        )
-      }
-
-      // No onGate: it fires where a browse or search is served, not on an item lookup.
-      if (mediaId == BrowserPathHelper.GATE_PATH) {
-        val outcome =
-          player
-            .awaitBrowser()
-            .gateDecision(
-              NativeGateRequest(
-                reason = GateReason.BROWSE,
-                path = BrowserPathHelper.GATE_PATH,
-                search = null,
-              )
-            )
-        if (!outcome.gated) return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
-        return@future LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
-      }
-
-      val browserManager = player.awaitBrowser().browserManager
-
-      // Cache first: resolve() strips __trackId from a contextual mediaId and would answer with the
-      // parent container's metadata.
-      val browseAuthority =
-        com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
-      browserManager.getCachedTrack(mediaId)?.let { track ->
-        return@future LibraryResult.ofItem(
-          TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, browseAuthority),
-          null,
-        )
-      }
-
       try {
-        val resolvedTrack = browserManager.resolve(mediaId)
-        // The same conversion as the cached path, so the item's tag is a Track, as fromMedia3
-        // expects.
-        LibraryResult.ofItem(
-          TrackFactory.toBrowseMediaItem(
-            resolvedTrack.toTrack(),
-            player.browseArtworkRegistry,
-            browseAuthority,
-          ),
-          null,
-        )
+        item(mediaId)
       } catch (e: Exception) {
-        if (e is CancellationException && e !is TimeoutCancellationException) throw e
-        Timber.e(e, "Error getting item for mediaId: $mediaId")
+        if (e is CancellationException) throw e
+        // No SessionError, as for a failed resolve below: controllers look items up with no user
+        // action behind it.
+        Timber.e(e, "Item lookup of $mediaId failed before it could be served")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
+    }
+  }
+
+  private suspend fun item(mediaId: String): LibraryResult<MediaItem> {
+    if (mediaId == BrowserPathHelper.ROOT_PATH) {
+      return LibraryResult.ofItem(
+        MediaItem.Builder()
+          .setMediaId(mediaId)
+          .setMediaMetadata(
+            MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
+          )
+          .build(),
+        null,
+      )
+    }
+
+    if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
+      return LibraryResult.ofItem(
+        createOfflineMediaItem(
+          player
+            .awaitBrowser()
+            .resolveFormattedError(offlineError(), BrowserPathHelper.OFFLINE_PATH)
+        ),
+        null,
+      )
+    }
+
+    if (mediaId == BrowserPathHelper.ERROR_PATH) {
+      return LibraryResult.ofItem(
+        createBrowseErrorMediaItem(
+          player
+            .awaitBrowser()
+            .resolveFormattedError(browseFailureError(), BrowserPathHelper.ERROR_PATH)
+        ),
+        null,
+      )
+    }
+
+    if (mediaId == BrowserPathHelper.EMPTY_PATH) {
+      return LibraryResult.ofItem(
+        createEmptyMediaItem(
+          player
+            .awaitBrowser()
+            .resolveFormattedError(emptyContentError(), BrowserPathHelper.EMPTY_PATH)
+        ),
+        null,
+      )
+    }
+
+    // No onGate: it fires where a browse or search is served, not on an item lookup.
+    if (mediaId == BrowserPathHelper.GATE_PATH) {
+      val outcome =
+        player
+          .awaitBrowser()
+          .gateDecision(
+            NativeGateRequest(
+              reason = GateReason.BROWSE,
+              path = BrowserPathHelper.GATE_PATH,
+              search = null,
+            )
+          )
+      if (!outcome.gated) return LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+      return LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
+    }
+
+    val browserManager = player.awaitBrowser().browserManager
+
+    // Cache first: resolve() strips __trackId from a contextual mediaId and would answer with the
+    // parent container's metadata.
+    val browseAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
+    val track = browserManager.trackFor(mediaId)
+    if (track != null) {
+      return LibraryResult.ofItem(
+        TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, browseAuthority),
+        null,
+      )
+    }
+    if (browserManager.answersOnlyByFindTrack(mediaId))
+      return LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+
+    return try {
+      val resolvedTrack = browserManager.resolve(mediaId)
+      // The same conversion as the cached path, so the item's tag is a Track, as fromMedia3
+      // expects.
+      LibraryResult.ofItem(
+        TrackFactory.toBrowseMediaItem(
+          resolvedTrack.toTrack(),
+          player.browseArtworkRegistry,
+          browseAuthority,
+        ),
+        null,
+      )
+    } catch (e: Exception) {
+      if (e is CancellationException) throw e
+      Timber.e(e, "Error getting item for mediaId: $mediaId")
+      LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
     }
   }
 
@@ -592,7 +629,7 @@ class MediaSessionCallback(private val player: Player) :
       val audioBrowser =
         try {
           player.awaitBrowser()
-        } catch (e: TimeoutCancellationException) {
+        } catch (e: TimeoutException) {
           Timber.w("Timed out waiting for browser - search not available")
           return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
         }
@@ -657,7 +694,7 @@ class MediaSessionCallback(private val player: Player) :
 
       session.notifySearchResultChanged(browser, query, resultCount, params)
     } catch (e: Exception) {
-      if (e is CancellationException && e !is TimeoutCancellationException) throw e
+      if (e is CancellationException) throw e
       Timber.e(e, "Error during search for query: $query")
       // Announces the browse-error tile: an ofError renders as nothing, and without the slot the
       // failure reads as "no results" by the time onGetSearchResult arrives.
@@ -677,7 +714,7 @@ class MediaSessionCallback(private val player: Player) :
     val browserManager =
       try {
         player.awaitBrowser().browserManager
-      } catch (e: TimeoutCancellationException) {
+      } catch (e: TimeoutException) {
         Timber.w("Timed out waiting for browser - offline searches not re-announced")
         return
       }
@@ -703,7 +740,7 @@ class MediaSessionCallback(private val player: Player) :
       val audioBrowser =
         try {
           player.awaitBrowser()
-        } catch (e: TimeoutCancellationException) {
+        } catch (e: TimeoutException) {
           Timber.w("Timed out waiting for browser - search not available")
           return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
         }
@@ -776,7 +813,7 @@ class MediaSessionCallback(private val player: Player) :
         Timber.d("Returning ${paginatedItems.size} search results")
         LibraryResult.ofItemList(ImmutableList.copyOf(paginatedItems), params)
       } catch (e: Exception) {
-        if (e is CancellationException && e !is TimeoutCancellationException) throw e
+        if (e is CancellationException) throw e
         Timber.e(e, "Error getting search results for query: $query")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
@@ -800,9 +837,25 @@ class MediaSessionCallback(private val player: Player) :
       )
     }
 
-    val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
+    return setMediaItems(mediaItems, startIndex, startPositionMs, player.playGeneration).also {
+      request ->
+      // Media3 does not queue play requests: an earlier one still finding its track would replace
+      // this one when it lands. A consumer's handleTrackLoad already running for it is not undone.
+      latestPlayRequest.getAndSet(request)?.cancel(true)
+      reportFailure(request, mediaSession, controller, mediaItems)
+    }
+  }
 
-    return scope.future {
+  private val latestPlayRequest = AtomicReference<Future<*>?>(null)
+
+  private fun setMediaItems(
+    mediaItems: List<MediaItem>,
+    startIndex: Int,
+    startPositionMs: Long,
+    playGenerationAtRequest: Int,
+  ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
+    scope.future {
+      val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
       val audioBrowser = player.awaitBrowser()
 
       // Media3 sets whatever this returns: the controller's position would undo the handler's seek.
@@ -860,7 +913,7 @@ class MediaSessionCallback(private val player: Player) :
           // A failed future leaves current playback untouched.
           val found =
             player.voiceSearch(voiceSearch)
-              ?: throw IllegalStateException("Voice search gated or without a playable result")
+              ?: throw IllegalStateException("Voice search without a playable result")
           MediaSession.MediaItemsWithStartPosition(
             found.map { TrackFactory.toMedia3(it) },
             0,
@@ -875,6 +928,11 @@ class MediaSessionCallback(private val player: Player) :
       // default branch, where it means a reset.
       val handlerIndex = result.startIndex.takeIf { it != C.INDEX_UNSET } ?: 0
       val selectedTrack = tracks.getOrElse(handlerIndex) { tracks.first() }
+      // The app replaced what plays while this request was finding its tracks: the newer choice
+      // stands.
+      if (player.playGeneration != playGenerationAtRequest) {
+        throw CancellationException("Play request superseded by a queue change")
+      }
 
       handleTrackLoad(
         audioBrowser.configuration.handleTrackLoad,
@@ -893,6 +951,32 @@ class MediaSessionCallback(private val player: Player) :
         result
       }
     }
+
+  /** Media3 drops a failed future without a word, to the controller or the log. */
+  private fun reportFailure(
+    request: ListenableFuture<MediaSession.MediaItemsWithStartPosition>,
+    mediaSession: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    mediaItems: List<MediaItem>,
+  ) {
+    Futures.addCallback(
+      request,
+      object : FutureCallback<MediaSession.MediaItemsWithStartPosition> {
+        override fun onSuccess(result: MediaSession.MediaItemsWithStartPosition) {}
+
+        override fun onFailure(t: Throwable) {
+          if (t is CancellationException || t is RequestGatedException) return
+          Timber.e(t, "Play request failed: ${mediaItems.map { it.mediaId }}")
+          sendSessionError(
+            mediaSession,
+            controller,
+            SessionError.ERROR_UNKNOWN,
+            com.audiobrowser.R.string.audio_browser_play_error,
+          )
+        }
+      },
+      MoreExecutors.directExecutor(),
+    )
   }
 
   /**
@@ -1080,6 +1164,13 @@ internal fun emptyContentError(): NavigationError =
 
 internal fun offlineError(): NavigationError =
   NavigationError(NavigationErrorType.NETWORK_ERROR, "", null, null)
+
+/**
+ * The browse-error tile for [e], a failure before the browse could be served, in the built-in copy:
+ * the app's formatter needs the browser, which may never have registered.
+ */
+internal fun unservedBrowseErrorItem(e: Exception): MediaItem =
+  createBrowseErrorMediaItem(defaultFormattedError(navigationErrorFor(e)))
 
 /** What a re-read of the browse-error tile formats under: its exception is gone. */
 internal fun browseFailureError(): NavigationError =

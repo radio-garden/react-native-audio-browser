@@ -46,6 +46,7 @@ class ResolveFormattedErrorTest {
           Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams {
             js.promise
           },
+        findTrack = null,
       )
     AudioBrowser::class
       .java

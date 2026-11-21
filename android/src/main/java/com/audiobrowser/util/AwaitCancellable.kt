@@ -4,6 +4,7 @@ import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -24,19 +25,27 @@ internal suspend fun <T> Promise<Promise<T>>.awaitNested(): T = settled().settle
  * [awaitCancellable], failing with a [TimeoutException], which is not a cancellation, after
  * [FALLBACK_TIMEOUT].
  */
-internal suspend fun <T> Promise<T>.awaitOrTimeout(): T = withTimeoutAsFailure { settled() }
+internal suspend fun <T> Promise<T>.awaitOrTimeout(): T =
+  withTimeoutAsFailure(FALLBACK_TIMEOUT, "JS callback") { settled() }
 
 /** [awaitNested], failing as [awaitOrTimeout] does; the timeout covers both promises. */
-internal suspend fun <T> Promise<Promise<T>>.awaitNestedOrTimeout(): T = withTimeoutAsFailure {
-  settled().settled()
-}
+internal suspend fun <T> Promise<Promise<T>>.awaitNestedOrTimeout(): T =
+  withTimeoutAsFailure(FALLBACK_TIMEOUT, "JS callback") { settled().settled() }
 
-private suspend fun <T> withTimeoutAsFailure(block: suspend () -> T): T =
+/**
+ * [withTimeout], failing with a [TimeoutException] rather than cancelling: a caller's `future` then
+ * fails, where a cancellation would end it without a word. [what] names it in the message.
+ */
+internal suspend fun <T> withTimeoutAsFailure(
+  timeout: Duration,
+  what: String,
+  block: suspend () -> T,
+): T =
   try {
-    withTimeout(FALLBACK_TIMEOUT) { block() }
+    withTimeout(timeout) { block() }
   } catch (e: TimeoutCancellationException) {
     currentCoroutineContext().ensureActive()
-    throw TimeoutException("JS callback outran $FALLBACK_TIMEOUT")
+    throw TimeoutException("$what outran $timeout")
   }
 
 private suspend fun <T> Promise<T>.settled(): T = suspendCancellableCoroutine { c ->
