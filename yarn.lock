@@ -17072,7 +17072,7 @@ __metadata:
   peerDependencies:
     react: ">=18.2.0"
     react-native: ">=0.76.0"
-    react-native-nitro-modules: ">=0.35.0"
+    react-native-nitro-modules: ">=0.37.2"
     shaka-player: ^4.7.9
   peerDependenciesMeta:
     shaka-player:
