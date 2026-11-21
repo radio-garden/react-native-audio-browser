@@ -28,32 +28,8 @@ export class NowPlayingManager {
     duration: number
   ): void {
     this.override = update
-
-    if (!currentTrack) return
-
-    const metadata: NowPlayingMetadata = update
-      ? {
-          title: update.title ?? currentTrack.title,
-          artist: update.artist ?? currentTrack.artist,
-          album: update.album ?? currentTrack.album,
-          artwork: artworkUrl(currentTrack.artwork),
-          description: currentTrack.description,
-          mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
-          genre: currentTrack.genre,
-          duration
-        }
-      : {
-          title: currentTrack.title,
-          artist: currentTrack.artist,
-          album: currentTrack.album,
-          artwork: artworkUrl(currentTrack.artwork),
-          description: currentTrack.description,
-          mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
-          genre: currentTrack.genre,
-          duration
-        }
-
-    this.onNowPlayingChanged(metadata)
+    const metadata = this.getNowPlaying(currentTrack, duration)
+    if (metadata) this.onNowPlayingChanged(metadata)
   }
 
   /**
