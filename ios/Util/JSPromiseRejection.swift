@@ -1,12 +1,12 @@
 import Foundation
 
-/// The rejection of a promise a JS callback returned, which reaches Swift as `Name: message`, with
-/// the name left out: its message as `localizedDescription`.
-struct JSCallbackError: LocalizedError {
+/// A rejected JS promise's error, its `Name: ` prefix removed when `Name` is a JS error name: its
+/// message as `localizedDescription`.
+struct JSPromiseRejection: LocalizedError {
   let message: String
   var errorDescription: String? { message }
 
-  init(jsPromiseRejection rejection: Error) {
+  init(_ rejection: Error) {
     message = withoutErrorName(rejection.localizedDescription)
   }
 }

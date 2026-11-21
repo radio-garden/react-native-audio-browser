@@ -2,7 +2,7 @@ import NitroModules
 
 /// Awaits for JS callbacks in place of Nitro's `await()`, which ignores cancellation: see
 /// `awaitCallback`. A rejection throws Nitro's `RuntimeError`; `awaitJSPromise`, and the inner promise
-/// of the nested forms, throw a `JSCallbackError` instead. The nested forms are for a callback returning
+/// of the nested forms, throw a `JSPromiseRejection` instead. The nested forms are for a callback returning
 /// a promise, which crosses the bridge as `Promise<Promise<U>>`.
 extension Promise {
   func awaitCancellable() async throws -> T {
@@ -34,7 +34,7 @@ extension Promise {
   }
 
   private func subscribeJS(_ deliver: @escaping @Sendable (Result<T, Error>) -> Void) {
-    then { deliver(.success($0)) }.catch { deliver(.failure(JSCallbackError(jsPromiseRejection: $0))) }
+    then { deliver(.success($0)) }.catch { deliver(.failure(JSPromiseRejection($0))) }
   }
 
   private func subscribeNested<U>(_ deliver: @escaping @Sendable (Result<U, Error>) -> Void) where T == Promise<U> {
