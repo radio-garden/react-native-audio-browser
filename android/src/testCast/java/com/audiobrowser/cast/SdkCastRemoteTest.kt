@@ -70,12 +70,12 @@ class SdkCastRemoteTest {
   /** [RemotePlayback.isSessionAvailable] as each session change the listener heard of saw it. */
   private val seen = mutableListOf<Boolean>()
 
-  private var lastSent: String? = null
+  private var sends = 0L
 
   private val failures = mutableListOf<PlaybackException>()
 
   private val remote =
-    SdkCastRemote(cast, player, { lastSent }) { onRegained ->
+    SdkCastRemote(cast, player, { sends }) { onRegained ->
         networkRegained = onRegained
         networkWatched = true
         return@SdkCastRemote { networkWatched = false }
@@ -387,9 +387,9 @@ class SdkCastRemoteTest {
   @Test
   fun `a failure reported after the next load went is the held load's, not the next one's`() {
     startSession(First.PLAYER)
-    lastSent = "a#cast-send-1"
+    sends = 1
     receiverReports(1, MediaStatus.IDLE_REASON_NONE)
-    lastSent = "a#cast-send-2"
+    sends = 2
 
     receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
     assertEquals(0, failures.size)

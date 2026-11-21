@@ -63,7 +63,7 @@ internal fun createCastRemote(context: Context, receiverApplicationId: String?):
   }
   val converter = SendingMediaItemConverter()
   val player = RemoteCastPlayer.Builder(context).setMediaItemConverter(converter).build()
-  return SdkCastRemote(Cast.getSingletonInstance(context), player, converter::lastSent) {
+  return SdkCastRemote(Cast.getSingletonInstance(context), player, converter::sends) {
     onRegained ->
     val connectivity = context.getSystemService(ConnectivityManager::class.java)
     val callback =
@@ -83,8 +83,8 @@ internal fun interface NetworkWatch {
 internal class SdkCastRemote(
   private val cast: Cast,
   override val player: RemoteCastPlayer,
-  /** The content id of the last load [player] sent. */
-  lastSent: () -> String?,
+  /** How many loads [player] has sent. */
+  sends: () -> Long,
   networkWatch: NetworkWatch,
 ) : RemotePlayback {
   private var listener: RemotePlayback.Listener? = null
@@ -97,7 +97,7 @@ internal class SdkCastRemote(
    */
   private var hasSession = player.isCastSessionAvailable
 
-  private val ends = CastEnds(lastSent)
+  private val ends = CastEnds(sends)
 
   /** The status request [askReceiver] waits on the answer to. */
   private var asking: PendingResult<RemoteMediaClient.MediaChannelResult>? = null
@@ -235,24 +235,24 @@ private const val RECEIVER_ANSWER_TIMEOUT_MS = 10_000L
 /**
  * The end or failure of each load a receiver's media statuses report, once. A load is told by its
  * queue item id, which a failed load's status carries too; a status without one counts as the last
- * item seen. A report for the item the receiver held when [lastSent] went is that earlier load's,
- * and is dropped.
+ * item seen. A report for the item the receiver held when the last load went is that earlier
+ * load's, and is dropped.
  */
-internal class CastEnds(private val lastSent: () -> String?) {
+internal class CastEnds(private val sends: () -> Long) {
   enum class Report {
     ENDED,
     FAILED,
   }
 
   private var lastItemId = MediaQueueItem.INVALID_ITEM_ID
-  private var send: String? = null
+  private var sendsSeen = 0L
   private var heldAtSend = MediaQueueItem.INVALID_ITEM_ID
   private var reported: Pair<Int, Int>? = null
 
   fun report(itemId: Int, playerState: Int, idleReason: Int): Report? {
-    val sent = lastSent()
-    if (sent != send) {
-      send = sent
+    val sent = sends()
+    if (sent != sendsSeen) {
+      sendsSeen = sent
       heldAtSend = lastItemId
     }
     if (itemId != MediaQueueItem.INVALID_ITEM_ID) lastItemId = itemId
@@ -284,14 +284,11 @@ internal class CastEnds(private val lastSent: () -> String?) {
  */
 internal class SendingMediaItemConverter : MediaItemConverter {
   private val default = DefaultMediaItemConverter()
-  private var sends = 0L
-
-  var lastSent: String? = null
+  var sends = 0L
     private set
 
   override fun toMediaQueueItem(mediaItem: MediaItem): MediaQueueItem {
     val contentId = "${mediaItem.mediaId}$SEND_SEPARATOR${sends++}"
-    lastSent = contentId
     return default.toMediaQueueItem(mediaItem.buildUpon().setMediaId(contentId).build())
   }
 

@@ -8,13 +8,12 @@ import org.junit.Test
 
 /** The status sequences are a Google TV Streamer's, running the Default Media Receiver. */
 class CastEndsTest {
-  private var lastSent: String? = null
-  private var sends = 0
+  private var sends = 0L
 
-  private val ends = CastEnds { lastSent }
+  private val ends = CastEnds { sends }
 
   private fun send() {
-    lastSent = "a#cast-send-${sends++}"
+    sends++
   }
 
   private fun idle(item: Int, reason: Int = MediaStatus.IDLE_REASON_NONE) =
