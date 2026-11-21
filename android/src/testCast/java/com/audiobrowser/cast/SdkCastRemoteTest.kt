@@ -6,7 +6,6 @@ import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.PlaybackException
 import com.audiobrowser.remote.RemotePlayback
 import com.google.android.gms.cast.CastStatusCodes
-import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
@@ -373,16 +372,12 @@ class SdkCastRemoteTest {
     verify(client, times(2)).requestStatus()
   }
 
-  /** The receiver's media status: idle for [idleReason], with [contentId]'s media, if any. */
-  private fun receiverReports(contentId: String?, idleReason: Int) {
+  /** The receiver's media status: [itemId] idle for [idleReason]. */
+  private fun receiverReports(itemId: Int, idleReason: Int) {
     val status = mock(MediaStatus::class.java)
     `when`(status.playerState).thenReturn(MediaStatus.PLAYER_STATE_IDLE)
     `when`(status.idleReason).thenReturn(idleReason)
-    val media =
-      contentId?.let { id ->
-        mock(MediaInfo::class.java).also { `when`(it.contentId).thenReturn(id) }
-      }
-    `when`(status.mediaInfo).thenReturn(media)
+    `when`(status.currentItemId).thenReturn(itemId)
     `when`(client.mediaStatus).thenReturn(status)
     val captor = ArgumentCaptor.forClass(RemoteMediaClient.Callback::class.java)
     verify(client, atLeastOnce()).registerCallback(captor.capture())
@@ -390,17 +385,16 @@ class SdkCastRemoteTest {
   }
 
   @Test
-  fun `a failure reported after the next load went is not that load's`() {
+  fun `a failure reported after the next load went is the held load's, not the next one's`() {
     startSession(First.PLAYER)
     lastSent = "a#cast-send-1"
-    receiverReports("a#cast-send-1", MediaStatus.IDLE_REASON_NONE)
+    receiverReports(1, MediaStatus.IDLE_REASON_NONE)
     lastSent = "a#cast-send-2"
 
-    receiverReports(null, MediaStatus.IDLE_REASON_ERROR)
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
     assertEquals(0, failures.size)
 
-    receiverReports("a#cast-send-2", MediaStatus.IDLE_REASON_NONE)
-    receiverReports(null, MediaStatus.IDLE_REASON_ERROR)
+    receiverReports(2, MediaStatus.IDLE_REASON_ERROR)
     assertEquals(1, failures.size)
   }
 

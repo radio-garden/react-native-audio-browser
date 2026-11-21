@@ -107,7 +107,7 @@ internal class SdkCastRemote(
       override fun onStatusUpdated() {
         val status = client?.mediaStatus ?: return
         if (status.playerState == MediaStatus.PLAYER_STATE_PLAYING) listener?.onPlaying()
-        when (ends.report(status.mediaInfo?.contentId, status.playerState, status.idleReason)) {
+        when (ends.report(status.currentItemId, status.playerState, status.idleReason)) {
           CastEnds.Report.ENDED -> listener?.onEnded()
           CastEnds.Report.FAILED ->
             listener?.onFailed(
@@ -234,9 +234,9 @@ private const val RECEIVER_ANSWER_TIMEOUT_MS = 10_000L
 
 /**
  * The end or failure of each load a receiver's media statuses report, once. A load is told by its
- * content id, which [SendingMediaItemConverter] makes its own; a failed load's status carries no
- * media, so it counts as the last load seen. While the last load seen is not [lastSent]'s, a
- * report is an earlier load's, and is dropped.
+ * queue item id, which a failed load's status carries too; a status without one counts as the last
+ * item seen. A report for the item the receiver held when [lastSent] went is that earlier load's,
+ * and is dropped.
  */
 internal class CastEnds(private val lastSent: () -> String?) {
   enum class Report {
@@ -244,27 +244,35 @@ internal class CastEnds(private val lastSent: () -> String?) {
     FAILED,
   }
 
-  private var lastContentId: String? = null
-  private var reported: Pair<String?, Int>? = null
+  private var lastItemId = MediaQueueItem.INVALID_ITEM_ID
+  private var send: String? = null
+  private var heldAtSend = MediaQueueItem.INVALID_ITEM_ID
+  private var reported: Pair<Int, Int>? = null
 
-  fun report(contentId: String?, playerState: Int, idleReason: Int): Report? {
-    contentId?.let { lastContentId = it }
+  fun report(itemId: Int, playerState: Int, idleReason: Int): Report? {
+    val sent = lastSent()
+    if (sent != send) {
+      send = sent
+      heldAtSend = lastItemId
+    }
+    if (itemId != MediaQueueItem.INVALID_ITEM_ID) lastItemId = itemId
     val report =
       when (idleReason.takeIf { playerState == MediaStatus.PLAYER_STATE_IDLE }) {
         MediaStatus.IDLE_REASON_FINISHED -> Report.ENDED
         MediaStatus.IDLE_REASON_ERROR -> Report.FAILED
         else -> return null
       }
-    val seen = lastContentId
-    if (seen != null && seen != lastSent()) return null
-    val key = lastContentId to idleReason
+    if (heldAtSend != MediaQueueItem.INVALID_ITEM_ID && lastItemId == heldAtSend) return null
+    val key = lastItemId to idleReason
     if (key == reported) return null
     reported = key
     return report
   }
 
+  /** A new receiver session numbers its items afresh. */
   fun reset() {
-    lastContentId = null
+    lastItemId = MediaQueueItem.INVALID_ITEM_ID
+    heldAtSend = MediaQueueItem.INVALID_ITEM_ID
     reported = null
   }
 }
