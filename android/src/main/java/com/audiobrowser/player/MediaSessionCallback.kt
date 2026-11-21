@@ -911,9 +911,7 @@ class MediaSessionCallback(private val player: Player) :
       val result =
         if (voiceSearch != null) {
           // A failed future leaves current playback untouched.
-          val found =
-            player.voiceSearch(voiceSearch)
-              ?: throw IllegalStateException("Voice search without a playable result")
+          val found = player.voiceSearch(voiceSearch)
           MediaSession.MediaItemsWithStartPosition(
             found.map { TrackFactory.toMedia3(it) },
             0,
@@ -965,7 +963,12 @@ class MediaSessionCallback(private val player: Player) :
         override fun onSuccess(result: MediaSession.MediaItemsWithStartPosition) {}
 
         override fun onFailure(t: Throwable) {
-          if (t is CancellationException || t is RequestGatedException) return
+          if (
+            t is CancellationException ||
+              t is RequestGatedException ||
+              t is VoiceSearchFailedException
+          )
+            return
           Timber.e(t, "Play request failed: ${mediaItems.map { it.mediaId }}")
           sendSessionError(
             mediaSession,

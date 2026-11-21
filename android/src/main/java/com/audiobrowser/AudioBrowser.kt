@@ -502,7 +502,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     path: String,
   ): FormattedNavigationError {
     val default = defaultFormattedError(error)
-    val formatter = _configuration.formatNavigationError ?: return default
+    val formatter = configuration.formatNavigationError ?: return default
     return formattedOrDefault(default) {
       formatter(
           FormatNavigationErrorParams(
