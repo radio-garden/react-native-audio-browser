@@ -47,6 +47,12 @@ Google Assistant requests ("play some jazz", "play the radishes") arrive as a `M
 
 Android sends a subset of what iOS does: the query, the `any` / `song` / `playlist` modes, and the genre, artist, album, title and playlist filters, always with `reference: 'unknown'`. See [Search](/guide/search) for how to resolve these requests and the cross-platform differences.
 
+### The search box
+
+Android Auto decides whether to show a search box when it connects, often before your JS has called `configureBrowser`. Until it does, the library offers search. A search made before then waits up to 10 seconds for `configureBrowser`, then runs, or fails if your configuration has no [`search`](/guide/search) source.
+
+An app that never calls `configureBrowser` shows a search box whose searches fail after the 10 seconds, as its browse pages do.
+
 ## Browse display
 
 Android Auto reads a page's layout from the **parent item** that opens it — before the page resolves. So the layout is declared in two places: on the parent item (a tab, or a row on another page) and on the page itself.
