@@ -67,6 +67,19 @@ describe('SearchManager', () => {
     expect(respond).not.toHaveBeenCalled()
   })
 
+  it('rejects with callback-error when the search callback rejects', async () => {
+    const manager = makeSearchManager(() => Promise.resolve({ children: [] }), {
+      path: '__search__',
+      searchCallback: () => Promise.reject(new TypeError('search is down'))
+    })
+    await expect(
+      manager.search({ query: 'jazz', reference: 'unknown' })
+    ).rejects.toMatchObject({
+      code: 'callback-error',
+      message: 'search is down'
+    })
+  })
+
   it('resolves [] when the search found nothing', async () => {
     const manager = makeSearchManager(() => Promise.resolve({ children: [] }))
     await expect(

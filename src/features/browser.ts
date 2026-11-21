@@ -196,12 +196,12 @@ export function hasSearch(): boolean {
  *
  * The rejection's message describes the failure, without a native class or
  * stack trace.
- * On web, a failed search request's `Error` also carries a `code`, the
+ * On web, a failed search's `Error` also carries a `code`, the
  * {@link features/errors!NavigationErrorType | NavigationErrorType} the
  * browse path reports as a
  * {@link features/errors!NavigationError | NavigationError}
- * (`'http-error'`, `'network-error'`), or `'callback-error'` when a request
- * `transform` throws; a search callback's rejection passes through unchanged.
+ * (`'http-error'`, `'network-error'`), or `'callback-error'` when a search
+ * callback or a request `transform` throws or rejects.
  *
  * @throws When the search source or its request fails, or on iOS when no
  *   search source is configured
