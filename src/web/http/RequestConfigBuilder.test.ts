@@ -52,26 +52,47 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
     expect(out.query).toEqual({ stage: 'sync' })
   })
 
-  it('falls back to the base when a transform throws', async () => {
+  it('rejects with callback-error when a transform throws', async () => {
     const layer: TransformableRequestConfig = {
       transform: async () => {
         throw new Error('boom')
       }
     }
-    const out = await RequestConfigBuilder.applyLayer(base, layer)
-    expect(out).toEqual(base)
+    await expect(
+      RequestConfigBuilder.applyLayer(base, layer)
+    ).rejects.toMatchObject({ code: 'callback-error', message: 'boom' })
   })
 
-  it('falls back to the base when the sync stage throws after the async one', async () => {
+  it('rejects with callback-error when the sync stage throws after the async one', async () => {
     const layer: TransformableRequestConfig = {
       transform: async (req) => ({ ...req, headers: { a: '1' } }),
       transformSync: () => {
         throw new Error('boom')
       }
     }
-    const out = await RequestConfigBuilder.applyLayer(base, layer)
-    // the layer's input, not the half-applied config — matches native's single
-    // catch around the pair
+    await expect(
+      RequestConfigBuilder.applyLayer(base, layer)
+    ).rejects.toMatchObject({ code: 'callback-error', message: 'boom' })
+  })
+
+  it('applyLayerOrBase falls back to the base when a transform throws', async () => {
+    const layer: TransformableRequestConfig = {
+      transform: async () => {
+        throw new Error('boom')
+      }
+    }
+    const out = await RequestConfigBuilder.applyLayerOrBase(base, layer)
+    expect(out).toEqual(base)
+  })
+
+  it('applyLayerOrBase falls back to the base when the sync stage throws after the async one', async () => {
+    const layer: TransformableRequestConfig = {
+      transform: async (req) => ({ ...req, headers: { a: '1' } }),
+      transformSync: () => {
+        throw new Error('boom')
+      }
+    }
+    const out = await RequestConfigBuilder.applyLayerOrBase(base, layer)
     expect(out).toEqual(base)
   })
 
@@ -104,6 +125,23 @@ describe('RequestConfigBuilder.resolveArtworkSourceAsync — no path left', () =
     )
 
     expect(out).toBeUndefined()
+  })
+})
+
+describe('RequestConfigBuilder.resolveArtworkSourceAsync — a throwing transform', () => {
+  it('keeps the artwork layer when the shared request transform throws', async () => {
+    using _ = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T', artwork: '/art/7.jpg' } as Track,
+      {
+        transform: async () => {
+          throw new Error('boom')
+        }
+      },
+      { baseUrl: 'https://img.example.com' }
+    )
+
+    expect(out?.uri).toBe('https://img.example.com/art/7.jpg')
   })
 })
 

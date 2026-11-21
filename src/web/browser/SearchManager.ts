@@ -16,7 +16,8 @@ export class SearchManager {
    * @param params Search parameters (query is required, other fields optional)
    * @returns Array of matching tracks — empty only when the source found none
    * @throws The failure itself: an `Error` carrying a `NavigationErrorType`
-   *   `code` from `HttpClient`, or whatever a `searchCallback` rejected with
+   *   `code` from `HttpClient`, `'callback-error'` when a request `transform`
+   *   throws, or whatever a `searchCallback` rejected with
    */
   async search(params: SearchParams): Promise<Track[]> {
     // Find __search__ route entry

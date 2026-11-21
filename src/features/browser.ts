@@ -200,8 +200,8 @@ export function hasSearch(): boolean {
  * {@link features/errors!NavigationErrorType | NavigationErrorType} the
  * browse path reports as a
  * {@link features/errors!NavigationError | NavigationError}
- * (`'http-error'`, `'network-error'`); a search callback's rejection passes
- * through unchanged.
+ * (`'http-error'`, `'network-error'`), or `'callback-error'` when a request
+ * `transform` throws; a search callback's rejection passes through unchanged.
  *
  * @throws When the search source or its request fails, or on iOS when no
  *   search source is configured
