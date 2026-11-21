@@ -21,6 +21,7 @@
 #include <exception>
 #include <stdexcept>
 #include <jsi/jsi.h>
+#include "JavaError.hpp"
 #include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"
 #include "JResolvedTrack.hpp"
 #include <string>
@@ -86,8 +87,7 @@ namespace margelo::nitro::audiobrowser {
           __promise->resolve(__result->toCpp());
         });
         __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-          jni::JniException __jniError(__throwable);
-          __promise->reject(std::make_exception_ptr(__jniError));
+          __promise->reject(std::make_exception_ptr(JavaError(__throwable)));
         });
         return __promise;
       }();

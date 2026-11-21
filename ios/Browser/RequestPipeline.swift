@@ -35,10 +35,14 @@ final class RequestPipeline {
       guard let self else { throw CancellationError() }
       // Read on every run: a retry after a config change must resolve the new config.
       let config = self.config
-      // Double await: the TS side wraps a sync-or-async thunk in a JS promise, behind the
-      // bridge's promise.
-      let request = try await config.requestResolver?().awaitNested() ?? config.request
-      let browse = try await config.browseResolver?().awaitNested() ?? config.browse
+      var request = config.request
+      if let resolver = config.requestResolver {
+        request = try await JSSources.nested(resolver)
+      }
+      var browse = config.browse
+      if let resolver = config.browseResolver {
+        browse = try await JSSources.nested(resolver)
+      }
       return ResolvedLayers(request: request, browse: browse)
     }
   }

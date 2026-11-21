@@ -15,6 +15,7 @@
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
+#include "JavaError.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>

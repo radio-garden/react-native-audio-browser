@@ -53,6 +53,7 @@
 #include <exception>
 #include <stdexcept>
 #include <jsi/jsi.h>
+#include "JavaError.hpp"
 #include "JBrowseResult.hpp"
 
 namespace margelo::nitro::audiobrowser {

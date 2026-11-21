@@ -1,6 +1,7 @@
 package com.audiobrowser.http
 
 import com.audiobrowser.browser.CallbackException
+import com.audiobrowser.browser.fromCallback
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.awaitCancellable
 import com.audiobrowser.util.awaitNested
@@ -105,15 +106,11 @@ object RequestConfigBuilder {
     if (override.transform == null && override.transformSync == null) {
       return mergeConfig(base, toRequestConfig(override)).copy(path = base.path)
     }
-    return try {
+    return fromCallback {
       var result = base
       override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
       override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
       result
-    } catch (e: CancellationException) {
-      throw e
-    } catch (e: Exception) {
-      throw CallbackException(e.message ?: e.toString(), e)
     }
   }
 

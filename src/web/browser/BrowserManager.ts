@@ -376,10 +376,10 @@ export class BrowserManager {
 
     // Handle callback-based search
     if (searchRoute.searchCallback) {
-      searchResults = await searchRoute.searchCallback({
-        query,
-        reference: 'unknown'
-      })
+      const searchCallback = searchRoute.searchCallback
+      searchResults = await fromCallback(() =>
+        searchCallback({ query, reference: 'unknown' })
+      )
     }
     // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {
@@ -473,7 +473,10 @@ export class BrowserManager {
   ): Promise<ResolvedTrack | undefined> {
     // Handle callback-based route
     if (route.browseCallback) {
-      const result = await route.browseCallback({ path, routeParams })
+      const browseCallback = route.browseCallback
+      const result = await fromCallback(() =>
+        browseCallback({ path, routeParams })
+      )
       if ('error' in result) {
         console.error(`${errorContext} browse error:`, result.error)
         this.navigationErrorManager.setNavigationError(
@@ -557,11 +560,12 @@ export class BrowserManager {
   private resolvedLayers(): Promise<ResolvedLayers> {
     return this.layers.value(async () => {
       const cfg = this._configuration
-      const request = cfg.requestResolver
-        ? await cfg.requestResolver()
+      const { requestResolver, browseResolver } = cfg
+      const request = requestResolver
+        ? await fromCallback(requestResolver)
         : cfg.request
-      const browse = cfg.browseResolver
-        ? await cfg.browseResolver()
+      const browse = browseResolver
+        ? await fromCallback(browseResolver)
         : cfg.browse
       return { request, browse }
     })
@@ -933,5 +937,23 @@ export class BrowserManager {
       return firstTab?.path ?? '/'
     }
     return '/'
+  }
+}
+
+/**
+ * Runs `call`, a call into a JS callback: what it throws or rejects with
+ * becomes an `Error` with its message, `code: 'callback-error'`, and the
+ * original as `cause`.
+ */
+async function fromCallback<T>(call: () => T | Promise<T>): Promise<T> {
+  try {
+    return await call()
+  } catch (error) {
+    throw Object.assign(
+      new Error(error instanceof Error ? error.message : String(error), {
+        cause: error
+      }),
+      { code: 'callback-error' satisfies NavigationErrorType }
+    )
   }
 }

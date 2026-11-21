@@ -61,6 +61,7 @@
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"
 #include "JVariant_String_ArtworkVariants.hpp"
+#include "JavaError.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
