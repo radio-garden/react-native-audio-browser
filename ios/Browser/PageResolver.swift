@@ -57,7 +57,7 @@ final class PageResolver {
       throw BrowserError.contentNotFound(path: SimpleRouter.searchRoutePath)
     }
     if let callback = searchEntry.searchCallback {
-      return try await callback(params).awaitNested()
+      return try await JSSources.nested { callback(params) }
     }
     if let searchConfig = searchEntry.searchConfig {
       return try await requests.fetchSearch(searchConfig, params: params)
@@ -74,21 +74,7 @@ final class PageResolver {
   ) async throws -> ResolvedTrack {
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms:
-      // a sync track, a sync error, or a promise of the same two.
-      switch try await callback(callbackParam).awaitCancellable() {
-      case let .first(resolvedTrack):
-        return resolvedTrack
-      case let .second(browseError):
-        throw BrowserError.callbackError(browseError.error)
-      case let .third(promise):
-        switch try await promise.awaitJSPromise() {
-        case let .first(resolvedTrack):
-          return resolvedTrack
-        case let .second(browseError):
-          throw BrowserError.callbackError(browseError.error)
-        }
-      }
+      return try await JSSources.browse(callback, callbackParam)
     }
 
     if let browseConfig = entry.browseConfig {

@@ -277,15 +277,15 @@ with `onNavigationError` / snapshot with `getNavigationError()`.
 `NavigationError` is `{ code, message, statusCode?, statusCodeSuccess? }`, where
 `code` is one of:
 
-| `code`                | Meaning                                                                                       |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `'content-not-found'` | No route for the path, or the route returned no content (a config issue, not an HTTP 404).    |
-| `'network-error'`     | The request failed (connection error, timeout, no internet).                                  |
-| `'http-error'`        | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`. |
-| `'callback-error'`    | Your browse callback returned an error (e.g. auth/subscription required).                     |
-| `'empty-content'`     | The page has no tracks (empty Favorites, no search results). CarPlay / Android Auto only.     |
-| `'timeout'`           | Resolution didn't finish in time. CarPlay only.                                               |
-| `'unknown-error'`     | An unexpected error (e.g. invalid configuration).                                             |
+| `code`                | Meaning                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `'content-not-found'` | No route for the path, or the route returned no content (a config issue, not an HTTP 404).     |
+| `'network-error'`     | The request failed (connection error, timeout, no internet).                                   |
+| `'http-error'`        | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`.  |
+| `'callback-error'`    | Your browse callback returned an error (e.g. auth/subscription required), or a callback threw. |
+| `'empty-content'`     | The page has no tracks (empty Favorites, no search results). CarPlay / Android Auto only.      |
+| `'timeout'`           | Resolution didn't finish in time. CarPlay only.                                                |
+| `'unknown-error'`     | An unexpected error (e.g. invalid configuration).                                              |
 
 `'empty-content'` and `'timeout'` never reach `useNavigationError()` or
 `onNavigationError`: the library raises them only for the in-car screens, where

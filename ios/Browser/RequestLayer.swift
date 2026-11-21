@@ -86,13 +86,7 @@ enum RequestLayer {
     guard !transforms.isEmpty else { return applyStatic(layer, to: base) }
     var result = base
     for transform in transforms {
-      do {
-        result = try await transform(result)
-      } catch let error as CancellationError {
-        throw error
-      } catch {
-        throw BrowserError.callbackError(error.localizedDescription)
-      }
+      result = try await BrowserError.fromCallback { try await transform(result) }
     }
     return result
   }

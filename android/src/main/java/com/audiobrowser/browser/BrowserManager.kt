@@ -1054,21 +1054,23 @@ class BrowserManager {
       Timber.d("Resolving route via callback")
       val param = BrowserSourceCallbackParam(path, routeParams)
       // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms.
-      return callback
-        .invoke(param)
-        .awaitCancellable()
-        .match(
-          first = { resolvedTrack -> resolvedTrack },
-          second = { browseError -> throw CallbackException(browseError.error) },
-          third = { promise ->
-            promise
-              .awaitJsPromise()
-              .match(
-                first = { resolvedTrack -> resolvedTrack },
-                second = { browseError -> throw CallbackException(browseError.error) },
-              )
-          },
-        )
+      return fromCallback {
+        callback
+          .invoke(param)
+          .awaitCancellable()
+          .match(
+            first = { resolvedTrack -> resolvedTrack },
+            second = { browseError -> throw CallbackException(browseError.error) },
+            third = { promise ->
+              promise
+                .awaitJsPromise()
+                .match(
+                  first = { resolvedTrack -> resolvedTrack },
+                  second = { browseError -> throw CallbackException(browseError.error) },
+                )
+            },
+          )
+      }
     }
 
     entry.browseConfig?.let { apiConfig ->
@@ -1095,7 +1097,7 @@ class BrowserManager {
 
     searchEntry.searchCallback?.let { callback ->
       Timber.d("Resolving search via callback")
-      return callback.invoke(params).awaitNested()
+      return fromCallback { callback.invoke(params).awaitNested() }
     }
 
     searchEntry.searchConfig?.let { apiConfig ->
@@ -1128,7 +1130,7 @@ class BrowserManager {
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
     // The TS layer wraps the thunk in Promise.resolve: await the bridge promise, then the JS one.
-    return resolver.invoke().awaitNested()
+    return fromCallback { resolver.invoke().awaitNested() }
   }
 
   // No in-flight dedupe: concurrent first requests may both resolve, which is harmless, and a
@@ -1312,8 +1314,6 @@ class HttpStatusException(val statusCode: Int, message: String, cause: Throwable
   Exception(message, cause)
 
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
-
-class CallbackException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /** Mirrors NativeBrowserConfiguration from JS. */
 data class BrowserConfig(
