@@ -1,6 +1,7 @@
 import { indent } from '../../utils.js';
 import { getForwardDeclaration } from '../c++/getForwardDeclaration.js';
 import { includeHeader } from '../c++/includeNitroHeader.js';
+import { JAVA_ERROR_IMPORT, callJava } from '../c++/withoutJavaStack.js';
 import { getAllTypes } from '../getAllTypes.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
 import { createFileMetadataString, isNotDuplicate } from '../helpers.js';
@@ -146,6 +147,8 @@ namespace ${cxxNamespace} {
         .map((t) => new KotlinCxxBridgedType(t))
         .flatMap((t) => t.getRequiredImports('c++'))
         .filter((i) => i != null);
+    // Not upstream: callJava.
+    jniImports.push(JAVA_ERROR_IMPORT);
     const cppIncludes = jniImports
         .map((i) => includeHeader(i))
         .filter(isNotDuplicate);
@@ -241,17 +244,19 @@ function getFbjniMethodForwardImplementation(spec, method, jniMethodName) {
     let body;
     if (returnJNI.hasType) {
         // return something - we need to parse it
+        // Not upstream: callJava.
         body = `
 static const auto method = _javaPart->javaClassStatic()->getMethod<${cxxSignature}>("${methodName}");
-auto __result = method(${paramsForward.join(', ')});
+auto __result = ${callJava('method', paramsForward)};
 return ${returnJNI.parse('__result', 'kotlin', 'c++', 'c++')};
     `;
     }
     else {
         // void method. no return
+        // Not upstream: callJava.
         body = `
 static const auto method = _javaPart->javaClassStatic()->getMethod<${cxxSignature}>("${methodName}");
-method(${paramsForward.join(', ')});
+${callJava('method', paramsForward)};
    `;
     }
     const code = method.getCode('c++', {
