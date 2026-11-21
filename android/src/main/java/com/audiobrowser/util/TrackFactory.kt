@@ -19,7 +19,7 @@ object TrackFactory {
   /**
    * The artwork URI the session publishes for [url]: [url] itself, except on Android Automotive OS,
    * whose car media app loads artwork only from `content://`, `android.resource://` and `file://`
-   * URIs, where http(s) artwork is served through the provider.
+   * URIs, where artwork the provider [ArtworkUris.isServable] goes through it.
    */
   fun sessionArtworkUri(url: String, headers: Map<String, String>?, isSvg: Boolean): String {
     val provider = artworkRoutes?.takeIf { Automotive.device } ?: return url
@@ -102,9 +102,10 @@ object TrackFactory {
   }
 
   /**
-   * Routes http(s) artwork through the `content://` provider, registered in [registry], so headers
-   * and SVG rendering apply in this process and no bytes cross the Binder. Other artwork
-   * (`android.resource://` icons, `file://`) passes through unchanged, so vector icons survive.
+   * Routes [ArtworkUris.isServable] artwork through the `content://` provider, registered in
+   * [registry], so headers and SVG rendering apply in this process and no bytes cross the Binder.
+   * Other artwork (`android.resource://` icons, `file://`) passes through unchanged, so vector
+   * icons survive.
    */
   fun toBrowseMediaItem(
     track: Track,

@@ -7,14 +7,14 @@ import com.audiobrowser.browser.ResolvedArtwork
 /** Routes artwork URLs through the [ArtworkContentProvider] at [authority], via its [registry]. */
 class ArtworkRoutes(val registry: BrowseArtworkRegistry, val authority: String) {
   /**
-   * Registers http(s) [url] and returns the `content://` URI the provider serves it at; any other
-   * URL comes back unchanged. [pinned] artwork survives [BrowseArtworkRegistry.clear]; pinning one
-   * of this provider's own URIs re-pins the artwork it already holds.
+   * Registers an [ArtworkUris.isServable] [url] and returns the `content://` URI the provider
+   * serves it at; any other URL comes back unchanged. [pinned] artwork survives
+   * [BrowseArtworkRegistry.clear]; pinning one of this provider's own URIs re-pins the artwork it
+   * already holds.
    */
   fun route(url: String, headers: Map<String, String>?, isSvg: Boolean, pinned: Boolean): String {
     val uri = Uri.parse(url)
-    val scheme = uri.scheme?.lowercase()
-    if (scheme != "http" && scheme != "https") {
+    if (!ArtworkUris.isServable(uri)) {
       if (pinned && uri.authority == authority) {
         ArtworkUris.parseToken(uri)?.let { token ->
           registry.lookup(token)?.let { registry.pin(token, it) }
