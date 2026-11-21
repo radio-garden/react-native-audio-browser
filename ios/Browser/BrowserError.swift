@@ -21,3 +21,21 @@ extension BrowserError {
     routed ? .invalidConfiguration("No URL configured for route") : .contentNotFound(path: path)
   }
 }
+
+extension BrowserError {
+  /// Runs `body`, a call into a JS callback: what it throws becomes `.callbackError` with its
+  /// message, except a cancellation and a `BrowserError`, which pass through.
+  nonisolated(nonsending) static func fromCallback<T>(
+    _ body: nonisolated(nonsending)() async throws -> T,
+  ) async throws -> T {
+    do {
+      return try await body()
+    } catch let error as CancellationError {
+      throw error
+    } catch let error as BrowserError {
+      throw error
+    } catch {
+      throw BrowserError.callbackError(error.localizedDescription)
+    }
+  }
+}

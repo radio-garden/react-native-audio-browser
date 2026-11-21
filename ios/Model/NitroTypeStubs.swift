@@ -588,6 +588,26 @@
     case third(SleepTimerEndOfTrack)
   }
 
+  struct BrowseError {
+    var error: String
+  }
+
+  struct BrowserSourceCallbackParam {
+    var path: String
+    var routeParams: [String: String]?
+  }
+
+  indirect enum BrowseResult {
+    case first(ResolvedTrack)
+    case second(BrowseError)
+  }
+
+  enum Variant_ResolvedTrack_BrowseError_Promise_BrowseResult_ {
+    case first(ResolvedTrack)
+    case second(BrowseError)
+    case third(Promise<BrowseResult>)
+  }
+
   /// Nitro's `Promise`, settled from the start: only what `Promise+AwaitCallback` uses.
   final class Promise<T>: @unchecked Sendable {
     private let result: Result<T, Error>
