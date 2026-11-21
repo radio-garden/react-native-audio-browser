@@ -76,3 +76,97 @@ describe('codegen: a JS error crossing to Kotlin or Swift', () => {
     })
   })
 })
+
+// The vendored nitrogen's JniException unwrap (see codegen/syntax/c++/withoutJavaStack.js). These
+// check the generated code only; what JavaError's `what()` gives is checked on a device.
+const JAVA_ERROR = 'std::make_exception_ptr(JavaError('
+
+/** A Kotlin error passed on as fbjni builds it, whose `what()` carries its class and stack. */
+const RAW_JNI_EXCEPTION = /jni::JniException[ (]/
+
+const toCppWithoutJavaStack = (code: string) =>
+  !RAW_JNI_EXCEPTION.test(code) && code.includes(JAVA_ERROR)
+
+/** What each Kotlin promise's rejection listener does, up to its closing `});`. */
+const rejections = (code: string) =>
+  code
+    .split(
+      'addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {'
+    )
+    .slice(1)
+    .map((listener) => {
+      const end = listener.indexOf('});')
+      expect(end).toBeGreaterThan(0)
+      return listener.slice(0, end)
+    })
+
+describe('codegen: a Kotlin error crossing to C++ and JS', () => {
+  it('rejects a Kotlin Promise with JavaError', () => {
+    const code = new KotlinCxxBridgedType(
+      new PromiseType(new StringType())
+    ).parseFromKotlinToCpp('promise', 'c++')
+    expect(toCppWithoutJavaStack(code)).toBe(true)
+  })
+
+  it('rejects a Kotlin Promise<void> with JavaError', () => {
+    const code = new KotlinCxxBridgedType(
+      new PromiseType(new VoidType())
+    ).parseFromKotlinToCpp('promise', 'c++')
+    expect(toCppWithoutJavaStack(code)).toBe(true)
+  })
+
+  it('passes a Kotlin error value on as JavaError', () => {
+    const code = new KotlinCxxBridgedType(new ErrorType()).parseFromKotlinToCpp(
+      'error',
+      'c++'
+    )
+    expect(toCppWithoutJavaStack(code)).toBe(true)
+  })
+
+  it('includes JavaError.hpp wherever it is used', () => {
+    for (const type of [new PromiseType(new StringType()), new ErrorType()]) {
+      const imports = new KotlinCxxBridgedType(type).getRequiredImports('c++')
+      expect(imports.map((i) => i.name)).toContain('JavaError.hpp')
+    }
+  })
+
+  describe('in the committed bridge', () => {
+    const files = readdirSync(ANDROID)
+      .filter((file) => file.endsWith('.hpp') || file.endsWith('.cpp'))
+      .map((file) => ({
+        file,
+        code: readFileSync(join(ANDROID, file), 'utf8')
+      }))
+    const listeners = files.flatMap(({ code }) => rejections(code))
+
+    it('are all read', () => {
+      expect(listeners.length).toBeGreaterThan(0)
+    })
+
+    // A generated .cpp includes only its own .hpp, which carries its includes.
+    const includesJavaError = (file: string) =>
+      [file, file.replace(/\.cpp$/, '.hpp')].some((f) =>
+        files
+          .find((other) => other.file === f)
+          ?.code.includes('#include "JavaError.hpp"')
+      )
+
+    it('include JavaError.hpp wherever they use it', () => {
+      expect(
+        files
+          .filter(({ code }) => code.includes('JavaError('))
+          .filter(({ file }) => !includesJavaError(file))
+          .map((f) => f.file)
+      ).toEqual([])
+    })
+
+    it('reject with JavaError, never a raw JniException', () => {
+      expect(listeners.filter((l) => !toCppWithoutJavaStack(l))).toEqual([])
+      expect(
+        files
+          .filter(({ code }) => RAW_JNI_EXCEPTION.test(code))
+          .map((f) => f.file)
+      ).toEqual([])
+    })
+  })
+})

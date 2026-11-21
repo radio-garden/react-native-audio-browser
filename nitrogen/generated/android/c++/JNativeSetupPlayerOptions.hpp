@@ -70,6 +70,7 @@
 #include "JVariant_NullType_Double.hpp"
 #include "JVariant_NullType_RemoteButtonLayout.hpp"
 #include "JVariant_String_ArtworkVariants.hpp"
+#include "JavaError.hpp"
 #include "NativeAndroidSetupOptions.hpp"
 #include "NativeIOSSetupOptions.hpp"
 #include "NativeUpdateOptions.hpp"

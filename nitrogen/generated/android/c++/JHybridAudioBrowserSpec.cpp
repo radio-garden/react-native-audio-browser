@@ -274,6 +274,7 @@ namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 #include <exception>
 #include <stdexcept>
 #include <jsi/jsi.h>
+#include "JavaError.hpp"
 #include "JRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____.hpp"
@@ -1512,8 +1513,7 @@ namespace margelo::nitro::audiobrowser {
         }(__result));
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-        jni::JniException __jniError(__throwable);
-        __promise->reject(std::make_exception_ptr(__jniError));
+        __promise->reject(std::make_exception_ptr(JavaError(__throwable)));
       });
       return __promise;
     }();
@@ -1576,8 +1576,7 @@ namespace margelo::nitro::audiobrowser {
         __promise->resolve();
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-        jni::JniException __jniError(__throwable);
-        __promise->reject(std::make_exception_ptr(__jniError));
+        __promise->reject(std::make_exception_ptr(JavaError(__throwable)));
       });
       return __promise;
     }();

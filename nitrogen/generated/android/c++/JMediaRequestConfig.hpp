@@ -32,6 +32,7 @@
 #include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JVariant_String_ArtworkVariants.hpp"
+#include "JavaError.hpp"
 #include "RequestConfig.hpp"
 #include "StyleDisplay.hpp"
 #include "Track.hpp"

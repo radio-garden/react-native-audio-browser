@@ -1,5 +1,6 @@
 import { ErrorType } from '../types/ErrorType.js';
 import { withoutJSStack } from '../c++/withoutJSStack.js';
+import { JAVA_ERROR_IMPORT, withoutJavaStack } from '../c++/withoutJavaStack.js';
 import { indent } from '../../utils.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
 import { getReferencedTypes } from '../getReferencedTypes.js';
@@ -102,6 +103,10 @@ export class KotlinCxxBridgedType {
                         space: 'system',
                     });
                     break;
+                case 'error':
+                    // Not upstream: withoutJavaStack.
+                    imports.push(JAVA_ERROR_IMPORT);
+                    break;
                 case 'array-buffer':
                     imports.push({
                         language: 'c++',
@@ -115,8 +120,8 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JPromise.hpp',
                         space: 'system',
                     });
-                    // Not upstream: its rejection goes through withoutJSStack.
-                    imports.push(...new ErrorType().getRequiredImports('c++'));
+                    // Not upstream: its rejection goes through withoutJSStack and withoutJavaStack.
+                    imports.push(...new ErrorType().getRequiredImports('c++'), JAVA_ERROR_IMPORT);
                     const promiseType = getTypeAs(this.type, PromiseType);
                     if (promiseType.resultingType.kind === 'void') {
                         // Promise<void> uses JUnit
@@ -991,6 +996,7 @@ __promise->resolve(${resultingType.parseFromKotlinToCpp('__result', 'c++', true)
 __promise->resolve();
           `.trim();
                         }
+                        // Not upstream: withoutJavaStack.
                         return `
 [&]() {
   auto __promise = Promise<${actualCppType}>::create();
@@ -998,8 +1004,7 @@ __promise->resolve();
     ${indent(resolveBody, '    ')}
   });
   ${parameterName}->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-    jni::JniException __jniError(__throwable);
-    __promise->reject(std::make_exception_ptr(__jniError));
+    __promise->reject(std::make_exception_ptr(${withoutJavaStack('__throwable')}));
   });
   return __promise;
 }()
@@ -1011,7 +1016,8 @@ __promise->resolve();
             case 'error':
                 switch (language) {
                     case 'c++':
-                        return `std::make_exception_ptr(jni::JniException(${parameterName}))`;
+                        // Not upstream: withoutJavaStack.
+                        return `std::make_exception_ptr(${withoutJavaStack(parameterName)})`;
                     default:
                         return parameterName;
                 }
