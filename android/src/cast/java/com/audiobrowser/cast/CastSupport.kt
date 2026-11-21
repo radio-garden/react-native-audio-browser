@@ -124,7 +124,10 @@ internal class SdkCastRemote(
 
   private val sessions =
     object : SessionManagerListener<CastSession> {
-      override fun onSessionStarted(session: CastSession, sessionId: String) = watch(session)
+      override fun onSessionStarted(session: CastSession, sessionId: String) {
+        ends.reset()
+        watch(session)
+      }
 
       override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) = watch(session)
 
@@ -203,7 +206,6 @@ internal class SdkCastRemote(
   }
 
   private fun watch(session: CastSession?) {
-    ends.reset()
     asking = null
     client?.unregisterCallback(statusCallback)
     client = session?.remoteMediaClient
