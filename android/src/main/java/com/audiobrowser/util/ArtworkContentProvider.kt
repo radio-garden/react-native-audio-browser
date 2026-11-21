@@ -19,7 +19,7 @@ import timber.log.Timber
  * Serves browse artwork to Android Auto and AAOS as PNG files. It is exported because both run in
  * another uid and Media3 issues no URI grant. So it never fetches a URL the caller supplies: the
  * URI carries an opaque token, and only a token in [com.audiobrowser.browser.BrowseArtworkRegistry]
- * whose URL is http(s) resolves; anything else returns null.
+ * whose URL is [ArtworkUris.isServable] resolves; anything else returns null.
  *
  * The response is an on-disk file in [ARTWORK_SUBDIR], not a pipe: the car's image loader seeks and
  * reads statSize, which a pipe reports as -1. The file doubles as the cache, keyed by token.
@@ -36,8 +36,7 @@ class ArtworkContentProvider : ContentProvider() {
     val token = ArtworkUris.parseToken(uri) ?: return null
     val deps = CoilArtworkLoaderHolder.get() ?: return null
     val art: ResolvedArtwork = deps.registry.lookup(token) ?: return null
-    val scheme = Uri.parse(art.finalUrl).scheme?.lowercase()
-    if (scheme != "http" && scheme != "https") return null
+    if (!ArtworkUris.isServable(Uri.parse(art.finalUrl))) return null
 
     val artworkDir = File(context!!.cacheDir, ARTWORK_SUBDIR)
     val file = File(artworkDir, "$token.png")

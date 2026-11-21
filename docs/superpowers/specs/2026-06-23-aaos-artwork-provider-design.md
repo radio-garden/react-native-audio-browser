@@ -151,9 +151,9 @@ only artwork the app itself produced.
 
 ## Data flow
 
-1. A browse-delivery callback converts tracks via `toBrowseMediaItem`. For http(s)
-   artwork: resolve → register `token → {finalUrl, headers, isSvg}` →
-   `artworkUri = content://${appId}.audiobrowser.artwork/art/<token>`. For non-http(s)
+1. A browse-delivery callback converts tracks via `toBrowseMediaItem`. For http(s) and
+   `data:` artwork: resolve → register `token → {finalUrl, headers, isSvg}` →
+   `artworkUri = content://${appId}.audiobrowser.artwork/art/<token>`. For other
    artwork: `setArtworkUri(rawUri)` unchanged.
 2. Media3's legacy bridge sets that as the browser item's `iconUri`. The car opens it
    (exported provider, cross-uid OK).

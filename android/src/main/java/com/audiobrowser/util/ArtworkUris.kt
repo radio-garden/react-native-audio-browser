@@ -11,6 +11,11 @@ object ArtworkUris {
 
   fun authorityFor(packageName: String): String = "$packageName.$AUTHORITY_SUFFIX"
 
+  /** Whether the provider serves artwork at [uri]: http(s), or `data:` decoded in this process. */
+  fun isServable(uri: Uri): Boolean = uri.scheme?.lowercase() in SERVABLE_SCHEMES
+
+  private val SERVABLE_SCHEMES = setOf("http", "https", "data")
+
   /** A stable token for [url] that does not reveal it to whoever sees the URI (SHA-256 hex). */
   fun tokenFor(url: String): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))

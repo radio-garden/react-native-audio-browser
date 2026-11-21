@@ -17,12 +17,14 @@ object TrackFactory {
   @Volatile var artworkRoutes: ArtworkRoutes? = null
 
   /**
-   * The artwork URI the session publishes for [url]: [url] itself, except on Android Automotive OS,
-   * whose car media app loads artwork only from `content://`, `android.resource://` and `file://`
-   * URIs, where http(s) artwork is served through the provider.
+   * The artwork URI the session publishes for [url]: a `content://` URI from the provider for a
+   * `data:` URL, which would otherwise send its bytes to every controller; on Android Automotive
+   * OS, whose car media app loads artwork only from `content://`, `android.resource://` and
+   * `file://` URIs, for any URL the provider serves; else [url] itself.
    */
   fun sessionArtworkUri(url: String, headers: Map<String, String>?, isSvg: Boolean): String {
-    val provider = artworkRoutes?.takeIf { Automotive.device } ?: return url
+    val provider = artworkRoutes ?: return url
+    if (!Automotive.device && !BrowserPathHelper.isDataUrl(url)) return url
     return provider.route(url, headers, isSvg, pinned = true)
   }
 
@@ -102,9 +104,10 @@ object TrackFactory {
   }
 
   /**
-   * Routes http(s) artwork through the `content://` provider, registered in [registry], so headers
-   * and SVG rendering apply in this process and no bytes cross the Binder. Other artwork
-   * (`android.resource://` icons, `file://`) passes through unchanged, so vector icons survive.
+   * Routes [ArtworkUris.isServable] artwork through the `content://` provider, registered in
+   * [registry], so headers and SVG rendering apply in this process and no bytes cross the Binder.
+   * Other artwork (`android.resource://` icons, `file://`) passes through unchanged, so vector
+   * icons survive.
    */
   fun toBrowseMediaItem(
     track: Track,

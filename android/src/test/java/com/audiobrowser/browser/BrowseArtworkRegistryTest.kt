@@ -36,4 +36,23 @@ class BrowseArtworkRegistryTest {
     assertNull(reg.lookup("a"))
     assertEquals("https://x/c", reg.lookup("c")?.finalUrl)
   }
+
+  @Test
+  fun `evicts oldest beyond the character budget, keeping the newest`() {
+    val reg = BrowseArtworkRegistry(maxUrlChars = 10)
+    reg.register("a", ResolvedArtwork("data:aaaa", null, false))
+    reg.register("b", ResolvedArtwork("data:bbbbbbbbbbbbbbbb", null, false))
+    assertNull(reg.lookup("a"))
+    assertEquals("data:bbbbbbbbbbbbbbbb", reg.lookup("b")?.finalUrl)
+  }
+
+  @Test
+  fun `a replaced entry gives back its characters`() {
+    val reg = BrowseArtworkRegistry(maxUrlChars = 21)
+    reg.register("a", ResolvedArtwork("data:aaaa", null, false))
+    reg.register("b", ResolvedArtwork("data:bbbbbb", null, false))
+    reg.register("b", ResolvedArtwork("data:b", null, false))
+    reg.register("c", ResolvedArtwork("data:c", null, false))
+    assertEquals("data:aaaa", reg.lookup("a")?.finalUrl)
+  }
 }

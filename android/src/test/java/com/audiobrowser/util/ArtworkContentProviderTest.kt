@@ -75,6 +75,17 @@ class ArtworkContentProviderTest {
   }
 
   @Test
+  fun `openFile serves a registered data token`() {
+    val url = "data:image/png;base64,AAAA"
+    val token = ArtworkUris.tokenFor(url)
+    registry.register(token, ResolvedArtwork(url, null, isSvg = false))
+    val pfd = provider.openFile(uri(token), "r")
+    assertNotNull(pfd)
+    val bytes = java.io.FileInputStream(pfd!!.fileDescriptor).readBytes()
+    assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+  }
+
+  @Test
   fun `openFile returns null for an unknown token`() {
     assertNull(provider.openFile(uri("nope"), "r"))
   }

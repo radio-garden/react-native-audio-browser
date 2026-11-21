@@ -1107,7 +1107,8 @@ internal constructor(
     browserManager.displayArtworkSource(uri, imageContext)?.let {
       return it
     }
-    // On Android Automotive OS the queue publishes provider URIs; the resolutions are keyed by URL.
+    // The queue may publish provider URIs (see sessionArtworkUri); the resolutions are keyed by
+    // URL.
     TrackFactory.artworkRoutes
       ?.publicUrl(uri.toUri())
       ?.takeIf { it != uri }

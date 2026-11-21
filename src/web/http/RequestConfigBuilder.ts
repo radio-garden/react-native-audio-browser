@@ -12,13 +12,16 @@ import { artworkUrl as resolveArtworkUrl } from '../../utils/artwork'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
 /**
- * Appends query parameters to a URL, handling existing query strings.
+ * Appends query parameters to a URL, handling existing query strings. A
+ * `data:` URL comes back unchanged: what follows its comma is the payload.
  */
 function appendQueryParams(
   url: string,
   query: Record<string, string | undefined> | undefined
 ): string {
-  if (!query || Object.keys(query).length === 0) return url
+  if (!query || Object.keys(query).length === 0 || /^data:/i.test(url)) {
+    return url
+  }
 
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {

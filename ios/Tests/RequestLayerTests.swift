@@ -118,6 +118,11 @@ struct RequestLayerTests {
     #expect(RequestLayer.buildUrl(Config(path: "/a", baseUrl: "https://host", query: ["q": "x"])) == "https://host/a?q=x")
   }
 
+  @Test func buildUrlLeavesQueryOffDataUrl() {
+    let dataUrl = "data:image/png;base64,iVBORw0KGgo="
+    #expect(RequestLayer.buildUrl(Config(path: dataUrl, baseUrl: "https://host", query: ["w": "512"])) == dataUrl)
+  }
+
   @Test func buildUrlLeavesFileSrcOutOfSharedBaseUrl() {
     let file = "file:///var/mobile/Containers/Data/Application/x/Documents/a.mp3"
     let merged = RequestLayer.merge(Config.base(path: file), Config(baseUrl: "https://api.example.com"))

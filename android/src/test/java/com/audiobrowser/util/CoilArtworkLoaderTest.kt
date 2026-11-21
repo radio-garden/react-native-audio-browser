@@ -1,10 +1,13 @@
 package com.audiobrowser.util
 
 import android.graphics.Bitmap
+import android.graphics.Color
+import coil3.ImageLoader
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.size.Dimension
 import coil3.size.Size
+import coil3.svg.SvgDecoder
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -12,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 class CoilArtworkLoaderTest {
@@ -49,5 +53,39 @@ class CoilArtworkLoaderTest {
     assertEquals(fakeBitmap, bmp)
     assertNotNull(captured)
     assertEquals(Size(Dimension.Pixels(512), Dimension.Pixels(512)), captured!!.sizeResolver.size())
+  }
+
+  @Test
+  fun `load decodes a data URL through a real Coil loader`() = runTest {
+    val context = RuntimeEnvironment.getApplication()
+    val loader = CoilArtworkLoader(context, ImageLoader.Builder(context).build())
+
+    val bmp =
+      loader.load(
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP4z8AARwzEcQCukw/x0F8jngAAAABJRU5ErkJggg==",
+        null,
+        null,
+        false,
+      )
+
+    assertEquals(Color.RED, bmp.getPixel(0, 0))
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun `load decodes an SVG data URL through the SVG decoder the service registers`() = runTest {
+    val context = RuntimeEnvironment.getApplication()
+    val imageLoader = ImageLoader.Builder(context).components { add(SvgDecoder.Factory()) }.build()
+    val loader = CoilArtworkLoader(context, imageLoader)
+
+    val bmp =
+      loader.load(
+        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZjAwMDAiLz48L3N2Zz4=",
+        null,
+        16,
+        false,
+      )
+
+    assertEquals(Color.RED, bmp.getPixel(8, 8))
   }
 }

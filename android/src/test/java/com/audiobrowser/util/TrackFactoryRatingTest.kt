@@ -88,6 +88,17 @@ class TrackFactoryRatingTest {
   }
 
   @Test
+  fun `a phone serves data artwork through the provider, and maps it back to its URL`() {
+    val registry = BrowseArtworkRegistry()
+    TrackFactory.artworkRoutes = ArtworkRoutes(registry, "app.artwork")
+    val item = TrackFactory.toMedia3(TestFixtures.track(artwork = "data:image/png;base64,AAAA"))
+    val uri = item.mediaMetadata.artworkUri!!
+    assertEquals("content", uri.scheme)
+    registry.clear()
+    assertEquals("data:image/png;base64,AAAA", TrackFactory.artworkRoutes!!.publicUrl(uri))
+  }
+
+  @Test
   fun `Android Automotive OS keeps non-http artwork as it is`() {
     automotive()
     assertEquals(

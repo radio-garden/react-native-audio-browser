@@ -139,4 +139,7 @@ object BrowserPathHelper {
   /** A mediaId that is neither blank, a browse path, nor an http(s) URL: a track's `id` alone. */
   fun isBareId(mediaId: String): Boolean =
     mediaId.isNotBlank() && !mediaId.startsWith("/") && !isHttpUrl(mediaId)
+
+  /** Whether [url] is a `data:` URL, whose bytes are the URL itself. */
+  fun isDataUrl(url: String): Boolean = url.startsWith("data:", ignoreCase = true)
 }

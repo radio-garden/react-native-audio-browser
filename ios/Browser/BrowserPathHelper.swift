@@ -92,9 +92,10 @@ enum BrowserPathHelper {
     return raw.removingPercentEncoding ?? String(raw)
   }
 
-  /// Percent-encodes keys and values, so pass them unencoded.
+  /// Percent-encodes keys and values, so pass them unencoded. A `data:` URL comes back unchanged:
+  /// what follows its comma is the payload.
   static func appendQuery(_ query: [String: String], to url: String) -> String {
-    guard !query.isEmpty else { return url }
+    guard !query.isEmpty, url.prefix(5).lowercased() != "data:" else { return url }
 
     let queryString = query.keys.sorted()
       .map { key in

@@ -85,6 +85,21 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
   })
 })
 
+describe('RequestConfigBuilder — data: URLs', () => {
+  const dataUrl = 'data:image/png;base64,iVBORw0KGgo='
+
+  it('leaves the query of the request and artwork layers off data: artwork', async () => {
+    const track = { title: 'T', artwork: dataUrl } as Track
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      { query: { key: 'k' } },
+      { query: { v: '2' } }
+    )
+
+    expect(out?.uri).toBe(dataUrl)
+  })
+})
+
 /**
  * A media request needs more than its URL. The layers resolve headers (and a
  * user agent) alongside it, and native applies them to the AVURLAsset /
