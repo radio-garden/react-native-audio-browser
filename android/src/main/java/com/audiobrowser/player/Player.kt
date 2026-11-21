@@ -82,6 +82,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -319,8 +320,13 @@ internal constructor(
   }
 
   /** The browser [notifyBrowserConfigurationReady] registered, or null if none is yet. */
+  @OptIn(ExperimentalCoroutinesApi::class)
   val configuredBrowser: AudioBrowser?
-    get() = browser.takeIf { browserRegistered.isCompleted }
+    get() = browserRegistered.let { if (it.isCompleted) it.getCompleted() else null }
+
+  /** [configuredBrowser], if it offers search. */
+  val searchBrowser: AudioBrowser?
+    get() = configuredBrowser?.takeIf { it.browserManager.config.hasSearch }
 
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.

@@ -656,18 +656,15 @@ class MediaSessionCallback(private val player: Player) :
    * is neither gated nor offline.
    */
   private suspend fun searchableBrowser(): AudioBrowser? {
-    val audioBrowser =
-      try {
-        player.awaitBrowser()
-      } catch (e: TimeoutException) {
-        Timber.w(e, "Timed out waiting for browser - search not available")
-        return null
-      }
-    if (!audioBrowser.browserManager.config.hasSearch) {
-      Timber.w("Search requested but no search source configured")
+    try {
+      player.awaitBrowser()
+    } catch (e: TimeoutException) {
+      Timber.w(e, "Timed out waiting for browser - search not available")
       return null
     }
-    return audioBrowser
+    val searchBrowser = player.searchBrowser
+    if (searchBrowser == null) Timber.w("Search requested but no search source configured")
+    return searchBrowser
   }
 
   /**
@@ -764,7 +761,7 @@ class MediaSessionCallback(private val player: Player) :
       // No wait: media3 answers every pending legacy search for this query from one announcement,
       // and a search still waiting in onSearch announces again once it is done.
       val audioBrowser =
-        player.configuredBrowser?.takeIf { it.browserManager.config.hasSearch }
+        player.searchBrowser
           ?: return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       val browserManager = audioBrowser.browserManager
 
