@@ -673,7 +673,7 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Media3's legacy bridge drops [onSearch]'s result and answers a legacy controller only once a
    * search is announced, from [onGetSearchResult], which refuses it in turn unless a browser with
-   * search was configured meanwhile.
+   * search was configured meanwhile, and then runs it.
    */
   private fun refuseSearch(
     session: MediaLibraryService.MediaLibrarySession,
@@ -819,10 +819,16 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       try {
-        val tracks = browserManager.getCachedSearchResults(query)
-        if (tracks == null) Timber.w("No cached search results for query: $query")
-        // No hits, all disabled, or nothing cached: the app's empty copy (ADR 0001). Something must
-        // come back: onSearch announced at least one item.
+        // Nothing cached when onSearch refused the search and the configuration came after.
+        val tracks =
+          browserManager.getCachedSearchResults(query)
+            ?: run {
+              Timber.d("No cached search results for query: $query - searching")
+              browserManager.search(query)
+              browserManager.getCachedSearchResults(query)
+            }
+        // No hits or all disabled: the app's empty copy (ADR 0001). Something must come back:
+        // onSearch announced at least one item.
         val mediaItems =
           browseLevelItems(toFlatMediaItems(tracks?.toList().orEmpty())) {
             audioBrowser.resolveFormattedError(

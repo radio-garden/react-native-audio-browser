@@ -2,7 +2,6 @@ package com.audiobrowser.player
 
 import android.os.Bundle
 import android.os.Looper
-import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
@@ -79,11 +78,15 @@ class SessionSearchCommandTest {
       .availableSessionCommands
       .contains(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
 
-  /** A browser whose search, if it has one, finds nothing. */
-  private fun configureBrowser(search: Boolean, player: Player = this.player) {
-    val nothing =
+  /** A browser whose search, if it has one, finds [hits]. */
+  private fun configureBrowser(
+    search: Boolean,
+    player: Player = this.player,
+    hits: Array<Track> = emptyArray(),
+  ) {
+    val found =
       JsPromise<Promise<Array<Track>>>().apply {
-        resolve(JsPromise<Array<Track>>().apply { resolve(emptyArray()) }.promise)
+        resolve(JsPromise<Array<Track>>().apply { resolve(hits) }.promise)
       }
     val route =
       TestFixtures.staticRoute(
@@ -94,12 +97,17 @@ class SessionSearchCommandTest {
           browseStatic = null,
           searchCallback =
             Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams {
-              nothing.promise
+              found.promise
             },
         )
     val browserManager =
       BrowserManager().apply {
-        config = BrowserConfig(routes = if (search) arrayOf(route) else emptyArray())
+        config =
+          BrowserConfig(
+            routes = if (search) arrayOf(route) else emptyArray(),
+            // Robolectric reports no network.
+            androidControllerOfflineError = false,
+          )
       }
     player.browser =
       mock(
@@ -245,16 +253,28 @@ class SessionSearchCommandTest {
   }
 
   @Test
-  fun `a refused search whose browser is configured before its results are asked for is served`() {
+  fun `a refused search whose browser is configured before its results are asked for is served its hits`() {
     val callback = impatientPlayer.getMediaSessionCallback()
     callback.onSearch(librarySession, car, "x", null).get(5, TimeUnit.SECONDS)
 
-    configureBrowser(search = true, player = impatientPlayer)
+    configureBrowser(
+      search = true,
+      player = impatientPlayer,
+      hits = arrayOf(TestFixtures.track(title = "Hit", id = "hit")),
+    )
     val result =
       callback
         .onGetSearchResult(librarySession, car, "x", 0, Int.MAX_VALUE, null)
         .get(5, TimeUnit.SECONDS)
 
-    assertEquals(LibraryResult.RESULT_SUCCESS, result.resultCode)
+    assertEquals(listOf("Hit"), result.value!!.map { it.mediaMetadata.title.toString() })
+  }
+
+  @Test
+  fun `a browser reconfigured without search withdraws it from cars that connect later`() {
+    configureBrowser(search = true)
+    configureBrowser(search = false)
+
+    assertFalse(offersSearch())
   }
 }
