@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.os.Bundle
 import android.os.Looper
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
@@ -17,6 +18,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.session
 import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.Promise
@@ -109,6 +111,7 @@ class SessionSearchCommandTest {
               AudioBrowser.GateOutcome(false, null)
             }
             it.method.name.startsWith("getBrowserManager") -> browserManager
+            it.method.name.startsWith("resolveFormattedError") -> FormattedNavigationError("", null)
             else -> RETURNS_DEFAULTS.answer(it)
           }
         },
@@ -232,7 +235,17 @@ class SessionSearchCommandTest {
   }
 
   @Test
-  fun `a search refused for want of a browser stays refused when one is configured before its results are asked for`() {
+  fun `results asked for before the browser is configured are refused at once`() {
+    val result =
+      callback
+        .onGetSearchResult(librarySession, car, "x", 0, Int.MAX_VALUE, null)
+        .get(1, TimeUnit.SECONDS)
+
+    assertEquals(SessionError.ERROR_NOT_SUPPORTED, result.resultCode)
+  }
+
+  @Test
+  fun `a refused search whose browser is configured before its results are asked for is served`() {
     val callback = impatientPlayer.getMediaSessionCallback()
     callback.onSearch(librarySession, car, "x", null).get(5, TimeUnit.SECONDS)
 
@@ -242,6 +255,6 @@ class SessionSearchCommandTest {
         .onGetSearchResult(librarySession, car, "x", 0, Int.MAX_VALUE, null)
         .get(5, TimeUnit.SECONDS)
 
-    assertEquals(SessionError.ERROR_NOT_SUPPORTED, result.resultCode)
+    assertEquals(LibraryResult.RESULT_SUCCESS, result.resultCode)
   }
 }
