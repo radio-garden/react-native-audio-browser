@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
+import type { TransformableRequestConfig } from '../../../types'
 import type { HttpClient } from '../../http/HttpClient'
 import { BrowserManager } from '../BrowserManager'
 import { FavoriteManager } from '../FavoriteManager'
@@ -100,5 +102,49 @@ describe('BrowserManager layer resolver', () => {
     expect(await manager.resolvedRequestConfig()).toEqual({
       baseUrl: 'https://static.example.com'
     })
+  })
+
+  describe('a resolver that stays silent', () => {
+    let now: MockInstance<() => number>
+    beforeEach(() => {
+      now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    })
+    afterEach(() => now.mockRestore())
+
+    it('is called again by a request past the bound', async () => {
+      const answers = [
+        new Promise<never>(() => {}),
+        Promise.resolve({ baseUrl: 'https://late.example.com' })
+      ]
+      const manager = makeManager()
+      manager.configuration = {
+        path: '/',
+        requestResolver: () => answers.shift() ?? new Promise<never>(() => {})
+      }
+      void manager.resolvedRequestConfig()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      now.mockReturnValue(10_000)
+      expect(await manager.resolvedRequestConfig()).toEqual({
+        baseUrl: 'https://late.example.com'
+      })
+    })
+  })
+
+  it('never hands a request the layer of a configuration it replaced', async () => {
+    const answers: Array<(config: TransformableRequestConfig) => void> = []
+    const requestResolver = () =>
+      new Promise<TransformableRequestConfig>((resolve) =>
+        answers.push(resolve)
+      )
+    const manager = makeManager()
+    manager.configuration = { path: '/', requestResolver }
+    const pending = manager.resolvedRequestConfig()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    manager.configuration = { path: '/', requestResolver }
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    answers[0]!({ baseUrl: 'https://old.example.com' })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    answers[1]!({ baseUrl: 'https://new.example.com' })
+    expect(await pending).toEqual({ baseUrl: 'https://new.example.com' })
   })
 })

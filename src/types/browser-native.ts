@@ -23,7 +23,7 @@ import type { ResolvedTrack } from './browser-nodes'
 // Native resolvers are Promise-only. The public `request`/`browse` resolver may
 // return its config sync OR async; `toNativeConfig` wraps it in Promise.resolve so
 // the bridge never sees a `T | Promise<T>` variant (which would misread the async
-// case). Resolvers run once per content generation, so the wrap is free.
+// case). Resolvers run rarely, so the wrap is free.
 type NativeRequestConfigResolver = () => Promise<TransformableRequestConfig>
 
 /**

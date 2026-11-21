@@ -721,11 +721,17 @@ export type BrowserConfiguration = {
    * defaults.
    *
    * Either a static {@link TransformableRequestConfig} (its optional `transform`
-   * runs per request), or a {@link RequestConfigResolver} thunk resolved once per
-   * content generation and re-resolved on `invalidateAllContent()`. Reach for the
-   * resolver when a value changes rarely (a base URL, an auth host) so it is read
-   * once per generation and merged natively — rather than recomputed on every
-   * browse/search/media/artwork request via a `transform`.
+   * runs per request), or a {@link RequestConfigResolver} thunk whose answer is
+   * kept per content generation and re-resolved on `invalidateAllContent()`.
+   * Reach for the resolver when a value changes rarely (a base URL, an auth
+   * host) so its answer is kept for the generation and merged natively —
+   * rather than recomputed on every browse/search/media/artwork request via a
+   * `transform`.
+   *
+   * The resolver can be called more than once at a time. On Android each
+   * request that finds no kept answer calls it; on iOS and web a request joins
+   * a call already running while that call is younger than 10 seconds, and
+   * calls it again after that.
    */
   request?: TransformableRequestConfig | RequestConfigResolver
 
@@ -744,7 +750,8 @@ export type BrowserConfiguration = {
    * default with a callback / static / bespoke config.
    *
    * Like `request`, this may be a static {@link TransformableRequestConfig} or a
-   * {@link RequestConfigResolver} thunk (resolved once per content generation) —
+   * {@link RequestConfigResolver} thunk (kept per content generation, and
+   * called as `request`'s is) —
    * e.g. a locale query param that only changes when `invalidateAllContent()` is
    * called. A resolver's `query` is merged additively into each browse request's
    * query, exactly as a static `query` would be.
