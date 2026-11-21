@@ -47,6 +47,29 @@ enum ArtworkImageFetcher {
       processor = nil
     }
     if let processor { options.append(.processor(processor)) }
+
+    let result: Result<UIImage, any Error> = if url.scheme?.lowercased() == "data" {
+      await retrieve(.provider(DataURLProvider(url: url)), options: options + [.cacheMemoryOnly], freshnessKey: nil)
+    } else {
+      await fetch(url, options: options, processor: processor, waitsForConnectivity: waitsForConnectivity)
+    }
+    switch result {
+    case let .success(image):
+      return image
+    case let .failure(error):
+      logger.error("Failed to load artwork from \(source.uri.prefix(200)): \(error.localizedDescription)")
+      return nil
+    }
+  }
+
+  /// Fetches `url` from the cache while its HTTP freshness lasts, else past the cache.
+  @MainActor
+  private static func fetch(
+    _ url: URL,
+    options: KingfisherOptionsInfo,
+    processor: (any ImageProcessor)?,
+    waitsForConnectivity: Bool,
+  ) async -> Result<UIImage, any Error> {
     let retry: KingfisherOptionsInfo = waitsForConnectivity ? [.retryStrategy(ConnectivityRetry())] : []
 
     // Each processed variant is fresh on its own: a variant cached before the image changed
@@ -54,17 +77,10 @@ enum ArtworkImageFetcher {
     let key = url.absoluteString + (processor?.identifier ?? "")
     // Only HTTP fetches record a lifetime, so any other scheme would otherwise refetch on every call.
     let isFresh = if ["http", "https"].contains(url.scheme?.lowercased()) { await freshness.isFresh(key) } else { true }
-    let result: Result<UIImage, any Error> = if isFresh {
-      await retrieve(url, options: options + retry, freshnessKey: key)
+    return if isFresh {
+      await retrieve(.network(url), options: options + retry, freshnessKey: key)
     } else {
       await refetch(url, options: options, retry: retry, freshnessKey: key)
-    }
-    switch result {
-    case let .success(image):
-      return image
-    case let .failure(error):
-      logger.error("Failed to load artwork from \(source.uri): \(error.localizedDescription)")
-      return nil
     }
   }
 
@@ -80,26 +96,26 @@ enum ArtworkImageFetcher {
     retry: KingfisherOptionsInfo,
     freshnessKey: String,
   ) async -> Result<UIImage, any Error> {
-    let fetched = await retrieve(url, options: options + [.forceRefresh], freshnessKey: freshnessKey)
+    let fetched = await retrieve(.network(url), options: options + [.forceRefresh], freshnessKey: freshnessKey)
     guard case let .failure(error) = fetched else { return fetched }
     if let cached = try? await KingfisherManager.shared.retrieveImage(with: url, options: options + [.onlyFromCache]) {
       return .success(cached.image)
     }
     guard !retry.isEmpty, (error as? KingfisherError)?.isConnectivity == true else { return fetched }
-    return await retrieve(url, options: options + [.forceRefresh] + retry, freshnessKey: freshnessKey)
+    return await retrieve(.network(url), options: options + [.forceRefresh] + retry, freshnessKey: freshnessKey)
   }
 
-  /// Fetches through Kingfisher and records the freshness lifetime of an image that was downloaded.
+  /// Fetches through Kingfisher and, given a `freshnessKey`, records the freshness lifetime of an image that was downloaded.
   @MainActor
   private static func retrieve(
-    _ url: URL,
+    _ source: Source,
     options: KingfisherOptionsInfo,
-    freshnessKey: String,
+    freshnessKey: String?,
   ) async -> Result<UIImage, any Error> {
     do {
-      let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
+      let result = try await KingfisherManager.shared.retrieveImage(with: source, options: options)
       // `.none` also covers an image re-processed from the cached original; only metrics mark a download.
-      if result.cacheType == .none, let metrics = result.metrics {
+      if let freshnessKey, result.cacheType == .none, let metrics = result.metrics {
         let responses = metrics.rawMetrics.transactionMetrics.compactMap { $0.response as? HTTPURLResponse }
         await freshness.record(freshnessKey, lifetime: ArtworkFreshness.lifetime(of: responses))
       }
@@ -108,6 +124,14 @@ enum ArtworkImageFetcher {
       return .failure(error)
     }
   }
+}
+
+/// A data: URL's bytes: Kingfisher's downloader fails any response that is not an HTTPURLResponse,
+/// and a data: URL's is not.
+private struct DataURLProvider: ImageDataProvider {
+  let url: URL
+  var cacheKey: String { url.absoluteString }
+  func data() async throws -> Data { try Data(contentsOf: url) }
 }
 
 /// Cache keys whose image is still fresh, each stored on disk with its lifetime as expiry.
