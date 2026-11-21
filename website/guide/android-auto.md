@@ -51,6 +51,8 @@ Android sends a subset of what iOS does: the query, the `any` / `song` / `playli
 
 Android Auto decides whether to show a search box when it connects, often before your JS has called `configureBrowser`. Until it does, the library offers search. A search made before then waits up to 10 seconds for `configureBrowser`, then runs, or fails if your configuration has no [`search`](/guide/search) source.
 
+A car that connected before your configuration keeps its search box, even when the configuration has no `search` source; its searches then fail.
+
 An app that never calls `configureBrowser` shows a search box whose searches fail after the 10 seconds, as its browse pages do.
 
 ## Browse display
