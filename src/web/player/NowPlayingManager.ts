@@ -49,7 +49,8 @@ export class NowPlayingManager {
       title: this.override?.title ?? currentTrack.title,
       artist: this.override?.artist ?? currentTrack.artist,
       album: this.override?.album ?? currentTrack.album,
-      artwork: artworkUrl(currentTrack.artwork),
+      artwork:
+        currentTrack.artworkSource?.uri ?? artworkUrl(currentTrack.artwork),
       description: currentTrack.description,
       mediaId: getTrackIdentity(currentTrack) ?? currentTrack.path,
       genre: currentTrack.genre,
