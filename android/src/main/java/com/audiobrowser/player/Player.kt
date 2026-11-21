@@ -1208,18 +1208,20 @@ internal constructor(
       } catch (e: Exception) {
         if (e is CancellationException) throw e
         Timber.e(e, "Voice search failed: $params")
-        sendSearchError(audioBrowser, params, navigationErrorFor(e))
+        sendSearchError(audioBrowser, params, offlineErrorOr { navigationErrorFor(e) })
         throw VoiceSearchFailedException("Voice search failed: $params", e)
       }
     if (tracks == null) {
       Timber.w("No tracks found for search: ${params}")
-      // An HTTP search source answers a failed request with no tracks.
-      val offline = !networkMonitor.isOnline.value
-      sendSearchError(audioBrowser, params, if (offline) offlineError() else emptyContentError())
+      // Offline, no result most likely means the search could not reach its source.
+      sendSearchError(audioBrowser, params, offlineErrorOr { emptyContentError() })
       throw VoiceSearchFailedException("No playable result for: $params")
     }
     return tracks
   }
+
+  private inline fun offlineErrorOr(error: () -> NavigationError): NavigationError =
+    if (networkMonitor.isOnline.value) error() else offlineError()
 
   @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   private suspend fun sendSearchError(

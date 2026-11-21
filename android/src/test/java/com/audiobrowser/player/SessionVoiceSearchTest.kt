@@ -240,6 +240,17 @@ class SessionVoiceSearchTest {
   }
 
   @Test
+  fun `a failed search while offline tells the car it is offline`() {
+    browserWhoseSearchAnswers(failure = RuntimeException("search source down"))
+    val errors = service.session.recordLegacyErrors()
+
+    assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
+    idleAfterReports()
+
+    assertEquals(listOf("NETWORK_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
+  }
+
+  @Test
   fun `a failed search tells the car it failed`() {
     goOnline(RuntimeEnvironment.getApplication())
     browserWhoseSearchAnswers(failure = RuntimeException("search source down"))

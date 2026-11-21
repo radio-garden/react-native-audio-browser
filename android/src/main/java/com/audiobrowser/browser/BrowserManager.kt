@@ -31,6 +31,7 @@ import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -431,9 +432,10 @@ class BrowserManager {
       if (searchQuery != null) {
         Timber.d("Handling search playback request for query: $searchQuery")
 
-        val searchResults = search(searchQuery)
         val searchTracks =
-          searchResults.flattenedChildren?.filterNot { it.disabled == true }?.toTypedArray()
+          (getCachedSearchResults(searchQuery) ?: searchedOrNull(searchQuery))
+            ?.filterNot { it.disabled == true }
+            ?.toTypedArray()
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           val mediaId = mediaItem.mediaId
@@ -826,6 +828,15 @@ class BrowserManager {
     }
   }
 
+  /** A fresh search's results, or null when it fails. */
+  private suspend fun searchedOrNull(query: String): Array<Track>? =
+    try {
+      search(query).flattenedChildren?.toTypedArray()
+    } catch (e: Exception) {
+      if (e is CancellationException) throw e
+      null
+    }
+
   /** Returns the results of the most recent search when [query] matches it, else null. */
   fun getCachedSearchResults(query: String): Array<Track>? {
     val (cachedQuery, cachedResults) = lastSearch ?: return null
@@ -841,7 +852,7 @@ class BrowserManager {
    * Returns the playable results, or null when there are none. A browsable first result plays its
    * children instead.
    *
-   * @throws Exception when the search callback fails; a failed API search returns null
+   * @throws Exception when the search fails
    */
   suspend fun searchPlayable(params: SearchParams): Array<Track>? {
     val searchResults = search(params)
@@ -877,7 +888,7 @@ class BrowserManager {
   /**
    * Runs a fresh search and keeps its results for [getCachedSearchResults].
    *
-   * @throws Exception when the search callback fails; a failed API search yields no results
+   * @throws Exception when the search fails
    */
   suspend fun search(params: SearchParams): ResolvedTrack {
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
@@ -1216,39 +1227,14 @@ class BrowserManager {
       ensureLayersResolved()
       // apiConfig is null for the implicit default.
       val httpRequest = buildApiRequest(resolvedBrowseLayer, apiConfig, path, routeParams)
-      val response = httpClient.request(httpRequest)
-
-      response.fold(
-        onSuccess = { httpResponse ->
-          if (httpResponse.isSuccessful) {
-            val jsonResolvedTrack =
-              try {
-                json.decodeFromString<JsonResolvedTrack>(httpResponse.body).also {
-                  // A browse page needs its title (BrowserSource); the tabs page does not.
-                  if (it.title == null && path != TABS_ROUTE_PATH) {
-                    throw SerializationException("Field 'title' is required for a browse page")
-                  }
-                }
-              } catch (e: Exception) {
-                throw HttpStatusException(
-                  httpResponse.code,
-                  "Server returned ${httpResponse.code} with a response that is not a page: ${e.message}",
-                  e,
-                )
-              }
-            jsonResolvedTrack.toNitro(requestedPath = path)
-          } else {
-            Timber.w(
-              "HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}"
-            )
-            throw HttpStatusException(httpResponse.code, "Server returned ${httpResponse.code}")
+      val jsonResolvedTrack =
+        fetchJson<JsonResolvedTrack>(httpRequest, "a page") {
+          // A browse page needs its title (BrowserSource); the tabs page does not.
+          if (it.title == null && path != TABS_ROUTE_PATH) {
+            throw SerializationException("Field 'title' is required for a browse page")
           }
-        },
-        onFailure = { exception ->
-          Timber.e(exception, "HTTP request failed")
-          throw NetworkException("Network request failed: ${exception.message}", exception)
-        },
-      )
+        }
+      jsonResolvedTrack.toNitro(requestedPath = path)
     }
   }
 
@@ -1257,52 +1243,64 @@ class BrowserManager {
     params: SearchParams,
   ): Array<Track> {
     return withContext(Dispatchers.IO) {
-      try {
-        val searchQueryParams = buildMap {
-          put("q", params.query)
-          params.mode?.let { put("mode", it.toString().lowercase()) }
-          if (params.reference == MediaReference.MY) put("reference", "my")
-          params.genre?.let { put("genre", it) }
-          params.artist?.let { put("artist", it) }
-          params.album?.let { put("album", it) }
-          params.title?.let { put("title", it) }
-          params.playlist?.let { put("playlist", it) }
-        }
-
-        // No browse layer and no route: search is its own kind.
-        val httpRequest =
-          buildApiRequest(
-            kindConfig = apiConfig,
-            routeConfig = null,
-            // A layer's static path never applies, so the search config's path seeds the base.
-            path = apiConfig.path,
-            params = emptyMap(),
-            initialQuery = searchQueryParams,
-          )
-        val response = httpClient.request(httpRequest)
-
-        response.fold(
-          onSuccess = { httpResponse ->
-            if (httpResponse.isSuccessful) {
-              // A bare Track array, unlike browse's page object.
-              val jsonTracks = json.decodeFromString<List<JsonTrack>>(httpResponse.body)
-              jsonTracks.map { it.toNitro() }.toTypedArray()
-            } else {
-              Timber.w(
-                "Search HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}"
-              )
-              emptyArray()
-            }
-          },
-          onFailure = { exception ->
-            Timber.e(exception, "Search HTTP request failed")
-            emptyArray()
-          },
-        )
-      } catch (e: Exception) {
-        Timber.e(e, "Error executing search API request")
-        emptyArray()
+      val searchQueryParams = buildMap {
+        put("q", params.query)
+        params.mode?.let { put("mode", it.toString().lowercase()) }
+        if (params.reference == MediaReference.MY) put("reference", "my")
+        params.genre?.let { put("genre", it) }
+        params.artist?.let { put("artist", it) }
+        params.album?.let { put("album", it) }
+        params.title?.let { put("title", it) }
+        params.playlist?.let { put("playlist", it) }
       }
+
+      // No browse layer and no route: search is its own kind.
+      val httpRequest =
+        buildApiRequest(
+          kindConfig = apiConfig,
+          routeConfig = null,
+          // A layer's static path never applies, so the search config's path seeds the base.
+          path = apiConfig.path,
+          params = emptyMap(),
+          initialQuery = searchQueryParams,
+        )
+      // A bare Track array, unlike browse's page object.
+      fetchJson<List<JsonTrack>>(httpRequest, "a track list").map { it.toNitro() }.toTypedArray()
+    }
+  }
+
+  /**
+   * The body of [httpRequest]'s response decoded as [T], which [validate] may still refuse by
+   * throwing.
+   *
+   * @throws HttpStatusException for a non-2xx response, or a 2xx body that is not [expected]
+   * @throws NetworkException when the request fails in transit; a request [HttpClient] refuses (an
+   *   invalid URL, an unsupported method) throws as it is
+   */
+  private suspend inline fun <reified T> fetchJson(
+    httpRequest: HttpClient.HttpRequest,
+    expected: String,
+    validate: (T) -> Unit = {},
+  ): T {
+    val httpResponse =
+      httpClient.request(httpRequest).getOrElse { exception ->
+        if (exception !is IOException) throw exception
+        throw NetworkException("Network request failed: ${exception.message}", exception)
+      }
+    if (!httpResponse.isSuccessful) {
+      Timber.w(
+        "HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}"
+      )
+      throw HttpStatusException(httpResponse.code, "Server returned ${httpResponse.code}")
+    }
+    return try {
+      json.decodeFromString<T>(httpResponse.body).also(validate)
+    } catch (e: Exception) {
+      throw HttpStatusException(
+        httpResponse.code,
+        "Server returned ${httpResponse.code} with a response that is not $expected: ${e.message}",
+        e,
+      )
     }
   }
 }

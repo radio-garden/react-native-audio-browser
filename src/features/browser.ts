@@ -191,11 +191,8 @@ export function hasSearch(): boolean {
  *
  * When a search source is configured, resolves `[]` only when it found
  * nothing; a failed search rejects, so a caller can tell "no results" from
- * "the request failed". Exception: on Android an HTTP search source
- * (`TransformableRequestConfig`) resolves `[]` on any failure (non-2xx,
- * network or decode error); a callback source still rejects there. With no
- * search source configured, Android and web resolve `[]` and iOS rejects;
- * call {@link hasSearch} first.
+ * "the request failed". With no search source configured, Android and web
+ * resolve `[]` and iOS rejects; call {@link hasSearch} first.
  *
  * The rejection's message describes the failure; on native platforms JS sees
  * only that message. On web, a failed search request's `Error` also carries a
