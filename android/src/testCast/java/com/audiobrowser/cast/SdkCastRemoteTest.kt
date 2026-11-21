@@ -398,6 +398,60 @@ class SdkCastRemoteTest {
     assertEquals(1, failures.size)
   }
 
+  // The receiver failed the load while the session was suspended.
+  @Test
+  fun `a failure a resumed session reports first is the load's`() {
+    startSession(First.PLAYER)
+    sends = 1
+    receiverReports(1, MediaStatus.IDLE_REASON_NONE)
+    suspendSession(First.PLAYER)
+    resumeSession(First.PLAYER)
+
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(1, failures.size)
+  }
+
+  @Test
+  fun `a failure a resumed session reports first, after a load held through the suspension, is the earlier load's`() {
+    startSession(First.PLAYER)
+    sends = 1
+    receiverReports(1, MediaStatus.IDLE_REASON_NONE)
+    suspendSession(First.PLAYER)
+    sends = 2
+    resumeSession(First.PLAYER)
+
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(0, failures.size)
+
+    receiverReports(2, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(1, failures.size)
+  }
+
+  @Test
+  fun `a failure the receiver repeats after a resume is reported once`() {
+    startSession(First.PLAYER)
+    sends = 1
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    suspendSession(First.PLAYER)
+    resumeSession(First.PLAYER)
+
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(1, failures.size)
+  }
+
+  @Test
+  fun `a new session reports a failure of an item id the last one reported`() {
+    startSession(First.PLAYER)
+    sends = 1
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    toRemote.onSessionEnded(session, CastStatusCodes.SUCCESS)
+    startSession(First.PLAYER)
+    sends = 2
+
+    receiverReports(1, MediaStatus.IDLE_REASON_ERROR)
+    assertEquals(2, failures.size)
+  }
+
   @Test
   fun `release stops watching the network`() {
     remote.release()

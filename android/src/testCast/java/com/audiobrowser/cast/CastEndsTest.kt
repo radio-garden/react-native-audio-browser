@@ -108,15 +108,4 @@ class CastEndsTest {
 
     assertEquals(CastEnds.Report.ENDED, idle(1, MediaStatus.IDLE_REASON_FINISHED))
   }
-
-  // The receiver failed the load while the session was suspended.
-  @Test
-  fun `a failure that a resumed session reports first is the load's`() {
-    send()
-    playing(1)
-
-    ends.reset()
-
-    assertEquals(CastEnds.Report.FAILED, idle(1, MediaStatus.IDLE_REASON_ERROR))
-  }
 }
