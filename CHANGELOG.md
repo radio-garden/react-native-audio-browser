@@ -1,3 +1,29 @@
+## [1.0.0-next.8](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.7...v1.0.0-next.8) (2026-11-21)
+
+### Bug Fixes
+
+* **android:** answer a search's results without waiting for the browser ([74682a8](https://github.com/radio-garden/react-native-audio-browser/commit/74682a89a4489b3c91db71a27a03adecc4308b55))
+* **android:** give JS a rejected promise's message without the Java class and stack ([18037c1](https://github.com/radio-garden/react-native-audio-browser/commit/18037c1912d0195467e7d7815d8bc4f94b7639d5))
+* **android:** offer search to a controller that connects before the browser is configured ([a41baaa](https://github.com/radio-garden/react-native-audio-browser/commit/a41baaa1259608e1d0b108b2608939978927c13b))
+* **android:** report a failing browse, search or resolver callback as callback-error, not unknown-error ([ca7896b](https://github.com/radio-garden/react-native-audio-browser/commit/ca7896b11f5827e28a131da70f03185a689fe510))
+* **android:** run a search onGetSearchResult finds nothing cached for ([55f9085](https://github.com/radio-garden/react-native-audio-browser/commit/55f9085eee0b5080066969ba9a00f834373df35a))
+* **ios:** compile CarPlay image rows in Release with Swift 6.3 ([014d041](https://github.com/radio-garden/react-native-audio-browser/commit/014d041bff403ed07ab082003dc163e08f98e70d)), closes [#431](https://github.com/radio-garden/react-native-audio-browser/issues/431) [#431](https://github.com/radio-garden/react-native-audio-browser/issues/431)
+* **ios:** give JS a BrowserError's message alone ([7ceca35](https://github.com/radio-garden/react-native-audio-browser/commit/7ceca35b1fcc8242735c487a2db49a8e81802da7))
+* **ios:** report a failing browse, search or resolver callback as callback-error, not unknown-error ([bc875be](https://github.com/radio-garden/react-native-audio-browser/commit/bc875be6ce22dce4afd344bdd10c335ced723bd8))
+* **web:** report a failing browse, search or resolver callback as callback-error, not network-error ([9ca8e71](https://github.com/radio-garden/react-native-audio-browser/commit/9ca8e7149d7cf69115d0b8f9adca5ac5c6694232))
+
+### Code Refactors
+
+* **android:** move the search records out of MediaSessionCallback ([3b763bb](https://github.com/radio-garden/react-native-audio-browser/commit/3b763bb1a39bc6a0811a1efb6e3695839ee7c2fe))
+* **android:** say once what a browser with search is ([1cdba17](https://github.com/radio-garden/react-native-audio-browser/commit/1cdba170f368f3ff713114545ff901d71567cf58))
+* drop openOutputPicker's anchor ([802655f](https://github.com/radio-garden/react-native-audio-browser/commit/802655fbc197ec68203e3c9979a5cf485eb17ce9))
+
+### Documentation
+
+* say callback-error also covers a callback that throws ([ce22ef9](https://github.com/radio-garden/react-native-audio-browser/commit/ce22ef959e75e6d0e7be9b8925b9aaf4a695520f)), closes [#380](https://github.com/radio-garden/react-native-audio-browser/issues/380) [#436](https://github.com/radio-garden/react-native-audio-browser/issues/436)
+* say that a car connected before configureBrowser keeps its search box ([e7c72a9](https://github.com/radio-garden/react-native-audio-browser/commit/e7c72a93440912fc415b2dbaab23bf3246d61fc2))
+* say when Android Auto shows a search box before configureBrowser ([b64c244](https://github.com/radio-garden/react-native-audio-browser/commit/b64c2440b09855722ea6536fedd6a39def482cd7))
+
 ## [1.0.0-next.7](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.6...v1.0.0-next.7) (2026-11-21)
 
 ### Bug Fixes
