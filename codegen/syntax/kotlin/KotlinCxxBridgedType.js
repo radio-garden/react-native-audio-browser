@@ -1,3 +1,5 @@
+import { ErrorType } from '../types/ErrorType.js';
+import { withoutJSStack } from '../c++/withoutJSStack.js';
 import { indent } from '../../utils.js';
 import { getHybridObjectName } from '../getHybridObjectName.js';
 import { getReferencedTypes } from '../getReferencedTypes.js';
@@ -113,6 +115,8 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JPromise.hpp',
                         space: 'system',
                     });
+                    // Not upstream: its rejection goes through withoutJSStack.
+                    imports.push(...new ErrorType().getRequiredImports('c++'));
                     const promiseType = getTypeAs(this.type, PromiseType);
                     if (promiseType.resultingType.kind === 'void') {
                         // Promise<void> uses JUnit
@@ -682,6 +686,7 @@ export class KotlinCxxBridgedType {
                         const bridge = new KotlinCxxBridgedType(promise.resultingType);
                         if (promise.resultingType.kind === 'void') {
                             // void: resolve()
+                            // Not upstream: withoutJSStack.
                             return `
 [&]() {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
@@ -690,7 +695,7 @@ export class KotlinCxxBridgedType {
     __promise->cthis()->resolve(JUnit::instance());
   });
   ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
-    auto __jniError = jni::getJavaExceptionForCppException(__error);
+    auto __jniError = jni::getJavaExceptionForCppException(${indent(withoutJSStack('__error'), '    ')});
     __promise->cthis()->reject(__jniError);
   });
   return __localPromise;
@@ -699,6 +704,7 @@ export class KotlinCxxBridgedType {
                         }
                         else {
                             // T: resolve(T)
+                            // Not upstream: withoutJSStack.
                             return `
 [&]() {
   jni::local_ref<JPromise::javaobject> __localPromise = JPromise::create();
@@ -707,7 +713,7 @@ export class KotlinCxxBridgedType {
     __promise->cthis()->resolve(${indent(bridge.parseFromCppToKotlin('__result', 'c++', true), '    ')});
   });
   ${parameterName}->addOnRejectedListener([=](const std::exception_ptr& __error) {
-    auto __jniError = jni::getJavaExceptionForCppException(__error);
+    auto __jniError = jni::getJavaExceptionForCppException(${indent(withoutJSStack('__error'), '    ')});
     __promise->cthis()->reject(__jniError);
   });
   return __localPromise;
@@ -722,7 +728,8 @@ export class KotlinCxxBridgedType {
             case 'error':
                 switch (language) {
                     case 'c++':
-                        return `jni::getJavaExceptionForCppException(${parameterName})`;
+                        // Not upstream: withoutJSStack.
+                        return `jni::getJavaExceptionForCppException(${withoutJSStack(parameterName)})`;
                     default:
                         return parameterName;
                 }

@@ -323,8 +323,10 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include <NitroModules/Result.hpp>
 #include <exception>
 #include <functional>
+#include <jsi/jsi.h>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <variant>

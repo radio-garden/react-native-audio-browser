@@ -26,7 +26,16 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
-      swiftClosure.call(error);
+      swiftClosure.call([](const std::exception_ptr& __error) -> std::exception_ptr {
+        if (__error == nullptr) return __error;
+        try {
+          std::rethrow_exception(__error);
+        } catch (const facebook::jsi::JSError& __jsError) {
+          return std::make_exception_ptr(std::runtime_error(__jsError.getMessage()));
+        } catch (...) {
+          return __error;
+        }
+      }(error));
     };
   }
   

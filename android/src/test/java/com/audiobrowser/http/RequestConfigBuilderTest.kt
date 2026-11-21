@@ -354,25 +354,32 @@ class RequestConfigBuilderTest {
     }
 
   @Test
-  fun `a throwing transformSync's CallbackException carries its message without the JS stack`() =
-    runTest {
-      val base =
-        RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
-      val layer =
-        transformableConfig()
-          .copy(
-            transformSync =
-              throwingTransformSync(
-                "token expired\n\nError: token expired\n    at transformSync (:11:92)"
-              )
-          )
-      try {
-        RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
-        fail("expected CallbackException")
-      } catch (e: CallbackException) {
-        assertEquals("token expired", e.message)
-      }
+  fun `a throwing transformSync's CallbackException keeps its message whole`() = runTest {
+    val base =
+      RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+    val message = "Error: token expired\n\nsign in again"
+    val layer = transformableConfig().copy(transformSync = throwingTransformSync(message))
+    try {
+      RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+      fail("expected CallbackException")
+    } catch (e: CallbackException) {
+      assertEquals(message, e.message)
     }
+  }
+
+  @Test
+  fun `a transform rejecting with a TypeError gives its message alone`() = runTest {
+    val base =
+      RequestConfig(null, "/library", "https://api.example.com", null, null, null, null, null)
+    val layer =
+      transformableConfig().copy(transform = throwingTransform("bad header", name = "TypeError"))
+    try {
+      RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+      fail("expected CallbackException")
+    } catch (e: CallbackException) {
+      assertEquals("bad header", e.message)
+    }
+  }
 
   @Test
   fun `mergeConfigOrBase skips a layer whose transform throws`() = runTest {

@@ -324,8 +324,10 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include <NitroModules/Result.hpp>
 #include <exception>
 #include <functional>
+#include <jsi/jsi.h>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <variant>

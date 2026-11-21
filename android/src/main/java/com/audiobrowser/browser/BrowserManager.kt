@@ -13,6 +13,7 @@ import com.audiobrowser.util.SearchParamsFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.awaitCancellable
+import com.audiobrowser.util.awaitJsPromise
 import com.audiobrowser.util.awaitNested
 import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
@@ -1050,7 +1051,7 @@ class BrowserManager {
           second = { browseError -> throw CallbackException(browseError.error) },
           third = { promise ->
             promise
-              .awaitCancellable()
+              .awaitJsPromise()
               .match(
                 first = { resolvedTrack -> resolvedTrack },
                 second = { browseError -> throw CallbackException(browseError.error) },

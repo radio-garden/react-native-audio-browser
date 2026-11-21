@@ -113,8 +113,7 @@ object RequestConfigBuilder {
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
-      // A JS call that throws reaches here as JSError's `what()`, `message\n\nstack`.
-      throw CallbackException(e.message?.substringBefore("\n\n") ?: e.toString(), e)
+      throw CallbackException(e.message ?: e.toString(), e)
     }
   }
 

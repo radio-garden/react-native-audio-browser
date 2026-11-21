@@ -82,7 +82,7 @@ final class PageResolver {
       case let .second(browseError):
         throw BrowserError.callbackError(browseError.error)
       case let .third(promise):
-        switch try await promise.awaitCancellable() {
+        switch try await promise.awaitJSPromise() {
         case let .first(resolvedTrack):
           return resolvedTrack
         case let .second(browseError):
