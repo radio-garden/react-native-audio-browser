@@ -5,14 +5,14 @@ package com.audiobrowser.browser
  * serves. Thread-safe: written from browse coroutines, read from the provider's IO scope.
  */
 class BrowseArtworkRegistry(
-  // Entries hold plain data, no JS closures (unlike [ArtworkResolutionRegistry]), so they are cheap
-  // to keep many of.
   private val maxEntries: Int = 2048,
   private val maxPinnedEntries: Int = 2048,
+  // A `data:` URL is its own payload, so entries are also bounded by the characters they hold.
+  private val maxUrlChars: Int = 4_000_000,
 ) {
 
-  private val entries = lruMap(maxEntries)
-  private val pinned = lruMap(maxPinnedEntries)
+  private val entries = Lru(maxEntries, maxUrlChars)
+  private val pinned = Lru(maxPinnedEntries, maxUrlChars)
 
   @Synchronized
   fun register(token: String, artwork: ResolvedArtwork) {
@@ -33,13 +33,29 @@ class BrowseArtworkRegistry(
   /** Drops the [register]ed entries; [pin]ned ones stay. */
   @Synchronized fun clear() = entries.clear()
 
-  private fun lruMap(maxEntries: Int) =
+  /** Least recently used first out, past [maxEntries] or [maxUrlChars]; the newest always stays. */
+  private class Lru(private val maxEntries: Int, private val maxUrlChars: Int) {
     // Access order, so a lookup keeps an entry from eviction.
-    object : LinkedHashMap<String, ResolvedArtwork>(16, 0.75f, true) {
-      override fun removeEldestEntry(
-        eldest: MutableMap.MutableEntry<String, ResolvedArtwork>
-      ): Boolean = size > maxEntries
+    private val map = LinkedHashMap<String, ResolvedArtwork>(16, 0.75f, true)
+    private var urlChars = 0L
+
+    operator fun get(token: String): ResolvedArtwork? = map[token]
+
+    operator fun set(token: String, artwork: ResolvedArtwork) {
+      map.put(token, artwork)?.let { urlChars -= it.finalUrl.length }
+      urlChars += artwork.finalUrl.length
+      val eldest = map.entries.iterator()
+      while (map.size > 1 && (map.size > maxEntries || urlChars > maxUrlChars)) {
+        urlChars -= eldest.next().value.finalUrl.length
+        eldest.remove()
+      }
     }
+
+    fun clear() {
+      map.clear()
+      urlChars = 0
+    }
+  }
 }
 
 /** Everything the provider needs to fetch one artwork. */
