@@ -12,6 +12,7 @@ import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
+import java.net.ServerSocket
 import java.net.UnknownHostException
 import java.time.Duration
 import org.junit.After
@@ -160,28 +161,37 @@ class PlayerCastTest {
 
   @Test
   fun `a connection that fails before the hand-back is heard is retried, not an error`() {
-    // The playback thread can fail an offline load before the main thread hears of the hand-back
-    // that prepared it. Robolectric starts offline.
-    player.exoPlayer.addListener(
-      object : MediaPlayer.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-          if (playbackState != MediaPlayer.STATE_BUFFERING) return
-          player.exoPlayer.removeListener(this)
-          player.onLoadFailure(UnknownHostException(), inPlace = false)
+    // Answers nothing, so the only failure report is the one the listener below makes.
+    ServerSocket(0).use { silent ->
+      player.load(TestFixtures.track(title = "b", src = "http://127.0.0.1:${silent.localPort}/a"))
+      idleUntil("the track on the receiver") { receiver.loads.size == 2 }
+      // The playback thread can fail an offline load before the main thread hears of the
+      // hand-back that prepared it. Robolectric starts offline.
+      player.exoPlayer.addListener(
+        object : MediaPlayer.Listener {
+          override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState != MediaPlayer.STATE_BUFFERING) return
+            player.exoPlayer.removeListener(this)
+            player.onLoadFailure(UnknownHostException(), inPlace = false)
+          }
         }
-      }
-    )
+      )
 
-    remote.endSession()
-    idle()
-    player.playerListener.onPlayerError(
-      PlaybackException("offline", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
-    )
-    idle()
+      remote.endSession()
+      idle()
+      player.playerListener.onPlayerError(
+        PlaybackException(
+          "offline",
+          null,
+          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+        )
+      )
+      idle()
 
-    assertNotEquals(PlaybackState.ERROR, player.playbackState)
-    assertEquals(true, player.getPlayback().error?.retrying)
-    assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
+      assertNotEquals(PlaybackState.ERROR, player.playbackState)
+      assertEquals(true, player.getPlayback().error?.retrying)
+      assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
+    }
   }
 
   private fun calls(name: String) =
