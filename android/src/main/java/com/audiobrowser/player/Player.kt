@@ -1207,6 +1207,7 @@ internal constructor(
         audioBrowser.browserManager.searchPlayable(params)
       } catch (e: Exception) {
         if (e is CancellationException) throw e
+        Timber.e(e, "Voice search failed: $params")
         sendSearchError(audioBrowser, params, navigationErrorFor(e))
         throw VoiceSearchFailedException("Voice search failed: $params", e)
       }
