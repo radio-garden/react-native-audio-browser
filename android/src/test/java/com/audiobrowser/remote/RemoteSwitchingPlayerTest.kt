@@ -193,6 +193,207 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `after a failure whose status reads 0, the phone resumes where the receiver last played`() {
+    playOnReceiver(positionMs = 70_000)
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+    assertTrue(local.playWhenReady)
+    assertEquals(2, local.prepares)
+  }
+
+  @Test
+  fun `the position a failure resumes from runs on from the receiver's last report while it played`() {
+    playOnReceiver(positionMs = 70_000)
+    shadowOf(looper).idleFor(Duration.ofSeconds(5))
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(75_000, local.positionMs)
+  }
+
+  @Test
+  fun `the position a failure resumes from stays put while the receiver was paused`() {
+    playOnReceiver(positionMs = 70_000)
+    player.pause()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(5))
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+    assertFalse(local.playWhenReady)
+  }
+
+  @Test
+  fun `the position a failure resumes from runs on at the receiver's speed`() {
+    playOnReceiver(positionMs = 70_000, speed = 2f)
+    shadowOf(looper).idleFor(Duration.ofSeconds(5))
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(80_000, local.positionMs)
+  }
+
+  @Test
+  fun `the position a failure resumes from stops at the item's end`() {
+    playOnReceiver(positionMs = 70_000, durationMs = 72_000)
+    shadowOf(looper).idleFor(Duration.ofSeconds(5))
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(72_000, local.positionMs)
+  }
+
+  @Test
+  fun `a failure that drops the item from the receiver resumes where it last played`() {
+    playOnReceiver(positionMs = 70_000)
+
+    remote.player.item = null
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+  }
+
+  @Test
+  fun `a Sonos failure resumes where its last poll found it, after a seek in its own app`() {
+    playOnReceiver(positionMs = 70_000)
+
+    // The poll reads the speaker after a seek made in the Sonos app, which sends no event.
+    remote.player.positionQuietly(100_000)
+    remote.playing()
+    idle()
+    // Sonos fails idle, keeping its frozen position.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.update()
+    idle()
+    remote.fail()
+    remote.endSession()
+    idle()
+
+    assertEquals(100_000, local.positionMs)
+  }
+
+  @Test
+  fun `a Cast failure resumes where a seek from another sender left the receiver`() {
+    playOnReceiver(positionMs = 70_000)
+
+    remote.player.positionMs = 100_000
+    remote.player.update()
+    idle()
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(100_000, local.positionMs)
+  }
+
+  @Test
+  fun `a load failing as it arrives on the receiver resumes where it was sent from`() {
+    playLocally(listOf("a"), positionMs = 45_000)
+    remote.startSession()
+    remote.player.lagging = true
+    idle()
+
+    // The receiver shows the item first in Cast's failed status, idle at 0.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.positionMs = 0
+    remote.player.catchUp()
+    idle()
+    remote.fail()
+    remote.endSession()
+    idle()
+
+    assertEquals(45_000, local.positionMs)
+  }
+
+  @Test
+  fun `a load failing while it first buffers on the receiver resumes where it was sent from`() {
+    playLocally(listOf("a"), positionMs = 45_000)
+    remote.startSession()
+    remote.player.lagging = true
+    idle()
+
+    // On a Streamer, a load to 46 s reported BUFFERING at 0.0 for about 0.3 s, then 46.3.
+    remote.player.readiness = MediaPlayer.STATE_BUFFERING
+    remote.player.positionMs = 0
+    remote.player.catchUp()
+    idle()
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(45_000, local.positionMs)
+  }
+
+  @Test
+  fun `the session ending after the receiver dropped the item resumes where it last played`() {
+    playOnReceiver(positionMs = 70_000)
+
+    remote.player.item = null
+    remote.player.update()
+    idle()
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+  }
+
+  @Test
+  fun `a handback long after the receiver went idle resumes where it stopped`() {
+    playOnReceiver(positionMs = 70_000)
+
+    // Stopped from another sender: idle, which reports no failure.
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.update()
+    idle()
+    shadowOf(looper).idleFor(Duration.ofSeconds(60))
+    remote.endSession()
+    idle()
+
+    assertEquals(70_000, local.positionMs)
+  }
+
+  @Test
+  fun `a prepare after the receiver dropped the item loads it where it last played`() {
+    playOnReceiver(positionMs = 70_000)
+    remote.player.item = null
+    remote.player.update()
+    idle()
+    assertEquals(70_000, player.currentPosition)
+
+    player.prepare()
+    idle()
+
+    assertEquals(70_000, remote.player.loads.last().positionMs)
+  }
+
+  @Test
+  fun `a live item failing on the receiver resumes at the phone's live edge`() {
+    live += "a"
+    playOnReceiver(positionMs = 70_000)
+
+    failAsCastDoes()
+    remote.endSession()
+    idle()
+
+    assertEquals(0, local.positionMs)
+  }
+
+  @Test
   fun `the session ending after the item didn't resolve plays it on the phone`() {
     unresolvable += "a"
     playLocally(listOf("a"), positionMs = 4_000)
@@ -1145,6 +1346,32 @@ class RemoteSwitchingPlayerTest {
     androidx.media3.common.MediaMetadata.Builder().setTitle(title).build()
 
   private fun idle() = shadowOf(looper).idle()
+
+  /** Casts "a", which the receiver then reports playing at [positionMs]. */
+  private fun playOnReceiver(positionMs: Long, speed: Float = 1f, durationMs: Long = C.TIME_UNSET) {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+    remote.player.speed = speed
+    remote.player.durationMs = durationMs
+    remote.player.positionMs = positionMs
+    remote.player.update()
+    remote.playing()
+    idle()
+  }
+
+  /**
+   * Fails as Cast's player does: it takes the failed status, idle at 0, before the session's
+   * failure callback runs.
+   */
+  private fun failAsCastDoes() {
+    remote.player.readiness = MediaPlayer.STATE_IDLE
+    remote.player.positionMs = 0
+    remote.player.update()
+    idle()
+    remote.fail()
+    idle()
+  }
 
   private companion object {
     val LIVE: MediaItem.LiveConfiguration =

@@ -8,6 +8,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.common.SimpleBasePlayer.PositionSupplier
 import androidx.media3.common.Timeline
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -98,8 +99,14 @@ internal class RemoteSwitchingPlayer(
     /** [item] went to the receiver, which doesn't report holding it yet. */
     class Sent(val item: MediaItem, val positionMs: Long) : Load
 
-    /** The receiver holds [item]: what it reports is the current item's. */
-    class Playing(val item: MediaItem) : Load
+    /**
+     * The receiver holds [item]: what it reports is the current item's. [lastPosition] is where it
+     * last reported [item] loaded, running on while it played; until then, where it was sent from.
+     */
+    class Playing(val item: MediaItem, var lastPosition: PositionSupplier) : Load {
+      /** Whether the receiver has reported [item] past its first buffering. */
+      var wasReady = false
+    }
 
     class Failed(val error: PlaybackException, val positionMs: Long) : Load
 
@@ -172,10 +179,41 @@ internal class RemoteSwitchingPlayer(
         val remote = remoteRoute ?: return
         if (player !== remote.receiver) return
         val changed = followReceiver(remote)
+        noteReport(remote)
         if (remote.startTimeout != null && started(remote)) disarmStart(remote)
         if (changed) invalidateState()
       }
     }
+
+  private fun noteReport(remote: Route.Remote) {
+    val load = remote.load as? Load.Playing ?: return
+    if (!reportsPosition(remote, load)) {
+      // Where it stopped reporting is the last it can be known to have played to.
+      load.lastPosition = PositionSupplier.getConstant(load.lastPosition.get())
+      return
+    }
+    val receiver = remote.receiver
+    // Cast reports a load buffering at 0 before its first PLAYING or PAUSED (Media3's ready) at
+    // the position it was sent from.
+    if (receiver.playbackState != STATE_BUFFERING) load.wasReady = true
+    else if (!load.wasReady) return
+    val running =
+      PositionSupplier.getExtrapolating(
+        receiver.currentPosition,
+        if (receiver.isPlaying) receiver.playbackParameters.speed else 0f,
+      )
+    val durationMs = receiver.duration
+    load.lastPosition =
+      if (durationMs == C.TIME_UNSET) running
+      else PositionSupplier { minOf(running.get(), durationMs) }
+  }
+
+  /**
+   * Whether the receiver holds [load]'s item, not idle, so that its position is the item's. Cast's
+   * player takes a failed status, idle at 0, before the failure is reported.
+   */
+  private fun reportsPosition(remote: Route.Remote, load: Load.Playing): Boolean =
+    receiverHolds(remote, load.item) && remote.receiver.playbackState != STATE_IDLE
 
   private fun enter(remote: Route.Remote, load: Load) {
     remote.load = load
@@ -317,8 +355,11 @@ internal class RemoteSwitchingPlayer(
       is Load.Sent -> load.positionMs
       is Load.Failed -> load.positionMs
       is Load.Playing ->
-        if (load.item.isRemoteLive || !receiverHolds(remote, load.item)) C.TIME_UNSET
-        else remote.receiver.currentPosition
+        when {
+          load.item.isRemoteLive -> C.TIME_UNSET
+          reportsPosition(remote, load) -> remote.receiver.currentPosition
+          else -> load.lastPosition.get()
+        }
       is Load.Ended -> C.TIME_UNSET
     }
 
@@ -445,6 +486,8 @@ internal class RemoteSwitchingPlayer(
   private fun onReceiverPlaying() {
     val remote = remoteRoute ?: return
     val changed = followReceiver(remote)
+    // Sonos reports each poll this way, a seek made in its own app included.
+    noteReport(remote)
     when (remote.load) {
       is Load.Playing -> {
         remote.reportedPlaying = true
@@ -541,7 +584,9 @@ internal class RemoteSwitchingPlayer(
               .setContentPositionMs(position(load.positionMs))
           is Load.Ended ->
             setPlaybackState(STATE_ENDED).setContentPositionMs(position(load.positionMs))
-          is Load.Playing -> if (!holds) setPlaybackState(STATE_IDLE).setContentPositionMs(0)
+          is Load.Playing ->
+            if (!holds)
+              setPlaybackState(STATE_IDLE).setContentPositionMs(position(positionOn(remote)))
         }
         if (queue.isEmpty) setPlaybackState(STATE_IDLE)
         if (pendingAutoTransition) {
@@ -574,7 +619,7 @@ internal class RemoteSwitchingPlayer(
     when (val load = remote.load) {
       is Load.Sent ->
         if (receiverHolds(remote, load.item)) {
-          remote.load = Load.Playing(load.item)
+          remote.load = Load.Playing(load.item, PositionSupplier.getConstant(load.positionMs))
           playIntent = remote.receiver.playWhenReady
           if (remote.reportedPlaying) disarmStart(remote)
           return true
@@ -608,7 +653,7 @@ internal class RemoteSwitchingPlayer(
     when (val load = remote.load) {
       is Load.Idle -> load(remote, load.positionMs)
       is Load.Failed -> load(remote, load.positionMs)
-      is Load.Playing -> if (!receiverHolds(remote, load.item)) load(remote, C.TIME_UNSET)
+      is Load.Playing -> if (!receiverHolds(remote, load.item)) load(remote, positionOn(remote))
       else -> Unit
     }
     return done()
