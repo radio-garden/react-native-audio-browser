@@ -6,7 +6,7 @@ description: 'Install react-native-audio-browser and its react-native-nitro-modu
 
 ## Installation
 
-The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. Building for iOS needs Xcode 26.4 or later (Swift 6.3): Swift 6.2 has a bug that makes the library crash on iOS below 18, so the library refuses to compile with it. `react-native-nitro-modules` 0.35 or later is a required peer dependency — install it alongside:
+The library requires **React Native 0.76 or newer** (with the New Architecture enabled) and React 18.2+, and runs on iOS 16+ and Android API 24+. Building for iOS needs Xcode 26.4 or later (Swift 6.3): Swift 6.2 has a bug that makes the library crash on iOS below 18, so the library refuses to compile with it. `react-native-nitro-modules` 0.37.2 or later is a required peer dependency — install it alongside:
 
 ::: code-group
 
@@ -33,6 +33,8 @@ On iOS, install the pods:
 ```bash
 cd ios && pod install
 ```
+
+On React Native 0.88 and older with `use_frameworks!` (reported with React Native built from source), Nitro 0.37.2 can fail the iOS build with `'jserrorhandler/ErrorUtils.h' file not found` ([margelo/nitro#2052](https://github.com/margelo/nitro/issues/2052)). The fix, [margelo/nitro#2046](https://github.com/margelo/nitro/pull/2046), is in Nitro's 0.37.3 nightlies; until a release carries it, apply it to 0.37.2 as a patch.
 
 For playback to continue in the background on iOS, add the `audio` background mode to your app's `Info.plist`:
 

@@ -41,9 +41,9 @@ describe('getting-started.md version floors', () => {
   })
 
   it('react-native-nitro-modules matches the peer range', () => {
-    expect(stated(/`react-native-nitro-modules` (\d+\.\d+) or later/)).toBe(
-      peerFloor('react-native-nitro-modules', 2)
-    )
+    expect(
+      stated(/`react-native-nitro-modules` (\d+\.\d+\.\d+) or later/)
+    ).toBe(peerFloor('react-native-nitro-modules', 3))
   })
 
   it('shaka-player matches the peer range, major and floor', () => {

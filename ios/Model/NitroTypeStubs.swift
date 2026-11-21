@@ -588,4 +588,26 @@
     case third(SleepTimerEndOfTrack)
   }
 
+  /// Nitro's `Promise`, settled from the start: only what `Promise+AwaitCallback` uses.
+  final class Promise<T>: @unchecked Sendable {
+    private let result: Result<T, Error>
+
+    private init(_ result: Result<T, Error>) { self.result = result }
+
+    static func resolved(withResult result: T) -> Promise { Promise(.success(result)) }
+    static func rejected(withError error: Error) -> Promise { Promise(.failure(error)) }
+
+    @discardableResult
+    func then(_ onResolvedListener: @escaping (T) -> Void) -> Promise {
+      if case let .success(value) = result { onResolvedListener(value) }
+      return self
+    }
+
+    @discardableResult
+    func `catch`(_ onRejectedListener: @escaping (Error) -> Void) -> Promise {
+      if case let .failure(error) = result { onRejectedListener(error) }
+      return self
+    }
+  }
+
 #endif
