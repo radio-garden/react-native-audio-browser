@@ -26,4 +26,9 @@ struct JSPromiseRejectionTests {
   @Test func givesTheMessageAsItsLocalizedDescription() {
     #expect(JSPromiseRejection(NitroRuntimeError("Error: token expired")).localizedDescription == "token expired")
   }
+
+  /// Nitro hands a Swift error back to JS as `String(describing:)`.
+  @Test func describesItselfAsItsMessage() {
+    #expect(String(describing: JSPromiseRejection(NitroRuntimeError("Error: token expired"))) == "token expired")
+  }
 }
