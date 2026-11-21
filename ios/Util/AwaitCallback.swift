@@ -13,8 +13,12 @@ typealias CallbackSubscription<T> = (_ deliver: @escaping @Sendable (Result<T, E
 
 /// The result `subscribe` delivers. Unlike Nitro's `Promise.await`, a cancelled caller throws
 /// `CancellationError` at once, and with a `timeout`, a silent callback throws
-/// `CallbackTimeoutError` once it elapses.
-nonisolated(nonsending) func awaitCallback<T>(timeout: Duration? = nil, _ subscribe: CallbackSubscription<T>) async throws -> T {
+/// `CallbackTimeoutError` once it elapses. `subscribe` runs on the caller's actor.
+func awaitCallback<T>(
+  timeout: Duration? = nil,
+  isolation: isolated (any Actor)? = #isolation,
+  _ subscribe: CallbackSubscription<T>,
+) async throws -> T {
   let once = ResumeOnce<T>()
   let timer = timeout.map { timeout in
     Task {
@@ -23,14 +27,16 @@ nonisolated(nonsending) func awaitCallback<T>(timeout: Duration? = nil, _ subscr
     }
   }
   defer { timer?.cancel() }
-  return try await withTaskCancellationHandler {
-    try await withCheckedThrowingContinuation { continuation in
-      once.start(continuation)
-      subscribe { once.resume($0) }
-    }
-  } onCancel: {
-    once.resume(.failure(CancellationError()))
-  }
+  return try await withTaskCancellationHandler(
+    operation: {
+      try await withCheckedThrowingContinuation(isolation: isolation) { continuation in
+        once.start(continuation)
+        subscribe { once.resume($0) }
+      }
+    },
+    onCancel: { once.resume(.failure(CancellationError())) },
+    isolation: isolation,
+  )
 }
 
 /// Resumes its continuation with the first result only, whichever thread sends it and whether it

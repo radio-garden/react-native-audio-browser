@@ -49,6 +49,14 @@ struct AwaitCallbackTests {
     #expect(result == 7)
   }
 
+  @MainActor
+  @Test func subscribeRunsOnTheCallersActor() async throws {
+    let onMainThread = try await awaitCallback { deliver in
+      deliver(.success(Thread.isMainThread))
+    }
+    #expect(onMainThread)
+  }
+
   @Test func aRejectionThrowsIt() async throws {
     let callback = FakeCallback()
     await #expect(throws: Rejected.self) {
