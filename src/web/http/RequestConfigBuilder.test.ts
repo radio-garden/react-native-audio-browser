@@ -85,6 +85,54 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
   })
 })
 
+describe('RequestConfigBuilder.resolveArtworkSourceAsync — no path left', () => {
+  it('gives no artwork when a transform drops the path', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T', artwork: '/art/7.jpg' } as Track,
+      undefined,
+      { transform: () => Promise.resolve({ baseUrl: 'https://x.example.com' }) }
+    )
+
+    expect(out).toBeUndefined()
+  })
+
+  it('gives no artwork for a track without artwork under a baseUrl-only config', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T' } as Track,
+      undefined,
+      { baseUrl: 'https://img.example.com' }
+    )
+
+    expect(out).toBeUndefined()
+  })
+})
+
+describe('RequestConfigBuilder.transformTrackArtwork', () => {
+  it("appends the request and artwork layers' query", () => {
+    const track = { title: 'T', artwork: '/art/7.jpg' } as Track
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      track,
+      { baseUrl: 'https://img.example.com', query: { key: 'k' } },
+      { query: { v: '2' } }
+    )
+
+    expect(out.artworkSource?.uri).toBe(
+      'https://img.example.com/art/7.jpg?key=k&v=2'
+    )
+  })
+
+  it('leaves the artwork as it is without an artwork config', () => {
+    const track = { title: 'T', artwork: 'https://cdn.example.com/a.jpg' }
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      track as Track,
+      { baseUrl: 'https://api.example.com', query: { key: 'k' } },
+      undefined
+    )
+
+    expect(out.artworkSource?.uri).toBe('https://cdn.example.com/a.jpg')
+  })
+})
+
 describe('RequestConfigBuilder — data: URLs', () => {
   const dataUrl = 'data:image/png;base64,iVBORw0KGgo='
 
