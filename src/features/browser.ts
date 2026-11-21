@@ -197,9 +197,11 @@ export function hasSearch(): boolean {
  * search source configured, Android and web resolve `[]` and iOS rejects;
  * call {@link hasSearch} first.
  *
- * The rejection's message describes the failure; on native platforms JS sees
- * only that message. On web, a failed search request's `Error` also carries a
- * `code`, the
+ * The rejection's message describes the failure; on iOS JS sees only that
+ * message. On Android the message starts with the Kotlin exception's class and
+ * ends with its stack trace
+ * (`com.audiobrowser.NavigationErrorException: <message>\n\tat …`).
+ * On web, a failed search request's `Error` also carries a `code`, the
  * {@link features/errors!NavigationErrorType | NavigationErrorType} the
  * browse path reports as a
  * {@link features/errors!NavigationError | NavigationError}
