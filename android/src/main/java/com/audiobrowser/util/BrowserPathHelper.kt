@@ -131,4 +131,7 @@ object BrowserPathHelper {
   }
 
   private fun isAbsoluteUrl(url: String): Boolean = ABSOLUTE_URL.containsMatchIn(url)
+
+  /** Whether [url] is a `data:` URL, whose bytes are the URL itself. */
+  fun isDataUrl(url: String): Boolean = url.startsWith("data:", ignoreCase = true)
 }

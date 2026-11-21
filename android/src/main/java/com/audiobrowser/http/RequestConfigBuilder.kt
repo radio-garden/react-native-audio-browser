@@ -248,7 +248,7 @@ object RequestConfigBuilder {
     val url = BrowserPathHelper.buildUrl(baseUrl, path)
 
     val query = config.query
-    if (query.isNullOrEmpty() || url.startsWith("data:", ignoreCase = true)) return url
+    if (query.isNullOrEmpty() || BrowserPathHelper.isDataUrl(url)) return url
 
     val queryString =
       query.entries.joinToString("&") { (key, value) ->
