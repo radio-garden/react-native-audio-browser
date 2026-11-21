@@ -144,6 +144,17 @@ describe('RequestConfigBuilder.resolveMediaRequest', () => {
     expect(out.baseUrl).toBeUndefined()
   })
 
+  it('leaves a blob src out of the shared baseUrl', async () => {
+    const blob = 'blob:https://app.example.com/0b1c2d3e'
+    const out = await RequestConfigBuilder.resolveMediaRequest(
+      blob,
+      { baseUrl: 'https://api.example.com' },
+      undefined
+    )
+
+    expect(out.path).toBe(blob)
+  })
+
   it('carries the media config query onto the resolved url', async () => {
     const out = await RequestConfigBuilder.resolveMediaRequest(src, undefined, {
       query: { token: 'abc' }
@@ -295,5 +306,16 @@ describe('RequestConfigBuilder.resolveMediaRequest — media.resolve', () => {
     })
 
     expect(out.path).toBe(src)
+  })
+})
+
+describe('RequestConfigBuilder.resolveArtworkSource', () => {
+  it('leaves a data artwork URL out of the artwork baseUrl', () => {
+    const data = 'data:image/png;base64,iVBORw0KGgo='
+    const out = RequestConfigBuilder.resolveArtworkSource(data, undefined, {
+      baseUrl: 'https://img.example.com'
+    })
+
+    expect(out?.uri).toBe(data)
   })
 })
