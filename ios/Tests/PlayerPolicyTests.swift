@@ -23,8 +23,6 @@ private func makePlaying(
 ) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let (player, engine, callbacks) = try makeLoading(live: live, scheduler: scheduler)
   player.setPlayWhenReady(true)
-  engine.hasItem = true
-  engine.hasLoadedAsset = true
   engine.emit(.itemPrepared(likelyToKeepUp: true))
   player.transition(.avPlayerPlaying)
   return (player, engine, callbacks)
@@ -40,8 +38,6 @@ private func makeStalling(givesUp: Bool = false) throws -> (Player, MockPlayerEn
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
-  engine.hasItem = true
-  engine.hasLoadedAsset = true
   engine.emit(.itemPrepared(likelyToKeepUp: true))
   player.transition(.avPlayerPlaying)
   engine.emit(.stalled)
@@ -60,8 +56,6 @@ private func makeVirtual(online: Bool = true) throws -> (Player, MockPlayerEngin
   let callbacks = MockPlayerCallbacks()
   player.callbacks = callbacks
   try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T", live: true)], playWhenReady: true)
-  engine.hasItem = true
-  engine.hasLoadedAsset = true
   engine.emit(.itemPrepared(likelyToKeepUp: true))
   return (player, engine, callbacks, clock)
 }
@@ -93,8 +87,6 @@ struct PlayerSeekingTests {
     player.seek(to: 30)
     #expect(engine.seekCalls.isEmpty)
 
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     #expect(engine.seekCalls == [30])
     #expect(player.state == .loading)
@@ -103,8 +95,6 @@ struct PlayerSeekingTests {
   @Test func theLoadBecomesReadyWhenTheDeferredSeekLands() throws {
     let (player, engine, _) = try makeLoading()
     player.seek(to: 30)
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: false))
     #expect(engine.seekCalls == [30])
     #expect(player.state == .ready)
@@ -137,7 +127,6 @@ struct PlayerSeekingTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     player.reloadResolving(startFromCurrentTime: true)
@@ -156,7 +145,6 @@ struct PlayerSeekingTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     engine.completeSeeks(false)
@@ -172,7 +160,6 @@ struct PlayerSeekingTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     player.reloadResolving(startFromCurrentTime: false)
@@ -189,7 +176,6 @@ struct PlayerSeekingTests {
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
 
     player.mediaServicesWereReset()
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     #expect(engine.seekCalls == [25])
@@ -200,7 +186,6 @@ struct PlayerSeekingTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
 
     player.stop()
@@ -294,8 +279,6 @@ struct PlayerEngineEventTests {
   @Test func aPauseWhileLoadingReachesTheEngine_aPlayDoesNot() throws {
     let (player, engine, _) = try makeLoading()
     player.setPlayWhenReady(true)
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: false))
     #expect(player.state == .loading)
     let plays = engine.startPlaybackCallCount
@@ -353,6 +336,25 @@ struct PlayerEngineEventTests {
     #expect(engine.shortStartBufferRequests == [false, true, false])
   }
 
+  /// #299: with the ended item still in the AVPlayer, the next item reads a progressive stream's
+  /// new connection over two GETs at once. The carrier keeps the now-playing surface meanwhile.
+  @Test func aLiveEndsReconnectLoadsWithTheCarrierInTheEndedItemsPlace() async throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierAtLoad.last == true)
+  }
+
+  /// An on-demand item stays until the next is prepared: its duration and buffer still read from it.
+  @Test func anOnDemandReloadKeepsItsItem() throws {
+    let (player, engine, _) = try makePlaying()
+    player.retryNow()
+    #expect(engine.resolveAndLoadCalls.count == 2)
+    #expect(engine.carrierAtLoad.last == false)
+    #expect(engine.hasItem)
+  }
+
   /// AVPlayer pauses an item at its end, so a seek within its window would leave it silent.
   @Test func aLiveEndReconnectsEvenWithASeekableWindow() async throws {
     let (player, engine, _) = try makePlaying(live: true)
@@ -371,7 +373,6 @@ struct PlayerEngineEventTests {
     for _ in 0 ..< 20 where player.state != .error {
       engine.emit(.playedToEnd)
       await player.retry.pendingTask?.value
-      engine.hasLoadedAsset = true
       engine.emit(.itemPrepared(likelyToKeepUp: true))
     }
     // The first connection played, so its end starts the count: four that deliver nothing follow.
@@ -602,8 +603,6 @@ struct PlayerRecoveringTests {
   /// Ready and waiting for AVPlayer to start: its waiting is a stall, watched in .buffering.
   @Test func aConnectThatIsReadyIsNoLongerWatched() async throws {
     let (player, engine, clock) = try makeConnecting()
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     #expect(player.state == .ready)
     await clock.run(until: 100_000)
@@ -954,8 +953,6 @@ struct PlayerRecoveringTests {
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, retry: makeRetryLoop(delay: 0.05))
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     player.transition(.avPlayerPlaying)
     #expect(player.retry.hasPlayed)
@@ -1224,7 +1221,6 @@ struct PlayerReviewRegressionTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     // The failed item's own time.
     engine.resumePosition = 0
@@ -1244,7 +1240,6 @@ struct PlayerReviewRegressionTests {
     let player = makePlayer(engine: engine)
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], startPositionMs: 25000)
     engine.seekResult = nil
-    engine.hasItem = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     engine.emit(.failed(nil, httpStatusCode: 404))
     #expect(player.state == .error)
@@ -1396,8 +1391,6 @@ struct PlayerReviewRegressionTests {
     let engine = MockPlayerEngine()
     let player = makePlayer(engine: engine, saveInterval: .milliseconds(10))
     try player.setQueue([Track(id: "t1", src: "https://example.com/a.mp3", title: "T")], playWhenReady: true)
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     player.transition(.avPlayerPlaying)
     engine.currentTime = 7
@@ -1485,8 +1478,6 @@ struct PlayerLivePauseTests {
     #expect(engine.resolveAndLoadCalls.count == 2)
     #expect(player.state == .loading)
 
-    engine.hasItem = true
-    engine.hasLoadedAsset = true
     engine.emit(.itemPrepared(likelyToKeepUp: true))
     #expect(engine.seekCalls.isEmpty)
   }

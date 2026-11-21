@@ -25,8 +25,6 @@ private func makePlayingFirstOfThree() throws -> (Player, MockPlayerEngine, Mock
 
 @MainActor
 private func playPreparedItem(_ player: Player, _ engine: MockPlayerEngine) {
-  engine.hasItem = true
-  engine.hasLoadedAsset = true
   engine.emit(.itemPrepared(likelyToKeepUp: true))
   player.transition(.avPlayerPlaying)
 }
