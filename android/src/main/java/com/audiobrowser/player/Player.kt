@@ -311,20 +311,16 @@ internal constructor(
     }
 
     if (::mediaSession.isInitialized) {
-      val searchAvailable = audioBrowser.browserManager.config.hasSearch
-      // The session starts without search, so only a configured search needs an update.
-      if (searchAvailable) {
-        mediaSessionCallback.updateMediaSession(
-          mediaSession,
-          options.capabilities,
-          options.remoteButtonLayout,
-          searchAvailable,
-          options.forwardJumpInterval,
-          options.backwardJumpInterval,
-        )
-      }
+      mediaSessionCallback.commandManager.updateSearchAvailable(
+        mediaSession,
+        audioBrowser.browserManager.config.hasSearch,
+      )
     }
   }
+
+  /** The browser [notifyBrowserConfigurationReady] registered, or null if none is yet. */
+  val configuredBrowser: AudioBrowser?
+    get() = browser.takeIf { browserRegistered.isCompleted }
 
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
@@ -1578,12 +1574,10 @@ internal constructor(
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged
     ) {
-      val searchAvailable = browser?.browserManager?.config?.hasSearch ?: false
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
         options.remoteButtonLayout,
-        searchAvailable,
         options.forwardJumpInterval,
         options.backwardJumpInterval,
       )
