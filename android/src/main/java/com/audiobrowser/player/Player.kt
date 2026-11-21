@@ -225,7 +225,7 @@ internal constructor(
               PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
             )
         )
-        exoPlayer.stop()
+        stopEngine()
       }
     }
 
@@ -1202,7 +1202,7 @@ internal constructor(
     playWhenReady = false
     // The next play is a new Load.
     retryLoop?.suspend()
-    sessionPlayer.stop()
+    stopEngine(sessionPlayer)
     playerListener.fenceOutgoingMetadata()
     // Idle at its end, the next prepare would end it again at once.
     if (ended) sessionPlayer.seekToDefaultPosition()
@@ -1360,9 +1360,15 @@ internal constructor(
     // Before the stop: the state machine holds PAUSED through the IDLE that follows.
     setPlaybackState(PlaybackState.PAUSED)
     clearRetryingError()
-    exoPlayer.stop()
+    stopEngine()
     // An engine the loop already holds idle leaves no IDLE for the listener to see.
     retryLoop?.engineStopped()
+  }
+
+  /** Stops [engine]; an error the local engine delivers before its next prepare is dropped. */
+  private fun stopEngine(engine: MediaPlayer = exoPlayer) {
+    playerListener.engineStopping()
+    engine.stop()
   }
 
   /** Drops the retrying error and the failure reports still on their way. */
