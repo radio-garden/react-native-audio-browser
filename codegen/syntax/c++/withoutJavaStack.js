@@ -6,8 +6,8 @@
 //
 // A re-vendor re-applies the call sites: a Kotlin promise's rejection and an error value
 // (kotlin/KotlinCxxBridgedType.js), a hybrid object's getters, setters and methods
-// (kotlin/FbjniHybridObject.js), and a Kotlin function's `invoke` (kotlin/KotlinFunction.js).
-// Constructing the hybrid object (kotlin/KotlinHybridObjectRegistration.js) is not patched.
+// (kotlin/FbjniHybridObject.js), a Kotlin function's `invoke` (kotlin/KotlinFunction.js), and
+// constructing the hybrid object (kotlin/KotlinHybridObjectRegistration.js).
 // Nitro's own JHybridObject calls Kotlin for JS `toString()`, which still reaches JS with fbjni's
 // message, and for `dispose()` and the external memory size, which are noexcept: a throw there
 // ends the app.

@@ -5,6 +5,7 @@ import { NitroConfig } from '../codegen/config/NitroConfig.js'
 import { createFbjniHybridObject } from '../codegen/syntax/kotlin/FbjniHybridObject.js'
 import { KotlinCxxBridgedType } from '../codegen/syntax/kotlin/KotlinCxxBridgedType.js'
 import { createKotlinFunction } from '../codegen/syntax/kotlin/KotlinFunction.js'
+import { createJNIHybridObjectRegistration } from '../codegen/syntax/kotlin/KotlinHybridObjectRegistration.js'
 import { Method } from '../codegen/syntax/Method.js'
 import { Parameter } from '../codegen/syntax/Parameter.js'
 import { Property } from '../codegen/syntax/Property.js'
@@ -256,5 +257,38 @@ describe('codegen: a Kotlin function that throws when JS calls it', () => {
           !callsJavaThroughCallJava(readFileSync(join(ANDROID, file), 'utf8'))
       )
     ).toEqual([])
+  })
+})
+
+/** Whether every construction of a Kotlin hybrid object goes through callJava. */
+const constructsThroughCallJava = (code: string) => {
+  const constructions = count(code, '->newObject(')
+  return (
+    constructions > 0 &&
+    count(code, 'callJava([&] { return javaClassStatic()->newObject(') ===
+      constructions &&
+    code.includes('#include "JavaError.hpp"')
+  )
+}
+
+describe('codegen: a Kotlin hybrid object whose constructor throws', () => {
+  it('constructs it through callJava', () => {
+    const registration = createJNIHybridObjectRegistration({
+      hybridObjectName: 'Thrower',
+      jniClassName: 'Thrower'
+    })
+    const code = [
+      ...registration.requiredImports.map((i) => `#include "${i.name}"`),
+      registration.cppDefinition
+    ].join('\n')
+    expect(constructsThroughCallJava(code)).toBe(true)
+  })
+
+  it('constructs it through callJava in the committed bridge', () => {
+    const onLoad = readFileSync(
+      join(ANDROID, '..', 'AudioBrowserOnLoad.cpp'),
+      'utf8'
+    )
+    expect(constructsThroughCallJava(onLoad)).toBe(true)
   })
 })

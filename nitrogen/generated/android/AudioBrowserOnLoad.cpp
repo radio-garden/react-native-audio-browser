@@ -67,6 +67,7 @@
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -80,7 +81,7 @@ struct JHybridAudioBrowserSpecImpl: public jni::JavaClass<JHybridAudioBrowserSpe
   static constexpr auto kJavaDescriptor = "Lcom/audiobrowser/AudioBrowser;";
   static std::shared_ptr<JHybridAudioBrowserSpec> create() {
     static const auto constructorFn = javaClassStatic()->getConstructor<JHybridAudioBrowserSpecImpl::javaobject()>();
-    jni::local_ref<JHybridAudioBrowserSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    jni::local_ref<JHybridAudioBrowserSpec::JavaPart> javaPart = callJava([&] { return javaClassStatic()->newObject(constructorFn); });
     return javaPart->getJHybridAudioBrowserSpec();
   }
 };
