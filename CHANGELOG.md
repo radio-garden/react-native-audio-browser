@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0...v1.0.1) (2026-11-21)
+
+### Bug Fixes
+
+* **ios:** compile CarPlay image rows in Release with Swift 6.3 ([122006b](https://github.com/radio-garden/react-native-audio-browser/commit/122006b9458187d1f17ba429bc9a17fd2219d6eb)), closes [#431](https://github.com/radio-garden/react-native-audio-browser/issues/431) [#431](https://github.com/radio-garden/react-native-audio-browser/issues/431)
+
 ## [1.0.0](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0...v1.0.0) (2026-11-18)
 
 ### ⚠ BREAKING CHANGES
