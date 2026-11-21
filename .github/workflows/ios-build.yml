@@ -97,3 +97,18 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             build \
             CODE_SIGNING_ALLOWED=NO | xcpretty
+
+      # Release compiles the module whole, and has failed where Debug passed.
+      - name: Build Library (Release)
+        working-directory: apps/example-native/ios
+        run: |
+          set -o pipefail && xcodebuild \
+            CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ \
+            -derivedDataPath build -UseModernBuildSystem=YES \
+            -workspace AudioBrowserExample.xcworkspace \
+            -scheme AudioBrowser \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            build \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO | xcpretty
