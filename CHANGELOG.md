@@ -1,3 +1,22 @@
+## [1.0.0-next.7](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.6...v1.0.0-next.7) (2026-11-21)
+
+### Bug Fixes
+
+* **ios:** give JS a rejected search promise's message alone ([cb1d4aa](https://github.com/radio-garden/react-native-audio-browser/commit/cb1d4aa263e8ea890771cc93393968cd9eb54f58))
+
+### Code Refactors
+
+* **ios:** drop JSCallbackError's fallback for Nitro before 0.37.2 ([7b396a3](https://github.com/radio-garden/react-native-audio-browser/commit/7b396a35d748daa6b1b880a1e6aea4608f227500))
+* **ios:** name JSCallbackError for what it now holds, JSPromiseRejection ([4e404d1](https://github.com/radio-garden/react-native-audio-browser/commit/4e404d1289450db9a426a822cd7dcebff9281957))
+
+### Documentation
+
+* say how to build Nitro 0.37.2 on React Native 0.88 with use_frameworks ([6b22c61](https://github.com/radio-garden/react-native-audio-browser/commit/6b22c61cd8d0d0a94951e117c5c4cfe785c4157e)), closes [margelo/nitro#2046](https://github.com/margelo/nitro/issues/2046) [#2052](https://github.com/radio-garden/react-native-audio-browser/issues/2052)
+
+### Other changes
+
+* require react-native-nitro-modules 0.37.2 or later ([74381af](https://github.com/radio-garden/react-native-audio-browser/commit/74381afca3fa1f047aa0268fd8c744ec1db07960)), closes [margelo/nitro#1824](https://github.com/margelo/nitro/issues/1824)
+
 ## [1.0.0-next.6](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.5...v1.0.0-next.6) (2026-11-21)
 
 ### Features
