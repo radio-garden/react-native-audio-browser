@@ -1,19 +1,13 @@
 import Foundation
 
-/// A JS callback's failure, its message as `localizedDescription`. Nitro's `RuntimeError`, which
-/// hands Swift the failure, is a `LocalizedError` only from 0.37.2: before, its message is only its
-/// `description`.
+/// The rejection of a promise a JS callback returned, which reaches Swift as `Name: message`, with
+/// the name left out: its message as `localizedDescription`.
 struct JSCallbackError: LocalizedError {
   let message: String
   var errorDescription: String? { message }
 
-  init(_ rejection: Error) {
-    message = String(describing: rejection)
-  }
-
-  /// For the rejection of a promise a JS callback returned, which reaches Swift as `Name: message`.
   init(jsPromiseRejection rejection: Error) {
-    message = withoutErrorName(String(describing: rejection))
+    message = withoutErrorName(rejection.localizedDescription)
   }
 }
 
