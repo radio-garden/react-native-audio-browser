@@ -259,7 +259,7 @@ class SessionVoiceSearchTest {
     assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
     idleAfterReports()
 
-    assertEquals(listOf("UNKNOWN_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
+    assertEquals(listOf("CALLBACK_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
   }
 
   @Test
