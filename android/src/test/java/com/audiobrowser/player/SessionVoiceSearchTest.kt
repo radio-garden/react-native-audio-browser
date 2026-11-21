@@ -157,6 +157,12 @@ class SessionVoiceSearchTest {
   private fun playFromSearch(query: String, extras: Bundle? = null) =
     requestFromSearch(query, extras).get(5, TimeUnit.SECONDS)
 
+  /** Runs what a failed request posts to main, which a report does from the failing thread. */
+  private fun idleAfterReports() {
+    Thread.sleep(200)
+    shadowOf(Looper.getMainLooper()).idle()
+  }
+
   @Test
   fun `a search that names no item queues the playable results from the first`() {
     browserWhoseSearchAnswers(
@@ -216,7 +222,7 @@ class SessionVoiceSearchTest {
     val stateBefore = service.session.legacyState()
 
     assertThrows(ExecutionException::class.java) { playFromSearch("zqx qqq") }
-    shadowOf(Looper.getMainLooper()).idle()
+    idleAfterReports()
 
     assertEquals(listOf(stateBefore to "EMPTY_CONTENT SEARCH\n/__search?q=zqx+qqq"), errors())
     assertEquals(PlaybackStateCompat.STATE_NONE, service.session.legacyState())
@@ -228,7 +234,7 @@ class SessionVoiceSearchTest {
     val errors = service.session.recordLegacyErrors()
 
     assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
-    shadowOf(Looper.getMainLooper()).idle()
+    idleAfterReports()
 
     assertEquals(listOf("NETWORK_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
   }
@@ -240,7 +246,7 @@ class SessionVoiceSearchTest {
     val errors = service.session.recordLegacyErrors()
 
     assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
-    shadowOf(Looper.getMainLooper()).idle()
+    idleAfterReports()
 
     assertEquals(listOf("UNKNOWN_ERROR SEARCH\n/__search?q=jazz"), errors().map { it.second })
   }
@@ -251,7 +257,7 @@ class SessionVoiceSearchTest {
     val errors = service.session.recordLegacyErrors()
 
     assertThrows(ExecutionException::class.java) { playFromSearch("jazz") }
-    shadowOf(Looper.getMainLooper()).idle()
+    idleAfterReports()
 
     assertEquals(emptyList<Pair<Int, String>>(), errors())
   }

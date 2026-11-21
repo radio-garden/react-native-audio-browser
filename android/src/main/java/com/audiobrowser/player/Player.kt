@@ -1161,12 +1161,14 @@ internal constructor(
    */
   suspend fun playFromSearch(params: SearchParams): Boolean {
     return try {
-      val tracks = voiceSearch(params) ?: return false
+      val tracks = voiceSearch(params)
       Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
       setQueue(tracks)
       play()
       true
     } catch (e: RequestGatedException) {
+      false
+    } catch (e: VoiceSearchFailedException) {
       false
     } catch (e: Exception) {
       currentCoroutineContext().ensureActive()
@@ -1181,11 +1183,12 @@ internal constructor(
    * controllers why in the app's words for a search (ADR 0001), offline as offline, as a non-fatal
    * error: what played keeps playing.
    *
-   * @return null when nothing playable is found
    * @throws RequestGatedException when gated, after onGate
-   * @throws Exception when the browser is not registered in time or the search callback fails
+   * @throws VoiceSearchFailedException when nothing playable is found or the search fails, after
+   *   the SessionError
+   * @throws Exception when the browser is not registered in time
    */
-  suspend fun voiceSearch(params: SearchParams): Array<Track>? {
+  suspend fun voiceSearch(params: SearchParams): Array<Track> {
     val audioBrowser = awaitBrowser()
     val gateOutcome =
       audioBrowser.gateDecision(
@@ -1203,15 +1206,16 @@ internal constructor(
       try {
         audioBrowser.browserManager.searchPlayable(params)
       } catch (e: Exception) {
-        if (e is CancellationException && e !is TimeoutCancellationException) throw e
+        if (e is CancellationException) throw e
         sendSearchError(audioBrowser, params, navigationErrorFor(e))
-        throw e
+        throw VoiceSearchFailedException("Voice search failed: $params", e)
       }
     if (tracks == null) {
       Timber.w("No tracks found for search: ${params}")
       // An HTTP search source answers a failed request with no tracks.
       val offline = !networkMonitor.isOnline.value
       sendSearchError(audioBrowser, params, if (offline) offlineError() else emptyContentError())
+      throw VoiceSearchFailedException("No playable result for: $params")
     }
     return tracks
   }
@@ -1660,3 +1664,7 @@ internal constructor(
 
 /** A request the consumer's gate refused: app state, which onGate reports, not a failure. */
 internal class RequestGatedException : IllegalStateException("Request is gated")
+
+/** A voice search that played nothing, whose SessionError has already told controllers why. */
+internal class VoiceSearchFailedException(message: String, cause: Throwable? = null) :
+  IllegalStateException(message, cause)
