@@ -65,13 +65,16 @@ data class NativeBrowserConfiguration(
   val resolveAlbumPath: Func_std__shared_ptr_Promise_std__optional_std__string____Track?,
   @DoNotStrip
   @Keep
-  val formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?
+  val formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?,
+  @DoNotStrip
+  @Keep
+  val findTrack: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams?
 ) {
   /**
    * Create a new instance of NativeBrowserConfiguration from Kotlin
    */
-  constructor(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?, androidControllerOfflineError: Boolean?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((track: Track) -> Promise<String?>)?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
-         this(path, request, requestResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, browse, browseResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_java(it) }, androidControllerOfflineError, viewMoreTitle?.let { Func_std__shared_ptr_Promise_std__string___java(it) }, carPlayLoadingTitle, resolveAlbumPath?.let { Func_std__shared_ptr_Promise_std__optional_std__string____Track_java(it) }, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
+  constructor(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?, androidControllerOfflineError: Boolean?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((track: Track) -> Promise<String?>)?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?, findTrack: ((params: FindTrackParams) -> Promise<Promise<Track?>>)?):
+         this(path, request, requestResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, browse, browseResolver?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____java(it) }, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_java(it) }, androidControllerOfflineError, viewMoreTitle?.let { Func_std__shared_ptr_Promise_std__string___java(it) }, carPlayLoadingTitle, resolveAlbumPath?.let { Func_std__shared_ptr_Promise_std__optional_std__string____Track_java(it) }, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) }, findTrack?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams_java(it) })
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -92,6 +95,7 @@ data class NativeBrowserConfiguration(
       && Objects.deepEquals(this.carPlayLoadingTitle, other.carPlayLoadingTitle)
       && Objects.deepEquals(this.resolveAlbumPath, other.resolveAlbumPath)
       && Objects.deepEquals(this.formatNavigationError, other.formatNavigationError)
+      && Objects.deepEquals(this.findTrack, other.findTrack)
   }
 
   override fun hashCode(): Int {
@@ -111,7 +115,8 @@ data class NativeBrowserConfiguration(
       viewMoreTitle,
       carPlayLoadingTitle,
       resolveAlbumPath,
-      formatNavigationError
+      formatNavigationError,
+      findTrack
     ).contentDeepHashCode()
   }
 
@@ -123,8 +128,8 @@ data class NativeBrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: TransformableRequestConfig?, requestResolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?, browse: TransformableRequestConfig?, browseResolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent?, androidControllerOfflineError: Boolean?, viewMoreTitle: Func_std__shared_ptr_Promise_std__string__?, carPlayLoadingTitle: String?, resolveAlbumPath: Func_std__shared_ptr_Promise_std__optional_std__string____Track?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?): NativeBrowserConfiguration {
-      return NativeBrowserConfiguration(path, request, requestResolver, browse, browseResolver, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad, androidControllerOfflineError, viewMoreTitle, carPlayLoadingTitle, resolveAlbumPath, formatNavigationError)
+    private fun fromCpp(path: String?, request: TransformableRequestConfig?, requestResolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?, browse: TransformableRequestConfig?, browseResolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent?, androidControllerOfflineError: Boolean?, viewMoreTitle: Func_std__shared_ptr_Promise_std__string__?, carPlayLoadingTitle: String?, resolveAlbumPath: Func_std__shared_ptr_Promise_std__optional_std__string____Track?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?, findTrack: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams?): NativeBrowserConfiguration {
+      return NativeBrowserConfiguration(path, request, requestResolver, browse, browseResolver, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad, androidControllerOfflineError, viewMoreTitle, carPlayLoadingTitle, resolveAlbumPath, formatNavigationError, findTrack)
     }
   }
 }

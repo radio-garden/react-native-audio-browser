@@ -93,6 +93,7 @@ class ContentRefreshNavigationErrorTest {
         carPlayLoadingTitle = null,
         resolveAlbumPath = null,
         formatNavigationError = null,
+        findTrack = null,
       ),
     )
     browser.onNavigationError = { errorEvents += it.error }

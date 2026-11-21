@@ -47,8 +47,10 @@ import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
 import com.margelo.nitro.audiobrowser.ChapterMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.FindTrackParams
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateDecision
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -206,6 +208,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       carPlayLoadingTitle = null,
       resolveAlbumPath = null,
       formatNavigationError = null,
+      findTrack = null,
     )
 
   internal val browserManager =
@@ -355,6 +358,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Browser Configuration
   // ============================================================================
 
+  private fun awaitingFindTrack(
+    findTrack:
+      Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams
+  ): suspend (String) -> Track? = { id -> findTrack(FindTrackParams(id)).awaitNestedOrTimeout() }
+
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(
       request = _configuration.request,
@@ -368,6 +376,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
       viewMoreTitle = _configuration.viewMoreTitle,
+      findTrack = _configuration.findTrack?.let(::awaitingFindTrack),
     )
   }
 
@@ -1504,6 +1513,7 @@ private fun NativeBrowserConfiguration.strippingJSCallbacks() =
     viewMoreTitle = null,
     resolveAlbumPath = null,
     formatNavigationError = null,
+    findTrack = null,
     request = request?.strippingJSCallbacks(),
     browse = browse?.strippingJSCallbacks(),
     media = media?.strippingJSCallbacks(),

@@ -259,6 +259,31 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const std::optional<Track>& /* result */)>
+  Func_void_std__optional_Track_ create_Func_void_std__optional_Track_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__optional_Track_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::optional<Track>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>>(const FindTrackParams& /* params */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__optional_Track______FindTrackParams::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const FindTrackParams& params) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<std::optional<Track>>>>> {
+      auto __result = swiftClosure.call(params);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::optional<Track>>>& /* result */)>
+  Func_void_std__shared_ptr_Promise_std__optional_Track___ create_Func_void_std__shared_ptr_Promise_std__optional_Track___(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__shared_ptr_Promise_std__optional_Track___::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<Promise<std::optional<Track>>>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
   // pragma MARK: std::function<void(const GateDecision& /* result */)>
   Func_void_GateDecision create_Func_void_GateDecision(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_GateDecision::fromUnsafe(swiftClosureWrapper);

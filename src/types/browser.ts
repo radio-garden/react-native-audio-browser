@@ -721,11 +721,17 @@ export type BrowserConfiguration = {
    * defaults.
    *
    * Either a static {@link TransformableRequestConfig} (its optional `transform`
-   * runs per request), or a {@link RequestConfigResolver} thunk resolved once per
-   * content generation and re-resolved on `invalidateAllContent()`. Reach for the
-   * resolver when a value changes rarely (a base URL, an auth host) so it is read
-   * once per generation and merged natively — rather than recomputed on every
-   * browse/search/media/artwork request via a `transform`.
+   * runs per request), or a {@link RequestConfigResolver} thunk whose answer is
+   * kept per content generation and re-resolved on `invalidateAllContent()`.
+   * Reach for the resolver when a value changes rarely (a base URL, an auth
+   * host) so its answer is kept for the generation and merged natively —
+   * rather than recomputed on every browse/search/media/artwork request via a
+   * `transform`.
+   *
+   * The resolver can be called more than once at a time. On Android each
+   * request that finds no kept answer calls it; on iOS and web a request joins
+   * a call already running while that call is younger than 10 seconds, and
+   * calls it again after that.
    */
   request?: TransformableRequestConfig | RequestConfigResolver
 
@@ -744,7 +750,8 @@ export type BrowserConfiguration = {
    * default with a callback / static / bespoke config.
    *
    * Like `request`, this may be a static {@link TransformableRequestConfig} or a
-   * {@link RequestConfigResolver} thunk (resolved once per content generation) —
+   * {@link RequestConfigResolver} thunk (kept per content generation, and
+   * called as `request`'s is) —
    * e.g. a locale query param that only changes when `invalidateAllContent()` is
    * called. A resolver's `query` is merged additively into each browse request's
    * query, exactly as a static `query` would be.
@@ -1070,6 +1077,38 @@ export type BrowserConfiguration = {
    * ```
    */
   formatNavigationError?: FormatNavigationErrorCallback
+
+  /**
+   * Finds the playable track for an `id` the library has not browsed in this
+   * process. A car plays a row's `id` after the app's process died, as when it
+   * resumes the last track or acts on a voice pick; only browsing remembers
+   * which track an `id` names, so without this such a play fails.
+   *
+   * Called for an `id` that is neither browsed, a path, nor an http(s) URL,
+   * for a play and for an item lookup. Return a {@link Track} with a `src`, or
+   * `undefined` when the `id` names nothing playable. The answer plays under
+   * the `id` asked about, whatever `id` it carries, and is remembered for the
+   * process. A track without `src`, a throw, or no answer within 10 seconds
+   * fails the play, and the car is told. Once this is set, such an `id` is
+   * never browsed as a path. A queue the app sets, loads, skips or clears
+   * while this answers wins, and the car's play is dropped, so don't restore
+   * a queue at startup while a car may be playing.
+   *
+   * The Gate doesn't apply: a play by `id` is hearing, not finding, so the
+   * resolver isn't asked and `onGate` doesn't fire. To refuse one, return
+   * `undefined`; the play fails as for an unknown `id`.
+   *
+   * @example
+   * ```typescript
+   * findTrack: async ({ id }) => {
+   *   const item = await api.item(id)
+   *   return item && { id, title: item.name, src: item.audioUrl }
+   * }
+   * ```
+   *
+   * @platform android
+   */
+  findTrack?: FindTrackCallback
 }
 
 /**
@@ -1189,6 +1228,20 @@ export type FormatNavigationErrorCallback = (
  * `undefined` to leave the line untappable. See {@link BrowserConfiguration.resolveAlbumPath | resolveAlbumPath}.
  */
 export type ResolveAlbumPathCallback = (track: Track) => string | undefined
+
+/** The id a {@link FindTrackCallback} is asked about. */
+export interface FindTrackParams {
+  /** The `id` of the row the car plays. */
+  id: string
+}
+
+/**
+ * Finds the playable track for an id the library has not browsed. See
+ * {@link BrowserConfiguration.findTrack | findTrack}.
+ */
+export type FindTrackCallback = (
+  params: FindTrackParams
+) => Promise<Track | undefined>
 
 /** Supplies the title of the appended "view more" row. See `viewMoreTitle`. */
 export type ViewMoreTitleCallback = () => string

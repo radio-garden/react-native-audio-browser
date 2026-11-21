@@ -79,6 +79,13 @@ describe('toNativeConfig route classification', () => {
   })
 })
 
+describe('toNativeConfig callbacks', () => {
+  it('hands findTrack to native', () => {
+    const findTrack = async () => undefined
+    expect(toNativeConfig({ findTrack }).findTrack).toBe(findTrack)
+  })
+})
+
 describe('validateBrowserConfiguration', () => {
   let warnings: string[]
 

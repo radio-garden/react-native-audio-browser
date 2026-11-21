@@ -208,6 +208,7 @@ object TestFixtures {
       carPlayLoadingTitle = null,
       resolveAlbumPath = null,
       formatNavigationError = null,
+      findTrack = null,
     )
 
   /**

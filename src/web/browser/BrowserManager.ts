@@ -14,6 +14,7 @@ import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { GenerationMemo } from '../util/GenerationMemo'
 import { assertBrowsePageShape } from './assertBrowsePageShape'
 import { parseSearchResponse } from './parseSearchResponse'
 import {
@@ -22,6 +23,11 @@ import {
   normalizePage,
   sectionContaining
 } from './sections'
+
+type ResolvedLayers = {
+  request?: TransformableRequestConfig
+  browse?: TransformableRequestConfig
+}
 
 /**
  * Manages browser navigation, route resolution, and content loading.
@@ -35,18 +41,10 @@ export class BrowserManager {
   private _configuration: NativeBrowserConfiguration = {}
   private router = new SimpleRouter()
 
-  // Layer resolution: any present request/browse resolver is invoked once per
-  // content generation, and the resolved TransformableRequestConfig is cached
-  // and fed into applyLayers in place of the static request/browse config. The
-  // generation bumps on config-set and on invalidateAllContent().
-  private _layerGeneration = 0
-  private _resolvedLayerGeneration = -1
-  private _resolvedRequest?: TransformableRequestConfig
-  private _resolvedBrowse?: TransformableRequestConfig
-  // Dedupes concurrent resolution within a generation (config-set triggers an
-  // initial navigate that can overlap with an explicit navigatePath), so a
-  // resolver is invoked exactly once per generation even under concurrency.
-  private _layerResolution?: { generation: number; promise: Promise<void> }
+  // The request and browse layers: each resolver's result, else the static
+  // layer, for the current content generation. The generation bumps on
+  // config-set and on invalidateAllContent().
+  private layers = new GenerationMemo<ResolvedLayers>()
 
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
@@ -159,7 +157,7 @@ export class BrowserManager {
    */
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
-    this._layerGeneration += 1
+    this.layers.invalidate()
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
@@ -217,7 +215,7 @@ export class BrowserManager {
    * to re-resolve it.
    */
   invalidateAllContent(): void {
-    this._layerGeneration += 1
+    this.layers.invalidate()
     if (this._path) {
       void this.navigate(this._path)
     }
@@ -412,8 +410,7 @@ export class BrowserManager {
     const artworkConfig = this._configuration.artwork
     // The shared request layer applies to artwork too — use the resolved layer
     // (resolver result or static config) so a resolver-only config still works.
-    await this.ensureLayersResolved()
-    const requestConfig = this._resolvedRequest
+    const requestConfig = (await this.resolvedLayers()).request
 
     // Transform parent artwork
     const parentArtworkSource =
@@ -543,48 +540,25 @@ export class BrowserManager {
   async resolvedRequestConfig(): Promise<
     TransformableRequestConfig | undefined
   > {
-    await this.ensureLayersResolved()
-    return this._resolvedRequest
+    return (await this.resolvedLayers()).request
   }
 
   /**
-   * Ensures the request/browse layer configs are resolved for the current
-   * generation. Any present resolver is invoked once per generation and the
-   * result cached; a static config (no resolver) passes through unchanged.
+   * The request and browse layers of the current generation. A resolver runs
+   * once per generation, and again for a later caller when it outlasts
+   * {@link GenerationMemo}'s bound.
    */
-  private async ensureLayersResolved(): Promise<void> {
-    if (this._resolvedLayerGeneration === this._layerGeneration) return
-    // Reuse an in-flight resolution for the same generation so concurrent
-    // navigations (e.g. config-set's initial navigate overlapping an explicit
-    // navigatePath) don't each invoke the resolver.
-    if (this._layerResolution?.generation === this._layerGeneration) {
-      return this._layerResolution.promise
-    }
-    const generation = this._layerGeneration
-    const promise = (async () => {
+  private resolvedLayers(): Promise<ResolvedLayers> {
+    return this.layers.value(async () => {
       const cfg = this._configuration
-      const resolvedRequest = cfg.requestResolver
+      const request = cfg.requestResolver
         ? await cfg.requestResolver()
         : cfg.request
-      const resolvedBrowse = cfg.browseResolver
+      const browse = cfg.browseResolver
         ? await cfg.browseResolver()
         : cfg.browse
-      // Only commit if no newer generation superseded us mid-resolution.
-      if (this._layerGeneration === generation) {
-        this._resolvedRequest = resolvedRequest
-        this._resolvedBrowse = resolvedBrowse
-        this._resolvedLayerGeneration = generation
-      }
-    })().catch((err) => {
-      // A failed resolution must not wedge the generation — clear the in-flight
-      // cache so the next navigation retries (e.g. a transient async resolver error).
-      if (this._layerResolution?.generation === generation) {
-        this._layerResolution = undefined
-      }
-      throw err
+      return { request, browse }
     })
-    this._layerResolution = { generation, promise }
-    return promise
   }
 
   /**
@@ -602,13 +576,13 @@ export class BrowserManager {
     path: string,
     params: Record<string, string>
   ): Promise<ResolvedTrack> {
-    await this.ensureLayersResolved()
+    const layers = await this.resolvedLayers()
     const merged = await RequestConfigBuilder.applyLayers(
       { path },
       [
-        this._resolvedRequest,
+        layers.request,
         // fall back to the route's kind config when no browse layer is configured
-        this._resolvedBrowse ?? kindConfig,
+        layers.browse ?? kindConfig,
         routeConfig
       ],
       params
@@ -629,10 +603,10 @@ export class BrowserManager {
     searchConfig: TransformableRequestConfig,
     queryParams: Record<string, string>
   ): Promise<Track[]> {
-    await this.ensureLayersResolved()
+    const { request } = await this.resolvedLayers()
     const merged = await RequestConfigBuilder.applyLayers(
       { path: searchConfig.path, query: queryParams },
-      [this._resolvedRequest, searchConfig],
+      [request, searchConfig],
       queryParams
     )
     const response = await this.httpClient.executeRequest(merged)
@@ -748,8 +722,7 @@ export class BrowserManager {
     // `transformArtworkForContent`.
     const artworkConfig = this._configuration.artwork
     // Resolved request layer (resolver or static), matching content/search.
-    await this.ensureLayersResolved()
-    const requestConfig = this._resolvedRequest
+    const requestConfig = (await this.resolvedLayers()).request
     return Promise.all(
       tabs.map(async (track) => {
         const artworkSource =
