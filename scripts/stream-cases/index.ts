@@ -247,15 +247,8 @@ try {
     adb('reverse', `tcp:${metroPort}`, `tcp:${metroPort}`)
     adb('reverse', `tcp:${stream.port}`, `tcp:${stream.port}`)
     pointAppAtMetro(runAdb, APP_ID, `localhost:${metroPort}`, undo)
-    adb(
-      'shell',
-      'monkey',
-      '-p',
-      APP_ID,
-      '-c',
-      'android.intent.category.LAUNCHER',
-      '1'
-    )
+    // monkey refuses to run on a device with no hardware keys.
+    adb('shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`)
   } else {
     // The argument outranks a Metro address saved in the app's settings.
     execFileSync(
