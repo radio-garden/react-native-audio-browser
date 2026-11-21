@@ -61,12 +61,7 @@ class LiveSeekCommandTest {
     )
 
   private fun update(capabilities: PlayerCapabilities) =
-    manager.updateMediaSession(
-      session,
-      capabilities,
-      remoteButtonLayout = null,
-      searchAvailable = false,
-    )
+    manager.updateMediaSession(session, capabilities, remoteButtonLayout = null)
 
   private fun offersSeek(): Boolean =
     manager

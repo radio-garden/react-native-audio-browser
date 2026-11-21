@@ -105,6 +105,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   private var currentRemoteButtonLayout: RemoteButtonLayout? = null
   private var currentFavorited: Boolean? = null
   private var currentLive: Boolean = false
+  private var currentSearchAvailable: Boolean = true
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
@@ -136,7 +137,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     val defaultCapabilities = currentCapabilities
 
     playerCommands = buildPlayerCommands(defaultCapabilities, live = false)
-    sessionCommands = buildSessionCommands(defaultCapabilities, searchAvailable = false)
+    sessionCommands = buildSessionCommands(defaultCapabilities, currentSearchAvailable)
     buttonPreferences =
       buildButtonPreferences(
         deriveButtonSlots(defaultCapabilities, layout = null),
@@ -153,7 +154,6 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     mediaSession: MediaSession,
     capabilities: PlayerCapabilities,
     remoteButtonLayout: RemoteButtonLayout?,
-    searchAvailable: Boolean,
     forwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL,
     backwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL,
   ) {
@@ -163,13 +163,24 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
     currentBackwardJumpInterval = backwardJumpInterval
 
     playerCommands = buildPlayerCommands(capabilities, currentLive)
-    sessionCommands = buildSessionCommands(capabilities, searchAvailable)
+    sessionCommands = buildSessionCommands(capabilities, currentSearchAvailable)
     buttonPreferences =
       buildButtonPreferences(deriveButtonSlots(capabilities, remoteButtonLayout), currentFavorited)
 
     // Commands first: Media3 disables a button whose command is not yet available.
     publishAvailableCommands(mediaSession)
     publishButtonPreferences(mediaSession)
+  }
+
+  /**
+   * Call with the configured browser's search. Until then search is offered: a legacy controller
+   * keeps the commands it connects with, and on a cold start it connects before the configuration.
+   */
+  fun updateSearchAvailable(mediaSession: MediaSession, available: Boolean) {
+    if (currentSearchAvailable == available) return
+    currentSearchAvailable = available
+    sessionCommands = buildSessionCommands(currentCapabilities, available)
+    publishAvailableCommands(mediaSession)
   }
 
   /**
