@@ -1,3 +1,64 @@
+## [1.0.0-next.6](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.5...v1.0.0-next.6) (2026-11-21)
+
+### Features
+
+* **android:** find the track for an id a controller plays before any browse ([786127f](https://github.com/radio-garden/react-native-audio-browser/commit/786127f03f53406acaa17ee2191bdbb8502a8ccd))
+* open the iOS output picker from an anchor ([7a53911](https://github.com/radio-garden/react-native-audio-browser/commit/7a539117e1a303c348ebfc3f5dae52f66bff0acf))
+* **web:** fill {id} in an artwork config with the track's id ([713eacb](https://github.com/radio-garden/react-native-audio-browser/commit/713eacbeb3f7e71d8a3eca5f7bdd1e539340c2e2))
+* **web:** resolve now-playing artwork through nowPlayingArtwork ([d1589f2](https://github.com/radio-garden/react-native-audio-browser/commit/d1589f285a5d9e5094c4fc1076aa15c5ecb5ad0c))
+
+### Bug Fixes
+
+* **android:** bound the artwork registry by the characters it holds ([88dc9d6](https://github.com/radio-garden/react-native-audio-browser/commit/88dc9d650dcf3581c1305903245506f4dd4eeb0d))
+* **android:** drop a car play only when the app replaces what plays ([46fbdac](https://github.com/radio-garden/react-native-audio-browser/commit/46fbdac5637e90097c450141e8b9d44b80278cf7))
+* **android:** drop an engine error for a connection the player already stopped ([03a5bdd](https://github.com/radio-garden/react-native-audio-browser/commit/03a5bdd7a79c6e934e0488f5f8227dbea7645337))
+* **android:** give up a Cast session whose receiver goes silent after a loss ([93eed31](https://github.com/radio-garden/react-native-audio-browser/commit/93eed3169d88b14004789771b24d88839c951401))
+* **android:** hand back when the Cast SDK fails the start of the held session ([32c5437](https://github.com/radio-garden/react-native-audio-browser/commit/32c5437d799ffdd807c9abb2d53db006a9b731f0))
+* **android:** hold a receiver's last position once it stops reporting ([1af4d4c](https://github.com/radio-garden/react-native-audio-browser/commit/1af4d4c3b87db2b8f5ce24a32e9759fa282f9820))
+* **android:** ignore a receiver's position while a load first buffers ([3933fb5](https://github.com/radio-garden/react-native-audio-browser/commit/3933fb52cc0bf324a94935217d7089f00e088402))
+* **android:** keep the failure report of a hand-back's first connection ([9200089](https://github.com/radio-garden/react-native-audio-browser/commit/92000894a7d44743a045787ba1f25cd14aaaa31d))
+* **android:** log the exception of a failed voice search ([f70191e](https://github.com/radio-garden/react-native-audio-browser/commit/f70191e6a9f74c20390e4af1b161459af3c41bd9))
+* **android:** play a tapped search result when its search fails ([26e9746](https://github.com/radio-garden/react-native-audio-browser/commit/26e97466f0dbddc1ff7728acaa9cba7c0c470bdb))
+* **android:** publish data: queue artwork through the provider on a phone too ([9bdf4ac](https://github.com/radio-garden/react-native-audio-browser/commit/9bdf4acf7c5915964c389384bb71230f4f58ba97))
+* **android:** read a receiver that no longer reports its item from its last report ([76cd0bd](https://github.com/radio-garden/react-native-audio-browser/commit/76cd0bd3047fbd717c53a479577d0c48bf0b0a2e))
+* **android:** report a browse that fails before it is served, and let a newer play win ([ebff090](https://github.com/radio-garden/react-native-audio-browser/commit/ebff090c7d9f01a33b666b13466bd59f32817d54))
+* **android:** resume a Cast failure where the receiver last played ([f7ea2f6](https://github.com/radio-garden/react-native-audio-browser/commit/f7ea2f6c525c3fbf85f3cb95b463ff9274efe8c6))
+* **android:** serve data: artwork through the artwork provider ([fc75c03](https://github.com/radio-garden/react-native-audio-browser/commit/fc75c03a3b4295196572c7f696eabb452f94f4c1))
+* **android:** stop calling a malformed request a network error ([8e67a20](https://github.com/radio-garden/react-native-audio-browser/commit/8e67a20b4ae715730868b5b946d39dd1f28a9646))
+* **android:** tell a controller once why a voice search plays nothing ([b17ebcc](https://github.com/radio-garden/react-native-audio-browser/commit/b17ebcc98371505a57fbecde4ed89f8f3d1ffeb0))
+* **android:** tell a failed HTTP search from an empty one ([3a4f724](https://github.com/radio-garden/react-native-audio-browser/commit/3a4f72417ccceb1f42d50ae52005d73df091d32e))
+* **android:** tell controllers why a voice search plays nothing ([32151d8](https://github.com/radio-garden/react-native-audio-browser/commit/32151d80e93dcb407bd9dcba58ad65e85301c0a6))
+* **codegen:** hand Kotlin and Swift a throwing JS callback's message without its stack ([0ee271b](https://github.com/radio-garden/react-native-audio-browser/commit/0ee271b0d4b3f849b3097d01fb9137315e41ccc8))
+* **ios:** build RequestPipeline with Xcode 26.4 again ([6d292c1](https://github.com/radio-garden/react-native-audio-browser/commit/6d292c1d0fd83dcdf1daf08120d3b99c3b5a7e46))
+* **ios:** keep the output picker open until it ends ([b19743c](https://github.com/radio-garden/react-native-audio-browser/commit/b19743c75f616fd495ebaf51ed9d1ac16376bc9c))
+* **ios:** load a data: artwork URL as now-playing artwork ([b4653fa](https://github.com/radio-garden/react-native-audio-browser/commit/b4653fa53356b19717c0baefb60dd237f6308768))
+* **ios:** run a JS callback's subscriber on the caller's actor with Swift 6.3 ([319db21](https://github.com/radio-garden/react-native-audio-browser/commit/319db21137fb38650f78537c401e8d2d6f54e595)), closes [#isolation](https://github.com/radio-garden/react-native-audio-browser/issues/isolation)
+* **ios:** swap the carrier in for a live item before its reload, so a reconnect is read once ([5656b68](https://github.com/radio-garden/react-native-audio-browser/commit/5656b68bdd5a45d1b4c8aee32c2be5c7eefce4f1)), closes [#299](https://github.com/radio-garden/react-native-audio-browser/issues/299)
+* leave the query off a data: URL ([2816211](https://github.com/radio-garden/react-native-audio-browser/commit/2816211e7bea47f4ba107a6578040862f8a8562a))
+* release callers of a silent resolver once a newer config answers ([b8a6907](https://github.com/radio-garden/react-native-audio-browser/commit/b8a69078ce9fc8fde45c44b292998102639593a3))
+* **scripts:** launch the example app with am start in stream-cases ([78fb99e](https://github.com/radio-garden/react-native-audio-browser/commit/78fb99eb167426161abdfaaf32e90f9a866907c9)), closes [#318](https://github.com/radio-garden/react-native-audio-browser/issues/318)
+* show a rejected JS callback promise's message alone on Android and iOS ([e78e80f](https://github.com/radio-garden/react-native-audio-browser/commit/e78e80fa9f2e1681f5504017944aa642297b100c))
+* stop one silent request or browse resolver holding every request ([33abe82](https://github.com/radio-garden/react-native-audio-browser/commit/33abe8267e800ce7f47a0940756917ddeaba95b9))
+* **web:** give JS the track's artworkSource as now-playing artwork ([ca33a3e](https://github.com/radio-garden/react-native-audio-browser/commit/ca33a3e097840bb39cf8800ff713ff98b8233d94))
+* **web:** keep the config's query on a queued track's artworkSource ([f0707aa](https://github.com/radio-garden/react-native-audio-browser/commit/f0707aa385f0c3285aca2b5264b3c9d0a200c4dd))
+* **web:** leave blob:, data: and protocol-relative URLs out of baseUrl ([8fb6fae](https://github.com/radio-garden/react-native-audio-browser/commit/8fb6fae176ee8f16ca81f49f8c9104fc5bf178b0))
+* **web:** resolve now-playing artwork through the artwork config ([418a6b1](https://github.com/radio-garden/react-native-audio-browser/commit/418a6b1eebf0869eb5af6839e2423c75d89868c7))
+
+### Code Refactors
+
+* **codegen:** evaluate the JSError unwrap's argument once, and include what it uses ([d215da5](https://github.com/radio-garden/react-native-audio-browser/commit/d215da59e5418f4aed585a583f2995669a62c527))
+* keep one JS error-name rule per platform, beside what uses it ([21325ce](https://github.com/radio-garden/react-native-audio-browser/commit/21325ce6b8c5e3f13f4baab9377dc94ded995731))
+* **web:** build now-playing metadata in one place ([c206e5c](https://github.com/radio-garden/react-native-audio-browser/commit/c206e5c26037b52823f3ae30fcd9d838b40135ee))
+* **web:** resolve artwork through one BrowserManager method ([f0175af](https://github.com/radio-garden/react-native-audio-browser/commit/f0175af44917aa93cb5946d5e3dd81d438f8a86d))
+
+### Documentation
+
+* **browser:** say what a rejected search's message holds on Android ([ec8fe18](https://github.com/radio-garden/react-native-audio-browser/commit/ec8fe18157bce37a96162026ca1d5e2303ad39d4)), closes [margelo/nitro#1014](https://github.com/margelo/nitro/issues/1014)
+
+### Other changes
+
+* **example:** pass the output button's frame to openOutputPicker ([a06a922](https://github.com/radio-garden/react-native-audio-browser/commit/a06a9221806862102eb183f6caea092f22d82a67))
+
 ## [1.0.0-next.5](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.4...v1.0.0-next.5) (2026-11-20)
 
 ### Features
