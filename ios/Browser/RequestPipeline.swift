@@ -55,6 +55,28 @@ final class RequestPipeline {
     params: [String: String]?,
   ) async throws -> RequestConfig {
     guard let layer else { return base }
+    return try await RequestLayer.apply(
+      RequestConfig(fieldsOf: layer), transforms: transforms(of: layer, params: params), to: base,
+    )
+  }
+
+  /// `applyLayer` for media and artwork: a layer whose transform fails is skipped
+  /// (`RequestLayer.applyOrBase`).
+  func applyLayerOrBase(
+    _ layer: (some TransformableLayer)?,
+    to base: RequestConfig,
+    params: [String: String]?,
+  ) async throws -> RequestConfig {
+    guard let layer else { return base }
+    return try await RequestLayer.applyOrBase(
+      RequestConfig(fieldsOf: layer), transforms: transforms(of: layer, params: params), to: base,
+    )
+  }
+
+  private func transforms(
+    of layer: some TransformableLayer,
+    params: [String: String]?,
+  ) -> [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] {
     var transforms: [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] = []
     if let transform = layer.transform {
       transforms.append { try await self.awaitAsyncConfig(transform($0, params)) }
@@ -62,7 +84,7 @@ final class RequestPipeline {
     if let transformSync = layer.transformSync {
       transforms.append { try await self.awaitSyncConfig(transformSync($0, params)) }
     }
-    return try await RequestLayer.apply(RequestConfig(fieldsOf: layer), transforms: transforms, to: base)
+    return transforms
   }
 
   /// The HTTP request for an API-backed route: the request layer, then the `kind` layer (nil
@@ -143,36 +165,33 @@ final class RequestPipeline {
   // MARK: - Media URL Resolution
 
   /// The media request for `originalUrl`: the request layer, the media layer, then what
-  /// `media.resolve(track)` produces over them. `track` only feeds `resolve`; its own `request`
-  /// is not merged here. A failing layer
-  /// leaves the URL as it is, with no headers.
+  /// `media.resolve(track)` produces over them, in Android's order. `track` only feeds
+  /// `resolve`; its own `request` is not merged here. A layer whose transform fails is skipped,
+  /// and so is a failing `resolve`; a failing request resolver leaves the URL as it is, with no
+  /// headers.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
-    let base: RequestConfig
+    var merged: RequestConfig
     do {
-      base = try await applyLayer(resolvedLayers().request, to: .base(path: originalUrl), params: [:])
+      let base = try await applyLayerOrBase(resolvedLayers().request, to: .base(path: originalUrl), params: [:])
+      merged = try await applyLayerOrBase(config.media, to: base, params: nil)
+    } catch is CancellationError {
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     } catch {
       logger.error("Media request layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
 
-    let resolveLayer: RequestConfig?
     do {
-      resolveLayer = try await resolveMediaTrackConfig(track)
+      if let resolveLayer = try await resolveMediaTrackConfig(track) {
+        merged = RequestLayer.merge(merged, resolveLayer)
+      }
     } catch {
       logger.error("Media resolve callback failed: \(error.localizedDescription)")
-      resolveLayer = nil
     }
 
-    do {
-      var merged = try await applyLayer(config.media, to: base, params: nil)
-      if let resolveLayer { merged = RequestLayer.merge(merged, resolveLayer) }
-      let finalUrl = RequestLayer.buildUrl(merged)
-      logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
-      return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
-    } catch {
-      logger.error("Media transform failed: \(error.localizedDescription)")
-      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
-    }
+    let finalUrl = RequestLayer.buildUrl(merged)
+    logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
+    return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
   }
 
   /// What the `media` config's `resolve` and `resolveSync` produce for `track`; nil without a
@@ -199,8 +218,8 @@ final class RequestPipeline {
   /// The image source for `track`'s artwork: an SF Symbol rendered to a file; the artwork URL
   /// as is when no artwork config applies; else the request layer and the artwork config, in
   /// `RequestLayer.artwork`'s order. `perRouteConfig` replaces the global artwork config;
-  /// `imageContext` is the display size, nil at browse time. Nil when there is no artwork or a
-  /// callback fails.
+  /// `imageContext` is the display size, nil at browse time. A request layer whose transform
+  /// fails is skipped; nil when there is no artwork or any other callback fails.
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
     let artworkUrl = track.artwork?.url
     if let artworkUrl, SFSymbolRenderer.isSFSymbol(artworkUrl) {
@@ -218,7 +237,7 @@ final class RequestPipeline {
     }
 
     do {
-      let base = try await applyLayer(resolvedLayers().request, to: .base(path: artworkUrl), params: [:])
+      let base = try await applyLayerOrBase(resolvedLayers().request, to: .base(path: artworkUrl), params: [:])
       let resolve: (nonisolated(nonsending)() async throws -> RequestConfig?)? =
         if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
           { try await self.resolved(artworkConfig.resolve, artworkConfig.resolveSync, for: track) }

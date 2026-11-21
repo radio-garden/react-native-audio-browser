@@ -100,6 +100,30 @@ struct RequestLayerTests {
     }
   }
 
+  @Test func applyOrBaseSkipsALayerWhoseTransformThrows() async throws {
+    struct Boom: Error {}
+    let base = Config(path: "/track.mp3", baseUrl: "https://a", headers: ["A": "1"])
+    let applied = try await RequestLayer.applyOrBase(
+      Config(baseUrl: "https://static"),
+      transforms: [
+        { Config(path: $0.path, baseUrl: "https://first") },
+        { _ in throw Boom() },
+      ],
+      to: base,
+    )
+    #expect(applied == base)
+  }
+
+  @Test func applyOrBaseLetsACancellationThrough() async {
+    await #expect(throws: CancellationError.self) {
+      _ = try await RequestLayer.applyOrBase(
+        Config(),
+        transforms: [{ _ in throw CancellationError() }],
+        to: Config(),
+      )
+    }
+  }
+
   @Test func mergeResolvedLetsSyncWin() {
     let asyncResolved = Config(baseUrl: "https://async", userAgent: "ASYNC")
     let syncResolved = Config(userAgent: "SYNC")

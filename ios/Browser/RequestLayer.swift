@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 #if canImport(NitroModules)
   import NitroModules
 #endif
@@ -90,6 +91,24 @@ enum RequestLayer {
     }
     return result
   }
+
+  /// `apply` for media and artwork, where a failing transform costs its own layer and not the
+  /// stack: on the `BrowserError` `apply` throws, it logs and hands back `base`, not a
+  /// half-applied config. A cancellation still throws. Android's `mergeConfigOrBase`.
+  nonisolated(nonsending) static func applyOrBase<C: RequestFields>(
+    _ layer: C,
+    transforms: [nonisolated(nonsending)(C) async throws -> C],
+    to base: C,
+  ) async throws -> C {
+    do {
+      return try await apply(layer, transforms: transforms, to: base)
+    } catch let error as BrowserError {
+      logger.error("Request transform failed, skipping its layer: \(error.localizedDescription)")
+      return base
+    }
+  }
+
+  private static let logger = Logger(subsystem: "com.audiobrowser", category: "RequestLayer")
 
   /// The sync config over the async one; nil only when both are nil.
   static func mergeResolved<C: RequestFields>(async asyncResolved: C?, sync syncResolved: C?) -> C? {
