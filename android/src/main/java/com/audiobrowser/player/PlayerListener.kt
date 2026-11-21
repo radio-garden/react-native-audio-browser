@@ -31,6 +31,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   @MediaPlayer.State private var lastEngineState = MediaPlayer.STATE_IDLE
 
   /**
+   * From the library's stop of the local engine until the engine leaves idle. An error it delivers
+   * meanwhile is the ended connection's: its playback thread was still failing it at the stop.
+   */
+  private var connectionEnded = false
+
+  /**
    * Set from an app-started command that ends the stream until the playback thread has handled it.
    * Until then every metadata delivery is the outgoing stream's: its renderer posted them to the
    * main looper before the command, and nothing removes them.
@@ -137,9 +143,14 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       player.retryLoop?.isPlayingChanged(isPlaying && !player.retryMasksPlaying)
   }
 
+  internal fun engineStopping() {
+    if (player.localEngine.isActive) connectionEnded = true
+  }
+
   /** A new engine or session player is attached: what this listener knew of the old one is gone. */
   internal fun engineAttached() {
     lastEngineState = player.exoPlayer.playbackState
+    connectionEnded = false
     localActive = player.localEngine.isActive
   }
 
@@ -179,6 +190,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     val engineState = player.sessionPlayer.playbackState
     val left = lastEngineState == MediaPlayer.STATE_IDLE && engineState != MediaPlayer.STATE_IDLE
     lastEngineState = engineState
+    if (left) connectionEnded = false
     val loop = player.retryLoop
     // A prepare: the retry's reconnect, or the listener's play, which after a give-up or a stop is
     // a new Load.
@@ -243,6 +255,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlayerError(error: PlaybackException) {
+    if (connectionEnded) return
     if (player.localEngine.isActive && recoverLocally(error)) return
     surface(error)
   }
