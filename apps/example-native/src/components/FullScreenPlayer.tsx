@@ -85,6 +85,14 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
     setRateState(nextRate)
   }
 
+  const outputButtonRef = useRef<ViewInstance>(null)
+
+  function openOutputPickerFromButton() {
+    outputButtonRef.current?.measureInWindow((x, y, width, height) => {
+      openOutputPicker({ x, y, width, height })
+    })
+  }
+
   const { title, artist, artwork } = nowPlaying ?? {}
   const sliderValue =
     progress.duration > 0 ? progress.position / progress.duration : 0
@@ -306,11 +314,12 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
             )}
             {supportsOutputSwitcher() && (
               <Pressable
+                ref={outputButtonRef}
                 style={({ pressed }) => [
                   styles.secondaryButton,
                   { opacity: pressed ? 0.5 : 1 }
                 ]}
-                onPress={openOutputPicker}
+                onPress={openOutputPickerFromButton}
                 accessibilityLabel={`Output: ${output?.name ?? 'unknown'}`}
               >
                 <Icon

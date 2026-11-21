@@ -164,7 +164,7 @@ export function MiniPlayer({ onSleepTimerPress }: MiniPlayerProps) {
           {Platform.OS === 'ios' && (
             <TouchableOpacity
               style={styles.controlButton}
-              onPress={openOutputPicker}
+              onPress={() => openOutputPicker()}
             >
               <Icon
                 name="headphones"

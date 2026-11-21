@@ -39,15 +39,15 @@ final class GenerationMemo<Value: Sendable> {
   }
 
   private let shareFor: Duration
-  private let now: () -> ContinuousClock.Instant
+  private let now: @MainActor @Sendable () -> ContinuousClock.Instant
   private var generation = 0
   private var kept: Value?
   /// Runs of every generation still computing and not yet released, oldest first.
   private var running: [Run] = []
 
-  init(
+  nonisolated init(
     shareFor: Duration = callbackFallbackTimeout,
-    now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now },
+    now: @escaping @MainActor @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now },
   ) {
     self.shareFor = shareFor
     self.now = now
