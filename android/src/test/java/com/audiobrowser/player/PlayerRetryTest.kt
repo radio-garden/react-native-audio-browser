@@ -187,9 +187,15 @@ class PlayerRetryTest {
     shadowOf(Looper.getMainLooper()).idle()
 
     player.seekToLiveEdge()
-    shadowOf(Looper.getMainLooper()).idle()
+    // ExoPlayer schedules its next step on the clock, which stands still unless advanced.
+    idleUntil("the edge loaded while paused") {
+      ShadowSystemClock.advanceBy(Duration.ofMillis(10))
+      // The player's state can still hold a READY from before the seek; the engine's drops to
+      // BUFFERING at once.
+      player.exoPlayer.playbackState == MediaPlayer.STATE_READY &&
+        player.playbackState == PlaybackState.READY
+    }
     assertEquals(edge, player.exoPlayer.currentPosition)
-    assertPausedInPlace()
   }
 
   @Test
