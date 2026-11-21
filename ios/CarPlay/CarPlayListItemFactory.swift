@@ -247,7 +247,7 @@ final class CarPlayListItemFactory {
     if #available(iOS 26.0, *) {
       func row<Element: CPListImageRowItemElement>(
         _ build: (String?, [Element], Bool) -> CPListImageRowItem,
-        element make: (Track, TrackStyle) -> Element,
+        element make: @MainActor (Track, TrackStyle) -> Element,
       ) -> CPListImageRowItem {
         let elements = zip(tracks, resolvedStyles).map { track, resolved in
           let element = make(track, resolved)
