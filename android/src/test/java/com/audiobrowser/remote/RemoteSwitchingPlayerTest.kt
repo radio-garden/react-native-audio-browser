@@ -722,6 +722,20 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a receiver's failure after a stop is not the player error`() {
+    playLocally(listOf("a"))
+    remote.startSession()
+    idle()
+
+    player.stop()
+    idle()
+    remote.fail()
+    idle()
+
+    assertNull(player.playerError)
+  }
+
+  @Test
   fun `a pause from elsewhere is the play intent`() {
     playLocally(listOf("a"))
     remote.startSession()

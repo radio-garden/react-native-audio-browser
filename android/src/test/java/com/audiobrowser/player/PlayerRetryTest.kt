@@ -716,6 +716,22 @@ class PlayerRetryTest {
   }
 
   @Test
+  fun `a failure report that arrives after a new queue is not its track's`() {
+    goOnline(context)
+    val wav = folder.silentWavUri(Duration.ofMinutes(1))
+    play(wav, retryPolicy = RetryPolicy.Infinite())
+    idleUntil("playing") { player.playbackState == PlaybackState.PLAYING }
+
+    // Posted from the playback thread before the new queue, run after it.
+    player.onLoadFailure(IOException("dropped"), inPlace = false)
+    player.setQueue(arrayOf(TestFixtures.track(title = "next", src = wav)))
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(player.retryLoop!!.failurePending)
+    assertEquals(null, player.playbackError)
+  }
+
+  @Test
   fun `with retry, a stuck engine reconnects and never ends in an error`() {
     goOnline(context)
     play(folder.silentWavUri(Duration.ofMinutes(1)), retryPolicy = RetryPolicy.Infinite())
