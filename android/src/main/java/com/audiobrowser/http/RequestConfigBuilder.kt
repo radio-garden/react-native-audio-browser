@@ -240,6 +240,7 @@ object RequestConfigBuilder {
     }
   }
 
+  /** Base URL, path, then query; a `data:` URL takes no query, which would land in its payload. */
   internal fun buildUrl(config: RequestConfig): String {
     val path = config.path ?: ""
     val baseUrl = config.baseUrl
@@ -247,7 +248,7 @@ object RequestConfigBuilder {
     val url = BrowserPathHelper.buildUrl(baseUrl, path)
 
     val query = config.query
-    if (query.isNullOrEmpty()) return url
+    if (query.isNullOrEmpty() || url.startsWith("data:", ignoreCase = true)) return url
 
     val queryString =
       query.entries.joinToString("&") { (key, value) ->

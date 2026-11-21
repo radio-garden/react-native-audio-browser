@@ -249,6 +249,24 @@ class RequestConfigBuilderTest {
   }
 
   @Test
+  fun `buildUrl leaves the query off a data URL`() {
+    val dataUrl = "data:image/png;base64,iVBORw0KGgo="
+    val config =
+      RequestConfig(
+        method = null,
+        path = dataUrl,
+        baseUrl = "https://api.example.com",
+        headers = null,
+        query = mapOf("w" to "512"),
+        body = null,
+        contentType = null,
+        userAgent = null,
+      )
+
+    assertEquals(dataUrl, RequestConfigBuilder.buildUrl(config))
+  }
+
+  @Test
   fun `buildUrl joins the query with an ampersand when the path already has one`() = runTest {
     val relative =
       RequestConfig(
