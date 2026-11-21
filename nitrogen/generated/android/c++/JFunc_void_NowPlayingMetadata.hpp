@@ -16,6 +16,7 @@
 #include "JNowPlayingMetadata.hpp"
 #include <optional>
 #include <string>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const NowPlayingMetadata& metadata) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JNowPlayingMetadata> /* metadata */)>("invoke");
-      method(self(), JNowPlayingMetadata::fromCpp(metadata));
+      callJava(method, self(), JNowPlayingMetadata::fromCpp(metadata));
     }
   };
 

@@ -16,6 +16,7 @@
 #include <NitroModules/JNICallable.hpp>
 #include "JFormattedNavigationError.hpp"
 #include <string>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::optional<FormattedNavigationError>& formattedError) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFormattedNavigationError> /* formattedError */)>("invoke");
-      method(self(), formattedError.has_value() ? JFormattedNavigationError::fromCpp(formattedError.value()) : nullptr);
+      callJava(method, self(), formattedError.has_value() ? JFormattedNavigationError::fromCpp(formattedError.value()) : nullptr);
     }
   };
 

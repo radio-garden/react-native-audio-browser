@@ -17,6 +17,7 @@
 #include "OutputType.hpp"
 #include "JOutputType.hpp"
 #include <string>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -36,7 +37,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const Output& output) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JOutput> /* output */)>("invoke");
-      method(self(), JOutput::fromCpp(output));
+      callJava(method, self(), JOutput::fromCpp(output));
     }
   };
 

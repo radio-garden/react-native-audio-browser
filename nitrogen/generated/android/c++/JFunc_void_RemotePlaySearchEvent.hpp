@@ -15,6 +15,7 @@
 #include <NitroModules/JNICallable.hpp>
 #include "JRemotePlaySearchEvent.hpp"
 #include <string>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -34,7 +35,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const RemotePlaySearchEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRemotePlaySearchEvent> /* event */)>("invoke");
-      method(self(), JRemotePlaySearchEvent::fromCpp(event));
+      callJava(method, self(), JRemotePlaySearchEvent::fromCpp(event));
     }
   };
 

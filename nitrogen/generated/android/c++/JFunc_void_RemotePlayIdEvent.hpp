@@ -16,6 +16,7 @@
 #include "JRemotePlayIdEvent.hpp"
 #include <string>
 #include <optional>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const RemotePlayIdEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRemotePlayIdEvent> /* event */)>("invoke");
-      method(self(), JRemotePlayIdEvent::fromCpp(event));
+      callJava(method, self(), JRemotePlayIdEvent::fromCpp(event));
     }
   };
 

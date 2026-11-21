@@ -1,6 +1,7 @@
 import { NitroConfig } from '../../config/NitroConfig.js';
 import { indent } from '../../utils.js';
 import { includeHeader } from '../c++/includeNitroHeader.js';
+import { JAVA_ERROR_IMPORT, callJava } from '../c++/withoutJavaStack.js';
 import { createFileMetadataString, isNotDuplicate } from '../helpers.js';
 import { addJNINativeRegistration } from './JNINativeRegistrations.js';
 import { KotlinCxxBridgedType } from './KotlinCxxBridgedType.js';
@@ -133,9 +134,10 @@ class ${name}_java(private val function: ${lambdaSignature}): ${name} {
     if (functionType.returnType.kind === 'void') {
         // It returns void
         cppCallBody = `_func(${paramsForward.join(', ')});`;
+        // Not upstream: callJava.
         jniCallBody = `
 static const auto method = javaClassStatic()->getMethod<${jniSignature}>("invoke");
-method(${jniParamsForward.join(', ')});
+${callJava('method', jniParamsForward)};
     `.trim();
     }
     else {
@@ -144,9 +146,10 @@ method(${jniParamsForward.join(', ')});
 ${functionType.returnType.getCode('c++')} __result = _func(${paramsForward.join(', ')});
 return ${bridgedReturn.parseFromCppToKotlin('__result', 'c++')};
 `.trim();
+        // Not upstream: callJava.
         jniCallBody = `
 static const auto method = javaClassStatic()->getMethod<${jniSignature}>("invoke");
-auto __result = method(${jniParamsForward.join(', ')});
+auto __result = ${callJava('method', jniParamsForward)};
 return ${bridgedReturn.parseFromKotlinToCpp('__result', 'c++', false)};
     `.trim();
     }
@@ -157,6 +160,8 @@ return ${bridgedReturn.parseFromKotlinToCpp('__result', 'c++', false)};
     const imports = bridged
         .getRequiredImports('c++')
         .filter((i) => i.name !== `J${name}.hpp`);
+    // Not upstream: callJava.
+    imports.push(JAVA_ERROR_IMPORT);
     const includes = imports.map((i) => includeHeader(i)).filter(isNotDuplicate);
     const fbjniCode = `
 ${createFileMetadataString(`J${name}.hpp`)}

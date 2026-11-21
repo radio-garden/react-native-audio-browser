@@ -39,6 +39,7 @@
 #include "JImageShape.hpp"
 #include "CardImage.hpp"
 #include "JCardImage.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -58,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const PlaybackActiveTrackChangedEvent& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JPlaybackActiveTrackChangedEvent> /* data */)>("invoke");
-      method(self(), JPlaybackActiveTrackChangedEvent::fromCpp(data));
+      callJava(method, self(), JPlaybackActiveTrackChangedEvent::fromCpp(data));
     }
   };
 

@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JPlayingState.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const PlayingState& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JPlayingState> /* data */)>("invoke");
-      method(self(), JPlayingState::fromCpp(data));
+      callJava(method, self(), JPlayingState::fromCpp(data));
     }
   };
 

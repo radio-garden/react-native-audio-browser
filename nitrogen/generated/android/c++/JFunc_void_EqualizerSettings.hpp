@@ -17,6 +17,7 @@
 #include <string>
 #include <optional>
 #include <vector>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -36,7 +37,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const EqualizerSettings& settings) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JEqualizerSettings> /* settings */)>("invoke");
-      method(self(), JEqualizerSettings::fromCpp(settings));
+      callJava(method, self(), JEqualizerSettings::fromCpp(settings));
     }
   };
 

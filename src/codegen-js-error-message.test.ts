@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { NitroConfig } from '../codegen/config/NitroConfig.js'
 import { createFbjniHybridObject } from '../codegen/syntax/kotlin/FbjniHybridObject.js'
 import { KotlinCxxBridgedType } from '../codegen/syntax/kotlin/KotlinCxxBridgedType.js'
+import { createKotlinFunction } from '../codegen/syntax/kotlin/KotlinFunction.js'
 import { Method } from '../codegen/syntax/Method.js'
 import { Parameter } from '../codegen/syntax/Parameter.js'
 import { Property } from '../codegen/syntax/Property.js'
@@ -221,6 +222,32 @@ describe('codegen: a Kotlin hybrid method or property that throws synchronously'
   it('calls Kotlin through callJava in the committed bridge', () => {
     const files = readdirSync(ANDROID).filter((file) =>
       /^JHybrid\w+Spec\.cpp$/.test(file)
+    )
+    expect(files.length).toBeGreaterThan(0)
+    expect(
+      files.filter(
+        (file) =>
+          !callsJavaThroughCallJava(readFileSync(join(ANDROID, file), 'utf8'))
+      )
+    ).toEqual([])
+  })
+})
+
+describe('codegen: a Kotlin function that throws when JS calls it', () => {
+  it('invokes it through callJava', () => {
+    const hpp =
+      createKotlinFunction(
+        new FunctionType(new StringType(), [
+          new NamedWrappingType('id', new StringType())
+        ])
+      ).find((f) => f.name.endsWith('.hpp'))?.content ?? ''
+    expect(count(hpp, '->getMethod<')).toBe(1)
+    expect(callsJavaThroughCallJava(hpp)).toBe(true)
+  })
+
+  it('invokes every Kotlin function through callJava in the committed bridge', () => {
+    const files = readdirSync(ANDROID).filter((file) =>
+      /^JFunc_\w+\.hpp$/.test(file)
     )
     expect(files.length).toBeGreaterThan(0)
     expect(

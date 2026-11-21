@@ -16,6 +16,7 @@
 #include "JRepeatModeChangedEvent.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const RepeatModeChangedEvent& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRepeatModeChangedEvent> /* data */)>("invoke");
-      method(self(), JRepeatModeChangedEvent::fromCpp(data));
+      callJava(method, self(), JRepeatModeChangedEvent::fromCpp(data));
     }
   };
 

@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JRemoteSeekEvent.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const RemoteSeekEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRemoteSeekEvent> /* event */)>("invoke");
-      method(self(), JRemoteSeekEvent::fromCpp(event));
+      callJava(method, self(), JRemoteSeekEvent::fromCpp(event));
     }
   };
 

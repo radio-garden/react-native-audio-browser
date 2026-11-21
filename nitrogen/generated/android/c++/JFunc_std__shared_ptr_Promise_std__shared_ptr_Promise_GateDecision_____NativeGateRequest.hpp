@@ -53,7 +53,7 @@ namespace margelo::nitro::audiobrowser {
      */
     std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> invoke(const NativeGateRequest& request) const {
       static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<JNativeGateRequest> /* request */)>("invoke");
-      auto __result = method(self(), JNativeGateRequest::fromCpp(request));
+      auto __result = callJava(method, self(), JNativeGateRequest::fromCpp(request));
       return [&]() {
         auto __promise = Promise<std::shared_ptr<Promise<GateDecision>>>::create();
         __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {

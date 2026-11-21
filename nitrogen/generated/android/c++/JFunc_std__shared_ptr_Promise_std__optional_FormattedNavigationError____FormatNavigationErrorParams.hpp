@@ -49,7 +49,7 @@ namespace margelo::nitro::audiobrowser {
      */
     std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> invoke(const FormatNavigationErrorParams& params) const {
       static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<JFormatNavigationErrorParams> /* params */)>("invoke");
-      auto __result = method(self(), JFormatNavigationErrorParams::fromCpp(params));
+      auto __result = callJava(method, self(), JFormatNavigationErrorParams::fromCpp(params));
       return [&]() {
         auto __promise = Promise<std::optional<FormattedNavigationError>>::create();
         __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {

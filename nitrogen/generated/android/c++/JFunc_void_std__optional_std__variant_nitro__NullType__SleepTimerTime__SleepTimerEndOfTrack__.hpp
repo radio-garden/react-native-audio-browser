@@ -21,6 +21,7 @@
 #include <NitroModules/JNull.hpp>
 #include "JSleepTimerTime.hpp"
 #include "JSleepTimerEndOfTrack.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -40,7 +41,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JSleepTimer> /* data */)>("invoke");
-      method(self(), data.has_value() ? JSleepTimer::fromCpp(data.value()) : nullptr);
+      callJava(method, self(), data.has_value() ? JSleepTimer::fromCpp(data.value()) : nullptr);
     }
   };
 

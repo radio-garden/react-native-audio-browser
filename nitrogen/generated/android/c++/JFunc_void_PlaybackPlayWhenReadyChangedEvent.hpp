@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JPlaybackPlayWhenReadyChangedEvent.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const PlaybackPlayWhenReadyChangedEvent& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JPlaybackPlayWhenReadyChangedEvent> /* data */)>("invoke");
-      method(self(), JPlaybackPlayWhenReadyChangedEvent::fromCpp(data));
+      callJava(method, self(), JPlaybackPlayWhenReadyChangedEvent::fromCpp(data));
     }
   };
 

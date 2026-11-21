@@ -16,6 +16,7 @@
 #include "JGateEvent.hpp"
 #include "GateReason.hpp"
 #include "JGateReason.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const GateEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JGateEvent> /* event */)>("invoke");
-      method(self(), JGateEvent::fromCpp(event));
+      callJava(method, self(), JGateEvent::fromCpp(event));
     }
   };
 

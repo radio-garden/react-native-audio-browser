@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JBatteryWarningPendingChangedEvent.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const BatteryWarningPendingChangedEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JBatteryWarningPendingChangedEvent> /* event */)>("invoke");
-      method(self(), JBatteryWarningPendingChangedEvent::fromCpp(event));
+      callJava(method, self(), JBatteryWarningPendingChangedEvent::fromCpp(event));
     }
   };
 
