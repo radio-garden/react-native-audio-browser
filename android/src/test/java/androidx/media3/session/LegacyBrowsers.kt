@@ -2,13 +2,15 @@ package androidx.media3.session
 
 import androidx.media3.common.Player
 
-// Robolectric can't bind a MediaBrowserCompat, so a car is registered as onGetRoot registers one.
+// Robolectric can't bind a MediaBrowserCompat, so a car is registered as onGetRoot registers one,
+// through media3's package-private internals: a media3 upgrade can break these.
 
 /** Connects [car] to the session's legacy browser service with [commands], as onGetRoot does. */
 internal fun MediaSession.connectLegacyBrowser(
   car: MediaSession.ControllerInfo,
   commands: SessionCommands,
 ) {
+  // Creates the legacy browser service.
   impl.legacyBrowserServiceBinder
   impl.legacyBrowserService!!
     .connectedControllersManager
