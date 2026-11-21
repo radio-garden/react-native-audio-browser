@@ -59,6 +59,8 @@ function applyImageQueryParams(
   return { ...config, query }
 }
 
+const TRACK_ID_TOKEN = '{id}'
+
 function unconfiguredArtworkSource(
   artworkUrl: string | undefined
 ): ImageSource | undefined {
@@ -66,16 +68,44 @@ function unconfiguredArtworkSource(
 }
 
 /**
- * The image source a finished artwork request loads. Undefined when the
- * request has no path.
+ * The image source a finished artwork request loads, with `{id}` in its path,
+ * query and headers replaced by `id`. Without a non-empty `id` the token
+ * stays, so the request fails with a URL that says why, and a warning names
+ * it. Undefined when the request has no path.
  */
-function artworkImageSource(request: RequestConfig): ImageSource | undefined {
+function artworkImageSource(
+  request: RequestConfig,
+  id: string | undefined
+): ImageSource | undefined {
+  const fill = (value: string) =>
+    id ? value.split(TRACK_ID_TOKEN).join(id) : value
+  const fillValues = (values: Record<string, string> | undefined) =>
+    values &&
+    Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [key, fill(value)])
+    )
   if (request.path === undefined) return undefined
+  const filled: RequestConfig = {
+    ...request,
+    path: fill(request.path),
+    query: fillValues(request.query),
+    headers: fillValues(request.headers)
+  }
+  const uri = RequestConfigBuilder.buildUrl(filled)
+  if (
+    [
+      filled.path,
+      ...Object.values(filled.query ?? {}),
+      ...Object.values(filled.headers ?? {})
+    ].some((value) => value?.includes(TRACK_ID_TOKEN))
+  ) {
+    console.warn(`Artwork: track has no id, '{id}' left unfilled in ${uri}`)
+  }
   return {
-    uri: RequestConfigBuilder.buildUrl(request),
-    method: request.method ?? 'GET',
-    headers: request.headers,
-    body: request.body
+    uri,
+    method: filled.method ?? 'GET',
+    headers: filled.headers,
+    body: filled.body
   }
 }
 
@@ -365,7 +395,8 @@ export const RequestConfigBuilder = {
       path: artworkUrl
     }
     return artworkImageSource(
-      this.mergeConfig(base, this.toRequestConfig(artworkConfig))
+      this.mergeConfig(base, this.toRequestConfig(artworkConfig)),
+      track.id
     )
   },
 
@@ -446,7 +477,7 @@ export const RequestConfigBuilder = {
         })
       }
 
-      return artworkImageSource(mergedConfig)
+      return artworkImageSource(mergedConfig, track.id)
     } catch (error) {
       // resolve/transform threw - log error, return undefined to avoid broken images
       console.error('Failed to resolve artwork URL:', error)

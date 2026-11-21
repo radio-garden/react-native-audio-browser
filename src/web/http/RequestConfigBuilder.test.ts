@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type {
   RequestConfig,
   Track,
@@ -130,6 +130,69 @@ describe('RequestConfigBuilder.transformTrackArtwork', () => {
     )
 
     expect(out.artworkSource?.uri).toBe('https://cdn.example.com/a.jpg')
+  })
+})
+
+describe('RequestConfigBuilder — {id} in an artwork config', () => {
+  const track = { id: 'abc', title: 'T', artwork: '/art.jpg' } as Track
+
+  it("fills {id} with the track's id in the path, query and headers", async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      { baseUrl: 'https://img.example.com' },
+      {
+        path: '/artwork/{id}',
+        query: { track: '{id}' },
+        headers: { 'x-track': '{id}' }
+      }
+    )
+
+    expect(out?.uri).toBe('https://img.example.com/artwork/abc?track=abc')
+    expect(out?.headers).toEqual({ 'x-track': 'abc' })
+  })
+
+  it('fills {id} a transform puts in', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      undefined,
+      {
+        transform: ({ request }) =>
+          Promise.resolve({ ...request, path: '/{id}.png' })
+      }
+    )
+
+    expect(out?.uri).toBe('/abc.png')
+  })
+
+  it('leaves {id} in place, and warns, for a track without an id', async () => {
+    using warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { ...track, id: undefined },
+      undefined,
+      { baseUrl: 'https://img.example.com', path: '/artwork/{id}' }
+    )
+
+    expect(out?.uri).toBe('https://img.example.com/artwork/{id}')
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
+  it("resolves a queued track's artwork from the config's path when the track has none", () => {
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      { id: 'abc', title: 'T' } as Track,
+      undefined,
+      { baseUrl: 'https://img.example.com', path: '/artwork/{id}' }
+    )
+
+    expect(out.artworkSource?.uri).toBe('https://img.example.com/artwork/abc')
+  })
+
+  it("fills {id} in a queued track's artworkSource", () => {
+    const out = RequestConfigBuilder.transformTrackArtwork(track, undefined, {
+      baseUrl: 'https://img.example.com',
+      path: '/artwork/{id}'
+    })
+
+    expect(out.artworkSource?.uri).toBe('https://img.example.com/artwork/abc')
   })
 })
 
