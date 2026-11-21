@@ -70,6 +70,9 @@ import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
+/** Native's now-playing artwork size, so `imageQueryParams` ask for the same image. */
+const SESSION_ARTWORK_SIZE_PX = 1200
+
 /**
  * Web implementation of AudioBrowser (unified browser + player)
  */
@@ -104,6 +107,8 @@ export class NativeAudioBrowser
   private optionsManager: OptionsManager
   private nowPlayingManager: NowPlayingManager
   private remoteCommands: RemoteCommandController
+  /** The current track's artwork for the OS media controls, once resolved. */
+  private sessionArtworkUri: string | undefined
 
   // Player state
   private progressTimer = new PlaybackTimer()
@@ -350,7 +355,35 @@ export class NativeAudioBrowser
    */
   private publishNowPlaying(metadata: NowPlayingMetadata): void {
     this.onNowPlayingChanged(metadata)
-    this.remoteCommands.setMetadata(metadata)
+    this.publishSessionMetadata(metadata)
+  }
+
+  /**
+   * Shows no artwork until the current track's has resolved, as iOS does,
+   * rather than the raw `artwork`, which the config may not leave a loadable
+   * URL.
+   */
+  private publishSessionMetadata(metadata: NowPlayingMetadata): void {
+    this.remoteCommands.setMetadata({
+      ...metadata,
+      artwork: this.sessionArtworkUri
+    })
+  }
+
+  /**
+   * Resolves `track`'s artwork at native's now-playing size, falling back to
+   * its own `artworkSource` as native does, then republishes the OS metadata
+   * if `track` is still current.
+   */
+  private async resolveSessionArtwork(track: Track): Promise<void> {
+    const source = await this.browserManager.resolveArtworkSource(track, {
+      width: SESSION_ARTWORK_SIZE_PX,
+      height: SESSION_ARTWORK_SIZE_PX
+    })
+    if (this.current !== track) return
+    this.sessionArtworkUri = source?.uri ?? track.artworkSource?.uri
+    const nowPlaying = this.getNowPlaying()
+    if (nowPlaying) this.publishSessionMetadata(nowPlaying)
   }
 
   protected setupProgressUpdates(interval?: number) {
@@ -720,6 +753,10 @@ export class NativeAudioBrowser
       // As Android's onMediaItemTransition does: a new item is a clean slate,
       // a retry of the same one keeps what the consumer set.
       this.nowPlayingManager.clearNowPlayingOverride()
+      this.sessionArtworkUri = undefined
+      this.resolveSessionArtwork(track).catch((error: unknown) => {
+        console.error('Failed to publish now-playing artwork:', error)
+      })
 
       try {
         this.onPlaybackActiveTrackChanged({

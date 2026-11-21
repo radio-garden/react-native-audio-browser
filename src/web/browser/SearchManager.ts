@@ -1,6 +1,5 @@
 import type { Track, SearchParams } from '../../types'
 import type { BrowserManager } from './BrowserManager'
-import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 
 /**
  * Manages search functionality.
@@ -59,16 +58,10 @@ export class SearchManager {
     // Transform artwork URLs on search results using async method with full Track access
     // Gated per track inside the resolver, as on Android — a result carrying a
     // plain `artwork` URL resolves even with no `artwork` config.
-    const requestConfig = await this.browserManager.resolvedRequestConfig()
-    const artworkConfig = this.browserManager.configuration.artwork
     results = await Promise.all(
       results.map(async (track) => {
         const artworkSource =
-          await RequestConfigBuilder.resolveArtworkSourceAsync(
-            track,
-            requestConfig,
-            artworkConfig
-          )
+          await this.browserManager.resolveArtworkSource(track)
         if (artworkSource && !track.artworkSource) {
           return { ...track, artworkSource }
         }
