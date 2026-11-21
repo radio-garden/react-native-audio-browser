@@ -103,18 +103,6 @@ export type Output = {
 }
 
 /**
- * Where `openOutputPicker` places the system picker's source view: a rect in
- * points, in the key window's coordinates. On iOS a picker shown as a menu
- * appears at it; a full-screen sheet does not move. Android ignores it.
- */
-export type OutputPickerAnchor = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-/**
  * The Nitro hybrid-object spec — the bridge surface itself. Not consumer API;
  * feature modules wrap every method.
  * @internal
@@ -373,13 +361,12 @@ export interface AudioBrowser extends HybridObject<{
    * to another output — Bluetooth, AirPlay/Sonos-via-AirPlay, speaker (iOS), or
    * the Bluetooth / speaker / Cast device list (Android). Cross-platform.
    *
-   * iOS: the system route picker (always available), from a source view at
-   * `anchor` when given, else at the window's top-left corner.
+   * iOS: the system route picker (always available).
    * Android: the system Output Switcher (Android 11+); no-op below that — gate
-   * on `supportsOutputSwitcher()`. Ignores `anchor`.
+   * on `supportsOutputSwitcher()`.
    * Web: no-op.
    */
-  openOutputPicker(anchor?: OutputPickerAnchor): void
+  openOutputPicker(): void
   /**
    * Whether `openOutputPicker()` can present a system output switcher on this
    * device — surface the output control in the UI only when this is true.

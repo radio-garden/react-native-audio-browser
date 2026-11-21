@@ -68,7 +68,6 @@ import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.Output
-import com.margelo.nitro.audiobrowser.OutputPickerAnchor
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -1079,8 +1078,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun supportsOutputSwitcher(): Boolean = OutputSwitcher.isSupported()
 
-  // The Output Switcher is a system dialog with no position.
-  override fun openOutputPicker(anchor: OutputPickerAnchor?) {
+  override fun openOutputPicker() {
     OutputSwitcher.open(context)
   }
 

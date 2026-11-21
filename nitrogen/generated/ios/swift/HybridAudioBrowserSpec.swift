@@ -137,7 +137,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getSystemVolume() throws -> Double
   func setSystemVolume(volume: Double) throws -> Void
   func getOutput() throws -> Output?
-  func openOutputPicker(anchor: OutputPickerAnchor?) throws -> Void
+  func openOutputPicker() throws -> Void
   func supportsOutputSwitcher() throws -> Bool
   func getEqualizerSettings() throws -> EqualizerSettings?
   func setEqualizerEnabled(enabled: Bool) throws -> Void

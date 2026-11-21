@@ -1077,7 +1077,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun openOutputPicker(anchor: OutputPickerAnchor?): Unit
+  abstract fun openOutputPicker(): Unit
   
   @DoNotStrip
   @Keep

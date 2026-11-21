@@ -214,8 +214,6 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `OutputPickerAnchor` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 
 #include <string>
 #include <optional>
@@ -326,7 +324,6 @@ namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 #include "RetryConfig.hpp"
 #include "RemoteOutputsOptions.hpp"
 #include "Progress.hpp"
-#include "OutputPickerAnchor.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -1239,8 +1236,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void openOutputPicker(const std::optional<OutputPickerAnchor>& anchor) override {
-      auto __result = _swiftPart.openOutputPicker(anchor);
+    inline void openOutputPicker() override {
+      auto __result = _swiftPart.openOutputPicker();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

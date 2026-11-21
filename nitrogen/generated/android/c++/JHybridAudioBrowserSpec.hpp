@@ -235,7 +235,7 @@ namespace margelo::nitro::audiobrowser {
     double getSystemVolume() override;
     void setSystemVolume(double volume) override;
     std::optional<Output> getOutput() override;
-    void openOutputPicker(const std::optional<OutputPickerAnchor>& anchor) override;
+    void openOutputPicker() override;
     bool supportsOutputSwitcher() override;
     std::optional<EqualizerSettings> getEqualizerSettings() override;
     void setEqualizerEnabled(bool enabled) override;
