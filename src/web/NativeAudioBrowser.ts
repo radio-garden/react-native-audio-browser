@@ -376,10 +376,12 @@ export class NativeAudioBrowser
    * if `track` is still current.
    */
   private async resolveSessionArtwork(track: Track): Promise<void> {
-    const source = await this.browserManager.resolveArtworkSource(track, {
-      width: SESSION_ARTWORK_SIZE_PX,
-      height: SESSION_ARTWORK_SIZE_PX
-    })
+    const { nowPlayingArtwork, artwork } = this.browserManager.configuration
+    const source = await this.browserManager.resolveArtworkSource(
+      track,
+      { width: SESSION_ARTWORK_SIZE_PX, height: SESSION_ARTWORK_SIZE_PX },
+      nowPlayingArtwork ?? artwork
+    )
     if (this.current !== track) return
     this.sessionArtworkUri = source?.uri ?? track.artworkSource?.uri
     const nowPlaying = this.getNowPlaying()

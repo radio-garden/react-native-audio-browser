@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type {
   RequestConfig,
   Track,
@@ -82,6 +82,117 @@ describe('RequestConfigBuilder.applyLayer — sync/async transform composition',
     const out = await RequestConfigBuilder.applyLayer(base, layer)
     expect(out.baseUrl).toBe('https://override.example.com')
     expect(out.path).toBe('/p')
+  })
+})
+
+describe('RequestConfigBuilder.resolveArtworkSourceAsync — no path left', () => {
+  it('gives no artwork when a transform drops the path', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T', artwork: '/art/7.jpg' } as Track,
+      undefined,
+      { transform: () => Promise.resolve({ baseUrl: 'https://x.example.com' }) }
+    )
+
+    expect(out).toBeUndefined()
+  })
+
+  it('gives no artwork for a track without artwork under a baseUrl-only config', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T' } as Track,
+      undefined,
+      { baseUrl: 'https://img.example.com' }
+    )
+
+    expect(out).toBeUndefined()
+  })
+})
+
+describe('RequestConfigBuilder.transformTrackArtwork', () => {
+  it("appends the request and artwork layers' query", () => {
+    const track = { title: 'T', artwork: '/art/7.jpg' } as Track
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      track,
+      { baseUrl: 'https://img.example.com', query: { key: 'k' } },
+      { query: { v: '2' } }
+    )
+
+    expect(out.artworkSource?.uri).toBe(
+      'https://img.example.com/art/7.jpg?key=k&v=2'
+    )
+  })
+
+  it('leaves the artwork as it is without an artwork config', () => {
+    const track = { title: 'T', artwork: 'https://cdn.example.com/a.jpg' }
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      track as Track,
+      { baseUrl: 'https://api.example.com', query: { key: 'k' } },
+      undefined
+    )
+
+    expect(out.artworkSource?.uri).toBe('https://cdn.example.com/a.jpg')
+  })
+})
+
+describe('RequestConfigBuilder — {id} in an artwork config', () => {
+  const track = { id: 'abc', title: 'T', artwork: '/art.jpg' } as Track
+
+  it("fills {id} with the track's id in the path, query and headers", async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      { baseUrl: 'https://img.example.com' },
+      {
+        path: '/artwork/{id}',
+        query: { track: '{id}' },
+        headers: { 'x-track': '{id}' }
+      }
+    )
+
+    expect(out?.uri).toBe('https://img.example.com/artwork/abc?track=abc')
+    expect(out?.headers).toEqual({ 'x-track': 'abc' })
+  })
+
+  it('fills {id} a transform puts in', async () => {
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      undefined,
+      {
+        transform: ({ request }) =>
+          Promise.resolve({ ...request, path: '/{id}.png' })
+      }
+    )
+
+    expect(out?.uri).toBe('/abc.png')
+  })
+
+  it('leaves {id} in place, and warns, for a track without an id', async () => {
+    using warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const out = await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { ...track, id: undefined },
+      undefined,
+      { baseUrl: 'https://img.example.com', path: '/artwork/{id}' }
+    )
+
+    expect(out?.uri).toBe('https://img.example.com/artwork/{id}')
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
+  it("resolves a queued track's artwork from the config's path when the track has none", () => {
+    const out = RequestConfigBuilder.transformTrackArtwork(
+      { id: 'abc', title: 'T' } as Track,
+      undefined,
+      { baseUrl: 'https://img.example.com', path: '/artwork/{id}' }
+    )
+
+    expect(out.artworkSource?.uri).toBe('https://img.example.com/artwork/abc')
+  })
+
+  it("fills {id} in a queued track's artworkSource", () => {
+    const out = RequestConfigBuilder.transformTrackArtwork(track, undefined, {
+      baseUrl: 'https://img.example.com',
+      path: '/artwork/{id}'
+    })
+
+    expect(out.artworkSource?.uri).toBe('https://img.example.com/artwork/abc')
   })
 })
 
@@ -327,9 +438,11 @@ describe('RequestConfigBuilder.resolveMediaRequest — media.resolve', () => {
 describe('RequestConfigBuilder.resolveArtworkSource', () => {
   it('leaves a data artwork URL out of the artwork baseUrl', () => {
     const data = 'data:image/png;base64,iVBORw0KGgo='
-    const out = RequestConfigBuilder.resolveArtworkSource(data, undefined, {
-      baseUrl: 'https://img.example.com'
-    })
+    const out = RequestConfigBuilder.resolveArtworkSource(
+      { title: 'T', artwork: data } as Track,
+      undefined,
+      { baseUrl: 'https://img.example.com' }
+    )
 
     expect(out?.uri).toBe(data)
   })

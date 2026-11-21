@@ -812,8 +812,7 @@ export type BrowserConfiguration = {
    * prepended). For logic that can't be expressed as a template, use `resolve(track)`.
    *
    * The same `{id}` templating applies to every artwork config (`artwork`,
-   * a route's `artwork`, `nowPlayingArtwork`) on iOS and Android. Neither
-   * `{id}` nor `nowPlayingArtwork` is implemented by the web implementation.
+   * a route's `artwork`, `nowPlayingArtwork`).
    *
    * @example
    * // 302-redirect endpoint keyed by the track id:

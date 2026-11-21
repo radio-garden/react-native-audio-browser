@@ -59,6 +59,56 @@ function applyImageQueryParams(
   return { ...config, query }
 }
 
+const TRACK_ID_TOKEN = '{id}'
+
+function unconfiguredArtworkSource(
+  artworkUrl: string | undefined
+): ImageSource | undefined {
+  return artworkUrl ? { uri: artworkUrl, method: 'GET' } : undefined
+}
+
+/**
+ * The image source a finished artwork request loads, with `{id}` in its path,
+ * query and headers replaced by `id`. Without a non-empty `id` the token
+ * stays, so the request fails with a URL that says why, and a warning names
+ * it. Undefined when the request has no path.
+ */
+function artworkImageSource(
+  request: RequestConfig,
+  id: string | undefined
+): ImageSource | undefined {
+  const fill = (value: string) =>
+    id ? value.split(TRACK_ID_TOKEN).join(id) : value
+  const fillValues = (values: Record<string, string> | undefined) =>
+    values &&
+    Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [key, fill(value)])
+    )
+  if (request.path === undefined) return undefined
+  const filled: RequestConfig = {
+    ...request,
+    path: fill(request.path),
+    query: fillValues(request.query),
+    headers: fillValues(request.headers)
+  }
+  const uri = RequestConfigBuilder.buildUrl(filled)
+  if (
+    [
+      filled.path,
+      ...Object.values(filled.query ?? {}),
+      ...Object.values(filled.headers ?? {})
+    ].some((value) => value?.includes(TRACK_ID_TOKEN))
+  ) {
+    console.warn(`Artwork: track has no id, '{id}' left unfilled in ${uri}`)
+  }
+  return {
+    uri,
+    method: filled.method ?? 'GET',
+    headers: filled.headers,
+    body: filled.body
+  }
+}
+
 /** Whether `after` carries a header `before` had not already set identically. */
 function addsHeaders(
   before: Record<string, string> | undefined,
@@ -323,49 +373,31 @@ export const RequestConfigBuilder = {
   },
 
   /**
-   * Resolves an artwork URL and creates an ImageSource.
-   * Matches Android's artwork URL transformation behavior.
+   * `track`'s artwork through the static fields of the shared `request` layer
+   * and the `artwork` config: the async resolution without the request
+   * layer's transform, the config's resolvers and transforms, or a size.
    *
-   * The shared `request` layer's static fields are applied first; this sync path
-   * cannot run an async `request.transform`, so transform-based shaping (e.g. a
-   * dynamic baseUrl) only applies on the async resolution paths. Queue tracks
-   * usually already carry an `artworkSource` resolved at browse-time, so this
-   * sync fallback rarely runs.
-   *
-   * @param artworkUrl The artwork URL (may be relative or absolute)
+   * @param track The track whose `artwork` (relative or absolute) to resolve
    * @param requestConfig The shared request configuration (static fields only)
    * @param artworkConfig The artwork request configuration
    * @returns ImageSource with resolved URI, or undefined if no artwork
    */
   resolveArtworkSource(
-    artworkUrl: string | undefined,
+    track: Track,
     requestConfig: TransformableRequestConfig | undefined,
     artworkConfig: ArtworkRequestConfig | undefined
   ): ImageSource | undefined {
-    if (!artworkUrl) return undefined
+    const artworkUrl = resolveArtworkUrl(track.artwork)
+    if (!artworkConfig) return unconfiguredArtworkSource(artworkUrl)
 
-    // Base path stays the artwork URL; the request layer contributes baseUrl /
-    // query / headers, then the artwork config overrides on top.
-    let config: RequestConfig = { path: artworkUrl }
-    if (requestConfig) {
-      config = this.mergeConfig(this.toRequestConfig(requestConfig), {
-        path: artworkUrl
-      })
+    const base = {
+      ...this.toRequestConfig(requestConfig ?? {}),
+      path: artworkUrl
     }
-    if (artworkConfig) {
-      config = this.mergeConfig(config, this.toRequestConfig(artworkConfig))
-    }
-
-    const resolvedUri = BrowserPathHelper.buildUrl(
-      config.baseUrl,
-      config.path ?? artworkUrl
+    return artworkImageSource(
+      this.mergeConfig(base, this.toRequestConfig(artworkConfig)),
+      track.id
     )
-
-    return {
-      uri: resolvedUri,
-      method: config.method ?? 'GET',
-      headers: config.headers
-    }
   },
 
   /**
@@ -396,15 +428,7 @@ export const RequestConfigBuilder = {
     // single `ImageSource`, and the web fallback renders one <Image>.
     const artworkUrl = resolveArtworkUrl(track.artwork)
 
-    // If no config and no track.artwork, nothing to transform
-    if (!artworkConfig && !artworkUrl) {
-      return undefined
-    }
-
-    // If no artwork config, just return the original artwork URL
-    if (!artworkConfig) {
-      return artworkUrl ? { uri: artworkUrl, method: 'GET' } : undefined
-    }
+    if (!artworkConfig) return unconfiguredArtworkSource(artworkUrl)
 
     try {
       // Step 0: Apply the shared request layer, with track.artwork as the path.
@@ -453,19 +477,7 @@ export const RequestConfigBuilder = {
         })
       }
 
-      // Build final URL
-      const resolvedUri = BrowserPathHelper.buildUrl(
-        mergedConfig.baseUrl,
-        mergedConfig.path ?? artworkUrl ?? ''
-      )
-      const finalUri = appendQueryParams(resolvedUri, mergedConfig.query)
-
-      return {
-        uri: finalUri,
-        method: mergedConfig.method ?? 'GET',
-        headers: mergedConfig.headers,
-        body: mergedConfig.body
-      }
+      return artworkImageSource(mergedConfig, track.id)
     } catch (error) {
       // resolve/transform threw - log error, return undefined to avoid broken images
       console.error('Failed to resolve artwork URL:', error)
@@ -492,7 +504,7 @@ export const RequestConfigBuilder = {
     if (track.artworkSource) return track
 
     const artworkSource = this.resolveArtworkSource(
-      resolveArtworkUrl(track.artwork),
+      track,
       requestConfig,
       artworkConfig
     )

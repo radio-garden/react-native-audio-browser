@@ -43,4 +43,33 @@ describe('NowPlayingManager', () => {
       album: 'Track Album'
     })
   })
+
+  it("gives the track's artworkSource as its artwork, as iOS does", () => {
+    const manager = new NowPlayingManager()
+    let pushed
+    manager.onNowPlayingChanged = (metadata) => {
+      pushed = metadata
+    }
+    const withSource: Track = {
+      ...track,
+      artwork: '/art/7.jpg',
+      artworkSource: { uri: 'https://img.example.com/art/7.jpg?v=2' }
+    }
+
+    manager.updateNowPlaying({ title: 'Live Title' }, withSource, 0)
+
+    const uri = 'https://img.example.com/art/7.jpg?v=2'
+    expect(pushed).toMatchObject({ artwork: uri })
+    expect(manager.getNowPlaying(withSource, 0)).toMatchObject({
+      artwork: uri
+    })
+  })
+
+  it('gives the raw artwork when the track has no artworkSource', () => {
+    const manager = new NowPlayingManager()
+
+    expect(
+      manager.getNowPlaying({ ...track, artwork: '/art/7.jpg' }, 0)
+    ).toMatchObject({ artwork: '/art/7.jpg' })
+  })
 })

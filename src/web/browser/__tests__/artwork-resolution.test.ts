@@ -115,3 +115,36 @@ describe('artwork resolution without an artwork config', () => {
     expect(tile?.artworkSource).toBeUndefined()
   })
 })
+
+describe('artwork resolution with nowPlayingArtwork set', () => {
+  it('resolves browse artwork through the artwork config alone', async () => {
+    const manager = makeManager()
+    manager.configuration = {
+      path: '/',
+      artwork: { baseUrl: 'https://img.example.com' },
+      nowPlayingArtwork: { baseUrl: 'https://np.example.com' },
+      routes: [
+        {
+          path: '/library',
+          browseStatic: {
+            path: '/library',
+            title: 'Library',
+            sections: [
+              {
+                title: 'Collections',
+                children: [
+                  { title: 'Seven', path: '/7', artwork: '/art/7.jpg' }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+
+    await manager.navigatePath('/library')
+
+    const tile = manager.content?.sections?.[0]?.children[0]
+    expect(tile?.artworkSource?.uri).toBe('https://img.example.com/art/7.jpg')
+  })
+})
