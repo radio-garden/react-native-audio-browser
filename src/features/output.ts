@@ -1,9 +1,13 @@
-import type { Output, OutputType } from '../specs/audio-browser.nitro'
+import type {
+  Output,
+  OutputPickerAnchor,
+  OutputType
+} from '../specs/audio-browser.nitro'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
-export type { Output, OutputType }
+export type { Output, OutputPickerAnchor, OutputType }
 
 // MARK: - Actions
 
@@ -11,13 +15,17 @@ export type { Output, OutputType }
  * Presents the system audio output switcher so the listener can move playback to
  * another output. Cross-platform:
  * - **iOS** — the system route picker (Bluetooth, AirPlay / Sonos-via-AirPlay,
- *   speaker). Always available.
+ *   speaker). Always available. Its source view takes `anchor`, a rect in points
+ *   in the key window's coordinates — pass the frame of the control that opened
+ *   it — else sits at the window's top-left corner. A picker shown as a menu
+ *   appears at its source view; a full-screen sheet does not move.
  * - **Android** — the system Output Switcher (Bluetooth / speaker / Cast list) on
  *   Android 11+. No-op on older Android — gate on {@link supportsOutputSwitcher}.
+ *   Ignores `anchor`.
  * - **Web** — no-op.
  */
-export function openOutputPicker(): void {
-  nativeBrowser.openOutputPicker()
+export function openOutputPicker(anchor?: OutputPickerAnchor): void {
+  nativeBrowser.openOutputPicker(anchor)
 }
 
 /**

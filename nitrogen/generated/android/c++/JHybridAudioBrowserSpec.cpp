@@ -209,6 +209,8 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `RemoteOutputsOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
+// Forward declaration of `OutputPickerAnchor` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 
 #include <string>
 #include <optional>
@@ -482,6 +484,8 @@ namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 #include "JRetryConfig.hpp"
 #include "RemoteOutputsOptions.hpp"
 #include "JRemoteOutputsOptions.hpp"
+#include "OutputPickerAnchor.hpp"
+#include "JOutputPickerAnchor.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -1849,9 +1853,9 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::openOutputPicker() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("openOutputPicker");
-    method(_javaPart);
+  void JHybridAudioBrowserSpec::openOutputPicker(const std::optional<OutputPickerAnchor>& anchor) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JOutputPickerAnchor> /* anchor */)>("openOutputPicker");
+    method(_javaPart, anchor.has_value() ? JOutputPickerAnchor::fromCpp(anchor.value()) : nullptr);
   }
   bool JHybridAudioBrowserSpec::supportsOutputSwitcher() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("supportsOutputSwitcher");

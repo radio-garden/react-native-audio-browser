@@ -126,6 +126,8 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `OutputPickerAnchor` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 // Forward declaration of `OutputType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class OutputType; }
 // Forward declaration of `Output` to properly resolve imports.
@@ -274,6 +276,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
 #include "Output.hpp"
+#include "OutputPickerAnchor.hpp"
 #include "OutputType.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"

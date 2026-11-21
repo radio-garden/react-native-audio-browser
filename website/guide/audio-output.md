@@ -345,6 +345,33 @@ function OutputButton() {
 switcher exists — but gating the button on `supportsOutputSwitcher()` keeps you
 from showing a control that would do nothing.
 
+On iOS the picker opens from a source view at the window's top-left corner,
+unless you pass an anchor: the frame of your button, in points in the key
+window's coordinates. A picker shown as a menu then appears at your button; a
+full-screen sheet does not move. React Native's `measureInWindow` gives the
+frame:
+
+```tsx
+import { useRef } from 'react'
+import { Button, View } from 'react-native'
+import { openOutputPicker } from 'react-native-audio-browser'
+
+function AnchoredOutputButton() {
+  const ref = useRef<View>(null)
+  const open = () =>
+    ref.current?.measureInWindow((x, y, width, height) =>
+      openOutputPicker({ x, y, width, height })
+    )
+  return (
+    <View ref={ref}>
+      <Button title="Output" onPress={open} />
+    </View>
+  )
+}
+```
+
+Android ignores the anchor: its switcher is a dialog with no position.
+
 On Android the switcher is the system one (the picker from the media
 notification); selecting a Bluetooth speaker there routes audio at the OS level.
 The library can't force playback to a _specific_ Bluetooth device itself — route
@@ -369,13 +396,13 @@ turns the pause off. On iOS it always happens.
 
 ## API summary
 
-| API                        | Platforms        | Purpose                                                                    |
-| -------------------------- | ---------------- | -------------------------------------------------------------------------- |
-| `openOutputPicker()`       | iOS, Android 11+ | Present the system output switcher (Bluetooth / AirPlay / speaker / Cast). |
-| `supportsOutputSwitcher()` | all              | Whether a switcher can be shown — gate your output button on it.           |
-| `useOutput()`              | iOS, Android     | Reactive current output (`Output \| undefined`).                           |
-| `getOutput()`              | iOS, Android     | One-off snapshot of the current output.                                    |
-| `onOutputChanged`          | iOS, Android     | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn.      |
+| API                         | Platforms        | Purpose                                                                                                |
+| --------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `openOutputPicker(anchor?)` | iOS, Android 11+ | Present the system output switcher (Bluetooth / AirPlay / speaker / Cast); iOS opens it from `anchor`. |
+| `supportsOutputSwitcher()`  | all              | Whether a switcher can be shown — gate your output button on it.                                       |
+| `useOutput()`               | iOS, Android     | Reactive current output (`Output \| undefined`).                                                       |
+| `getOutput()`               | iOS, Android     | One-off snapshot of the current output.                                                                |
+| `onOutputChanged`           | iOS, Android     | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn.                                  |
 
 The whole API is cross-platform; only the switcher needs Android 11+ (gate on
 `supportsOutputSwitcher()`). Below Android 13, the output can miss a reroute

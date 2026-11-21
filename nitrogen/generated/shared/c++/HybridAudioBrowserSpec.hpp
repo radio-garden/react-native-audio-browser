@@ -97,6 +97,8 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `OutputPickerAnchor` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct OutputPickerAnchor; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 
@@ -149,6 +151,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
 #include "NowPlayingUpdate.hpp"
+#include "OutputPickerAnchor.hpp"
 #include "BatteryOptimizationStatus.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -363,7 +366,7 @@ namespace margelo::nitro::audiobrowser {
       virtual double getSystemVolume() = 0;
       virtual void setSystemVolume(double volume) = 0;
       virtual std::optional<Output> getOutput() = 0;
-      virtual void openOutputPicker() = 0;
+      virtual void openOutputPicker(const std::optional<OutputPickerAnchor>& anchor) = 0;
       virtual bool supportsOutputSwitcher() = 0;
       virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
       virtual void setEqualizerEnabled(bool enabled) = 0;
