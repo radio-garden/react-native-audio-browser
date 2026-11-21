@@ -1,5 +1,7 @@
 import type { NavigationErrorType } from '../../features'
 import type {
+  ImageContext,
+  ImageSource,
   Track,
   ResolvedTrack,
   Section,
@@ -409,28 +411,12 @@ export class BrowserManager {
     // meant an app with no `artwork` block never populated the field at all —
     // `resolveArtworkSourceAsync` already handles the no-config case the way
     // `resolveArtworkUrl` does on Android.
-    const artworkConfig = this._configuration.artwork
-    // The shared request layer applies to artwork too — use the resolved layer
-    // (resolver result or static config) so a resolver-only config still works.
-    await this.ensureLayersResolved()
-    const requestConfig = this._resolvedRequest
-
     // Transform parent artwork
-    const parentArtworkSource =
-      await RequestConfigBuilder.resolveArtworkSourceAsync(
-        content,
-        requestConfig,
-        artworkConfig
-      )
+    const parentArtworkSource = await this.resolveArtworkSource(content)
 
     // Transform children artwork, section by section
     const transformTrack = async (track: Track): Promise<Track> => {
-      const artworkSource =
-        await RequestConfigBuilder.resolveArtworkSourceAsync(
-          track,
-          requestConfig,
-          artworkConfig
-        )
+      const artworkSource = await this.resolveArtworkSource(track)
       if (artworkSource && !track.artworkSource) {
         return { ...track, artworkSource }
       }
@@ -545,6 +531,22 @@ export class BrowserManager {
   > {
     await this.ensureLayersResolved()
     return this._resolvedRequest
+  }
+
+  /**
+   * `track`'s artwork through the resolved request layer and the `artwork`
+   * config. Rejects when the request layer's resolver does.
+   */
+  async resolveArtworkSource(
+    track: Track,
+    imageContext?: ImageContext
+  ): Promise<ImageSource | undefined> {
+    return RequestConfigBuilder.resolveArtworkSourceAsync(
+      track,
+      await this.resolvedRequestConfig(),
+      this._configuration.artwork,
+      imageContext
+    )
   }
 
   /**
@@ -746,18 +748,9 @@ export class BrowserManager {
     // request layer (incl. its transform) applies, matching content/search.
     // Gated per track inside the resolver, as on Android — see
     // `transformArtworkForContent`.
-    const artworkConfig = this._configuration.artwork
-    // Resolved request layer (resolver or static), matching content/search.
-    await this.ensureLayersResolved()
-    const requestConfig = this._resolvedRequest
     return Promise.all(
       tabs.map(async (track) => {
-        const artworkSource =
-          await RequestConfigBuilder.resolveArtworkSourceAsync(
-            track,
-            requestConfig,
-            artworkConfig
-          )
+        const artworkSource = await this.resolveArtworkSource(track)
         if (artworkSource && !track.artworkSource) {
           return { ...track, artworkSource }
         }
