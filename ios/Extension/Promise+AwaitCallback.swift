@@ -1,4 +1,6 @@
-import NitroModules
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// Awaits for JS callbacks in place of Nitro's `await()`, which ignores cancellation: see
 /// `awaitCallback`. A rejection throws Nitro's `RuntimeError`; `awaitJSPromise`, and the inner promise

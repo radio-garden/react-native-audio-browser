@@ -72,6 +72,7 @@ let package = Package(
         "Extension/CGSize+AspectFit.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Extension/Dictionary+Headers.swift",
+        "Extension/Promise+AwaitCallback.swift",
         "Http/HttpClient.swift",
         "Util/Emitter.swift",
         "Util/Connectivity.swift",
