@@ -1,5 +1,6 @@
 import type { NavigationErrorType } from '../../features'
 import type {
+  ArtworkRequestConfig,
   ImageContext,
   ImageSource,
   Track,
@@ -534,17 +535,19 @@ export class BrowserManager {
   }
 
   /**
-   * `track`'s artwork through the resolved request layer and the `artwork`
-   * config. Rejects when the request layer's resolver does.
+   * `track`'s artwork through the resolved request layer and `artworkConfig`,
+   * else the `artwork` config. Rejects when the request layer's resolver does.
    */
   async resolveArtworkSource(
     track: Track,
-    imageContext?: ImageContext
+    imageContext?: ImageContext,
+    artworkConfig: ArtworkRequestConfig | undefined = this._configuration
+      .artwork
   ): Promise<ImageSource | undefined> {
     return RequestConfigBuilder.resolveArtworkSourceAsync(
       track,
       await this.resolvedRequestConfig(),
-      this._configuration.artwork,
+      artworkConfig,
       imageContext
     )
   }

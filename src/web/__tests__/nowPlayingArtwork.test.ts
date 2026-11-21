@@ -66,6 +66,21 @@ describe('now-playing artwork on the OS media controls', () => {
     )
   })
 
+  it('resolves the artwork through nowPlayingArtwork when it is set', async () => {
+    h.browser.configuration = {
+      artwork: { baseUrl: 'https://img.example.com' },
+      nowPlayingArtwork: {
+        baseUrl: 'https://np.example.com',
+        path: '/artwork/{id}'
+      }
+    }
+
+    h.browser.load(relative)
+    await h.flush()
+
+    expect(sessionArtwork()).toBe('https://np.example.com/artwork/7')
+  })
+
   it("runs the artwork config's resolve and transform", async () => {
     h.browser.configuration = {
       artwork: {
