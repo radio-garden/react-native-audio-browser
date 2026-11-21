@@ -318,6 +318,10 @@ internal constructor(
     }
   }
 
+  /** The browser [notifyBrowserConfigurationReady] registered, or null if none is yet. */
+  val configuredBrowser: AudioBrowser?
+    get() = browser.takeIf { browserRegistered.isCompleted }
+
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
    *
