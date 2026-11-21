@@ -14,6 +14,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
@@ -110,7 +111,6 @@ class MediaSessionCallback(private val player: Player) :
     mediaSession: MediaSession,
     capabilities: PlayerCapabilities,
     remoteButtonLayout: RemoteButtonLayout?,
-    searchAvailable: Boolean,
     forwardJumpInterval: Double,
     backwardJumpInterval: Double,
   ) {
@@ -119,7 +119,6 @@ class MediaSessionCallback(private val player: Player) :
       mediaSession,
       capabilities,
       remoteButtonLayout,
-      searchAvailable,
       forwardJumpInterval,
       backwardJumpInterval,
     )
@@ -627,12 +626,7 @@ class MediaSessionCallback(private val player: Player) :
     Timber.d("onSearch: ${browser.packageName}, query = $query")
     return scope.future {
       val audioBrowser =
-        try {
-          player.awaitBrowser()
-        } catch (e: TimeoutException) {
-          Timber.w("Timed out waiting for browser - search not available")
-          return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-        }
+        searchableBrowser() ?: return@future refuseSearch(session, browser, query, params)
       val browserManager = audioBrowser.browserManager
 
       val searchOutcome =
@@ -651,21 +645,48 @@ class MediaSessionCallback(private val player: Player) :
         return@future LibraryResult.ofVoid()
       }
 
-      // Before announceSearch's offline branch: no search source is not-supported, online or not.
-      if (!browserManager.config.hasSearch) {
-        Timber.w("Search requested but no search source configured")
-        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-      }
-
       announceSearch(session, browser, browserManager, query, params)
       LibraryResult.ofVoid()
     }
   }
 
   /**
+   * The configured browser, once it is, if it offers search; null if its configuration never comes
+   * or has no search. Comes before the gate and the offline tile: a search the app does not offer
+   * is neither gated nor offline.
+   */
+  private suspend fun searchableBrowser(): AudioBrowser? {
+    try {
+      player.awaitBrowser()
+    } catch (e: TimeoutException) {
+      Timber.w(e, "Timed out waiting for browser - search not available")
+      return null
+    }
+    val searchBrowser = player.searchBrowser
+    if (searchBrowser == null) Timber.w("Search requested but no search source configured")
+    return searchBrowser
+  }
+
+  /**
+   * Media3's legacy bridge drops [onSearch]'s result and answers a legacy controller only once a
+   * search is announced, from [onGetSearchResult], which refuses it in turn unless a browser with
+   * search was configured meanwhile, and then runs it.
+   */
+  private fun refuseSearch(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    query: String,
+    params: MediaLibraryService.LibraryParams?,
+  ): LibraryResult<Void> {
+    session.notifySearchResultChanged(browser, query, 0, params)
+    return LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+  }
+
+  /**
    * Tells [browser] how many items [onGetSearchResult] will serve for [query]: its hits, or the one
-   * tile standing in for them, since a controller told zero never asks. Offline keeps the query for
-   * [reannounceOfflineSearches]; any other outcome drops it.
+   * tile standing in for them, since a media3 controller told zero never asks (the legacy bridge
+   * asks whatever the count). Offline keeps the query for [reannounceOfflineSearches]; any other
+   * outcome drops it.
    */
   private suspend fun announceSearch(
     session: MediaLibraryService.MediaLibrarySession,
@@ -737,13 +758,11 @@ class MediaSessionCallback(private val player: Player) :
       "onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize"
     )
     return scope.future {
+      // No wait: media3 answers every pending legacy search for this query from one announcement,
+      // and a search still waiting in onSearch announces again once it is done.
       val audioBrowser =
-        try {
-          player.awaitBrowser()
-        } catch (e: TimeoutException) {
-          Timber.w("Timed out waiting for browser - search not available")
-          return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-        }
+        player.searchBrowser
+          ?: return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       val browserManager = audioBrowser.browserManager
 
       val searchOutcome =
@@ -797,10 +816,16 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       try {
-        val tracks = browserManager.getCachedSearchResults(query)
-        if (tracks == null) Timber.w("No cached search results for query: $query")
-        // No hits, all disabled, or nothing cached: the app's empty copy (ADR 0001). Something must
-        // come back: onSearch announced at least one item.
+        // Nothing cached when onSearch refused the search and the configuration came after.
+        val tracks =
+          browserManager.getCachedSearchResults(query)
+            ?: run {
+              Timber.d("No cached search results for query: $query - searching")
+              browserManager.search(query)
+              browserManager.getCachedSearchResults(query)
+            }
+        // No hits or all disabled: the app's empty copy (ADR 0001). Something must come back:
+        // onSearch announced at least one item.
         val mediaItems =
           browseLevelItems(toFlatMediaItems(tracks?.toList().orEmpty())) {
             audioBrowser.resolveFormattedError(
@@ -1186,55 +1211,3 @@ internal fun browseFailureError(): NavigationError =
 internal fun announcedSearchCount(sections: List<Section>?): Int =
   (sections?.sumOf { section -> section.children.count { it.disabled != true } } ?: 0)
     .coerceAtLeast(1)
-
-/**
- * The search each controller was last served the offline tile for. Media3 keeps no record of a
- * search and it has no subscription, so without this the offline tile stays until the user searches
- * again. Written from the IO scope and read from the connectivity observer.
- */
-internal class OfflineSearchRegistry {
-  private val searches = mutableMapOf<MediaSession.ControllerInfo, OfflineSearch>()
-
-  @Synchronized
-  fun record(
-    browser: MediaSession.ControllerInfo,
-    query: String,
-    params: MediaLibraryService.LibraryParams?,
-  ) {
-    searches[browser] = OfflineSearch(browser, query, params)
-  }
-
-  @Synchronized
-  fun forget(browser: MediaSession.ControllerInfo) {
-    searches.remove(browser)
-  }
-
-  /** Takes every record: a re-run that finds the network gone again records its own. */
-  @Synchronized
-  fun drain(): List<OfflineSearch> = searches.values.toList().also { searches.clear() }
-}
-
-internal data class OfflineSearch(
-  val browser: MediaSession.ControllerInfo,
-  val query: String,
-  val params: MediaLibraryService.LibraryParams?,
-)
-
-/**
- * The query whose search threw, so [MediaSessionCallback.onGetSearchResult] serves the error tile
- * rather than the empty one. One slot, like BrowserManager's single-entry result cache: a late
- * fetch of an earlier failed query serves the empty tile.
- */
-internal class FailedSearchSlot {
-  @Volatile private var failed: Pair<String, NavigationError>? = null
-
-  fun record(query: String, error: NavigationError) {
-    failed = query to error
-  }
-
-  fun clear() {
-    failed = null
-  }
-
-  fun errorFor(query: String): NavigationError? = failed?.takeIf { it.first == query }?.second
-}

@@ -82,6 +82,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -311,20 +312,21 @@ internal constructor(
     }
 
     if (::mediaSession.isInitialized) {
-      val searchAvailable = audioBrowser.browserManager.config.hasSearch
-      // The session starts without search, so only a configured search needs an update.
-      if (searchAvailable) {
-        mediaSessionCallback.updateMediaSession(
-          mediaSession,
-          options.capabilities,
-          options.remoteButtonLayout,
-          searchAvailable,
-          options.forwardJumpInterval,
-          options.backwardJumpInterval,
-        )
-      }
+      mediaSessionCallback.commandManager.updateSearchAvailable(
+        mediaSession,
+        audioBrowser.browserManager.config.hasSearch,
+      )
     }
   }
+
+  /** The browser [notifyBrowserConfigurationReady] registered, or null if none is yet. */
+  @OptIn(ExperimentalCoroutinesApi::class)
+  val configuredBrowser: AudioBrowser?
+    get() = browserRegistered.let { if (it.isCompleted) it.getCompleted() else null }
+
+  /** [configuredBrowser], if it offers search. */
+  val searchBrowser: AudioBrowser?
+    get() = configuredBrowser?.takeIf { it.browserManager.config.hasSearch }
 
   /**
    * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
@@ -1578,12 +1580,10 @@ internal constructor(
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged
     ) {
-      val searchAvailable = browser?.browserManager?.config?.hasSearch ?: false
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
         options.remoteButtonLayout,
-        searchAvailable,
         options.forwardJumpInterval,
         options.backwardJumpInterval,
       )

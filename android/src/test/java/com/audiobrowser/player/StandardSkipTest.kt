@@ -73,14 +73,14 @@ class StandardSkipTest {
     capabilities: PlayerCapabilities,
     layout: RemoteButtonLayout? = null,
   ): List<Pair<String, Int>> {
-    manager.updateMediaSession(session, capabilities, layout, searchAvailable = false)
+    manager.updateMediaSession(session, capabilities, layout)
     return manager.buildConnectionResult(session).mediaButtonPreferences!!.map {
       it.displayName.toString() to it.slots[0]
     }
   }
 
   private fun commands(capabilities: PlayerCapabilities): MediaPlayer.Commands {
-    manager.updateMediaSession(session, capabilities, null, searchAvailable = false)
+    manager.updateMediaSession(session, capabilities, null)
     return manager.buildConnectionResult(session).availablePlayerCommands
   }
 
@@ -92,7 +92,7 @@ class StandardSkipTest {
   @Test
   fun `Android Automotive OS leaves the favorite to its own rating control`() {
     val automotive = MediaSessionCommandManager(automotive = true)
-    automotive.updateMediaSession(session, capabilities(), null, searchAvailable = false)
+    automotive.updateMediaSession(session, capabilities(), null)
     assertEquals(
       emptyList<CommandButton>(),
       automotive.buildConnectionResult(session).mediaButtonPreferences,
@@ -160,7 +160,7 @@ class StandardSkipTest {
   }
 
   private fun acceptsRatings(capabilities: PlayerCapabilities): Boolean {
-    manager.updateMediaSession(session, capabilities, null, searchAvailable = false)
+    manager.updateMediaSession(session, capabilities, null)
     return manager
       .buildConnectionResult(session)
       .availableSessionCommands
