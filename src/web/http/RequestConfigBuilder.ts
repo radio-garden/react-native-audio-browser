@@ -221,10 +221,11 @@ export const RequestConfigBuilder = {
    */
   async applyLayerOrBase(
     base: RequestConfig,
-    layer: TransformableRequestConfig | undefined
+    layer: TransformableRequestConfig | undefined,
+    params?: Record<string, string>
   ): Promise<RequestConfig> {
     try {
-      return await this.applyLayer(base, layer)
+      return await this.applyLayer(base, layer, params)
     } catch (e) {
       console.error(
         'Failed to apply transform function, using base config',
@@ -445,9 +446,11 @@ export const RequestConfigBuilder = {
     try {
       // Step 0: Apply the shared request layer, with track.artwork as the path.
       // Its transform (if any) runs for artwork too — e.g. a dynamic baseUrl.
+      // Empty route params, as iOS and Android hand it.
       const baseConfig = await this.applyLayerOrBase(
         { path: artworkUrl },
-        requestConfig
+        requestConfig,
+        {}
       )
 
       // Step 1: Per-track resolution — async `resolve` first, then `resolveSync`

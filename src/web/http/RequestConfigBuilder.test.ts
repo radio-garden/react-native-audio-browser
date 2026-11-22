@@ -128,6 +128,21 @@ describe('RequestConfigBuilder.resolveArtworkSourceAsync — no path left', () =
   })
 })
 
+describe('RequestConfigBuilder.resolveArtworkSourceAsync — route params', () => {
+  it('hands the shared request transform empty route params, as iOS and Android do', async () => {
+    const transform = vi.fn((request: RequestConfig) =>
+      Promise.resolve(request)
+    )
+    await RequestConfigBuilder.resolveArtworkSourceAsync(
+      { title: 'T', artwork: '/art/7.jpg' } as Track,
+      { transform },
+      { baseUrl: 'https://img.example.com' }
+    )
+
+    expect(transform).toHaveBeenCalledWith(expect.anything(), {})
+  })
+})
+
 describe('RequestConfigBuilder.resolveArtworkSourceAsync — a throwing transform', () => {
   it('keeps the artwork layer when the shared request transform throws', async () => {
     using _ = vi.spyOn(console, 'error').mockImplementation(() => {})
