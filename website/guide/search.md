@@ -56,7 +56,7 @@ configureBrowser({
 })
 ```
 
-With the HTTP form the library adds to `request.query`: `q` (always, even when empty), `mode`, `reference` (only when it is `'my'`, see below), and the filter fields, each only when the intent carried it. The callback's `query` is sent as `q`.
+With the HTTP form the library adds to `request.query`: `q` (always, even when empty), `mode`, `reference` (only when it is `'my'`, see below), and the filter fields, each only when the intent carried it. The callback's `query` is sent as `q`. A search `transform` gets the same parameters as its second argument.
 
 ## Searching from your own UI
 

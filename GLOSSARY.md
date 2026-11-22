@@ -221,7 +221,7 @@ _Avoid_: Finalize, sign, decorate.
 
 One config in the outbound-request stack, applied base-up: _request_ (shared) → _kind_ (browse / search / media) → _route_ (per-Route). A Request-Config Layer with a **Transform** replaces the running config entirely (transform-wins); otherwise its static fields merge over it — except `path`, which is carried from the base (only a Transform may change it).
 
-`buildApiRequest` / `applyLayers` are the canonical application of the stack. Artwork configs are _not_ applied as Request-Config Layers: their static fields merge override-wins, so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` can supply the path.
+`RequestLayer.apiRequest` (iOS), `buildApiRequest` (Android) and `applyLayers` (web) are the canonical application of the stack. Artwork configs are _not_ applied as Request-Config Layers: their static fields merge override-wins, so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` can supply the path.
 
 _Avoid_: Layer (unqualified — too generic), stage, level.
 

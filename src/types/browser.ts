@@ -183,7 +183,10 @@ export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
 // no Promise. When both are set they run as a pipeline: async first, then sync.
 /**
  * Async `transform`: receives the merged request and the route's params, and
- * returns the request to send.
+ * returns the request to send. The params are, on every platform: the matched
+ * route's params for browse (`{ path }` on the default route), the search's
+ * query params for search, `{}` for tabs and for the shared `request` layer of
+ * an artwork request, and none for a media request.
  */
 export type RequestConfigTransformer = (
   request: RequestConfig,
