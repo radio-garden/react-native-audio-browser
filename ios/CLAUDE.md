@@ -208,7 +208,6 @@ ios/
 │   ├── Track+Copying.swift           # Track.copying() for selective field updates
 │   ├── SearchParams+Query.swift      # A search's query params and cache key
 │   ├── ResolvedTrack+Copying.swift   # ResolvedTrack.copying()
-│   ├── RequestConfig+Copying.swift   # RequestConfig.copying()
 │   ├── Capability+RemoteCommand.swift # Capability → RemoteCommand conversion
 │   ├── PlayerCapabilities+Favorite.swift # Favorite capability helpers
 │   ├── ChapterMetadata+AVFoundation.swift  # AVTimedMetadataGroup → ChapterMetadata

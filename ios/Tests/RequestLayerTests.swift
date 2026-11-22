@@ -124,6 +124,103 @@ struct RequestLayerTests {
     }
   }
 
+  @Test func mediaRequestAppliesTheRequestLayerThenTheMediaLayerWithNoParams() async throws {
+    var calls: [(layer: String, params: [String: String]?)] = []
+    let applied = try await RequestLayer.mediaRequest(
+      request: (Config(), [{ (config: Config, params: [String: String]?) -> Config in
+        calls.append(("request", params))
+        return Config(path: config.path, baseUrl: "https://a")
+      }]),
+      media: (Config(), [{ (config: Config, params: [String: String]?) -> Config in
+        calls.append(("media", params))
+        return Config(path: config.path, baseUrl: config.baseUrl, headers: ["M": "1"])
+      }]),
+      over: Config(path: "/track.mp3"),
+    )
+    #expect(applied == Config(path: "/track.mp3", baseUrl: "https://a", headers: ["M": "1"]))
+    #expect(calls.map(\.layer) == ["request", "media"])
+    #expect(calls.allSatisfy { $0.params == nil })
+  }
+
+  @Test func mediaRequestSkipsOnlyTheLayerWhoseTransformThrows() async throws {
+    struct Boom: Error {}
+    let applied = try await RequestLayer.mediaRequest(
+      request: (Config(), [{ _, _ in throw Boom() }]),
+      media: (Config(headers: ["M": "1"]), []),
+      over: Config(path: "/track.mp3", baseUrl: "https://a"),
+    )
+    #expect(applied == Config(path: "/track.mp3", baseUrl: "https://a", headers: ["M": "1"]))
+  }
+
+  @Test func searchRequestHandsItsTransformsTheQueryAndPutsItInTheRequest() async throws {
+    var received: [[String: String]?] = []
+    let record = { (config: Config, params: [String: String]?) -> Config in
+      received.append(params)
+      return config
+    }
+    let request = try await RequestLayer.searchRequest(
+      request: (Config(baseUrl: "https://a"), [record]),
+      search: (Config(), [record]),
+      query: ["q": "jazz", "mode": "artist"],
+      over: Config(path: "/search"),
+    )
+    #expect(received == [["q": "jazz", "mode": "artist"], ["q": "jazz", "mode": "artist"]])
+    #expect(request.query == ["q": "jazz", "mode": "artist"])
+  }
+
+  @Test func apiRequestHandsEveryLayerTheParamsInOrder() async throws {
+    var calls: [(layer: String, params: [String: String]?)] = []
+    func recording(_ name: String) -> RequestLayer.Source<Config> {
+      (Config(), [{ (config: Config, params: [String: String]?) -> Config in
+        calls.append((name, params))
+        return config
+      }])
+    }
+    _ = try await RequestLayer.apiRequest(
+      request: recording("request"), kind: recording("kind"), route: recording("route"),
+      params: ["id": "42"], over: Config(path: "/albums/42"),
+    )
+    #expect(calls.map(\.layer) == ["request", "kind", "route"])
+    #expect(calls.allSatisfy { $0.params == ["id": "42"] })
+  }
+
+  @Test func apiRequestKeepsTheInitialQueryWhenTheRequestTransformDropsTheQuery() async throws {
+    let request = try await RequestLayer.apiRequest(
+      request: (Config(), [{ (config: Config, _: [String: String]?) -> Config in
+        Config(path: config.path, baseUrl: "https://a")
+      }]),
+      kind: nil, route: nil, params: [:], initialQuery: ["q": "jazz"],
+      over: Config(path: "/search", query: ["stale": "1"]),
+    )
+    #expect(request.query == ["q": "jazz"])
+  }
+
+  @Test func artworkHandsTheRequestLayerEmptyParams() async throws {
+    var received: [[String: String]?] = []
+    let result = try await RequestLayer.artwork(
+      Config(),
+      request: (Config(), [{ (config: Config, params: [String: String]?) -> Config in
+        received.append(params)
+        return Config(path: config.path, baseUrl: "https://img")
+      }]),
+      over: Config(path: "/art/7.jpg"),
+      resolve: nil, trackHasArtwork: true, sizeQuery: [:], transforms: [], id: nil,
+    )
+    #expect(received == [[:]])
+    #expect(result == Config(path: "/art/7.jpg", baseUrl: "https://img"))
+  }
+
+  @Test func artworkSkipsARequestLayerWhoseTransformThrows() async throws {
+    struct Boom: Error {}
+    let result = try await RequestLayer.artwork(
+      Config(baseUrl: "https://img"),
+      request: (Config(), [{ _, _ in throw Boom() }]),
+      over: Config(path: "/art/7.jpg"),
+      resolve: nil, trackHasArtwork: true, sizeQuery: [:], transforms: [], id: nil,
+    )
+    #expect(result == Config(path: "/art/7.jpg", baseUrl: "https://img"))
+  }
+
   @Test func mergeResolvedLetsSyncWin() {
     let asyncResolved = Config(baseUrl: "https://async", userAgent: "ASYNC")
     let syncResolved = Config(userAgent: "SYNC")
@@ -175,7 +272,7 @@ struct RequestLayerTests {
     id: String? = nil,
   ) async throws -> Config? {
     try await RequestLayer.artwork(
-      artwork, over: base, resolve: resolve, trackHasArtwork: trackHasArtwork,
+      artwork, request: nil, over: base, resolve: resolve, trackHasArtwork: trackHasArtwork,
       sizeQuery: sizeQuery, transforms: transforms, id: id,
     )
   }
