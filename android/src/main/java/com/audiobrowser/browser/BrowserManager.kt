@@ -1039,7 +1039,7 @@ class BrowserManager {
     routes
       .find { it.path == DEFAULT_ROUTE_PATH }
       ?.let { defaultRoute ->
-        return Pair(defaultRoute, emptyMap())
+        return Pair(defaultRoute, mapOf("path" to path))
       }
 
     return null
@@ -1183,7 +1183,7 @@ class BrowserManager {
    * Layers request → kind (browse/search) → route; each transform receives the previous output.
    * [path] seeds the base because no layer's static path ever applies; [initialQuery] seeds it
    * because a layer with a transform receives only the base, so its static query never applies.
-   * Mirrors iOS `buildApiRequest`.
+   * Mirrors iOS `RequestLayer.apiRequest`.
    *
    * @throws ContentNotFoundException when no layer supplies a baseUrl
    */
@@ -1263,7 +1263,8 @@ class BrowserManager {
           routeConfig = null,
           // A layer's static path never applies, so the search config's path seeds the base.
           path = apiConfig.path,
-          params = emptyMap(),
+          // The transforms get the query params as their route params, as on iOS and web.
+          params = searchQueryParams,
           initialQuery = searchQueryParams,
         )
       // A bare Track array, unlike browse's page object.

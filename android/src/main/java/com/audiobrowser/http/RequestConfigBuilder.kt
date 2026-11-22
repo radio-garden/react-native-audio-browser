@@ -94,7 +94,7 @@ object RequestConfigBuilder {
   /**
    * Applies [override] as a Request-Config Layer (GLOSSARY.md): its transforms, async then sync,
    * replace the config and its static fields are then ignored; without one, its static fields merge
-   * over [base] except `path`, which stays the base's. Mirrors iOS `applyLayer`.
+   * over [base] except `path`, which stays the base's. Mirrors iOS `RequestLayer.apply`.
    *
    * @throws CallbackException when a transform throws
    */
