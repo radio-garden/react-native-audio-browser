@@ -50,6 +50,9 @@ class PlayerCastTest {
 
   private val callbacks = mock(Callbacks::class.java)
 
+  /** Takes the phone's connection and answers nothing: the phone's loads neither play nor fail. */
+  private val silent = ServerSocket(0)
+
   @Before
   fun cast() {
     player.setup(
@@ -61,7 +64,11 @@ class PlayerCastTest {
     )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(
-      listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
+      listOf(
+        TrackFactory.toMedia3(
+          TestFixtures.track(title = "a", src = "http://127.0.0.1:${silent.localPort}/a.mp3")
+        )
+      )
     )
     player.playWhenReady = true
     remote.startSession()
@@ -70,7 +77,11 @@ class PlayerCastTest {
     idleExpecting("the item on the receiver") { receiver.loads.isNotEmpty() }
   }
 
-  @After fun release() = player.destroy()
+  @After
+  fun release() {
+    player.destroy()
+    silent.close()
+  }
 
   @Test
   fun `a receiver falling behind the live window is a remote error, not a local restart`() {
@@ -164,37 +175,31 @@ class PlayerCastTest {
 
   @Test
   fun `a connection that fails before the hand-back is heard is retried, not an error`() {
-    // Answers nothing, so the only failure report is the one the listener below makes.
-    ServerSocket(0).use { silent ->
-      player.load(TestFixtures.track(title = "b", src = "http://127.0.0.1:${silent.localPort}/a"))
-      idleExpecting("the track on the receiver") { receiver.loads.size == 2 }
-      // The playback thread can fail an offline load before the main thread hears of the
-      // hand-back that prepared it. Robolectric starts offline.
-      player.exoPlayer.addListener(
-        object : MediaPlayer.Listener {
-          override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState != MediaPlayer.STATE_BUFFERING) return
-            player.exoPlayer.removeListener(this)
-            player.onLoadFailure(UnknownHostException(), inPlace = false)
-          }
+    // The only failure report is the one the listener below makes.
+    player.load(TestFixtures.track(title = "b", src = "http://127.0.0.1:${silent.localPort}/a"))
+    idleExpecting("the track on the receiver") { receiver.loads.size == 2 }
+    // The playback thread can fail an offline load before the main thread hears of the
+    // hand-back that prepared it. Robolectric starts offline.
+    player.exoPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          if (playbackState != MediaPlayer.STATE_BUFFERING) return
+          player.exoPlayer.removeListener(this)
+          player.onLoadFailure(UnknownHostException(), inPlace = false)
         }
-      )
+      }
+    )
 
-      remote.endSession()
-      idle()
-      player.playerListener.onPlayerError(
-        PlaybackException(
-          "offline",
-          null,
-          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-        )
-      )
-      idle()
+    remote.endSession()
+    idle()
+    player.playerListener.onPlayerError(
+      PlaybackException("offline", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+    )
+    idle()
 
-      assertNotEquals(PlaybackState.ERROR, player.playbackState)
-      assertEquals(true, player.getPlayback().error?.retrying)
-      assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
-    }
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
+    assertEquals(true, player.getPlayback().error?.retrying)
+    assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
   }
 
   private fun calls(name: String) =
