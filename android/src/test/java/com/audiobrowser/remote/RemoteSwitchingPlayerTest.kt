@@ -845,6 +845,42 @@ class RemoteSwitchingPlayerTest {
   }
 
   @Test
+  fun `a session ending while its handover resolves, with no other remote up, leaves the phone playing`() {
+    playLocally(listOf("a"), positionMs = 4_000)
+    gate = CompletableDeferred()
+    remote.startSession()
+    idle()
+    val receiver = remote.player
+
+    remote.endSession()
+    gate!!.complete(Unit)
+    idle()
+
+    assertFalse(player.isRemote)
+    assertEquals(0, local.stops)
+    assertTrue(local.playWhenReady)
+    assertEquals(MediaPlayer.STATE_READY, player.playbackState)
+    assertTrue(receiver.loads.isEmpty())
+  }
+
+  @Test
+  fun `a session that ends and starts again while its handover resolves takes the item once`() {
+    playLocally(listOf("a"))
+    gate = CompletableDeferred()
+    remote.startSession()
+    idle()
+
+    remote.endSession()
+    remote.startSession()
+    idle()
+    gate!!.complete(Unit)
+    idle()
+
+    assertTrue(player.isRemote)
+    assertEquals(listOf("a"), remote.player.loads.map { it.item.mediaId })
+  }
+
+  @Test
   fun `a remote turned off is released, and one that stays keeps playing`() {
     playLocally(listOf("a"))
     remote.startSession()
