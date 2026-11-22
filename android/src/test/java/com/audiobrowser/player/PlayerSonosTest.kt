@@ -17,6 +17,7 @@ import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -91,6 +92,7 @@ class PlayerSonosTest {
       RuntimeEnvironment.getApplication(),
       castRemote = { _, _ -> null },
       sonosRemote = { context, scope -> SonosRemote(context, scope, controlOf = { room }) },
+      remoteResolveContext = EmptyCoroutineContext,
     )
   private val callbacks = mock(Callbacks::class.java)
 

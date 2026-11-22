@@ -76,6 +76,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
@@ -115,6 +116,7 @@ internal constructor(
   castRemote: (Context, String?) -> RemotePlayback?,
   sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
   private val browserRegistrationTimeout: Duration = 10.seconds,
+  remoteResolveContext: CoroutineContext = Dispatchers.IO,
 ) {
   constructor(context: Context) : this(context, ::createCastRemote, ::SonosRemote)
 
@@ -187,6 +189,7 @@ internal constructor(
       ::resolveRemoteUrls,
       castRemote,
       sonosRemote,
+      remoteResolveContext,
       localHeld = { retryLoop?.reconnecting == true },
     )
 
