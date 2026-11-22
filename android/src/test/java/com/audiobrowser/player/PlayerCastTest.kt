@@ -9,6 +9,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.remote.FakeReceiver
 import com.audiobrowser.remote.FakeRemote
+import com.audiobrowser.remote.RemoteSwitchingPlayer
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
@@ -21,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -202,6 +204,21 @@ class PlayerCastTest {
 
   private fun idleExpecting(what: String, condition: () -> Boolean) {
     idle()
-    assertTrue("not $what", condition())
+    if (!condition()) fail("not $what\n${state()}")
+  }
+
+  private fun state(): String {
+    val events =
+      mockingDetails(callbacks).invocations.toList().takeLast(20).joinToString("\n  ") {
+        "${it.method.name}(${it.arguments.joinToString().take(160)})"
+      }
+    return """
+      |state=${player.playbackState} route=${(player.sessionPlayer as? RemoteSwitchingPlayer)?.routeDescription}
+      |phone: active=${player.localEngine.isActive} state=${player.exoPlayer.playbackState} playWhenReady=${player.exoPlayer.playWhenReady} items=${player.exoPlayer.mediaItemCount} error=${player.exoPlayer.playerError?.errorCodeName}
+      |retry: reconnecting=${player.retryLoop?.reconnecting}
+      |last callbacks:
+      |  $events
+    """
+      .trimMargin()
   }
 }
