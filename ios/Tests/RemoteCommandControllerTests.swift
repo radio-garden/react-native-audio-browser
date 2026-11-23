@@ -206,12 +206,12 @@ struct RemoteTogglePlayPauseTests {
     let player = makePlayer()
     player.setPlayWhenReady(true)
     player.transition(.avPlayerPlaying)
-    #expect(player.playingState.playing)
+    #expect(player.remoteIsPlaying)
     player.transition(.errorOccurred(.playbackFailed))
     #expect(player.playWhenReady)
 
     let spy = RemoteCommandControllerTests.SpyCallbacks()
-    spy.remoteIsPlaying = player.playingState.playing
+    spy.remoteIsPlaying = player.remoteIsPlaying
     spy.remoteTogglePlayPause()
 
     #expect(spy.events == ["play"])

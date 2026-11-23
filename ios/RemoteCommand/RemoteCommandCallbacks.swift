@@ -6,8 +6,7 @@
 /// screen, Control Center, CarPlay, headset), and the one state it reads to route a toggle.
 /// `AVPlayerEngineCallbacks` extends it, so the controller depends only on these.
 @MainActor protocol RemoteCommandCallbacks: AnyObject {
-  /// Whether the player is playing by its `PlayingState`, not its raw play intent: decides
-  /// which way `remoteTogglePlayPause()` goes.
+  /// `Player.remoteIsPlaying`: decides which way `remoteTogglePlayPause()` goes.
   var remoteIsPlaying: Bool { get }
 
   func remotePlay()

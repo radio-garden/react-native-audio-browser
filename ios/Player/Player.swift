@@ -241,6 +241,11 @@ final class Player {
     Self.playingState(playWhenReady: playWhenReady, state: state)
   }
 
+  /// Whether a remote toggle pauses rather than plays.
+  var remoteIsPlaying: Bool {
+    playingState.playing
+  }
+
   var playbackActive: Bool {
     switch state {
     case .none, .stopped, .ended, .error:
