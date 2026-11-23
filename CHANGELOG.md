@@ -1,3 +1,14 @@
+## [1.0.0-next.10](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.9...v1.0.0-next.10) (2026-11-23)
+
+### Features
+
+* **ios:** handle the togglePlayPause remote command ([61c2431](https://github.com/radio-garden/react-native-audio-browser/commit/61c24310bc1a3ffde1007345c13f0a5e2a526bb7)), closes [#171](https://github.com/radio-garden/react-native-audio-browser/issues/171)
+
+### Code Refactors
+
+* **ios:** enable togglePlayPause from a row of the capability table ([ff0930c](https://github.com/radio-garden/react-native-audio-browser/commit/ff0930c4b08736bc8bdb3785344c2e3a772b9cc3))
+* **ios:** name the toggle's playing state remoteIsPlaying ([baeaa1d](https://github.com/radio-garden/react-native-audio-browser/commit/baeaa1d0da9a0cc224119f596c3a714d29edd353))
+
 ## [1.0.0-next.9](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.8...v1.0.0-next.9) (2026-11-23)
 
 ### Bug Fixes
