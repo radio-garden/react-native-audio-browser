@@ -84,7 +84,7 @@ Android Auto reads a page's layout from the **parent item** that opens it — be
 
 - **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section that carries a `path` also gets a browsable "view more" row appended after its children, navigating there.
 
-  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option — one wording for every section. In a `grid` section the row is a tile, drawn as a category tile with the library's arrow icon (`audio_browser_view_more`, a drawable your app can override by declaring one of the same name).
+  No header is tappable on Android Auto at any `display`, so the row is the only affordance the section's `path` has here; its title comes from the [`viewMoreTitle`](/api/types/browser/#viewmoretitle) browser option — one wording for every section. In a `grid` section the row is a tile, drawn as a category tile with the library's arrow icon (`audio_browser_view_more`). To draw your own, declare a drawable of that name in your app's `res/drawable/`; a density-qualified PNG (`res/drawable-xxhdpi/`) may lose to the library's vector.
 
   For per-section copy (`"View all 42 albums"`), leave `path` unset and append your own browsable `Track` to `children` instead, titled however you like. `children` is shared by every surface, so CarPlay and in-app UIs show that row too; see [`Section`](/api/types/browser-nodes/#section) for how CarPlay draws a section with and without a `path`.
 

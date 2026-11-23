@@ -1,5 +1,6 @@
 package com.audiobrowser.util
 
+import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
@@ -113,8 +114,7 @@ object TrackFactory {
         null
       }
     val metadata =
-      metadataBuilder(track)
-        .setExtras(MediaExtrasBuilder.buildNavigation(track, section, icon))
+      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, icon))
         .setArtworkUri(icon?.toUri())
         .build()
     return buildMediaItem(track, metadata)
@@ -127,7 +127,10 @@ object TrackFactory {
   fun toMedia3(track: Track): MediaItem {
     val artwork =
       artworkUri(track)?.let { sessionArtworkUri(it, track.artworkSource?.headers, isSvg(track)) }
-    val metadata = metadataBuilder(track).setArtworkUri(artwork?.toUri()).build()
+    val metadata =
+      metadataBuilder(track, MediaExtrasBuilder.build(track))
+        .setArtworkUri(artwork?.toUri())
+        .build()
     return buildMediaItem(track, metadata)
   }
 
@@ -148,7 +151,10 @@ object TrackFactory {
         ArtworkRoutes(registry, authority)
           .route(it, track.artworkSource?.headers, isSvg(track), pinned = false)
       }
-    val metadata = metadataBuilder(track, section).setArtworkUri(artwork?.toUri()).build()
+    val metadata =
+      metadataBuilder(track, MediaExtrasBuilder.build(track, section))
+        .setArtworkUri(artwork?.toUri())
+        .build()
     return buildMediaItem(track, metadata)
   }
 
@@ -158,7 +164,7 @@ object TrackFactory {
 
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
 
-  private fun metadataBuilder(track: Track, section: Section? = null): MediaMetadata.Builder =
+  private fun metadataBuilder(track: Track, extras: Bundle): MediaMetadata.Builder =
     MediaMetadata.Builder()
       .setTitle(track.title)
       // The list line shows `subtitle`; the now-playing pipeline re-stamps it from `artist`.
@@ -168,7 +174,7 @@ object TrackFactory {
       .setGenre(track.genre)
       .setIsBrowsable(track.src == null)
       .setIsPlayable(track.src != null)
-      .setExtras(MediaExtrasBuilder.build(track, section))
+      .setExtras(extras)
       .setFavorite(track.favorited, playable = track.src != null)
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
