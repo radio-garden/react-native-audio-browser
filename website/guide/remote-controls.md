@@ -40,6 +40,12 @@ Without any wiring, each control drives the player:
 | seek                    | `seekTo(position)`                  |
 | jump forward / backward | seek forward / back (see below)     |
 
+A single click on a headset or a one-button remote toggles: it is a pause while
+playing and a play otherwise, so it reaches `handleRemotePlay` /
+`handleRemotePause` and fires `onRemotePlay` / `onRemotePause` like those
+buttons. It stays available unless both the `play` and `pause` capabilities are
+off.
+
 So you only reach for the APIs below to _change_ or _watch_ that behavior.
 
 ## Button layout (Android)

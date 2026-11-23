@@ -114,6 +114,7 @@ final class RemoteCommandController {
     switch command {
     case .play: center.playCommand
     case .pause: center.pauseCommand
+    case .togglePlayPause: center.togglePlayPauseCommand
     case .stop: center.stopCommand
     case .next: center.nextTrackCommand
     case .previous: center.previousTrackCommand
@@ -157,6 +158,7 @@ final class RemoteCommandController {
     switch command {
     case .play: callbacks?.remotePlay()
     case .pause: callbacks?.remotePause()
+    case .togglePlayPause: callbacks?.remoteTogglePlayPause()
     case .stop: callbacks?.remoteStop()
     case .next: callbacks?.remoteNext()
     case .previous: callbacks?.remotePrevious()

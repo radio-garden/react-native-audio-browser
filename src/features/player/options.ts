@@ -27,12 +27,14 @@ import { validateIOSUpdateOptions } from './validateOptions'
  */
 export interface PlayerCapabilities {
   /**
-   * Enable play control.
+   * Enable play control. A headset or one-button-remote click, which toggles,
+   * stays enabled unless `play` and `pause` are both `false`.
    * @default true
    */
   play?: boolean
   /**
-   * Enable pause control.
+   * Enable pause control. A headset or one-button-remote click, which toggles,
+   * stays enabled unless `play` and `pause` are both `false`.
    * @default true
    */
   pause?: boolean

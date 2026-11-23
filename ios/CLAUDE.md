@@ -169,8 +169,10 @@ ios/
 │   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingSession + nowPlayingInfo fields by key
 │   └── SilentAudioPrimer.swift       # Renders silence so iOS elects the app (ADR 0005)
 ├── RemoteCommand/
-│   └── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter: one handler for every command
-│                                     # Session command-center switching
+│   ├── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter: one handler for every command
+│   │                                 # Session command-center switching
+│   └── RemoteCommandCallbacks.swift  # @MainActor protocol the controller calls; the play/pause
+│                                     #   toggle's routing (tested)
 ├── CarPlay/
 │   ├── CarPlayController.swift       # @MainActor @objc(RNABCarPlayController): shell that waits for
 │   │                                 #   the player + configured browser, then runs a CarPlaySession
