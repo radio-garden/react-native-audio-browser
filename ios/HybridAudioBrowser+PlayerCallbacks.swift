@@ -86,7 +86,7 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     onChapterMetadata(chapters)
   }
 
-  var isPlaying: Bool {
+  var remoteIsPlaying: Bool {
     player?.playingState.playing == true
   }
 

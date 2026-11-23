@@ -8,7 +8,7 @@
 @MainActor protocol RemoteCommandCallbacks: AnyObject {
   /// Whether the player is playing by its `PlayingState`, not its raw play intent: decides
   /// which way `remoteTogglePlayPause()` goes.
-  var isPlaying: Bool { get }
+  var remoteIsPlaying: Bool { get }
 
   func remotePlay()
 
@@ -41,6 +41,6 @@ extension RemoteCommandCallbacks {
   /// `remotePause()` and `remotePlay()`, so it reaches JS as those buttons do. After a terminal
   /// error the play intent is still raised but the player is not playing, so a click reloads.
   func remoteTogglePlayPause() {
-    if isPlaying { remotePause() } else { remotePlay() }
+    if remoteIsPlaying { remotePause() } else { remotePlay() }
   }
 }

@@ -11,7 +11,7 @@ import Testing
 struct RemoteCommandControllerTests {
   final class SpyCallbacks: RemoteCommandCallbacks {
     var events: [String] = []
-    var isPlaying = false
+    var remoteIsPlaying = false
     func remotePlay() { events.append("play") }
     func remotePause() { events.append("pause") }
     func remoteStop() { events.append("stop") }
@@ -189,7 +189,7 @@ struct RemoteCommandControllerTests {
 struct RemoteTogglePlayPauseTests {
   @Test func togglePausesWhenPlaying() {
     let spy = RemoteCommandControllerTests.SpyCallbacks()
-    spy.isPlaying = true
+    spy.remoteIsPlaying = true
     spy.remoteTogglePlayPause()
     #expect(spy.events == ["pause"])
   }
@@ -211,7 +211,7 @@ struct RemoteTogglePlayPauseTests {
     #expect(player.playWhenReady)
 
     let spy = RemoteCommandControllerTests.SpyCallbacks()
-    spy.isPlaying = player.playingState.playing
+    spy.remoteIsPlaying = player.playingState.playing
     spy.remoteTogglePlayPause()
 
     #expect(spy.events == ["play"])
