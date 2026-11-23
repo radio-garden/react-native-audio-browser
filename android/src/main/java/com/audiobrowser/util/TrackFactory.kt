@@ -6,6 +6,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 
@@ -14,6 +15,12 @@ import com.margelo.nitro.audiobrowser.TrackStyle
  * `path` note in GLOSSARY.md.
  */
 object TrackFactory {
+  /**
+   * By name, not id: Android Automotive OS's car media app does not load the numeric-id form of an
+   * `android.resource://` URI. `res/raw/audio_browser_keep.xml` keeps it from resource shrinking.
+   */
+  private const val VIEW_MORE_ICON = "audio_browser_view_more"
+
   @Volatile var artworkRoutes: ArtworkRoutes? = null
 
   /**
@@ -91,6 +98,27 @@ object TrackFactory {
       live = null,
       icyCharset = null,
     )
+
+  /**
+   * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
+   * Android Auto draws as a broken image when it has no artwork, so it carries the library's arrow
+   * icon from [packageName]'s resources.
+   */
+  fun toNavigationMediaItem(section: Section, title: String, packageName: String): MediaItem {
+    val track = navigationTrack(section, title)
+    val icon =
+      if (section.style?.display == StyleDisplay.GRID) {
+        "android.resource://$packageName/drawable/$VIEW_MORE_ICON"
+      } else {
+        null
+      }
+    val metadata =
+      metadataBuilder(track)
+        .setExtras(MediaExtrasBuilder.buildNavigation(track, section, icon))
+        .setArtworkUri(icon?.toUri())
+        .build()
+    return buildMediaItem(track, metadata)
+  }
 
   fun toMedia3(tracks: Array<Track>): List<MediaItem> {
     return tracks.map { toMedia3(it) }
