@@ -70,19 +70,32 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
-      - name: Cache CocoaPods
-        uses: actions/cache@v4
+      - name: Restore CocoaPods
+        id: pods-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cocoapods/repos
             apps/example-native/ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('apps/example-native/ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-installed-${{ hashFiles('apps/example-native/ios/Podfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-pods-installed-
 
       - name: Install Pods
         working-directory: apps/example-native/ios
         run: pod install
+
+      # Saved before the builds: each build swaps React Native's prebuilt
+      # frameworks in Pods/ to its configuration, and a Debug build that
+      # restores the Release ones fails to link.
+      - name: Save CocoaPods
+        if: steps.pods-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cocoapods/repos
+            apps/example-native/ios/Pods
+          key: ${{ steps.pods-cache.outputs.cache-primary-key }}
 
       - name: Build App
         working-directory: apps/example-native/ios

@@ -1,3 +1,10 @@
+## [1.0.0-next.9](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.8...v1.0.0-next.9) (2026-11-23)
+
+### Bug Fixes
+
+* **android:** build the "view more" row's extras once, and test it through a browse ([59adfa4](https://github.com/radio-garden/react-native-audio-browser/commit/59adfa408b79d22af447a26812336b64f76450d9))
+* **android:** give a grid section's "view more" tile an icon ([95f239e](https://github.com/radio-garden/react-native-audio-browser/commit/95f239ec7096523fdbb204c6d48c300d08e776c0))
+
 ## [1.0.0-next.8](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.7...v1.0.0-next.8) (2026-11-21)
 
 ### Bug Fixes

@@ -421,13 +421,7 @@ class MediaSessionCallback(private val player: Player) :
       // Free after the first row: the browser is already up, and viewMoreTitle is memoized per
       // content generation.
       val title = player.awaitBrowser().browserManager.viewMoreTitle()
-      items +
-        TrackFactory.toBrowseMediaItem(
-          TrackFactory.navigationTrack(section, title),
-          registry,
-          authority,
-          section,
-        )
+      items + TrackFactory.toNavigationMediaItem(section, title, player.context.packageName)
     }
   }
 
