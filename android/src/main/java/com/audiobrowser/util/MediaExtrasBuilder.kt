@@ -48,14 +48,29 @@ object MediaExtrasBuilder {
       groupTitle = section?.title,
       itemDisplay = section?.style?.display,
       promisedDisplay = if (track.src == null) track.style?.display else null,
-      artwork = track.artwork?.url,
+      itemArtwork = track.artwork?.url,
+      promisedArtwork = track.artwork?.url,
+    )
+
+  /**
+   * Extras for a section's "view more" [navigation] row drawn with [icon]. The icon makes the row
+   * itself a category item, but not the page it opens, which holds the section's own items.
+   */
+  fun buildNavigation(navigation: Track, section: Section, icon: String?): Bundle =
+    build(
+      groupTitle = section.title,
+      itemDisplay = section.style?.display,
+      promisedDisplay = navigation.style?.display,
+      itemArtwork = icon,
+      promisedArtwork = null,
     )
 
   private fun build(
     groupTitle: String?,
     itemDisplay: StyleDisplay?,
     promisedDisplay: StyleDisplay?,
-    artwork: String?,
+    itemArtwork: String?,
+    promisedArtwork: String?,
   ): Bundle =
     Bundle().apply {
       groupTitle?.let {
@@ -64,11 +79,11 @@ object MediaExtrasBuilder {
       itemDisplay?.let {
         putInt(
           MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM,
-          it.toContentStyleValue(artwork),
+          it.toContentStyleValue(itemArtwork),
         )
       }
       promisedDisplay?.let {
-        val styleValue = it.toContentStyleValue(artwork)
+        val styleValue = it.toContentStyleValue(promisedArtwork)
         putInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_BROWSABLE, styleValue)
         putInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, styleValue)
       }

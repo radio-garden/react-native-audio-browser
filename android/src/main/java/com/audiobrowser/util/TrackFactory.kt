@@ -1,11 +1,13 @@
 package com.audiobrowser.util
 
+import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 
@@ -14,6 +16,12 @@ import com.margelo.nitro.audiobrowser.TrackStyle
  * `path` note in GLOSSARY.md.
  */
 object TrackFactory {
+  /**
+   * By name, not id: Android Automotive OS's car media app does not load the numeric-id form of an
+   * `android.resource://` URI. `res/raw/audio_browser_keep.xml` keeps it from resource shrinking.
+   */
+  private const val VIEW_MORE_ICON = "audio_browser_view_more"
+
   @Volatile var artworkRoutes: ArtworkRoutes? = null
 
   /**
@@ -92,6 +100,26 @@ object TrackFactory {
       icyCharset = null,
     )
 
+  /**
+   * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
+   * Android Auto draws as a broken image when it has no artwork, so it carries the library's arrow
+   * icon from [packageName]'s resources.
+   */
+  fun toNavigationMediaItem(section: Section, title: String, packageName: String): MediaItem {
+    val track = navigationTrack(section, title)
+    val icon =
+      if (section.style?.display == StyleDisplay.GRID) {
+        "android.resource://$packageName/drawable/$VIEW_MORE_ICON"
+      } else {
+        null
+      }
+    val metadata =
+      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, icon))
+        .setArtworkUri(icon?.toUri())
+        .build()
+    return buildMediaItem(track, metadata)
+  }
+
   fun toMedia3(tracks: Array<Track>): List<MediaItem> {
     return tracks.map { toMedia3(it) }
   }
@@ -99,7 +127,10 @@ object TrackFactory {
   fun toMedia3(track: Track): MediaItem {
     val artwork =
       artworkUri(track)?.let { sessionArtworkUri(it, track.artworkSource?.headers, isSvg(track)) }
-    val metadata = metadataBuilder(track).setArtworkUri(artwork?.toUri()).build()
+    val metadata =
+      metadataBuilder(track, MediaExtrasBuilder.build(track))
+        .setArtworkUri(artwork?.toUri())
+        .build()
     return buildMediaItem(track, metadata)
   }
 
@@ -120,7 +151,10 @@ object TrackFactory {
         ArtworkRoutes(registry, authority)
           .route(it, track.artworkSource?.headers, isSvg(track), pinned = false)
       }
-    val metadata = metadataBuilder(track, section).setArtworkUri(artwork?.toUri()).build()
+    val metadata =
+      metadataBuilder(track, MediaExtrasBuilder.build(track, section))
+        .setArtworkUri(artwork?.toUri())
+        .build()
     return buildMediaItem(track, metadata)
   }
 
@@ -130,7 +164,7 @@ object TrackFactory {
 
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
 
-  private fun metadataBuilder(track: Track, section: Section? = null): MediaMetadata.Builder =
+  private fun metadataBuilder(track: Track, extras: Bundle): MediaMetadata.Builder =
     MediaMetadata.Builder()
       .setTitle(track.title)
       // The list line shows `subtitle`; the now-playing pipeline re-stamps it from `artist`.
@@ -140,7 +174,7 @@ object TrackFactory {
       .setGenre(track.genre)
       .setIsBrowsable(track.src == null)
       .setIsPlayable(track.src != null)
-      .setExtras(MediaExtrasBuilder.build(track, section))
+      .setExtras(extras)
       .setFavorite(track.favorited, playable = track.src != null)
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
