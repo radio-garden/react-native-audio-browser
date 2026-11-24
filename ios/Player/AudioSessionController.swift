@@ -8,6 +8,7 @@ protocol AudioSessionPlayer: AnyObject {
   var canReleaseAudioSession: Bool { get }
   var willResumeAfterInterruption: Bool { get }
   func handleInterruptionBegan()
+  func handleAudioSessionActivationFailed()
   func handleInterruptionEnded(shouldResume: Bool)
   func handleRouteDisconnected()
   func mediaServicesWereReset()
@@ -45,6 +46,10 @@ final class AudioSessionController {
   /// Shared, as the session is: after a JS reload the old instance's release must not fire
   /// under the new instance's playback.
   private static var releaseWork: DispatchWorkItem?
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioSession")
+  /// Bumped by each activation and by each interruption of the live controller: a refusal older
+  /// than either is stale, as is one on a retired controller.
+  private static var generation = 0
 
   /// Set when a JS reload replaces this controller's instance; read on `activationQueue`, so a
   /// category queued before the reload never lands after the new instance's.
@@ -107,12 +112,24 @@ final class AudioSessionController {
   }
 
   /// Activates the session and cancels a pending release. `then` runs on the main actor once the
-  /// activation has run, whether or not it succeeded.
+  /// session is active; a refusal is logged and reported to the player instead.
   func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
+    Self.generation += 1
+    let generation = Self.generation
     Self.activationQueue.async {
-      try? AVAudioSession.sharedInstance().setActive(true)
-      if let then { Task { @MainActor in then() } }
+      do {
+        try AVAudioSession.sharedInstance().setActive(true)
+        if let then { Task { @MainActor in then() } }
+      } catch {
+        let message = error.localizedDescription
+        Task { @MainActor [weak self] in
+          guard let self else { return }
+          logger.error("The audio session did not activate: \(message, privacy: .public)")
+          guard generation == Self.generation, !isRetired else { return }
+          player?.handleAudioSessionActivationFailed()
+        }
+      }
     }
   }
 
@@ -200,6 +217,7 @@ final class AudioSessionController {
       {
         return
       }
+      if !isRetired { Self.generation += 1 }
       player?.handleInterruptionBegan()
     case .ended:
       let shouldResume = options.map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) } ?? false

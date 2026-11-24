@@ -475,6 +475,11 @@ final class Player {
     // nothing playing: there is nothing to resume.
     shouldResumeAfterInterruption = shouldResumeAfterInterruption || playingState.playing
     pause()
+    settlePaused()
+  }
+
+  /// The AVPlayer's own pause was swallowed while the intent held, and does not come again.
+  private func settlePaused() {
     if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
     }
@@ -485,6 +490,15 @@ final class Player {
     guard shouldResumeAfterInterruption else { return }
     shouldResumeAfterInterruption = false
     publish()
+  }
+
+  /// The system refused the session (a call, or a nonmixable activation from the background):
+  /// paused, rather than buffering under the intent with nothing to hear.
+  func handleAudioSessionActivationFailed() {
+    dropInterruptionResume()
+    guard playWhenReady else { return }
+    pause()
+    settlePaused()
   }
 
   /// Whether the interruption's end will resume playback, so the session reactivates first.

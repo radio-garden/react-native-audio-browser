@@ -1744,6 +1744,43 @@ struct SessionReleaseTests {
 
     #expect(eh.scheduleAudioSessionReleaseCount == 1)
   }
+
+  /// The AVPlayer's own pause, swallowed while the intent held, does not come again.
+  @Test @MainActor
+  func activationFailed_pausesThePlayer() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.emit(.timeControlStatus(.paused, waitingForNoItem: false))
+
+    c.handleAudioSessionActivationFailed()
+
+    #expect(c.playWhenReady == false)
+    #expect(c.state == .paused)
+  }
+
+  @Test @MainActor
+  func activationFailedDuringAnInterruption_releasesATerminalSession() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    c.transition(.errorOccurred(.playbackFailed))
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.handleAudioSessionActivationFailed()
+
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+
+  @Test @MainActor
+  func activationFailed_dropsTheInterruptionResume() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.handleAudioSessionActivationFailed()
+
+    #expect(c.willResumeAfterInterruption == false)
+  }
 }
 
 // MARK: - Media-stack effects of a publish
