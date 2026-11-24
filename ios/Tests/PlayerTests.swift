@@ -1706,11 +1706,30 @@ struct SessionReleaseTests {
     #expect(eh.cancelAudioSessionReleaseCount == 0)
   }
 
+  /// Nobody asked for the session back: the other app's audio the release returns keeps playing.
+  @Test @MainActor
+  func loadAfterStop_withoutAPlay_keepsTheRelease() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.stop()
+    eh.cancelAudioSessionReleaseCount = 0
+
+    try loadTrack(c, id: "t2")
+
+    #expect(eh.cancelAudioSessionReleaseCount == 0)
+    #expect(c.canReleaseAudioSession == true)
+
+    c.play()
+
+    #expect(eh.cancelAudioSessionReleaseCount == 1)
+  }
+
   /// `.none` with a track loaded: a pause observed before the asset arrived.
   @Test @MainActor
   func clear_fromNoneWithATrack_requestsRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try loadTrack(c)
+    c.setPlayWhenReady(true)
     c.transition(.avPlayerPaused(hasAsset: false))
     eh.scheduleAudioSessionReleaseCount = 0
 
@@ -1830,6 +1849,20 @@ struct MediaStackEffectTests {
     return (c, eh, cb)
   }
 
+  @Test @MainActor
+  func playIntent_cancelsTheReleaseBeforeJSHearsIt_thenActivatesOnOutput() throws {
+    let (c, _, cb) = makeTraced()
+    try loadTrack(c)
+    cb.publishOrder.removeAll()
+
+    c.setPlayWhenReady(true)
+
+    #expect(cb.publishOrder == [
+      "cancelAudioSessionRelease", "playWhenReady",
+      "playingState", "activateAudioSession", "renderNowPlaying",
+    ])
+  }
+
   /// A retry from `.error` keeps the play intent: leaving the terminal state is what cancels.
   @Test @MainActor
   func retryFromError_cancelsTheReleaseBeforeJSHearsIt() throws {
@@ -1863,7 +1896,7 @@ struct MediaStackEffectTests {
 
     c.transition(.errorOccurred(.playbackFailed))
 
-    #expect(cb.publishOrder == ["playback", "renderNowPlaying", "scheduleAudioSessionRelease"])
+    #expect(cb.publishOrder == ["playback", "renderNowPlaying"])
   }
 
   @Test @MainActor

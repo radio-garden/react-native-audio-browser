@@ -355,6 +355,7 @@ final class Player {
   /// these leave the Player, so each goes out once per change, with the audio-session and
   /// now-playing effects it drives.
   private func publish() {
+    if state.isTerminal || currentTrack == nil { engaged = false } else if playWhenReady { engaged = true }
     let playing = playingState
     let now = Published(
       state: state, errorStatus: errorStatus, playWhenReady: playWhenReady,
@@ -520,12 +521,16 @@ final class Player {
     }
   }
 
-  /// Whether nothing needs the audio session: playback is stopped, has ended or has failed for
-  /// good, or the queue is empty, with no interruption to resume from. A pause keeps it: a released
-  /// session lets another app's audio resume and take the lock screen, CarPlay and headset
-  /// controls.
+  /// From a play intent until a terminal state or an empty queue: a track loaded since then, but
+  /// not played, does not take the session back from the other app's audio its release returned.
+  private var engaged = false
+
+  /// Whether nothing needs the audio session: nothing played since playback stopped, ended,
+  /// failed for good or the queue emptied, with no interruption to resume from. A pause keeps it:
+  /// a released session lets another app's audio resume and take the lock screen, CarPlay and
+  /// headset controls.
   var canReleaseAudioSession: Bool {
-    (state.isTerminal || currentTrack == nil)
+    !engaged
       && !shouldResumeAfterInterruption
   }
 
