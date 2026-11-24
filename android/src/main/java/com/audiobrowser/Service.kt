@@ -23,6 +23,7 @@ import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.ArtworkContentProvider
 import com.audiobrowser.util.ArtworkProviderDeps
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.CoilArtworkLoader
@@ -131,14 +132,9 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         scope = artworkScope,
         artworkSizeHint = { player.artworkSizeHintPixels },
       )
+    // Before the provider can serve, so it never reads or writes the stale files.
+    ArtworkContentProvider.discardStaleArtwork(cacheDir, artworkScope)
     CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
-    // Best-effort: the previous process's files are stale, and keeping them grows the disk across
-    // restarts. The provider fetches again on demand.
-    runCatching {
-      java.io
-        .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
-        .deleteRecursively()
-    }
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
