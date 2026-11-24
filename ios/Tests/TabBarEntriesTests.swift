@@ -85,4 +85,24 @@ struct TabBarEntriesTests {
     let tabs = [tab("Explore", path: "/explore")]
     #expect(TabBarEntries.change(from: tabs, to: tabs) == nil)
   }
+
+  @Test func anAssetTabImageIsTakenFromTheCatalogWithoutAFetch() {
+    #expect(TabBarEntries.image(for: tab("Home", path: "/home", artwork: "asset:TabHome")) == .asset(name: "TabHome"))
+    let withSource = tab(
+      "Home", path: "/home", artwork: "asset:TabHome",
+      artworkSource: ImageSource(uri: "https://example.com/a.png", method: nil, headers: nil, body: nil),
+    )
+    #expect(TabBarEntries.image(for: withSource) == .asset(name: "TabHome"))
+  }
+
+  @Test func tabImagesOfEachKind() {
+    #expect(TabBarEntries.image(for: tab("Home", path: "/home", artwork: "sf:house")) == .sfSymbol(artwork: "sf:house"))
+    #expect(TabBarEntries.image(for: tab("Home", path: "/home", artwork: "https://example.com/a.png")) == .fetch)
+    let sourceOnly = tab(
+      "Home", path: "/home",
+      artworkSource: ImageSource(uri: "https://example.com/a.png", method: nil, headers: nil, body: nil),
+    )
+    #expect(TabBarEntries.image(for: sourceOnly) == .fetch)
+    #expect(TabBarEntries.image(for: tab("Home", path: "/home")) == .none)
+  }
 }

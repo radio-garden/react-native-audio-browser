@@ -220,11 +220,11 @@ final class NowPlayingUpdater {
   }
 
   /// `artworkSource` (a rendered SF Symbol's `file://` included), else the raw artwork unless it
-  /// is an SF Symbol, which JS cannot load.
+  /// is local artwork (`sf:`, `asset:`), which JS cannot load.
   private static func jsArtwork(for track: Track) -> String? {
     if let uri = track.artworkSource?.uri { return uri }
     guard let artwork = track.artwork?.url else { return nil }
-    return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
+    return LocalArtwork(artwork) == nil ? artwork : nil
   }
 
   private func loadArtwork(for track: Track) {

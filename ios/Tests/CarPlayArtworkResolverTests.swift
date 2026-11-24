@@ -19,11 +19,12 @@ struct CarPlayArtworkResolverTests {
     ArtworkResolvedImage(uri: uri, headers: headers)
   }
 
-  @Test func anAssetArtworkNamesItsImage() {
-    #expect(CarPlayArtworkResolver.assetName("asset:TabHome") == "TabHome")
-    #expect(CarPlayArtworkResolver.assetName("asset:") == nil)
-    #expect(CarPlayArtworkResolver.assetName("sf:house") == nil)
-    #expect(CarPlayArtworkResolver.assetName("https://example.com/asset:a.png") == nil)
+  @Test func anAssetArtworkIsNeitherResolvedNorFetched() {
+    #expect(!CarPlayArtworkResolver.needsResolve(artwork: "asset:TabHome"))
+    #expect(
+      CarPlayArtworkResolver.action(
+        artwork: "asset:TabHome", artworkSource: nil, resolved: nil, stencil: false, width: 40, height: 40,
+      ) == .none)
   }
 
   @Test func anSFSymbolRendersAndIsNotResolved() {

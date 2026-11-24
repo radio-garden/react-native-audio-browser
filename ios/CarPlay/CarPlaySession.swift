@@ -27,6 +27,8 @@ final class CarPlaySession {
 
   private var subscriptions: [Subscription] = []
   private var tasks: [UUID: Task<Void, Never>] = [:]
+  /// Each tab template's image load in flight, keyed weakly so a load keeps no template alive.
+  let tabImageLoads = NSMapTable<CPTemplate, SupersedingTask<Never, UIImage>>.weakToStrongObjects()
   private(set) var ended = false
 
   /// Paths pushed but not yet appeared; `topTemplate` shows a push only once it lands, so this
@@ -101,6 +103,7 @@ final class CarPlaySession {
       task.cancel()
     }
     tasks = [:]
+    tabImageLoads.removeAllObjects()
     subscriptions = []
     nowPlaying.end()
   }

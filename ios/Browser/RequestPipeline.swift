@@ -196,14 +196,16 @@ final class RequestPipeline {
 
   // MARK: - Artwork URL Resolution
 
-  /// The image source for `track`'s artwork: an SF Symbol rendered to a file; the artwork URL
+  /// The image source for `track`'s artwork: an SF Symbol rendered to a file; none for an
+  /// `asset:` image, which only CarPlay tabs draw; the artwork URL
   /// as is when no artwork config applies; else the request layer and the artwork config, in
   /// `RequestLayer.artwork`'s order. `perRouteConfig` replaces the global artwork config;
   /// `imageContext` is the display size, nil at browse time. Nil when there is no artwork or a
   /// callback fails.
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
     let artworkUrl = track.artwork?.url
-    if let artworkUrl, SFSymbolRenderer.isSFSymbol(artworkUrl) {
+    if let artworkUrl, let local = LocalArtwork(artworkUrl) {
+      guard local == .sfSymbol else { return nil }
       let canvasSize: CGSize = if let w = imageContext?.width, let h = imageContext?.height {
         CGSize(width: w, height: h)
       } else {
