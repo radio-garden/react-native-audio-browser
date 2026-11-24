@@ -399,6 +399,14 @@ export interface Track {
    * CarPlay rows key off `fg` instead: without it, the symbol is drawn black
    * or white to match light/dark mode over a grey tile, and `bg` is ignored;
    * with it, an omitted `bg` is a grey tile. CarPlay tabs ignore both.
+   *
+   * **iOS, CarPlay tabs only:** `asset:<name>` takes the image of that name
+   * from the app's asset catalog, drawn as a template image that CarPlay
+   * tints. Like `sf:`, it is set as the tab bar is built, with no fetch.
+   * Give it as a single value, not in an {@link ArtworkVariants} pair, which
+   * would use only its `dark` value: the asset catalog holds any per-appearance
+   * images. Anywhere else on iOS it gives no artwork; Android and web do not
+   * read it.
    */
   artwork?: TrackArtwork
 

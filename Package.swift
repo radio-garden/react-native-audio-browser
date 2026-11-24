@@ -86,6 +86,7 @@ let package = Package(
         "Util/JSPromiseRejection.swift",
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
+        "Util/LocalArtwork.swift",
         "Util/RoutePickerSourceLifetime.swift",
         "Observer/PlayerObserver.swift",
         "Observer/ItemObserver.swift",

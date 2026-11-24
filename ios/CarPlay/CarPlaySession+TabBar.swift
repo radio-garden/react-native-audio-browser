@@ -87,6 +87,7 @@ extension CarPlaySession {
       for (template, tab) in zip(tabBar.templates, visible) {
         applyTabBarEntry(to: template, for: tab)
       }
+      redraw(tabBar)
       builtTabs = tabs
       needsTabRebuild = false
       return
@@ -157,23 +158,46 @@ extension CarPlaySession {
 
   func applyTabBarEntry(to template: CPTemplate, for track: Track) {
     template.tabTitle = track.title
-    if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
+    tabImageLoads.removeObject(forKey: template)
+    switch TabBarEntries.image(for: track) {
+    case let .sfSymbol(artwork):
       // CarPlay tints the tab image, so the artwork's colours are dropped.
-      let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
-      if let image = UIImage(systemName: symbolName) {
-        template.tabImage = image
-      }
-    } else if track.artwork != nil || track.artworkSource != nil {
-      spawn { [weak template] session in
-        // Tab icons are 24 pt (CarPlay Developer Guide).
-        let image = await session.imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))
-        guard !Task.isCancelled, let image else { return }
-        template?.tabImage = image
-      }
-    } else {
+      template.tabImage = UIImage(systemName: SFSymbolRenderer.parseArtwork(artwork).symbolName)
+    case let .asset(name):
+      let image = UIImage(named: name)
+      if image == nil { logger.debug("No image named \(name) in the asset catalog for tab \(track.title)") }
+      template.tabImage = image?.withRenderingMode(.alwaysTemplate)
+    case .fetch:
+      loadTabImage(into: template, for: track)
+    case .none:
       // A restamp must not leave an old icon on a now title-only tab.
       template.tabImage = nil
     }
+  }
+
+  /// One load per template: a restamp drops the one before, so a slow fetch cannot replace the
+  /// newer image.
+  private func loadTabImage(into template: CPTemplate, for track: Track) {
+    // A handler queued before `end()` can still call in; the next run owns the screen.
+    guard !ended else { return }
+    let load = SupersedingTask<Never, UIImage>()
+    tabImageLoads.setObject(load, forKey: template)
+    load.run(key: nil) { [imageLoader] in
+      // Tab icons are 24 pt (CarPlay Developer Guide).
+      await imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))
+    } deliver: { [weak self, weak template] result in
+      guard let self, let template, case let .success(image?) = result else { return }
+      template.tabImage = image
+      if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate, tabBar.templates.contains(template) {
+        redraw(tabBar)
+      }
+    }
+  }
+
+  /// A tab title or image changed after the tab bar is root may not be drawn until its templates
+  /// are set again.
+  private func redraw(_ tabBar: CPTabBarTemplate) {
+    tabBar.updateTemplates(tabBar.templates)
   }
 
   /// Shows the app's formatting of `error` at path "/" as the root (ADR 0001).

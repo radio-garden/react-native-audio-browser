@@ -89,10 +89,6 @@ final class SFSymbolRenderer: @unchecked Sendable {
     }.withRenderingMode(.alwaysOriginal) // Keeps the drawn tint inside a tinted view.
   }
 
-  static func isSFSymbol(_ artwork: String) -> Bool {
-    artwork.hasPrefix("sf:")
-  }
-
   /// `"sf:heart.fill?bg=#000&fg=#fff"` → `("heart.fill", black, white)`; a colour that is
   /// absent is nil, one that is not 3 or 6 characters long is black.
   static func parseArtwork(_ value: String) -> (symbolName: String, backgroundColor: UIColor?, symbolColor: UIColor?) {
