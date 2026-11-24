@@ -4,9 +4,13 @@ import PackageDescription
 let package = Package(
   name: "AudioBrowser",
   platforms: [.iOS(.v16), .macOS(.v13)],
+  dependencies: [
+    .package(url: "https://github.com/onevcat/Kingfisher.git", from: "8.6.0"),
+  ],
   targets: [
     .target(
       name: "AudioBrowserTestable",
+      dependencies: ["Kingfisher"],
       path: "ios",
       sources: [
         "Browser/BrowserPathHelper.swift",
@@ -71,6 +75,7 @@ let package = Package(
         "Extension/URLError+Connectivity.swift",
         "Extension/NavigationError+Conversion.swift",
         "Extension/CGSize+AspectFit.swift",
+        "Util/ScaledDownsamplingProcessor.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Extension/Dictionary+Headers.swift",
         "Extension/Promise+AwaitCallback.swift",

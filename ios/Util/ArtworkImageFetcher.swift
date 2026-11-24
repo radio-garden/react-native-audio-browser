@@ -40,7 +40,7 @@ enum ArtworkImageFetcher {
       // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
       // return the original. cacheOriginalImage keeps the original on disk so another target
       // size re-processes it instead of downloading it again.
-      processor = DownsamplingImageProcessor(size: fitting.size)
+      processor = ScaledDownsamplingProcessor(size: fitting.size, scale: fitting.scale)
       options.append(.scaleFactor(fitting.scale))
       options.append(.cacheOriginalImage)
     } else {
