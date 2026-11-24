@@ -1,3 +1,9 @@
+## [1.0.0-next.11](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.10...v1.0.0-next.11) (2026-11-24)
+
+### Bug Fixes
+
+* **ios:** escape &, = and + in search paths ([b5d1aff](https://github.com/radio-garden/react-native-audio-browser/commit/b5d1aff2b902c6997f629690708585a277c9c8eb))
+
 ## [1.0.0-next.10](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.9...v1.0.0-next.10) (2026-11-23)
 
 ### Features
