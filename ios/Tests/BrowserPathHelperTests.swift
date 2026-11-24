@@ -210,6 +210,13 @@ func buildRoundTripsAParentThatIsNotACanonicalUrl(parent: String) {
   #expect(BrowserPathHelper.isSearchPath("/__searchable") == false)
 }
 
+// MARK: - createSearchPath
+
+@Test(arguments: [("rock & roll", "rock%20%26%20roll"), ("a=b", "a%3Db"), ("1+1", "1%2B1")])
+func createSearchPathEscapesQuerySeparators(query: String, encoded: String) {
+  #expect(BrowserPathHelper.createSearchPath(query) == "/__search?q=\(encoded)")
+}
+
 // MARK: - stampingContextualPaths
 
 @Test func stampsPlayableOnlyTracksWithTheirFlatPagePosition() throws {
