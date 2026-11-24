@@ -77,28 +77,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onCreate() {
     super.onCreate()
 
-    if (BuildConfig.DEBUG) {
-      Timber.Forest.plant(
-        object : Timber.DebugTree() {
-          override fun createStackElementTag(element: StackTraceElement): String? {
-            return "${element.className.substringAfterLast('.')}:${element.methodName}"
-          }
-        }
-      )
-    } else {
-      Timber.Forest.plant(
-        object : Timber.Tree() {
-          override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-            if (priority >= Log.WARN) {
-              Log.println(priority, tag ?: "AudioBrowser", message)
-              t?.let { throwable ->
-                Log.println(priority, tag ?: "AudioBrowser", throwable.toString())
-              }
-            }
-          }
-        }
-      )
-    }
+    plantLogTree()
 
     player = Player(this)
     player.setup(PlayerSetupOptions())
@@ -338,5 +317,35 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
      * session re-sending External Surfaces the playback state every 3 s while playing or loading.
      */
     const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
+
+    private var logTreePlanted = false
+
+    /** Once per process: the service is recreated in the same process, and each tree logs anew. */
+    private fun plantLogTree() {
+      if (logTreePlanted) return
+      logTreePlanted = true
+      if (BuildConfig.DEBUG) {
+        Timber.Forest.plant(
+          object : Timber.DebugTree() {
+            override fun createStackElementTag(element: StackTraceElement): String? {
+              return "${element.className.substringAfterLast('.')}:${element.methodName}"
+            }
+          }
+        )
+      } else {
+        Timber.Forest.plant(
+          object : Timber.Tree() {
+            override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+              if (priority >= Log.WARN) {
+                Log.println(priority, tag ?: "AudioBrowser", message)
+                t?.let { throwable ->
+                  Log.println(priority, tag ?: "AudioBrowser", throwable.toString())
+                }
+              }
+            }
+          }
+        )
+      }
+    }
   }
 }
