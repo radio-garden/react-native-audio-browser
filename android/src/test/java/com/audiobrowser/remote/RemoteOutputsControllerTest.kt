@@ -2,6 +2,7 @@ package com.audiobrowser.remote
 
 import android.os.Looper
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,6 +27,7 @@ class RemoteOutputsControllerTest {
       resolveUrls = { RemoteUrls(it.src ?: "", null) },
       castRemote = { _, receiver -> FakeRemote(looper).also { casts += it to receiver } },
       sonosRemote = { _, _ -> FakeRemote(looper).also { sonoses += it } },
+      resolveContext = EmptyCoroutineContext,
     )
 
   @After fun release() = controller.release()

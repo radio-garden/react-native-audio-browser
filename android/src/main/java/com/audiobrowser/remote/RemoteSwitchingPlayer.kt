@@ -56,6 +56,14 @@ internal class RemoteSwitchingPlayer(
   val isRemote: Boolean
     get() = route is Route.Remote
 
+  /** The route and, while remote, its load, for a failure message. */
+  internal val routeDescription: String
+    get() =
+      when (val current = route) {
+        is Route.Remote -> "Remote(${current.load::class.simpleName})"
+        else -> current::class.simpleName.orEmpty()
+      }
+
   private val queue = RemoteQueue()
   private var playIntent = false
   private var repeat = MediaPlayer.REPEAT_MODE_OFF

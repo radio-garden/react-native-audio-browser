@@ -10,8 +10,8 @@ import com.audiobrowser.sonos.SonosOutputs
 import com.margelo.nitro.audiobrowser.OutputType
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Track
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
@@ -29,6 +29,7 @@ internal class RemoteOutputsController(
   private val resolveUrls: suspend (Track) -> RemoteUrls,
   private val castRemote: (Context, String?) -> RemotePlayback?,
   private val sonosRemote: (Context, CoroutineScope) -> RemotePlayback,
+  private val resolveContext: CoroutineContext,
   /** Whether the phone's idle engine is the retry loop's, between connections of a load. */
   private val localHeld: () -> Boolean = { false },
 ) {
@@ -97,7 +98,7 @@ internal class RemoteOutputsController(
   private suspend fun resolve(item: MediaItem): MediaItem {
     val track = item.localConfiguration?.tag as? Track
     val urls =
-      if (track != null) withContext(Dispatchers.IO) { resolveUrls(track) }
+      if (track != null) withContext(resolveContext) { resolveUrls(track) }
       else RemoteUrls(checkNotNull(item.localConfiguration?.uri) { "No URL" }.toString(), null)
     return remoteItemOf(item, urls.url, urls.artworkUrl, live = track?.live == true)
   }

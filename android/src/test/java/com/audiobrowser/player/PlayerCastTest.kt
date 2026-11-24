@@ -9,12 +9,14 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.remote.FakeReceiver
 import com.audiobrowser.remote.FakeRemote
+import com.audiobrowser.remote.RemoteSwitchingPlayer
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import java.net.ServerSocket
 import java.net.UnknownHostException
 import java.time.Duration
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,11 +43,15 @@ class PlayerCastTest {
       RuntimeEnvironment.getApplication(),
       castRemote = { _, _ -> remote },
       sonosRemote = { _, _ -> FakeRemote(looper) },
+      remoteResolveContext = EmptyCoroutineContext,
     )
   private val receiver: FakeReceiver
     get() = remote.player
 
   private val callbacks = mock(Callbacks::class.java)
+
+  /** Takes the phone's connection and answers nothing: the phone's loads neither play nor fail. */
+  private val silent = ServerSocket(0)
 
   @Before
   fun cast() {
@@ -58,16 +64,24 @@ class PlayerCastTest {
     )
     player.setCallbacks(callbacks)
     player.sessionPlayer.setMediaItems(
-      listOf(TrackFactory.toMedia3(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
+      listOf(
+        TrackFactory.toMedia3(
+          TestFixtures.track(title = "a", src = "http://127.0.0.1:${silent.localPort}/a.mp3")
+        )
+      )
     )
     player.playWhenReady = true
     remote.startSession()
-    idleUntil("remote") { !player.localEngine.isActive }
+    idleExpecting("remote") { !player.localEngine.isActive }
     player.sessionPlayer.prepare()
-    idleUntil("the item on the receiver") { receiver.loads.isNotEmpty() }
+    idleExpecting("the item on the receiver") { receiver.loads.isNotEmpty() }
   }
 
-  @After fun release() = player.destroy()
+  @After
+  fun release() {
+    player.destroy()
+    silent.close()
+  }
 
   @Test
   fun `a receiver falling behind the live window is a remote error, not a local restart`() {
@@ -97,7 +111,7 @@ class PlayerCastTest {
 
     remote.endSession()
 
-    idleUntil("the phone playing") { player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE }
+    idleExpecting("the phone playing") { player.exoPlayer.playbackState != MediaPlayer.STATE_IDLE }
     assertTrue(player.exoPlayer.playWhenReady)
     assertNotEquals(PlaybackState.ERROR, player.playbackState)
   }
@@ -111,7 +125,7 @@ class PlayerCastTest {
       ),
       startIndex = 1,
     )
-    idleUntil("the start item on the receiver") { receiver.loads.size == 2 }
+    idleExpecting("the start item on the receiver") { receiver.loads.size == 2 }
 
     assertEquals("https://s/c.mp3", receiver.loads.last().item.localConfiguration?.uri.toString())
     assertEquals(1, player.currentIndex)
@@ -145,7 +159,7 @@ class PlayerCastTest {
         TestFixtures.track(title = "c", src = "https://s/c.mp3"),
       )
     )
-    idleUntil("the first item on the receiver") { receiver.loads.size == 2 }
+    idleExpecting("the first item on the receiver") { receiver.loads.size == 2 }
     receiver.durationMs = 180_000
     receiver.positionMs = 179_000
     receiver.update()
@@ -153,7 +167,7 @@ class PlayerCastTest {
     player.sleepTimer.setEndOfTrack()
 
     remote.end()
-    idleUntil("the next item on the receiver") { receiver.loads.size == 3 }
+    idleExpecting("the next item on the receiver") { receiver.loads.size == 3 }
 
     assertTrue(player.sleepTimer.get().isFirst)
     assertFalse(receiver.loads.last().autoplay)
@@ -161,37 +175,31 @@ class PlayerCastTest {
 
   @Test
   fun `a connection that fails before the hand-back is heard is retried, not an error`() {
-    // Answers nothing, so the only failure report is the one the listener below makes.
-    ServerSocket(0).use { silent ->
-      player.load(TestFixtures.track(title = "b", src = "http://127.0.0.1:${silent.localPort}/a"))
-      idleUntil("the track on the receiver") { receiver.loads.size == 2 }
-      // The playback thread can fail an offline load before the main thread hears of the
-      // hand-back that prepared it. Robolectric starts offline.
-      player.exoPlayer.addListener(
-        object : MediaPlayer.Listener {
-          override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState != MediaPlayer.STATE_BUFFERING) return
-            player.exoPlayer.removeListener(this)
-            player.onLoadFailure(UnknownHostException(), inPlace = false)
-          }
+    // The only failure report is the one the listener below makes.
+    player.load(TestFixtures.track(title = "b", src = "http://127.0.0.1:${silent.localPort}/a"))
+    idleExpecting("the track on the receiver") { receiver.loads.size == 2 }
+    // The playback thread can fail an offline load before the main thread hears of the
+    // hand-back that prepared it. Robolectric starts offline.
+    player.exoPlayer.addListener(
+      object : MediaPlayer.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+          if (playbackState != MediaPlayer.STATE_BUFFERING) return
+          player.exoPlayer.removeListener(this)
+          player.onLoadFailure(UnknownHostException(), inPlace = false)
         }
-      )
+      }
+    )
 
-      remote.endSession()
-      idle()
-      player.playerListener.onPlayerError(
-        PlaybackException(
-          "offline",
-          null,
-          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-        )
-      )
-      idle()
+    remote.endSession()
+    idle()
+    player.playerListener.onPlayerError(
+      PlaybackException("offline", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+    )
+    idle()
 
-      assertNotEquals(PlaybackState.ERROR, player.playbackState)
-      assertEquals(true, player.getPlayback().error?.retrying)
-      assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
-    }
+    assertNotEquals(PlaybackState.ERROR, player.playbackState)
+    assertEquals(true, player.getPlayback().error?.retrying)
+    assertTrue("the loop holds the engine to reconnect it", player.retryLoop!!.reconnecting)
   }
 
   private fun calls(name: String) =
@@ -199,13 +207,23 @@ class PlayerCastTest {
 
   private fun idle() = shadowOf(looper).idle()
 
-  private fun idleUntil(what: String, condition: () -> Boolean) {
-    repeat(200) {
-      idle()
-      if (condition()) return
-      // Casting starts after a resolution on a background thread.
-      Thread.sleep(10)
-    }
-    fail("never $what")
+  private fun idleExpecting(what: String, condition: () -> Boolean) {
+    idle()
+    if (!condition()) fail("not $what\n${state()}")
+  }
+
+  private fun state(): String {
+    val events =
+      mockingDetails(callbacks).invocations.toList().takeLast(20).joinToString("\n  ") {
+        "${it.method.name}(${it.arguments.joinToString().take(160)})"
+      }
+    return """
+      |state=${player.playbackState} route=${(player.sessionPlayer as? RemoteSwitchingPlayer)?.routeDescription}
+      |phone: active=${player.localEngine.isActive} state=${player.exoPlayer.playbackState} playWhenReady=${player.exoPlayer.playWhenReady} items=${player.exoPlayer.mediaItemCount} error=${player.exoPlayer.playerError?.errorCodeName}
+      |retry: reconnecting=${player.retryLoop?.reconnecting}
+      |last callbacks:
+      |  $events
+    """
+      .trimMargin()
   }
 }

@@ -29,6 +29,7 @@ import com.audiobrowser.util.TrackFactory
 import java.io.IOException
 import java.net.ServerSocket
 import java.time.Duration
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -37,7 +38,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -57,6 +61,22 @@ class LiveStreamEndTest {
   private var server = ServerSocket(0)
   private val requests = AtomicInteger()
   private val played = AtomicInteger()
+  private val startNs = System.nanoTime()
+  private val trace = ConcurrentLinkedQueue<String>()
+
+  @get:Rule
+  val printTraceOnFailure =
+    object : TestWatcher() {
+      override fun failed(e: Throwable, description: Description) {
+        println("${description.methodName}:\n  ${trace.joinToString("\n  ")}")
+      }
+    }
+
+  private fun note(step: String) {
+    trace +=
+      "${(System.nanoTime() - startNs) / 1_000_000}ms ${Thread.currentThread().name}: $step " +
+        "(played ${played.get()}, requests ${requests.get()})"
+  }
 
   @After
   fun shutdown() {
@@ -265,6 +285,7 @@ class LiveStreamEndTest {
           val request = it.getInputStream().bufferedReader()
           while (!request.readLine().isNullOrEmpty()) Unit
           val frames = framesFor(requests.incrementAndGet())
+          note("request: sending $frames frames")
           val bytes = body(frames)
           val headers = buildString {
             append("HTTP/1.1 200 OK\r\nConnection: close\r\n")
@@ -281,7 +302,9 @@ class LiveStreamEndTest {
             flush()
           }
           sent += frames
+          note("sent")
           while (end == End.AFTER_PLAYED && played.get() < sent && !server.isClosed) Thread.sleep(1)
+          note("closing")
         }
       }
     }
@@ -375,11 +398,13 @@ class LiveStreamEndTest {
         try {
           period.maybeThrowPrepareError()
         } catch (e: IOException) {
+          note("prepare error: $e")
           return Outcome(ended = false, error = e)
         }
         Thread.sleep(5)
         shadowOf(Looper.getMainLooper()).idle()
       }
+      note("prepared")
       val streams = arrayOfNulls<SampleStream>(1)
       period.selectTracks(
         arrayOf<ExoTrackSelection>(FixedTrackSelection(period.trackGroups[0], 0)),
@@ -400,7 +425,10 @@ class LiveStreamEndTest {
         period.readDiscontinuity()
         when (result) {
           C.RESULT_BUFFER_READ -> {
-            if (buffer.isEndOfStream) return Outcome(ended = true, error = null)
+            if (buffer.isEndOfStream) {
+              note("end of stream")
+              return Outcome(ended = true, error = null)
+            }
             played.incrementAndGet()
             ShadowSystemClock.advanceBy(Duration.ofNanos(FRAME_NS))
           }
@@ -409,6 +437,7 @@ class LiveStreamEndTest {
             try {
               stream.maybeThrowError()
             } catch (e: IOException) {
+              note("stream error: $e")
               return Outcome(ended = false, error = e)
             }
             period.continueLoading(LoadingInfo.Builder().build())
