@@ -227,7 +227,6 @@ final class Player {
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
-    evaluateSessionRelease()
   }
 
   static func playingState(playWhenReady: Bool, state: PlaybackState) -> PlayingState {
@@ -345,6 +344,8 @@ final class Player {
     var playing = false
     var buffering = false
     var playIntentActive = false
+    /// A new Player has nothing to play, and so starts releasable.
+    var releasable = true
   }
 
   private var published = Published()
@@ -359,12 +360,13 @@ final class Player {
       state: state, errorStatus: errorStatus, playWhenReady: playWhenReady,
       playing: playing.playing, buffering: playing.buffering,
       playIntentActive: playbackActive && playWhenReady,
+      releasable: canReleaseAudioSession,
     )
     let old = published
     guard now != old else { return }
     published = now
+    if old.releasable, !now.releasable { engine.cancelAudioSessionRelease() }
     if now.playWhenReady != old.playWhenReady {
-      if now.playWhenReady { engine.cancelAudioSessionRelease() }
       callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
     }
     if now.playing != old.playing || now.buffering != old.buffering {
@@ -385,6 +387,7 @@ final class Player {
     if now.playIntentActive != old.playIntentActive {
       persistence.playIntentDidChange(active: now.playIntentActive)
     }
+    if now.releasable, !old.releasable { engine.scheduleAudioSessionRelease() }
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
@@ -407,15 +410,12 @@ final class Player {
     case .loading:
       engine.applyTimePitchAlgorithm()
     case .ended:
-      // A natural end exhausts the play intent; the setter also requests the session release.
       setPlayWhenReady(false)
     case .error:
       // A stall or a lost connection can fail an item that is still alive: data arriving later
       // must not play it under the error.
       engine.pause()
       retry.cancel()
-      // The intent holds through .error: no pause follows to request the release.
-      if playWhenReady { evaluateSessionRelease() }
     default: break
     }
 
@@ -464,7 +464,7 @@ final class Player {
   /// The output route went away (headphones unplugged): pause, and cancel any interruption
   /// resume, so a call ending cannot start the built-in speaker.
   func handleRouteDisconnected() {
-    shouldResumeAfterInterruption = false
+    dropInterruptionResume()
     pause()
   }
 
@@ -480,32 +480,33 @@ final class Player {
     }
   }
 
+  /// A terminal state reached during the interruption kept the session for its resume.
+  private func dropInterruptionResume() {
+    guard shouldResumeAfterInterruption else { return }
+    shouldResumeAfterInterruption = false
+    publish()
+  }
+
   /// Whether the interruption's end will resume playback, so the session reactivates first.
   var willResumeAfterInterruption: Bool { shouldResumeAfterInterruption }
 
   func handleInterruptionEnded(shouldResume: Bool) {
     guard shouldResumeAfterInterruption else { return }
-    shouldResumeAfterInterruption = false
     if shouldResume {
+      shouldResumeAfterInterruption = false
       play()
     } else {
-      evaluateSessionRelease()
+      dropInterruptionResume()
     }
   }
 
-  /// Whether nothing needs the audio session: playback is deliberately stopped or has failed for
-  /// good (`.error` keeps the intent), with no interruption to resume from and no retry pending,
-  /// whose reconnect needs the session.
+  /// Whether nothing needs the audio session: playback is stopped, has ended or has failed for
+  /// good, or the queue is empty, with no interruption to resume from. A pause keeps it: a released
+  /// session lets another app's audio resume and take the lock screen, CarPlay and headset
+  /// controls.
   var canReleaseAudioSession: Bool {
-    (!playWhenReady || state == .error)
+    (state.isTerminal || currentTrack == nil)
       && !shouldResumeAfterInterruption
-      && retry.pendingTask == nil
-  }
-
-  /// Requests a session release when nothing needs the session. The engine debounces it.
-  private func evaluateSessionRelease() {
-    guard canReleaseAudioSession else { return }
-    engine.scheduleAudioSessionRelease()
   }
 
   func getPlayback() -> Playback {

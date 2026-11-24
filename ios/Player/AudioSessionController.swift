@@ -23,7 +23,13 @@ extension Player: AudioSessionPlayer {}
 /// launch.
 @MainActor
 final class AudioSessionController {
-  weak var player: AudioSessionPlayer?
+  weak var player: AudioSessionPlayer? {
+    didSet { if !isRetired { Self.currentPlayer = player } }
+  }
+
+  /// The newest controller's player: after a JS reload, the one whose playback a release must be
+  /// judged against.
+  private weak static var currentPlayer: AudioSessionPlayer?
 
   let outputChanged = Emitter<Output>()
   let volumeChanged = Emitter<Double>()
@@ -36,7 +42,9 @@ final class AudioSessionController {
     options: AVAudioSession.CategoryOptions,
   )?
 
-  private var releaseWork: DispatchWorkItem?
+  /// Shared, as the session is: after a JS reload the old instance's release must not fire
+  /// under the new instance's playback.
+  private static var releaseWork: DispatchWorkItem?
 
   /// Set when a JS reload replaces this controller's instance; read on `activationQueue`, so a
   /// category queued before the reload never lands after the new instance's.
@@ -109,18 +117,22 @@ final class AudioSessionController {
   }
 
   /// Releases the session after 3 s unless playback resumes, so other apps' audio can come back.
-  /// Debounced: iOS dislikes deactivating while audio trails off, and a quick pause and resume
+  /// Debounced: iOS dislikes deactivating while audio trails off, and a quick stop and play
   /// should not thrash it.
   func scheduleRelease() {
-    releaseWork?.cancel()
-    let release = DispatchWorkItem { [weak self] in
-      guard let self, player?.canReleaseAudioSession == true else { return }
-      releaseWork = nil
-      Self.activationQueue.async {
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    Self.releaseWork?.cancel()
+    // Not through `self`: a JS reload drops this controller within the 3 s, and the release it
+    // owes must still run, unless the new player has restored a track in the meantime.
+    let release = DispatchWorkItem {
+      MainActor.assumeIsolated {
+        guard Self.currentPlayer?.canReleaseAudioSession ?? true else { return }
+        Self.releaseWork = nil
+        Self.activationQueue.async {
+          try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
       }
     }
-    releaseWork = release
+    Self.releaseWork = release
     DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
   }
 
@@ -129,9 +141,13 @@ final class AudioSessionController {
     retired.withLock { $0 = true }
   }
 
+  private var isRetired: Bool {
+    retired.withLock { $0 }
+  }
+
   func cancelRelease() {
-    releaseWork?.cancel()
-    releaseWork = nil
+    Self.releaseWork?.cancel()
+    Self.releaseWork = nil
   }
 
   nonisolated static var volume: Double {
