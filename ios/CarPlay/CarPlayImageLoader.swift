@@ -108,8 +108,8 @@ final class CarPlayImageLoader {
     return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
   }
 
-  /// The image fitted to `size` points at the car's display scale (CPListItem.h: "size them
-  /// to the display scale of the car screen").
+  /// The image on a canvas of exactly `size` points at the car's display scale (CPListItem.h:
+  /// "size them to the display scale of the car screen"), whatever size the source arrives at.
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
     return await ArtworkImageFetcher.fetchImage(from: source, fitting: (size, carTraitCollection.displayScale, isSvg))
