@@ -78,6 +78,7 @@ let package = Package(
         "Extension/UIImage+Adaptive.swift",
         "Util/SlotFit.swift",
         "Util/ScaledDownsamplingProcessor.swift",
+        "Util/SlotCanvasProcessor.swift",
         "Extension/Capability+RemoteCommand.swift",
         "Extension/Dictionary+Headers.swift",
         "Extension/Promise+AwaitCallback.swift",

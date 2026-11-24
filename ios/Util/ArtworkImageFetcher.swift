@@ -10,8 +10,8 @@ enum ArtworkImageFetcher {
 
   /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
   /// falls back to the cached copy.
-  /// - Parameter fitting: Fits the image into `size` points at `scale`, rasterizing it as an SVG
-  ///   when `isSvg`; nil keeps the image as fetched.
+  /// - Parameter fitting: Draws the image onto a canvas of exactly `size` points at `scale`
+  ///   (`SlotCanvasProcessor`), rasterizing it as an SVG when `isSvg`; nil keeps the image as fetched.
   /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
   ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
@@ -36,11 +36,13 @@ enum ArtworkImageFetcher {
     let processor: (any ImageProcessor)?
     if let fitting, fitting.isSvg {
       processor = SVGProcessor(slot: fitting.size, scale: fitting.scale)
+        |> SlotCanvasProcessor(slot: fitting.size, scale: fitting.scale)
     } else if let fitting {
       // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
       // return the original. cacheOriginalImage keeps the original on disk so another target
       // size re-processes it instead of downloading it again.
       processor = ScaledDownsamplingProcessor(size: fitting.size, scale: fitting.scale)
+        |> SlotCanvasProcessor(slot: fitting.size, scale: fitting.scale)
       options.append(.scaleFactor(fitting.scale))
       options.append(.cacheOriginalImage)
     } else {

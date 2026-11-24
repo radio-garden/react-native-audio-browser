@@ -26,13 +26,4 @@ struct SlotFitTests {
   @Test func anImageWithNoAspectRatioHasNoRect() {
     #expect(SlotFit.drawRect(for: .zero, in: slot) == nil)
   }
-
-  @Test func anImageAlreadyAtTheSlotAndScaleNeedsNoRedraw() {
-    #expect(!SlotFit.needsRedraw(imageSize: slot, imageScale: 2, slot: slot, scale: 2))
-  }
-
-  @Test func anImageOfAnotherSizeOrScaleNeedsARedraw() {
-    #expect(SlotFit.needsRedraw(imageSize: CGSize(width: 30, height: 30), imageScale: 2, slot: slot, scale: 2))
-    #expect(SlotFit.needsRedraw(imageSize: slot, imageScale: 3, slot: slot, scale: 2))
-  }
 }

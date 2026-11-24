@@ -15,8 +15,4 @@ enum SlotFit {
       height: fitted.height,
     )
   }
-
-  static func needsRedraw(imageSize: CGSize, imageScale: CGFloat, slot: CGSize, scale: CGFloat) -> Bool {
-    imageSize != slot || imageScale != scale
-  }
 }
