@@ -108,11 +108,27 @@ final class CarPlayImageLoader {
     return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
   }
 
-  /// The image fitted to `size` points at the car's display scale (CPListItem.h: "size them
-  /// to the display scale of the car screen").
+  /// The image on a canvas of exactly `size` points at the car's display scale (CPListItem.h:
+  /// "size them to the display scale of the car screen"), whatever size the source arrives at.
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    return await ArtworkImageFetcher.fetchImage(from: source, fitting: (size, carTraitCollection.displayScale, isSvg))
+    let scale = carTraitCollection.displayScale
+    guard let image = await ArtworkImageFetcher.fetchImage(from: source, fitting: (size, scale, isSvg)) else {
+      return nil
+    }
+    return Self.fitted(image, to: size, scale: scale)
+  }
+
+  private nonisolated static func fitted(_ image: UIImage, to slot: CGSize, scale: CGFloat) -> UIImage {
+    guard SlotFit.needsRedraw(imageSize: image.size, imageScale: image.scale, slot: slot, scale: scale),
+          let rect = SlotFit.drawRect(for: image.size, in: slot)
+    else { return image }
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    format.opaque = false
+    return UIGraphicsImageRenderer(size: slot, format: format).image { _ in
+      image.draw(in: rect)
+    }
   }
 
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
