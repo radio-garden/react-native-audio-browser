@@ -110,12 +110,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).build() }
         .build()
 
+    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val coilBitmapLoader =
       CoilBitmapLoader(
         context = this,
         imageLoader = imageLoader,
         resolveDisplayArtwork = { uri, sizeHint -> player.resolveDisplayArtwork(uri, sizeHint) },
         getArtworkSizeHint = { player.artworkSizeHintPixels },
+        scope = artworkScope,
       )
 
     player.coilBitmapLoader = coilBitmapLoader
@@ -124,7 +126,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
     // ArtworkContentProvider reads the holder to serve browse artwork to Android Auto and AAOS over
     // content:// URIs.
-    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     artworkProviderDeps =
       ArtworkProviderDeps(
         loader = CoilArtworkLoader(this, imageLoader),
