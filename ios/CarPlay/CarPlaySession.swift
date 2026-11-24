@@ -170,25 +170,20 @@ final class CarPlaySession {
 
   func updatePlayingIndicators() {
     let location = playingIndicatorLocation
+    let playingIdentity = player?.currentTrack?.identity
     for template in displayedListTemplates() {
-      var changed = false
       for section in template.sections {
         for case let item as CPListItem in section.items {
           guard let identity = item.carPlayItemInfo?.identity else { continue }
-          let isPlaying = player?.currentTrack?.identity == identity
-          if item.isPlaying != isPlaying {
-            item.isPlaying = isPlaying
-            changed = true
-          }
-          if item.playingIndicatorLocation != location {
-            item.playingIndicatorLocation = location
-            changed = true
-          }
+          let isPlaying = playingIdentity == identity
+          guard item.isPlaying != isPlaying || item.playingIndicatorLocation != location else { continue }
+          item.isPlaying = isPlaying
+          item.playingIndicatorLocation = location
+          // Setting the flags alone does not reliably reach the car screen; setting the text sends
+          // this row again, and not its list.
+          item.setText(item.text ?? "")
         }
       }
-      // A flag set on a displayed item does not reliably reach the car screen; re-pushing the
-      // sections re-serializes every item, so it is done only on a change.
-      if changed { template.updateSections(template.sections) }
     }
   }
 
