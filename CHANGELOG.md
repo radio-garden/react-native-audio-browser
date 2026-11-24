@@ -1,3 +1,13 @@
+## [1.0.0-next.12](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.11...v1.0.0-next.12) (2026-11-24)
+
+### Features
+
+* **ios:** take CarPlay tab images from the asset catalog ([628f072](https://github.com/radio-garden/react-native-audio-browser/commit/628f072393370304d78bbb2e0f1b5e4996829470))
+
+### Bug Fixes
+
+* **ios:** redraw restamped CarPlay tabs, keep tab image loads current ([6ed9b5d](https://github.com/radio-garden/react-native-audio-browser/commit/6ed9b5dec88e2aa01ba1b2b921bca393a03514cf))
+
 ## [1.0.0-next.11](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.10...v1.0.0-next.11) (2026-11-24)
 
 ### Bug Fixes
