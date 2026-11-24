@@ -228,7 +228,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Player state
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
-  private var setupOptions = PlayerSetupOptions()
+  private var setupOptions: PlayerSetupOptions? = null
   // Written only on main (ServiceConnection callbacks, dispose); read on main and, in places,
   // straight from the JS thread, where it may be stale either way: a just-detached service, or
   // null while onServiceConnected is pending. Keep writes on main; no read-modify-write.
@@ -822,7 +822,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
     return promise {
-      setupOptions.update(options)
+      val setup = (setupOptions ?: PlayerSetupOptions()).also { it.update(options) }
+      setupOptions = setup
       // Staged to apply together with the engine below, or at service connect. Last write wins
       // against the imperative setters.
       options.options?.let { updateOptions.updateFromBridge(it) }
@@ -831,7 +832,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       connectedService?.let {
         it.player.applyOptions(updateOptions)
-        it.player.setup(setupOptions)
+        it.player.setup(setup)
         applyPendingPlayerState(it.player)
         return@promise
       }
@@ -1183,7 +1184,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         (serviceBinder as Service.LocalBinder).service.apply {
           player.setCallbacks(callbacks)
           player.applyOptions(updateOptions)
-          player.setup(setupOptions)
+          player.setupForModule(setupOptions)
           applyPendingPlayerState(player)
           player.observeNetworkConnectivity(mainScope)
           player.browser = this@AudioBrowser

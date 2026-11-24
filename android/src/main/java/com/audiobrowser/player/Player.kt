@@ -30,6 +30,7 @@ import com.audiobrowser.browser.unattributedArtworkSource
 import com.audiobrowser.cast.createCastRemote
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.extension.identity
+import com.audiobrowser.model.EngineOptionsStore
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.model.RetryPolicy
@@ -571,9 +572,36 @@ internal constructor(
       exoPlayer.skipSilenceEnabled = value
     }
 
-  private var engineOptions: PlayerSetupOptions? = null
+  /**
+   * The options the engine was last built from, as [PlayerSetupOptions.engineOptions] gives them.
+   */
+  internal lateinit var engineOptions: PlayerSetupOptions
+    private set
 
   private var deferredSetup: PlayerSetupOptions? = null
+
+  /**
+   * Builds the first engine from the options the app last set up, else the defaults. Stored options
+   * the engine fails to build from fall back to the defaults, so the app's own setup reports it.
+   */
+  fun setupFromStore() {
+    val stored = EngineOptionsStore.load(context) ?: return setup(PlayerSetupOptions())
+    try {
+      setup(stored)
+    } catch (e: IllegalStateException) {
+      // A SimpleCache folder still locked, for one: the defaults build without a cache, and the
+      // app's options stay stored for the next start.
+      Timber.w(e, "Could not build the engine from the stored options; building the defaults")
+      setup(PlayerSetupOptions())
+      EngineOptionsStore.save(context, stored)
+    }
+  }
+
+  /**
+   * The module's setup at connect. Before its setupPlayer, [options] is null and the engine keeps
+   * the options it was built from, while a reloaded runtime's formatter and remote outputs go.
+   */
+  fun setupForModule(options: PlayerSetupOptions?) = setup(options ?: engineOptions)
 
   /**
    * Builds the ExoPlayer on the first call, and rebuilds it only when the engine options changed. A
@@ -589,7 +617,8 @@ internal constructor(
         { params -> f.invoke(params).awaitOrTimeout() }
       }
 
-    deferredSetup = setupOptions.takeIf { it.engineOptions() != engineOptions }
+    deferredSetup =
+      setupOptions.takeIf { !::engineOptions.isInitialized || it.engineOptions() != engineOptions }
     rebuildIfDue()
     if (remoteOutputs.apply(setupOptions.remoteOutputs, exoPlayer)) attachSessionPlayer()
   }
@@ -604,7 +633,7 @@ internal constructor(
     val options = deferredSetup ?: return
     // A stopped engine keeps the suppression but holds no focus, and is carried unprepared.
     if (
-      engineOptions != null &&
+      ::engineOptions.isInitialized &&
         exoPlayer.playbackState != MediaPlayer.STATE_IDLE &&
         exoPlayer.playWhenReady &&
         exoPlayer.playbackSuppressionReason ==
@@ -615,6 +644,7 @@ internal constructor(
     deferredSetup = null
     buildEngine(options)
     engineOptions = options.engineOptions()
+    EngineOptionsStore.save(context, engineOptions)
   }
 
   /**
@@ -628,7 +658,7 @@ internal constructor(
 
   private fun buildEngine(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
-    val isInitialSetup = engineOptions == null
+    val isInitialSetup = !::engineOptions.isInitialized
     val carried = if (isInitialSetup) null else EnginePlayback.of(exoPlayer)
 
     if (!isInitialSetup) {

@@ -21,7 +21,6 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.svg.SvgDecoder
-import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
 import com.audiobrowser.util.ArtworkContentProvider
 import com.audiobrowser.util.ArtworkProviderDeps
@@ -80,7 +79,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     plantLogTree()
 
     player = Player(this)
-    player.setup(PlayerSetupOptions())
+    player.setupFromStore()
 
     // The disk cache keeps Coil's default size limit: 2% of the disk, at most 250 MB.
     imageLoader =

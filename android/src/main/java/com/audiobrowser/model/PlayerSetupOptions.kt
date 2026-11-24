@@ -8,28 +8,34 @@ import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /** Offload preferences; [PlayerSetupOptions.audioOffload] being null turns offload off. */
+@Serializable
 data class AudioOffloadOptions(
   val gaplessSupportRequired: Boolean = true,
   val rateChangeSupportRequired: Boolean = true,
 )
 
 /** How the player retries a load error (network failure, timeout). */
+@Serializable
 sealed class RetryPolicy {
   /** ExoPlayer's default: a few retries, then the error surfaces. */
-  data object Default : RetryPolicy()
+  @Serializable data object Default : RetryPolicy()
 
   /**
    * Retries with exponential backoff, with no attempt cap, until a duration bound runs out; a null
    * bound takes RetryLoadErrorHandlingPolicy's default.
    */
+  @Serializable
   data class Infinite(
     val maxRetryDurationMs: Long? = null,
     val firstConnectMaxRetryDurationMs: Long? = null,
   ) : RetryPolicy()
 
   /** Retries up to [maxRetries] times with exponential backoff. */
+  @Serializable
   data class Limited(
     val maxRetries: Int,
     val maxRetryDurationMs: Long? = null,
@@ -37,7 +43,11 @@ sealed class RetryPolicy {
   ) : RetryPolicy()
 }
 
-/** The options [Player.setup] builds the engine from; see [engineOptions] for what rebuilds it. */
+/**
+ * The options [Player.setup] builds the engine from; see [engineOptions] for what rebuilds it. The
+ * serialized form holds only those: the fields that apply without a rebuild are [Transient].
+ */
+@Serializable
 data class PlayerSetupOptions(
   // The buffer fields are durations in milliseconds.
   var minBuffer: Double = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS.toDouble(),
@@ -56,9 +66,9 @@ data class PlayerSetupOptions(
   // Keeps the media session through a terminal error so external controllers (Android Auto) keep
   // their transport controls. On by default to match iOS, where the session always survives.
   var keepSessionAliveOnError: Boolean = true,
-  var autoUpdateNowPlayingMetadata: Boolean = true,
-  var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
-  var remoteOutputs: RemoteOutputsOptions? = null,
+  @Transient var autoUpdateNowPlayingMetadata: Boolean = true,
+  @Transient var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
+  @Transient var remoteOutputs: RemoteOutputsOptions? = null,
 ) {
   val automaticBuffer: Boolean
     get() = rebufferBuffer == null
