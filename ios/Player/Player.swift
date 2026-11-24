@@ -459,6 +459,12 @@ final class Player {
     if currentTrack?.live != true { seek(to: 0) }
   }
 
+  /// The lock screen offers a live stream a stop for its pause: it pauses there, keeping the
+  /// session, so another app's audio does not take the controls. JS's `stop()` still stops.
+  func stopFromRemote() {
+    if currentTrack?.live == true { pause() } else { stop() }
+  }
+
   // MARK: - Audio Session Interruptions
 
   /// The output route went away (headphones unplugged): pause, and cancel any interruption

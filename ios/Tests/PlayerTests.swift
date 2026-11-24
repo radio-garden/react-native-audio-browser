@@ -1783,6 +1783,40 @@ struct SessionReleaseTests {
   }
 }
 
+// MARK: - Remote stop
+
+@Suite("Player - remote stop")
+struct RemoteStopTests {
+  @Test @MainActor
+  func remoteStop_onALiveTrack_pausesAndKeepsTheSession() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try c.setQueue([Track(id: "t1", src: "https://example.com/live.mp3", title: "Live", live: true)])
+    eh.hasLoadedAsset = true
+    eh.hasItem = true
+    c.setPlayWhenReady(true)
+    c.transition(.avPlayerPlaying)
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.stopFromRemote()
+
+    #expect(c.playWhenReady == false)
+    #expect(c.state != .stopped)
+    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+  }
+
+  @Test @MainActor
+  func remoteStop_onATrackThatIsNotLive_stopsAndRequestsRelease() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    eh.scheduleAudioSessionReleaseCount = 0
+
+    c.stopFromRemote()
+
+    #expect(c.state == .stopped)
+    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+  }
+}
+
 // MARK: - Media-stack effects of a publish
 
 /// The audio-session and now-playing effects the Player drives through its engine, in order
