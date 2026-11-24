@@ -163,12 +163,20 @@ extension CarPlaySession {
       if let image = UIImage(systemName: symbolName) {
         template.tabImage = image
       }
+    } else if let artwork = track.artwork?.url, let name = CarPlayArtworkResolver.assetName(artwork) {
+      template.tabImage = UIImage(named: name)?.withRenderingMode(.alwaysTemplate)
     } else if track.artwork != nil || track.artworkSource != nil {
       spawn { [weak template] session in
         // Tab icons are 24 pt (CarPlay Developer Guide).
         let image = await session.imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))
-        guard !Task.isCancelled, let image else { return }
-        template?.tabImage = image
+        guard !Task.isCancelled, let image, let template else { return }
+        template.tabImage = image.withRenderingMode(.alwaysTemplate)
+        // The tab bar draws a tab image only when its templates are set.
+        if let tabBar = session.interfaceController.rootTemplate as? CPTabBarTemplate,
+           tabBar.templates.contains(template)
+        {
+          tabBar.updateTemplates(tabBar.templates)
+        }
       }
     } else {
       // A restamp must not leave an old icon on a now title-only tab.

@@ -50,6 +50,13 @@ enum CarPlayArtworkResolver {
     )
   }
 
+  /// The image name of an `asset:<name>` artwork, nil for any other artwork.
+  static func assetName(_ artwork: String) -> String? {
+    guard artwork.hasPrefix("asset:") else { return nil }
+    let name = artwork.dropFirst("asset:".count)
+    return name.isEmpty ? nil : String(name)
+  }
+
   private static func isSFSymbol(_ artwork: String?) -> Bool {
     artwork?.hasPrefix("sf:") == true
   }
