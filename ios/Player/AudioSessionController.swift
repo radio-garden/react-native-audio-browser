@@ -1,5 +1,6 @@
 import AVFoundation
 import NitroModules
+import os
 
 /// What `AudioSessionController` tells the player about the audio session.
 @MainActor
@@ -37,9 +38,14 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
 
+  /// Set when a JS reload replaces this controller's instance; read on `activationQueue`, so a
+  /// category queued before the reload never lands after the new instance's.
+  private let retired = OSAllocatedUnfairLock(initialState: false)
+
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
-  /// thread. Serial, so a release and a quick re-activation keep their order.
-  private let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
+  /// thread. Serial and shared, like the session, so a release and a quick re-activation keep their
+  /// order, also across the controllers of a JS reload.
+  private static let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
   // Touched only by `init` and `deinit`.
   private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
@@ -69,8 +75,7 @@ final class AudioSessionController {
         [weak self] _ in
         MainActor.assumeIsolated {
           // The reset cleared the category and invalidated every player and session handle.
-          self?.applyCategory()
-          self?.player?.mediaServicesWereReset()
+          self?.applyCategory { [weak self] in self?.player?.mediaServicesWereReset() }
         }
       },
     ]
@@ -86,17 +91,18 @@ final class AudioSessionController {
     }
   }
 
-  /// Sets the session category from the iOS setup options, without activating it.
-  func configure(_ options: NativeIOSSetupOptions?) {
+  /// Sets the session category from the iOS setup options, without activating it. Returns once it
+  /// is set.
+  func configure(_ options: NativeIOSSetupOptions?) async {
     configuration = options?.resolveAudioSessionConfig() ?? (.playback, .default, .default, [])
-    applyCategory()
+    await withCheckedContinuation { continuation in applyCategory { continuation.resume() } }
   }
 
   /// Activates the session and cancels a pending release. `then` runs on the main actor once the
   /// activation has run, whether or not it succeeded.
   func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
-    activationQueue.async {
+    Self.activationQueue.async {
       try? AVAudioSession.sharedInstance().setActive(true)
       if let then { Task { @MainActor in then() } }
     }
@@ -110,12 +116,17 @@ final class AudioSessionController {
     let release = DispatchWorkItem { [weak self] in
       guard let self, player?.canReleaseAudioSession == true else { return }
       releaseWork = nil
-      activationQueue.async {
+      Self.activationQueue.async {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
       }
     }
     releaseWork = release
     DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
+  }
+
+  /// Stops this controller setting the category: a JS reload's new instance owns the session now.
+  func retire() {
+    retired.withLock { $0 = true }
   }
 
   func cancelRelease() {
@@ -145,11 +156,20 @@ final class AudioSessionController {
 
   // MARK: - Private
 
-  private func applyCategory() {
-    guard let configuration else { return }
-    try? session.setCategory(
-      configuration.category, mode: configuration.mode, policy: configuration.policy, options: configuration.options,
-    )
+  /// On the activation queue: `setCategory` also waits on the audio server, and the serial queue
+  /// keeps it ahead of the activation that follows it. Playback starts on main, outside the queue,
+  /// so it must wait for `then`, which runs on the main actor once the category is set.
+  private func applyCategory(then: @escaping @MainActor @Sendable () -> Void) {
+    guard let configuration else { return then() }
+    let retired = retired
+    Self.activationQueue.async {
+      if !retired.withLock({ $0 }) {
+        try? AVAudioSession.sharedInstance().setCategory(
+          configuration.category, mode: configuration.mode, policy: configuration.policy, options: configuration.options,
+        )
+      }
+      Task { @MainActor in then() }
+    }
   }
 
   private func handleInterruption(type: UInt?, reason: UInt?, options: UInt?) {

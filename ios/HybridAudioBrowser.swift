@@ -271,7 +271,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     forwardBrowserEventsToJS()
   }
 
-  @MainActor private var didDropJSCallbacks = false
+  @MainActor private(set) var didDropJSCallbacks = false
+
+  /// Runs `setupPlayer` calls one at a time, in call order.
+  let setupTurns = SerialTurns()
 
   /// Drops every JS callback native code can invoke on its own (browse resolvers,
   /// `handleTrackLoad`, `resolveAlbumPath`, `formatNavigationError`, `resolveGate`, the now-playing
@@ -284,6 +287,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }
     didDropJSCallbacks = true
+    audioSession.retire()
     // Assigning `config` marks the browser configured, and a never-configured browser must keep
     // CarPlay and Siri waiting on `playerAndConfiguredBrowser`, not serve them an empty config.
     if browserManager.isConfigured {
