@@ -1,3 +1,12 @@
+## [1.0.0-next.13](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.12...v1.0.0-next.13) (2026-11-24)
+
+### Bug Fixes
+
+* **ios:** draw CarPlay images on a canvas the size of their slot ([f0b752e](https://github.com/radio-garden/react-native-audio-browser/commit/f0b752e1836df73ea9b95aac984c4497502bff4b))
+* **ios:** draw the CarPlay slot canvas in a cached Kingfisher processor ([ae49ff1](https://github.com/radio-garden/react-native-audio-browser/commit/ae49ff1c8c81d4445daaf6f81a9f106562127fd4))
+* **ios:** keep the display scale of a light/dark artwork pair ([58e9ccb](https://github.com/radio-garden/react-native-audio-browser/commit/58e9ccba90f75e93d2ecb338befb06465feed71c))
+* **ios:** name a downsampled artwork's cache entry by its display scale ([848aed4](https://github.com/radio-garden/react-native-audio-browser/commit/848aed485cb0de56755943d047e17da0d165664c))
+
 ## [1.0.0-next.12](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.11...v1.0.0-next.12) (2026-11-24)
 
 ### Features
