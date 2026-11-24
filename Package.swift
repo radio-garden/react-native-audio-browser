@@ -75,6 +75,7 @@ let package = Package(
         "Extension/URLError+Connectivity.swift",
         "Extension/NavigationError+Conversion.swift",
         "Extension/CGSize+AspectFit.swift",
+        "Extension/UIImage+Adaptive.swift",
         "Util/SlotFit.swift",
         "Util/ScaledDownsamplingProcessor.swift",
         "Extension/Capability+RemoteCommand.swift",
