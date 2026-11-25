@@ -234,10 +234,11 @@ object TestFixtures {
     query: Map<String, String>? = null,
     headers: Map<String, String>? = null,
     imageQueryParams: ImageQueryParams? = null,
+    resolveSync: ((Track) -> Promise<RequestConfig>)? = null,
   ) =
     ArtworkRequestConfig(
       resolve = null,
-      resolveSync = null,
+      resolveSync = resolveSync,
       transform = null,
       transformSync = null,
       imageQueryParams = imageQueryParams,

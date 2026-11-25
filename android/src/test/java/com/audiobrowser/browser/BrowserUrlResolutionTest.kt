@@ -4,17 +4,24 @@ import com.audiobrowser.TestFixtures.artworkConfig
 import com.audiobrowser.TestFixtures.mediaConfig
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.util.FALLBACK_TIMEOUT
+import com.audiobrowser.util.JsPromise
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-// Static configs only: a Nitro Promise is JNI-backed and cannot be built in a unit test.
 class BrowserUrlResolutionTest {
 
   private lateinit var bm: BrowserManager
@@ -78,6 +85,49 @@ class BrowserUrlResolutionTest {
 
     assertEquals(listOf(queued), resolvedFor)
   }
+
+  @Test
+  fun `resolveMediaUrl falls back to the layered config when media resolveSync never answers`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<RequestConfig>()
+      bm.config =
+        BrowserConfig(
+          media =
+            mediaConfig(baseUrl = "https://media.example.com", resolveSync = { silent.promise })
+        )
+      val resolved =
+        backgroundScope.async { bm.resolveMediaUrl("/stream/1", track(src = "/stream/1")) }
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      runCurrent()
+      assertFalse(resolved.isCompleted)
+      advanceTimeBy(2.seconds)
+      runCurrent()
+
+      assertTrue(resolved.isCompleted)
+      assertEquals("https://media.example.com", resolved.await()?.baseUrl)
+      assertEquals("/stream/1", resolved.await()?.path)
+    }
+
+  @Test
+  fun `resolveArtworkUrl gives no artwork when artwork resolveSync never answers`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<RequestConfig>()
+      bm.config = BrowserConfig(artwork = artworkConfig(resolveSync = { silent.promise }))
+      val source =
+        backgroundScope.async {
+          bm.resolveArtworkUrl(track(artwork = "https://img.example.com/a.png"))
+        }
+
+      advanceTimeBy(FALLBACK_TIMEOUT - 1.seconds)
+      runCurrent()
+      assertFalse(source.isCompleted)
+      advanceTimeBy(2.seconds)
+      runCurrent()
+
+      assertTrue(source.isCompleted)
+      assertNull(source.await())
+    }
 
   @Test
   fun `resolveArtworkUrl returns original artwork untouched when no artwork config`() = runTest {

@@ -66,7 +66,8 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
  * replaces `config.artwork`, it does not merge), `resolve`, image query params from [imageContext],
  * transform, then `{id}`. With no artwork config the track's artwork URL is returned untouched.
  * Returns null when there is no artwork, when `resolve`/`resolveSync` yields nothing for a track
- * without an artwork URL (even if the config has a static path), or when any callback throws.
+ * without an artwork URL (even if the config has a static path), or when any callback throws or
+ * outruns `FALLBACK_TIMEOUT`.
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,

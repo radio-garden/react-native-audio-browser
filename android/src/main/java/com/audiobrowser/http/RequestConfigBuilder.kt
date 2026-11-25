@@ -3,8 +3,8 @@ package com.audiobrowser.http
 import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.browser.fromCallback
 import com.audiobrowser.util.BrowserPathHelper
-import com.audiobrowser.util.awaitCancellable
-import com.audiobrowser.util.awaitNested
+import com.audiobrowser.util.awaitNestedOrTimeout
+import com.audiobrowser.util.awaitOrTimeout
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -63,10 +63,10 @@ object RequestConfigBuilder {
    * JS promise); awaiting it once hands a Promise downstream as the config.
    */
   suspend fun awaitAsyncConfig(promise: Promise<Promise<RequestConfig>>): RequestConfig =
-    promise.awaitNested()
+    promise.awaitNestedOrTimeout()
 
   suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig =
-    promise.awaitCancellable()
+    promise.awaitOrTimeout()
 
   private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
     MediaRequestConfig(
@@ -96,7 +96,7 @@ object RequestConfigBuilder {
    * replace the config and its static fields are then ignored; without one, its static fields merge
    * over [base] except `path`, which stays the base's. Mirrors iOS `applyLayer`.
    *
-   * @throws CallbackException when a transform throws
+   * @throws CallbackException when a transform throws or outruns `FALLBACK_TIMEOUT`
    */
   suspend fun mergeConfig(
     base: RequestConfig,
