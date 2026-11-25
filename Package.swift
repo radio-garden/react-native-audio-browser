@@ -89,6 +89,7 @@ let package = Package(
         "Util/ReadyValue.swift",
         "Util/GenerationMemo.swift",
         "Util/SupersedingTask.swift",
+        "Util/SerialTurns.swift",
         "Util/Deadline.swift",
         "Util/AwaitCallback.swift",
         "Util/JSPromiseRejection.swift",

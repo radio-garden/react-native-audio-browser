@@ -11,6 +11,8 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -134,6 +136,29 @@ class ArtworkContentProvider : ContentProvider() {
     const val MAX_CACHE_FILES = 512
     /** Tests only. */
     @JvmField internal var maxCacheFilesOverride: Int? = null
+
+    /**
+     * Discards the previous process's artwork files, which are stale. Best-effort. The directory is
+     * renamed at once, so files the provider writes next never land in it, and deleted on [scope],
+     * along with any stale directory a killed process left behind.
+     */
+    internal fun discardStaleArtwork(cacheDir: File, scope: CoroutineScope) {
+      val stalePrefix = "$ARTWORK_SUBDIR-stale-"
+      val artworkDir = File(cacheDir, ARTWORK_SUBDIR)
+      val renamed = runCatching {
+        artworkDir.renameTo(File(cacheDir, stalePrefix + System.nanoTime()))
+      }
+      if (renamed.getOrNull() != true && artworkDir.exists()) {
+        Timber.w(
+          "Could not rename the stale artwork in $artworkDir; it stays, pruned to the cache limit"
+        )
+      }
+      scope.launch {
+        cacheDir
+          .listFiles { f -> f.name.startsWith(stalePrefix) }
+          ?.forEach { runCatching { it.deleteRecursively() } }
+      }
+    }
   }
 
   private fun pruneCache(dir: File) {

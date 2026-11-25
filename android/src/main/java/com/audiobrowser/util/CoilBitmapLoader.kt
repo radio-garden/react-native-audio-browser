@@ -8,11 +8,10 @@ import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import coil3.ImageLoader
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import com.margelo.nitro.audiobrowser.ImageSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.guava.future
 import timber.log.Timber
 
 /**
@@ -31,9 +30,8 @@ class CoilBitmapLoader(
   private val imageLoader: ImageLoader,
   private val resolveDisplayArtwork: suspend (uri: String, sizeHintPixels: Int?) -> ImageSource?,
   private val getArtworkSizeHint: () -> Int? = { null },
+  private val scope: CoroutineScope,
 ) : BitmapLoader {
-
-  private val scope = CoroutineScope(Dispatchers.IO)
 
   // Lock screen controls are ~128dp; at 4x density (xxxhdpi) that is 512px.
   private val defaultArtworkSizePixels = 512
@@ -46,25 +44,15 @@ class CoilBitmapLoader(
       mimeType == "application/svg+xml"
   }
 
-  override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> {
-    val future = SettableFuture.create<Bitmap>()
-    try {
-      val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-      if (bitmap != null) {
-        future.set(bitmap)
-      } else {
-        future.setException(IllegalArgumentException("Failed to decode bitmap from byte array"))
-      }
-    } catch (e: Exception) {
-      future.setException(e)
+  /** Media3 calls this on the main thread for artwork embedded in the stream. */
+  override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> =
+    scope.future {
+      decodeSampled(data, (getArtworkSizeHint() ?: defaultArtworkSizePixels).coerceAtLeast(1))
+        ?: throw IllegalArgumentException("Failed to decode bitmap from byte array")
     }
-    return future
-  }
 
-  override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
-    val future = SettableFuture.create<Bitmap>()
-
-    scope.launch {
+  override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> =
+    scope.future {
       try {
         val originalUrl = uri.toString()
         val sizeHint = getArtworkSizeHint() ?: defaultArtworkSizePixels
@@ -72,6 +60,8 @@ class CoilBitmapLoader(
         val source =
           try {
             resolveDisplayArtwork(originalUrl, sizeHint)
+          } catch (e: CancellationException) {
+            throw e
           } catch (e: Exception) {
             Timber.e(e, "Display artwork resolution failed for $originalUrl")
             null
@@ -85,13 +75,31 @@ class CoilBitmapLoader(
 
         val bitmap = core.load(finalUrl, headers, sizeHint, isSvg)
         Timber.d("Loaded bitmap: ${bitmap.width}x${bitmap.height} from $finalUrl")
-        future.set(bitmap)
+        bitmap
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         Timber.e(e, "Exception loading artwork from $uri")
-        future.setException(e)
+        throw e
       }
     }
 
-    return future
+  /** Decodes at the largest power-of-two subsample that keeps both sides at least [sizePixels]. */
+  private fun decodeSampled(data: ByteArray, sizePixels: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+    var sampleSize = 1
+    while (
+      bounds.outWidth / (sampleSize * 2) >= sizePixels &&
+        bounds.outHeight / (sampleSize * 2) >= sizePixels
+    ) {
+      sampleSize *= 2
+    }
+    return BitmapFactory.decodeByteArray(
+      data,
+      0,
+      data.size,
+      BitmapFactory.Options().apply { inSampleSize = sampleSize },
+    )
   }
 }

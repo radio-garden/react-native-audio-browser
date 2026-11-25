@@ -21,8 +21,8 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.svg.SvgDecoder
-import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.ArtworkContentProvider
 import com.audiobrowser.util.ArtworkProviderDeps
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.CoilArtworkLoader
@@ -76,31 +76,10 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onCreate() {
     super.onCreate()
 
-    if (BuildConfig.DEBUG) {
-      Timber.Forest.plant(
-        object : Timber.DebugTree() {
-          override fun createStackElementTag(element: StackTraceElement): String? {
-            return "${element.className.substringAfterLast('.')}:${element.methodName}"
-          }
-        }
-      )
-    } else {
-      Timber.Forest.plant(
-        object : Timber.Tree() {
-          override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-            if (priority >= Log.WARN) {
-              Log.println(priority, tag ?: "AudioBrowser", message)
-              t?.let { throwable ->
-                Log.println(priority, tag ?: "AudioBrowser", throwable.toString())
-              }
-            }
-          }
-        }
-      )
-    }
+    plantLogTree()
 
     player = Player(this)
-    player.setup(PlayerSetupOptions())
+    player.setupFromStore()
 
     // The disk cache keeps Coil's default size limit: 2% of the disk, at most 250 MB.
     imageLoader =
@@ -109,12 +88,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).build() }
         .build()
 
+    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val coilBitmapLoader =
       CoilBitmapLoader(
         context = this,
         imageLoader = imageLoader,
         resolveDisplayArtwork = { uri, sizeHint -> player.resolveDisplayArtwork(uri, sizeHint) },
         getArtworkSizeHint = { player.artworkSizeHintPixels },
+        scope = artworkScope,
       )
 
     player.coilBitmapLoader = coilBitmapLoader
@@ -123,7 +104,6 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
     // ArtworkContentProvider reads the holder to serve browse artwork to Android Auto and AAOS over
     // content:// URIs.
-    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     artworkProviderDeps =
       ArtworkProviderDeps(
         loader = CoilArtworkLoader(this, imageLoader),
@@ -131,14 +111,9 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         scope = artworkScope,
         artworkSizeHint = { player.artworkSizeHintPixels },
       )
+    // Before the provider can serve, so it never reads or writes the stale files.
+    ArtworkContentProvider.discardStaleArtwork(cacheDir, artworkScope)
     CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
-    // Best-effort: the previous process's files are stale, and keeping them grows the disk across
-    // restarts. The provider fetches again on demand.
-    runCatching {
-      java.io
-        .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
-        .deleteRecursively()
-    }
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -341,5 +316,35 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
      * session re-sending External Surfaces the playback state every 3 s while playing or loading.
      */
     const val PERIODIC_POSITION_UPDATES = "com.audiobrowser.PERIODIC_POSITION_UPDATES"
+
+    private var logTreePlanted = false
+
+    /** Once per process: the service is recreated in the same process, and each tree logs anew. */
+    private fun plantLogTree() {
+      if (logTreePlanted) return
+      logTreePlanted = true
+      if (BuildConfig.DEBUG) {
+        Timber.Forest.plant(
+          object : Timber.DebugTree() {
+            override fun createStackElementTag(element: StackTraceElement): String? {
+              return "${element.className.substringAfterLast('.')}:${element.methodName}"
+            }
+          }
+        )
+      } else {
+        Timber.Forest.plant(
+          object : Timber.Tree() {
+            override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+              if (priority >= Log.WARN) {
+                Log.println(priority, tag ?: "AudioBrowser", message)
+                t?.let { throwable ->
+                  Log.println(priority, tag ?: "AudioBrowser", throwable.toString())
+                }
+              }
+            }
+          }
+        )
+      }
+    }
   }
 }
