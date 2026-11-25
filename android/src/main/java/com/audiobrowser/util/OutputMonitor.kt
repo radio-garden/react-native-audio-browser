@@ -127,7 +127,9 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
           .ifEmpty {
             return null
           }
-      return sinks.firstNotNullOfOrNull(::outputOf)
+      // Sinks with no output of their own, such as the remote submix of screen mirroring: no
+      // reading would keep the last output, so headphones gone since would still show.
+      return sinks.firstNotNullOfOrNull(::outputOf) ?: PHONE_SPEAKER
     }
     return computeOutputLegacy()
   }
