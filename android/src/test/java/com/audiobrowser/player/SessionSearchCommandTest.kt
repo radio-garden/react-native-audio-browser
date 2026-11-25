@@ -312,7 +312,8 @@ class SessionSearchCommandTest {
   @Test
   fun `a browser reconfigured without search withdraws it from cars that connect later`() {
     configureBrowser(search = true)
-    configureBrowser(search = false)
+    player.browser!!.browserManager.config = browserConfig(search = false)
+    player.notifyBrowserConfigurationReady()
 
     assertFalse(offersSearch())
   }
