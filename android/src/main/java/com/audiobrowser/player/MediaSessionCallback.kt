@@ -65,9 +65,10 @@ import timber.log.Timber
  * and as an intent in the service. Callbacks answering through [scope] run on IO, so anything
  * touching ExoPlayer hops to [Dispatchers.Main]; the rest answer on the Media3 application thread.
  */
-class MediaSessionCallback(private val player: Player) :
+class MediaSessionCallback(private val player: Player, searchAvailable: Boolean) :
   MediaLibraryService.MediaLibrarySession.Callback {
-  internal val commandManager = MediaSessionCommandManager(player.context.isAutomotive)
+  internal val commandManager =
+    MediaSessionCommandManager(player.context.isAutomotive, searchAvailable)
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   // Written on the Media3 application thread, read from the network observer and JS-triggered

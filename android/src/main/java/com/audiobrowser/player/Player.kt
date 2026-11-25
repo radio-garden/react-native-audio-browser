@@ -47,6 +47,7 @@ import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
+import com.audiobrowser.util.SearchOfferStore
 import com.audiobrowser.util.SvgArtworkRenderer
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.TrackFactory.setFavorite
@@ -161,7 +162,8 @@ internal constructor(
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
   internal val equalizer =
     EqualizerController(onSettingsChanged = { settings -> callbacks?.onEqualizerChanged(settings) })
-  private val mediaSessionCallback = MediaSessionCallback(this)
+  private val mediaSessionCallback =
+    MediaSessionCallback(this, searchAvailable = SearchOfferStore.lastHasSearch(context))
   internal val playbackStateStore = PlaybackStateStore(this)
   // Fades the local engine only: a remote receiver keeps its own volume.
   internal val volumeFader =
@@ -320,11 +322,10 @@ internal constructor(
       mediaSessionCallback.notifyBrowserReady()
     }
 
+    val hasSearch = audioBrowser.browserManager.config.hasSearch
+    SearchOfferStore.record(context, hasSearch)
     if (::mediaSession.isInitialized) {
-      mediaSessionCallback.commandManager.updateSearchAvailable(
-        mediaSession,
-        audioBrowser.browserManager.config.hasSearch,
-      )
+      mediaSessionCallback.commandManager.updateSearchAvailable(mediaSession, hasSearch)
     }
   }
 
