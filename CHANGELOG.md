@@ -1,3 +1,28 @@
+## [1.0.0-next.14](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.13...v1.0.0-next.14) (2026-11-25)
+
+### Bug Fixes
+
+* **android:** decide the now-playing stall at the state change ([b0f9e26](https://github.com/radio-garden/react-native-audio-browser/commit/b0f9e26498d6a64eebfb7347d798b10dd180124c))
+* **android:** don't count waiting at an item's end as a stall ([18eadcb](https://github.com/radio-garden/react-native-audio-browser/commit/18eadcba883d54f2271c781938fe0f0347cab544))
+* **android:** give the media and artwork config callbacks the JS-callback time limit ([78fe36a](https://github.com/radio-garden/react-native-audio-browser/commit/78fe36ac2f7db8d8dfd29e208819924ce08f0af3))
+* **android:** head a view-more page with its section's title ([ba30bad](https://github.com/radio-garden/react-native-audio-browser/commit/ba30badc33bfd59e1d516fb0d576c20ec3cb8b16))
+* **android:** let a cancelled artwork resolve stay cancelled ([4c7966a](https://github.com/radio-garden/react-native-audio-browser/commit/4c7966a9f1f7dfab6485133ea7fc76798b08e582))
+* **android:** plant the log tree once per process ([cc7a636](https://github.com/radio-garden/react-native-audio-browser/commit/cc7a636c50a6dba2213970564a70deebc8811b92))
+* **ios:** decode raster bytes served from an .svg URL ([aaefed3](https://github.com/radio-garden/react-native-audio-browser/commit/aaefed33f9098a8f44fe5742148ad33e18dd2099))
+* **ios:** keep the release when a track loads without a play ([2eb49e1](https://github.com/radio-garden/react-native-audio-browser/commit/2eb49e19ca0e8595ed9749881ff66531e7db5796))
+* **ios:** pause on a remote stop of a live track ([c39818e](https://github.com/radio-garden/react-native-audio-browser/commit/c39818e8a6a0453c75d94a5c57d09652acdfbe56))
+* **ios:** pause when the system refuses the audio session ([4caa367](https://github.com/radio-garden/react-native-audio-browser/commit/4caa367fef7d8ff23f426389e9c4cddb97137191))
+* **ios:** rasterize SVG artwork on the lock screen and CarPlay now-playing ([3284ca5](https://github.com/radio-garden/react-native-audio-browser/commit/3284ca534149be56d139be8f0b0525a309498b21))
+* **ios:** release the audio session only when nothing needs it ([311fa30](https://github.com/radio-garden/react-native-audio-browser/commit/311fa3077ed789b2f9aa8c6fceebf155367d5da8))
+
+### Performance Improvements
+
+* **android:** build the player engine once at startup ([9cad5e8](https://github.com/radio-garden/react-native-audio-browser/commit/9cad5e89e51c66aa56902336b91c5d42ab6b5d8a))
+* **android:** decode artwork embedded in a stream off the main thread ([7803fce](https://github.com/radio-garden/react-native-audio-browser/commit/7803fce37296a525d803886f4792d3ea50229a5c))
+* **android:** delete the stale artwork cache off the main thread ([c535889](https://github.com/radio-garden/react-native-audio-browser/commit/c53588964b6daccf1bc9ae305cad4467a7384ba3))
+* **ios:** re-send only the CarPlay rows whose playing state changed ([008036d](https://github.com/radio-garden/react-native-audio-browser/commit/008036d396b91edfa665069d9d1295489395d67b))
+* **ios:** set the audio session category off the main thread ([48f3ae9](https://github.com/radio-garden/react-native-audio-browser/commit/48f3ae942074e8fbfeaf18363dbbb7cb726f8034))
+
 ## [1.0.0-next.13](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.12...v1.0.0-next.13) (2026-11-24)
 
 ### Bug Fixes
