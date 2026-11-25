@@ -689,6 +689,7 @@ internal constructor(
     } else if (localEngine.isActive) {
       // No listener heard the restore. Its prepare() leaves the engine buffering; an unprepared one
       // keeps its state. While remote, the receiver plays on unchanged.
+      connectStarted()
       if (exoPlayer.playbackState != ExoPlayer.STATE_IDLE) setPlaybackState(PlaybackState.BUFFERING)
       // The new engine starts unsuppressed: an unchanged state would not re-derive it.
       refreshPlayingState()
@@ -884,6 +885,22 @@ internal constructor(
 
   // MARK: - Now Playing Metadata
 
+  private var playedSinceConnect = false
+
+  /** Call where a connect starts: the engine leaving idle, a seek, a track change, a rebuild. */
+  internal fun connectStarted() {
+    val wasStalled = isStalled
+    playedSinceConnect = false
+    if (wasStalled) nowPlaying.render()
+  }
+
+  /**
+   * Playback that had started waits for data. As iOS's `isStalled`, except that a seek's buffering
+   * isn't a stall.
+   */
+  internal val isStalled: Boolean
+    get() = playbackState == PlaybackState.BUFFERING && shouldPlayWhenReady && playedSinceConnect
+
   /** [NowPlayingUpdater] does the rendering; this is its platform surface. */
   val nowPlaying: NowPlayingUpdater =
     NowPlayingUpdater(
@@ -903,8 +920,8 @@ internal constructor(
         override val playWhenReady
           get() = shouldPlayWhenReady
 
-        override val isRebuffering
-          get() = loadControl.isRebuffering
+        override val isStalled
+          get() = this@Player.isStalled
 
         override val isOnline
           get() = networkMonitor.getOnline()
@@ -1499,6 +1516,8 @@ internal constructor(
       ) {
         playbackError = null
       }
+
+      if (state == PlaybackState.PLAYING) playedSinceConnect = true
 
       val playback = Playback(state, playbackError)
       callbacks?.onPlaybackChanged(playback)
