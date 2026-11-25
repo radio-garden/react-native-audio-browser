@@ -108,15 +108,7 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
   private fun recompute(reason: String) {
     // With no local reading, a remote output that is gone falls back to the phone speaker, so
     // listeners hear that it is gone.
-    val output =
-      computeOutput()
-        ?: if (cached?.type in REMOTE_TYPES)
-          Output(
-            type = OutputType.SPEAKER,
-            name = defaultName(OutputType.SPEAKER),
-            external = false,
-          )
-        else return
+    val output = computeOutput() ?: if (cached?.type in REMOTE_TYPES) PHONE_SPEAKER else return
     if (output == cached) return
     cached = output
     Timber.d("OutputMonitor [%s]: type=%s name=%s", reason, output.type, output.name)
@@ -128,11 +120,14 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       return it
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      val device =
-        audioManager.getAudioDevicesForAttributes(mediaAttributes).firstOrNull { it.isSink }
-          ?: return null
-      val type = outputTypeOf(device.type)
-      return Output(type = type, name = deviceName(device, type), external = isExternal(type))
+      val sinks =
+        audioManager
+          .getAudioDevicesForAttributes(mediaAttributes)
+          .filter { it.isSink }
+          .ifEmpty {
+            return null
+          }
+      return sinks.firstNotNullOfOrNull(::outputOf)
     }
     return computeOutputLegacy()
   }
@@ -144,43 +139,45 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
     val device =
       when {
         audioManager.isBluetoothA2dpOn ->
-          outputs.firstOrNull { outputTypeOf(it.type) == OutputType.BLUETOOTH }
+          outputs.firstOrNull {
+            outputTypeOf(it.type) == OutputType.BLUETOOTH &&
+              it.type != AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+          }
         else ->
           outputs.firstOrNull { outputTypeOf(it.type) == OutputType.HEADPHONES }
             ?: outputs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
       } ?: return null
-    val type = outputTypeOf(device.type)
-    return Output(type = type, name = deviceName(device, type), external = isExternal(type))
+    return outputOf(device)
   }
-
-  private fun deviceName(device: AudioDeviceInfo, type: OutputType): String =
-    device.productName?.toString()?.ifBlank { null } ?: defaultName(type)
-
-  private fun isExternal(type: OutputType): Boolean =
-    type != OutputType.SPEAKER && type != OutputType.RECEIVER
-
-  private fun defaultName(type: OutputType): String =
-    when (type) {
-      OutputType.BLUETOOTH -> "Bluetooth"
-      OutputType.HEADPHONES -> "Headphones"
-      OutputType.USB -> "USB"
-      OutputType.HDMI -> "HDMI"
-      OutputType.RECEIVER -> "Earpiece"
-      else -> "Phone speaker"
-    }
 
   companion object {
     private const val POLL_INTERVAL_MS = 1000L
     private val REMOTE_TYPES = setOf(OutputType.REMOTE, OutputType.CAST, OutputType.SONOS)
 
-    /** Maps an [AudioDeviceInfo] `TYPE_*` to an [OutputType]; [OutputType.OTHER] if unknown. */
-    fun outputTypeOf(deviceType: Int): OutputType =
+    private val PHONE_SPEAKER =
+      Output(type = OutputType.SPEAKER, name = Build.MODEL, external = false)
+
+    private fun outputOf(device: AudioDeviceInfo): Output? {
+      val type = outputTypeOf(device.type) ?: return null
+      val name = device.productName?.toString()?.ifBlank { null } ?: Build.MODEL
+      return Output(type = type, name = name, external = isExternal(type))
+    }
+
+    private fun isExternal(type: OutputType): Boolean =
+      type != OutputType.SPEAKER && type != OutputType.RECEIVER
+
+    /**
+     * Maps an [AudioDeviceInfo] `TYPE_*` to an [OutputType]; null for a device no listener picks
+     * for media, such as the remote submix of screen casting, and for any type not listed.
+     */
+    fun outputTypeOf(deviceType: Int): OutputType? =
       when (deviceType) {
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
         AudioDeviceInfo.TYPE_BLE_HEADSET,
         AudioDeviceInfo.TYPE_BLE_SPEAKER,
         AudioDeviceInfo.TYPE_BLE_BROADCAST,
-        AudioDeviceInfo.TYPE_HEARING_AID -> OutputType.BLUETOOTH
+        AudioDeviceInfo.TYPE_HEARING_AID,
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> OutputType.BLUETOOTH
 
         AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
         AudioDeviceInfo.TYPE_WIRED_HEADSET,
@@ -195,10 +192,19 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
 
         AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> OutputType.RECEIVER
 
+        AudioDeviceInfo.TYPE_MULTICHANNEL_GROUP,
+        AudioDeviceInfo.TYPE_LINE_ANALOG,
+        AudioDeviceInfo.TYPE_LINE_DIGITAL,
+        AudioDeviceInfo.TYPE_AUX_LINE,
+        AudioDeviceInfo.TYPE_DOCK,
+        AudioDeviceInfo.TYPE_DOCK_ANALOG,
+        AudioDeviceInfo.TYPE_IP,
+        AudioDeviceInfo.TYPE_BUS -> OutputType.OTHER
+
         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE -> OutputType.SPEAKER
 
-        else -> OutputType.OTHER
+        else -> null
       }
   }
 }
