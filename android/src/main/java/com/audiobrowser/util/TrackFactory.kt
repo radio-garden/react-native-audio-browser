@@ -64,19 +64,21 @@ object TrackFactory {
   /**
    * A browsable Track for a section's "view more" row (ADR 0010). It carries the section's style,
    * `display` included: nothing else can declare the layout of the page it opens, and without it
-   * Android Auto renders that page as a list. [title] is the consumer's `viewMoreTitle`, not the
-   * section's title.
+   * Android Auto renders that page as a list. It is titled by the section, since car media apps
+   * head the opened page with the tapped row's title, and subtitled by [viewMoreTitle], which a
+   * section without a title takes as its title.
    */
-  fun navigationTrack(section: Section, title: String): Track =
-    Track(
+  fun navigationTrack(section: Section, viewMoreTitle: String): Track {
+    val sectionTitle = section.title?.takeIf { it.isNotBlank() }
+    return Track(
       id = null,
       path = section.path,
       src = null,
       artwork = null,
       artworkSource = null,
       request = null,
-      title = title,
-      subtitle = null,
+      title = sectionTitle ?: viewMoreTitle,
+      subtitle = viewMoreTitle.takeIf { sectionTitle != null },
       artist = null,
       albumPath = null,
       album = null,
@@ -99,14 +101,19 @@ object TrackFactory {
       live = null,
       icyCharset = null,
     )
+  }
 
   /**
    * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
    * Android Auto draws as a broken image when it has no artwork, so it carries the library's arrow
    * icon from [packageName]'s resources.
    */
-  fun toNavigationMediaItem(section: Section, title: String, packageName: String): MediaItem {
-    val track = navigationTrack(section, title)
+  fun toNavigationMediaItem(
+    section: Section,
+    viewMoreTitle: String,
+    packageName: String,
+  ): MediaItem {
+    val track = navigationTrack(section, viewMoreTitle)
     val icon =
       if (section.style?.display == StyleDisplay.GRID) {
         "android.resource://$packageName/drawable/$VIEW_MORE_ICON"

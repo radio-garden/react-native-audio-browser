@@ -206,8 +206,10 @@ in either wrap mode — and on `'condensed'` (see
 never adds words to the section.
 
 On Android Auto, the browsable row appended to a section with a `path` takes
-its title from the global `viewMoreTitle` browser option ("View more" by
-default), not from anything on the section. See the `Section.path` docs in
+the section's title, which the car uses to head the page the row opens, and
+the global `viewMoreTitle` browser option ("View more" by default) as its
+subtitle; an untitled section's row takes `viewMoreTitle` as its title. See
+the `Section.path` docs in
 [`src/types/browser-nodes.ts`](../../src/types/browser-nodes.ts) and the
 Sections entry in the
 [Android Auto guide](../../website/guide/android-auto.md).

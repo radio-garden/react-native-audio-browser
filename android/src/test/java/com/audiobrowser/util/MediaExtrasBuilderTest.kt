@@ -125,7 +125,6 @@ class MediaExtrasBuilderTest {
       )
     val navigation = TrackFactory.navigationTrack(section, "View more")
     assertEquals(StyleDisplay.GRID, navigation.style?.display)
-    assertEquals("View more", navigation.title)
 
     val extras = MediaExtrasBuilder.build(navigation)
     assertEquals(

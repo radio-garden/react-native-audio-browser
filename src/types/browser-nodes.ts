@@ -312,8 +312,8 @@ export interface Section {
    *   CarPlay has no "see all" idiom for one, and an invented row would
    *   spend an item from the template's cap.
    * - **Android Auto** — no header is tappable at any display, so the
-   *   section gets an appended browsable row, titled by the global
-   *   `viewMoreTitle` browser option.
+   *   section gets an appended browsable row, titled by the section and
+   *   subtitled by the global `viewMoreTitle` browser option.
    */
   path?: string
   /** The section's tracks. */

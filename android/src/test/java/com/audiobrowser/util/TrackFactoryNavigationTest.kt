@@ -85,11 +85,25 @@ class TrackFactoryNavigationTest {
   }
 
   @Test
-  fun `the row navigates to the section's path under the configured title`() {
+  fun `the row is titled by its section, which heads the page it opens, and subtitled by the configured title`() {
     val item = TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "More", "com.test")
 
     assertEquals("/popular", item.mediaId)
-    assertEquals("More", item.mediaMetadata.title)
+    assertEquals("Popular", item.mediaMetadata.title)
+    assertEquals("More", item.mediaMetadata.artist)
     assertEquals(true, item.mediaMetadata.isBrowsable)
+  }
+
+  @Test
+  fun `an untitled or blank-titled section's row takes the configured title`() {
+    for (title in listOf(null, " ")) {
+      val untitled =
+        TestFixtures.section(arrayOf(track), title = title, path = "/popular", style = null)
+
+      val item = TrackFactory.toNavigationMediaItem(untitled, "More", "com.test")
+
+      assertEquals("More", item.mediaMetadata.title)
+      assertNull(item.mediaMetadata.artist)
+    }
   }
 }
