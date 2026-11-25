@@ -1557,6 +1557,24 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func takeRequestsFailedBeforeRegistration() -> bridge.Result_std__vector_FailedRequestCount__ {
+    do {
+      let __result = try self.__implementation.takeRequestsFailedBeforeRegistration()
+      let __resultCpp = { () -> bridge.std__vector_FailedRequestCount_ in
+        var __vector = bridge.create_std__vector_FailedRequestCount_(__result.count)
+        for __item in __result {
+          __vector.push_back(__item)
+        }
+        return __vector
+      }()
+      return bridge.create_Result_std__vector_FailedRequestCount__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__vector_FailedRequestCount__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func setGate(gate: bridge.std__optional_Gate_, hasResolver: Bool) -> bridge.Result_void_ {
     do {
       try self.__implementation.setGate(gate: gate.value, hasResolver: hasResolver)

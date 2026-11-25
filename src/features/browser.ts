@@ -187,6 +187,44 @@ export function hasSearch(): boolean {
 }
 
 /**
+ * A kind of request a car or other media controller makes of the browser:
+ * - `browse`: a listing or an item
+ * - `search`: a search from the car's search box
+ * - `playFromSearch`: a spoken "play …"
+ * - `play`: a track chosen to play
+ * - `resume`: playback resumed from the last session
+ */
+export type FailedRequestKind =
+  | 'browse'
+  | 'search'
+  | 'playFromSearch'
+  | 'play'
+  | 'resume'
+
+/** How many requests of one kind failed before the browser registered. */
+export type FailedRequestCount = {
+  kind: FailedRequestKind
+  count: number
+}
+
+/**
+ * Returns the requests that failed because the browser had not registered in
+ * time, by kind, and clears them (Android only; always empty on iOS and web).
+ *
+ * A car's request made before the browser registers waits up to 10 s, then
+ * fails; on a cold start the app's JS has not run to hear of it. Each such
+ * request counts once; one cancelled while it waits does not. The browser
+ * registers after {@link configureBrowser}, once the player service is
+ * connected, and JS is not told when: a take straight after `configureBrowser`
+ * can miss a timeout still to come, so take again later, such as when a car
+ * connects. A take after registration is final for the requests made before
+ * it.
+ */
+export function takeRequestsFailedBeforeRegistration(): FailedRequestCount[] {
+  return nativeBrowser.takeRequestsFailedBeforeRegistration()
+}
+
+/**
  * Searches for tracks using the configured search source.
  *
  * When a search source is configured, resolves `[]` only when it found

@@ -29,6 +29,7 @@ import com.audiobrowser.extension.toQueueIndex
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.player.RegistrationTimeouts
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
@@ -46,6 +47,7 @@ import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
 import com.margelo.nitro.audiobrowser.ChapterMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
+import com.margelo.nitro.audiobrowser.FailedRequestCount
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FindTrackParams
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
@@ -488,6 +490,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var formattedNavigationError: FormattedNavigationError? = null
 
   override fun getNavigationError(): NavigationError? = navigationError
+
+  override fun takeRequestsFailedBeforeRegistration(): Array<FailedRequestCount> =
+    RegistrationTimeouts.take()
 
   override fun getFormattedNavigationError(): FormattedNavigationError? = formattedNavigationError
 

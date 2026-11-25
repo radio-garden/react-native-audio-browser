@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.margelo.nitro.audiobrowser.FailedRequestKind
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
@@ -279,7 +280,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     params: MediaLibraryService.LibraryParams?,
   ): LibraryResult<ImmutableList<MediaItem>> {
     val audioBrowser =
-      player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
+      player.awaitBrowser(FailedRequestKind.BROWSE).also {
+        Timber.d("Browser ready, proceeding with onGetChildren")
+      }
     val browserManager = audioBrowser.browserManager
 
     // While a gate is active the root keeps its tabs; a gated level, the gate tile's own sentinel
@@ -421,7 +424,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       if (section.path == null || children.isEmpty()) return@flatMap items
       // Free after the first row: the browser is already up, and viewMoreTitle is memoized per
       // content generation.
-      val viewMoreTitle = player.awaitBrowser().browserManager.viewMoreTitle()
+      val viewMoreTitle = player.awaitBrowser(null).browserManager.viewMoreTitle()
       items + TrackFactory.toNavigationMediaItem(section, viewMoreTitle, player.context.packageName)
     }
   }
@@ -466,7 +469,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       return LibraryResult.ofItem(
         createOfflineMediaItem(
           player
-            .awaitBrowser()
+            .awaitBrowser(null)
             .resolveFormattedError(offlineError(), BrowserPathHelper.OFFLINE_PATH)
         ),
         null,
@@ -477,7 +480,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       return LibraryResult.ofItem(
         createBrowseErrorMediaItem(
           player
-            .awaitBrowser()
+            .awaitBrowser(null)
             .resolveFormattedError(browseFailureError(), BrowserPathHelper.ERROR_PATH)
         ),
         null,
@@ -488,7 +491,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       return LibraryResult.ofItem(
         createEmptyMediaItem(
           player
-            .awaitBrowser()
+            .awaitBrowser(null)
             .resolveFormattedError(emptyContentError(), BrowserPathHelper.EMPTY_PATH)
         ),
         null,
@@ -499,7 +502,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     if (mediaId == BrowserPathHelper.GATE_PATH) {
       val outcome =
         player
-          .awaitBrowser()
+          .awaitBrowser(null)
           .gateDecision(
             NativeGateRequest(
               reason = GateReason.BROWSE,
@@ -511,7 +514,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       return LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
     }
 
-    val browserManager = player.awaitBrowser().browserManager
+    val browserManager = player.awaitBrowser(FailedRequestKind.BROWSE).browserManager
 
     // Cache first: resolve() strips __trackId from a contextual mediaId and would answer with the
     // parent container's metadata.
@@ -652,7 +655,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
    */
   private suspend fun searchableBrowser(): AudioBrowser? {
     try {
-      player.awaitBrowser()
+      player.awaitBrowser(FailedRequestKind.SEARCH)
     } catch (e: TimeoutException) {
       Timber.w(e, "Timed out waiting for browser - search not available")
       return null
@@ -729,7 +732,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     val session = mediaLibrarySession ?: return
     val browserManager =
       try {
-        player.awaitBrowser().browserManager
+        player.awaitBrowser(null).browserManager
       } catch (e: TimeoutException) {
         Timber.w("Timed out waiting for browser - offline searches not re-announced")
         return
@@ -876,7 +879,11 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
     scope.future {
       val startPosition = startPositionMs.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 }
-      val audioBrowser = player.awaitBrowser()
+      val voiceSearch = mediaItems.singleOrNull()?.let { SearchParamsFactory.voiceSearchOf(it) }
+      val audioBrowser =
+        player.awaitBrowser(
+          if (voiceSearch != null) FailedRequestKind.PLAYFROMSEARCH else FailedRequestKind.PLAY
+        )
 
       // Media3 sets whatever this returns: the controller's position would undo the handler's seek.
       // Reads hop to Main: ExoPlayer is main-thread confined and this runs on IO.
@@ -927,7 +934,6 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
         }
       }
 
-      val voiceSearch = mediaItems.singleOrNull()?.let { SearchParamsFactory.voiceSearchOf(it) }
       val result =
         if (voiceSearch != null) {
           // A failed future leaves current playback untouched.
@@ -1067,7 +1073,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       val path = state.track.path
       Timber.d("Resuming from path=$path, positionMs=${state.positionMs}")
 
-      val browserManager = player.awaitBrowser().browserManager
+      val browserManager = player.awaitBrowser(FailedRequestKind.RESUME).browserManager
 
       val expanded = path?.let { browserManager.expandQueueFromContextualPath(it) }
 

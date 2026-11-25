@@ -3,6 +3,7 @@ import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,
   BatteryWarningPendingChangedEvent,
+  FailedRequestCount,
   FavoriteChangedEvent
 } from '../features'
 import type {
@@ -131,6 +132,11 @@ export interface AudioBrowser extends HybridObject<{
   invalidateAllContent(): void
   setFavorites(favorites: string[]): void
   configuration: NativeBrowserConfiguration
+  /**
+   * Returns and clears the requests that timed out waiting for the browser to
+   * register, by kind. Android only; always empty on iOS and web.
+   */
+  takeRequestsFailedBeforeRegistration(): FailedRequestCount[]
 
   // MARK: gate
   /**

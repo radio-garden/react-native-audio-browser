@@ -24,6 +24,12 @@ public extension HybridAudioBrowser {
     // Unsupported on iOS.
   }
 
+  // MARK: - Requests failed before registration (Android-only)
+
+  func takeRequestsFailedBeforeRegistration() throws -> [FailedRequestCount] {
+    []
+  }
+
   // MARK: - Battery (Android-only, stub implementations)
 
   func getBatteryWarningPending() throws -> Bool {

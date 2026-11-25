@@ -176,6 +176,10 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
+// Forward declaration of `FailedRequestCount` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FailedRequestCount; }
+// Forward declaration of `FailedRequestKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FailedRequestKind; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
@@ -305,6 +309,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
+#include "FailedRequestCount.hpp"
+#include "FailedRequestKind.hpp"
 #include "NativeSetupPlayerOptions.hpp"
 #include "NativeAndroidSetupOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
@@ -833,6 +839,14 @@ namespace margelo::nitro::audiobrowser {
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
+    }
+    inline std::vector<FailedRequestCount> takeRequestsFailedBeforeRegistration() override {
+      auto __result = _swiftPart.takeRequestsFailedBeforeRegistration();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
     }
     inline void setGate(const std::optional<Gate>& gate, bool hasResolver) override {
       auto __result = _swiftPart.setGate(gate, std::forward<decltype(hasResolver)>(hasResolver));
