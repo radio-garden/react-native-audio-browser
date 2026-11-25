@@ -48,28 +48,28 @@ struct CarPlayArtworkResolverTests {
   @Test func theResolvedURLIsFetchedWithItsHeaders() {
     #expect(
       action(artwork: "https://example.com/a.jpg", resolved: image("https://cdn.example.com/r.jpg", headers: ["A": "1"]))
-        == .fetch(uri: "https://cdn.example.com/r.jpg", headers: ["A": "1"], shouldTint: false, isSvg: false),
+        == .fetch(uri: "https://cdn.example.com/r.jpg", headers: ["A": "1"], shouldTint: false),
     )
   }
 
   @Test func withoutAResolvedURLTheArtworkIsFetched() {
     #expect(
       action(artwork: "https://example.com/a.jpg")
-        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
+        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false),
     )
   }
 
   @Test func anInvalidResolvedURLFallsBackToTheArtwork() {
     #expect(
       action(artwork: "https://example.com/a.jpg", resolved: image(""))
-        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
+        == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false),
     )
   }
 
   @Test func withoutArtworkTheArtworkSourceIsFetchedWithItsHeaders() {
     #expect(
       action(artworkSource: image("https://example.com/s.jpg", headers: ["Authorization": "Bearer t"]))
-        == .fetch(uri: "https://example.com/s.jpg", headers: ["Authorization": "Bearer t"], shouldTint: false, isSvg: false),
+        == .fetch(uri: "https://example.com/s.jpg", headers: ["Authorization": "Bearer t"], shouldTint: false),
     )
   }
 
@@ -78,7 +78,7 @@ struct CarPlayArtworkResolverTests {
       action(
         artwork: "https://example.com/a.jpg",
         artworkSource: image("https://example.com/s.jpg", headers: ["Authorization": "Bearer t"]),
-      ) == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false, isSvg: false),
+      ) == .fetch(uri: "https://example.com/a.jpg", headers: nil, shouldTint: false),
     )
   }
 
@@ -86,23 +86,14 @@ struct CarPlayArtworkResolverTests {
     #expect(action(artwork: "") == .none)
   }
 
-  @Test func anSVGPathIsMarkedCaseInsensitively() {
-    #expect(action(artwork: "https://example.com/i.svg") == .fetch(uri: "https://example.com/i.svg", headers: nil, shouldTint: false, isSvg: true))
-    #expect(action(artwork: "https://example.com/i.SVG") == .fetch(uri: "https://example.com/i.SVG", headers: nil, shouldTint: false, isSvg: true))
-    #expect(
-      action(resolved: image("https://cdn.example.com/i.svg"))
-        == .fetch(uri: "https://cdn.example.com/i.svg", headers: nil, shouldTint: false, isSvg: true),
-    )
-  }
-
   @Test func aStencilTints() {
     #expect(
       action(artwork: "https://example.com/a.png", stencil: true)
-        == .fetch(uri: "https://example.com/a.png", headers: nil, shouldTint: true, isSvg: false),
+        == .fetch(uri: "https://example.com/a.png", headers: nil, shouldTint: true),
     )
     #expect(
       action(resolved: image("https://cdn.example.com/r.png"), stencil: true)
-        == .fetch(uri: "https://cdn.example.com/r.png", headers: nil, shouldTint: true, isSvg: false),
+        == .fetch(uri: "https://cdn.example.com/r.png", headers: nil, shouldTint: true),
     )
   }
 }

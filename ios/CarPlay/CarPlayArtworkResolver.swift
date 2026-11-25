@@ -8,7 +8,7 @@ struct ArtworkResolvedImage: Equatable, Sendable {
 enum ArtworkLoadAction: Equatable, Sendable {
   /// `width` and `height` are the canvas size in points.
   case sfSymbol(artwork: String, width: Double, height: Double)
-  case fetch(uri: String, headers: [String: String]?, shouldTint: Bool, isSvg: Bool)
+  case fetch(uri: String, headers: [String: String]?, shouldTint: Bool)
   case none
 }
 
@@ -50,9 +50,7 @@ enum CarPlayArtworkResolver {
   }
 
   private static func fetch(_ image: ArtworkResolvedImage, stencil: Bool) -> ArtworkLoadAction? {
-    guard let url = URL(string: image.uri) else { return nil }
-    return .fetch(
-      uri: image.uri, headers: image.headers, shouldTint: stencil, isSvg: url.pathExtension.lowercased() == "svg",
-    )
+    guard URL(string: image.uri) != nil else { return nil }
+    return .fetch(uri: image.uri, headers: image.headers, shouldTint: stencil)
   }
 }

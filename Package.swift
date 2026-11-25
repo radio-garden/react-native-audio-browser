@@ -96,6 +96,7 @@ let package = Package(
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
         "Util/LocalArtwork.swift",
+        "Util/ArtworkProcessing.swift",
         "Util/RoutePickerSourceLifetime.swift",
         "Observer/PlayerObserver.swift",
         "Observer/ItemObserver.swift",
