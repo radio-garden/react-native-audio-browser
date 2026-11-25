@@ -112,7 +112,7 @@ final class CarPlayImageLoader {
   /// "size them to the display scale of the car screen"), whatever size the source arrives at.
   private func fetchImage(uri: String, headers: [String: String]?, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    return await ArtworkImageFetcher.fetchImage(from: source, size: (size, carTraitCollection.displayScale), onCanvas: true)
+    return await ArtworkImageFetcher.fetchImage(from: source, slot: (size, carTraitCollection.displayScale), onCanvas: true)
   }
 
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {

@@ -10,16 +10,16 @@ enum ArtworkImageFetcher {
 
   /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
   /// falls back to the cached copy.
-  /// - Parameter size: The slot in points at `scale` that an image at an `.svg` path rasterizes
+  /// - Parameter slot: The size in points at `scale` that an image at an `.svg` path rasterizes
   ///   to fit.
-  /// - Parameter onCanvas: Draws the image onto a canvas of exactly `size` (`SlotCanvasProcessor`);
+  /// - Parameter onCanvas: Draws the image onto a canvas of exactly `slot` (`SlotCanvasProcessor`);
   ///   false keeps a raster image as fetched.
   /// - Parameter waitsForConnectivity: A fetch that fails for want of a connection waits for one
   ///   and tries again. A cancelled fetch that is waiting ends when the connection returns.
   @MainActor
   static func fetchImage(
     from source: ImageSource,
-    size: (points: CGSize, scale: CGFloat),
+    slot: (size: CGSize, scale: CGFloat),
     onCanvas: Bool,
     waitsForConnectivity: Bool = false,
   ) async -> UIImage? {
@@ -36,8 +36,8 @@ enum ArtworkImageFetcher {
       }
       options.append(.requestModifier(modifier))
     }
-    let svg = SVGProcessor(slot: size.points, scale: size.scale)
-    let canvas = SlotCanvasProcessor(slot: size.points, scale: size.scale)
+    let svg = SVGProcessor(slot: slot.size, scale: slot.scale)
+    let canvas = SlotCanvasProcessor(slot: slot.size, scale: slot.scale)
     let processor: (any ImageProcessor)?
     switch ArtworkProcessing(url: url, onCanvas: onCanvas) {
     case .svg(onCanvas: true):
@@ -48,8 +48,8 @@ enum ArtworkImageFetcher {
       // The only sizing that is guaranteed: a size hint sent upstream is advisory and a CDN may
       // return the original. cacheOriginalImage keeps the original on disk so another target
       // size re-processes it instead of downloading it again.
-      processor = ScaledDownsamplingProcessor(size: size.points, scale: size.scale) |> canvas
-      options.append(.scaleFactor(size.scale))
+      processor = ScaledDownsamplingProcessor(size: slot.size, scale: slot.scale) |> canvas
+      options.append(.scaleFactor(slot.scale))
       options.append(.cacheOriginalImage)
     case .asFetched:
       processor = nil

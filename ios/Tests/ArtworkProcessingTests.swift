@@ -9,17 +9,17 @@ struct ArtworkProcessingTests {
     ArtworkProcessing(url: URL(string: uri)!, onCanvas: onCanvas)
   }
 
-  @Test func anSVGRasterizesWithOrWithoutACanvas() {
+  @Test func anSVGPathMapsToSVGWithOrWithoutACanvas() {
     #expect(processing("https://example.com/i.svg", onCanvas: false) == .svg(onCanvas: false))
     #expect(processing("https://example.com/i.svg", onCanvas: true) == .svg(onCanvas: true))
   }
 
-  @Test func anSVGPathIsRecognisedCaseInsensitivelyAndPastItsQuery() {
+  @Test func anSVGPathMatchesInAnyCaseAndPastItsQuery() {
     #expect(processing("https://example.com/i.SVG", onCanvas: false) == .svg(onCanvas: false))
     #expect(processing("https://example.com/i.svg?w=40", onCanvas: false) == .svg(onCanvas: false))
   }
 
-  @Test func aRasterImageIsDownsampledOnlyOntoACanvas() {
+  @Test func anyOtherPathMapsToDownsampledOntoACanvasOrAsFetched() {
     #expect(processing("https://example.com/a.png", onCanvas: true) == .downsampledOntoCanvas)
     #expect(processing("https://example.com/a.png", onCanvas: false) == .asFetched)
   }
