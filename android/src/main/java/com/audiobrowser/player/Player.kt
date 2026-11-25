@@ -97,6 +97,11 @@ import timber.log.Timber
 private const val PAUSABLE_LIVE_WINDOW_MS = 30_000L
 
 /**
+ * How near its end an on-demand item's buffering counts as waiting on the next item, not a stall.
+ */
+private const val ITEM_END_TOLERANCE_MS = 1_000L
+
+/**
  * STOPPED stays out: stop() idles the engine itself, and [Player.stopRetrying] would make it
  * PAUSED.
  */
@@ -689,7 +694,7 @@ internal constructor(
     } else if (localEngine.isActive) {
       // No listener heard the restore. Its prepare() leaves the engine buffering; an unprepared one
       // keeps its state. While remote, the receiver plays on unchanged.
-      connectStarted()
+      resetPlayedSinceConnect()
       if (exoPlayer.playbackState != ExoPlayer.STATE_IDLE) setPlaybackState(PlaybackState.BUFFERING)
       // The new engine starts unsuppressed: an unchanged state would not re-derive it.
       refreshPlayingState()
@@ -888,7 +893,7 @@ internal constructor(
   private var playedSinceConnect = false
 
   /** Call where a connect starts: the engine leaving idle, a seek, a track change, a rebuild. */
-  internal fun connectStarted() {
+  internal fun resetPlayedSinceConnect() {
     val wasStalled = isStalled
     playedSinceConnect = false
     if (wasStalled) nowPlaying.render()
@@ -896,10 +901,24 @@ internal constructor(
 
   /**
    * Playback that had started waits for data. As iOS's `isStalled`, except that a seek's buffering
-   * isn't a stall.
+   * isn't a stall, nor is waiting at an item's end for the next, which ExoPlayer reports before the
+   * transition.
    */
   internal val isStalled: Boolean
-    get() = playbackState == PlaybackState.BUFFERING && shouldPlayWhenReady && playedSinceConnect
+    get() =
+      playbackState == PlaybackState.BUFFERING &&
+        shouldPlayWhenReady &&
+        playedSinceConnect &&
+        !isAtItemEnd
+
+  // ExoPlayer reports that BUFFERING once the old item's audio has drained, its position at the
+  // end.
+  private val isAtItemEnd: Boolean
+    get() {
+      val durationMs = sessionPlayer.duration
+      return durationMs != C.TIME_UNSET &&
+        sessionPlayer.currentPosition >= durationMs - ITEM_END_TOLERANCE_MS
+    }
 
   /** [NowPlayingUpdater] does the rendering; this is its platform surface. */
   val nowPlaying: NowPlayingUpdater =

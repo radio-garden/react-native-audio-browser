@@ -104,6 +104,24 @@ class PlayerCastTest {
   }
 
   @Test
+  fun `the phone taking back over is a fresh connect, not a stall`() {
+    receiver.readiness = MediaPlayer.STATE_READY
+    receiver.update()
+    idleExpecting("the receiver playing") { player.playbackState == PlaybackState.PLAYING }
+    val stalls = mutableListOf<Boolean>()
+    doAnswer { stalls.add(player.isStalled) }
+      .`when`(callbacks)
+      .onPlaybackChanged(any() ?: Playback(PlaybackState.NONE, null))
+
+    remote.endSession()
+    idleExpecting("the phone buffering") {
+      player.localEngine.isActive && player.playbackState == PlaybackState.BUFFERING
+    }
+
+    assertEquals(emptyList<Boolean>(), stalls.filter { it })
+  }
+
+  @Test
   fun `a receiver falling behind the live window is a remote error, not a local restart`() {
     remote.fail(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
     idle()

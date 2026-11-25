@@ -83,7 +83,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     reason: Int,
   ) {
     player.oldPosition = oldPosition.positionMs
-    if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK) player.connectStarted()
+    if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK) player.resetPlayedSinceConnect()
     // A seek opens a new connection without passing through idle, clearing a failed one's error.
     val loop = player.retryLoop
     if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK && player.localEngine.isActive) {
@@ -115,7 +115,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_REPEAT
     player.nowPlaying.clearOverride()
     if (!ended) fenceOutgoingMetadata()
-    player.connectStarted()
+    player.resetPlayedSinceConnect()
     player.callbacks?.onPlaybackActiveTrackChanged(event)
 
     if (ended) player.sleepTimer.onTrackEnd()
@@ -194,7 +194,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     lastEngineState = engineState
     if (left) {
       connectionEnded = false
-      player.connectStarted()
+      player.resetPlayedSinceConnect()
     }
     val loop = player.retryLoop
     // A prepare: the retry's reconnect, or the listener's play, which after a give-up or a stop is

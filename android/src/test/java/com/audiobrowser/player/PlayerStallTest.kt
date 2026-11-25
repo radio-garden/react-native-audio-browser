@@ -18,6 +18,7 @@ import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.StallReason
 import java.io.File
+import java.net.ServerSocket
 import java.net.URI
 import java.time.Duration
 import org.junit.After
@@ -45,6 +46,7 @@ class PlayerStallTest {
 
   private val context = RuntimeEnvironment.getApplication()
   private val seen = mutableListOf<FormatNowPlayingParams>()
+  private var onFormat: (FormatNowPlayingParams) -> Unit = {}
   private val player = Player(context)
 
   @Before fun online() = goOnline(context)
@@ -105,17 +107,27 @@ class PlayerStallTest {
   }
 
   @Test
-  fun `buffering after a track change is not a stall`() {
-    playUntilPlaying(tracks = 2)
+  fun `the end of an item, waiting on the next, is not a stall`() {
+    ServerSocket(0).use { silent ->
+      val renders = mutableListOf<Triple<Int?, PlaybackState, StallReason?>>()
+      onFormat = { renders.add(Triple(player.currentIndex, player.playbackState, it.stalled)) }
+      play(
+        srcs =
+          listOf(
+            folder.silentWavUri(Duration.ofSeconds(1)),
+            "http://127.0.0.1:${silent.localPort}/next.mp3",
+          )
+      )
 
-    // As the engine reports a track played to its end, before the BUFFERING the next one brings.
-    player.playerListener.onMediaItemTransition(
-      player.exoPlayer.currentMediaItem,
-      MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO,
-    )
-    player.setPlaybackState(PlaybackState.BUFFERING)
+      idleUntil("the next item") {
+        ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+        player.currentIndex == 1
+      }
+      shadowOf(Looper.getMainLooper()).idle()
 
-    assertFalse(player.isStalled)
+      assertTrue(renders.contains(Triple(0, PlaybackState.PLAYING, null)))
+      assertEquals(emptyList<StallReason>(), renders.mapNotNull { it.third })
+    }
   }
 
   @Test
@@ -190,14 +202,19 @@ class PlayerStallTest {
     )
   }
 
-  private fun play(tracks: Int = 1, retryPolicy: RetryPolicy = RetryPolicy.Default): String {
-    val src = folder.silentWavUri(Duration.ofMinutes(1))
+  private fun play(
+    tracks: Int = 1,
+    retryPolicy: RetryPolicy = RetryPolicy.Default,
+    srcs: List<String>? = null,
+  ): String {
+    val src = srcs?.first() ?: folder.silentWavUri(Duration.ofMinutes(1))
     player.setup(
       PlayerSetupOptions(
         retryPolicy = retryPolicy,
         nowPlayingMetadataFormatter =
           Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams {
             seen.add(it)
+            onFormat(it)
             JsPromise<NowPlayingUpdate?>().promise
           },
       )
@@ -208,7 +225,9 @@ class PlayerStallTest {
         .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
         .build()
     player.exoPlayer.setMediaItems(
-      (0 until tracks).map { TrackFactory.toMedia3(TestFixtures.track(title = "$it", src = src)) }
+      (srcs ?: List(tracks) { src }).mapIndexed { i, it ->
+        TrackFactory.toMedia3(TestFixtures.track(title = "$i", src = it))
+      }
     )
     player.exoPlayer.prepare()
     player.play()

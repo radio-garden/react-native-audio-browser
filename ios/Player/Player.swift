@@ -1091,8 +1091,9 @@ final class Player {
   /// connect or a seek doesn't read as one.
   private static let stallGraceSeconds: TimeInterval = 0.5
 
-  /// Ongoing playback is waiting for data. Android's `isStalled` follows the same rule, except
-  /// that a seek's buffering isn't a stall there.
+  /// Ongoing playback is waiting for data. Android counts only buffering after playback since
+  /// the last connect, so a seek, a track change or a reconnect that starts past the grace isn't a
+  /// stall there.
   var isStalled: Bool {
     guard engine.hasItem else { return false }
     return engine.currentTime > Self.stallGraceSeconds && playWhenReady && !engine.isPlaybackLikelyToKeepUp
