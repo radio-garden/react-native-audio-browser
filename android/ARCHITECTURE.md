@@ -370,7 +370,7 @@ trust anchors, so they cannot weaken trust.
 - **PlayerEngineFactory.kt**: `buildPlayerEngine(...)` pure-constructs one engine generation —
   `DynamicLoadControl`, `MediaFactory`, and the configured `ExoPlayer` — returned as a `PlayerEngine`.
 - **DynamicLoadControl.kt**: Custom `LoadControl` with thread-safe, runtime-configurable buffer
-  thresholds; defines the `BufferConfig` data class and exposes `isRebuffering`.
+  thresholds; defines the `BufferConfig` data class.
 - **AutomaticBufferManager.kt**: Adaptive buffer management — monitors rebuffers, computes drain rate,
   and adjusts the rebuffer threshold (target: sustain 60s without rebuffering). Resets on track change.
 - **MediaFactory.kt**: `MediaSource.Factory` that assembles the DataSource chain (transform → http →

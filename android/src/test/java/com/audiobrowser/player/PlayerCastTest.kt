@@ -11,6 +11,7 @@ import com.audiobrowser.remote.FakeReceiver
 import com.audiobrowser.remote.FakeRemote
 import com.audiobrowser.remote.RemoteSwitchingPlayer
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import java.net.ServerSocket
@@ -26,6 +27,8 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
 import org.robolectric.RobolectricTestRunner
@@ -81,6 +84,41 @@ class PlayerCastTest {
   fun release() {
     player.destroy()
     silent.close()
+  }
+
+  @Test
+  fun `the receiver taking over is a fresh connect, not a stall`() {
+    remote.endSession()
+    idleExpecting("local") { player.localEngine.isActive }
+    player.setPlaybackState(PlaybackState.PLAYING)
+    val stalls = mutableListOf<Boolean>()
+    doAnswer { stalls.add(player.isStalled) }
+      .`when`(callbacks)
+      .onPlaybackChanged(any() ?: Playback(PlaybackState.NONE, null))
+
+    remote.startSession()
+    idleExpecting("the receiver playing") { player.playbackState == PlaybackState.PLAYING }
+
+    assertTrue(stalls.isNotEmpty())
+    assertEquals(emptyList<Boolean>(), stalls.filter { it })
+  }
+
+  @Test
+  fun `the phone taking back over is a fresh connect, not a stall`() {
+    receiver.readiness = MediaPlayer.STATE_READY
+    receiver.update()
+    idleExpecting("the receiver playing") { player.playbackState == PlaybackState.PLAYING }
+    val stalls = mutableListOf<Boolean>()
+    doAnswer { stalls.add(player.isStalled) }
+      .`when`(callbacks)
+      .onPlaybackChanged(any() ?: Playback(PlaybackState.NONE, null))
+
+    remote.endSession()
+    idleExpecting("the phone buffering") {
+      player.localEngine.isActive && player.playbackState == PlaybackState.BUFFERING
+    }
+
+    assertEquals(emptyList<Boolean>(), stalls.filter { it })
   }
 
   @Test

@@ -34,7 +34,11 @@ interface NowPlayingSurface {
    * formatter gets this, so the masked value breaks its output in exactly that error case.
    */
   val playWhenReady: Boolean
-  val isRebuffering: Boolean
+
+  /**
+   * Playback that had started waits for data, as opposed to a connect, a seek or a track change.
+   */
+  val isStalled: Boolean
 
   val isOnline: Boolean
 
@@ -240,11 +244,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
     if (activeFormatter != null) {
       val capturedId = track.src ?: track.path
-      // ExoPlayer's rebuffering flag is polled on its own cadence and can linger true into PLAYING
-      // as a rebuffer recovers, so only BUFFERING counts as a stall.
-      val isStalled = surface.playbackState == PlaybackState.BUFFERING && surface.isRebuffering
       val stalled =
-        if (isStalled) {
+        if (surface.isStalled) {
           if (surface.isOnline) StallReason.BUFFERING else StallReason.OFFLINE
         } else {
           null

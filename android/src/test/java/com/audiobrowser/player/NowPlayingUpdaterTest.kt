@@ -29,7 +29,7 @@ class NowPlayingUpdaterTest {
     override var playbackState: PlaybackState = PlaybackState.PLAYING
     override var playbackError: PlaybackError? = null
     override var playWhenReady: Boolean = true
-    override var isRebuffering: Boolean = false
+    override var isStalled: Boolean = false
     override var isOnline: Boolean = true
     override var hasNowPlayingArtworkConfig: Boolean = false
 
@@ -388,7 +388,7 @@ class NowPlayingUpdaterTest {
       FakeSurface().apply {
         currentTrack = track("Station")
         playbackState = PlaybackState.BUFFERING
-        isRebuffering = true
+        isStalled = true
         playWhenReady = false
       }
     val updater = NowPlayingUpdater(surface, backgroundScope)
@@ -411,7 +411,7 @@ class NowPlayingUpdaterTest {
       FakeSurface().apply {
         currentTrack = track("Station")
         playbackState = PlaybackState.BUFFERING
-        isRebuffering = true
+        isStalled = true
         isOnline = false
       }
     val updater = NowPlayingUpdater(surface, backgroundScope)
@@ -427,7 +427,7 @@ class NowPlayingUpdaterTest {
   }
 
   @Test
-  fun `no stall when not rebuffering`() = runTest {
+  fun `no stall when the surface reports none`() = runTest {
     var seen: FormatNowPlayingParams? = null
     val surface =
       FakeSurface().apply {

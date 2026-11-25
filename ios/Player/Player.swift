@@ -1117,8 +1117,9 @@ final class Player {
   /// connect or a seek doesn't read as one.
   private static let stallGraceSeconds: TimeInterval = 0.5
 
-  /// Ongoing playback is waiting for data. Mirrors Android's `stalled`, which ExoPlayer
-  /// distinguishes natively; iOS has no rebuffer-vs-initial signal.
+  /// Ongoing playback is waiting for data. Android counts only buffering after playback since
+  /// the last connect, so a seek, a track change or a reconnect that starts past the grace isn't a
+  /// stall there.
   var isStalled: Bool {
     guard engine.hasItem else { return false }
     return engine.currentTime > Self.stallGraceSeconds && playWhenReady && !engine.isPlaybackLikelyToKeepUp
