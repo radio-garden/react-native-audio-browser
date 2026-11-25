@@ -198,6 +198,14 @@ class SessionSearchCommandTest {
   }
 
   @Test
+  fun `a car connecting on the first cold start after an app update is offered search`() {
+    configureBrowser(search = false)
+    shadowOf(app.packageManager).getInternalMutablePackageInfo(app.packageName).lastUpdateTime += 1
+
+    assertTrue(offersSearchOnColdStart())
+  }
+
+  @Test
   fun `an options update before the browser is configured keeps search offered`() {
     player.applyOptions(PlayerUpdateOptions(forwardJumpInterval = 30.0))
 
