@@ -420,8 +420,8 @@ class MediaSessionCallback(private val player: Player) :
       if (section.path == null || children.isEmpty()) return@flatMap items
       // Free after the first row: the browser is already up, and viewMoreTitle is memoized per
       // content generation.
-      val title = player.awaitBrowser().browserManager.viewMoreTitle()
-      items + TrackFactory.toNavigationMediaItem(section, title, player.context.packageName)
+      val viewMoreTitle = player.awaitBrowser().browserManager.viewMoreTitle()
+      items + TrackFactory.toNavigationMediaItem(section, viewMoreTitle, player.context.packageName)
     }
   }
 

@@ -996,8 +996,10 @@ export type BrowserConfiguration = {
   androidControllerOfflineError?: boolean
 
   /**
-   * Titles the "view more" row Android Auto appends to a `Section` that
-   * carries a `Section.path`, one string for every section.
+   * Subtitles the "view more" row Android Auto appends to a `Section` that
+   * carries a `Section.path`, one string for every section. The row is titled
+   * by the section, since the car heads the page it opens with the row's
+   * title; an untitled section's row takes this as its title.
    *
    * It is re-resolved once per content generation, so
    * `invalidateAllContent()` after an in-app language switch picks up the new
@@ -1242,5 +1244,5 @@ export type FindTrackCallback = (
   params: FindTrackParams
 ) => Promise<Track | undefined>
 
-/** Supplies the title of the appended "view more" row. See `viewMoreTitle`. */
+/** Supplies the subtitle of the appended "view more" row. See `viewMoreTitle`. */
 export type ViewMoreTitleCallback = () => string
