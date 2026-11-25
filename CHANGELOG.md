@@ -1,3 +1,11 @@
+## [1.0.0-next.15](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.14...v1.0.0-next.15) (2026-11-25)
+
+### Bug Fixes
+
+* **android:** give no output for devices no listener picks ([fdc34e2](https://github.com/radio-garden/react-native-audio-browser/commit/fdc34e29cae09751fbf484b5c4fbb8441bd0b9a3))
+* **android:** read an Automotive media bus as the phone speaker ([1a7f123](https://github.com/radio-garden/react-native-audio-browser/commit/1a7f1233b48fa6ba6a3aaf3d62831d40e19131a1))
+* **android:** read media routed only to unpickable devices as the speaker ([85c171d](https://github.com/radio-garden/react-native-audio-browser/commit/85c171df1a50b7870dffa56adee2d8e05f824fcb))
+
 ## [1.0.0-next.14](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.13...v1.0.0-next.14) (2026-11-25)
 
 ### Bug Fixes
