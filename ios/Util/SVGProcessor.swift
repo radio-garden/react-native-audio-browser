@@ -1,8 +1,13 @@
 import Kingfisher
 import SwiftDraw
-import UIKit
+#if canImport(UIKit)
+  import UIKit
+#else
+  import AppKit
+#endif
 
-/// Kingfisher processor that rasterizes SVG data with SwiftDraw.
+/// Kingfisher processor that rasterizes SVG data with SwiftDraw, and decodes any other bytes as
+/// Kingfisher's default processor does: a URL with an `.svg` path may serve a raster image.
 struct SVGProcessor: ImageProcessor {
   // Kingfisher keys its cache on the URL and this identifier only (`.scaleFactor` is
   // not in the key), so every render parameter must be here or different
@@ -16,10 +21,10 @@ struct SVGProcessor: ImageProcessor {
 
   let scale: CGFloat
 
-  func process(item: ImageProcessItem, options _: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+  func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
     switch item {
     case let .data(data):
-      return renderSVG(from: data)
+      return renderSVG(from: data) ?? DefaultImageProcessor.default.process(item: item, options: options)
     case let .image(image):
       return image
     @unknown default:
@@ -28,11 +33,15 @@ struct SVGProcessor: ImageProcessor {
   }
 
   /// Nil for an SVG that declares no usable size, which SwiftDraw cannot scale to the slot.
-  private func renderSVG(from data: Data) -> UIImage? {
+  private func renderSVG(from data: Data) -> KFCrossPlatformImage? {
     guard let svg = SVG(data: data), let size = svg.size.aspectFitted(in: slot) else {
       return nil
     }
 
-    return svg.rasterize(size: size, scale: scale)
+    #if canImport(UIKit)
+      return svg.rasterize(size: size, scale: scale)
+    #else
+      return svg.rasterize(with: size, scale: scale)
+    #endif
   }
 }

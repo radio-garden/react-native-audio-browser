@@ -6,11 +6,12 @@ let package = Package(
   platforms: [.iOS(.v16), .macOS(.v13)],
   dependencies: [
     .package(url: "https://github.com/onevcat/Kingfisher.git", from: "8.6.0"),
+    .package(url: "https://github.com/swhitty/SwiftDraw.git", from: "0.18.0"),
   ],
   targets: [
     .target(
       name: "AudioBrowserTestable",
-      dependencies: ["Kingfisher"],
+      dependencies: ["Kingfisher", "SwiftDraw"],
       path: "ios",
       sources: [
         "Browser/BrowserPathHelper.swift",
@@ -96,6 +97,8 @@ let package = Package(
         "Util/LRUCache.swift",
         "Util/ArtworkFreshness.swift",
         "Util/LocalArtwork.swift",
+        "Util/ArtworkProcessing.swift",
+        "Util/SVGProcessor.swift",
         "Util/RoutePickerSourceLifetime.swift",
         "Observer/PlayerObserver.swift",
         "Observer/ItemObserver.swift",

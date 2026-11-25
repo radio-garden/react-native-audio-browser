@@ -235,6 +235,7 @@ final class NowPlayingUpdater {
 
     let artworkSize = Self.artworkPixelWidth
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
+    let pixelSlot = (size: CGSize(width: artworkSize, height: artworkSize), scale: CGFloat(1))
 
     artworkLoadTask?.cancel()
     artworkLoadTask = Task {
@@ -245,11 +246,11 @@ final class NowPlayingUpdater {
       {
         guard !Task.isCancelled else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
-        image = await ArtworkImageFetcher.fetchImage(from: imageSource, waitsForConnectivity: true)
+        image = await ArtworkImageFetcher.fetchImage(from: imageSource, slot: pixelSlot, onCanvas: false, waitsForConnectivity: true)
       } else {
         guard !Task.isCancelled else { return }
         if let source = track.artworkImageSource {
-          image = await ArtworkImageFetcher.fetchImage(from: source, waitsForConnectivity: true)
+          image = await ArtworkImageFetcher.fetchImage(from: source, slot: pixelSlot, onCanvas: false, waitsForConnectivity: true)
         } else {
           image = nil
         }

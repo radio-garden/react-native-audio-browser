@@ -87,8 +87,8 @@ final class CarPlayImageLoader {
     switch action {
     case let .sfSymbol(artwork, width, height):
       return sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height))
-    case let .fetch(uri, headers, shouldTint, isSvg):
-      let image = await fetchImage(uri: uri, headers: headers, isSvg: isSvg, size: size)
+    case let .fetch(uri, headers, shouldTint):
+      let image = await fetchImage(uri: uri, headers: headers, size: size)
       guard let image, shouldTint else { return image }
       return tinted(image)
     case .none:
@@ -110,9 +110,9 @@ final class CarPlayImageLoader {
 
   /// The image on a canvas of exactly `size` points at the car's display scale (CPListItem.h:
   /// "size them to the display scale of the car screen"), whatever size the source arrives at.
-  private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
+  private func fetchImage(uri: String, headers: [String: String]?, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    return await ArtworkImageFetcher.fetchImage(from: source, fitting: (size, carTraitCollection.displayScale, isSvg))
+    return await ArtworkImageFetcher.fetchImage(from: source, slot: (size, carTraitCollection.displayScale), onCanvas: true)
   }
 
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
