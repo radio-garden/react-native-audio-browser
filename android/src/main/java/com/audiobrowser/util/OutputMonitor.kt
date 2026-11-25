@@ -160,6 +160,8 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
       Output(type = OutputType.SPEAKER, name = Build.MODEL, external = false)
 
     private fun outputOf(device: AudioDeviceInfo): Output? {
+      // A bus's product name is its address, such as bus0_media_out.
+      if (device.type == AudioDeviceInfo.TYPE_BUS) return PHONE_SPEAKER
       val type = outputTypeOf(device.type) ?: return null
       val name = device.productName?.toString()?.ifBlank { null } ?: Build.MODEL
       return Output(type = type, name = name, external = isExternal(type))
@@ -200,11 +202,12 @@ class OutputMonitor(private val context: Context) : DefaultLifecycleObserver {
         AudioDeviceInfo.TYPE_AUX_LINE,
         AudioDeviceInfo.TYPE_DOCK,
         AudioDeviceInfo.TYPE_DOCK_ANALOG,
-        AudioDeviceInfo.TYPE_IP,
-        AudioDeviceInfo.TYPE_BUS -> OutputType.OTHER
+        AudioDeviceInfo.TYPE_IP -> OutputType.OTHER
 
         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
-        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE -> OutputType.SPEAKER
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE,
+        // Android Automotive plays media through the car's own speakers on a bus.
+        AudioDeviceInfo.TYPE_BUS -> OutputType.SPEAKER
 
         else -> null
       }

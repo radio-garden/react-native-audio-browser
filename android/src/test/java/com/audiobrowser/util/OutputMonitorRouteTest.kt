@@ -133,6 +133,13 @@ class OutputMonitorRouteTest {
     }
   }
 
+  @Test
+  fun `media on an Automotive bus reads as the speaker`() {
+    val monitor = routedTo(device(AudioDeviceInfo.TYPE_BUS, "bus0_media_out"))
+
+    assertEquals(phoneSpeaker, monitor.current)
+  }
+
   private fun routedTo(vararg devices: AudioDeviceInfo): OutputMonitor {
     val audioManager = mock(AudioManager::class.java)
     route(audioManager, *devices)
