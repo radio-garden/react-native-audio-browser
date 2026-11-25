@@ -3,6 +3,7 @@ package com.audiobrowser.util
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.Looper
 import com.audiobrowser.RemoteOutputs
 import com.margelo.nitro.audiobrowser.Output
@@ -80,16 +81,28 @@ class OutputMonitorTest {
       RemoteOutputs.setCurrent(null)
       idle()
 
-      val phoneSpeaker = Output(type = OutputType.SPEAKER, name = "Phone speaker", external = false)
+      val phoneSpeaker = Output(type = OutputType.SPEAKER, name = Build.MODEL, external = false)
       assertEquals("$type", phoneSpeaker, emitted.last())
       assertEquals("$type", phoneSpeaker, monitor.current)
     }
   }
 
-  private fun routeMediaTo(deviceType: Int) {
+  @Test
+  fun `with A2DP on, a Bluetooth call device beside the A2DP device reads as the A2DP device`() {
+    routeMediaTo(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Car kit")
+    routeMediaTo(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, "Headphones")
+    @Suppress("DEPRECATION") audioManager.isBluetoothA2dpOn = true
+
+    assertEquals(
+      Output(type = OutputType.BLUETOOTH, name = "Headphones", external = true),
+      monitor.current,
+    )
+  }
+
+  private fun routeMediaTo(deviceType: Int, productName: String = "Pixel") {
     val device = mock(AudioDeviceInfo::class.java)
     `when`(device.type).thenReturn(deviceType)
-    `when`(device.productName).thenReturn("Pixel")
+    `when`(device.productName).thenReturn(productName)
     shadowOf(audioManager).addOutputDevice(device, false)
   }
 
