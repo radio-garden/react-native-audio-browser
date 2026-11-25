@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 // The Android side of iOS `RequestPipeline.swift` and the web stub's `RequestConfigBuilder`: keep
@@ -66,7 +67,8 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
  * replaces `config.artwork`, it does not merge), `resolve`, image query params from [imageContext],
  * transform, then `{id}`. With no artwork config the track's artwork URL is returned untouched.
  * Returns null when there is no artwork, when `resolve`/`resolveSync` yields nothing for a track
- * without an artwork URL (even if the config has a static path), or when any callback throws.
+ * without an artwork URL (even if the config has a static path), or when any callback throws or
+ * outruns `FALLBACK_TIMEOUT`.
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -169,6 +171,8 @@ suspend fun BrowserManager.resolveArtworkUrl(
         ),
       body = transformedConfig.body,
     )
+  } catch (e: CancellationException) {
+    throw e
   } catch (e: Exception) {
     Timber.e(e, "Failed to transform artwork URL for track: ${track.title}")
     null
