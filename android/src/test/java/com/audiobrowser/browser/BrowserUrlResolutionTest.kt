@@ -12,6 +12,7 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -127,6 +128,26 @@ class BrowserUrlResolutionTest {
 
       assertTrue(source.isCompleted)
       assertNull(source.await())
+    }
+
+  @Test
+  fun `a cancelled artwork resolve stays cancelled`() =
+    runTest(timeout = 5.seconds) {
+      val silent = JsPromise<RequestConfig>()
+      bm.config = BrowserConfig(artwork = artworkConfig(resolveSync = { silent.promise }))
+      var wentOn = false
+      val caller =
+        backgroundScope.launch {
+          bm.resolveArtworkUrl(track(artwork = "https://img.example.com/a.png"))
+          wentOn = true
+        }
+      runCurrent()
+
+      caller.cancel()
+      runCurrent()
+
+      assertTrue(caller.isCancelled)
+      assertFalse(wentOn)
     }
 
   @Test

@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 // The Android side of iOS `RequestPipeline.swift` and the web stub's `RequestConfigBuilder`: keep
@@ -170,6 +171,8 @@ suspend fun BrowserManager.resolveArtworkUrl(
         ),
       body = transformedConfig.body,
     )
+  } catch (e: CancellationException) {
+    throw e
   } catch (e: Exception) {
     Timber.e(e, "Failed to transform artwork URL for track: ${track.title}")
     null
