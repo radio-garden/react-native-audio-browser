@@ -227,7 +227,6 @@ final class Player {
     // A pause during the sleep fade ends the timer early, restoring the pre-fade volume.
     if !newValue, sleepTimerManager.isFading { sleepTimerManager.clear() }
     publish()
-    evaluateSessionRelease()
   }
 
   static func playingState(playWhenReady: Bool, state: PlaybackState) -> PlayingState {
@@ -345,6 +344,8 @@ final class Player {
     var playing = false
     var buffering = false
     var playIntentActive = false
+    /// A new Player has nothing to play, and so starts releasable.
+    var releasable = true
   }
 
   private var published = Published()
@@ -354,17 +355,19 @@ final class Player {
   /// these leave the Player, so each goes out once per change, with the audio-session and
   /// now-playing effects it drives.
   private func publish() {
+    if state.isTerminal || currentTrack == nil { engaged = false } else if playWhenReady { engaged = true }
     let playing = playingState
     let now = Published(
       state: state, errorStatus: errorStatus, playWhenReady: playWhenReady,
       playing: playing.playing, buffering: playing.buffering,
       playIntentActive: playbackActive && playWhenReady,
+      releasable: canReleaseAudioSession,
     )
     let old = published
     guard now != old else { return }
     published = now
+    if old.releasable, !now.releasable { engine.cancelAudioSessionRelease() }
     if now.playWhenReady != old.playWhenReady {
-      if now.playWhenReady { engine.cancelAudioSessionRelease() }
       callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
     }
     if now.playing != old.playing || now.buffering != old.buffering {
@@ -385,6 +388,7 @@ final class Player {
     if now.playIntentActive != old.playIntentActive {
       persistence.playIntentDidChange(active: now.playIntentActive)
     }
+    if now.releasable, !old.releasable { engine.scheduleAudioSessionRelease() }
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
@@ -407,15 +411,12 @@ final class Player {
     case .loading:
       engine.applyTimePitchAlgorithm()
     case .ended:
-      // A natural end exhausts the play intent; the setter also requests the session release.
       setPlayWhenReady(false)
     case .error:
       // A stall or a lost connection can fail an item that is still alive: data arriving later
       // must not play it under the error.
       engine.pause()
       retry.cancel()
-      // The intent holds through .error: no pause follows to request the release.
-      if playWhenReady { evaluateSessionRelease() }
     default: break
     }
 
@@ -459,12 +460,18 @@ final class Player {
     if currentTrack?.live != true { seek(to: 0) }
   }
 
+  /// The lock screen offers a live stream a stop for its pause: it pauses there, keeping the
+  /// session, so another app's audio does not take the controls. JS's `stop()` still stops.
+  func stopFromRemote() {
+    if currentTrack?.live == true { pause() } else { stop() }
+  }
+
   // MARK: - Audio Session Interruptions
 
   /// The output route went away (headphones unplugged): pause, and cancel any interruption
   /// resume, so a call ending cannot start the built-in speaker.
   func handleRouteDisconnected() {
-    shouldResumeAfterInterruption = false
+    dropInterruptionResume()
     pause()
   }
 
@@ -475,9 +482,30 @@ final class Player {
     // nothing playing: there is nothing to resume.
     shouldResumeAfterInterruption = shouldResumeAfterInterruption || playingState.playing
     pause()
+    settlePaused()
+  }
+
+  /// The AVPlayer's own pause was swallowed while the intent held, and does not come again.
+  private func settlePaused() {
     if playbackActive, state != .loading, state != .paused {
       transition(.avPlayerPaused(hasAsset: engine.hasLoadedAsset))
     }
+  }
+
+  /// A terminal state reached during the interruption kept the session for its resume.
+  private func dropInterruptionResume() {
+    guard shouldResumeAfterInterruption else { return }
+    shouldResumeAfterInterruption = false
+    publish()
+  }
+
+  /// The system refused the session (a call, or a nonmixable activation from the background):
+  /// paused, rather than buffering under the intent with nothing to hear.
+  func handleAudioSessionActivationFailed() {
+    dropInterruptionResume()
+    guard playWhenReady else { return }
+    pause()
+    settlePaused()
   }
 
   /// Whether the interruption's end will resume playback, so the session reactivates first.
@@ -485,27 +513,25 @@ final class Player {
 
   func handleInterruptionEnded(shouldResume: Bool) {
     guard shouldResumeAfterInterruption else { return }
-    shouldResumeAfterInterruption = false
     if shouldResume {
+      shouldResumeAfterInterruption = false
       play()
     } else {
-      evaluateSessionRelease()
+      dropInterruptionResume()
     }
   }
 
-  /// Whether nothing needs the audio session: playback is deliberately stopped or has failed for
-  /// good (`.error` keeps the intent), with no interruption to resume from and no retry pending,
-  /// whose reconnect needs the session.
-  var canReleaseAudioSession: Bool {
-    (!playWhenReady || state == .error)
-      && !shouldResumeAfterInterruption
-      && retry.pendingTask == nil
-  }
+  /// From a play intent until a terminal state or an empty queue: a track loaded since then, but
+  /// not played, does not take the session back from the other app's audio its release returned.
+  private var engaged = false
 
-  /// Requests a session release when nothing needs the session. The engine debounces it.
-  private func evaluateSessionRelease() {
-    guard canReleaseAudioSession else { return }
-    engine.scheduleAudioSessionRelease()
+  /// Whether nothing needs the audio session: nothing played since playback stopped, ended,
+  /// failed for good or the queue emptied, with no interruption to resume from. A pause keeps it:
+  /// a released session lets another app's audio resume and take the lock screen, CarPlay and
+  /// headset controls.
+  var canReleaseAudioSession: Bool {
+    !engaged
+      && !shouldResumeAfterInterruption
   }
 
   func getPlayback() -> Playback {

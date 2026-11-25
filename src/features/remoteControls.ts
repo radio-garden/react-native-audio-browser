@@ -100,7 +100,9 @@ export function handleRemotePrevious(callback: (() => void) | undefined) {
 }
 
 /**
- * Sets a custom handler for remote stop events, overriding the default behavior.
+ * Sets a custom handler for remote stop events, replacing the default behavior:
+ * a stop, except on iOS for a live track, which pauses and keeps the audio session.
+ * Android stops a live track too.
  * `onRemote*` listeners still fire.
  *
  * @param callback - Called when the user presses the stop button. Pass

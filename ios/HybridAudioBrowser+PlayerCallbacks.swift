@@ -99,7 +99,7 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   public func remoteStop() {
-    dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { player?.stop() }
+    dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { player?.stopFromRemote() }
   }
 
   public func remoteNext() {
