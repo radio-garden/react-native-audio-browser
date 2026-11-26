@@ -21,6 +21,7 @@ protocol AudioSessionControlling: AnyObject {
   func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)?)
   func cancelRelease(for requester: AudioSessionPlayer)
   func scheduleRelease()
+  func detach(_ player: AudioSessionPlayer?)
 }
 
 extension AudioSessionController: AudioSessionControlling {}

@@ -168,6 +168,7 @@ final class MockPlayerEngine: PlayerEngine {
   /// system.
   var activateThens: [@MainActor @Sendable () -> Void] = []
   var cancelReleaseRequesters: [AudioSessionPlayer] = []
+  var detached: [AudioSessionPlayer?] = []
   /// Called with the name of each seam call above, so a test can interleave them with callbacks.
   var onSeamCall: ((String) -> Void)?
 
@@ -217,6 +218,11 @@ extension MockPlayerEngine: AudioSessionControlling {
   func scheduleRelease() {
     scheduleReleaseCount += 1
     onSeamCall?("scheduleRelease")
+  }
+
+  func detach(_ player: AudioSessionPlayer?) {
+    detached.append(player)
+    onSeamCall?("detach")
   }
 }
 

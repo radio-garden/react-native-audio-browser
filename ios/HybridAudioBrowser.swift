@@ -312,13 +312,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// otherwise outlive a dropped reference.
   @MainActor
   func destroyPlayer() {
-    AudioSessionController.shared.detach(player)
     Self.destroy(player, engine)
   }
 
   @MainActor
   private static func destroy(_ player: Player?, _ engine: AVPlayerEngine?) {
-    player?.clear()
+    player?.tearDown()
     engine?.destroy()
   }
 

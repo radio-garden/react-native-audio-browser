@@ -687,6 +687,13 @@ final class Player {
     }
   }
 
+  /// Ends this player for good: stops serving the audio session, then clears. Detached first, so
+  /// nothing the clear sets off reaches the session as the served player's.
+  func tearDown() {
+    audioSession.detach(self)
+    clear()
+  }
+
   func clear() {
     afterQueueMutation(queue.clear())
     unload()

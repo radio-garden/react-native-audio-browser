@@ -1652,6 +1652,21 @@ struct SessionReleaseTests {
   /// A play from `.error` activates the session, which cancels the pending release, and leaves
   /// `canReleaseAudioSession` false for the controller's check when the release fires.
   @Test @MainActor
+  func tearDown_detachesFromTheSession_beforeTheClearReleasesIt() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    var seams: [String] = []
+    eh.onSeamCall = { seams.append($0) }
+
+    c.tearDown()
+
+    #expect(eh.detached.map { $0.map(ObjectIdentifier.init) } == [ObjectIdentifier(c)])
+    #expect(seams.first == "detach")
+    #expect(seams.contains("scheduleRelease"))
+    #expect(c.currentTrack == nil)
+  }
+
+  @Test @MainActor
   func anActiveSession_reactivatesTheNowPlayingSession() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
