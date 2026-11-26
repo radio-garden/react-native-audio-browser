@@ -71,6 +71,16 @@
     var playbackRate: Bool?
   }
 
+  enum OutputType {
+    case speaker, receiver, headphones, bluetooth, airplay, car, hdmi, usb, cast, sonos, remote, other
+  }
+
+  struct Output {
+    var type: OutputType
+    var name: String
+    var external: Bool
+  }
+
   struct TrackLoadEvent {
     var track: Track
     var queue: [Track]

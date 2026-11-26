@@ -1,5 +1,4 @@
-import AVFoundation
-import NitroModules
+import Foundation
 import os
 
 /// What `AudioSessionController` tells the player about the audio session.
@@ -17,7 +16,8 @@ protocol AudioSessionPlayer: AnyObject {
 extension Player: AudioSessionPlayer {}
 
 /// Owns the app's `AVAudioSession`: category, activation and release, and the interruption,
-/// route-change, media-services-reset and volume observers.
+/// route-change, media-services-reset and volume observers. The `AVAudioSession` calls and the
+/// observers are in `AudioSessionController+System.swift`, outside the SwiftPM test target.
 ///
 /// The session is configured at setup but activated only when playback produces output:
 /// activating a non-mixable session interrupts other apps' audio, which must not happen at
@@ -36,12 +36,11 @@ final class AudioSessionController {
   let volumeChanged = Emitter<Double>()
 
   /// Nil until `configure`: before setup the category is the host app's, not ours to restore.
-  private var configuration: (
-    category: AVAudioSession.Category,
-    mode: AVAudioSession.Mode,
-    policy: AVAudioSession.RouteSharingPolicy,
-    options: AVAudioSession.CategoryOptions,
-  )?
+  private var setCategory: (@Sendable () throws -> Void)?
+
+  /// Runs on `activationQueue`; `false` deactivates, notifying other apps.
+  private let setActive: @Sendable (Bool) throws -> Void
+  private let releaseDelay: DispatchTimeInterval
 
   /// Shared, as the session is: after a JS reload the old instance's release must not fire
   /// under the new instance's playback.
@@ -61,41 +60,12 @@ final class AudioSessionController {
   private static let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
   // Touched only by `init` and `deinit`.
-  private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
-  private var volumeObservation: NSKeyValueObservation?
+  nonisolated(unsafe) var observers: [NSObjectProtocol] = []
+  var volumeObservation: NSKeyValueObservation?
 
-  private var session: AVAudioSession {
-    .sharedInstance()
-  }
-
-  init() {
-    let center = NotificationCenter.default
-    observers = [
-      center.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) {
-        [weak self] notification in
-        let info = notification.userInfo
-        let type = info?[AVAudioSessionInterruptionTypeKey] as? UInt
-        let reason = info?[AVAudioSessionInterruptionReasonKey] as? UInt
-        let options = info?[AVAudioSessionInterruptionOptionKey] as? UInt
-        MainActor.assumeIsolated { self?.handleInterruption(type: type, reason: reason, options: options) }
-      },
-      center.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) {
-        [weak self] notification in
-        let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
-        MainActor.assumeIsolated { self?.handleRouteChange(reason: reason) }
-      },
-      center.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) {
-        [weak self] _ in
-        MainActor.assumeIsolated {
-          // The reset cleared the category and invalidated every player and session handle.
-          self?.applyCategory { [weak self] in self?.player?.mediaServicesWereReset() }
-        }
-      },
-    ]
-    volumeObservation = session.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
-      guard let volume = change.newValue else { return }
-      Task { @MainActor in self?.volumeChanged.emit(Double(volume)) }
-    }
+  init(setActive: @escaping @Sendable (Bool) throws -> Void, releaseDelay: DispatchTimeInterval = .seconds(3)) {
+    self.setActive = setActive
+    self.releaseDelay = releaseDelay
   }
 
   deinit {
@@ -104,10 +74,10 @@ final class AudioSessionController {
     }
   }
 
-  /// Sets the session category from the iOS setup options, without activating it. Returns once it
-  /// is set.
-  func configure(_ options: NativeIOSSetupOptions?) async {
-    configuration = options?.resolveAudioSessionConfig() ?? (.playback, .default, .default, [])
+  /// Sets the session category with `setCategory`, without activating it, and again after a
+  /// media-services reset. Returns once it is set.
+  func configure(setCategory: @escaping @Sendable () throws -> Void) async {
+    self.setCategory = setCategory
     await withCheckedContinuation { continuation in applyCategory { continuation.resume() } }
   }
 
@@ -117,9 +87,10 @@ final class AudioSessionController {
     cancelRelease()
     Self.generation += 1
     let generation = Self.generation
+    let setActive = setActive
     Self.activationQueue.async {
       do {
-        try AVAudioSession.sharedInstance().setActive(true)
+        try setActive(true)
         if let then { Task { @MainActor in then() } }
       } catch {
         let message = error.localizedDescription
@@ -138,19 +109,18 @@ final class AudioSessionController {
   /// should not thrash it.
   func scheduleRelease() {
     Self.releaseWork?.cancel()
+    let setActive = setActive
     // Not through `self`: a JS reload drops this controller within the 3 s, and the release it
     // owes must still run, unless the new player has restored a track in the meantime.
     let release = DispatchWorkItem {
       MainActor.assumeIsolated {
         guard Self.currentPlayer?.canReleaseAudioSession ?? true else { return }
         Self.releaseWork = nil
-        Self.activationQueue.async {
-          try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        }
+        Self.activationQueue.async { try? setActive(false) }
       }
     }
     Self.releaseWork = release
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
+    DispatchQueue.main.asyncAfter(deadline: .now() + releaseDelay, execute: release)
   }
 
   /// Stops this controller setting the category: a JS reload's new instance owns the session now.
@@ -167,24 +137,24 @@ final class AudioSessionController {
     Self.releaseWork = nil
   }
 
-  nonisolated static var volume: Double {
-    Double(AVAudioSession.sharedInstance().outputVolume)
+  func interruptionBegan() {
+    if !isRetired { Self.generation += 1 }
+    player?.handleInterruptionBegan()
   }
 
-  nonisolated static var currentOutput: Output? {
-    guard let output = AVAudioSession.sharedInstance().currentRoute.outputs.first else { return nil }
-    let (type, external): (OutputType, Bool) = switch output.portType {
-    case .builtInSpeaker: (.speaker, false)
-    case .builtInReceiver: (.receiver, false)
-    case .airPlay: (.airplay, true)
-    case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE: (.bluetooth, true)
-    case .headphones: (.headphones, true)
-    case .carAudio: (.car, true)
-    case .HDMI: (.hdmi, true)
-    case .usbAudio: (.usb, true)
-    default: (.other, true)
+  func interruptionEnded(shouldResume: Bool) {
+    // Reactivate only when a resume follows, and resume once active: activating while staying
+    // paused would hold a non-mixable session with nothing to release it.
+    if shouldResume, player?.willResumeAfterInterruption == true {
+      activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
+    } else {
+      player?.handleInterruptionEnded(shouldResume: shouldResume)
     }
-    return Output(type: type, name: output.portName, external: external)
+  }
+
+  /// The reset cleared the category and invalidated every player and session handle.
+  func mediaServicesWereReset() {
+    applyCategory { [weak self] in self?.player?.mediaServicesWereReset() }
   }
 
   // MARK: - Private
@@ -193,52 +163,11 @@ final class AudioSessionController {
   /// keeps it ahead of the activation that follows it. Playback starts on main, outside the queue,
   /// so it must wait for `then`, which runs on the main actor once the category is set.
   private func applyCategory(then: @escaping @MainActor @Sendable () -> Void) {
-    guard let configuration else { return then() }
+    guard let setCategory else { return then() }
     let retired = retired
     Self.activationQueue.async {
-      if !retired.withLock({ $0 }) {
-        try? AVAudioSession.sharedInstance().setCategory(
-          configuration.category, mode: configuration.mode, policy: configuration.policy, options: configuration.options,
-        )
-      }
+      if !retired.withLock({ $0 }) { try? setCategory() }
       Task { @MainActor in then() }
     }
-  }
-
-  private func handleInterruption(type: UInt?, reason: UInt?, options: UInt?) {
-    guard let type = type.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) else { return }
-    switch type {
-    case .began:
-      // iOS 17+ also begins one, never ended, when an output route disappears; the route change
-      // handles that.
-      if #available(iOS 17.0, *),
-         let reason,
-         AVAudioSession.InterruptionReason(rawValue: reason) == .routeDisconnected
-      {
-        return
-      }
-      if !isRetired { Self.generation += 1 }
-      player?.handleInterruptionBegan()
-    case .ended:
-      let shouldResume = options.map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) } ?? false
-      // Reactivate only when a resume follows, and resume once active: activating while staying
-      // paused would hold a non-mixable session with nothing to release it.
-      if shouldResume, player?.willResumeAfterInterruption == true {
-        activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
-      } else {
-        player?.handleInterruptionEnded(shouldResume: shouldResume)
-      }
-    @unknown default:
-      break
-    }
-  }
-
-  private func handleRouteChange(reason: UInt?) {
-    // The output disappeared (headphones unplugged, a speaker off): pause rather than carry on
-    // from the built-in speaker.
-    if let reason, AVAudioSession.RouteChangeReason(rawValue: reason) == .oldDeviceUnavailable {
-      player?.handleRouteDisconnected()
-    }
-    if let output = Self.currentOutput { outputChanged.emit(output) }
   }
 }
