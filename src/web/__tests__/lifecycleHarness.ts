@@ -171,6 +171,10 @@ export class LifecycleHarness {
       writable: true,
       configurable: true
     })
+    Object.defineProperty(this.element, 'paused', {
+      get: () => !this.elementPlaying,
+      configurable: true
+    })
     Object.defineProperty(this.element, 'seekable', {
       value: { length: 0, end: () => 0 },
       configurable: true
@@ -222,6 +226,7 @@ export class LifecycleHarness {
 
   private startedPlaying(): void {
     this.elementPlaying = true
+    this.fireElement('play')
     this.fireElement('playing')
   }
 
@@ -289,6 +294,23 @@ export class LifecycleHarness {
 
   get currentTime(): number {
     return this.element.currentTime
+  }
+
+  /**
+   * The element pausing without the library asking: the browser takes the
+   * audio away (another tab or app, an interruption on a phone), or page code
+   * pauses the element.
+   */
+  pausedFromOutside(): void {
+    this.elementPlaying = false
+    this.fireElement('pause')
+  }
+
+  /** The element starting again without the library asking. */
+  resumedFromOutside(): void {
+    this.elementPlaying = true
+    this.fireElement('play')
+    this.fireElement('playing')
   }
 
   /**

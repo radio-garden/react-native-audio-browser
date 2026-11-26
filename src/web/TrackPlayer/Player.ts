@@ -196,7 +196,13 @@ export class Player {
       // is meaningful — reporting `paused` first flashes a state Android never
       // reports, mid-queue or at the true end.
       if (element.ended) return
+      // A `play()` that overtook this event owns the intent.
+      if (element.paused) this.followElement(false)
       this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+    })
+    element.addEventListener('play', () => {
+      // A `pause()` that overtook this event owns the intent.
+      if (!element.paused) this.followElement(true)
     })
 
     player.addEventListener('loading', () => {
@@ -543,6 +549,27 @@ export class Player {
 
     this.playWhenReady = false
     this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+  }
+
+  /**
+   * Sets the intent to what the element did, so a pause or resume that
+   * something else made (the browser, page code) is followed, as an
+   * interruption is on iOS. `play()` and `pause()` set the intent before they
+   * touch the element, so their own events change nothing.
+   *
+   * The intent stands, in both directions, while a load is in flight, after an
+   * error and after `stop()`: there the element is being emptied, and nothing
+   * it does is a pause or resume of the track.
+   */
+  private followElement(playing: boolean): void {
+    if (
+      this._loadInProgress ||
+      this._isStopped ||
+      this.state.state === State.Error
+    ) {
+      return
+    }
+    this.playWhenReady = playing
   }
 
   /**
