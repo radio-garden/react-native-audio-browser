@@ -738,43 +738,12 @@ only the JS→session direction. If these need to be told apart from an ordinary
 
 ## Per-Section Queue Policy
 
-Once sections are first-class (ADR 0010, issue #93), `Section` is the natural
-home for the queue-scope knob ADR 0006 deferred ("what becomes the queue when
-a child of this section is tapped"). Deliberately **not** part of the sections
-migration: an optional field is additive and lands compatibly at any time,
-even after production ship, so it must not spend the breaking-change window —
-and no surface varies yet.
+`Section.queue` takes `'section'` (the default) and `'path'` (ADR 0015). Two
+more values wait for a surface that needs them:
 
-```ts
-interface Section {
-  // ...
-  queue?: 'section' | 'page' | 'track' | 'path'
-}
-```
-
-- `'section'` — the section's children (today's fixed behavior, stays the default)
 - `'page'` — the whole page's flattened children
 - `'track'` — the tapped track alone (per-section version of the global `singleTrack`;
   if the enum lands at config level too, it can subsume that boolean)
-- `'path'` — the content of the section's linked `path` page. Makes a preview
-  section (a rail capped to N items) queue the _full_ collection it
-  previews, and unifies the two tap surfaces: tapping a track in the preview
-  and tapping it inside the view-all page produce the same queue and the same
-  `queueSourcePath`, so skip-in-place treats them as one source.
-
-`'path'` trade-offs, recorded from the design discussion: it is a cold resolve
-at tap time (today's expansion resolves the page being looked at — a cache hit
-by construction); the preview and the linked page can drift, in which case the
-vanished-identity rule falls back to the single track; the `__index`
-tie-breaker cannot be stamped against an unresolved page, so linked-page
-expansion is identity-first (ADR 0009 fallback semantics). Mechanically it is
-a stamp-time decision — the child's contextual path points at `section.path`
-instead of the current page — and the existing expansion/resumption/skip
-machinery works unchanged.
-
-The default stays `'section'` for every style: uniform, offline-safe, no added
-tap latency. A per-style default (rails defaulting to `'path'`) was
-considered and rejected — it would couple `queue`'s meaning to `style`.
 
 ## Surface Request Param (server-tailored pages per surface)
 

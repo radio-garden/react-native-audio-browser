@@ -244,6 +244,44 @@ func createSearchPathEscapesQuerySeparators(query: String, encoded: String) {
   #expect(stamped[0].children[0].path == "/search?q=jazz&__trackId=s.mp3&__index=0")
 }
 
+@Test func stampsAPathQueuedPreviewAgainstItsLinkedPage() throws {
+  // Identity alone: an index counted on this page would mean nothing on the linked one.
+  let sections = [
+    Section(children: [Track(src: "top.mp3", title: "Top")]),
+    Section(path: "/recent", queue: .path, children: [Track(src: "a.mp3", title: "A")]),
+  ]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/home")
+  #expect(stamped.map { $0.children.map(\.path) } == [
+    ["/home?__trackId=top.mp3&__index=0"],
+    ["/recent?__trackId=a.mp3"],
+  ])
+}
+
+@Test(arguments: [nil, ""])
+func stampsAPathQueuedSectionWithoutAPathAgainstThePage(path: String?) throws {
+  let sections = [Section(path: path, queue: .path, children: [Track(src: "a.mp3", title: "A")])]
+  let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/home")
+  #expect(stamped[0].children[0].path == "/home?__trackId=a.mp3&__index=0")
+}
+
+@Test func aPathQueuedPreviewQueuesTheWholeLinkedPageFromTheTappedTrack() throws {
+  let preview = [Section(path: "/recent", queue: .path, children: [
+    Track(src: "a.mp3", title: "A"), Track(src: "b.mp3", title: "B"),
+  ])]
+  let tapped = try BrowserPathHelper.stampingContextualPaths(preview, parentPath: "/home")[0].children[1]
+  let linked = try BrowserPathHelper.stampingContextualPaths(
+    [Section(children: ["a", "b", "c"].map { Track(src: "\($0).mp3", title: $0) })],
+    parentPath: "/recent",
+  )
+  let tappedPath = try #require(tapped.path)
+  let queue = try #require(SectionScope.queue(in: linked, path: tappedPath, singleTrack: false))
+  #expect(queue.tracks.map(\.src) == ["a.mp3", "b.mp3", "c.mp3"])
+  #expect(queue.selectedIndex == 1)
+  // The same source as a tap on the linked page itself, so a tap there skips in place.
+  let linkedPath = try #require(linked[0].children[1].path)
+  #expect(BrowserPathHelper.stripTrackId(tappedPath) == BrowserPathHelper.stripTrackId(linkedPath))
+}
+
 @Test func rejectsATrackWithNeitherPathNorSrc() {
   let sections = [Section(children: [Track(id: "only-id", title: "Nowhere")])]
   #expect(throws: BrowserError.self) {

@@ -10,6 +10,7 @@ import com.audiobrowser.util.toStyleDisplay
 import com.margelo.nitro.audiobrowser.CarPlaySiriListButtonPosition
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionQueue
 import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackRequest
@@ -34,6 +35,7 @@ data class JsonSection(
   val title: String? = null,
   val style: JsonElement? = null,
   val path: String? = null,
+  val queue: String? = null,
   val children: List<JsonTrack>,
 )
 
@@ -133,11 +135,19 @@ private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosi
   }
 }
 
+private fun String?.toSectionQueue(): SectionQueue? =
+  when (this?.lowercase()) {
+    "section" -> SectionQueue.SECTION
+    "path" -> SectionQueue.PATH
+    else -> null
+  }
+
 fun JsonSection.toNitro(): Section {
   return Section(
     title = title,
     style = style.toSectionStyle(),
     path = path,
+    queue = queue.toSectionQueue(),
     children = children.map { it.toNitro() }.toTypedArray(),
   )
 }

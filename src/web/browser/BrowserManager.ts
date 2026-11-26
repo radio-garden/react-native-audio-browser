@@ -319,25 +319,31 @@ export class BrowserManager {
    * contextual path carrying its identity (id ?? src) so the queue can be
    * re-expanded from it later, plus its flat page position (children
    * concatenated in section order — ADR 0009/0010) as a duplicate-identity
-   * tie-breaker. Non-playable tracks are shallow-copied to avoid mutating
-   * original config objects (e.g., browseStatic from routes).
+   * tie-breaker. A section that queues its `path` stamps its tracks against
+   * that page, by identity alone. Non-playable tracks are shallow-copied to
+   * avoid mutating original config objects (e.g., browseStatic from routes).
    */
   private addContextualPaths(path: string, sections: Section[]): Section[] {
     let index = 0
-    return sections.map((section) => ({
-      ...section,
-      children: section.children.map((track) => {
-        const flatIndex = index++
-        const identity = getTrackIdentity(track)
-        if (track.src && identity) {
-          return {
-            ...track,
-            path: BrowserPathHelper.build(path, identity, flatIndex)
+    return sections.map((section) => {
+      const linkedPath = section.queue === 'path' ? section.path : undefined
+      return {
+        ...section,
+        children: section.children.map((track) => {
+          const flatIndex = index++
+          const identity = getTrackIdentity(track)
+          if (track.src && identity) {
+            return {
+              ...track,
+              path: linkedPath
+                ? BrowserPathHelper.build(linkedPath, identity)
+                : BrowserPathHelper.build(path, identity, flatIndex)
+            }
           }
-        }
-        return { ...track }
-      })
-    }))
+          return { ...track }
+        })
+      }
+    })
   }
 
   /**

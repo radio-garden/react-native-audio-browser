@@ -27,6 +27,7 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionQueue
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -231,14 +232,18 @@ class BrowserManager {
     )
   }
 
-  private fun cacheTrack(track: Track) {
-    track.id?.takeUnless { it.isBlank() }?.let { trackCache.put(it, track) }
-    track.path?.let { trackCache.put(it, track) }
-    track.src?.let { trackCache.put(it, track) }
+  /** With [rekey] false, keeps a key that already names a track. */
+  private fun cacheTrack(track: Track, rekey: Boolean = true) {
+    val put = { key: String ->
+      if (rekey || trackCache.get(key) == null) trackCache.put(key, track)
+    }
+    track.id?.takeUnless { it.isBlank() }?.let(put)
+    track.path?.let(put)
+    track.src?.let(put)
   }
 
-  private fun cacheChildren(resolvedTrack: ResolvedTrack) {
-    resolvedTrack.flattenedChildren?.forEach { cacheTrack(it) }
+  private fun cacheChildren(resolvedTrack: ResolvedTrack, rekey: Boolean = true) {
+    resolvedTrack.flattenedChildren?.forEach { cacheTrack(it, rekey) }
   }
 
   // Warns once per page: the check runs again on every onGetChildren serve. Concurrent: those
@@ -530,8 +535,16 @@ class BrowserManager {
     }
   }
 
-  /** Resolves the page at [path]; a contextual path resolves its parent container. */
-  suspend fun resolve(path: String, useCache: Boolean = true): ResolvedTrack {
+  /**
+   * Resolves the page at [path]; a contextual path resolves its parent container. With [rekey]
+   * false, a track the cache already holds keeps its entry, so `contextualPathFor` still names the
+   * page it was browsed on.
+   */
+  suspend fun resolve(
+    path: String,
+    useCache: Boolean = true,
+    rekey: Boolean = true,
+  ): ResolvedTrack {
     Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
 
     val normalizedPath = BrowserPathHelper.stripTrackId(path)
@@ -544,7 +557,7 @@ class BrowserManager {
         Timber.d("Content cache HIT for path='$normalizedPath'")
         // Re-key the track cache on a hit too: contextualPathFor must see the most recently
         // browsed container.
-        cacheChildren(cached)
+        cacheChildren(cached, rekey)
         return hydrateChildren(cached)
       }
       Timber.d("Content cache MISS for path='$normalizedPath'")
@@ -559,7 +572,7 @@ class BrowserManager {
       }
     }
 
-    cacheChildren(resolvedTrack)
+    cacheChildren(resolvedTrack, rekey)
 
     return hydrateChildren(resolvedTrack)
   }
@@ -625,6 +638,8 @@ class BrowserManager {
         .map { section ->
           val base = flatIndex
           flatIndex += section.children.size
+          val linkedPath =
+            section.path?.takeIf { it.isNotEmpty() && section.queue == SectionQueue.PATH }
           section to
             section.children.mapIndexed { offset, track ->
               async {
@@ -637,7 +652,9 @@ class BrowserManager {
                 // Regenerated on every browse so the path names the container it was browsed in;
                 // the flat position breaks ties between duplicate identities.
                 if (track.src != null && trackIdentity != null) {
-                  val contextualPath = BrowserPathHelper.build(path, trackIdentity, index)
+                  val contextualPath =
+                    if (linkedPath != null) BrowserPathHelper.build(linkedPath, trackIdentity)
+                    else BrowserPathHelper.build(path, trackIdentity, index)
                   transformedTrack = transformedTrack.copy(path = contextualPath)
 
                   Timber.d(
@@ -723,7 +740,7 @@ class BrowserManager {
 
     try {
       val parentPath = BrowserPathHelper.stripTrackId(contextualPath)
-      val parentResolvedTrack = resolve(parentPath)
+      val parentResolvedTrack = resolve(parentPath, rekey = false)
       val sections = parentResolvedTrack.normalizedSections
 
       if (sections.isNullOrEmpty()) {

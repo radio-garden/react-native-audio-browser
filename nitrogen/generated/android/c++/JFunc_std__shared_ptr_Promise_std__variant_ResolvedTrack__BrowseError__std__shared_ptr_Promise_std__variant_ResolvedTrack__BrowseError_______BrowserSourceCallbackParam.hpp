@@ -41,6 +41,8 @@
 #include "Section.hpp"
 #include <vector>
 #include "JSection.hpp"
+#include "SectionQueue.hpp"
+#include "JSectionQueue.hpp"
 #include "Track.hpp"
 #include "JTrack.hpp"
 #include "ArtworkVariants.hpp"

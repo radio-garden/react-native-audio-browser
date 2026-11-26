@@ -284,10 +284,23 @@ export interface ArtworkVariants {
 export type TrackArtwork = string | ArtworkVariants
 
 /**
+ * What a tap on a section's track queues:
+ *
+ * - `'section'` — the section's own children.
+ * - `'path'` — the section of the {@link Section.path} page that first
+ *   holds the tapped track, found by its identity: the full list a preview
+ *   section stands for, resolved at tap time. The queue then comes from the
+ *   same source as a tap on the "view all" page, so a tap there skips in
+ *   place. Without a `path`, or with an empty one, it acts as `'section'`.
+ */
+export type SectionQueue = 'section' | 'path'
+
+/**
  * A titled, styled group of Tracks within a resolved page — the unit of
- * queue scope. Tapping a playable child queues the section it sits in,
- * identically on every platform and screen width: rendering may truncate
- * what is visible, it never changes what plays.
+ * queue scope. Tapping a playable child queues the section it sits in, or
+ * the page it previews ({@link Section.queue}), identically on every
+ * platform and screen width: rendering may truncate what is visible, it
+ * never changes what plays.
  */
 export interface Section {
   /** Header text. Absent = headerless group. */
@@ -316,6 +329,10 @@ export interface Section {
    *   subtitled by the global `viewMoreTitle` browser option.
    */
   path?: string
+  /**
+   * What a tap on one of the section's tracks queues. Absent = `'section'`.
+   */
+  queue?: SectionQueue
   /** The section's tracks. */
   children: Track[]
 }

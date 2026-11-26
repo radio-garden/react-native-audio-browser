@@ -141,17 +141,22 @@ enum BrowserPathHelper {
 
 extension BrowserPathHelper {
   /// `sections` with a contextual path on every track that has a `src` and no `path`, its index
-  /// counted across all sections. Throws on a track with neither.
+  /// counted across all sections. A section that queues its `path` stamps its tracks against that
+  /// page, by identity alone. Throws on a track with neither.
   static func stampingContextualPaths(_ sections: [Section], parentPath: String) throws -> [Section] {
     var flatIndex = 0
     return try sections.map { section in
-      try section.copying(children: section.children.map { track in
+      let linkedPath = section.queue == .path ? section.path.flatMap { $0.isEmpty ? nil : $0 } : nil
+      return try section.copying(children: section.children.map { track in
         defer { flatIndex += 1 }
         if track.path != nil { return track }
         guard track.src != nil, let identity = track.identity else {
           throw BrowserError.invalidConfiguration(
             "Track must have either 'path' or 'src' for stable identification: \(track.title)",
           )
+        }
+        if let linkedPath {
+          return track.copying(path: build(parentPath: linkedPath, trackId: identity))
         }
         return track.copying(path: build(parentPath: parentPath, trackId: identity, index: flatIndex))
       })

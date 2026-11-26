@@ -47,6 +47,18 @@ struct JsonTrackArtworkTests {
     #expect(resolved.children?.first?.artwork?.variants?.dark == "https://e.example/d.png")
   }
 
+  @Test func decodesASectionsQueueAndAnUnknownOneAsNone() throws {
+    func queue(_ value: String) throws -> SectionQueue? {
+      let json = """
+      { "path": "/home", "sections": [{ "queue": "\(value)", "children": [{ "title": "S", "src": "s" }] }] }
+      """.data(using: .utf8)!
+      return try JSONDecoder().decode(JsonResolvedTrack.self, from: json).toNitro(requestedPath: "/home").sections?.first?.queue
+    }
+    #expect(try queue("path") == .path)
+    #expect(try queue("section") == .section)
+    #expect(try queue("everything") == nil)
+  }
+
   @Test func roundTripsBothShapes() throws {
     for artwork: JsonArtwork in [.single("a.png"), .variants(light: "l.png", dark: "d.png")] {
       let encoded = try JSONEncoder().encode(JsonTrack(title: "X", artwork: artwork))

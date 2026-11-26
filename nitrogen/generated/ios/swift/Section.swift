@@ -18,7 +18,7 @@ public extension Section {
   /**
    * Create a new instance of `Section`.
    */
-  init(title: String?, style: SectionStyle?, path: String?, children: [Track]) {
+  init(title: String?, style: SectionStyle?, path: String?, queue: SectionQueue?, children: [Track]) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = title {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -34,6 +34,12 @@ public extension Section {
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_SectionQueue_ in
+      if let __unwrappedValue = queue {
+        return bridge.create_std__optional_SectionQueue_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -73,6 +79,11 @@ public extension Section {
         return nil
       }
     }()
+  }
+  
+  @inline(__always)
+  var queue: SectionQueue? {
+    return self.__queue.value
   }
   
   @inline(__always)

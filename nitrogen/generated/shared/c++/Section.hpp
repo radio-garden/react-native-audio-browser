@@ -30,12 +30,15 @@
 
 // Forward declaration of `SectionStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SectionStyle; }
+// Forward declaration of `SectionQueue` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionQueue; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 
 #include <string>
 #include <optional>
 #include "SectionStyle.hpp"
+#include "SectionQueue.hpp"
 #include "Track.hpp"
 #include <vector>
 
@@ -49,11 +52,12 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> title     SWIFT_PRIVATE;
     std::optional<SectionStyle> style     SWIFT_PRIVATE;
     std::optional<std::string> path     SWIFT_PRIVATE;
+    std::optional<SectionQueue> queue     SWIFT_PRIVATE;
     std::vector<Track> children     SWIFT_PRIVATE;
 
   public:
     Section() = default;
-    explicit Section(std::optional<std::string> title, std::optional<SectionStyle> style, std::optional<std::string> path, std::vector<Track> children): title(title), style(style), path(path), children(children) {}
+    explicit Section(std::optional<std::string> title, std::optional<SectionStyle> style, std::optional<std::string> path, std::optional<SectionQueue> queue, std::vector<Track> children): title(title), style(style), path(path), queue(queue), children(children) {}
 
   public:
     friend bool operator==(const Section& lhs, const Section& rhs) = default;
@@ -72,6 +76,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "style"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionQueue>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "queue"))),
         JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "children")))
       );
     }
@@ -80,6 +85,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "style"), JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::toJSI(runtime, arg.style));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "path"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "queue"), JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionQueue>>::toJSI(runtime, arg.queue));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "children"), JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::toJSI(runtime, arg.children));
       return obj;
     }
@@ -94,6 +100,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionStyle>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "style")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::SectionQueue>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "queue")))) return false;
       if (!JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "children")))) return false;
       return true;
     }

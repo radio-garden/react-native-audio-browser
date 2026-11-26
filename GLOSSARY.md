@@ -145,6 +145,8 @@ _Avoid_: contextual URL in new prose (legacy alias in code comments), deep link.
 
 A titled, styled group of Tracks within a resolved page — the unit of queue scope, declared, not derived and never rendering-dependent (ADR 0010).
 
+A tap on one of its tracks queues its own `children`, or, with `queue: 'path'`, the page its `path` links to: a preview section then queues the full list it previews (ADR 0015).
+
 A page's canonical shape is `sections`; a plain `children` list is authoring sugar for one untitled Section. Its **Style** block declares the requested presentation; each surface renders its nearest supported form.
 
 _Avoid_: group, category; Section for a **Tab** (Tabs are top-level navigation, Sections live inside pages).
