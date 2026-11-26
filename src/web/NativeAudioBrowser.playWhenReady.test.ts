@@ -256,6 +256,14 @@ describe('NativeAudioBrowser getQueueVersion', () => {
     load(): void {}
   }
 
+  it('is -1 before the player is set up', () => {
+    expect(new NativeAudioBrowser().getQueueVersion()).toBe(-1)
+  })
+
+  it('is not -1 once the player is set up', () => {
+    expect(new QueueBrowser().getQueueVersion()).not.toBe(-1)
+  })
+
   it('changes with every change to the queue', () => {
     const browser = new QueueBrowser()
     const versions = [browser.getQueueVersion()]
