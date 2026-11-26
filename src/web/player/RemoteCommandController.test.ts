@@ -86,7 +86,7 @@ describe('RemoteCommandController', () => {
     '$action runs $transport and emits $emit by default',
     ({ action, transport, emit }) => {
       const host = makeHost()
-      new RemoteCommandController(host)
+      new RemoteCommandController(host).registerHandlers()
 
       handlers.get(action)?.(undefined)
 
@@ -98,7 +98,7 @@ describe('RemoteCommandController', () => {
   it('prefers a consumer handler over the default action, still emitting', () => {
     const handleRemotePlay = vi.fn()
     const host = makeHost({ handleRemotePlay })
-    new RemoteCommandController(host)
+    new RemoteCommandController(host).registerHandlers()
 
     handlers.get('play')?.(undefined)
 
@@ -109,7 +109,7 @@ describe('RemoteCommandController', () => {
 
   it('reads handlers live, honouring ones assigned after construction', () => {
     const host = makeHost()
-    new RemoteCommandController(host)
+    new RemoteCommandController(host).registerHandlers()
 
     const lateHandler = vi.fn()
     host.handleRemotePause = lateHandler
@@ -121,7 +121,7 @@ describe('RemoteCommandController', () => {
 
   it('passes seek/jump payloads to default actions and events', () => {
     const host = makeHost()
-    new RemoteCommandController(host)
+    new RemoteCommandController(host).registerHandlers()
 
     handlers.get('seekto')?.({ seekTime: 12 })
     handlers.get('seekforward')?.({ seekOffset: 25 })

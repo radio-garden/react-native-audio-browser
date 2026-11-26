@@ -47,14 +47,13 @@ export class MediaSessionManager {
     'seekbackward'
   ]
 
-  constructor(actions: MediaSessionActions) {
+  constructor(private readonly actions: MediaSessionActions) {
     this.session =
       typeof navigator !== 'undefined' &&
       'mediaSession' in navigator &&
       typeof MediaMetadata !== 'undefined'
         ? navigator.mediaSession
         : undefined
-    if (this.session) this.registerHandlers(this.session, actions)
   }
 
   /**
@@ -117,10 +116,13 @@ export class MediaSessionManager {
     this.session.playbackState = 'none'
   }
 
-  private registerHandlers(
-    session: MediaSession,
-    actions: MediaSessionActions
-  ): void {
+  /**
+   * Routes the OS media controls into the actions. Until this is called the
+   * session has no handlers, so a command does not reach the player.
+   */
+  registerHandlers(): void {
+    const { session, actions } = this
+    if (!session) return
     const set = (
       action: MediaSessionAction,
       handler: MediaSessionActionHandler
