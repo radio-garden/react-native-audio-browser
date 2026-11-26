@@ -1,3 +1,14 @@
+## [1.0.0-next.16](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.15...v1.0.0-next.16) (2026-11-26)
+
+### Features
+
+* **android:** report requests that timed out before the browser registered ([d230f31](https://github.com/radio-garden/react-native-audio-browser/commit/d230f31c4136ce86718dd4faea1f9d1e9d4dc378))
+
+### Bug Fixes
+
+* **android:** offer search on the first cold start after an app update ([37ffd50](https://github.com/radio-garden/react-native-audio-browser/commit/37ffd50440a8e5df589c13d65762b88cf8e9581f))
+* **android:** remember whether the browser had search across cold starts ([d0ed95c](https://github.com/radio-garden/react-native-audio-browser/commit/d0ed95c0dd6877439c565e7dbaf735d297b9bead))
+
 ## [1.0.0-next.15](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.14...v1.0.0-next.15) (2026-11-25)
 
 ### Bug Fixes
