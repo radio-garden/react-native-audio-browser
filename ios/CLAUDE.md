@@ -156,8 +156,9 @@ ios/
 │   ├── NowPlayingLines.swift         # Pure line ranking: flash, formatter, override, track (tested);
 │   │                                 #   NowPlayingSource protocol
 │   ├── ErrorStatus.swift             # ErrorStatus value and its after(event:from:to:) rule (tested)
-│   ├── AudioSessionController.swift  # @MainActor AVAudioSession: category, activate, release,
-│   │                                 #   interruption/route/reset/volume observers; AudioSessionPlayer
+│   ├── AudioSessionController.swift  # @MainActor session policy: category, activate, release,
+│   │                                 #   interruptions, stale refusals; AudioSessionPlayer (tested)
+│   ├── AudioSessionController+System.swift # Its AVAudioSession calls and observers (iOS only)
 │   ├── DeferredSeek.swift            # Pure state: a seek held while the item loads (idle/pending/inFlight)
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track), fade via VolumeFader
 │   ├── RetryLoop.swift               # @MainActor classify, pace reconnects (ReconnectPacer) and

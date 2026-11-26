@@ -57,7 +57,7 @@ final class AudioSessionController {
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
   /// thread. Serial and shared, like the session, so a release and a quick re-activation keep their
   /// order, also across the controllers of a JS reload.
-  private static let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
+  static let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
   // Touched only by `init` and `deinit`.
   nonisolated(unsafe) var observers: [NSObjectProtocol] = []

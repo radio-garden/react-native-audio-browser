@@ -7,11 +7,27 @@ final class FakeAudioSession: @unchecked Sendable {
   private let lock = NSLock()
   private var log: [String] = []
   private var activations = 0
-  /// Activations, counted from 1, that the system refuses.
-  var refused: Set<Int> = []
+  private var refusedActivations: Set<Int> = []
+  private var holding = false
+  private var waiting = false
   /// Held closed, the queue blocks in the next call until it opens.
   let gate = DispatchSemaphore(value: 0)
-  var holdNextCall = false
+
+  /// Activations, counted from 1, that the system refuses.
+  var refused: Set<Int> {
+    get { lock.withLock { refusedActivations } }
+    set { lock.withLock { refusedActivations = newValue } }
+  }
+
+  var holdNextCall: Bool {
+    get { lock.withLock { holding } }
+    set { lock.withLock { holding = newValue } }
+  }
+
+  /// Whether the queue is blocked on `gate`.
+  var isWaiting: Bool {
+    lock.withLock { waiting }
+  }
 
   var calls: [String] {
     lock.withLock { log }
@@ -22,27 +38,36 @@ final class FakeAudioSession: @unchecked Sendable {
     let refuse = lock.withLock {
       log.append(active ? "activate" : "deactivate")
       if active { activations += 1 }
-      return active && refused.contains(activations)
+      return active && refusedActivations.contains(activations)
     }
     if refuse { throw CocoaError(.featureUnsupported) }
   }
 
-  func setCategory() {
+  func setCategory(_ name: String = "category") {
     wait()
-    lock.withLock { log.append("category") }
+    lock.withLock { log.append(name) }
   }
 
   private func wait() {
-    if lock.withLock({ holdNextCall }) {
-      gate.wait()
-      lock.withLock { holdNextCall = false }
+    guard lock.withLock({ holding }) else { return }
+    lock.withLock { waiting = true }
+    gate.wait()
+    lock.withLock {
+      holding = false
+      waiting = false
     }
   }
 }
 
 @MainActor
 final class FakeSessionPlayer: AudioSessionPlayer {
-  var canReleaseAudioSession = true
+  var releasable = true
+  var releaseChecks = 0
+  var canReleaseAudioSession: Bool {
+    releaseChecks += 1
+    return releasable
+  }
+
   var willResumeAfterInterruption = false
   var refusals = 0
   var interruptionsBegan = 0
@@ -53,6 +78,13 @@ final class FakeSessionPlayer: AudioSessionPlayer {
   func handleInterruptionEnded(shouldResume: Bool) { interruptionEnds.append(shouldResume) }
   func handleRouteDisconnected() {}
   func mediaServicesWereReset() {}
+}
+
+/// What the tests' main-actor closures did, in order: a `@Sendable` closure cannot append to a
+/// local array.
+@MainActor
+final class SessionLog {
+  var entries: [String] = []
 }
 
 @MainActor
@@ -70,9 +102,14 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
   #expect(condition(), sourceLocation: sourceLocation)
 }
 
+/// Runs what the activation queue holds, then what it posted to the main actor.
 @MainActor
-private func settle() async {
-  try? await Task.sleep(for: .milliseconds(100))
+private func drain(_: AudioSessionController) async {
+  for _ in 0 ..< 2 {
+    await withCheckedContinuation { continuation in
+      AudioSessionController.activationQueue.async { Task { @MainActor in continuation.resume() } }
+    }
+  }
 }
 
 // Serialized: the controllers share the session's state, as they do across a JS reload.
@@ -102,7 +139,7 @@ struct AudioSessionControllerTests {
     controller.activate()
 
     await eventually { session.calls == ["activate", "activate"] }
-    await settle()
+    await drain(controller)
     #expect(player.refusals == 0)
   }
 
@@ -117,7 +154,7 @@ struct AudioSessionControllerTests {
     controller.interruptionBegan()
 
     await eventually { session.calls == ["activate"] }
-    await settle()
+    await drain(controller)
     #expect(player.refusals == 0)
     #expect(player.interruptionsBegan == 1)
   }
@@ -133,13 +170,14 @@ struct AudioSessionControllerTests {
     old = nil
     let new = makeController(session)
     let newPlayer = FakeSessionPlayer()
-    newPlayer.canReleaseAudioSession = false
+    newPlayer.releasable = false
     new.player = newPlayer
 
-    await settle()
+    await eventually { newPlayer.releaseChecks == 1 }
+    await drain(new)
     #expect(session.calls == [])
 
-    newPlayer.canReleaseAudioSession = true
+    newPlayer.releasable = true
     new.scheduleRelease()
     await eventually { session.calls == ["deactivate"] }
   }
@@ -162,7 +200,7 @@ struct AudioSessionControllerTests {
     session.holdNextCall = true
     old.activate()
     let configured = Task { await old.configure { session.setCategory() } }
-    await settle()
+    await Task.yield()
 
     old.retire()
     session.gate.signal()
@@ -175,12 +213,16 @@ struct AudioSessionControllerTests {
     let session = FakeAudioSession()
     let controller = makeController(session)
     session.holdNextCall = true
-    let configured = Task { await controller.configure { session.setCategory() } }
+    let log = SessionLog()
+    let call = Task {
+      await controller.configure { session.setCategory() }
+      log.entries.append("returned")
+    }
 
-    await settle()
-    #expect(session.calls == [])
+    await eventually { session.isWaiting }
+    #expect(log.entries == [])
     session.gate.signal()
-    await configured.value
+    await call.value
     #expect(session.calls == ["category"])
   }
 
@@ -189,7 +231,7 @@ struct AudioSessionControllerTests {
     let controller = makeController(session)
     session.holdNextCall = true
     let configured = Task { await controller.configure { session.setCategory() } }
-    await settle()
+    await eventually { session.isWaiting }
     controller.activate()
 
     session.gate.signal()
@@ -203,8 +245,12 @@ struct AudioSessionControllerTests {
     let player = FakeSessionPlayer()
     player.willResumeAfterInterruption = true
     controller.player = player
+    session.holdNextCall = true
 
     controller.interruptionEnded(shouldResume: true)
+    await eventually { session.isWaiting }
+    #expect(player.interruptionEnds == [])
+    session.gate.signal()
 
     await eventually { player.interruptionEnds == [true] }
     #expect(session.calls == ["activate"])
