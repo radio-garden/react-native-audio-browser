@@ -26,6 +26,7 @@ class CoilArtworkLoaderHolderTest {
         ),
       registry = BrowseArtworkRegistry(),
       scope = CoroutineScope(Dispatchers.Unconfined),
+      resolveBrowseArtwork = { _, _ -> null },
     )
 
   @After

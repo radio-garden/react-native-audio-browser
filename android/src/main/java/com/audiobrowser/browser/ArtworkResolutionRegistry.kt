@@ -7,10 +7,11 @@ import com.margelo.nitro.audiobrowser.Track
  * Maps a produced artwork URI back to the Track and artwork config it came from, so the
  * display-time bitmap loader, which gets only the URI from Media3, re-resolves Track-first with the
  * real size instead of re-running the transform on an already-transformed URL (safe only for
- * idempotent transforms). Bounded LRU; thread-safe (written from browse coroutines and the
- * now-playing scope, read from the bitmap loader's IO scope).
+ * idempotent transforms). An LRU as large as [BrowseArtworkRegistry], so the artwork provider finds
+ * every row it can serve; thread-safe (written from browse coroutines and the now-playing scope,
+ * read from the bitmap loader's IO scope).
  */
-class ArtworkResolutionRegistry(private val maxEntries: Int = 256) {
+class ArtworkResolutionRegistry(private val maxEntries: Int = BrowseArtworkRegistry.MAX_ENTRIES) {
 
   /** A null [perRouteConfig] resolves through the browser's current `config.artwork`. */
   data class Entry(val track: Track, val perRouteConfig: ArtworkRequestConfig?)

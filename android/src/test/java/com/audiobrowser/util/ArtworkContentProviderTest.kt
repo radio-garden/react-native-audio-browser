@@ -3,13 +3,17 @@ package com.audiobrowser.util
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import coil3.request.ImageRequest
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
+import com.margelo.nitro.audiobrowser.ImageSource
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -36,13 +40,19 @@ class ArtworkContentProviderTest {
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
     val loader = CoilArtworkLoader(context, FakeImageLoader(context, fakeBitmap) {})
     CoilArtworkLoaderHolder.set(
-      ArtworkProviderDeps(loader, registry, CoroutineScope(Dispatchers.IO))
+      ArtworkProviderDeps(
+        loader,
+        registry,
+        CoroutineScope(Dispatchers.IO),
+        resolveBrowseArtwork = { _, _ -> null },
+      )
     )
   }
 
   @After
   fun tearDown() {
     CoilArtworkLoaderHolder.get()?.let { CoilArtworkLoaderHolder.clearIf(it) }
+    ArtworkContentProvider.resolveTimeoutMsOverride = null
     val context = RuntimeEnvironment.getApplication()
     File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR).deleteRecursively()
   }
@@ -83,6 +93,91 @@ class ArtworkContentProviderTest {
     assertNotNull(pfd)
     val bytes = java.io.FileInputStream(pfd!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+  }
+
+  private class Fetch(val url: String?, val resolvedWith: Int?, val forcedSvg: Boolean)
+
+  private fun fetchedWith(
+    sizeHint: Int?,
+    registeredSvg: Boolean = false,
+    resolve: suspend (String, Int) -> ImageSource?,
+  ): Fetch {
+    val context = RuntimeEnvironment.getApplication()
+    val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
+    var request: ImageRequest? = null
+    var resolvedWith: Int? = null
+    val loader = CoilArtworkLoader(context, FakeImageLoader(context, fakeBitmap) { request = it })
+    CoilArtworkLoaderHolder.set(
+      ArtworkProviderDeps(
+        loader,
+        registry,
+        CoroutineScope(Dispatchers.IO),
+        artworkSizeHint = { sizeHint },
+        resolveBrowseArtwork = { url, hint ->
+          resolvedWith = hint
+          resolve(url, hint)
+        },
+      )
+    )
+    val url = "https://cdn/sized.png"
+    val token = ArtworkUris.tokenFor(url)
+    registry.register(token, ResolvedArtwork(url, null, isSvg = registeredSvg))
+    assertNotNull(provider.openFile(uri(token), "r"))
+    return Fetch(request?.data as String?, resolvedWith, request?.decoderFactory != null)
+  }
+
+  @Test
+  fun `openFile fetches the artwork resolved for the car's size hint`() {
+    val fetch = fetchedWith(256) { url, hint -> ImageSource("$url?w=$hint", null, null, null) }
+    assertEquals(256, fetch.resolvedWith)
+    assertEquals("https://cdn/sized.png?w=256", fetch.url)
+  }
+
+  @Test
+  fun `openFile decodes a registered svg that resolves to a raster as a raster`() {
+    val fetch =
+      fetchedWith(256, registeredSvg = true) { url, hint ->
+        ImageSource("$url?w=$hint", null, null, null)
+      }
+    assertEquals("https://cdn/sized.png?w=256", fetch.url)
+    assertFalse(fetch.forcedSvg)
+  }
+
+  @Test
+  fun `openFile keeps the svg decoder for a registered svg nothing re-resolves`() {
+    val fetch = fetchedWith(256, registeredSvg = true) { _, _ -> null }
+    assertTrue(fetch.forcedSvg)
+  }
+
+  @Test
+  fun `openFile fetches the registered url when nothing resolves it`() {
+    assertEquals("https://cdn/sized.png", fetchedWith(256) { _, _ -> null }.url)
+  }
+
+  @Test
+  fun `openFile fetches the registered url when the resolution throws`() {
+    val fetch = fetchedWith(256) { _, _ -> throw IllegalStateException("resolver failed") }
+    assertEquals("https://cdn/sized.png", fetch.url)
+  }
+
+  @Test
+  fun `openFile never fetches a resolved url it would not serve`() {
+    val fetch = fetchedWith(256) { _, _ -> ImageSource("file:///etc/hosts", null, null, null) }
+    assertEquals("https://cdn/sized.png", fetch.url)
+  }
+
+  @Test
+  fun `openFile fetches the registered url when the resolution outlasts its timeout`() {
+    ArtworkContentProvider.resolveTimeoutMsOverride = 50
+    val fetch = fetchedWith(256) { _, _ -> awaitCancellation() }
+    assertEquals("https://cdn/sized.png", fetch.url)
+  }
+
+  @Test
+  fun `openFile resolves nothing without a size hint`() {
+    val fetch = fetchedWith(null) { url, hint -> ImageSource("$url?w=$hint", null, null, null) }
+    assertNull(fetch.resolvedWith)
+    assertEquals("https://cdn/sized.png", fetch.url)
   }
 
   @Test
@@ -140,7 +235,12 @@ class ArtworkContentProviderTest {
     val countingLoader =
       CoilArtworkLoader(context, FakeImageLoader(context, fakeBitmap) { loadCount++ })
     CoilArtworkLoaderHolder.set(
-      ArtworkProviderDeps(countingLoader, registry, CoroutineScope(Dispatchers.IO))
+      ArtworkProviderDeps(
+        countingLoader,
+        registry,
+        CoroutineScope(Dispatchers.IO),
+        resolveBrowseArtwork = { _, _ -> null },
+      )
     )
 
     val token = ArtworkUris.tokenFor("https://cdn/b.png")
