@@ -11,10 +11,12 @@ import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.buildService
 import com.audiobrowser.session
+import com.audiobrowser.util.ArtworkUris
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.RETURNS_DEFAULTS
@@ -46,7 +48,7 @@ class SessionViewMoreTest {
     controller.destroy()
   }
 
-  private fun browse(page: String): List<MediaItem> {
+  private fun browse(page: String, viewMoreArtwork: String? = null): List<MediaItem> {
     val section =
       TestFixtures.section(
         arrayOf(TestFixtures.track(title = "Station", id = "s1", src = "https://s/s1.mp3")),
@@ -59,6 +61,7 @@ class SessionViewMoreTest {
         config =
           BrowserConfig(
             androidControllerOfflineError = false,
+            viewMoreArtwork = viewMoreArtwork,
             routes =
               arrayOf(
                 TestFixtures.staticRoute(
@@ -100,6 +103,25 @@ class SessionViewMoreTest {
     )
     assertEquals(
       MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      viewMore.mediaMetadata.extras!!.getInt(
+        MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
+      ),
+    )
+  }
+
+  @Test
+  fun `a configured view more artwork is served through the artwork provider as a full tile`() {
+    val artwork =
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
+    val viewMore = browse("/home", viewMoreArtwork = artwork).last()
+
+    val uri = viewMore.mediaMetadata.artworkUri!!
+    assertEquals(ArtworkUris.authorityFor(service.packageName), uri.authority)
+    val served = player.browseArtworkRegistry.lookup(ArtworkUris.parseToken(uri)!!)!!
+    assertEquals(artwork, served.finalUrl)
+    assertTrue(served.isSvg)
+    assertEquals(
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
       viewMore.mediaMetadata.extras!!.getInt(
         MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
       ),

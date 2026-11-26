@@ -207,6 +207,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       handleTrackLoad = null,
       androidControllerOfflineError = null,
       viewMoreTitle = null,
+      viewMoreArtwork = null,
       carPlayLoadingTitle = null,
       resolveAlbumPath = null,
       formatNavigationError = null,
@@ -378,6 +379,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
       viewMoreTitle = _configuration.viewMoreTitle,
+      viewMoreArtwork = _configuration.viewMoreArtwork,
       findTrack = _configuration.findTrack?.let(::awaitingFindTrack),
     )
   }

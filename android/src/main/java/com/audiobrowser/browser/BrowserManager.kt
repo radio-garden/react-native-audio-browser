@@ -1336,6 +1336,7 @@ data class BrowserConfig(
   val singleTrack: Boolean = false,
   val androidControllerOfflineError: Boolean = true,
   val viewMoreTitle: (() -> Promise<String>)? = null,
+  val viewMoreArtwork: String? = null,
   val findTrack: (suspend (id: String) -> Track?)? = null,
 ) {
   val hasSearch: Boolean

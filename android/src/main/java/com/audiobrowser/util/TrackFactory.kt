@@ -105,18 +105,23 @@ object TrackFactory {
 
   /**
    * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
-   * Android Auto draws as a broken image when it has no artwork, so it carries the library's arrow
-   * icon from [packageName]'s resources.
+   * Android Auto draws as a broken image when it has no artwork. It carries [artwork] when the
+   * provider can serve it, filling the tile in its own colours; else the library's arrow icon from
+   * [packageName]'s resources, which the car tints.
    */
   fun toNavigationMediaItem(
     section: Section,
     viewMoreTitle: String,
+    artwork: String?,
     packageName: String,
   ): MediaItem {
     val track = navigationTrack(section, viewMoreTitle)
     val icon =
       if (section.style?.display == StyleDisplay.GRID) {
-        "android.resource://$packageName/drawable/$VIEW_MORE_ICON"
+        val url =
+          artwork?.takeIf { ArtworkUris.isServable(it.toUri()) }
+            ?: "android.resource://$packageName/drawable/$VIEW_MORE_ICON"
+        artworkRoutes?.route(url, null, SvgArtworkRenderer.isSvgUrl(url), pinned = false) ?: url
       } else {
         null
       }

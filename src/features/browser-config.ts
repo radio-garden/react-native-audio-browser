@@ -293,6 +293,7 @@ export function toNativeConfig(
     handleTrackLoad: config.handleTrackLoad,
     androidControllerOfflineError: config.androidControllerOfflineError,
     viewMoreTitle: config.viewMoreTitle,
+    viewMoreArtwork: config.viewMoreArtwork,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
     resolveAlbumPath: config.resolveAlbumPath,
     formatNavigationError: config.formatNavigationError,

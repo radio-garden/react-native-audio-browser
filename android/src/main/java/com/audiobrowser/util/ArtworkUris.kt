@@ -11,10 +11,17 @@ object ArtworkUris {
 
   fun authorityFor(packageName: String): String = "$packageName.$AUTHORITY_SUFFIX"
 
-  /** Whether the provider serves artwork at [uri]: http(s), or `data:` decoded in this process. */
-  fun isServable(uri: Uri): Boolean = uri.scheme?.lowercase() in SERVABLE_SCHEMES
-
-  private val SERVABLE_SCHEMES = setOf("http", "https", "data")
+  /**
+   * Whether the provider serves artwork at [uri]: http(s), or a base64 `data:` URL decoded in this
+   * process. Coil reads no other `data:` form.
+   */
+  fun isServable(uri: Uri): Boolean =
+    when (uri.scheme?.lowercase()) {
+      "http",
+      "https" -> true
+      "data" -> uri.schemeSpecificPart.contains(";base64,", ignoreCase = true)
+      else -> false
+    }
 
   /** A stable token for [url] that does not reveal it to whoever sees the URI (SHA-256 hex). */
   fun tokenFor(url: String): String {

@@ -1021,6 +1021,20 @@ export type BrowserConfiguration = {
   viewMoreTitle?: ViewMoreTitleCallback
 
   /**
+   * Artwork for the "view more" tile of a `grid` section: an `http(s)` URL or a
+   * base64 `data:` URL, SVG included. The library's artwork provider serves it
+   * to the car, fetched as given (the `artwork` request config does not apply),
+   * and it fills the tile in its own colours.
+   *
+   * Unset, or any other URL, and the tile draws the library's arrow icon
+   * (`audio_browser_view_more`), which the car tints to its theme. See
+   * [Android Auto](https://audiobrowser.dev/guide/android-auto).
+   *
+   * @platform android
+   */
+  viewMoreArtwork?: string
+
+  /**
    * Title shown (as the list's centered empty state) on CarPlay screens whose
    * content is still loading — browse destinations while they resolve, and the
    * startup screen while tabs load. Supply your app's localized "Loading…"

@@ -680,6 +680,7 @@ Three config-level platform options round it out:
 - `carPlayLoadingTitle`: a localized "Loading…" on older CarPlay.
 - `androidControllerOfflineError`: shows an offline error in Android Auto and other external controllers when the network is lost. It defaults to `true`.
 - [`viewMoreTitle`](/api/types/browser/#viewmoretitle): subtitles the "view more" row Android Auto appends to a section with a `path`, which the section titles. It is read again on `invalidateAllContent()`.
+- [`viewMoreArtwork`](/api/types/browser/#viewmoreartwork): artwork for that row's tile in a `grid` section, in its own colours, in place of the tinted arrow icon.
 
 The CarPlay now-playing album line is tappable when the active track has an `albumPath`. For tracks without one, a `resolveAlbumPath` callback maps the track to a browse path. In both cases the track needs an `album`. See [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 
