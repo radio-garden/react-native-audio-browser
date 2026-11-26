@@ -164,12 +164,17 @@ export class BrowserManager {
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
+    const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
+    if (!tabsRoute && this._tabs) {
+      this._tabs = undefined
+      this.onTabsChanged([])
+    }
+
     // Determine initial path
     let initialPath = value.path
 
     // If no path specified, try to get first tab path
     if (!initialPath) {
-      const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
       const staticTabs = tabsRoute?.browseStatic
         ? flattenedChildren(tabsRoute.browseStatic)
         : []
