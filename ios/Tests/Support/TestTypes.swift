@@ -1,5 +1,6 @@
 @testable import AudioBrowserTestable
 import AVFoundation
+import Testing
 
 func makeMetadataItem(
   identifier: AVMetadataIdentifier? = nil,
@@ -330,6 +331,8 @@ final class SkippingClock: RetryClock, @unchecked Sendable {
 }
 
 /// A `RetryClock` that moves only when `run(until:)` moves it, firing what falls due in time order.
+/// `run` lets woken tasks catch up by yielding 20 times on the main actor. That count is not a
+/// timing margin: it holds only while every woken task stays on the main actor until its next sleep.
 final class VirtualClock: RetryClock, @unchecked Sendable {
   private struct Timer {
     let atMs: Int
@@ -358,10 +361,12 @@ final class VirtualClock: RetryClock, @unchecked Sendable {
     lock.withLock { timers[id] = Timer(atMs: atMs, order: id, action: action) }
   }
 
+  /// Registers and wakes on the main actor, where `run`'s yields wait for it.
   nonisolated(nonsending) func sleep(ms: Int) async throws {
+    if !isMainThread() { Issue.record("VirtualClock's sleep was called off the main actor") }
     let id = allocate()
-    try await withTaskCancellationHandler {
-      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    try await withTaskCancellationHandler(operation: {
+      try await withCheckedThrowingContinuation(isolation: MainActor.shared) { (continuation: CheckedContinuation<Void, Error>) in
         let cancelled = lock.withLock {
           guard !Task.isCancelled else { return true }
           timers[id] = Timer(atMs: _nowMs + ms, order: id, sleeper: continuation)
@@ -369,10 +374,10 @@ final class VirtualClock: RetryClock, @unchecked Sendable {
         }
         if cancelled { continuation.resume(throwing: CancellationError()) }
       }
-    } onCancel: {
+    }, onCancel: {
       // Whichever of the cancel and `run` removes the timer resumes it.
       lock.withLock { timers.removeValue(forKey: id) }?.sleeper?.resume(throwing: CancellationError())
-    }
+    }, isolation: MainActor.shared)
   }
 
   /// Fires every timer due up to `endMs` in time order, letting the tasks each wakes run first.
@@ -402,3 +407,5 @@ final class VirtualClock: RetryClock, @unchecked Sendable {
     }
   }
 }
+
+private func isMainThread() -> Bool { Thread.isMainThread }
