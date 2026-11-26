@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JRemoteJumpBackwardEvent.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const RemoteJumpBackwardEvent& event) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRemoteJumpBackwardEvent> /* event */)>("invoke");
-      method(self(), JRemoteJumpBackwardEvent::fromCpp(event));
+      callJava(method, self(), JRemoteJumpBackwardEvent::fromCpp(event));
     }
   };
 

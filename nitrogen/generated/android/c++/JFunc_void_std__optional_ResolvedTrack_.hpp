@@ -48,6 +48,7 @@
 #include "JTrackStyle.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -67,7 +68,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::optional<ResolvedTrack>& content) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JResolvedTrack> /* content */)>("invoke");
-      method(self(), content.has_value() ? JResolvedTrack::fromCpp(content.value()) : nullptr);
+      callJava(method, self(), content.has_value() ? JResolvedTrack::fromCpp(content.value()) : nullptr);
     }
   };
 

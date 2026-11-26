@@ -22,6 +22,7 @@
 #include "PlaybackErrorKind.hpp"
 #include "JPlaybackErrorKind.hpp"
 #include <string>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -41,7 +42,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const Playback& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JPlayback> /* data */)>("invoke");
-      method(self(), JPlayback::fromCpp(data));
+      callJava(method, self(), JPlayback::fromCpp(data));
     }
   };
 

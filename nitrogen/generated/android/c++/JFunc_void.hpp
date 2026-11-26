@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -31,7 +32,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke() const {
       static const auto method = javaClassStatic()->getMethod<void()>("invoke");
-      method(self());
+      callJava(method, self());
     }
   };
 

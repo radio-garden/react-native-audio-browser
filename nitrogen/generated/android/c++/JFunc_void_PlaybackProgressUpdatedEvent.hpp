@@ -14,6 +14,7 @@
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
 #include "JPlaybackProgressUpdatedEvent.hpp"
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,7 +34,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const PlaybackProgressUpdatedEvent& data) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JPlaybackProgressUpdatedEvent> /* data */)>("invoke");
-      method(self(), JPlaybackProgressUpdatedEvent::fromCpp(data));
+      callJava(method, self(), JPlaybackProgressUpdatedEvent::fromCpp(data));
     }
   };
 

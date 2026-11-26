@@ -17,6 +17,7 @@
 #include "JChapterMetadata.hpp"
 #include <string>
 #include <optional>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -36,7 +37,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::vector<ChapterMetadata>& chapters) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JChapterMetadata>> /* chapters */)>("invoke");
-      method(self(), [&](auto&& __input) {
+      callJava(method, self(), [&](auto&& __input) {
         size_t __size = __input.size();
         jni::local_ref<jni::JArrayClass<JChapterMetadata>> __array = jni::JArrayClass<JChapterMetadata>::newArray(__size);
         for (size_t __i = 0; __i < __size; __i++) {

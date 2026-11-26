@@ -1,11 +1,19 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
+import { NitroConfig } from '../codegen/config/NitroConfig.js'
+import { createFbjniHybridObject } from '../codegen/syntax/kotlin/FbjniHybridObject.js'
 import { KotlinCxxBridgedType } from '../codegen/syntax/kotlin/KotlinCxxBridgedType.js'
+import { createKotlinFunction } from '../codegen/syntax/kotlin/KotlinFunction.js'
+import { createJNIHybridObjectRegistration } from '../codegen/syntax/kotlin/KotlinHybridObjectRegistration.js'
+import { Method } from '../codegen/syntax/Method.js'
+import { Parameter } from '../codegen/syntax/Parameter.js'
+import { Property } from '../codegen/syntax/Property.js'
 import { createSwiftCxxHelpers } from '../codegen/syntax/swift/SwiftCxxTypeHelper.js'
 import { ErrorType } from '../codegen/syntax/types/ErrorType.js'
 import { FunctionType } from '../codegen/syntax/types/FunctionType.js'
 import { NamedWrappingType } from '../codegen/syntax/types/NamedWrappingType.js'
+import { NumberType } from '../codegen/syntax/types/NumberType.js'
 import { PromiseType } from '../codegen/syntax/types/PromiseType.js'
 import { StringType } from '../codegen/syntax/types/StringType.js'
 import { VoidType } from '../codegen/syntax/types/VoidType.js'
@@ -168,5 +176,119 @@ describe('codegen: a Kotlin error crossing to C++ and JS', () => {
           .map((f) => f.file)
       ).toEqual([])
     })
+  })
+})
+
+const count = (code: string, text: string) => code.split(text).length - 1
+
+/**
+ * Whether every fbjni lookup of a Kotlin method or function is called through callJava, whose
+ * catch (JavaError.hpp) gives JS the Throwable's message. What JS then sees is checked on a device.
+ */
+const callsJavaThroughCallJava = (code: string) => {
+  const lookups = count(code, '->getMethod<')
+  return (
+    lookups > 0 &&
+    count(code, 'callJava(method, ') === lookups &&
+    !/\bmethod\(/.test(code) &&
+    code.includes('#include "JavaError.hpp"')
+  )
+}
+
+describe('codegen: a Kotlin hybrid method or property that throws synchronously', () => {
+  const spec = {
+    name: 'Thrower',
+    properties: [
+      new Property('state', new StringType(), true),
+      new Property('volume', new NumberType(), false)
+    ],
+    methods: [
+      new Method('stop', new VoidType(), []),
+      new Method('find', new StringType(), [
+        new Parameter('id', new StringType())
+      ])
+    ],
+    baseTypes: [],
+    config: NitroConfig.current
+  }
+  const cpp =
+    createFbjniHybridObject(spec as never).find((f) => f.name.endsWith('.cpp'))
+      ?.content ?? ''
+
+  it('calls every getter, setter and method through callJava', () => {
+    expect(count(cpp, '->getMethod<')).toBe(5)
+    expect(callsJavaThroughCallJava(cpp)).toBe(true)
+  })
+
+  it('calls Kotlin through callJava in the committed bridge', () => {
+    const files = readdirSync(ANDROID).filter((file) =>
+      /^JHybrid\w+Spec\.cpp$/.test(file)
+    )
+    expect(files.length).toBeGreaterThan(0)
+    expect(
+      files.filter(
+        (file) =>
+          !callsJavaThroughCallJava(readFileSync(join(ANDROID, file), 'utf8'))
+      )
+    ).toEqual([])
+  })
+})
+
+describe('codegen: a Kotlin function that throws when JS calls it', () => {
+  it('invokes it through callJava', () => {
+    const hpp =
+      createKotlinFunction(
+        new FunctionType(new StringType(), [
+          new NamedWrappingType('id', new StringType())
+        ])
+      ).find((f) => f.name.endsWith('.hpp'))?.content ?? ''
+    expect(count(hpp, '->getMethod<')).toBe(1)
+    expect(callsJavaThroughCallJava(hpp)).toBe(true)
+  })
+
+  it('invokes every Kotlin function through callJava in the committed bridge', () => {
+    const files = readdirSync(ANDROID).filter((file) =>
+      /^JFunc_\w+\.hpp$/.test(file)
+    )
+    expect(files.length).toBeGreaterThan(0)
+    expect(
+      files.filter(
+        (file) =>
+          !callsJavaThroughCallJava(readFileSync(join(ANDROID, file), 'utf8'))
+      )
+    ).toEqual([])
+  })
+})
+
+/** Whether every construction of a Kotlin hybrid object goes through callJava. */
+const constructsThroughCallJava = (code: string) => {
+  const constructions = count(code, '->newObject(')
+  return (
+    constructions > 0 &&
+    count(code, 'callJava([&] { return javaClassStatic()->newObject(') ===
+      constructions &&
+    code.includes('#include "JavaError.hpp"')
+  )
+}
+
+describe('codegen: a Kotlin hybrid object whose constructor throws', () => {
+  it('constructs it through callJava', () => {
+    const registration = createJNIHybridObjectRegistration({
+      hybridObjectName: 'Thrower',
+      jniClassName: 'Thrower'
+    })
+    const code = [
+      ...registration.requiredImports.map((i) => `#include "${i.name}"`),
+      registration.cppDefinition
+    ].join('\n')
+    expect(constructsThroughCallJava(code)).toBe(true)
+  })
+
+  it('constructs it through callJava in the committed bridge', () => {
+    const onLoad = readFileSync(
+      join(ANDROID, '..', 'AudioBrowserOnLoad.cpp'),
+      'utf8'
+    )
+    expect(constructsThroughCallJava(onLoad)).toBe(true)
   })
 })

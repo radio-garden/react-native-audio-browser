@@ -13,6 +13,7 @@
 #include <string>
 #include <functional>
 #include <NitroModules/JNICallable.hpp>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -32,7 +33,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const std::string& path) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("invoke");
-      method(self(), jni::make_jstring(path));
+      callJava(method, self(), jni::make_jstring(path));
     }
   };
 

@@ -69,7 +69,7 @@ namespace margelo::nitro::audiobrowser {
      */
     std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> invoke(const SearchParams& params) const {
       static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<JSearchParams> /* params */)>("invoke");
-      auto __result = method(self(), JSearchParams::fromCpp(params));
+      auto __result = callJava(method, self(), JSearchParams::fromCpp(params));
       return [&]() {
         auto __promise = Promise<std::shared_ptr<Promise<std::vector<Track>>>>::create();
         __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {

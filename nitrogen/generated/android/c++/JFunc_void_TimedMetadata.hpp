@@ -16,6 +16,7 @@
 #include "JTimedMetadata.hpp"
 #include <string>
 #include <optional>
+#include "JavaError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,7 +36,7 @@ namespace margelo::nitro::audiobrowser {
      */
     void invoke(const TimedMetadata& metadata) const {
       static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTimedMetadata> /* metadata */)>("invoke");
-      method(self(), JTimedMetadata::fromCpp(metadata));
+      callJava(method, self(), JTimedMetadata::fromCpp(metadata));
     }
   };
 

@@ -44,7 +44,7 @@ namespace margelo::nitro::audiobrowser {
      */
     std::shared_ptr<Promise<RequestConfig>> invoke(const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) const {
       static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<JRequestConfig> /* request */, jni::alias_ref<jni::JMap<jni::JString, jni::JString>> /* routeParams */)>("invoke");
-      auto __result = method(self(), JRequestConfig::fromCpp(request), routeParams.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
+      auto __result = callJava(method, self(), JRequestConfig::fromCpp(request), routeParams.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
         auto __map = jni::JHashMap<jni::JString, jni::JString>::create(routeParams.value().size());
         for (const auto& __entry : routeParams.value()) {
           __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
