@@ -1,5 +1,6 @@
 import type { Track, SearchParams } from '../../types'
 import type { BrowserManager } from './BrowserManager'
+import { fromCallback } from '../util/fromCallback'
 
 /**
  * Manages search functionality.
@@ -16,7 +17,8 @@ export class SearchManager {
    * @param params Search parameters (query is required, other fields optional)
    * @returns Array of matching tracks — empty only when the source found none
    * @throws The failure itself: an `Error` carrying a `NavigationErrorType`
-   *   `code` from `HttpClient`, or whatever a `searchCallback` rejected with
+   *   `code`: from `HttpClient`, or `'callback-error'` when a `searchCallback`
+   *   or a request `transform` throws or rejects
    */
   async search(params: SearchParams): Promise<Track[]> {
     // Find __search__ route entry
@@ -31,7 +33,8 @@ export class SearchManager {
 
     // Handle callback-based search - pass full SearchParams
     if (searchRoute.searchCallback) {
-      results = await searchRoute.searchCallback(params)
+      const searchCallback = searchRoute.searchCallback
+      results = await fromCallback(() => searchCallback(params))
     }
     // Handle request config-based search
     else if (searchRoute.searchConfig) {

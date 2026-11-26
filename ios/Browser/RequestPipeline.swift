@@ -47,47 +47,44 @@ final class RequestPipeline {
     }
   }
 
-  /// `layer` onto `base`: its transforms (async, then sync) when it has any, else its static
-  /// fields (`RequestLayer.apply`).
-  func applyLayer(
-    _ layer: (some TransformableLayer)?,
-    to base: RequestConfig,
-    params: [String: String]?,
-  ) async throws -> RequestConfig {
-    guard let layer else { return base }
-    var transforms: [nonisolated(nonsending)(RequestConfig) async throws -> RequestConfig] = []
-    if let transform = layer.transform {
-      transforms.append { try await self.awaitAsyncConfig(transform($0, params)) }
-    }
-    if let transformSync = layer.transformSync {
-      transforms.append { try await self.awaitSyncConfig(transformSync($0, params)) }
-    }
-    return try await RequestLayer.apply(RequestConfig(fieldsOf: layer), transforms: transforms, to: base)
+  private func source(_ layer: (some TransformableLayer)?) -> RequestLayer.Source<RequestConfig>? {
+    layer.map { (RequestConfig(fieldsOf: $0), transforms(of: $0)) }
   }
 
-  /// The HTTP request for an API-backed route: the request layer, then the `kind` layer (nil
-  /// for kinds with none), then `routeConfig` (nil for the implicit browse default).
-  /// `initialQuery` goes onto the request after the request layer, so it reaches the URL even
-  /// when a later layer's transforms replace that layer's static query. Throws
-  /// `BrowserError.missingBaseUrl` when no layer sets a base URL.
-  func buildApiRequest(
-    kind: KeyPath<ResolvedLayers, TransformableRequestConfig?>?,
+  private func transforms(
+    of layer: some TransformableLayer,
+  ) -> [nonisolated(nonsending)(RequestConfig, [String: String]?) async throws -> RequestConfig] {
+    var transforms: [nonisolated(nonsending)(RequestConfig, [String: String]?) async throws -> RequestConfig] = []
+    if let transform = layer.transform {
+      transforms.append { try await self.awaitAsyncConfig(transform($0, $1)) }
+    }
+    if let transformSync = layer.transformSync {
+      transforms.append { try await self.awaitSyncConfig(transformSync($0, $1)) }
+    }
+    return transforms
+  }
+
+  /// The HTTP request for an API-backed browse route: the request layer, the browse layer, then
+  /// `routeConfig` (nil for the implicit default), every transform handed `params`
+  /// (`RequestLayer.apiRequest`).
+  func buildBrowseRequest(
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
-    initialQuery: [String: String]? = nil,
   ) async throws -> HttpClient.HttpRequest {
-    var merged = RequestConfig.base(path: path)
     let layers = try await resolvedLayers()
-    merged = try await applyLayer(layers.request, to: merged, params: params)
-    if let initialQuery, !initialQuery.isEmpty {
-      merged = merged.copying(query: RequestLayer.mergeDicts(merged.query, initialQuery))
-    }
-    merged = try await applyLayer(kind.flatMap { layers[keyPath: $0] }, to: merged, params: params)
-    merged = try await applyLayer(routeConfig, to: merged, params: params)
+    let merged = try await RequestLayer.apiRequest(
+      request: source(layers.request), kind: source(layers.browse), route: source(routeConfig),
+      params: params, over: .base(path: path),
+    )
+    return try httpRequest(merged, path: path, routed: routeConfig != nil)
+  }
 
+  /// `merged` as an HTTP request. Throws `BrowserError.missingBaseUrl` when no layer set a base
+  /// URL.
+  private func httpRequest(_ merged: RequestConfig, path: String, routed: Bool) throws -> HttpClient.HttpRequest {
     guard merged.baseUrl != nil else {
-      throw BrowserError.missingBaseUrl(path: path, routed: routeConfig != nil)
+      throw BrowserError.missingBaseUrl(path: path, routed: routed)
     }
     return HttpClient.HttpRequest(
       url: RequestLayer.buildUrl(merged, defaultPath: path),
@@ -104,9 +101,7 @@ final class RequestPipeline {
     path: String,
     params: [String: String],
   ) async throws -> ResolvedTrack {
-    let request = try await buildApiRequest(
-      kind: \.browse, routeConfig, path: path, params: params,
-    )
+    let request = try await buildBrowseRequest(routeConfig, path: path, params: params)
 
     logger.debug("Resolving content from API")
     logger.debug("  path: \(path)")
@@ -127,14 +122,15 @@ final class RequestPipeline {
     return nitroResult
   }
 
-  /// A search route's tracks, through the request layer and `searchConfig`. The search params
-  /// go in as `initialQuery`; the config's path seeds the base, since a layer's static path
-  /// never applies.
+  /// A search route's tracks, through the request layer and `searchConfig` (`RequestLayer.searchRequest`).
+  /// The config's path seeds the base, since a layer's static path never applies.
   func fetchSearch(_ searchConfig: TransformableRequestConfig, params: SearchParams) async throws -> [Track] {
-    let request = try await buildApiRequest(
-      kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": params.query],
-      initialQuery: params.queryParams,
+    let path = searchConfig.path ?? ""
+    let merged = try await RequestLayer.searchRequest(
+      request: source(resolvedLayers().request), search: source(searchConfig), query: params.queryParams,
+      over: .base(path: path),
     )
+    let request = try httpRequest(merged, path: path, routed: true)
     logger.debug("Searching via API: \(request.url)")
     let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
     return jsonTracks.map { $0.toNitro() }
@@ -143,36 +139,35 @@ final class RequestPipeline {
   // MARK: - Media URL Resolution
 
   /// The media request for `originalUrl`: the request layer, the media layer, then what
-  /// `media.resolve(track)` produces over them. `track` only feeds `resolve`; its own `request`
-  /// is not merged here. A failing layer
-  /// leaves the URL as it is, with no headers.
+  /// `media.resolve(track)` produces over them, in Android's order. `track` only feeds
+  /// `resolve`; its own `request` is not merged here. A layer whose transform fails is skipped,
+  /// and so is a failing `resolve`; a failing request resolver leaves the URL as it is, with no
+  /// headers.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
-    let base: RequestConfig
+    var merged: RequestConfig
     do {
-      base = try await applyLayer(resolvedLayers().request, to: .base(path: originalUrl), params: [:])
+      merged = try await RequestLayer.mediaRequest(
+        request: source(resolvedLayers().request), media: source(config.media), over: .base(path: originalUrl),
+      )
+    } catch is CancellationError {
+      // Not a failure, so not logged as one.
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     } catch {
       logger.error("Media request layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
 
-    let resolveLayer: RequestConfig?
     do {
-      resolveLayer = try await resolveMediaTrackConfig(track)
+      if let resolveLayer = try await resolveMediaTrackConfig(track) {
+        merged = RequestLayer.merge(merged, resolveLayer)
+      }
     } catch {
       logger.error("Media resolve callback failed: \(error.localizedDescription)")
-      resolveLayer = nil
     }
 
-    do {
-      var merged = try await applyLayer(config.media, to: base, params: nil)
-      if let resolveLayer { merged = RequestLayer.merge(merged, resolveLayer) }
-      let finalUrl = RequestLayer.buildUrl(merged)
-      logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
-      return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
-    } catch {
-      logger.error("Media transform failed: \(error.localizedDescription)")
-      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
-    }
+    let finalUrl = RequestLayer.buildUrl(merged)
+    logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
+    return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
   }
 
   /// What the `media` config's `resolve` and `resolveSync` produce for `track`; nil without a
@@ -200,8 +195,8 @@ final class RequestPipeline {
   /// `asset:` image, which only CarPlay tabs draw; the artwork URL
   /// as is when no artwork config applies; else the request layer and the artwork config, in
   /// `RequestLayer.artwork`'s order. `perRouteConfig` replaces the global artwork config;
-  /// `imageContext` is the display size, nil at browse time. Nil when there is no artwork or a
-  /// callback fails.
+  /// `imageContext` is the display size, nil at browse time. A request layer whose transform
+  /// fails is skipped; nil when there is no artwork or any other callback fails.
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
     let artworkUrl = track.artwork?.url
     if let artworkUrl, let local = LocalArtwork(artworkUrl) {
@@ -220,7 +215,7 @@ final class RequestPipeline {
     }
 
     do {
-      let base = try await applyLayer(resolvedLayers().request, to: .base(path: artworkUrl), params: [:])
+      let shared = try await source(resolvedLayers().request)
       let resolve: (nonisolated(nonsending)() async throws -> RequestConfig?)? =
         if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
           { try await self.resolved(artworkConfig.resolve, artworkConfig.resolveSync, for: track) }
@@ -236,7 +231,8 @@ final class RequestPipeline {
       }
       guard let request = try await RequestLayer.artwork(
         RequestConfig(fieldsOf: artworkConfig),
-        over: base,
+        request: shared,
+        over: .base(path: artworkUrl),
         resolve: resolve,
         trackHasArtwork: track.artwork != nil,
         sizeQuery: RequestLayer.sizeQuery(artworkConfig.imageQueryParams, imageContext),

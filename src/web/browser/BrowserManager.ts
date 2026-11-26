@@ -17,6 +17,7 @@ import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { fromCallback } from '../util/fromCallback'
 import { GenerationMemo } from '../util/GenerationMemo'
 import { assertBrowsePageShape } from './assertBrowsePageShape'
 import { parseSearchResponse } from './parseSearchResponse'
@@ -937,23 +938,5 @@ export class BrowserManager {
       return firstTab?.path ?? '/'
     }
     return '/'
-  }
-}
-
-/**
- * Runs `call`, a call into a JS callback: what it throws or rejects with
- * becomes an `Error` with its message, `code: 'callback-error'`, and the
- * original as `cause`.
- */
-async function fromCallback<T>(call: () => T | Promise<T>): Promise<T> {
-  try {
-    return await call()
-  } catch (error) {
-    throw Object.assign(
-      new Error(error instanceof Error ? error.message : String(error), {
-        cause: error
-      }),
-      { code: 'callback-error' satisfies NavigationErrorType }
-    )
   }
 }

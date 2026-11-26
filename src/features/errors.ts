@@ -94,8 +94,8 @@ export interface PlaybackErrorEvent {
  * - `'http-error'` - Server returned a non-2xx HTTP status code, or returned 2xx but response
  *   parsing failed. Check `statusCode` and `statusCodeSuccess` for details.
  * - `'callback-error'` - One of your callbacks failed: a browse callback returned an error (e.g.,
- *   `{ error: 'message' }`), or a browse or search callback, a request or browse resolver, or (on
- *   iOS and Android; web skips the layer) a request `transform` threw or rejected. `message` is
+ *   `{ error: 'message' }`), or a browse or search callback, a request or browse resolver, or a
+ *   request `transform` threw or rejected. `message` is
  *   the returned or thrown error's message.
  *   Return `{ error }` for business logic errors like authentication failures or subscription
  *   requirements.

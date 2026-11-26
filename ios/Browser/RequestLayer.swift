@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 #if canImport(NitroModules)
   import NitroModules
 #endif
@@ -91,6 +92,100 @@ enum RequestLayer {
     return result
   }
 
+  /// `apply` for media and artwork, where a failing transform costs its own layer and not the
+  /// stack: on the `BrowserError` `apply` throws, it logs and hands back `base`, not a
+  /// half-applied config. A cancellation still throws. Android's `mergeConfigOrBase`.
+  nonisolated(nonsending) static func applyOrBase<C: RequestFields>(
+    _ layer: C,
+    transforms: [nonisolated(nonsending)(C) async throws -> C],
+    to base: C,
+  ) async throws -> C {
+    do {
+      return try await apply(layer, transforms: transforms, to: base)
+    } catch let error as BrowserError {
+      logger.error("Request transform failed, skipping its layer: \(error.localizedDescription)")
+      return base
+    }
+  }
+
+  /// A layer's static fields and its transforms, which take the route params.
+  typealias Source<C> = (fields: C, transforms: [nonisolated(nonsending)(C, [String: String]?) async throws -> C])
+
+  /// An API request's layers over `base`: the request layer, then `initialQuery` added to the
+  /// query (so it reaches the URL even when a later layer's transforms replace the static
+  /// query), then the kind layer and the route layer. Every transform gets `params`; a failing
+  /// one throws `BrowserError.callbackError`.
+  nonisolated(nonsending) static func apiRequest<C: RequestFields>(
+    request: Source<C>?,
+    kind: Source<C>?,
+    route: Source<C>?,
+    params: [String: String],
+    initialQuery: [String: String] = [:],
+    over base: C,
+  ) async throws -> C {
+    var config = try await applySource(request, params: params, to: base)
+    config = adding(query: initialQuery, to: config)
+    config = try await applySource(kind, params: params, to: config)
+    return try await applySource(route, params: params, to: config)
+  }
+
+  /// A search request: `apiRequest` with `search` as the kind layer and no route, `query` (what
+  /// the search appends to the URL) handed to every transform as its params, as on Android and
+  /// web.
+  nonisolated(nonsending) static func searchRequest<C: RequestFields>(
+    request: Source<C>?,
+    search: Source<C>?,
+    query: [String: String],
+    over base: C,
+  ) async throws -> C {
+    try await apiRequest(request: request, kind: search, route: nil, params: query, initialQuery: query, over: base)
+  }
+
+  /// A media request's layers over `base`: the request layer, then the media layer, each skipped
+  /// when its transform fails (`applyOrBase`). Their transforms get no route params, as on
+  /// Android and web.
+  nonisolated(nonsending) static func mediaRequest<C: RequestFields>(
+    request: Source<C>?,
+    media: Source<C>?,
+    over base: C,
+  ) async throws -> C {
+    var config = base
+    for layer in [request, media] {
+      guard let layer else { continue }
+      config = try await applyOrBase(layer.fields, transforms: bound(layer, params: nil), to: config)
+    }
+    return config
+  }
+
+  private nonisolated(nonsending) static func applySource<C: RequestFields>(
+    _ layer: Source<C>?,
+    params: [String: String],
+    to base: C,
+  ) async throws -> C {
+    guard let layer else { return base }
+    return try await apply(layer.fields, transforms: bound(layer, params: params), to: base)
+  }
+
+  /// `layer`'s transforms with `params` bound.
+  // swiftformat:disable:next opaqueGenericParameters
+  private static func bound<C: RequestFields>(
+    _ layer: Source<C>,
+    params: [String: String]?,
+  ) -> [nonisolated(nonsending)(C) async throws -> C] {
+    layer.transforms.map { transform in { try await transform($0, params) } }
+  }
+
+  /// `config` with `query` merged into its query, `query` winning.
+  static func adding<C: RequestFields>(query: [String: String], to config: C) -> C {
+    guard !query.isEmpty else { return config }
+    return merge(config, C(
+      method: nil, path: nil, baseUrl: nil, headers: nil,
+      query: query, body: nil, contentType: nil, userAgent: nil,
+    ))
+  }
+
+  private static let logger = Logger(subsystem: "com.audiobrowser", category: "RequestLayer")
+
   /// The sync config over the async one; nil only when both are nil.
   static func mergeResolved<C: RequestFields>(async asyncResolved: C?, sync syncResolved: C?) -> C? {
     guard let asyncResolved else { return syncResolved }
@@ -113,11 +208,14 @@ enum RequestLayer {
 
   // MARK: - Artwork
 
-  /// An artwork request, built in order: `artwork` over `base`, path included; what `resolve`
-  /// produces; `sizeQuery`; the transforms in turn; then `id` for `{id}`. Nil when `resolve`
-  /// produces nothing for a track without artwork, or when no path remains.
+  /// An artwork request, built in order: the `request` layer over `base`, skipped when its
+  /// transform fails (`applyOrBase`) and its transforms handed empty route params, as on
+  /// Android and web; `artwork` over that, path included; what `resolve` produces;
+  /// `sizeQuery`; the transforms in turn; then `id` for `{id}`. Nil when `resolve` produces
+  /// nothing for a track without artwork, or when no path remains.
   nonisolated(nonsending) static func artwork<C: RequestFields>(
     _ artwork: C,
+    request: Source<C>?,
     over base: C,
     resolve: (nonisolated(nonsending)() async throws -> C?)?,
     trackHasArtwork: Bool,
@@ -125,7 +223,11 @@ enum RequestLayer {
     transforms: [nonisolated(nonsending)(C) async throws -> C],
     id: String?,
   ) async throws -> C? {
-    var request = merge(base, artwork)
+    var shared = base
+    if let request {
+      shared = try await applyOrBase(request.fields, transforms: bound(request, params: [:]), to: base)
+    }
+    var request = merge(shared, artwork)
     if let resolve {
       if let resolved = try await resolve() {
         request = merge(request, resolved)
@@ -133,12 +235,7 @@ enum RequestLayer {
         return nil
       }
     }
-    if !sizeQuery.isEmpty {
-      request = merge(request, C(
-        method: nil, path: nil, baseUrl: nil, headers: nil,
-        query: sizeQuery, body: nil, contentType: nil, userAgent: nil,
-      ))
-    }
+    request = adding(query: sizeQuery, to: request)
     for transform in transforms {
       request = try await transform(request)
     }

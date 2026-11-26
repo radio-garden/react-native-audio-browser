@@ -47,6 +47,39 @@ describe('SearchManager', () => {
     ).rejects.toThrow('HTTP 500: Internal Server Error')
   })
 
+  it('rejects with callback-error, sending nothing, when the search transform throws', async () => {
+    const respond = vi.fn(() => Promise.resolve({ children: [] }))
+    const manager = makeSearchManager(respond, {
+      path: '__search__',
+      searchConfig: {
+        baseUrl: 'https://api.example.com',
+        transform: async () => {
+          throw new Error('token expired')
+        }
+      }
+    })
+    await expect(
+      manager.search({ query: 'jazz', reference: 'unknown' })
+    ).rejects.toMatchObject({
+      code: 'callback-error',
+      message: 'token expired'
+    })
+    expect(respond).not.toHaveBeenCalled()
+  })
+
+  it('rejects with callback-error when the search callback rejects', async () => {
+    const manager = makeSearchManager(() => Promise.resolve({ children: [] }), {
+      path: '__search__',
+      searchCallback: () => Promise.reject(new TypeError('search is down'))
+    })
+    await expect(
+      manager.search({ query: 'jazz', reference: 'unknown' })
+    ).rejects.toMatchObject({
+      code: 'callback-error',
+      message: 'search is down'
+    })
+  })
+
   it('resolves [] when the search found nothing', async () => {
     const manager = makeSearchManager(() => Promise.resolve({ children: [] }))
     await expect(
