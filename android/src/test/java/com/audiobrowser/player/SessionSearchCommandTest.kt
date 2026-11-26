@@ -72,18 +72,15 @@ class SessionSearchCommandTest {
     impatientPlayer.exoPlayer.release()
   }
 
-  private fun offersSearch(): Boolean =
+  private fun offersSearch(
+    callback: MediaLibraryService.MediaLibrarySession.Callback = this.callback
+  ): Boolean =
     callback
       .onConnect(session, car)
       .availableSessionCommands
       .contains(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
 
-  /** A browser whose search, if it has one, finds [hits]. */
-  private fun configureBrowser(
-    search: Boolean,
-    player: Player = this.player,
-    hits: Array<Track> = emptyArray(),
-  ) {
+  private fun browserConfig(search: Boolean, hits: Array<Track> = emptyArray()): BrowserConfig {
     val found =
       JsPromise<Promise<Array<Track>>>().apply {
         resolve(JsPromise<Array<Track>>().apply { resolve(hits) }.promise)
@@ -100,15 +97,20 @@ class SessionSearchCommandTest {
               found.promise
             },
         )
-    val browserManager =
-      BrowserManager().apply {
-        config =
-          BrowserConfig(
-            routes = if (search) arrayOf(route) else emptyArray(),
-            // Robolectric reports no network.
-            androidControllerOfflineError = false,
-          )
-      }
+    return BrowserConfig(
+      routes = if (search) arrayOf(route) else emptyArray(),
+      // Robolectric reports no network.
+      androidControllerOfflineError = false,
+    )
+  }
+
+  /** A browser whose search, if it has one, finds [hits]. */
+  private fun configureBrowser(
+    search: Boolean,
+    player: Player = this.player,
+    hits: Array<Track> = emptyArray(),
+  ) {
+    val browserManager = BrowserManager().apply { config = browserConfig(search, hits) }
     player.browser =
       mock(
         AudioBrowser::class.java,
@@ -156,6 +158,51 @@ class SessionSearchCommandTest {
   @Test
   fun `a car connecting before the browser is configured is offered search`() {
     assertTrue(offersSearch())
+  }
+
+  /**
+   * Whether a car connecting to the next process, before its browser is configured, is offered
+   * search.
+   */
+  private fun offersSearchOnColdStart(): Boolean {
+    val cold = Player(app).apply { setup(PlayerSetupOptions()) }
+    try {
+      return offersSearch(cold.getMediaSessionCallback())
+    } finally {
+      cold.exoPlayer.release()
+    }
+  }
+
+  @Test
+  fun `a car connecting on a cold start after a browser without search is not offered search`() {
+    configureBrowser(search = false)
+
+    assertFalse(offersSearchOnColdStart())
+  }
+
+  @Test
+  fun `a car connecting on a cold start after a browser configured without a media session is not offered search`() {
+    val sessionless = Player(app)
+    configureBrowser(search = false, player = sessionless)
+
+    assertFalse(offersSearchOnColdStart())
+  }
+
+  @Test
+  fun `a car connecting on a cold start after a browser reconfigured with search is offered search`() {
+    configureBrowser(search = false)
+    player.browser!!.browserManager.config = browserConfig(search = true)
+    player.notifyBrowserConfigurationReady()
+
+    assertTrue(offersSearchOnColdStart())
+  }
+
+  @Test
+  fun `a car connecting on the first cold start after an app update is offered search`() {
+    configureBrowser(search = false)
+    shadowOf(app.packageManager).getInternalMutablePackageInfo(app.packageName).lastUpdateTime += 1
+
+    assertTrue(offersSearchOnColdStart())
   }
 
   @Test
@@ -273,7 +320,8 @@ class SessionSearchCommandTest {
   @Test
   fun `a browser reconfigured without search withdraws it from cars that connect later`() {
     configureBrowser(search = true)
-    configureBrowser(search = false)
+    player.browser!!.browserManager.config = browserConfig(search = false)
+    player.notifyBrowserConfigurationReady()
 
     assertFalse(offersSearch())
   }

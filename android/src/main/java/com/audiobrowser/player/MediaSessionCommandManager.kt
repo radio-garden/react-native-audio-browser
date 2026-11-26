@@ -43,7 +43,7 @@ internal fun media3SlotsFor(slot: ButtonSlot): IntArray =
  * legacy PlaybackState that Android Auto and the Android 13+ media controls read. A per-controller
  * layout would reach neither: Android Auto connects as a legacy controller.
  */
-class MediaSessionCommandManager(private val automotive: Boolean) {
+class MediaSessionCommandManager(private val automotive: Boolean, searchAvailable: Boolean = true) {
 
   companion object {
     private const val CUSTOM_ACTION_JUMP_BACKWARD = "JUMP_BACKWARD"
@@ -105,7 +105,7 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   private var currentRemoteButtonLayout: RemoteButtonLayout? = null
   private var currentFavorited: Boolean? = null
   private var currentLive: Boolean = false
-  private var currentSearchAvailable: Boolean = true
+  private var currentSearchAvailable: Boolean = searchAvailable
   private var currentForwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
   private var currentBackwardJumpInterval: Double = DEFAULT_JUMP_INTERVAL
 
@@ -173,8 +173,9 @@ class MediaSessionCommandManager(private val automotive: Boolean) {
   }
 
   /**
-   * Call with the configured browser's search. Until then search is offered: a legacy controller
-   * keeps the commands it connects with, and on a cold start it connects before the configuration.
+   * Call with the configured browser's search. Until then the constructor's `searchAvailable` is
+   * offered: a legacy controller keeps the commands it connects with, and on a cold start it
+   * connects before the configuration.
    */
   fun updateSearchAvailable(mediaSession: MediaSession, available: Boolean) {
     if (currentSearchAvailable == available) return
