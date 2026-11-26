@@ -592,18 +592,20 @@ internal constructor(
 
   /**
    * Builds the first engine from the options the app last set up, else the defaults. Stored options
-   * the engine fails to build from fall back to the defaults, so the app's own setup reports it.
+   * the engine fails to build from fall back to the defaults, so the app's own setup reports it;
+   * the defaults replace them in the store unless the cache folder was locked.
    */
   fun setupFromStore() {
     val stored = EngineOptionsStore.load(context) ?: return setup(PlayerSetupOptions())
     try {
       setup(stored)
-    } catch (e: IllegalStateException) {
-      // A SimpleCache folder still locked, for one: the defaults build without a cache, and the
-      // app's options stay stored for the next start.
+    } catch (e: Exception) {
       Timber.w(e, "Could not build the engine from the stored options; building the defaults")
+      // A first build that failed past the engine's construction leaves that engine unreleased.
+      if (::exoPlayer.isInitialized) exoPlayer.release()
       setup(PlayerSetupOptions())
-      EngineOptionsStore.save(context, stored)
+      // The previous engine's cache not yet released: the app's options stay for the next start.
+      if (e is CacheFolderLockedException) EngineOptionsStore.save(context, stored)
     }
   }
 
@@ -680,15 +682,16 @@ internal constructor(
     if (setupOptions.maxCacheSize > 0) {
       // SimpleCache locks its folder: the constructor throws until the previous one is released.
       cache?.release()
+      val folder = File(context.cacheDir, "RNAB")
+      // MB to bytes
+      val evictor = LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1_000_000)
+      val database = StandaloneDatabaseProvider(context)
       cache =
-        SimpleCache(
-          File(context.cacheDir, "RNAB"),
-          LeastRecentlyUsedCacheEvictor(
-            // MB to bytes
-            setupOptions.maxCacheSize.toLong() * 1_000_000
-          ),
-          StandaloneDatabaseProvider(context),
-        )
+        try {
+          SimpleCache(folder, evictor, database)
+        } catch (e: IllegalStateException) {
+          throw CacheFolderLockedException(e)
+        }
     } else {
       cache?.release()
       cache = null
@@ -1770,3 +1773,7 @@ internal class RequestGatedException : IllegalStateException("Request is gated")
 /** A voice search that played nothing, whose SessionError has already told controllers why. */
 internal class VoiceSearchFailedException(message: String, cause: Throwable? = null) :
   IllegalStateException(message, cause)
+
+/** SimpleCache's refusal of a folder another instance holds. */
+private class CacheFolderLockedException(cause: IllegalStateException) :
+  IllegalStateException(cause.message, cause)

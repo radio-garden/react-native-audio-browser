@@ -90,6 +90,17 @@ internal fun buildPlayerEngine(
       .setName("AudioBrowser")
       .build()
 
+  try {
+    configure(exoPlayer, options)
+  } catch (e: Throwable) {
+    exoPlayer.release()
+    throw e
+  }
+
+  return PlayerEngine(loadControl, mediaFactory, exoPlayer)
+}
+
+private fun configure(exoPlayer: ExoPlayer, options: PlayerSetupOptions) {
   exoPlayer.setAudioAttributes(
     AudioAttributes.Builder()
       .setUsage(C.USAGE_MEDIA)
@@ -115,6 +126,4 @@ internal fun buildPlayerEngine(
         .setAudioOffloadPreferences(audioOffloadPreferences)
         .build()
   }
-
-  return PlayerEngine(loadControl, mediaFactory, exoPlayer)
 }
