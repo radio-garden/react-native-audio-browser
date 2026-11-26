@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import AudioBrowserTestable
@@ -16,9 +17,16 @@ struct MediaIntentDeadlineTests {
   @MainActor
   final class Intent {
     var played: [Track] = []
+    private let sleep: @Sendable (ContinuousClock.Instant) async throws -> Void
+
+    init(sleep: @escaping @Sendable (ContinuousClock.Instant) async throws -> Void = {
+      try await Task.sleep(until: $0, clock: .continuous)
+    }) {
+      self.sleep = sleep
+    }
 
     func answer(within timeout: Duration, search: @escaping @MainActor () async -> [Track]?) async -> Bool? {
-      await withDeadline(timeout) { _ in
+      await withDeadline(timeout, sleep: sleep) { _ in
         guard let tracks = await search(), !Task.isCancelled else { return false }
         self.played = tracks
         return true
@@ -26,35 +34,88 @@ struct MediaIntentDeadlineTests {
     }
   }
 
-  @Test func aSilentSearchFailsAtTheDeadlineAndPlaysNothing() async throws {
-    let intent = Intent()
-    let deadline = deadline
-    let answer = try await withinTimeLimit(.seconds(2)) {
+  /// A deadline that passes when the test calls `pass()`, however long the main actor is held up.
+  final class HeldDeadline: @unchecked Sendable {
+    private let lock = NSLock()
+    private var passed = false
+    private var sleeper: CheckedContinuation<Void, Error>?
+
+    @Sendable func sleep(until _: ContinuousClock.Instant) async throws {
+      try await withTaskCancellationHandler {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+          let now: Result<Void, Error>? = lock.withLock {
+            if passed { return .success(()) }
+            if Task.isCancelled { return .failure(CancellationError()) }
+            sleeper = continuation
+            return nil
+          }
+          if let now { continuation.resume(with: now) }
+        }
+      } onCancel: {
+        take()?.resume(throwing: CancellationError())
+      }
+    }
+
+    func pass() {
+      lock.withLock { passed = true }
+      take()?.resume()
+    }
+
+    private func take() -> CheckedContinuation<Void, Error>? {
+      lock.withLock {
+        defer { sleeper = nil }
+        return sleeper
+      }
+    }
+  }
+
+  /// Lets `wait()` through once `open()` has been called.
+  @MainActor
+  final class Latch {
+    private var opened = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func open() {
+      opened = true
+      waiter?.resume()
+      waiter = nil
+    }
+
+    func wait() async {
+      guard !opened else { return }
+      await withCheckedContinuation { waiter = $0 }
+    }
+  }
+
+  @Test(.timeLimit(.minutes(1))) func aSilentSearchFailsAtTheDeadline() async {
+    let held = HeldDeadline()
+    let intent = Intent(sleep: held.sleep)
+    let answering = Task {
       await intent.answer(within: deadline) {
         try? await awaitCallback { (_: @escaping @Sendable (Result<[Track]?, Error>) -> Void) in }
       }
     }
-    #expect(answer == nil)
-    try await Task.sleep(for: deadline * 2)
-    #expect(intent.played.isEmpty)
+    held.pass()
+    #expect(await answering.value == nil)
   }
 
-  @Test func aSearchAnsweringAfterTheDeadlinePlaysNothing() async throws {
-    let intent = Intent()
+  @Test(.timeLimit(.minutes(1))) func aSearchAnsweringAfterTheDeadlinePlaysNothing() async {
+    let held = HeldDeadline()
+    let intent = Intent(sleep: held.sleep)
     let found = found
-    let late = deadline * 2
-    let answer = await intent.answer(within: deadline) {
-      // Ignores cancellation, as a search whose result is already in hand does.
-      await withCheckedContinuation { continuation in
-        Task {
-          try? await Task.sleep(for: late)
-          continuation.resume()
-        }
+    let answered = Latch(), returned = Latch()
+    let answering = Task {
+      await intent.answer(within: deadline) {
+        // Ignores cancellation, as a search whose result is already in hand does.
+        await answered.wait()
+        returned.open()
+        return found
       }
-      return found
     }
-    #expect(answer == nil)
-    try await Task.sleep(for: late * 2)
+    held.pass()
+    #expect(await answering.value == nil)
+    answered.open()
+    await returned.wait()
     #expect(intent.played.isEmpty)
   }
 
