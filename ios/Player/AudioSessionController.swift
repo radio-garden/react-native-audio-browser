@@ -19,18 +19,15 @@ extension Player: AudioSessionPlayer {}
 /// route-change, media-services-reset and volume observers. The `AVAudioSession` calls and the
 /// observers are in `AudioSessionController+System.swift`, outside the SwiftPM test target.
 ///
+/// One per process, `shared`, as the session is: across a JS reload it outlives both instances,
+/// and serves whichever player the latest setup gave it.
+///
 /// The session is configured at setup but activated only when playback produces output:
 /// activating a non-mixable session interrupts other apps' audio, which must not happen at
 /// launch.
 @MainActor
 final class AudioSessionController {
-  weak var player: AudioSessionPlayer? {
-    didSet { if !isRetired { Self.currentPlayer = player } }
-  }
-
-  /// The newest controller's player: after a JS reload, the one whose playback a release must be
-  /// judged against.
-  private weak static var currentPlayer: AudioSessionPlayer?
+  weak var player: AudioSessionPlayer?
 
   let outputChanged = Emitter<Output>()
   let volumeChanged = Emitter<Double>()
@@ -42,36 +39,18 @@ final class AudioSessionController {
   private let setActive: @Sendable (Bool) throws -> Void
   private let releaseDelay: DispatchTimeInterval
 
-  /// Shared, as the session is: after a JS reload the old instance's release must not fire
-  /// under the new instance's playback.
-  private static var releaseWork: DispatchWorkItem?
+  private var releaseWork: DispatchWorkItem?
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioSession")
-  /// Bumped by each activation and by each interruption of the live controller: a refusal older
-  /// than either is stale, as is one on a retired controller.
-  private static var generation = 0
-
-  /// Set when a JS reload replaces this controller's instance; read on `activationQueue`, so a
-  /// category queued before the reload never lands after the new instance's.
-  private let retired = OSAllocatedUnfairLock(initialState: false)
+  /// Bumped by each activation and each interruption: a refusal older than either is stale.
+  private var generation = 0
 
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
-  /// thread. Serial and shared, like the session, so a release and a quick re-activation keep their
-  /// order, also across the controllers of a JS reload.
-  static let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
-
-  // Touched only by `init` and `deinit`.
-  nonisolated(unsafe) var observers: [NSObjectProtocol] = []
-  var volumeObservation: NSKeyValueObservation?
+  /// thread. Serial, so a release and a quick re-activation keep their order.
+  let activationQueue = DispatchQueue(label: "com.audiobrowser.audio-session", qos: .userInitiated)
 
   init(setActive: @escaping @Sendable (Bool) throws -> Void, releaseDelay: DispatchTimeInterval = .seconds(3)) {
     self.setActive = setActive
     self.releaseDelay = releaseDelay
-  }
-
-  deinit {
-    for observer in observers {
-      NotificationCenter.default.removeObserver(observer)
-    }
   }
 
   /// Sets the session category with `setCategory`, without activating it, and again after a
@@ -85,10 +64,10 @@ final class AudioSessionController {
   /// session is active; a refusal is logged and reported to the player instead.
   func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
     cancelRelease()
-    Self.generation += 1
-    let generation = Self.generation
+    generation += 1
+    let generation = generation
     let setActive = setActive
-    Self.activationQueue.async {
+    activationQueue.async {
       do {
         try setActive(true)
         if let then { Task { @MainActor in then() } }
@@ -97,7 +76,7 @@ final class AudioSessionController {
         Task { @MainActor [weak self] in
           guard let self else { return }
           logger.error("The audio session did not activate: \(message, privacy: .public)")
-          guard generation == Self.generation, !isRetired else { return }
+          guard generation == self.generation else { return }
           player?.handleAudioSessionActivationFailed()
         }
       }
@@ -108,37 +87,33 @@ final class AudioSessionController {
   /// Debounced: iOS dislikes deactivating while audio trails off, and a quick stop and play
   /// should not thrash it.
   func scheduleRelease() {
-    Self.releaseWork?.cancel()
-    let setActive = setActive
-    // Not through `self`: a JS reload drops this controller within the 3 s, and the release it
-    // owes must still run, unless the new player has restored a track in the meantime.
-    let release = DispatchWorkItem {
+    releaseWork?.cancel()
+    // Judged when it fires: a JS reload within the 3 s may have handed the session to a new
+    // player, or to none.
+    let release = DispatchWorkItem { [weak self] in
       MainActor.assumeIsolated {
-        guard Self.currentPlayer?.canReleaseAudioSession ?? true else { return }
-        Self.releaseWork = nil
-        Self.activationQueue.async { try? setActive(false) }
+        guard let self, self.player?.canReleaseAudioSession ?? true else { return }
+        self.releaseWork = nil
+        self.activationQueue.async { [setActive = self.setActive] in try? setActive(false) }
       }
     }
-    Self.releaseWork = release
+    releaseWork = release
     DispatchQueue.main.asyncAfter(deadline: .now() + releaseDelay, execute: release)
   }
 
-  /// Stops this controller setting the category: a JS reload's new instance owns the session now.
-  func retire() {
-    retired.withLock { $0 = true }
-  }
-
-  private var isRetired: Bool {
-    retired.withLock { $0 }
+  /// Stops serving `player`, unless a later setup has already replaced it: its JS instance is
+  /// gone, and an interruption's end must not resume it.
+  func detach(_ player: AudioSessionPlayer?) {
+    if self.player === player { self.player = nil }
   }
 
   func cancelRelease() {
-    Self.releaseWork?.cancel()
-    Self.releaseWork = nil
+    releaseWork?.cancel()
+    releaseWork = nil
   }
 
   func interruptionBegan() {
-    if !isRetired { Self.generation += 1 }
+    generation += 1
     player?.handleInterruptionBegan()
   }
 
@@ -164,9 +139,8 @@ final class AudioSessionController {
   /// so it must wait for `then`, which runs on the main actor once the category is set.
   private func applyCategory(then: @escaping @MainActor @Sendable () -> Void) {
     guard let setCategory else { return then() }
-    let retired = retired
-    Self.activationQueue.async {
-      if !retired.withLock({ $0 }) { try? setCategory() }
+    activationQueue.async {
+      try? setCategory()
       Task { @MainActor in then() }
     }
   }

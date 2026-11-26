@@ -56,7 +56,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browseGate = BrowseGate()
   let trackSelector: TrackSelector
   @MainActor private(set) var initialNavigation: Task<Void, Never>?
-  @MainActor private(set) lazy var audioSession = AudioSessionController()
+  /// Cancelled on a JS reload: the controller outlives this instance.
+  @MainActor private var audioSessionListeners: [Subscription] = []
   // Player state set before the player exists, by setup options or the setters; last write wins,
   // consumed when the player comes up.
   @MainActor var pendingPlayWhenReady: Bool?
@@ -250,8 +251,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared?.destroyPlayer()
       HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       HybridAudioBrowser.shared = self
-      audioSession.outputChanged.addListener { [weak self] in self?.onOutputChanged($0) }
-      audioSession.volumeChanged.addListener { [weak self] in self?.onSystemVolumeChanged($0) }
+      audioSessionListeners = [
+        AudioSessionController.shared.outputChanged.subscribe { [weak self] in self?.onOutputChanged($0) },
+        AudioSessionController.shared.volumeChanged.subscribe { [weak self] in self?.onSystemVolumeChanged($0) },
+      ]
       // Registered whether or not JS subscribes: the player needs it too.
       networkMonitor.changed.addListener { [weak self] isOnline in
         guard let self else { return }
@@ -287,7 +290,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }
     didDropJSCallbacks = true
-    audioSession.retire()
+    AudioSessionController.shared.detach(player)
+    audioSessionListeners = []
     // Assigning `config` marks the browser configured, and a never-configured browser must keep
     // CarPlay and Siri waiting on `playerAndConfiguredBrowser`, not serve them an empty config.
     if browserManager.isConfigured {

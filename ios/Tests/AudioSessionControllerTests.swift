@@ -104,16 +104,15 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
 
 /// Runs what the activation queue holds, then what it posted to the main actor.
 @MainActor
-private func drain(_: AudioSessionController) async {
+private func drain(_ controller: AudioSessionController) async {
   for _ in 0 ..< 2 {
     await withCheckedContinuation { continuation in
-      AudioSessionController.activationQueue.async { Task { @MainActor in continuation.resume() } }
+      controller.activationQueue.async { Task { @MainActor in continuation.resume() } }
     }
   }
 }
 
-// Serialized: the controllers share the session's state, as they do across a JS reload.
-@Suite("AudioSessionController", .serialized, .timeLimit(.minutes(1)))
+@Suite("AudioSessionController", .timeLimit(.minutes(1)))
 @MainActor
 struct AudioSessionControllerTests {
   @Test func aRefusalIsReportedToThePlayer() async {
@@ -161,52 +160,62 @@ struct AudioSessionControllerTests {
 
   @Test func aReloadsReleaseIsJudgedAgainstTheNewPlayer() async {
     let session = FakeAudioSession()
-    var old: AudioSessionController? = makeController(session)
+    let controller = makeController(session)
     let oldPlayer = FakeSessionPlayer()
-    old?.player = oldPlayer
-    old?.scheduleRelease()
+    controller.player = oldPlayer
+    controller.scheduleRelease()
 
-    old?.retire()
-    old = nil
-    let new = makeController(session)
+    controller.detach(oldPlayer)
     let newPlayer = FakeSessionPlayer()
     newPlayer.releasable = false
-    new.player = newPlayer
+    controller.player = newPlayer
 
     await eventually { newPlayer.releaseChecks == 1 }
-    await drain(new)
+    await drain(controller)
     #expect(session.calls == [])
 
     newPlayer.releasable = true
-    new.scheduleRelease()
+    controller.scheduleRelease()
     await eventually { session.calls == ["deactivate"] }
   }
 
-  @Test func aReleaseOwedByADroppedControllerStillRuns() async {
+  @Test func aReleaseScheduledBeforeAReloadStillRuns() async {
     let session = FakeAudioSession()
-    var old: AudioSessionController? = makeController(session)
+    let controller = makeController(session)
     let player = FakeSessionPlayer()
-    old?.player = player
-    old?.scheduleRelease()
-    old?.retire()
-    old = nil
+    player.releasable = false
+    controller.player = player
+    controller.scheduleRelease()
+
+    controller.detach(player)
 
     await eventually { session.calls == ["deactivate"] }
   }
 
-  @Test func aCategoryQueuedBeforeAReloadIsSkipped() async {
+  @Test func detachKeepsAPlayerThatReplacedTheDetachedOne() {
+    let controller = makeController(FakeAudioSession())
+    let old = FakeSessionPlayer()
+    let new = FakeSessionPlayer()
+    controller.player = new
+
+    controller.detach(old)
+
+    #expect(controller.player === new)
+  }
+
+  @Test func theLatestCategoryLandsLast() async {
     let session = FakeAudioSession()
-    let old = makeController(session)
+    let controller = makeController(session)
     session.holdNextCall = true
-    old.activate()
-    let configured = Task { await old.configure { session.setCategory() } }
-    await Task.yield()
+    let first = Task { await controller.configure { session.setCategory("first") } }
+    await eventually { session.isWaiting }
+    let second = Task { await controller.configure { session.setCategory("second") } }
 
-    old.retire()
     session.gate.signal()
-    await configured.value
+    await first.value
+    await second.value
 
-    #expect(session.calls == ["activate"])
+    #expect(session.calls == ["first", "second"])
   }
 
   @Test func configureReturnsOnceTheCategoryIsSet() async {
@@ -254,5 +263,21 @@ struct AudioSessionControllerTests {
 
     await eventually { player.interruptionEnds == [true] }
     #expect(session.calls == ["activate"])
+  }
+
+  @Test func aCallEndingAfterAReloadLeavesTheSessionAlone() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let oldPlayer = FakeSessionPlayer()
+    oldPlayer.willResumeAfterInterruption = true
+    controller.player = oldPlayer
+    controller.interruptionBegan()
+
+    controller.detach(oldPlayer)
+    controller.interruptionEnded(shouldResume: true)
+
+    await drain(controller)
+    #expect(session.calls == [])
+    #expect(oldPlayer.interruptionEnds == [])
   }
 }

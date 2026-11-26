@@ -21,7 +21,7 @@ public extension HybridAudioBrowser {
     guard !didDropJSCallbacks else { return }
     // Sets the category only; the session activates when playback produces output. Awaited
     // before the player is built, so it never plays under another category.
-    await audioSession.configure(options.ios)
+    await AudioSessionController.shared.configure(options.ios)
     // A JS reload's new instance took over during the wait.
     guard !didDropJSCallbacks else { return }
 
@@ -33,7 +33,6 @@ public extension HybridAudioBrowser {
     let newEngine = AVPlayerEngine(
       callbacks: self,
       resolver: browserManager.requests,
-      audioSession: audioSession,
       networkStatus: networkMonitor,
       bufferDuration: options.ios?.buffer ?? 0,
       nowPlayingEnabled: options.autoUpdateNowPlayingMetadata ?? true,
@@ -44,7 +43,7 @@ public extension HybridAudioBrowser {
     newEngine.nowPlayingUpdater.source = newPlayer
     engine = newEngine
     player = newPlayer
-    audioSession.player = newPlayer
+    AudioSessionController.shared.player = newPlayer
     browserManager.favorites.queue = newPlayer
 
     // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
