@@ -33,6 +33,15 @@ type ResolvedLayers = {
 }
 
 /**
+ * A browse resolution that failed. Resolution only returns it: whether it
+ * becomes the navigation error is for the caller to decide, since the same
+ * resolution serves the displayed page, the tabs and queue expansion.
+ */
+class BrowseFailure {
+  constructor(readonly error: unknown) {}
+}
+
+/**
  * Manages browser navigation, route resolution, and content loading.
  * Coordinates between HTTP client, favorite manager, and error manager.
  * Matches Android's BrowserManager architecture.
@@ -245,7 +254,7 @@ export class BrowserManager {
       // Search paths use a separate code path that doesn't add contextual URLs
       // This matches Android where search() bypasses resolve() entirely
       const isSearchPath = path.startsWith(BrowserPathHelper.SEARCH_PATH_PREFIX)
-      let content = isSearchPath
+      const resolved = isSearchPath
         ? await this.resolveSearchContent(path)
         : await this.resolveContent(path)
 
@@ -253,6 +262,13 @@ export class BrowserManager {
       if (navigationId !== this.currentNavigationId) {
         // A newer navigation started - discard this result
         return
+      }
+
+      let content: ResolvedTrack | undefined
+      if (resolved instanceof BrowseFailure) {
+        this.handleNavigationError(resolved.error, path)
+      } else {
+        content = resolved
       }
 
       // Resolution returns canonical sectioned pages; add contextual paths
@@ -447,7 +463,8 @@ export class BrowserManager {
    * @param path The path being navigated to
    * @param routeParams Extracted route parameters
    * @param errorContext Context string for error logging
-   * @returns ResolvedTrack or undefined if resolution fails
+   * @returns The page, a BrowseFailure when the route's callback or request
+   *   failed, or undefined when the route has no browse source
    */
   private async resolveRouteContent(
     route: {
@@ -470,7 +487,7 @@ export class BrowserManager {
     path: string,
     routeParams: Record<string, string>,
     errorContext: string
-  ): Promise<ResolvedTrack | undefined> {
+  ): Promise<ResolvedTrack | BrowseFailure | undefined> {
     // Handle callback-based route
     if (route.browseCallback) {
       const browseCallback = route.browseCallback
@@ -479,12 +496,10 @@ export class BrowserManager {
       )
       if ('error' in result) {
         console.error(`${errorContext} browse error:`, result.error)
-        this.navigationErrorManager.setNavigationError(
-          'callback-error',
-          result.error,
-          path
-        )
-        return undefined
+        return new BrowseFailure({
+          code: 'callback-error',
+          message: result.error
+        } satisfies { code: NavigationErrorType; message: string })
       }
       return normalizePage(result)
     }
@@ -509,8 +524,7 @@ export class BrowserManager {
         )
       } catch (error: unknown) {
         console.error(`Failed to resolve ${errorContext}:`, error)
-        this.handleNavigationError(error, path)
-        return undefined
+        return new BrowseFailure(error)
       }
     }
 
@@ -630,7 +644,7 @@ export class BrowserManager {
    */
   private async resolveContent(
     path: string
-  ): Promise<ResolvedTrack | undefined> {
+  ): Promise<ResolvedTrack | BrowseFailure | undefined> {
     const routes = this._configuration.routes
 
     if (routes && routes.length > 0) {
@@ -703,8 +717,7 @@ export class BrowserManager {
         )
       } catch (error: unknown) {
         console.error('Failed to resolve default browse content:', error)
-        this.handleNavigationError(error, path)
-        return undefined
+        return new BrowseFailure(error)
       }
     }
 
@@ -724,7 +737,8 @@ export class BrowserManager {
 
     const result = await this.resolveRouteContent(tabsRoute, '/', {}, 'Tabs')
     // Tabs are a flat list, not a page — a sectioned tabs source flattens.
-    const tabs = result ? flattenSections(result.sections) : []
+    const tabs =
+      result instanceof BrowseFailure ? [] : flattenSections(result?.sections)
 
     // Transform artwork URLs on tabs via the async resolver so the shared
     // request layer (incl. its transform) applies, matching content/search.
@@ -769,6 +783,7 @@ export class BrowserManager {
       // Resolve the parent container to get all siblings
       const parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       const parentResolvedTrack = await this.resolveContent(parentPath)
+      if (parentResolvedTrack instanceof BrowseFailure) return undefined
       const rawSections = parentResolvedTrack?.sections
 
       if (!rawSections || rawSections.every((s) => s.children.length === 0)) {
