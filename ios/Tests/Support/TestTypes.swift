@@ -325,7 +325,7 @@ final class SkippingClock: RetryClock, @unchecked Sendable {
   private var skippedMs = 0
 
   var nowMs: Int { real.nowMs + lock.withLock { skippedMs } }
-  func sleep(ms: Int) async throws { try await real.sleep(ms: ms) }
+  nonisolated(nonsending) func sleep(ms: Int) async throws { try await real.sleep(ms: ms) }
   func skip(_ ms: Int) { lock.withLock { skippedMs += ms } }
 }
 
@@ -358,7 +358,7 @@ final class VirtualClock: RetryClock, @unchecked Sendable {
     lock.withLock { timers[id] = Timer(atMs: atMs, order: id, action: action) }
   }
 
-  func sleep(ms: Int) async throws {
+  nonisolated(nonsending) func sleep(ms: Int) async throws {
     let id = allocate()
     try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
