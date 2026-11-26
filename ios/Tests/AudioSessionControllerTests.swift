@@ -63,9 +63,10 @@ final class FakeAudioSession: @unchecked Sendable {
 final class FakeSessionPlayer: AudioSessionPlayer {
   var releasable = true
   var releaseChecks = 0
+  /// As the real player's: a held resume keeps the session.
   var canReleaseAudioSession: Bool {
     releaseChecks += 1
-    return releasable
+    return releasable && !willResumeAfterInterruption
   }
 
   var willResumeAfterInterruption = false
@@ -315,5 +316,60 @@ struct AudioSessionControllerTests {
     #expect(session.calls == [])
     #expect(oldPlayer.interruptionEnds == [])
     #expect(newPlayer.interruptionEnds == [true])
+  }
+
+  @Test func aResumeOvertakenByAnotherInterruptionWaitsForItsEnd() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    player.willResumeAfterInterruption = true
+    controller.player = player
+    session.holdNextCall = true
+
+    controller.interruptionEnded(shouldResume: true)
+    await eventually { session.isWaiting }
+    controller.interruptionBegan()
+    session.gate.signal()
+    await drain(controller)
+    #expect(player.interruptionEnds == [])
+
+    controller.interruptionEnded(shouldResume: true)
+
+    await eventually { player.interruptionEnds == [true] }
+    #expect(session.calls == ["activate", "activate"])
+  }
+
+  @Test func aSkippedResumeStillReleasesASessionNothingHolds() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    player.willResumeAfterInterruption = true
+    controller.player = player
+    session.holdNextCall = true
+
+    controller.interruptionEnded(shouldResume: true)
+    await eventually { session.isWaiting }
+    controller.interruptionBegan()
+    // An unplug during the second interruption drops the resume the player kept.
+    player.willResumeAfterInterruption = false
+    session.gate.signal()
+
+    await eventually { session.calls == ["activate", "deactivate"] }
+    #expect(player.interruptionEnds == [])
+  }
+
+  @Test func anActivationsFollowUpRunsThoughAnInterruptionOvertookIt() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let followUps = SessionLog()
+    session.holdNextCall = true
+
+    controller.activate { followUps.entries.append("first") }
+    await eventually { session.isWaiting }
+    controller.interruptionBegan()
+    controller.activate { followUps.entries.append("second") }
+    session.gate.signal()
+
+    await eventually { followUps.entries == ["first", "second"] }
   }
 }
