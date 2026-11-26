@@ -126,6 +126,16 @@ describe('QueueManager', () => {
       expect(q.nextIndex()).toBe(1)
     })
 
+    it('keeps the shuffle order and history when shuffle is enabled again', () => {
+      q.currentIndex = 2
+
+      q.setShuffleEnabled(true)
+
+      // order stays [0,1,2,3]; a regeneration would lead with 2 → [2,1,0,3]
+      expect(q.previousIndex()).toBe(1)
+      expect(q.nextIndex()).toBe(3)
+    })
+
     // Mutations maintain the shuffle order in place (matching iOS/ExoPlayer)
     // instead of regenerating it — a regeneration erased the played history,
     // leaving previous() dead after any add/remove/move.
