@@ -30,7 +30,9 @@ extension AudioSessionController: AudioSessionControlling {}
 /// observers are in `AudioSessionController+System.swift`, outside the SwiftPM test target.
 ///
 /// One per process, `shared`, as the session is: across a JS reload it outlives both instances,
-/// and serves whichever player the latest setup gave it.
+/// and serves whichever player the latest setup gave it. Activations and cancelled releases from
+/// any other player are ignored, so a replaced or detached player's late call cannot reach the
+/// session.
 ///
 /// The session is configured at setup but activated only when playback produces output:
 /// activating a non-mixable session interrupts other apps' audio, which must not happen at
@@ -72,10 +74,13 @@ final class AudioSessionController {
     await withCheckedContinuation { continuation in applyCategory { continuation.resume() } }
   }
 
-  /// Activates the session for `requester` and cancels a pending release. `then` runs on the main
-  /// actor once the session is active; a refusal is logged and reported to the player instead.
+  /// Activates the session and cancels a pending release, if `requester` is the player served.
+  /// `then` runs on the main actor once the session is active; a refusal is logged and reported to
+  /// the player instead.
   func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)? = nil) {
-    cancelRelease(for: requester)
+    guard requester === player else { return }
+    releaseWork?.cancel()
+    releaseWork = nil
     generation += 1
     let generation = generation
     let setActive = setActive
@@ -96,6 +101,8 @@ final class AudioSessionController {
   }
 
   /// Releases the session after 3 s unless playback resumes, so other apps' audio can come back.
+  /// Takes no requester on purpose: a player's teardown schedules its release after it is
+  /// detached, and the release is judged against the player served when it fires.
   /// Debounced: iOS dislikes deactivating while audio trails off, and a quick stop and play
   /// should not thrash it.
   func scheduleRelease() {
@@ -119,7 +126,8 @@ final class AudioSessionController {
     if self.player === player { self.player = nil }
   }
 
-  func cancelRelease(for _: AudioSessionPlayer) {
+  func cancelRelease(for requester: AudioSessionPlayer) {
+    guard requester === player else { return }
     releaseWork?.cancel()
     releaseWork = nil
   }

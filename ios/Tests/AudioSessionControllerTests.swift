@@ -103,6 +103,13 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
   #expect(condition(), sourceLocation: sourceLocation)
 }
 
+/// Waits past `makeController`'s 20 ms release delay, then drains the activation queue.
+@MainActor
+private func outlastTheReleaseDelay(_ controller: AudioSessionController) async {
+  try? await Task.sleep(for: .milliseconds(100))
+  await drain(controller)
+}
+
 /// Runs what the activation queue holds, then what it posted to the main actor.
 @MainActor
 private func drain(_ controller: AudioSessionController) async {
@@ -363,15 +370,78 @@ struct AudioSessionControllerTests {
   @Test func anActivationsFollowUpRunsThoughAnInterruptionOvertookIt() async {
     let session = FakeAudioSession()
     let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    controller.player = player
     let followUps = SessionLog()
     session.holdNextCall = true
 
-    controller.activate { followUps.entries.append("first") }
+    controller.activate(for: player) { followUps.entries.append("first") }
     await eventually { session.isWaiting }
     controller.interruptionBegan()
-    controller.activate { followUps.entries.append("second") }
+    controller.activate(for: player) { followUps.entries.append("second") }
     session.gate.signal()
 
     await eventually { followUps.entries == ["first", "second"] }
+  }
+
+  @Test func aDetachedPlayersActivationKeepsTheNewPlayersRefusal() async {
+    let session = FakeAudioSession()
+    session.refused = [1]
+    let controller = makeController(session)
+    let oldPlayer = FakeSessionPlayer()
+    controller.player = oldPlayer
+    controller.detach(oldPlayer)
+    let newPlayer = FakeSessionPlayer()
+    controller.player = newPlayer
+
+    controller.activate(for: newPlayer)
+    controller.activate(for: oldPlayer)
+
+    await eventually { newPlayer.refusals == 1 }
+    await drain(controller)
+    #expect(session.calls == ["activate"])
+  }
+
+  @Test func aDetachedPlayersCancelKeepsTheNewPlayersRelease() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let oldPlayer = FakeSessionPlayer()
+    controller.player = oldPlayer
+    controller.detach(oldPlayer)
+    let newPlayer = FakeSessionPlayer()
+    controller.player = newPlayer
+
+    controller.scheduleRelease()
+    controller.cancelRelease(for: oldPlayer)
+
+    await eventually { session.calls == ["deactivate"] }
+  }
+
+  @Test func theServedPlayersCancelDropsThePendingRelease() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    controller.player = player
+
+    controller.scheduleRelease()
+    controller.cancelRelease(for: player)
+
+    await outlastTheReleaseDelay(controller)
+    #expect(session.calls == [])
+    #expect(player.releaseChecks == 0)
+  }
+
+  @Test func theServedPlayersActivationDropsThePendingRelease() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    controller.player = player
+
+    controller.scheduleRelease()
+    controller.activate(for: player)
+
+    await outlastTheReleaseDelay(controller)
+    #expect(session.calls == ["activate"])
+    #expect(player.releaseChecks == 0)
   }
 }
