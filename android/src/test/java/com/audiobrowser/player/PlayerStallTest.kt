@@ -7,6 +7,7 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.StuckPlayerException
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
+import com.audiobrowser.liveHlsUri
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentWavUri
@@ -128,6 +129,28 @@ class PlayerStallTest {
       assertTrue(renders.contains(Triple(0, PlaybackState.PLAYING, null)))
       assertEquals(emptyList<StallReason>(), renders.mapNotNull { it.third })
     }
+  }
+
+  @Test
+  fun `a live item buffering at the end of its window is a stall`() {
+    play(srcs = listOf(folder.liveHlsUri(segments = 6)))
+    idleUntil("the live window") {
+      !player.exoPlayer.currentTimeline.isEmpty && player.exoPlayer.isCurrentMediaItemLive
+    }
+    val windowMs = player.exoPlayer.duration
+    player.exoPlayer.seekTo(windowMs - 500)
+    shadowOf(Looper.getMainLooper()).idle()
+    assertTrue(player.exoPlayer.currentPosition >= windowMs - 1_000)
+    // Played since the seek's connect.
+    player.setPlaybackState(PlaybackState.PLAYING)
+    val rendersBefore = seen.size
+
+    player.setPlaybackState(PlaybackState.BUFFERING)
+
+    assertTrue(player.isStalled)
+    // Idling lets the engine report its own state after the render.
+    shadowOf(Looper.getMainLooper()).idle()
+    assertTrue(seen.drop(rendersBefore).any { it.stalled == StallReason.BUFFERING })
   }
 
   @Test

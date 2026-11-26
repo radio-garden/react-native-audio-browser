@@ -936,22 +936,23 @@ internal constructor(
 
   /**
    * Playback that had started waits for data. As iOS's `isStalled`, except that a seek's buffering
-   * isn't a stall, nor is waiting at an item's end for the next, which ExoPlayer reports before the
-   * transition.
+   * isn't a stall, nor is waiting at an on-demand item's end for the next, which ExoPlayer reports
+   * before the transition.
    */
   internal val isStalled: Boolean
     get() =
       playbackState == PlaybackState.BUFFERING &&
         shouldPlayWhenReady &&
         playedSinceConnect &&
-        !isAtItemEnd
+        !isAwaitingNextItem
 
   // ExoPlayer reports that BUFFERING once the old item's audio has drained, its position at the
-  // end.
-  private val isAtItemEnd: Boolean
+  // end. A live item's duration is its window, whose end a stalled stream also plays out to.
+  private val isAwaitingNextItem: Boolean
     get() {
       val durationMs = sessionPlayer.duration
-      return durationMs != C.TIME_UNSET &&
+      return !isCurrentItemLive &&
+        durationMs != C.TIME_UNSET &&
         sessionPlayer.currentPosition >= durationMs - ITEM_END_TOLERANCE_MS
     }
 
