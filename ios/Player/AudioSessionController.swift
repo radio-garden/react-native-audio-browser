@@ -39,7 +39,9 @@ extension AudioSessionController: AudioSessionControlling {}
 /// launch.
 @MainActor
 final class AudioSessionController {
-  weak var player: AudioSessionPlayer?
+  weak var player: AudioSessionPlayer? {
+    didSet { if player !== oldValue { generation += 1 } }
+  }
 
   let outputChanged = Emitter<Output>()
   let volumeChanged = Emitter<Double>()
@@ -53,7 +55,8 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioSession")
-  /// Bumped by each activation and each interruption: a refusal older than either is stale.
+  /// Bumped by each activation, each interruption and each change of player: a refusal older than
+  /// any of them is stale.
   private var generation = 0
   /// Bumped by each interruption: a resume older than one is stale.
   private var interruptions = 0
@@ -76,7 +79,8 @@ final class AudioSessionController {
 
   /// Activates the session and cancels a pending release, if `requester` is the player served.
   /// `then` runs on the main actor once the session is active; a refusal is logged and reported to
-  /// the player instead.
+  /// the player instead, unless a later activation, interruption or change of player has
+  /// overtaken it.
   func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)? = nil) {
     guard requester === player else { return }
     releaseWork?.cancel()
