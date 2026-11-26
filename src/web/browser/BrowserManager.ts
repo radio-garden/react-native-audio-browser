@@ -857,14 +857,21 @@ export class BrowserManager {
    * @param startIndex The starting index
    * @param startPositionMs The starting position in milliseconds
    * @param searchQuery Optional search query that generated these tracks
-   * @returns Object with expanded tracks and starting index
+   * @returns Object with expanded tracks and starting index, and the parent
+   *   path the queue was expanded from, which the caller records as
+   *   {@link queueSourcePath} when it applies the queue
    */
   async resolveMediaItemsForPlayback(
     tracks: Track[],
     startIndex: number,
     startPositionMs: number,
     searchQuery?: string
-  ): Promise<{ tracks: Track[]; startIndex: number; startPositionMs: number }> {
+  ): Promise<{
+    tracks: Track[]
+    startIndex: number
+    startPositionMs: number
+    sourcePath?: string
+  }> {
     // Single track: check for search context or contextual path
     if (tracks.length === 1) {
       const track = assertedNotNullish(tracks[0])
@@ -908,16 +915,14 @@ export class BrowserManager {
       // This matches Android where MediaSessionCallback handles the optimization before calling
       // BrowserManager.resolveMediaItemsForPlayback.
       if (trackPath && BrowserPathHelper.isContextual(trackPath)) {
-        const parentPath = BrowserPathHelper.stripTrackId(trackPath)
         const expanded = await this.expandQueueFromContextualPath(trackPath)
 
         if (expanded) {
-          // Store source path for optimization by caller on next invocation
-          this._queueSourcePath = parentPath
           return {
             tracks: expanded.tracks,
             startIndex: expanded.selectedIndex,
-            startPositionMs
+            startPositionMs,
+            sourcePath: BrowserPathHelper.stripTrackId(trackPath)
           }
         }
       }
