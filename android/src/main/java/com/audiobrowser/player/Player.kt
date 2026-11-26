@@ -55,6 +55,7 @@ import com.audiobrowser.util.awaitOrTimeout
 import com.audiobrowser.util.isAutomotive
 import com.audiobrowser.util.withTimeoutAsFailure
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.FailedRequestKind
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
@@ -339,16 +340,19 @@ internal constructor(
     get() = configuredBrowser?.takeIf { it.browserManager.config.hasSearch }
 
   /**
-   * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is.
+   * The browser [notifyBrowserConfigurationReady] registered, waiting for it if none is. A timeout
+   * counts toward [RegistrationTimeouts] under [kind]; pass null for a wait that follows a request
+   * already served (a tile read back, a re-announced search), so a count stays one per request.
    *
    * @throws TimeoutException if it is not registered within [browserRegistrationTimeout]
    */
-  suspend fun awaitBrowser(): AudioBrowser =
+  suspend fun awaitBrowser(kind: FailedRequestKind?): AudioBrowser =
     try {
       withTimeoutAsFailure(browserRegistrationTimeout, "Browser registration") {
         browserRegistered.await()
       }
     } catch (e: TimeoutException) {
+      kind?.let { RegistrationTimeouts.record(it) }
       Timber.e(e)
       throw e
     }
@@ -1263,7 +1267,7 @@ internal constructor(
    * @throws Exception when the browser is not registered in time
    */
   suspend fun voiceSearch(params: SearchParams): Array<Track> {
-    val audioBrowser = awaitBrowser()
+    val audioBrowser = awaitBrowser(FailedRequestKind.PLAYFROMSEARCH)
     val gateOutcome =
       audioBrowser.gateDecision(
         NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)

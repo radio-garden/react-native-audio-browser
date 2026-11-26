@@ -171,6 +171,10 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
+// Forward declaration of `FailedRequestCount` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FailedRequestCount; }
+// Forward declaration of `FailedRequestKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FailedRequestKind; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
@@ -445,6 +449,10 @@ namespace margelo::nitro::audiobrowser { struct RemoteOutputsOptions; }
 #include "JBatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "JBatteryOptimizationStatus.hpp"
+#include "FailedRequestCount.hpp"
+#include "JFailedRequestCount.hpp"
+#include "FailedRequestKind.hpp"
+#include "JFailedRequestKind.hpp"
 #include "Progress.hpp"
 #include "JProgress.hpp"
 #include "NativeSetupPlayerOptions.hpp"
@@ -1549,6 +1557,20 @@ namespace margelo::nitro::audiobrowser {
       }
       return __array;
     }(favorites));
+  }
+  std::vector<FailedRequestCount> JHybridAudioBrowserSpec::takeRequestsFailedBeforeRegistration() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JFailedRequestCount>>()>("takeRequestsFailedBeforeRegistration");
+    auto __result = method(_javaPart);
+    return [&](auto&& __input) {
+      size_t __size = __input->size();
+      std::vector<FailedRequestCount> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __input->getElement(__i);
+        __vector.push_back(__element->toCpp());
+      }
+      return __vector;
+    }(__result);
   }
   void JHybridAudioBrowserSpec::setGate(const std::optional<Gate>& gate, bool hasResolver) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JGate> /* gate */, jboolean /* hasResolver */)>("setGate");

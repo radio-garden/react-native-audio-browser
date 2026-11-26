@@ -46,6 +46,10 @@ namespace margelo::nitro::audiobrowser { enum class CardImage; }
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
+// Forward declaration of `FailedRequestCount` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FailedRequestCount; }
+// Forward declaration of `FailedRequestKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FailedRequestKind; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FindTrackParams` to properly resolve imports.
@@ -233,6 +237,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "CardImage.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
+#include "FailedRequestCount.hpp"
+#include "FailedRequestKind.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FindTrackParams.hpp"
 #include "FormatNavigationErrorParams.hpp"
@@ -2040,6 +2046,17 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
+  // pragma MARK: std::vector<FailedRequestCount>
+  /**
+   * Specialized version of `std::vector<FailedRequestCount>`.
+   */
+  using std__vector_FailedRequestCount_ = std::vector<FailedRequestCount>;
+  inline std::vector<FailedRequestCount> create_std__vector_FailedRequestCount_(size_t size) noexcept {
+    std::vector<FailedRequestCount> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
   // pragma MARK: std::optional<Gate>
   /**
    * Specialized version of `std::optional<Gate>`.
@@ -3695,6 +3712,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_FormattedNavigationError__ create_Result_std__optional_FormattedNavigationError__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<FormattedNavigationError>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::vector<FailedRequestCount>>
+  using Result_std__vector_FailedRequestCount__ = Result<std::vector<FailedRequestCount>>;
+  inline Result_std__vector_FailedRequestCount__ create_Result_std__vector_FailedRequestCount__(const std::vector<FailedRequestCount>& value) noexcept {
+    return Result<std::vector<FailedRequestCount>>::withValue(value);
+  }
+  inline Result_std__vector_FailedRequestCount__ create_Result_std__vector_FailedRequestCount__(const std::exception_ptr& error) noexcept {
+    return Result<std::vector<FailedRequestCount>>::withError(error);
   }
   
   // pragma MARK: Result<bool>

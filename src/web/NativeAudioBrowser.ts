@@ -36,6 +36,7 @@ import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,
   BatteryWarningPendingChangedEvent,
+  FailedRequestCount,
   NativeSetupPlayerOptions
 } from '../features'
 import type {
@@ -1240,6 +1241,11 @@ export class NativeAudioBrowser
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setEqualizerLevels(_levels: number[]): void {
     // No-op on web
+  }
+
+  // MARK: Requests failed before registration (Android only)
+  takeRequestsFailedBeforeRegistration(): FailedRequestCount[] {
+    return []
   }
 
   // MARK: Battery optimization (not supported on web)

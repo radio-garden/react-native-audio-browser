@@ -15,9 +15,11 @@ import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.buildService
 import com.audiobrowser.goOnline
+import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.session
 import com.audiobrowser.util.JsPromise
 import com.google.common.util.concurrent.ListenableFuture
+import com.margelo.nitro.audiobrowser.FailedRequestKind
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams
@@ -30,6 +32,7 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -141,6 +144,7 @@ class SessionVoiceSearchTest {
     query: String,
     extras: Bundle? = null,
     session: MediaSession = service.session,
+    player: Player = this.player,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     val item =
       MediaItem.Builder()
@@ -161,6 +165,26 @@ class SessionVoiceSearchTest {
   private fun idleAfterReports() {
     Thread.sleep(200)
     shadowOf(Looper.getMainLooper()).idle()
+  }
+
+  @Test
+  fun `a search made before the browser is configured counts as a failed play from search`() {
+    RegistrationTimeouts.take()
+    val impatientPlayer =
+      Player(RuntimeEnvironment.getApplication(), browserRegistrationTimeout = 50.milliseconds)
+        .apply { setup(PlayerSetupOptions()) }
+    try {
+      assertThrows(ExecutionException::class.java) {
+        requestFromSearch("jazz", player = impatientPlayer).get(5, TimeUnit.SECONDS)
+      }
+
+      assertEquals(
+        listOf(FailedRequestKind.PLAYFROMSEARCH to 1.0),
+        RegistrationTimeouts.take().map { it.kind to it.count },
+      )
+    } finally {
+      impatientPlayer.exoPlayer.release()
+    }
   }
 
   @Test

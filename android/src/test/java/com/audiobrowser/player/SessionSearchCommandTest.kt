@@ -17,6 +17,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.session
 import com.audiobrowser.util.JsPromise
+import com.margelo.nitro.audiobrowser.FailedRequestKind
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams
 import com.margelo.nitro.audiobrowser.Track
@@ -27,6 +28,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.RETURNS_DEFAULTS
@@ -65,6 +67,11 @@ class SessionSearchCommandTest {
       false,
     )
   private var gateDecisions = 0
+
+  @Before
+  fun forgetTimeouts() {
+    RegistrationTimeouts.take()
+  }
 
   @After
   fun release() {
@@ -287,6 +294,10 @@ class SessionSearchCommandTest {
     assertEquals(SessionError.ERROR_NOT_SUPPORTED, search.resultCode)
     assertEquals(listOf(0), announced("x"))
     assertEquals(SessionError.ERROR_NOT_SUPPORTED, result.resultCode)
+    assertEquals(
+      listOf(FailedRequestKind.SEARCH to 1.0),
+      RegistrationTimeouts.take().map { it.kind to it.count },
+    )
   }
 
   @Test

@@ -9,12 +9,14 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.util.BrowserPathHelper
+import com.margelo.nitro.audiobrowser.FailedRequestKind
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
@@ -43,7 +45,14 @@ class SessionBrowserNeverConfiguredTest {
     )
   private val session = mock(MediaLibraryService.MediaLibrarySession::class.java)
 
+  @Before
+  fun forgetTimeouts() {
+    RegistrationTimeouts.take()
+  }
+
   @After fun release() = player.exoPlayer.release()
+
+  private fun timeouts() = RegistrationTimeouts.take().map { it.kind to it.count }
 
   /** The error codes sent to the car, waiting up to 5 s for the first. */
   private fun errorsSentToTheCar(): List<Int> {
@@ -74,6 +83,7 @@ class SessionBrowserNeverConfiguredTest {
 
     assertThrows(ExecutionException::class.java) { request.get(5, TimeUnit.SECONDS) }
     assertEquals(listOf(SessionError.ERROR_UNKNOWN), errorsSentToTheCar())
+    assertEquals(listOf(FailedRequestKind.PLAY to 1.0), timeouts())
   }
 
   @Test
@@ -86,6 +96,7 @@ class SessionBrowserNeverConfiguredTest {
 
     assertEquals(BrowserPathHelper.ERROR_PATH, result.value!!.single().mediaId)
     assertEquals(listOf(SessionError.ERROR_UNKNOWN), errorsSentToTheCar())
+    assertEquals(listOf(FailedRequestKind.BROWSE to 1.0), timeouts())
   }
 
   @Test
@@ -94,5 +105,16 @@ class SessionBrowserNeverConfiguredTest {
       player.getMediaSessionCallback().onGetItem(session, car, "/library").get(5, TimeUnit.SECONDS)
 
     assertEquals(SessionError.ERROR_UNKNOWN, result.resultCode)
+    assertEquals(listOf(FailedRequestKind.BROWSE to 1.0), timeouts())
+  }
+
+  @Test
+  fun `the error tile read back while the browser is never configured counts nothing`() {
+    player
+      .getMediaSessionCallback()
+      .onGetItem(session, car, BrowserPathHelper.ERROR_PATH)
+      .get(5, TimeUnit.SECONDS)
+
+    assertEquals(emptyList<Pair<FailedRequestKind, Double>>(), timeouts())
   }
 }

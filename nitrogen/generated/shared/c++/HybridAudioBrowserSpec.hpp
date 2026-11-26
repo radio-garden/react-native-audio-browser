@@ -83,6 +83,8 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `NavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
+// Forward declaration of `FailedRequestCount` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FailedRequestCount; }
 // Forward declaration of `Gate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Gate; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
@@ -142,6 +144,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "NavigationError.hpp"
+#include "FailedRequestCount.hpp"
 #include "Gate.hpp"
 #include "NativeSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
@@ -304,6 +307,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void notifyContentChanged(const std::string& path) = 0;
       virtual void invalidateAllContent() = 0;
       virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
+      virtual std::vector<FailedRequestCount> takeRequestsFailedBeforeRegistration() = 0;
       virtual void setGate(const std::optional<Gate>& gate, bool hasResolver) = 0;
       virtual void clearGate() = 0;
       virtual bool isCarConnected() = 0;

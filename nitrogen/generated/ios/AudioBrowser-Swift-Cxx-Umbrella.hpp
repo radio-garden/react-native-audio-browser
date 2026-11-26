@@ -46,6 +46,10 @@ namespace margelo::nitro::audiobrowser { enum class CardImage; }
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
+// Forward declaration of `FailedRequestCount` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FailedRequestCount; }
+// Forward declaration of `FailedRequestKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FailedRequestKind; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FindTrackParams` to properly resolve imports.
@@ -233,6 +237,8 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "CardImage.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
+#include "FailedRequestCount.hpp"
+#include "FailedRequestKind.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FindTrackParams.hpp"
 #include "FormatNavigationErrorParams.hpp"
