@@ -45,10 +45,6 @@ class RetryLoadErrorHandlingPolicy(
     LIVE,
   }
 
-  companion object {
-    private val RETRYABLE_HTTP_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
-  }
-
   override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
     // Not super's verdict: it still backs off on some errors it doesn't treat as fatal (a 404),
     // which would retry a dead URL until the silence deadline.
@@ -103,6 +99,9 @@ class RetryLoadErrorHandlingPolicy(
       }
     }
 
+  /** The same statuses as iOS's PlaybackFailure retries. */
+  private fun isRetryableStatus(status: Int) = status == 408 || status == 429 || status in 500..599
+
   /**
    * Walks the cause chain: load errors arrive as raw IOExceptions (a Wi-Fi drop is a socket or DNS
    * error), never as a PlaybackException. Anything not known to be fatal is recoverable.
@@ -112,7 +111,7 @@ class RetryLoadErrorHandlingPolicy(
     while (current != null) {
       when (current) {
         is HttpDataSource.InvalidResponseCodeException ->
-          return current.responseCode in RETRYABLE_HTTP_STATUS_CODES
+          return isRetryableStatus(current.responseCode)
         // Mirrors DefaultLoadErrorHandlingPolicy's fatal set.
         is HttpDataSource.CleartextNotPermittedException,
         is ParserException,
