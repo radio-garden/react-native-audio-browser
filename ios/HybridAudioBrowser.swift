@@ -290,7 +290,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func dropStaleJSCallbacks() {
     guard !didDropJSCallbacks else { return }
     didDropJSCallbacks = true
-    AudioSessionController.shared.detach(player)
     audioSessionListeners = []
     // Assigning `config` marks the browser configured, and a never-configured browser must keep
     // CarPlay and Siri waiting on `playerAndConfiguredBrowser`, not serve them an empty config.
@@ -313,6 +312,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// otherwise outlive a dropped reference.
   @MainActor
   func destroyPlayer() {
+    AudioSessionController.shared.detach(player)
     Self.destroy(player, engine)
   }
 

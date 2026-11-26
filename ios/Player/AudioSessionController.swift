@@ -121,7 +121,12 @@ final class AudioSessionController {
     // Reactivate only when a resume follows, and resume once active: activating while staying
     // paused would hold a non-mixable session with nothing to release it.
     if shouldResume, player?.willResumeAfterInterruption == true {
-      activate { [weak self] in self?.player?.handleInterruptionEnded(shouldResume: true) }
+      activate { [weak self] in
+        guard let self else { return }
+        player?.handleInterruptionEnded(shouldResume: true)
+        // A JS reload while the session activated left no resume to hold it.
+        if player?.canReleaseAudioSession ?? true { scheduleRelease() }
+      }
     } else {
       player?.handleInterruptionEnded(shouldResume: shouldResume)
     }

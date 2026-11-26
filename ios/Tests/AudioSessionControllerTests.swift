@@ -280,4 +280,40 @@ struct AudioSessionControllerTests {
     #expect(session.calls == [])
     #expect(oldPlayer.interruptionEnds == [])
   }
+
+  @Test func aReloadDuringACallsReactivationReleasesTheSession() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    player.willResumeAfterInterruption = true
+    controller.player = player
+    session.holdNextCall = true
+
+    controller.interruptionEnded(shouldResume: true)
+    await eventually { session.isWaiting }
+    controller.detach(player)
+    session.gate.signal()
+
+    await eventually { session.calls == ["activate", "deactivate"] }
+    #expect(player.interruptionEnds == [])
+  }
+
+  @Test func aCallEndingAfterTheNewSetupIsTheNewPlayers() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let oldPlayer = FakeSessionPlayer()
+    oldPlayer.willResumeAfterInterruption = true
+    controller.player = oldPlayer
+    controller.interruptionBegan()
+
+    controller.detach(oldPlayer)
+    let newPlayer = FakeSessionPlayer()
+    controller.player = newPlayer
+    controller.interruptionEnded(shouldResume: true)
+
+    await drain(controller)
+    #expect(session.calls == [])
+    #expect(oldPlayer.interruptionEnds == [])
+    #expect(newPlayer.interruptionEnds == [true])
+  }
 }
