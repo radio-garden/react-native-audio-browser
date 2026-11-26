@@ -699,20 +699,45 @@ export class NativeAudioBrowser
    * Matches Android, where `load()` modifies the queue: an empty queue takes
    * the track as its only entry, a populated one has its current entry
    * replaced.
+   *
+   * @returns the track to load: `track` itself when it already is the current
+   * entry, otherwise its queue form.
    */
-  private syncQueueTo(track: Track): void {
+  private syncQueueTo(track: Track): Track {
+    const { currentIndex } = this.queue
+    if (
+      currentIndex !== undefined &&
+      this.queue.getTrack(currentIndex) === track
+    ) {
+      return track
+    }
+    const entry = this.toQueueEntry(track)
     if (this.queue.length === 0) {
-      this.queue.setTracks([track])
+      this.queue.setTracks([entry])
       this.queue.currentIndex = 0
       this.emitQueueChanged()
-      return
-    }
-    if (
-      this.queue.currentIndex !== undefined &&
-      this.queue.getTrack(this.queue.currentIndex) !== track
-    ) {
-      this.queue.replaceTrack(this.queue.currentIndex, track)
+    } else if (currentIndex !== undefined) {
+      this.queue.replaceTrack(currentIndex, entry)
       this.emitQueueChanged()
+    }
+    return entry
+  }
+
+  /**
+   * The form a track takes in the queue: `favorited` hydrated from the
+   * declared favorites and `artworkSource` resolved.
+   */
+  private toQueueEntry(track: Track): Track {
+    const { request, artwork } = this.browserManager.configuration
+    try {
+      return RequestConfigBuilder.transformTrackArtwork(
+        this.favoriteManager.hydrateFavorite(track),
+        request,
+        artwork
+      )
+    } catch (error) {
+      console.error('Failed to transform track:', error)
+      return track
     }
   }
 
@@ -803,12 +828,12 @@ export class NativeAudioBrowser
     this.dispatch({ type: 'trackLoading' })
   }
 
-  load(track: Track, callback?: (track: Track) => void): void {
+  load(given: Track, callback?: (track: Track) => void): void {
     // Before the queue is touched, so a load before `setupPlayer()` throws
     // rather than half-applying.
     this.requireElement()
 
-    this.syncQueueTo(track)
+    const track = this.syncQueueTo(given)
 
     // Begun here, at the call, so a newer load supersedes this one immediately
     // rather than once its own URL has resolved. Both continuations below carry
@@ -910,7 +935,10 @@ export class NativeAudioBrowser
   // Queue mutations must reach onPlaybackQueueChanged (the contract covers
   // added/removed/reordered; Android emits via onTimelineChanged).
   override add(tracks: Track[], insertBeforeIndex?: number): void {
-    super.add(tracks, insertBeforeIndex)
+    super.add(
+      tracks.map((track) => this.toQueueEntry(track)),
+      insertBeforeIndex
+    )
     this.emitQueueChanged()
   }
 
@@ -1101,23 +1129,7 @@ export class NativeAudioBrowser
     this.stop()
     // Clear stale references from previous queue
     this.current = undefined
-    // Hydrate favorites and transform artwork URLs on all tracks in the queue
-    const { request, artwork } = this.browserManager.configuration
-    this.queue.setTracks(
-      tracks.map((track) => {
-        try {
-          const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
-          return RequestConfigBuilder.transformTrackArtwork(
-            hydratedTrack,
-            request,
-            artwork
-          )
-        } catch (error) {
-          console.error('Failed to transform track:', error)
-          return track // Use original track as fallback
-        }
-      })
-    )
+    this.queue.setTracks(tracks.map((track) => this.toQueueEntry(track)))
     this.emitQueueChanged()
 
     if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
