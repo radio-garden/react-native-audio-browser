@@ -15,7 +15,10 @@ function makeManager(respond: () => Promise<unknown>): {
   formattedPaths: string[]
 } {
   const httpClient = {
-    executeRequest: vi.fn().mockImplementation(respond)
+    executeRequest: vi.fn(
+      async (_config: unknown, decode: (body: unknown) => unknown) =>
+        decode(await respond())
+    )
   } as unknown as HttpClient
   const errors = new NavigationErrorManager()
   const manager = new BrowserManager(httpClient, new FavoriteManager(), errors)
@@ -57,7 +60,7 @@ describe('navigating to a search path', () => {
       code: 'http-error',
       message: 'HTTP 500: Internal Server Error',
       statusCode: 500,
-      statusCodeSuccess: undefined
+      statusCodeSuccess: false
     })
     expect(formattedPaths).toEqual(['/__search?q=jazz'])
     expect(manager.content).toBeUndefined()

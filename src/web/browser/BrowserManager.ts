@@ -597,8 +597,9 @@ export class BrowserManager {
       ],
       params
     )
-    const response = await this.httpClient.executeRequest(merged)
-    return assertBrowsePageShape(response, path)
+    return this.httpClient.executeRequest(merged, (body) =>
+      assertBrowsePageShape(body, path)
+    )
   }
 
   /**
@@ -619,8 +620,7 @@ export class BrowserManager {
       [request, searchConfig],
       queryParams
     )
-    const response = await this.httpClient.executeRequest(merged)
-    return parseSearchResponse(response)
+    return this.httpClient.executeRequest(merged, parseSearchResponse)
   }
 
   /**
