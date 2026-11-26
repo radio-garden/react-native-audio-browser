@@ -271,16 +271,8 @@ final class AVPlayerEngine: PlayerEngine {
 
   // MARK: - Audio Session
 
-  func activateAudioSession() {
-    AudioSessionController.shared.activate { [weak self] in self?.nowPlayingInfoController.reactivateSessionIfNeeded() }
-  }
-
-  func cancelAudioSessionRelease() {
-    AudioSessionController.shared.cancelRelease()
-  }
-
-  func scheduleAudioSessionRelease() {
-    AudioSessionController.shared.scheduleRelease()
+  func reactivateNowPlayingSession() {
+    nowPlayingInfoController.reactivateSessionIfNeeded()
   }
 
   // MARK: - Observed Events

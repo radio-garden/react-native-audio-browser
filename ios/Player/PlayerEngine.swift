@@ -111,13 +111,7 @@ func clampedVolume(_ level: Double) -> Float? {
   func updateRemoteShuffleMode(_ enabled: Bool)
   func updateSkipAvailability(canNext: Bool, canPrevious: Bool)
 
-  // MARK: Audio session
-
-  /// Activates the audio session off the main thread, then re-requests the now-playing session,
-  /// which the system may have declined while the audio session was inactive.
-  func activateAudioSession()
-  func cancelAudioSessionRelease()
-  /// Releases the audio session after a debounce, unless playback resumes or
-  /// `cancelAudioSessionRelease()` runs first.
-  func scheduleAudioSessionRelease()
+  /// Re-requests the now-playing session, which the system may have declined while the audio
+  /// session was inactive.
+  func reactivateNowPlayingSession()
 }

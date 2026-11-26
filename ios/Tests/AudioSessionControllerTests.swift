@@ -123,7 +123,7 @@ struct AudioSessionControllerTests {
     let player = FakeSessionPlayer()
     controller.player = player
 
-    controller.activate()
+    controller.activate(for: player)
 
     await eventually { player.refusals == 1 }
   }
@@ -135,8 +135,8 @@ struct AudioSessionControllerTests {
     let player = FakeSessionPlayer()
     controller.player = player
 
-    controller.activate()
-    controller.activate()
+    controller.activate(for: player)
+    controller.activate(for: player)
 
     await eventually { session.calls == ["activate", "activate"] }
     await drain(controller)
@@ -150,7 +150,7 @@ struct AudioSessionControllerTests {
     let player = FakeSessionPlayer()
     controller.player = player
 
-    controller.activate()
+    controller.activate(for: player)
     controller.interruptionBegan()
 
     await eventually { session.calls == ["activate"] }
@@ -239,10 +239,12 @@ struct AudioSessionControllerTests {
   @Test func aCategoryLandsBeforeTheActivationAfterIt() async {
     let session = FakeAudioSession()
     let controller = makeController(session)
+    let player = FakeSessionPlayer()
+    controller.player = player
     session.holdNextCall = true
     let configured = Task { await controller.configure { session.setCategory() } }
     await eventually { session.isWaiting }
-    controller.activate()
+    controller.activate(for: player)
 
     session.gate.signal()
     await configured.value

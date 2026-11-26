@@ -160,9 +160,14 @@ final class MockPlayerEngine: PlayerEngine {
   var nowPlayingRenderCount = 0
   var nowPlayingTrackChangedCount = 0
   var appliedTimedMetadata: [TimedMetadata] = []
-  var activateAudioSessionCount = 0
-  var cancelAudioSessionReleaseCount = 0
-  var scheduleAudioSessionReleaseCount = 0
+  var activateCount = 0
+  var cancelReleaseCount = 0
+  var scheduleReleaseCount = 0
+  var activateRequesters: [AudioSessionPlayer] = []
+  /// What the activations run once the session is active; a test runs one to stand in for the
+  /// system.
+  var activateThens: [@MainActor @Sendable () -> Void] = []
+  var cancelReleaseRequesters: [AudioSessionPlayer] = []
   /// Called with the name of each seam call above, so a test can interleave them with callbacks.
   var onSeamCall: ((String) -> Void)?
 
@@ -185,19 +190,33 @@ final class MockPlayerEngine: PlayerEngine {
     onSeamCall?("clearTimedMetadata")
   }
 
-  func activateAudioSession() {
-    activateAudioSessionCount += 1
-    onSeamCall?("activateAudioSession")
+  var reactivateNowPlayingSessionCount = 0
+
+  func reactivateNowPlayingSession() {
+    reactivateNowPlayingSessionCount += 1
+    onSeamCall?("reactivateNowPlayingSession")
+  }
+}
+
+/// The engine mock stands in for the audio session too, so `onSeamCall` sees the session calls in
+/// order with the engine's.
+extension MockPlayerEngine: AudioSessionControlling {
+  func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)?) {
+    activateCount += 1
+    activateRequesters.append(requester)
+    if let then { activateThens.append(then) }
+    onSeamCall?("activate")
   }
 
-  func cancelAudioSessionRelease() {
-    cancelAudioSessionReleaseCount += 1
-    onSeamCall?("cancelAudioSessionRelease")
+  func cancelRelease(for requester: AudioSessionPlayer) {
+    cancelReleaseCount += 1
+    cancelReleaseRequesters.append(requester)
+    onSeamCall?("cancelRelease")
   }
 
-  func scheduleAudioSessionRelease() {
-    scheduleAudioSessionReleaseCount += 1
-    onSeamCall?("scheduleAudioSessionRelease")
+  func scheduleRelease() {
+    scheduleReleaseCount += 1
+    onSeamCall?("scheduleRelease")
   }
 }
 
@@ -212,7 +231,7 @@ func makePlayer(
   saveInterval: Duration = .seconds(5),
 ) -> Player {
   let player = Player(
-    engine: engine, retry: retry, sleepTimerScheduler: sleepTimerScheduler,
+    engine: engine, audioSession: engine, retry: retry, sleepTimerScheduler: sleepTimerScheduler,
     persistenceDefaults: UserDefaults(suiteName: "PlayerTests")!, persistenceSaveInterval: saveInterval,
   )
   // The Player reports its play intent to the loop from here on, starting from none.

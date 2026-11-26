@@ -932,11 +932,11 @@ struct NaturalEndPlayIntentTests {
   func naturalEnd_requestsSessionRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     eh.emit(.playedToEnd)
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   /// startPlayback() alone is a silent no-op on a player parked at the end of its item.
@@ -1560,9 +1560,9 @@ struct SessionReleaseTests {
   func pause_keepsTheSession() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.pause()
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
     #expect(c.canReleaseAudioSession == false)
   }
 
@@ -1570,9 +1570,9 @@ struct SessionReleaseTests {
   func stop_requestsRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.stop()
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
     #expect(c.canReleaseAudioSession == true)
   }
 
@@ -1581,16 +1581,16 @@ struct SessionReleaseTests {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.pause()
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.stop()
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   @Test @MainActor
   func play_doesNotRequestRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
@@ -1598,9 +1598,9 @@ struct SessionReleaseTests {
     // A call pauses but is meant to resume, so the session is held.
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.handleInterruptionBegan()
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
@@ -1608,9 +1608,9 @@ struct SessionReleaseTests {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.handleInterruptionBegan()
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: true)
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
@@ -1618,9 +1618,9 @@ struct SessionReleaseTests {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.handleInterruptionBegan()
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
     c.handleInterruptionEnded(shouldResume: false)
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
@@ -1628,41 +1628,55 @@ struct SessionReleaseTests {
     let (c, eh, _) = try makePlayingWithRetries()
     c.retry.handleError(URLError(.cannotConnectToHost), context: .playback)
     let retrying = c.retry.pendingTask
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.pause()
     await retrying?.value
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
   func terminalError_requestsRelease_withTheIntentHeld() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.transition(.errorOccurred(.playbackFailed))
 
     #expect(c.playWhenReady == true)
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
     #expect(c.canReleaseAudioSession == true)
   }
 
   /// A play from `.error` activates the session, which cancels the pending release, and leaves
   /// `canReleaseAudioSession` false for the controller's check when the release fires.
   @Test @MainActor
+  func anActiveSession_reactivatesTheNowPlayingSession() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    #expect(eh.reactivateNowPlayingSessionCount == 0)
+
+    let then = try #require(eh.activateThens.last)
+    then()
+
+    #expect(eh.reactivateNowPlayingSessionCount == 1)
+  }
+
+  @Test @MainActor
   func playFromError_activatesTheSession_andBlocksTheRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.transition(.errorOccurred(.playbackFailed))
-    eh.activateAudioSessionCount = 0
+    eh.activateCount = 0
+    eh.activateRequesters = []
 
     c.play()
 
     #expect(c.state == .loading)
     #expect(c.canReleaseAudioSession == false)
-    #expect(eh.activateAudioSessionCount == 1)
+    #expect(eh.activateCount == 1)
+    #expect(eh.activateRequesters.map(ObjectIdentifier.init) == [ObjectIdentifier(c)])
   }
 
   @Test @MainActor
@@ -1687,11 +1701,11 @@ struct SessionReleaseTests {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.pause()
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.transition(.errorOccurred(.playbackFailed))
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   /// `reset()`, an empty `setQueue` and removing the last track all clear the queue.
@@ -1699,12 +1713,12 @@ struct SessionReleaseTests {
   func clear_requestsRelease_withTheIntentHeld() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.clear()
 
     #expect(c.playWhenReady == true)
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
     #expect(c.canReleaseAudioSession == true)
   }
 
@@ -1715,11 +1729,11 @@ struct SessionReleaseTests {
     try startPlaying(c, eh)
     c.pause()
     c.clear()
-    eh.cancelAudioSessionReleaseCount = 0
+    eh.cancelReleaseCount = 0
 
     c.play()
 
-    #expect(eh.cancelAudioSessionReleaseCount == 0)
+    #expect(eh.cancelReleaseCount == 0)
   }
 
   /// Nobody asked for the session back: the other app's audio the release returns keeps playing.
@@ -1728,16 +1742,18 @@ struct SessionReleaseTests {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
     c.stop()
-    eh.cancelAudioSessionReleaseCount = 0
+    eh.cancelReleaseCount = 0
 
     try loadTrack(c, id: "t2")
 
-    #expect(eh.cancelAudioSessionReleaseCount == 0)
+    #expect(eh.cancelReleaseCount == 0)
     #expect(c.canReleaseAudioSession == true)
 
+    eh.cancelReleaseRequesters = []
     c.play()
 
-    #expect(eh.cancelAudioSessionReleaseCount == 1)
+    #expect(eh.cancelReleaseCount == 1)
+    #expect(eh.cancelReleaseRequesters.map(ObjectIdentifier.init) == [ObjectIdentifier(c)])
   }
 
   /// `.none` with a track loaded: a pause observed before the asset arrived.
@@ -1747,11 +1763,11 @@ struct SessionReleaseTests {
     try loadTrack(c)
     c.setPlayWhenReady(true)
     c.transition(.avPlayerPaused(hasAsset: false))
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.clear()
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   @Test @MainActor
@@ -1760,11 +1776,11 @@ struct SessionReleaseTests {
     try startPlaying(c, eh)
     c.handleInterruptionBegan()
     c.transition(.errorOccurred(.playbackFailed))
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.handleInterruptionEnded(shouldResume: false)
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   @Test @MainActor
@@ -1773,11 +1789,11 @@ struct SessionReleaseTests {
     try startPlaying(c, eh)
     c.handleInterruptionBegan()
     c.transition(.errorOccurred(.playbackFailed))
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.handleRouteDisconnected()
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   /// The AVPlayer's own pause, swallowed while the intent held, does not come again.
@@ -1799,11 +1815,11 @@ struct SessionReleaseTests {
     try startPlaying(c, eh)
     c.handleInterruptionBegan()
     c.transition(.errorOccurred(.playbackFailed))
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.handleAudioSessionActivationFailed()
 
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 
   @Test @MainActor
@@ -1830,25 +1846,25 @@ struct RemoteStopTests {
     eh.hasItem = true
     c.setPlayWhenReady(true)
     c.transition(.avPlayerPlaying)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.stopFromRemote()
 
     #expect(c.playWhenReady == false)
     #expect(c.state != .stopped)
-    #expect(eh.scheduleAudioSessionReleaseCount == 0)
+    #expect(eh.scheduleReleaseCount == 0)
   }
 
   @Test @MainActor
   func remoteStop_onATrackThatIsNotLive_stopsAndRequestsRelease() throws {
     let (c, eh, _, _) = makeCoordinator()
     try startPlaying(c, eh)
-    eh.scheduleAudioSessionReleaseCount = 0
+    eh.scheduleReleaseCount = 0
 
     c.stopFromRemote()
 
     #expect(c.state == .stopped)
-    #expect(eh.scheduleAudioSessionReleaseCount == 1)
+    #expect(eh.scheduleReleaseCount == 1)
   }
 }
 
@@ -1874,8 +1890,8 @@ struct MediaStackEffectTests {
     c.setPlayWhenReady(true)
 
     #expect(cb.publishOrder == [
-      "cancelAudioSessionRelease", "playWhenReady",
-      "playingState", "activateAudioSession", "renderNowPlaying",
+      "cancelRelease", "playWhenReady",
+      "playingState", "activate", "renderNowPlaying",
     ])
   }
 
@@ -1889,8 +1905,8 @@ struct MediaStackEffectTests {
 
     c.retryNow()
 
-    #expect(cb.publishOrder.first == "cancelAudioSessionRelease")
-    #expect(cb.publishOrder.count(where: { $0 == "cancelAudioSessionRelease" }) == 1)
+    #expect(cb.publishOrder.first == "cancelRelease")
+    #expect(cb.publishOrder.count(where: { $0 == "cancelRelease" }) == 1)
   }
 
   @Test @MainActor

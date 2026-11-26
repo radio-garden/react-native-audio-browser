@@ -15,6 +15,16 @@ protocol AudioSessionPlayer: AnyObject {
 
 extension Player: AudioSessionPlayer {}
 
+/// The audio session as the `Player` drives it: `AudioSessionController.shared` in the app.
+@MainActor
+protocol AudioSessionControlling: AnyObject {
+  func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)?)
+  func cancelRelease(for requester: AudioSessionPlayer)
+  func scheduleRelease()
+}
+
+extension AudioSessionController: AudioSessionControlling {}
+
 /// Owns the app's `AVAudioSession`: category, activation and release, and the interruption,
 /// route-change, media-services-reset and volume observers. The `AVAudioSession` calls and the
 /// observers are in `AudioSessionController+System.swift`, outside the SwiftPM test target.
@@ -62,10 +72,10 @@ final class AudioSessionController {
     await withCheckedContinuation { continuation in applyCategory { continuation.resume() } }
   }
 
-  /// Activates the session and cancels a pending release. `then` runs on the main actor once the
-  /// session is active; a refusal is logged and reported to the player instead.
-  func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
-    cancelRelease()
+  /// Activates the session for `requester` and cancels a pending release. `then` runs on the main
+  /// actor once the session is active; a refusal is logged and reported to the player instead.
+  func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)? = nil) {
+    cancelRelease(for: requester)
     generation += 1
     let generation = generation
     let setActive = setActive
@@ -109,7 +119,7 @@ final class AudioSessionController {
     if self.player === player { self.player = nil }
   }
 
-  func cancelRelease() {
+  func cancelRelease(for _: AudioSessionPlayer) {
     releaseWork?.cancel()
     releaseWork = nil
   }
@@ -123,9 +133,9 @@ final class AudioSessionController {
   func interruptionEnded(shouldResume: Bool) {
     // Reactivate only when a resume follows, and resume once active: activating while staying
     // paused would hold a non-mixable session with nothing to release it.
-    if shouldResume, player?.willResumeAfterInterruption == true {
+    if shouldResume, let resuming = player, resuming.willResumeAfterInterruption {
       let interruptions = interruptions
-      activate { [weak self] in
+      activate(for: resuming) { [weak self] in
         guard let self else { return }
         // Another interruption began while the session activated: its own end resumes.
         if interruptions == self.interruptions { player?.handleInterruptionEnded(shouldResume: true) }
