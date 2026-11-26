@@ -5,7 +5,8 @@ import os.log
 
 @MainActor protocol TrackSelectionBrowser {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool
-  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)?
+  func expandQueueFromContextualPath(_ path: String) async throws
+    -> (tracks: [Track], selectedIndex: Int, sourcePath: String)?
 }
 
 @MainActor protocol TrackSelectionPlayer {
@@ -136,12 +137,12 @@ class TrackSelector {
     }
 
     do {
-      guard let (tracks, startIndex) = try await browserManager.expandQueueFromContextualPath(path) else {
+      guard let (tracks, startIndex, sourcePath) = try await browserManager.expandQueueFromContextualPath(path) else {
         return .single(track)
       }
       return PlannedPlayback(
         queue: tracks, index: startIndex,
-        intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: parentPath),
+        intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: sourcePath),
       )
     } catch {
       logger.error("Error expanding queue: \(error.localizedDescription)")

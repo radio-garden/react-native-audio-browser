@@ -20,6 +20,14 @@ enum BrowserPathHelper {
 
   private static let contextualIndexParam = "__index"
 
+  /// A `.path`-queued section's child names the page it was tapped on, and its position there.
+  private static let contextualFromParam = "__from"
+  private static let contextualFromIndexParam = "__fromIndex"
+
+  private static let contextualParams = [
+    contextualTrackParam, contextualIndexParam, contextualFromParam, contextualFromIndexParam,
+  ]
+
   static func isSearchPath(_ path: String) -> Bool {
     path.hasPrefix("\(searchPathPrefix)?")
   }
@@ -35,16 +43,16 @@ enum BrowserPathHelper {
       || path.contains("&\(contextualTrackParam)=")
   }
 
-  /// Strips both `__trackId` and `__index` and leaves every other character as it is, so the
-  /// result equals the parent path the contextual path was built on; `url` unchanged when it is
-  /// not contextual.
+  /// Strips the contextual parameters and leaves every other character as it is, so the result
+  /// equals the parent path the contextual path was built on; `url` unchanged when it is not
+  /// contextual.
   static func stripTrackId(_ url: String) -> String {
     guard isContextual(url), let query = splitQuery(url) else {
       return url
     }
 
-    let kept = query.pairs.filter {
-      !$0.hasPrefix("\(contextualTrackParam)=") && !$0.hasPrefix("\(contextualIndexParam)=")
+    let kept = query.pairs.filter { pair in
+      !contextualParams.contains { pair.hasPrefix("\($0)=") }
     }
     return kept.isEmpty ? String(query.head) : "\(query.head)?\(kept.joined(separator: "&"))"
   }
@@ -57,6 +65,25 @@ enum BrowserPathHelper {
     let separator = parentPath.contains("?") ? "&" : "?"
     let indexParam = index.map { "&\(contextualIndexParam)=\($0)" } ?? ""
     return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)\(indexParam)"
+  }
+
+  /// The contextual path of a `.path`-queued section's child: against the `linkedPath` page, by
+  /// identity alone, carrying the `originPath` page it sits on and its `originIndex` there.
+  static func buildLinked(linkedPath: String, trackId: String, originPath: String, originIndex: Int) -> String {
+    let encodedOrigin =
+      originPath.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? originPath
+    return "\(build(parentPath: linkedPath, trackId: trackId))&\(contextualFromParam)=\(encodedOrigin)"
+      + "&\(contextualFromIndexParam)=\(originIndex)"
+  }
+
+  /// The contextual path `path`'s track has on the page it was tapped on; nil when `path` was not
+  /// built by `buildLinked`.
+  static func extractOrigin(_ path: String) -> String? {
+    guard let trackId = extractTrackId(path), let origin = contextualValue(contextualFromParam, in: path) else {
+      return nil
+    }
+    let index = contextualValue(contextualFromIndexParam, in: path).flatMap { Int($0) }.flatMap { $0 >= 0 ? $0 : nil }
+    return build(parentPath: origin, trackId: trackId, index: index)
   }
 
   static func extractTrackId(_ path: String) -> String? {
@@ -156,7 +183,9 @@ extension BrowserPathHelper {
           )
         }
         if let linkedPath {
-          return track.copying(path: build(parentPath: linkedPath, trackId: identity))
+          return track.copying(path: buildLinked(
+            linkedPath: linkedPath, trackId: identity, originPath: parentPath, originIndex: flatIndex,
+          ))
         }
         return track.copying(path: build(parentPath: parentPath, trackId: identity, index: flatIndex))
       })

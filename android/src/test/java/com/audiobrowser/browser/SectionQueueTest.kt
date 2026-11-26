@@ -10,6 +10,7 @@ import com.margelo.nitro.audiobrowser.SectionQueue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -96,8 +97,59 @@ class SectionQueueTest {
 
       browserManager.expandQueueFromContextualPath(browserManager.contextualPathFor("x")!!)
 
-      assertEquals(BrowserPathHelper.build("/channels", "y"), browserManager.contextualPathFor("y"))
+      assertEquals(
+        BrowserPathHelper.buildLinked("/channels", "y", "/home", 1),
+        browserManager.contextualPathFor("y"),
+      )
     }
+
+  @Test
+  fun `a path-queued preview whose linked page fails queues its own children, from its page`() =
+    runBlocking {
+      serve("/home" to arrayOf(preview(SectionQueue.PATH)))
+
+      val tapped = browserManager.navigate("/home").flattenedChildren!![1]
+      val expanded = requireNotNull(browserManager.expandQueueFromContextualPath(tapped.path!!))
+
+      assertEquals(listOf("a", "b"), expanded.tracks.map { it.src })
+      assertEquals(1, expanded.startIndex)
+      // Not the linked page's source: a later tap in the preview must not skip in this queue.
+      assertEquals("/home", expanded.sourcePath)
+    }
+
+  @Test
+  fun `a path-queued preview whose linked page lost the track queues its own children`() =
+    runBlocking {
+      serve(
+        "/home" to arrayOf(preview(SectionQueue.PATH)),
+        "/recent" to arrayOf(section(children = arrayOf(track(src = "a"), track(src = "c")))),
+      )
+
+      val tapped = browserManager.navigate("/home").flattenedChildren!![1]
+      val (queue, index) =
+        requireNotNull(browserManager.expandQueueFromContextualPath(tapped.path!!))
+
+      assertEquals(listOf("a", "b"), queue.map { it.src })
+      assertEquals(1, index)
+    }
+
+  @Test
+  fun `a fallback leaves a later tap in the preview free to queue the linked page`() = runBlocking {
+    serve("/home" to arrayOf(preview(SectionQueue.PATH)))
+    val tapped = browserManager.navigate("/home").flattenedChildren!![1].path!!
+    val fallback = requireNotNull(browserManager.expandQueueFromContextualPath(tapped))
+
+    serve(
+      "/home" to arrayOf(preview(SectionQueue.PATH)),
+      "/recent" to arrayOf(section(children = fullList)),
+    )
+    val again = requireNotNull(browserManager.expandQueueFromContextualPath(tapped))
+
+    // A tap skips in place only when its parent is the queue's source.
+    assertNotEquals(BrowserPathHelper.stripTrackId(tapped), fallback.sourcePath)
+    assertEquals(listOf("a", "b", "c"), again.tracks.map { it.src })
+    assertEquals("/recent", again.sourcePath)
+  }
 
   @Test
   fun `a preview without a queue still queues only its own children`() = runBlocking {

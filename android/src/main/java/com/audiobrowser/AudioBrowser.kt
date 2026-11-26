@@ -641,7 +641,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                   intercepted = {},
                   defaultBehavior = {
                     // The Player itself: this class's overrides block on main, where this runs.
-                    player.setQueue(tracks, startIndex, sourcePath = parentPath)
+                    player.setQueue(tracks, startIndex, sourcePath = expanded.sourcePath)
                     player.play()
                   },
                 )

@@ -89,3 +89,24 @@ describe('BrowserPathHelper.buildUrl', () => {
     expect(BrowserPathHelper.buildUrl(base, url)).toBe(url)
   })
 })
+
+describe('BrowserPathHelper linked paths', () => {
+  it("strip to the linked page and name the tapped page's path", () => {
+    const linked = BrowserPathHelper.buildLinked(
+      '/recent',
+      'a b',
+      '/home?x=1',
+      2
+    )
+
+    expect(BrowserPathHelper.stripTrackId(linked)).toBe('/recent')
+    expect(BrowserPathHelper.extractTrackId(linked)).toBe('a b')
+    expect(BrowserPathHelper.extractIndex(linked)).toBeUndefined()
+    expect(BrowserPathHelper.extractOrigin(linked)).toBe(
+      BrowserPathHelper.build('/home?x=1', 'a b', 2)
+    )
+    expect(
+      BrowserPathHelper.extractOrigin(BrowserPathHelper.build('/home', 'a', 2))
+    ).toBeUndefined()
+  })
+})

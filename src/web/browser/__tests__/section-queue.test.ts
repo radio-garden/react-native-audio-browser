@@ -8,10 +8,14 @@ import { NavigationErrorManager } from '../NavigationErrorManager'
 
 const station = (name: string) => ({ title: name, src: `${name}.mp3` })
 
-/** `/home` holds a two-station preview of `/recent`, which holds three. */
+/**
+ * `/home` holds a two-station preview of `/recent`, which holds `recent`, or
+ * fails to resolve when it is null.
+ */
 function makeManager(
   queue: SectionQueue | undefined,
-  path = '/recent'
+  path = '/recent',
+  recent: string[] | null = ['a', 'b', 'c']
 ): BrowserManager {
   const httpClient = {
     executeRequest: vi.fn().mockRejectedValue(new Error('no network in test'))
@@ -34,14 +38,18 @@ function makeManager(
         path: '/home',
         browseStatic: { path: '/home', title: 'Home', sections: [preview] }
       },
-      {
-        path: '/recent',
-        browseStatic: {
-          path: '/recent',
-          title: 'Recent',
-          children: [station('a'), station('b'), station('c')]
-        }
-      }
+      ...(recent
+        ? [
+            {
+              path: '/recent',
+              browseStatic: {
+                path: '/recent',
+                title: 'Recent',
+                children: recent.map(station)
+              }
+            }
+          ]
+        : [])
     ]
   }
   return manager
@@ -75,6 +83,39 @@ describe("a section's queue", () => {
     const { expanded } = await tapSecond(makeManager('path', ''))
 
     expect(expanded?.tracks.map((t) => t.src)).toEqual(['a.mp3', 'b.mp3'])
+  })
+
+  it("'path' queues the preview itself, from its page, when the linked page fails", async () => {
+    const { expanded } = await tapSecond(makeManager('path', '/recent', null))
+
+    expect(expanded?.tracks.map((t) => t.src)).toEqual(['a.mp3', 'b.mp3'])
+    expect(expanded?.selectedIndex).toBe(1)
+    expect(expanded?.sourcePath).toBe('/home')
+  })
+
+  it("'path' queues the preview itself when the linked page lost the track", async () => {
+    const { expanded } = await tapSecond(
+      makeManager('path', '/recent', ['a', 'c'])
+    )
+
+    expect(expanded?.tracks.map((t) => t.src)).toEqual(['a.mp3', 'b.mp3'])
+    expect(expanded?.selectedIndex).toBe(1)
+  })
+
+  it('after a fallback, a tap in the preview queues the linked page again', async () => {
+    const offline = makeManager('path', '/recent', null)
+    const { tapped } = await tapSecond(offline)
+    const track = { title: 'b', src: 'b.mp3', path: tapped }
+    await offline.resolveMediaItemsForPlayback([track], 0, 0)
+    // A tap skips in place only when its parent is the queue's source.
+    expect(offline.queueSourcePath).toBe('/home')
+    expect(BrowserPathHelper.stripTrackId(tapped)).not.toBe('/home')
+
+    const online = makeManager('path')
+    await online.navigatePath('/home')
+    const again = await online.resolveMediaItemsForPlayback([track], 0, 0)
+    expect(again.tracks.map((t) => t.src)).toEqual(['a.mp3', 'b.mp3', 'c.mp3'])
+    expect(online.queueSourcePath).toBe('/recent')
   })
 
   it('absent queues only the section itself', async () => {

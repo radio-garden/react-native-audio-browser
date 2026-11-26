@@ -84,3 +84,8 @@ position)._
 
 _The old image-row/run precedence survives only as the index-less fallback
 (first section containing the identity)._
+
+_Amended by ADR 0015: a `'path'`-queued section's child is stamped against
+the linked page without `__index`, and carries `__from` and `__fromIndex`,
+the page it sits on and its position there. Its queue falls back to that
+page's section._

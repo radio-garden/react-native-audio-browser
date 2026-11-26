@@ -104,4 +104,18 @@ class BrowserPathHelperTest {
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "/shows/a:b"))
     assertEquals("$base/shows/a:b", BrowserPathHelper.buildUrl(base, "shows/a:b"))
   }
+
+  @Test
+  fun `a linked path strips to its linked page and names the tapped page's path`() {
+    val linked = BrowserPathHelper.buildLinked("/recent", "a b", "/home?x=1", 2)
+
+    assertEquals("/recent", BrowserPathHelper.stripTrackId(linked))
+    assertEquals("a b", BrowserPathHelper.extractTrackId(linked))
+    assertNull(BrowserPathHelper.extractIndex(linked))
+    assertEquals(
+      BrowserPathHelper.build("/home?x=1", "a b", 2),
+      BrowserPathHelper.extractOrigin(linked),
+    )
+    assertNull(BrowserPathHelper.extractOrigin(BrowserPathHelper.build("/home", "a", 2)))
+  }
 }

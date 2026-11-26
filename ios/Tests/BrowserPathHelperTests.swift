@@ -253,7 +253,7 @@ func createSearchPathEscapesQuerySeparators(query: String, encoded: String) {
   let stamped = try BrowserPathHelper.stampingContextualPaths(sections, parentPath: "/home")
   #expect(stamped.map { $0.children.map(\.path) } == [
     ["/home?__trackId=top.mp3&__index=0"],
-    ["/recent?__trackId=a.mp3"],
+    ["/recent?__trackId=a.mp3&__from=/home&__fromIndex=1"],
   ])
 }
 
@@ -280,6 +280,15 @@ func stampsAPathQueuedSectionWithoutAPathAgainstThePage(path: String?) throws {
   // The same source as a tap on the linked page itself, so a tap there skips in place.
   let linkedPath = try #require(linked[0].children[1].path)
   #expect(BrowserPathHelper.stripTrackId(tappedPath) == BrowserPathHelper.stripTrackId(linkedPath))
+}
+
+@Test func aLinkedPathStripsToItsLinkedPageAndNamesItsOrigin() {
+  let linked = BrowserPathHelper.buildLinked(linkedPath: "/recent", trackId: "a b", originPath: "/home?x=1", originIndex: 2)
+  #expect(BrowserPathHelper.stripTrackId(linked) == "/recent")
+  #expect(BrowserPathHelper.extractTrackId(linked) == "a b")
+  #expect(BrowserPathHelper.extractIndex(linked) == nil)
+  #expect(BrowserPathHelper.extractOrigin(linked) == BrowserPathHelper.build(parentPath: "/home?x=1", trackId: "a b", index: 2))
+  #expect(BrowserPathHelper.extractOrigin(BrowserPathHelper.build(parentPath: "/home", trackId: "a", index: 2)) == nil)
 }
 
 @Test func rejectsATrackWithNeitherPathNorSrc() {

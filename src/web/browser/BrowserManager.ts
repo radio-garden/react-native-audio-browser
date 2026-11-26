@@ -336,7 +336,12 @@ export class BrowserManager {
             return {
               ...track,
               path: linkedPath
-                ? BrowserPathHelper.build(linkedPath, identity)
+                ? BrowserPathHelper.buildLinked(
+                    linkedPath,
+                    identity,
+                    path,
+                    flatIndex
+                  )
                 : BrowserPathHelper.build(path, identity, flatIndex)
             }
           }
@@ -762,10 +767,33 @@ export class BrowserManager {
    * Resolves the parent container to get all siblings.
    * Matches Android's BrowserManager.expandQueueFromContextualPath() behavior.
    *
+   * A `'path'`-queued section's child that its linked page does not queue
+   * queues its own section, on the page it was tapped on, which is then the
+   * queue's `sourcePath`.
+   *
    * @param contextualPath The contextual path (format: /path?__trackId=trackSrc)
-   * @returns Object with tracks and selectedIndex, or undefined if expansion fails
+   * @returns The tracks, selectedIndex and source page, or undefined if expansion fails
    */
   async expandQueueFromContextualPath(
+    contextualPath: string
+  ): Promise<
+    { tracks: Track[]; selectedIndex: number; sourcePath: string } | undefined
+  > {
+    const linked = await this.expandScoped(contextualPath)
+    if (linked) {
+      return {
+        ...linked,
+        sourcePath: BrowserPathHelper.stripTrackId(contextualPath)
+      }
+    }
+    const origin = BrowserPathHelper.extractOrigin(contextualPath)
+    const fallback = origin && (await this.expandScoped(origin))
+    return origin && fallback
+      ? { ...fallback, sourcePath: BrowserPathHelper.stripTrackId(origin) }
+      : undefined
+  }
+
+  private async expandScoped(
     contextualPath: string
   ): Promise<{ tracks: Track[]; selectedIndex: number } | undefined> {
     const trackId = BrowserPathHelper.extractTrackId(contextualPath)
@@ -914,12 +942,11 @@ export class BrowserManager {
       // This matches Android where MediaSessionCallback handles the optimization before calling
       // BrowserManager.resolveMediaItemsForPlayback.
       if (trackPath && BrowserPathHelper.isContextual(trackPath)) {
-        const parentPath = BrowserPathHelper.stripTrackId(trackPath)
         const expanded = await this.expandQueueFromContextualPath(trackPath)
 
         if (expanded) {
           // Store source path for optimization by caller on next invocation
-          this._queueSourcePath = parentPath
+          this._queueSourcePath = expanded.sourcePath
           return {
             tracks: expanded.tracks,
             startIndex: expanded.selectedIndex,

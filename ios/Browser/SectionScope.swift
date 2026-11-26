@@ -65,6 +65,27 @@ enum SectionScope {
   }
 }
 
+extension SectionScope {
+  /// The queue a tap on the contextual `path` plays, as `expand` gives it for a path, and the page
+  /// it came from. A `.path`-queued section's child that its linked page does not queue (the page
+  /// fails, or no longer holds it) queues its own section on the page it was tapped on, which is
+  /// then the source.
+  @MainActor
+  static func expanding(
+    _ path: String,
+    with expand: (String) async throws -> (tracks: [Track], selectedIndex: Int)?,
+  ) async throws -> (tracks: [Track], selectedIndex: Int, sourcePath: String)? {
+    guard let origin = BrowserPathHelper.extractOrigin(path) else {
+      return try await expand(path).map { ($0.tracks, $0.selectedIndex, BrowserPathHelper.stripTrackId(path)) }
+    }
+    if let linked = try? await expand(path) {
+      return (linked.tracks, linked.selectedIndex, BrowserPathHelper.stripTrackId(path))
+    }
+    try Task.checkCancellation()
+    return try await expand(origin).map { ($0.tracks, $0.selectedIndex, BrowserPathHelper.stripTrackId(origin)) }
+  }
+}
+
 // MARK: - Page shape helpers (ADR 0010)
 
 extension ResolvedTrack {

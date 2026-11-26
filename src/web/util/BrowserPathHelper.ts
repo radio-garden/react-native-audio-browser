@@ -33,6 +33,10 @@ export const BrowserPathHelper = {
   /** Query parameter name for the tapped child's page position (tie-breaker) */
   CONTEXTUAL_INDEX_PARAM: '__index',
 
+  /** Query parameters naming the page a `'path'`-queued child was tapped on, and its position there */
+  CONTEXTUAL_FROM_PARAM: '__from',
+  CONTEXTUAL_FROM_INDEX_PARAM: '__fromIndex',
+
   /**
    * Whether a navigation error on this path came from a browse or a search
    */
@@ -84,6 +88,8 @@ export const BrowserPathHelper = {
       // Remove the contextual parameters
       urlObj.searchParams.delete(this.CONTEXTUAL_TRACK_PARAM)
       urlObj.searchParams.delete(this.CONTEXTUAL_INDEX_PARAM)
+      urlObj.searchParams.delete(this.CONTEXTUAL_FROM_PARAM)
+      urlObj.searchParams.delete(this.CONTEXTUAL_FROM_INDEX_PARAM)
 
       // Return the appropriate format
       if (isFullUrl) {
@@ -95,7 +101,7 @@ export const BrowserPathHelper = {
     } catch {
       // Fallback: simple string manipulation
       const paramPattern = new RegExp(
-        `[?&](?:${this.CONTEXTUAL_TRACK_PARAM}|${this.CONTEXTUAL_INDEX_PARAM})=[^&]*`,
+        `[?&](?:${this.CONTEXTUAL_TRACK_PARAM}|${this.CONTEXTUAL_INDEX_PARAM}|${this.CONTEXTUAL_FROM_PARAM}|${this.CONTEXTUAL_FROM_INDEX_PARAM})=[^&]*`,
         'g'
       )
       let result = url.replace(paramPattern, '')
@@ -121,6 +127,37 @@ export const BrowserPathHelper = {
     const indexParam =
       index === undefined ? '' : `&${this.CONTEXTUAL_INDEX_PARAM}=${index}`
     return `${parentPath}${separator}${this.CONTEXTUAL_TRACK_PARAM}=${encodeURIComponent(trackId)}${indexParam}`
+  },
+
+  /**
+   * The contextual path of a `'path'`-queued section's child: against the
+   * `linkedPath` page, by identity alone, carrying the `originPath` page it
+   * sits on and its `originIndex` there.
+   */
+  buildLinked(
+    linkedPath: string,
+    trackId: string,
+    originPath: string,
+    originIndex: number
+  ): string {
+    return `${this.build(linkedPath, trackId)}&${this.CONTEXTUAL_FROM_PARAM}=${encodeURIComponent(originPath)}&${this.CONTEXTUAL_FROM_INDEX_PARAM}=${originIndex}`
+  },
+
+  /**
+   * The contextual path `path`'s track has on the page it was tapped on, or
+   * undefined when `path` was not built by `buildLinked`.
+   */
+  extractOrigin(path: string): string | undefined {
+    const trackId = this.extractTrackId(path)
+    const origin =
+      trackId && this.extractParam(path, this.CONTEXTUAL_FROM_PARAM)
+    if (!trackId || !origin) return undefined
+    const raw = this.extractParam(path, this.CONTEXTUAL_FROM_INDEX_PARAM)
+    const index =
+      raw !== undefined && /^\d+$/.test(raw)
+        ? Number.parseInt(raw, 10)
+        : undefined
+    return this.build(origin, trackId, index)
   },
 
   /**
