@@ -1,6 +1,6 @@
 import type { NowPlayingMetadata } from '../../features'
 import type { AudioBrowser as AudioBrowserSpec } from '../../specs/audio-browser.nitro'
-import { MediaSessionManager } from './MediaSessionManager'
+import { hasPositionState, MediaSessionManager } from './MediaSessionManager'
 
 /**
  * The slice of the player the remote-command bridge drives. Picked straight from
@@ -38,6 +38,7 @@ export type RemoteCommandHost = Pick<
   | 'getPlayback'
   | 'getPlayingState'
   | 'getProgress'
+  | 'getRate'
 >
 
 /**
@@ -124,24 +125,38 @@ export class RemoteCommandController {
     this.mediaSession.setMetadata(metadata)
   }
 
-  /** Reflects the current playing/paused/stopped state in the OS controls. */
+  /**
+   * Reflects the current playing/paused/stopped state in the OS controls.
+   * Buffering with a position state reads as paused: the browser advances the
+   * scrubber while playing, and the position state cannot carry a rate of 0.
+   * Without one (live) it reads as playing, so the controls still offer pause.
+   */
   syncPlaybackState(): void {
     const playback = this.host.getPlayback()
+    const { playing, buffering } = this.host.getPlayingState()
     if (playback.state === 'none') {
       this.mediaSession.setPlaybackState('none')
-    } else if (this.host.getPlayingState().playing) {
+    } else if (
+      playing &&
+      !(buffering && hasPositionState(this.host.getProgress().duration))
+    ) {
       this.mediaSession.setPlaybackState('playing')
     } else {
       this.mediaSession.setPlaybackState('paused')
     }
   }
 
-  /** Pushes the latest scrubber position to the OS controls. */
-  updateProgress(): void {
+  /**
+   * Reports the position, duration and rate to the OS controls, which advance
+   * the scrubber from them on their own until the next report.
+   */
+  syncPositionState(): void {
     const { duration, position } = this.host.getProgress()
-    // The web player has no variable-rate playback, so the rate is always 1.
-    // (Live radio has no seekable timeline anyway — the position is cleared.)
-    this.mediaSession.setPositionState({ duration, position, playbackRate: 1 })
+    this.mediaSession.setPositionState({
+      duration,
+      position,
+      playbackRate: this.host.getRate()
+    })
   }
 
   /** Removes handlers and clears metadata/state. Call on teardown. */

@@ -53,6 +53,7 @@ function makeHost(
     getPlayback: vi.fn(() => ({ state: 'playing' })) as any,
     getPlayingState: vi.fn(() => ({ playing: true, buffering: false })),
     getProgress: vi.fn(() => ({ position: 0, duration: 0, buffered: 0 })),
+    getRate: vi.fn(() => 1),
     ...overrides
   }
 }
@@ -138,9 +139,11 @@ describe('RemoteCommandController', () => {
   it('mirrors playback state from the host', () => {
     const playback = { state: 'ready' as const }
     const playingState = { playing: false, buffering: false }
+    const progress = { position: 30, duration: 180, buffered: 0 }
     const host = makeHost({
       getPlayback: vi.fn(() => playback) as any,
-      getPlayingState: vi.fn(() => playingState)
+      getPlayingState: vi.fn(() => playingState),
+      getProgress: vi.fn(() => progress)
     })
     const controller = new RemoteCommandController(host)
 
@@ -151,21 +154,30 @@ describe('RemoteCommandController', () => {
     controller.syncPlaybackState()
     expect(session.playbackState).toBe('playing')
 
+    playingState.buffering = true
+    controller.syncPlaybackState()
+    expect(session.playbackState).toBe('paused')
+
+    progress.duration = Infinity
+    controller.syncPlaybackState()
+    expect(session.playbackState).toBe('playing')
+
     ;(playback as { state: string }).state = 'none'
     controller.syncPlaybackState()
     expect(session.playbackState).toBe('none')
   })
 
-  it('pushes scrubber position from host progress', () => {
+  it('reports the position state from host progress and rate', () => {
     const host = makeHost({
-      getProgress: vi.fn(() => ({ position: 30, duration: 180, buffered: 0 }))
+      getProgress: vi.fn(() => ({ position: 30, duration: 180, buffered: 0 })),
+      getRate: vi.fn(() => 1.5)
     })
-    new RemoteCommandController(host).updateProgress()
+    new RemoteCommandController(host).syncPositionState()
 
     expect(session.setPositionState).toHaveBeenCalledWith({
       duration: 180,
       position: 30,
-      playbackRate: 1
+      playbackRate: 1.5
     })
   })
 })

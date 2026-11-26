@@ -198,6 +198,11 @@ export class Player {
       if (element.ended) return
       this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
     })
+    // `emptied` stands in for the duration going back to NaN on a new load,
+    // which fires no `durationchange`.
+    for (const type of ['durationchange', 'ratechange', 'seeked', 'emptied']) {
+      element.addEventListener(type, () => this.onPlaybackClockChanged())
+    }
 
     player.addEventListener('loading', () => {
       this.dispatch({ type: 'trackLoading' })
@@ -233,6 +238,12 @@ export class Player {
 
     this.hasInitialized = true
   }
+
+  /**
+   * The element's duration or rate changed, or its position jumped: whatever
+   * extrapolates the position from an earlier reading is now wrong.
+   */
+  protected onPlaybackClockChanged(): void {}
 
   /**
    * Routes a racy element/Shaka observation through the state machine. The
