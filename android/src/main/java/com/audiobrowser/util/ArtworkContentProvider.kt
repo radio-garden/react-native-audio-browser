@@ -11,10 +11,12 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 /**
@@ -78,7 +80,9 @@ class ArtworkContentProvider : ContentProvider() {
         try {
           runBlocking {
             withTimeout(LOAD_TIMEOUT_MS) {
-              deps.loader.load(art.finalUrl, art.headers, deps.artworkSizeHint(), art.isSvg)
+              val sizeHint = deps.artworkSizeHint()
+              val sized = sizedArtwork(deps, art, sizeHint, token)
+              deps.loader.load(sized.finalUrl, sized.headers, sizeHint, sized.isSvg)
             }
           }
         } catch (e: Throwable) {
@@ -114,6 +118,36 @@ class ArtworkContentProvider : ContentProvider() {
     }
   }
 
+  /**
+   * [art] re-resolved for [sizeHint], so the request asks for the size the car draws; [art] itself
+   * when there is no hint, nothing resolves it within [RESOLVE_TIMEOUT_MS], the resolution fails,
+   * or it resolves to a URL this provider would not serve.
+   */
+  private suspend fun sizedArtwork(
+    deps: ArtworkProviderDeps,
+    art: ResolvedArtwork,
+    sizeHint: Int?,
+    token: String,
+  ): ResolvedArtwork {
+    if (sizeHint == null) return art
+    val source =
+      try {
+        withTimeoutOrNull(resolveTimeoutMsOverride ?: RESOLVE_TIMEOUT_MS) {
+          deps.resolveBrowseArtwork(art.finalUrl, sizeHint)
+        }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        Timber.w(e, "Artwork resolution failed for token=$token; fetching it as registered")
+        null
+      } ?: return art
+    if (!ArtworkUris.isServable(Uri.parse(source.uri))) return art
+    // A URL resolved at size is its own source: a registered SVG may resolve to a raster.
+    val isSvg =
+      if (source.uri == art.finalUrl) art.isSvg else SvgArtworkRenderer.isSvgUrl(source.uri)
+    return ResolvedArtwork(source.uri, source.headers, isSvg)
+  }
+
   override fun query(
     uri: Uri,
     p: Array<String>?,
@@ -132,10 +166,14 @@ class ArtworkContentProvider : ContentProvider() {
     private const val MAX_CONCURRENT = 6
     private const val GATE_TIMEOUT_SECONDS = 5L
     private const val LOAD_TIMEOUT_MS = 8_000L
+    /** Within [LOAD_TIMEOUT_MS], leaving the fetch most of it. */
+    internal const val RESOLVE_TIMEOUT_MS = 2_000L
     internal const val ARTWORK_SUBDIR = "audiobrowser-artwork"
     const val MAX_CACHE_FILES = 512
     /** Tests only. */
     @JvmField internal var maxCacheFilesOverride: Int? = null
+    /** Tests only. */
+    @JvmField internal var resolveTimeoutMsOverride: Long? = null
 
     /**
      * Discards the previous process's artwork files, which are stale. Best-effort. The directory is

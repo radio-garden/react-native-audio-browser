@@ -1,6 +1,7 @@
 package com.audiobrowser.util
 
 import com.audiobrowser.browser.BrowseArtworkRegistry
+import com.margelo.nitro.audiobrowser.ImageSource
 import kotlinx.coroutines.CoroutineScope
 
 /** What [ArtworkContentProvider] needs to serve artwork; the media Service builds it. */
@@ -9,6 +10,11 @@ data class ArtworkProviderDeps(
   val registry: BrowseArtworkRegistry,
   val scope: CoroutineScope,
   val artworkSizeHint: () -> Int? = { null },
+  /**
+   * The browse artwork registered as `url`, re-resolved for the car's size hint; null when none is
+   * registered, which fetches the URL as registered.
+   */
+  val resolveBrowseArtwork: suspend (url: String, sizeHintPixels: Int) -> ImageSource?,
 )
 
 /**

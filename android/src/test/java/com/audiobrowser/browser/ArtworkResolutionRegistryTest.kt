@@ -35,6 +35,13 @@ class ArtworkResolutionRegistryTest {
   }
 
   @Test
+  fun `keeps as many resolutions as the browse artwork registry keeps tokens`() {
+    val registry = ArtworkResolutionRegistry()
+    repeat(BrowseArtworkRegistry.MAX_ENTRIES) { registry.register("u$it", track("t$it"), null) }
+    assertEquals("t0", registry.lookup("u0")?.track?.title)
+  }
+
+  @Test
   fun `clear drops all entries`() {
     val registry = ArtworkResolutionRegistry()
     registry.register("u1", track("t1"), null)

@@ -21,6 +21,7 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.svg.SvgDecoder
+import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.player.Player
 import com.audiobrowser.util.ArtworkContentProvider
 import com.audiobrowser.util.ArtworkProviderDeps
@@ -30,6 +31,7 @@ import com.audiobrowser.util.CoilArtworkLoaderHolder
 import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.SearchParamsFactory
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.ImageContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -110,6 +112,10 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         registry = player.browseArtworkRegistry,
         scope = artworkScope,
         artworkSizeHint = { player.artworkSizeHintPixels },
+        resolveBrowseArtwork = { url, sizeHint ->
+          val size = sizeHint.toDouble()
+          player.browser?.browserManager?.displayArtworkSource(url, ImageContext(size, size))
+        },
       )
     // Before the provider can serve, so it never reads or writes the stale files.
     ArtworkContentProvider.discardStaleArtwork(cacheDir, artworkScope)

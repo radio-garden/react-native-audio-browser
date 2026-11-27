@@ -5,7 +5,7 @@ package com.audiobrowser.browser
  * serves. Thread-safe: written from browse coroutines, read from the provider's IO scope.
  */
 class BrowseArtworkRegistry(
-  private val maxEntries: Int = 2048,
+  private val maxEntries: Int = MAX_ENTRIES,
   private val maxPinnedEntries: Int = 2048,
   // A `data:` URL is its own payload, so entries are also bounded by the characters they hold.
   private val maxUrlChars: Int = 4_000_000,
@@ -32,6 +32,10 @@ class BrowseArtworkRegistry(
 
   /** Drops the [register]ed entries; [pin]ned ones stay. */
   @Synchronized fun clear() = entries.clear()
+
+  companion object {
+    const val MAX_ENTRIES = 2048
+  }
 
   /** Least recently used first out, past [maxEntries] or [maxUrlChars]; the newest always stays. */
   private class Lru(private val maxEntries: Int, private val maxUrlChars: Int) {
