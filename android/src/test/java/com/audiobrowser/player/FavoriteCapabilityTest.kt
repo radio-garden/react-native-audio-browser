@@ -1,8 +1,11 @@
 package com.audiobrowser.player
 
+import android.os.Bundle
 import android.os.Looper
 import androidx.media3.common.HeartRating
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
@@ -66,6 +69,46 @@ class FavoriteCapabilityTest {
     browserManager.config = BrowserConfig(routes = arrayOf(TestFixtures.staticRoute("/home", home)))
     browserManager.setFavorites(listOf("https://s/a.mp3"))
     browserManager.resolve("/home").flattenedChildren?.single()?.favorited
+  }
+
+  private fun tapHeart(): Int {
+    val controller =
+      MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+        "car",
+        0,
+        0,
+        MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION,
+        MediaSession.ControllerInfo.LEGACY_CONTROLLER_INTERFACE_VERSION,
+        false,
+        Bundle.EMPTY,
+        false,
+      )
+    val command = SessionCommand(MediaSessionCommandManager.CUSTOM_ACTION_FAVORITE, Bundle.EMPTY)
+    return player
+      .getMediaSessionCallback()
+      .onCustomCommand(session, controller, command, Bundle.EMPTY)
+      .get()
+      .resultCode
+  }
+
+  @Test
+  fun `a heart tap toggles the active track's favorite`() {
+    player.applyOptions(favorite(true))
+    player.add(arrayOf(TestFixtures.track(title = "a", src = "https://s/a.mp3")))
+    idle()
+
+    assertEquals(SessionResult.RESULT_SUCCESS, tapHeart())
+    assertEquals(true, player.currentTrack?.favorited)
+    assertEquals(SessionResult.RESULT_SUCCESS, tapHeart())
+    assertEquals(false, player.currentTrack?.favorited)
+  }
+
+  @Test
+  fun `a heart tap with no active track reports an invalid state`() {
+    player.applyOptions(favorite(true))
+    idle()
+
+    assertEquals(SessionResult.RESULT_ERROR_INVALID_STATE, tapHeart())
   }
 
   @Test
