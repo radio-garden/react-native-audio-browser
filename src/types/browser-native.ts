@@ -78,6 +78,8 @@ export interface NativeBrowserConfiguration {
   // Subtitle of the "view more" row appended to a pathed section where the
   // header can't be tapped (Android Auto). Absent = native's "View more" default.
   viewMoreTitle?: ViewMoreTitleCallback
+  // Artwork URL of a grid section's "view more" tile. Absent = the tinted arrow icon.
+  viewMoreArtwork?: string
 
   // CarPlay options
   carPlayLoadingTitle?: string

@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, viewMoreTitle: (() -> Promise<String>)?, carPlayLoadingTitle: String?, resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?, findTrack: ((_ params: FindTrackParams) -> Promise<Promise<Track?>>)?) {
+  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, viewMoreTitle: (() -> Promise<String>)?, viewMoreArtwork: String?, carPlayLoadingTitle: String?, resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?, findTrack: ((_ params: FindTrackParams) -> Promise<Promise<Track?>>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -112,6 +112,12 @@ public extension NativeBrowserConfiguration {
           let __closureWrapper = Func_std__shared_ptr_Promise_std__string__(__unwrappedValue)
           return bridge.create_Func_std__shared_ptr_Promise_std__string__(__closureWrapper.toUnsafe())
         }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = viewMoreArtwork {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -370,6 +376,18 @@ public extension NativeBrowserConfiguration {
             }()
           }
         }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var viewMoreArtwork: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__viewMoreArtwork) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__viewMoreArtwork)
+        return String(__unwrapped)
       } else {
         return nil
       }

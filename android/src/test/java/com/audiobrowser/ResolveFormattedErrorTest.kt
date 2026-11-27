@@ -40,6 +40,7 @@ class ResolveFormattedErrorTest {
         handleTrackLoad = null,
         androidControllerOfflineError = null,
         viewMoreTitle = null,
+        viewMoreArtwork = null,
         carPlayLoadingTitle = null,
         resolveAlbumPath = null,
         formatNavigationError =
