@@ -186,6 +186,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
+// Forward declaration of `SectionQueue` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionQueue; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 // Forward declaration of `Section` to properly resolve imports.
@@ -308,6 +310,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "Section.hpp"
+#include "SectionQueue.hpp"
 #include "SectionStyle.hpp"
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
@@ -699,6 +702,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline SectionStyle get_std__optional_SectionStyle_(const std::optional<SectionStyle>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<SectionQueue>
+  /**
+   * Specialized version of `std::optional<SectionQueue>`.
+   */
+  using std__optional_SectionQueue_ = std::optional<SectionQueue>;
+  inline std::optional<SectionQueue> create_std__optional_SectionQueue_(const SectionQueue& value) noexcept {
+    return std::optional<SectionQueue>(value);
+  }
+  inline bool has_value_std__optional_SectionQueue_(const std::optional<SectionQueue>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline SectionQueue get_std__optional_SectionQueue_(const std::optional<SectionQueue>& optional) noexcept {
     return optional.value();
   }
   

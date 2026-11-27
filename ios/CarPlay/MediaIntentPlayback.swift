@@ -33,7 +33,8 @@ enum MediaIntentPlayback {
         guard let session = player.persistedSession() else { return false }
         var expanded: (tracks: [Track], selectedIndex: Int)?
         if let path = session.track.path {
-          expanded = try? await browser.browserManager.expandQueueFromContextualPath(path)
+          expanded = await (try? browser.browserManager.expandQueueFromContextualPath(path))
+            .map { ($0.tracks, $0.selectedIndex) }
         }
         guard let player = livePlayer(of: browser) else { return false }
         player.resume(session, queue: expanded)

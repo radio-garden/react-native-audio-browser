@@ -319,25 +319,36 @@ export class BrowserManager {
    * contextual path carrying its identity (id ?? src) so the queue can be
    * re-expanded from it later, plus its flat page position (children
    * concatenated in section order — ADR 0009/0010) as a duplicate-identity
-   * tie-breaker. Non-playable tracks are shallow-copied to avoid mutating
-   * original config objects (e.g., browseStatic from routes).
+   * tie-breaker. A section that queues its `path` stamps its tracks against
+   * that page, by identity alone. Non-playable tracks are shallow-copied to
+   * avoid mutating original config objects (e.g., browseStatic from routes).
    */
   private addContextualPaths(path: string, sections: Section[]): Section[] {
     let index = 0
-    return sections.map((section) => ({
-      ...section,
-      children: section.children.map((track) => {
-        const flatIndex = index++
-        const identity = getTrackIdentity(track)
-        if (track.src && identity) {
-          return {
-            ...track,
-            path: BrowserPathHelper.build(path, identity, flatIndex)
+    return sections.map((section) => {
+      const linkedPath = section.queue === 'path' ? section.path : undefined
+      return {
+        ...section,
+        children: section.children.map((track) => {
+          const flatIndex = index++
+          const identity = getTrackIdentity(track)
+          if (track.src && identity) {
+            return {
+              ...track,
+              path: linkedPath
+                ? BrowserPathHelper.buildLinked(
+                    linkedPath,
+                    identity,
+                    path,
+                    flatIndex
+                  )
+                : BrowserPathHelper.build(path, identity, flatIndex)
+            }
           }
-        }
-        return { ...track }
-      })
-    }))
+          return { ...track }
+        })
+      }
+    })
   }
 
   /**
@@ -756,10 +767,33 @@ export class BrowserManager {
    * Resolves the parent container to get all siblings.
    * Matches Android's BrowserManager.expandQueueFromContextualPath() behavior.
    *
+   * A `'path'`-queued section's child that its linked page does not queue
+   * queues its own section, on the page it was tapped on, which is then the
+   * queue's `sourcePath`.
+   *
    * @param contextualPath The contextual path (format: /path?__trackId=trackSrc)
-   * @returns Object with tracks and selectedIndex, or undefined if expansion fails
+   * @returns The tracks, selectedIndex and source page, or undefined if expansion fails
    */
   async expandQueueFromContextualPath(
+    contextualPath: string
+  ): Promise<
+    { tracks: Track[]; selectedIndex: number; sourcePath: string } | undefined
+  > {
+    const linked = await this.expandScoped(contextualPath)
+    if (linked) {
+      return {
+        ...linked,
+        sourcePath: BrowserPathHelper.stripTrackId(contextualPath)
+      }
+    }
+    const origin = BrowserPathHelper.extractOrigin(contextualPath)
+    const fallback = origin && (await this.expandScoped(origin))
+    return origin && fallback
+      ? { ...fallback, sourcePath: BrowserPathHelper.stripTrackId(origin) }
+      : undefined
+  }
+
+  private async expandScoped(
     contextualPath: string
   ): Promise<{ tracks: Track[]; selectedIndex: number } | undefined> {
     const trackId = BrowserPathHelper.extractTrackId(contextualPath)
@@ -908,12 +942,11 @@ export class BrowserManager {
       // This matches Android where MediaSessionCallback handles the optimization before calling
       // BrowserManager.resolveMediaItemsForPlayback.
       if (trackPath && BrowserPathHelper.isContextual(trackPath)) {
-        const parentPath = BrowserPathHelper.stripTrackId(trackPath)
         const expanded = await this.expandQueueFromContextualPath(trackPath)
 
         if (expanded) {
           // Store source path for optimization by caller on next invocation
-          this._queueSourcePath = parentPath
+          this._queueSourcePath = expanded.sourcePath
           return {
             tracks: expanded.tracks,
             startIndex: expanded.selectedIndex,

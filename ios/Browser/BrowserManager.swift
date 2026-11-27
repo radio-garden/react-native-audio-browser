@@ -278,9 +278,15 @@ final class BrowserManager {
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
 
-  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`); nil when `path` is
-  /// not contextual.
-  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
+  /// The queue a tap on the contextual `path` plays (`SectionScope.queue`) and its source page
+  /// (`SectionScope.expanding`); nil when `path` is not contextual.
+  func expandQueueFromContextualPath(_ path: String) async throws
+    -> (tracks: [Track], selectedIndex: Int, sourcePath: String)?
+  {
+    try await SectionScope.expanding(path) { try await self.expandScoped($0) }
+  }
+
+  private func expandScoped(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
     let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
     guard let sections = resolved.normalizedSections else { return nil }

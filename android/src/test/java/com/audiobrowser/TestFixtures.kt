@@ -69,7 +69,7 @@ object TestFixtures {
     title: String? = null,
     style: SectionStyle? = null,
     path: String? = null,
-  ) = Section(title = title, style = style, path = path, children = children)
+  ) = Section(title = title, style = style, path = path, queue = null, children = children)
 
   fun transformableConfig(
     baseUrl: String? = null,

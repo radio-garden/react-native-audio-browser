@@ -38,3 +38,6 @@ flow through the same expansion instead of loading a queue of one.
 _Amended by ADR 0010: sections are structural (`Section`), not derived
 from `groupTitle` runs as this ADR describes. The decision itself (queue
 scope is the tapped section) stands._
+
+_Amended by ADR 0015: a section declared `queue: 'path'` queues the page its
+`path` links to instead of its own children._

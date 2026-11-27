@@ -176,6 +176,7 @@ struct JsonSection: Codable {
   var title: String? = nil
   var style: JsonStyle? = nil
   var path: String? = nil
+  var queue: String? = nil
   var children: [JsonTrack]
 }
 
@@ -290,6 +291,7 @@ extension JsonSection {
       title: title,
       style: style?.toSectionStyle(),
       path: path,
+      queue: queue.flatMap { SectionQueue(fromString: $0.lowercased()) },
       children: children.map { $0.toNitro() },
     )
   }

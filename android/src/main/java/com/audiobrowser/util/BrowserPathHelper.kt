@@ -35,6 +35,18 @@ object BrowserPathHelper {
   // different track.
   private const val CONTEXTUAL_INDEX_PARAM = "__index"
 
+  // A `'path'`-queued section's child names the page it was tapped on, and its position there.
+  private const val CONTEXTUAL_FROM_PARAM = "__from"
+  private const val CONTEXTUAL_FROM_INDEX_PARAM = "__fromIndex"
+
+  private val CONTEXTUAL_PARAMS =
+    listOf(
+      CONTEXTUAL_TRACK_PARAM,
+      CONTEXTUAL_INDEX_PARAM,
+      CONTEXTUAL_FROM_PARAM,
+      CONTEXTUAL_FROM_INDEX_PARAM,
+    )
+
   fun navigationErrorKind(path: String): NavigationErrorKind =
     if (path.startsWith("$SEARCH_PATH_PREFIX?")) NavigationErrorKind.SEARCH
     else NavigationErrorKind.BROWSE
@@ -61,7 +73,7 @@ object BrowserPathHelper {
   }
 
   /**
-   * The parent path: [url] without `__trackId` and `__index`, every other character as written, so
+   * The parent path: [url] without its contextual parameters, every other character as written, so
    * it equals the parent [build] was given. Returns a non-contextual [url] unchanged.
    */
   fun stripTrackId(url: String): String {
@@ -69,10 +81,7 @@ object BrowserPathHelper {
       return url
     }
     val (head, pairs) = splitQuery(url) ?: return url
-    val kept =
-      pairs.filterNot {
-        it.startsWith("$CONTEXTUAL_TRACK_PARAM=") || it.startsWith("$CONTEXTUAL_INDEX_PARAM=")
-      }
+    val kept = pairs.filterNot { pair -> CONTEXTUAL_PARAMS.any { pair.startsWith("$it=") } }
     return if (kept.isEmpty()) head else "$head?${kept.joinToString("&")}"
   }
 
@@ -86,6 +95,26 @@ object BrowserPathHelper {
     val separator = if (parentPath.contains('?')) '&' else '?'
     val indexParam = if (index != null) "&$CONTEXTUAL_INDEX_PARAM=$index" else ""
     return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}$indexParam"
+  }
+
+  /**
+   * The contextual path of a `'path'`-queued section's child: against the [linkedPath] page, by
+   * identity alone, carrying the [originPath] page it sits on and its [originIndex] there.
+   */
+  fun buildLinked(linkedPath: String, trackId: String, originPath: String, originIndex: Int) =
+    "${build(linkedPath, trackId)}&$CONTEXTUAL_FROM_PARAM=${Uri.encode(originPath)}" +
+      "&$CONTEXTUAL_FROM_INDEX_PARAM=$originIndex"
+
+  /**
+   * The contextual path [path]'s track has on the page it was tapped on, or null when [path] was
+   * not built by [buildLinked].
+   */
+  fun extractOrigin(path: String): String? {
+    val trackId = extractTrackId(path) ?: return null
+    val origin = contextualValue(CONTEXTUAL_FROM_PARAM, path) ?: return null
+    val index =
+      contextualValue(CONTEXTUAL_FROM_INDEX_PARAM, path)?.toIntOrNull()?.takeIf { it >= 0 }
+    return build(origin, trackId, index)
   }
 
   /** The decoded `__trackId`, or null when [path] is not contextual. */

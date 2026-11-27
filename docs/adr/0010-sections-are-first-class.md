@@ -82,7 +82,7 @@ Decisions, each with its reason:
   path. Rendering may truncate what is _visible_ (CarPlay fits a
   width-dependent number of tiles per row and exposes no way to query it);
   it never changes what _plays_.
-- **The per-section queue policy stays deferred.** It is additive — an
+- **The per-section queue policy stays deferred.** _(Its `'path'` value landed in ADR 0015.)_ It is additive — an
   optional field lands compatibly at any time, even post-ship — so it does
   not spend this migration's breaking-change window. ADR 0006's discipline
   holds: the knob arrives when a surface actually varies.

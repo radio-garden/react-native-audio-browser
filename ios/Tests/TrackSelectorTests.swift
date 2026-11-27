@@ -7,7 +7,7 @@ import Testing
 @MainActor
 private final class BrowserMock: TrackSelectionBrowser {
   var trackLoadHandlerResult = false
-  var expandQueueResult: (tracks: [Track], selectedIndex: Int)?
+  var expandQueueResult: (tracks: [Track], selectedIndex: Int, sourcePath: String)?
   var expandQueueError: Error?
 
   var trackLoadEvents: [TrackLoadEvent] = []
@@ -38,7 +38,9 @@ private final class BrowserMock: TrackSelectionBrowser {
     return trackLoadHandlerResult
   }
 
-  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
+  func expandQueueFromContextualPath(_ path: String) async throws
+    -> (tracks: [Track], selectedIndex: Int, sourcePath: String)?
+  {
     expandedPaths.append(path)
     await hold(path)
     if let error = expandQueueError {
@@ -265,6 +267,7 @@ struct ContextualPathQueueReuseTests {
     browser.expandQueueResult = (
       tracks: [Track(path: stamped("y", 4), src: "y"), Track(path: stamped("dup", 5), src: "dup")],
       selectedIndex: 1,
+      sourcePath: parentPath,
     )
 
     let track = Track(path: stamped("dup", 5), src: "dup")
@@ -277,6 +280,63 @@ struct ContextualPathQueueReuseTests {
     #expect(startIndex == 1)
     #expect(sourcePath == parentPath)
     #expect(browser.expandedPaths == [stamped("dup", 5)])
+  }
+}
+
+// MARK: - Linked path fallback
+
+@Suite("a linked path's fallback")
+@MainActor
+struct LinkedFallbackTests {
+  let linked = BrowserPathHelper.buildLinked(linkedPath: "/recent", trackId: "b", originPath: "/home", originIndex: 2)
+
+  @Test func aFailedLinkedPageQueuesTheOriginFromTheOrigin() async throws {
+    var expanded: [String] = []
+    let queue = try await SectionScope.expanding(linked) { path in
+      expanded.append(path)
+      if path.hasPrefix("/recent") { throw MockError.expansion }
+      return (tracks: [Track(src: "a"), Track(src: "b")], selectedIndex: 1)
+    }
+    #expect(expanded == [linked, "/home?__trackId=b&__index=2"])
+    #expect(queue?.sourcePath == "/home")
+    #expect(queue?.tracks.map(\.src) == ["a", "b"])
+  }
+
+  @Test func aLinkedPageWithoutTheTrackQueuesTheOrigin() async throws {
+    let queue = try await SectionScope.expanding(linked) { path in
+      path.hasPrefix("/recent") ? nil : (tracks: [Track(src: "b")], selectedIndex: 0)
+    }
+    #expect(queue?.sourcePath == "/home")
+  }
+
+  @Test func aCancelledTapDoesNotFallBack() async {
+    var expanded: [String] = []
+    let task = Task { @MainActor in
+      try await SectionScope.expanding(linked) { path in
+        expanded.append(path)
+        withUnsafeCurrentTask { $0?.cancel() }
+        throw CancellationError()
+      }
+    }
+    await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(expanded == [linked])
+  }
+
+  @Test func aTapInThePreviewAfterAFallbackQueuesTheLinkedPageAgain() async {
+    let (selector, browser, player) = makeSelector()
+    // The fallback queue: the preview's tracks, from /home.
+    player.queueSourcePath = "/home"
+    player.tracks = [Track(path: linked, src: "b")]
+    browser.expandQueueResult = (tracks: [Track(src: "a"), Track(src: "b"), Track(src: "c")], selectedIndex: 1, sourcePath: "/recent")
+
+    let result = await selector.select(track: Track(path: linked, src: "b"), player: player)
+
+    guard case let .play(.setQueue(tracks, _, sourcePath)) = result else {
+      Issue.record("expected .play(.setQueue), got \(result)")
+      return
+    }
+    #expect(tracks.count == 3)
+    #expect(sourcePath == "/recent")
   }
 }
 
@@ -296,7 +356,7 @@ struct ContextualPathExpansionTests {
       Track(id: "b", src: "song.mp3"),
       Track(id: "c", src: "last.mp3"),
     ]
-    browser.expandQueueResult = (tracks: expandedTracks, selectedIndex: 1)
+    browser.expandQueueResult = (tracks: expandedTracks, selectedIndex: 1, sourcePath: parentPath)
 
     let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
@@ -325,6 +385,7 @@ struct ContextualPathExpansionTests {
     browser.expandQueueResult = (
       tracks: [Track(id: "a", src: "song.mp3")],
       selectedIndex: 0,
+      sourcePath: parentPath,
     )
 
     let track = Track(id: "t1", path: contextualPath, src: trackSrc)
@@ -406,7 +467,7 @@ struct DisabledTrackTests {
 
   @Test func disabledContextual_neverExpands() async {
     let (selector, browser, player) = makeSelector()
-    browser.expandQueueResult = (tracks: [Track(id: "a", src: "a")], selectedIndex: 0)
+    browser.expandQueueResult = (tracks: [Track(id: "a", src: "a")], selectedIndex: 0, sourcePath: "/home")
     let track = Track(
       id: "t1", path: "/home?__trackId=t1", src: "https://example.com/a.mp3", disabled: true,
     )
@@ -445,7 +506,7 @@ struct SelectionOrderTests {
   ) async -> PendingSelection {
     let path = BrowserPathHelper.build(parentPath: "/library/radio", trackId: "older")
     browser.held = [path]
-    browser.expandQueueResult = (tracks: [Track(id: "older", src: "older.mp3")], selectedIndex: 0)
+    browser.expandQueueResult = (tracks: [Track(id: "older", src: "older.mp3")], selectedIndex: 0, sourcePath: "/library/radio")
     let selection = PendingSelection(selector, Track(id: "older", path: path, src: "older.mp3"), player)
     await yieldUntil { browser.waiting.count == 1 }
     return selection

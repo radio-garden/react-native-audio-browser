@@ -29,6 +29,9 @@ data class Section(
   val path: String?,
   @DoNotStrip
   @Keep
+  val queue: SectionQueue?,
+  @DoNotStrip
+  @Keep
   val children: Array<Track>
 ) {
   /* primary constructor */
@@ -39,6 +42,7 @@ data class Section(
     return Objects.deepEquals(this.title, other.title)
       && Objects.deepEquals(this.style, other.style)
       && Objects.deepEquals(this.path, other.path)
+      && Objects.deepEquals(this.queue, other.queue)
       && Objects.deepEquals(this.children, other.children)
   }
 
@@ -47,6 +51,7 @@ data class Section(
       title,
       style,
       path,
+      queue,
       children
     ).contentDeepHashCode()
   }
@@ -59,8 +64,8 @@ data class Section(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String?, style: SectionStyle?, path: String?, children: Array<Track>): Section {
-      return Section(title, style, path, children)
+    private fun fromCpp(title: String?, style: SectionStyle?, path: String?, queue: SectionQueue?, children: Array<Track>): Section {
+      return Section(title, style, path, queue, children)
     }
   }
 }

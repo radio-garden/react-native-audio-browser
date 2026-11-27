@@ -27,6 +27,7 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionQueue
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -231,14 +232,18 @@ class BrowserManager {
     )
   }
 
-  private fun cacheTrack(track: Track) {
-    track.id?.takeUnless { it.isBlank() }?.let { trackCache.put(it, track) }
-    track.path?.let { trackCache.put(it, track) }
-    track.src?.let { trackCache.put(it, track) }
+  /** With [rekey] false, keeps a key that already names a track. */
+  private fun cacheTrack(track: Track, rekey: Boolean = true) {
+    val put = { key: String ->
+      if (rekey || trackCache.get(key) == null) trackCache.put(key, track)
+    }
+    track.id?.takeUnless { it.isBlank() }?.let(put)
+    track.path?.let(put)
+    track.src?.let(put)
   }
 
-  private fun cacheChildren(resolvedTrack: ResolvedTrack) {
-    resolvedTrack.flattenedChildren?.forEach { cacheTrack(it) }
+  private fun cacheChildren(resolvedTrack: ResolvedTrack, rekey: Boolean = true) {
+    resolvedTrack.flattenedChildren?.forEach { cacheTrack(it, rekey) }
   }
 
   // Warns once per page: the check runs again on every onGetChildren serve. Concurrent: those
@@ -414,8 +419,8 @@ class BrowserManager {
   /**
    * Resolves the items `MediaSessionCallback.onSetMediaItems()` receives. A single item with a
    * search query plays the search results from that item; a single contextual item expands to the
-   * tapped section's queue. Otherwise each item resolves through the track cache. Disabled tracks
-   * are dropped and the start index shifts to match.
+   * tapped section's queue, its source page passed to [onQueueSource]. Otherwise each item resolves
+   * through the track cache. Disabled tracks are dropped and the start index shifts to match.
    *
    * @throws IllegalStateException when the start track is disabled, every track is disabled, or a
    *   mediaId is neither cached, a playable URL, nor found by `findTrack`
@@ -424,6 +429,7 @@ class BrowserManager {
     mediaItems: List<MediaItem>,
     startIndex: Int,
     startPositionMs: Long,
+    onQueueSource: (String) -> Unit = {},
   ): MediaSession.MediaItemsWithStartPosition {
     if (mediaItems.size == 1) {
       val mediaItem = mediaItems[0]
@@ -476,6 +482,7 @@ class BrowserManager {
 
         if (expanded != null) {
           val (tracks, selectedIndex) = expanded
+          onQueueSource(expanded.sourcePath)
 
           val expandedMediaItems = tracks.map { track -> TrackFactory.toMedia3(track) }
 
@@ -530,8 +537,16 @@ class BrowserManager {
     }
   }
 
-  /** Resolves the page at [path]; a contextual path resolves its parent container. */
-  suspend fun resolve(path: String, useCache: Boolean = true): ResolvedTrack {
+  /**
+   * Resolves the page at [path]; a contextual path resolves its parent container. With [rekey]
+   * false, a track the cache already holds keeps its entry, so `contextualPathFor` still names the
+   * page it was browsed on.
+   */
+  suspend fun resolve(
+    path: String,
+    useCache: Boolean = true,
+    rekey: Boolean = true,
+  ): ResolvedTrack {
     Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
 
     val normalizedPath = BrowserPathHelper.stripTrackId(path)
@@ -544,7 +559,7 @@ class BrowserManager {
         Timber.d("Content cache HIT for path='$normalizedPath'")
         // Re-key the track cache on a hit too: contextualPathFor must see the most recently
         // browsed container.
-        cacheChildren(cached)
+        cacheChildren(cached, rekey)
         return hydrateChildren(cached)
       }
       Timber.d("Content cache MISS for path='$normalizedPath'")
@@ -559,7 +574,7 @@ class BrowserManager {
       }
     }
 
-    cacheChildren(resolvedTrack)
+    cacheChildren(resolvedTrack, rekey)
 
     return hydrateChildren(resolvedTrack)
   }
@@ -625,6 +640,8 @@ class BrowserManager {
         .map { section ->
           val base = flatIndex
           flatIndex += section.children.size
+          val linkedPath =
+            section.path?.takeIf { it.isNotEmpty() && section.queue == SectionQueue.PATH }
           section to
             section.children.mapIndexed { offset, track ->
               async {
@@ -637,7 +654,10 @@ class BrowserManager {
                 // Regenerated on every browse so the path names the container it was browsed in;
                 // the flat position breaks ties between duplicate identities.
                 if (track.src != null && trackIdentity != null) {
-                  val contextualPath = BrowserPathHelper.build(path, trackIdentity, index)
+                  val contextualPath =
+                    if (linkedPath != null)
+                      BrowserPathHelper.buildLinked(linkedPath, trackIdentity, path, index)
+                    else BrowserPathHelper.build(path, trackIdentity, index)
                   transformedTrack = transformedTrack.copy(path = contextualPath)
 
                   Timber.d(
@@ -714,16 +734,29 @@ class BrowserManager {
    * Expands a contextual path into the playable, enabled tracks of the tapped section (ADR 0006)
    * and the start index, or only the tapped track when `singleTrack` is set. Returns null when the
    * path is not contextual, the tapped identity is no longer on the page or is disabled, or
-   * resolution fails; the caller then plays the stored single track.
+   * resolution fails; the caller then plays the stored single track. A `'path'`-queued section's
+   * child that its linked page does not queue queues its own section, on the page it was tapped on,
+   * which is then the queue's [ExpandedQueue.sourcePath].
    */
-  suspend fun expandQueueFromContextualPath(contextualPath: String): Pair<Array<Track>, Int>? {
+  suspend fun expandQueueFromContextualPath(contextualPath: String): ExpandedQueue? {
+    expandScoped(contextualPath)?.let { (tracks, index) ->
+      return ExpandedQueue(tracks, index, BrowserPathHelper.stripTrackId(contextualPath))
+    }
+    val origin = BrowserPathHelper.extractOrigin(contextualPath) ?: return null
+    Timber.d("Linked page gave no queue for $contextualPath, queueing its origin: $origin")
+    return expandScoped(origin)?.let { (tracks, index) ->
+      ExpandedQueue(tracks, index, BrowserPathHelper.stripTrackId(origin))
+    }
+  }
+
+  private suspend fun expandScoped(contextualPath: String): Pair<Array<Track>, Int>? {
     val trackId = BrowserPathHelper.extractTrackId(contextualPath) ?: return null
 
     Timber.d("Expanding queue from contextual path: $contextualPath (trackId=$trackId)")
 
     try {
       val parentPath = BrowserPathHelper.stripTrackId(contextualPath)
-      val parentResolvedTrack = resolve(parentPath)
+      val parentResolvedTrack = resolve(parentPath, rekey = false)
       val sections = parentResolvedTrack.normalizedSections
 
       if (sections.isNullOrEmpty()) {
@@ -1345,3 +1378,6 @@ data class BrowserConfig(
       return searchEntry?.searchCallback != null || searchEntry?.searchConfig != null
     }
 }
+
+/** A tap's queue, its start index, and the page it was expanded from. */
+data class ExpandedQueue(val tracks: Array<Track>, val startIndex: Int, val sourcePath: String)

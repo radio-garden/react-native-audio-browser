@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 namespace margelo::nitro::audiobrowser { enum class GridTile; }
 // Forward declaration of `Section` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Section; }
+// Forward declaration of `SectionQueue` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionQueue; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -239,6 +241,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "SectionStyle.hpp"
 #include "GridTile.hpp"
 #include "Section.hpp"
+#include "SectionQueue.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "NavigationErrorEvent.hpp"
 #include "NavigationError.hpp"

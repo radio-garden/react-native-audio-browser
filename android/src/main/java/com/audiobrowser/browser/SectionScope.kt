@@ -48,7 +48,7 @@ object SectionScope {
 
 /** One untitled section: how a flat track list (`children` sugar, search results) is wrapped. */
 fun untitledSection(children: Array<Track>): Section =
-  Section(title = null, style = null, path = null, children = children)
+  Section(title = null, style = null, path = null, queue = null, children = children)
 
 /** The page as sections: `sections` when present, else `children` as one untitled section. */
 val ResolvedTrack.normalizedSections: List<Section>?

@@ -940,6 +940,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
         }
       }
 
+      var queueSource: String? = null
       val result =
         if (voiceSearch != null) {
           // A failed future leaves current playback untouched.
@@ -950,7 +951,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
             startPositionMs,
           )
         } else {
-          browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+          browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs) {
+            queueSource = it
+          }
         }
 
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
@@ -975,8 +978,8 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
         // Only on handleTrackLoad's default branch: a consumer that handles the load owns the
         // queue.
         if (singleContextualPath != null) {
-          val parentPath = BrowserPathHelper.stripTrackId(singleContextualPath)
-          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
+          val sourcePath = queueSource ?: BrowserPathHelper.stripTrackId(singleContextualPath)
+          withContext(Dispatchers.Main) { player.queueSourcePath = sourcePath }
         }
         result
       }
@@ -1089,10 +1092,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
           "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
         )
 
-        if (BrowserPathHelper.isContextual(path)) {
-          val parentPath = BrowserPathHelper.stripTrackId(path)
-          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
-        }
+        withContext(Dispatchers.Main) { player.queueSourcePath = expanded.sourcePath }
 
         MediaSession.MediaItemsWithStartPosition(
           ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),

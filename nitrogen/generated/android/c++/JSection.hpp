@@ -24,12 +24,14 @@
 #include "JHttpMethod.hpp"
 #include "JImageShape.hpp"
 #include "JImageSource.hpp"
+#include "JSectionQueue.hpp"
 #include "JSectionStyle.hpp"
 #include "JStyleDisplay.hpp"
 #include "JTrack.hpp"
 #include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JVariant_String_ArtworkVariants.hpp"
+#include "SectionQueue.hpp"
 #include "SectionStyle.hpp"
 #include "StyleDisplay.hpp"
 #include "Track.hpp"
@@ -66,12 +68,15 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JSectionStyle> style = this->getFieldValue(fieldStyle);
       static const auto fieldPath = clazz->getField<jni::JString>("path");
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
+      static const auto fieldQueue = clazz->getField<JSectionQueue>("queue");
+      jni::local_ref<JSectionQueue> queue = this->getFieldValue(fieldQueue);
       static const auto fieldChildren = clazz->getField<jni::JArrayClass<JTrack>>("children");
       jni::local_ref<jni::JArrayClass<JTrack>> children = this->getFieldValue(fieldChildren);
       return Section(
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt,
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
+        queue != nullptr ? std::make_optional(queue->toCpp()) : std::nullopt,
         [&](auto&& __input) {
           size_t __size = __input->size();
           std::vector<Track> __vector;
@@ -91,7 +96,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JSection::javaobject> fromCpp(const Section& value) {
-      using JSignature = JSection(jni::alias_ref<jni::JString>, jni::alias_ref<JSectionStyle>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>);
+      using JSignature = JSection(jni::alias_ref<jni::JString>, jni::alias_ref<JSectionStyle>, jni::alias_ref<jni::JString>, jni::alias_ref<JSectionQueue>, jni::alias_ref<jni::JArrayClass<JTrack>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -99,6 +104,7 @@ namespace margelo::nitro::audiobrowser {
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
         value.style.has_value() ? JSectionStyle::fromCpp(value.style.value()) : nullptr,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
+        value.queue.has_value() ? JSectionQueue::fromCpp(value.queue.value()) : nullptr,
         [&](auto&& __input) {
           size_t __size = __input.size();
           jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);

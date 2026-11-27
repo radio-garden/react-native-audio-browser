@@ -190,6 +190,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
+// Forward declaration of `SectionQueue` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionQueue; }
 // Forward declaration of `SectionStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SectionStyle; }
 // Forward declaration of `Section` to properly resolve imports.
@@ -310,6 +312,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "Section.hpp"
+#include "SectionQueue.hpp"
 #include "SectionStyle.hpp"
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"

@@ -441,6 +441,14 @@ The position is only a tie-breaker. If the page has changed by the time the queu
 
 Tapping a row that's already in the current queue from the same page skips in place rather than requeueing the section.
 
+A section that previews a longer list, a rail of a few stations with a `path` to all of them, can queue the whole list instead. Give it `queue: 'path'`:
+
+```ts
+{ title: 'Recently played', path: '/recent', queue: 'path', children: firstSix }
+```
+
+A tap on one of its tracks then queues the `/recent` page's section that holds the tapped track, and starts at that track. The page is resolved when the track is tapped, so a page not yet browsed costs a request. The track is found there by its identity alone, since its position in the preview says nothing about its position on the page. A tap on the `/recent` page itself afterwards skips in place, since both taps queue from the same source. If the page fails to resolve, or no longer holds the track, the tap queues the section's own tracks instead, and the next tap tries the page again. Without a `path`, `queue: 'path'` queues the section itself, as the default `queue: 'section'` does.
+
 **`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls _your_ handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
 
 ```ts

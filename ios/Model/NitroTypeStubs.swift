@@ -375,7 +375,21 @@
     var title: String?
     var style: SectionStyle?
     var path: String?
+    var queue: SectionQueue?
     var children: [Track]
+  }
+
+  enum SectionQueue: Equatable {
+    case section
+    case path
+
+    init?(fromString string: String) {
+      switch string {
+      case "section": self = .section
+      case "path": self = .path
+      default: return nil
+      }
+    }
   }
 
   struct ResolvedTrack: Equatable {
