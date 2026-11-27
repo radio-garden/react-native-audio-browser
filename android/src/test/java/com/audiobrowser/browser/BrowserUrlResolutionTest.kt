@@ -10,6 +10,8 @@ import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.Promise
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -24,6 +26,13 @@ import org.junit.Before
 import org.junit.Test
 
 class BrowserUrlResolutionTest {
+
+  private fun nested(
+    config: TransformableRequestConfig
+  ): Promise<Promise<TransformableRequestConfig>> =
+    JsPromise<Promise<TransformableRequestConfig>>()
+      .apply { resolve(JsPromise<TransformableRequestConfig>().apply { resolve(config) }.promise) }
+      .promise
 
   private lateinit var bm: BrowserManager
 
@@ -124,6 +133,21 @@ class BrowserUrlResolutionTest {
     }
 
   @Test
+  fun `resolveMediaUrl uses the requestResolver again once it recovers`() = runTest {
+    var calls = 0
+    bm.config =
+      BrowserConfig(
+        requestResolver = {
+          if (calls++ == 0) throw IllegalStateException("resolver failed")
+          nested(transformableConfig(baseUrl = "https://api.example.com"))
+        }
+      )
+    assertNull(bm.resolveMediaUrl("/stream/1", track(src = "/stream/1"))?.baseUrl)
+    val resolved = bm.resolveMediaUrl("/stream/1", track(src = "/stream/1"))
+    assertEquals("https://api.example.com", resolved?.baseUrl)
+  }
+
+  @Test
   fun `a throwing browseResolver also resolves the media URL without the request layer`() =
     runTest {
       bm.config =
@@ -135,6 +159,16 @@ class BrowserUrlResolutionTest {
       assertNull(resolved?.baseUrl)
       assertEquals("/stream/1", resolved?.path)
     }
+
+  @Test
+  fun `resolveArtworkUrl gives no artwork when the requestResolver throws`() = runTest {
+    bm.config =
+      BrowserConfig(
+        requestResolver = { throw IllegalStateException("resolver failed") },
+        artwork = artworkConfig(headers = mapOf("x-token" to "abc")),
+      )
+    assertNull(bm.resolveArtworkUrl(track(artwork = "https://img.example.com/a.png")))
+  }
 
   @Test
   fun `resolveArtworkUrl gives no artwork when artwork resolveSync never answers`() =
