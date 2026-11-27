@@ -70,7 +70,11 @@ final class StagedPlayerState {
   }
 
   func setPlayWhenReady(_ intent: Bool) {
-    if isStaging { stagedPlayWhenReady = intent } else { currentPlayer()?.setPlayWhenReady(intent) }
+    let staging = isStaging
+    if staging { stagedPlayWhenReady = intent }
+    // A pause also reaches the outgoing player, audible until the rebuild; a play doesn't, as the
+    // category changes under it.
+    if !staging || !intent { currentPlayer()?.setPlayWhenReady(intent) }
     announce()
   }
 

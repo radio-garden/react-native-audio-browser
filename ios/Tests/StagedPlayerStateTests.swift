@@ -131,6 +131,14 @@ struct StagedPlayerStateTests {
     #expect(new.playWhenReady)
   }
 
+  @Test func aSetupsPauseOptionReachesTheOldPlayer() throws {
+    let staged = Staged()
+    let old = try staged.setUp(playingPlayer())
+
+    staged.start(playWhenReady: false)
+    #expect(!old.playWhenReady)
+  }
+
   @Test func queuedSetupsApplyOnlyAtTheLastRebuild() {
     let staged = Staged()
     _ = staged.setUp()
@@ -159,12 +167,25 @@ struct StagedPlayerStateTests {
     #expect(next.repeatMode == .off)
   }
 
-  @Test func aToggleDuringResetupStagesAPauseForAPlayingPlayer() throws {
+  @Test func aPauseDuringResetupReachesTheOldPlayerToo() throws {
     let staged = Staged()
-    _ = try staged.setUp(playingPlayer())
+    let old = try staged.setUp(playingPlayer())
+
+    staged.start()
+    staged.state.setPlayWhenReady(false)
+    #expect(!old.playWhenReady)
+
+    let new = staged.rebuild()
+    #expect(!new.playWhenReady)
+  }
+
+  @Test func aToggleDuringResetupPausesThePlayingOldPlayer() throws {
+    let staged = Staged()
+    let old = try staged.setUp(playingPlayer())
 
     staged.start()
     staged.state.togglePlayback()
+    #expect(!old.playWhenReady)
 
     let new = staged.rebuild()
     #expect(!new.playWhenReady)
