@@ -1,3 +1,31 @@
+## [1.0.0-next.17](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.16...v1.0.0-next.17) (2026-11-27)
+
+### Features
+
+* **android:** add the viewMoreArtwork browser option ([3e72769](https://github.com/radio-garden/react-native-audio-browser/commit/3e72769c91a52e3c9bcc80abbab75422f07c29d1))
+* let a preview section queue the page it links to ([75e50e0](https://github.com/radio-garden/react-native-audio-browser/commit/75e50e0b2dd9905ded77f8eaca0b677b0496d90a))
+* queue a preview's own tracks when its linked page gives no queue ([ba3b378](https://github.com/radio-garden/react-native-audio-browser/commit/ba3b3780adb58fdc5ea633abd9f7f141e2b7ba0a))
+
+### Bug Fixes
+
+* **android:** handle the favorite custom command in one place ([c1cb6ce](https://github.com/radio-garden/react-native-audio-browser/commit/c1cb6cebc357cb9e182af51b7ce3918139d3ce5d))
+* **android:** replace stored engine options the engine fails to build from ([ff64ee7](https://github.com/radio-garden/react-native-audio-browser/commit/ff64ee7c4cb746c76dc745c54a848c9e3a35f32e))
+* **android:** report a live item's stall at the end of its window ([3da25e8](https://github.com/radio-garden/react-native-audio-browser/commit/3da25e8d352c91392a75f9ae2bc7631700e91fa3))
+* **android:** request browse artwork at the size the car draws it ([b7370e4](https://github.com/radio-garden/react-native-audio-browser/commit/b7370e464fe408067cd541c0d9bcc733d2e9de43))
+* **android:** retry every 5xx, as iOS does ([0d981e7](https://github.com/radio-garden/react-native-audio-browser/commit/0d981e734fc334842651368ea0d22dea5274994d))
+* **ios:** detach a player when it is destroyed, and release after a lost resume ([d2684ce](https://github.com/radio-garden/react-native-audio-browser/commit/d2684ce572767f727ed38a946a0828c25f30b25e))
+* **ios:** detach the player from the audio session when the browser is freed ([11a2fd8](https://github.com/radio-garden/react-native-audio-browser/commit/11a2fd84b07d3c91ba74fef1bd09405e8a6a6e05))
+* **ios:** drop an activation's follow-up once the player that asked was replaced ([e5a378c](https://github.com/radio-garden/react-native-audio-browser/commit/e5a378c4956a8278e1e5e5b0a3b052efc1676483))
+* **ios:** ignore audio session calls from a player the controller no longer serves ([8c406ca](https://github.com/radio-garden/react-native-audio-browser/commit/8c406cad5e2a14fc0e7f23284e4f12bc47cc6b05))
+* **ios:** keep a refusal from before a reload off the new player ([99108d5](https://github.com/radio-garden/react-native-audio-browser/commit/99108d599f442d5d7059541b64df6a86666e3a41))
+* **ios:** keep one audio session controller for the process ([9aaf2c3](https://github.com/radio-garden/react-native-audio-browser/commit/9aaf2c3d87c7f0a13f077f32bd324b1cf7de08c3))
+* **ios:** skip an interruption's resume once another interruption began ([73092e7](https://github.com/radio-garden/react-native-audio-browser/commit/73092e7ffd2d4a2ce4c4863dc6d87386878374b1))
+
+### Code Refactors
+
+* **ios:** have the Player call the audio session controller itself ([dee18ea](https://github.com/radio-garden/react-native-audio-browser/commit/dee18ea1e0eb55c994a997a48772c5e4237aee08))
+* **ios:** put the AudioSessionController under test ([e18c053](https://github.com/radio-garden/react-native-audio-browser/commit/e18c05378ec86d1cd4393da96c24aa5b7e5715bd))
+
 ## [1.0.0-next.16](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.15...v1.0.0-next.16) (2026-11-26)
 
 ### Features
