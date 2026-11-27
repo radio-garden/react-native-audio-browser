@@ -43,6 +43,8 @@ final class AudioSessionController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioSession")
   /// Bumped by each activation and each interruption: a refusal older than either is stale.
   private var generation = 0
+  /// Bumped by each interruption: a resume older than one is stale.
+  private var interruptions = 0
 
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
   /// thread. Serial, so a release and a quick re-activation keep their order.
@@ -114,6 +116,7 @@ final class AudioSessionController {
 
   func interruptionBegan() {
     generation += 1
+    interruptions += 1
     player?.handleInterruptionBegan()
   }
 
@@ -121,11 +124,13 @@ final class AudioSessionController {
     // Reactivate only when a resume follows, and resume once active: activating while staying
     // paused would hold a non-mixable session with nothing to release it.
     if shouldResume, player?.willResumeAfterInterruption == true {
+      let interruptions = interruptions
       activate { [weak self] in
         guard let self else { return }
-        player?.handleInterruptionEnded(shouldResume: true)
-        // A JS reload while the session activated left no resume to hold it.
-        if player?.canReleaseAudioSession ?? true { scheduleRelease() }
+        // Another interruption began while the session activated: its own end resumes.
+        if interruptions == self.interruptions { player?.handleInterruptionEnded(shouldResume: true) }
+        // A JS reload, or a resume dropped meanwhile, may have left nothing to hold the session.
+        scheduleRelease()
       }
     } else {
       player?.handleInterruptionEnded(shouldResume: shouldResume)

@@ -1177,6 +1177,22 @@ struct InterruptionTests {
     #expect(c.playWhenReady == true)
   }
 
+  /// A refusal handled before the interruption that caused it pauses first, so the interruption
+  /// captures nothing to resume.
+  @Test @MainActor
+  func activationFailedBeforeItsInterruption_resumesAfterIt() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+
+    c.handleAudioSessionActivationFailed()
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    withKnownIssue("The refusal drops the play intent the interruption would have kept") {
+      #expect(c.playWhenReady == true)
+    }
+  }
+
   /// Unplugging headphones during a call is a deliberate output loss: the call's end must not
   /// resume on the built-in speaker.
   @Test @MainActor
