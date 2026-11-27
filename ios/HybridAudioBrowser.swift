@@ -58,10 +58,17 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor private(set) var initialNavigation: Task<Void, Never>?
   /// Cancelled on a JS reload: the controller outlives this instance.
   @MainActor private var audioSessionListeners: [Subscription] = []
-  // Player state set before the player exists, by setup options or the setters; last write wins,
-  // consumed when the player comes up.
-  @MainActor var pendingPlayWhenReady: Bool?
-  @MainActor var pendingRepeatMode: RepeatMode?
+  @MainActor lazy var stagedPlayerState = StagedPlayerState(
+    currentPlayer: { [weak self] in self?.player },
+    onRepeatModeChanged: { [weak self] mode in
+      let event = RepeatModeChangedEvent(repeatMode: mode)
+      self?.onPlaybackRepeatModeChanged(event)
+      self?.repeatModeChangedEmitter.emit(event)
+    },
+    onPlayWhenReadyChanged: { [weak self] intent in
+      self?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady: intent))
+    },
+  )
   @MainActor let playerOptions = PlayerUpdateOptions()
 
   @MainActor lazy var navigationError = NavigationErrorState(

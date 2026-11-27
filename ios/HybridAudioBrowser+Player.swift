@@ -22,30 +22,27 @@ public extension HybridAudioBrowser {
   }
 
   func play() throws {
-    onMainActor { player?.play() }
+    onMainActor { stagedPlayerState.setPlayWhenReady(true) }
   }
 
   func pause() throws {
-    onMainActor { player?.pause() }
+    onMainActor { stagedPlayerState.setPlayWhenReady(false) }
   }
 
   func togglePlayback() throws {
-    onMainActor { player?.togglePlayback() }
+    onMainActor { stagedPlayerState.togglePlayback() }
   }
 
   func stop() throws {
-    onMainActor { player?.stop() }
+    onMainActor { stagedPlayerState.stop() }
   }
 
   func setPlayWhenReady(playWhenReady: Bool) throws {
-    onMainActor {
-      if let player { player.setPlayWhenReady(playWhenReady) }
-      else { pendingPlayWhenReady = playWhenReady }
-    }
+    onMainActor { stagedPlayerState.setPlayWhenReady(playWhenReady) }
   }
 
   func getPlayWhenReady() throws -> Bool {
-    onMainActor { player?.playWhenReady ?? pendingPlayWhenReady ?? false }
+    onMainActor { stagedPlayerState.playWhenReady() }
   }
 
   func seekTo(position: Double) throws {
@@ -111,14 +108,11 @@ public extension HybridAudioBrowser {
   }
 
   func getRepeatMode() throws -> RepeatMode {
-    onMainActor { player?.repeatMode ?? pendingRepeatMode ?? .off }
+    onMainActor { stagedPlayerState.repeatMode() }
   }
 
   func setRepeatMode(mode: RepeatMode) throws {
-    onMainActor {
-      if let player { player.repeatMode = mode }
-      else { pendingRepeatMode = mode }
-    }
+    onMainActor { stagedPlayerState.setRepeatMode(mode) }
   }
 
   func getShuffleEnabled() throws -> Bool {

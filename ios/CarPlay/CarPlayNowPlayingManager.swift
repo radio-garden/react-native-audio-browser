@@ -128,7 +128,7 @@ final class CarPlayNowPlayingManager {
       types: buttons,
       favorited: buttons.contains(.favorite) ? audioBrowser.isActiveTrackFavorited() : nil,
       shuffleSelected: buttons.contains(.shuffle) ? player?.shuffleEnabled ?? false : nil,
-      repeatSelected: buttons.contains(.repeat) ? (player?.repeatMode ?? .off) != .off : nil,
+      repeatSelected: buttons.contains(.repeat) ? audioBrowser.stagedPlayerState.repeatMode() != .off : nil,
     )
     guard row != builtRow else { return }
     builtRow = row
@@ -261,10 +261,9 @@ final class CarPlayNowPlayingManager {
   }
 
   private func handleRepeatButtonTapped() {
-    guard let player else { return }
-    let currentMode = player.repeatMode
+    let currentMode = audioBrowser.stagedPlayerState.repeatMode()
     let newMode = NowPlayingButtonRules.repeatMode(after: currentMode)
-    player.repeatMode = newMode
+    audioBrowser.stagedPlayerState.setRepeatMode(newMode)
     logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
   }
 

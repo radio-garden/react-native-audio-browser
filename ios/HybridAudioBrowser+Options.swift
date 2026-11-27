@@ -9,21 +9,29 @@ public extension HybridAudioBrowser {
   // MARK: - Player Setup
 
   func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
+    // Opened on the calling thread, not in the turn, so a setter called after this one stages for
+    // its player.
+    onMainActor {
+      stagedPlayerState.setupStarted(repeatMode: options.repeatMode, playWhenReady: options.playWhenReady)
+    }
     // Claimed here, on the calling thread: the last call sets the category last and builds the
     // player last.
-    let setup = setupTurns.enqueue { [weak self] in await self?.runSetup(options) }
+    let setup = setupTurns.enqueue { [weak self] in
+      guard let self else { return }
+      await stagedPlayerState.setupFinished(player: runSetup(options))
+    }
     return Promise.async { await setup.value }
   }
 
   @MainActor
-  private func runSetup(_ options: NativeSetupPlayerOptions) async {
+  private func runSetup(_ options: NativeSetupPlayerOptions) async -> Player? {
     // A JS reload's new instance took over while this waited its turn.
-    guard !didDropJSCallbacks else { return }
+    guard !didDropJSCallbacks else { return nil }
     // Sets the category only; the session activates when playback produces output. Awaited
     // before the player is built, so it never plays under another category.
     await AudioSessionController.shared.configure(options.ios)
     // A JS reload's new instance took over during the wait.
-    guard !didDropJSCallbacks else { return }
+    guard !didDropJSCallbacks else { return nil }
 
     // A re-setup replaces the player, so the outgoing one is torn down first. No-op on first setup.
     let oldPlayer = player
@@ -54,42 +62,16 @@ public extension HybridAudioBrowser {
     // `options.keepSessionAliveOnError` is ignored: on iOS an error never clears the now-playing
     // info, and next/previous follow the queue, not the state.
 
-    // Stage the state before applying it, so setup options and pre-setup setter calls
-    // resolve by strict last-write-wins.
     if let bundled = options.options { updateOptions(options: bundled) }
-    if let mode = options.repeatMode { pendingRepeatMode = mode }
-    if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
-    applyPendingPlayerState()
-    // The new player starts at its defaults without emitting them; listeners still hold the old values.
-    if let oldPlayer {
-      if oldPlayer.repeatMode != newPlayer.repeatMode {
-        playerDidChangeRepeatMode(RepeatModeChangedEvent(repeatMode: newPlayer.repeatMode))
-      }
-      if oldPlayer.shuffleEnabled != newPlayer.shuffleEnabled {
-        playerDidChangeShuffleEnabled(newPlayer.shuffleEnabled)
-      }
-      if oldPlayer.playWhenReady != newPlayer.playWhenReady {
-        playerDidChangePlayWhenReady(newPlayer.playWhenReady)
-      }
+    // The new player starts at its defaults without emitting them; listeners still hold the old
+    // value. The repeat mode and play intent are announced when the window closes.
+    if let oldPlayer, oldPlayer.shuffleEnabled != newPlayer.shuffleEnabled {
+      playerDidChangeShuffleEnabled(newPlayer.shuffleEnabled)
     }
     // The stored options outlive the player, so a re-setup applies them to the new one.
     applyOptions()
     playerAndConfiguredBrowser.check()
-  }
-
-  /// Applies state staged before the player existed, by setup options or pre-setup setters.
-  /// Consumed on apply so a later re-setup doesn't replay it.
-  @MainActor
-  private func applyPendingPlayerState() {
-    guard let player else { return }
-    if let mode = pendingRepeatMode {
-      player.repeatMode = mode
-      pendingRepeatMode = nil
-    }
-    if let intent = pendingPlayWhenReady {
-      player.setPlayWhenReady(intent)
-      pendingPlayWhenReady = nil
-    }
+    return newPlayer
   }
 
   func updateOptions(options: NativeUpdateOptions) {

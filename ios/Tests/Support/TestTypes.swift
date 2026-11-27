@@ -265,6 +265,8 @@ final class MockPlayerCallbacks: PlayerCallbacks {
   var timedMetadata: [TimedMetadata] = []
 
   var publishOrder: [String] = []
+  /// Called on each repeat-mode or play-intent change, as `HybridAudioBrowser` forwards them.
+  var onSettingChanged: (() -> Void)?
 
   func playerDidChangePlayback(_ playback: Playback) {
     publishOrder.append("playback")
@@ -287,6 +289,7 @@ final class MockPlayerCallbacks: PlayerCallbacks {
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
     publishOrder.append("playWhenReady")
     playWhenReadyChanges.append(playWhenReady)
+    onSettingChanged?()
   }
 
   func playerDidChangePlayingState(_ state: PlayingState) {
@@ -305,6 +308,7 @@ final class MockPlayerCallbacks: PlayerCallbacks {
 
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
     repeatModeChanges.append(event)
+    onSettingChanged?()
   }
 
   func playerDidChangeShuffleEnabled(_ enabled: Bool) {
