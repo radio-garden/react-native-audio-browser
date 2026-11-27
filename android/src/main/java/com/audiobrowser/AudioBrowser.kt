@@ -18,6 +18,7 @@ import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.browser.ContentNotFoundException
+import com.audiobrowser.browser.DisabledOnLinkedPageException
 import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.flattenedChildren
@@ -608,7 +609,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
               val trackId = BrowserPathHelper.extractTrackId(path)
 
               if (trackId != null && parentPath == player.queueSourcePath) {
-                val index = player.tracks.indexOfTappedTrack(path, trackId)
+                val index = player.tracks.indexOfTappedTrack(path, trackId, player.currentIndex)
                 if (index >= 0) {
                   Timber.d("Queue already from $parentPath, skipping to index $index")
                   handleTrackLoad(
@@ -683,6 +684,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           }
         } catch (e: CancellationException) {
           throw e
+        } catch (e: DisabledOnLinkedPageException) {
+          Timber.d(e.message)
         } catch (e: Exception) {
           handleBrowserException(e, path ?: track.src ?: "", "navigating to track: ${track.title}")
         }

@@ -51,7 +51,10 @@ import type {
 } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { getTrackIdentity } from '../utils/getTrackIdentity'
-import { BrowserManager } from './browser/BrowserManager'
+import {
+  BrowserManager,
+  DisabledOnLinkedPageError
+} from './browser/BrowserManager'
 import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
@@ -484,15 +487,21 @@ export class NativeAudioBrowser
     // holds the same identity more than once. The identity match remains for
     // index-less paths (e.g. pre-stamp persisted state); an index-stamped path
     // with no exact match falls through to expansion, which re-scopes the
-    // queue to the tapped section.
+    // queue to the tapped section, unless it names the playing track, which
+    // the page may have moved.
     const queue = this.getQueue()
     let index = queue.findIndex((t) => t.path != null && t.path === track.path)
-    if (
-      index < 0 &&
-      track.path != null &&
-      BrowserPathHelper.extractIndex(track.path) === undefined
-    ) {
-      index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+    if (index < 0 && track.path != null) {
+      const current = this.queue.currentIndex
+      if (BrowserPathHelper.extractIndex(track.path) === undefined) {
+        index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+      } else if (
+        current !== undefined &&
+        queue[current] &&
+        getTrackIdentity(queue[current]) === trackId
+      ) {
+        index = current
+      }
     }
 
     if (index < 0) {
@@ -536,7 +545,7 @@ export class NativeAudioBrowser
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
-  private async navigateTrackAsync(track: Track): Promise<void> {
+  protected async navigateTrackAsync(track: Track): Promise<void> {
     try {
       // A disabled track is unavailable — it never plays, whichever surface
       // or stale resume path delivered the selection (Track.disabled; mirrors
@@ -577,6 +586,7 @@ export class NativeAudioBrowser
           throw new Error("Track must have either 'path' or 'src' property")
       }
     } catch (error) {
+      if (error instanceof DisabledOnLinkedPageError) return
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.navigationErrorManager.setNavigationError('unknown-error', message)
     }

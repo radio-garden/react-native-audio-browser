@@ -43,9 +43,10 @@ extension CarPlaySession {
         session.nowPlaying.showNowPlaying(popToFront: false)
       case let .browse(path):
         await session.navigate(to: path, title: track.title)
-      case .superseded, .none:
-        // No `endNowPlayingPreview()` when superseded: Now Playing already previews the later
-        // selection's track.
+      case .none:
+        if track.src != nil { session.player?.endNowPlayingPreview() }
+      case .superseded:
+        // No `endNowPlayingPreview()`: Now Playing already previews the later selection's track.
         break
       }
     }

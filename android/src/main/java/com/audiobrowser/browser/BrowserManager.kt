@@ -424,6 +424,7 @@ class BrowserManager {
    *
    * @throws IllegalStateException when the start track is disabled, every track is disabled, or a
    *   mediaId is neither cached, a playable URL, nor found by `findTrack`
+   * @throws DisabledOnLinkedPageException when a single item's linked page holds it only disabled
    */
   suspend fun resolveMediaItemsForPlayback(
     mediaItems: List<MediaItem>,
@@ -737,6 +738,8 @@ class BrowserManager {
    * resolution fails; the caller then plays the stored single track. A `'path'`-queued section's
    * child that its linked page does not queue queues its own section, on the page it was tapped on,
    * which is then the queue's [ExpandedQueue.sourcePath].
+   *
+   * @throws DisabledOnLinkedPageException when that linked page holds the track only disabled
    */
   suspend fun expandQueueFromContextualPath(contextualPath: String): ExpandedQueue? {
     expandScoped(contextualPath)?.let { (tracks, index) ->
@@ -765,10 +768,14 @@ class BrowserManager {
       }
 
       // The stamped flat index pins which section and which copy was tapped; a stale index falls
-      // back to the first identity match. A vanished identity aborts: queueing the changed list
+      // back to the first section holding an enabled copy. A vanished identity aborts: queueing the
+      // changed list
       // would resume the wrong station.
       val tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
       val scoped = SectionScope.scoped(sections, trackId, tappedIndex) ?: return null
+      if (scoped.onlyDisabled && BrowserPathHelper.extractOrigin(contextualPath) != null) {
+        throw DisabledOnLinkedPageException(trackId)
+      }
       val sectionTracks = scoped.section.children.toList()
       val tappedOffset = scoped.tappedOffset
 
@@ -806,6 +813,8 @@ class BrowserManager {
       )
       return Pair(playableTracks.toTypedArray(), selectedIndex)
     } catch (e: CancellationException) {
+      throw e
+    } catch (e: DisabledOnLinkedPageException) {
       throw e
     } catch (e: Exception) {
       Timber.e(e, "Error expanding queue from contextual path: $contextualPath")
@@ -1381,3 +1390,7 @@ data class BrowserConfig(
 
 /** A tap's queue, its start index, and the page it was expanded from. */
 data class ExpandedQueue(val tracks: Array<Track>, val startIndex: Int, val sourcePath: String)
+
+/** The page a linked path queues marks the tapped track disabled: the tap plays nothing. */
+class DisabledOnLinkedPageException(trackId: String) :
+  IllegalStateException("Refusing playback of a track its linked page disables: $trackId")

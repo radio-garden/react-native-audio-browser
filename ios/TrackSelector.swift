@@ -12,6 +12,8 @@ import os.log
 @MainActor protocol TrackSelectionPlayer {
   var tracks: [Track] { get }
   var queueSourcePath: String? { get }
+  /// -1 when nothing is current.
+  var currentIndex: Int { get }
 }
 
 /// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession;
@@ -49,9 +51,10 @@ class TrackSelector {
 
   // MARK: - Selection
 
-  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within
-  /// the current queue when it came from the same parent, else the parent expanded into a queue
-  /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
+  /// Resolves a selection: nothing for a disabled track, or one its linked page disables; for a
+  /// contextual path, a skip within the current queue when it came from the same parent, else the
+  /// parent expanded into a queue (the track alone if expansion fails); a single track for a `src`;
+  /// browse for a bare `path`.
   /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
   /// Of the playbacks still resolving, only the latest plays, even when the app intercepts it:
   /// an earlier one is `superseded`, and is not offered to the app once it is.
@@ -71,12 +74,13 @@ class TrackSelector {
     }
 
     let selection = beginSelection()
-    let playback: PlannedPlayback = if let contextualPath {
+    let playback: PlannedPlayback? = if let contextualPath {
       await contextualPlayback(contextualPath, track: track, player: player)
     } else {
       .single(track)
     }
     guard isLatest(selection) else { return .superseded }
+    guard let playback else { return .none }
 
     let event = TrackLoadEvent(
       track: track,
@@ -117,22 +121,27 @@ class TrackSelector {
     _ path: String,
     track: Track,
     player: some TrackSelectionPlayer,
-  ) async -> PlannedPlayback {
+  ) async -> PlannedPlayback? {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
     // Exact path first: its `__index` pins the tapped copy when the page holds the same identity
-    // more than once. Identity matching is only for index-less paths (e.g. from persisted state
-    // without one); an indexed path with no exact match expands instead, re-scoping
-    // the queue to the tapped section.
+    // more than once. Identity matching is for index-less paths (e.g. from persisted state
+    // without one) and for the playing track, which the page may have moved; any other indexed
+    // path with no exact match expands instead, re-scoping the queue to the tapped section.
     if parentPath == player.queueSourcePath {
-      var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
-      if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {
-        skipIndex = player.tracks.firstIndex(where: { $0.identity == trackId })
+      let tracks = player.tracks
+      var skipIndex = tracks.firstIndex(where: { $0.path == path })
+      if skipIndex == nil, let trackId {
+        if BrowserPathHelper.extractIndex(path) == nil {
+          skipIndex = tracks.firstIndex(where: { $0.identity == trackId })
+        } else if tracks.indices.contains(player.currentIndex), tracks[player.currentIndex].identity == trackId {
+          skipIndex = player.currentIndex
+        }
       }
       if let index = skipIndex {
         logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        return PlannedPlayback(queue: player.tracks, index: index, intent: .skipTo(index: index))
+        return PlannedPlayback(queue: tracks, index: index, intent: .skipTo(index: index))
       }
     }
 
@@ -144,6 +153,8 @@ class TrackSelector {
         queue: tracks, index: startIndex,
         intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: sourcePath),
       )
+    } catch is SectionScope.DisabledOnLinkedPage {
+      return nil
     } catch {
       logger.error("Error expanding queue: \(error.localizedDescription)")
       return .single(track)

@@ -274,12 +274,31 @@ func stampsAPathQueuedSectionWithoutAPathAgainstThePage(path: String?) throws {
     parentPath: "/recent",
   )
   let tappedPath = try #require(tapped.path)
-  let queue = try #require(SectionScope.queue(in: linked, path: tappedPath, singleTrack: false))
+  let queue = try #require(try SectionScope.queue(in: linked, path: tappedPath, singleTrack: false))
   #expect(queue.tracks.map(\.src) == ["a.mp3", "b.mp3", "c.mp3"])
   #expect(queue.selectedIndex == 1)
   // The same source as a tap on the linked page itself, so a tap there skips in place.
   let linkedPath = try #require(linked[0].children[1].path)
   #expect(BrowserPathHelper.stripTrackId(tappedPath) == BrowserPathHelper.stripTrackId(linkedPath))
+}
+
+@Test func aLinkedPageThatDisablesTheTappedTrackRefusesIt() {
+  let tapped = BrowserPathHelper.buildLinked(linkedPath: "/recent", trackId: "b.mp3", originPath: "/home", originIndex: 1)
+  let linked = [Section(children: [Track(src: "a.mp3", title: "A"), Track(src: "b.mp3", title: "B", disabled: true)])]
+  #expect(throws: SectionScope.DisabledOnLinkedPage.self) {
+    try SectionScope.queue(in: linked, path: tapped, singleTrack: false)
+  }
+}
+
+@Test func aLinkedPageQueuesTheSectionHoldingTheTrackEnabled() throws {
+  let tapped = BrowserPathHelper.buildLinked(linkedPath: "/recent", trackId: "b.mp3", originPath: "/home", originIndex: 1)
+  let linked = [
+    Section(children: [Track(src: "b.mp3", title: "B", disabled: true)]),
+    Section(children: [Track(src: "b.mp3", title: "B"), Track(src: "c.mp3", title: "C")]),
+  ]
+  let queue = try #require(try SectionScope.queue(in: linked, path: tapped, singleTrack: false))
+  #expect(queue.tracks.map(\.src) == ["b.mp3", "c.mp3"])
+  #expect(queue.selectedIndex == 0)
 }
 
 @Test func aLinkedPathStripsToItsLinkedPageAndNamesItsOrigin() {

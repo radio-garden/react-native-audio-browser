@@ -2,20 +2,25 @@ import { describe, it, expect, vi } from 'vitest'
 import type { Section, SectionQueue } from '../../../types'
 import type { HttpClient } from '../../http/HttpClient'
 import { BrowserPathHelper } from '../../util/BrowserPathHelper'
-import { BrowserManager } from '../BrowserManager'
+import { BrowserManager, DisabledOnLinkedPageError } from '../BrowserManager'
 import { FavoriteManager } from '../FavoriteManager'
 import { NavigationErrorManager } from '../NavigationErrorManager'
 
-const station = (name: string) => ({ title: name, src: `${name}.mp3` })
+const station = (name: string, disabled?: boolean) => ({
+  title: name,
+  src: `${name}.mp3`,
+  disabled
+})
 
 /**
  * `/home` holds a two-station preview of `/recent`, which holds `recent`, or
- * fails to resolve when it is null.
+ * fails to resolve when it is null; it disables the stations in `disabled`.
  */
 function makeManager(
   queue: SectionQueue | undefined,
   path = '/recent',
-  recent: string[] | null = ['a', 'b', 'c']
+  recent: string[] | null = ['a', 'b', 'c'],
+  disabled: string[] = []
 ): BrowserManager {
   const httpClient = {
     executeRequest: vi.fn().mockRejectedValue(new Error('no network in test'))
@@ -45,7 +50,9 @@ function makeManager(
               browseStatic: {
                 path: '/recent',
                 title: 'Recent',
-                children: recent.map(station)
+                children: recent.map((name) =>
+                  station(name, disabled.includes(name) || undefined)
+                )
               }
             }
           ]
@@ -100,6 +107,59 @@ describe("a section's queue", () => {
 
     expect(expanded?.tracks.map((t) => t.src)).toEqual(['a.mp3', 'b.mp3'])
     expect(expanded?.selectedIndex).toBe(1)
+  })
+
+  it("'path' refuses a track the linked page disables instead of queueing the preview", async () => {
+    const manager = makeManager('path', '/recent', ['a', 'b', 'c'], ['b'])
+    await manager.navigatePath('/home')
+    const tapped = manager.content?.sections?.[0]?.children[1]?.path ?? ''
+
+    await expect(
+      manager.expandQueueFromContextualPath(tapped)
+    ).rejects.toBeInstanceOf(DisabledOnLinkedPageError)
+  })
+
+  it("'path' queues the linked page's section that holds the track enabled", async () => {
+    const manager = makeManager('path', '/recent', ['b', 'c'], ['b'])
+    const recent = manager.configuration.routes?.[1]?.browseStatic
+    if (!recent?.children) throw new Error('no /recent')
+    recent.sections = [
+      { children: recent.children },
+      { children: [station('b'), station('d')] }
+    ]
+    delete recent.children
+
+    const { expanded } = await tapSecond(manager)
+
+    expect(expanded?.tracks.map((t) => t.src)).toEqual(['b.mp3', 'd.mp3'])
+    expect(expanded?.selectedIndex).toBe(0)
+  })
+
+  it('a stale stamp queues the section that holds the track enabled', async () => {
+    const manager = makeManager(undefined)
+    manager.configuration = {
+      path: '/page',
+      routes: [
+        {
+          path: '/page',
+          browseStatic: {
+            path: '/page',
+            title: 'Page',
+            sections: [
+              { children: [station('x', true)] },
+              { children: [station('x'), station('y')] }
+            ]
+          }
+        }
+      ]
+    }
+
+    const expanded = await manager.expandQueueFromContextualPath(
+      BrowserPathHelper.build('/page', 'x.mp3', 2)
+    )
+
+    expect(expanded?.tracks.map((t) => t.src)).toEqual(['x.mp3', 'y.mp3'])
+    expect(expanded?.selectedIndex).toBe(0)
   })
 
   it('after a fallback, a tap in the preview queues the linked page again', async () => {

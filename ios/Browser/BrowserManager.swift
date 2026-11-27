@@ -290,7 +290,7 @@ final class BrowserManager {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
     let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
     guard let sections = resolved.normalizedSections else { return nil }
-    return SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
+    return try SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
   }
 }
 

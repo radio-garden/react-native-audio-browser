@@ -27,6 +27,9 @@ import {
   sectionContaining
 } from './sections'
 
+/** The page a linked path queues marks the tapped track disabled: the tap plays nothing. */
+export class DisabledOnLinkedPageError extends Error {}
+
 /**
  * Manages browser navigation, route resolution, and content loading.
  * Coordinates between HTTP client, favorite manager, and error manager.
@@ -768,7 +771,8 @@ export class BrowserManager {
    *
    * A `'path'`-queued section's child that its linked page does not queue
    * queues its own section, on the page it was tapped on, which is then the
-   * queue's `sourcePath`.
+   * queue's `sourcePath`; one the page disables throws
+   * `DisabledOnLinkedPageError` instead.
    *
    * @param contextualPath The contextual path (format: /path?__trackId=trackSrc)
    * @returns The tracks, selectedIndex and source page, or undefined if expansion fails
@@ -816,9 +820,9 @@ export class BrowserManager {
       // Queue scope is the tapped section, not the whole page (ADR 0006).
       // The stamped flat index pins which section (and which copy) was
       // tapped when the same identity appears more than once; a stale index
-      // falls back to the first identity match. An identity that no longer
-      // appears on the page aborts the expansion — the caller falls back to
-      // the single track.
+      // falls back to the first section holding an enabled copy. An identity
+      // that no longer appears on the page aborts the expansion — the caller
+      // falls back to the single track.
       const tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
       const scoped = sectionContaining(sections, trackId, tappedIndex)
       if (!scoped) {
@@ -834,6 +838,12 @@ export class BrowserManager {
       const isQueueable = (track: Track) =>
         track.src != null && track.disabled !== true
       const playableTracks = scoped.tracks.filter(isQueueable)
+      if (
+        scoped.onlyDisabled &&
+        BrowserPathHelper.extractOrigin(contextualPath)
+      ) {
+        throw new DisabledOnLinkedPageError(trackId)
+      }
 
       if (playableTracks.length === 0) {
         console.warn('Section has no playable tracks, cannot expand queue')
@@ -841,7 +851,7 @@ export class BrowserManager {
       }
 
       // Selected position: the pinned copy when the stamp survived, else
-      // the first identity match.
+      // the first enabled identity match.
       let selectedIndex = -1
       if (scoped.tappedOffset !== undefined) {
         const tapped = scoped.tracks[scoped.tappedOffset]
@@ -873,6 +883,7 @@ export class BrowserManager {
       }
       return { tracks: playableTracks, selectedIndex }
     } catch (error) {
+      if (error instanceof DisabledOnLinkedPageError) throw error
       console.error(
         `Error expanding queue from contextual path: ${contextualPath}`,
         error

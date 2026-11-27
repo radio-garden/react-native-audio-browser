@@ -16,6 +16,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.DisabledOnLinkedPageException
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
 import com.audiobrowser.browser.styleResolvedSections
@@ -920,8 +921,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
         // A tap within the queue's own source list skips rather than rebuilds.
         if (trackId != null && parentPath == player.queueSourcePath) {
-          val queueTracks = withContext(Dispatchers.Main) { player.tracks }
-          val index = queueTracks.indexOfTappedTrack(singleContextualPath, trackId)
+          val (queueTracks, currentIndex) =
+            withContext(Dispatchers.Main) { player.tracks to player.currentIndex }
+          val index = queueTracks.indexOfTappedTrack(singleContextualPath, trackId, currentIndex)
           if (index >= 0) {
             Timber.d("Queue already from $parentPath, skipping to index $index")
             val track = queueTracks[index]
@@ -1084,7 +1086,15 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
       val browserManager = player.awaitBrowser(FailedRequestKind.RESUME).browserManager
 
-      val expanded = path?.let { browserManager.expandQueueFromContextualPath(it) }
+      // A resume plays the stored track even when its linked page now disables it.
+      val expanded =
+        path?.let {
+          try {
+            browserManager.expandQueueFromContextualPath(it)
+          } catch (e: DisabledOnLinkedPageException) {
+            null
+          }
+        }
 
       if (expanded != null) {
         val (tracks, selectedIndex) = expanded
