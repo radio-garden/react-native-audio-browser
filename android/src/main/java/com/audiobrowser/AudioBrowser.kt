@@ -608,7 +608,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
               val trackId = BrowserPathHelper.extractTrackId(path)
 
               if (trackId != null && parentPath == player.queueSourcePath) {
-                val index = player.tracks.indexOfTappedTrack(path, trackId)
+                val index = player.tracks.indexOfTappedTrack(path, trackId, player.currentIndex)
                 if (index >= 0) {
                   Timber.d("Queue already from $parentPath, skipping to index $index")
                   handleTrackLoad(

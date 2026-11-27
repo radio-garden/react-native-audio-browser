@@ -161,6 +161,7 @@ final class Player {
   var upNextIndices: [Int] { queue.upNextIndices }
   var queueVersion: Int { queue.version }
   var queueSourcePath: String? { queue.queueSourcePath }
+  var currentIndex: Int { queue.currentIndex }
   var currentTrack: Track? { queue.currentTrack }
   var nitroPlaybackError: PlaybackError? { errorStatus.nitroError }
 

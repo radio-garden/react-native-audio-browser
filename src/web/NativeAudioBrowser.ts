@@ -484,15 +484,21 @@ export class NativeAudioBrowser
     // holds the same identity more than once. The identity match remains for
     // index-less paths (e.g. pre-stamp persisted state); an index-stamped path
     // with no exact match falls through to expansion, which re-scopes the
-    // queue to the tapped section.
+    // queue to the tapped section, unless it names the playing track, which
+    // the page may have moved.
     const queue = this.getQueue()
     let index = queue.findIndex((t) => t.path != null && t.path === track.path)
-    if (
-      index < 0 &&
-      track.path != null &&
-      BrowserPathHelper.extractIndex(track.path) === undefined
-    ) {
-      index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+    if (index < 0 && track.path != null) {
+      const current = this.queue.currentIndex
+      if (BrowserPathHelper.extractIndex(track.path) === undefined) {
+        index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+      } else if (
+        current !== undefined &&
+        queue[current] &&
+        getTrackIdentity(queue[current]) === trackId
+      ) {
+        index = current
+      }
     }
 
     if (index < 0) {

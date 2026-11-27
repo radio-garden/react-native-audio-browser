@@ -920,8 +920,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
         // A tap within the queue's own source list skips rather than rebuilds.
         if (trackId != null && parentPath == player.queueSourcePath) {
-          val queueTracks = withContext(Dispatchers.Main) { player.tracks }
-          val index = queueTracks.indexOfTappedTrack(singleContextualPath, trackId)
+          val (queueTracks, currentIndex) =
+            withContext(Dispatchers.Main) { player.tracks to player.currentIndex }
+          val index = queueTracks.indexOfTappedTrack(singleContextualPath, trackId, currentIndex)
           if (index >= 0) {
             Timber.d("Queue already from $parentPath, skipping to index $index")
             val track = queueTracks[index]

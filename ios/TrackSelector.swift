@@ -12,6 +12,8 @@ import os.log
 @MainActor protocol TrackSelectionPlayer {
   var tracks: [Track] { get }
   var queueSourcePath: String? { get }
+  /// -1 when nothing is current.
+  var currentIndex: Int { get }
 }
 
 /// Decides what selecting a track does, for both HybridAudioBrowser and CarPlaySession;
@@ -122,17 +124,22 @@ class TrackSelector {
     let trackId = BrowserPathHelper.extractTrackId(path)
 
     // Exact path first: its `__index` pins the tapped copy when the page holds the same identity
-    // more than once. Identity matching is only for index-less paths (e.g. from persisted state
-    // without one); an indexed path with no exact match expands instead, re-scoping
-    // the queue to the tapped section.
+    // more than once. Identity matching is for index-less paths (e.g. from persisted state
+    // without one) and for the playing track, which the page may have moved; any other indexed
+    // path with no exact match expands instead, re-scoping the queue to the tapped section.
     if parentPath == player.queueSourcePath {
-      var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
-      if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {
-        skipIndex = player.tracks.firstIndex(where: { $0.identity == trackId })
+      let tracks = player.tracks
+      var skipIndex = tracks.firstIndex(where: { $0.path == path })
+      if skipIndex == nil, let trackId {
+        if BrowserPathHelper.extractIndex(path) == nil {
+          skipIndex = tracks.firstIndex(where: { $0.identity == trackId })
+        } else if tracks.indices.contains(player.currentIndex), tracks[player.currentIndex].identity == trackId {
+          skipIndex = player.currentIndex
+        }
       }
       if let index = skipIndex {
         logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        return PlannedPlayback(queue: player.tracks, index: index, intent: .skipTo(index: index))
+        return PlannedPlayback(queue: tracks, index: index, intent: .skipTo(index: index))
       }
     }
 

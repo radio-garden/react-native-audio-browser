@@ -22,16 +22,25 @@ class TappedTrackTest {
 
   @Test
   fun `exact path match pins the tapped copy of a duplicate identity`() {
-    assertEquals(2, queue.indexOfTappedTrack(stamped("a", 2), "a"))
+    assertEquals(2, queue.indexOfTappedTrack(stamped("a", 2), "a", currentIndex = 0))
   }
 
   @Test
   fun `index-less path falls back to the identity match`() {
-    assertEquals(0, queue.indexOfTappedTrack(BrowserPathHelper.build("/page", "a"), "a"))
+    assertEquals(
+      0,
+      queue.indexOfTappedTrack(BrowserPathHelper.build("/page", "a"), "a", currentIndex = null),
+    )
   }
 
   @Test
   fun `index-stamped path with no exact match misses instead of identity-skipping`() {
-    assertEquals(-1, queue.indexOfTappedTrack(stamped("a", 7), "a"))
+    assertEquals(-1, queue.indexOfTappedTrack(stamped("a", 7), "a", currentIndex = 1))
+  }
+
+  @Test
+  fun `index-stamped path with no exact match finds the playing track by identity`() {
+    // The page moved the playing track since the queue was made.
+    assertEquals(2, queue.indexOfTappedTrack(stamped("a", 7), "a", currentIndex = 2))
   }
 }

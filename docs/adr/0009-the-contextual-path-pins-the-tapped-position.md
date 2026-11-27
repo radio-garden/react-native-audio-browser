@@ -89,3 +89,8 @@ _Amended by ADR 0015: a `'path'`-queued section's child is stamped against
 the linked page without `__index`, and carries `__from` and `__fromIndex`,
 the page it sits on and its position there. Its queue falls back to that
 page's section._
+
+_Amended: an index-stamped tap with no exact match still matches the playing
+track by identity, since a page that reorders on play (a recency list) moves
+it. A tap on the playing track's copy in another section therefore keeps the
+current queue; every other stale stamp re-expands as above._

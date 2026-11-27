@@ -54,6 +54,7 @@ private final class BrowserMock: TrackSelectionBrowser {
 private final class PlayerMock: TrackSelectionPlayer {
   var tracks: [Track] = []
   var queueSourcePath: String?
+  var currentIndex = -1
 }
 
 private enum MockError: Error {
@@ -264,6 +265,7 @@ struct ContextualPathQueueReuseTests {
       Track(path: stamped("dup", 0), src: "dup"),
       Track(path: stamped("x", 1), src: "x"),
     ]
+    player.currentIndex = 1
     browser.expandQueueResult = (
       tracks: [Track(path: stamped("y", 4), src: "y"), Track(path: stamped("dup", 5), src: "dup")],
       selectedIndex: 1,
@@ -280,6 +282,30 @@ struct ContextualPathQueueReuseTests {
     #expect(startIndex == 1)
     #expect(sourcePath == parentPath)
     #expect(browser.expandedPaths == [stamped("dup", 5)])
+  }
+
+  @Test func indexStampedPathOfThePlayingTrack_skipsToItAfterThePageMovedIt() async {
+    let (selector, browser, player) = makeSelector()
+    let parentPath = "/recent"
+    func stamped(_ id: String, _ index: Int) -> String {
+      BrowserPathHelper.build(parentPath: parentPath, trackId: id, index: index)
+    }
+
+    // Playing "b" moved it to the top of the page; the queue still holds it at 1.
+    player.queueSourcePath = parentPath
+    player.tracks = [
+      Track(path: stamped("a", 0), src: "a"),
+      Track(path: stamped("b", 1), src: "b"),
+    ]
+    player.currentIndex = 1
+
+    let result = await selector.select(track: Track(path: stamped("b", 0), src: "b"), player: player)
+    guard case let .play(.skipTo(index)) = result else {
+      Issue.record("expected .play(.skipTo), got \(result)")
+      return
+    }
+    #expect(index == 1)
+    #expect(browser.expandedPaths.isEmpty)
   }
 }
 
