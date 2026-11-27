@@ -43,4 +43,34 @@ describe('search result artwork', () => {
     expect(hit?.artworkSource?.uri).toBe('https://api.example.com/art/hit.jpg')
     expect(hit?.artworkSource?.headers).toEqual({ Authorization: 'Bearer t' })
   })
+
+  it('resolves search results when the browse layer fails to resolve', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const httpClient = {
+      executeRequest: vi
+        .fn()
+        .mockResolvedValue([
+          { title: 'Hit', src: '/hit.mp3', artwork: '/art/hit.jpg' }
+        ])
+    } as unknown as HttpClient
+    const manager = new BrowserManager(
+      httpClient,
+      new FavoriteManager(),
+      new NavigationErrorManager()
+    )
+    manager.configuration = {
+      path: '/',
+      requestResolver: async () => ({ baseUrl: 'https://api.example.com' }),
+      browseResolver: () => Promise.reject(new Error('token refresh failed')),
+      artwork: {},
+      routes: [{ path: '__search__', searchConfig: { path: '/search' } }]
+    }
+
+    const [hit] = await new SearchManager(manager).search({
+      query: 'hit',
+      reference: 'unknown'
+    })
+
+    expect(hit?.artworkSource?.uri).toBe('https://api.example.com/art/hit.jpg')
+  })
 })
