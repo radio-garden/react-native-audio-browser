@@ -11,7 +11,6 @@ final class AVPlayerEngine: PlayerEngine {
 
   var onEvent: (@MainActor (EngineEvent) -> Void)?
   private weak var callbacks: AVPlayerEngineCallbacks?
-  private weak var audioSession: AudioSessionController?
 
   let nowPlayingInfoController: NowPlayingInfoController
   let nowPlayingUpdater: NowPlayingUpdater
@@ -33,7 +32,6 @@ final class AVPlayerEngine: PlayerEngine {
   init(
     callbacks: AVPlayerEngineCallbacks?,
     resolver: MediaResolving?,
-    audioSession: AudioSessionController,
     networkStatus: (any NetworkStatusProviding)?,
     bufferDuration: Double,
     nowPlayingEnabled: Bool,
@@ -41,7 +39,6 @@ final class AVPlayerEngine: PlayerEngine {
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
   ) {
     self.callbacks = callbacks
-    self.audioSession = audioSession
     self.bufferDuration = bufferDuration
     self.nowPlayingInfoController = nowPlayingInfoController
     nowPlayingUpdater = NowPlayingUpdater(
@@ -275,15 +272,15 @@ final class AVPlayerEngine: PlayerEngine {
   // MARK: - Audio Session
 
   func activateAudioSession() {
-    audioSession?.activate { [weak self] in self?.nowPlayingInfoController.reactivateSessionIfNeeded() }
+    AudioSessionController.shared.activate { [weak self] in self?.nowPlayingInfoController.reactivateSessionIfNeeded() }
   }
 
   func cancelAudioSessionRelease() {
-    audioSession?.cancelRelease()
+    AudioSessionController.shared.cancelRelease()
   }
 
   func scheduleAudioSessionRelease() {
-    audioSession?.scheduleRelease()
+    AudioSessionController.shared.scheduleRelease()
   }
 
   // MARK: - Observed Events

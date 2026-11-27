@@ -1,7 +1,13 @@
 import AVFoundation
 
 extension AudioSessionController {
-  convenience init() {
+  static let shared = AudioSessionController()
+
+  // Never removed: the controller lives as long as the process.
+  private static var observers: [NSObjectProtocol] = []
+  private static var volumeObservation: NSKeyValueObservation?
+
+  private convenience init() {
     self.init { active in
       if active {
         try AVAudioSession.sharedInstance().setActive(true)
@@ -10,7 +16,7 @@ extension AudioSessionController {
       }
     }
     let center = NotificationCenter.default
-    observers = [
+    Self.observers = [
       center.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) {
         [weak self] notification in
         let info = notification.userInfo
@@ -29,7 +35,7 @@ extension AudioSessionController {
         MainActor.assumeIsolated { self?.mediaServicesWereReset() }
       },
     ]
-    volumeObservation = AVAudioSession.sharedInstance().observe(\.outputVolume, options: [.new]) {
+    Self.volumeObservation = AVAudioSession.sharedInstance().observe(\.outputVolume, options: [.new]) {
       [weak self] _, change in
       guard let volume = change.newValue else { return }
       Task { @MainActor in self?.volumeChanged.emit(Double(volume)) }
