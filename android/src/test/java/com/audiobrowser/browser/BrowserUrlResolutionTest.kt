@@ -111,6 +111,32 @@ class BrowserUrlResolutionTest {
     }
 
   @Test
+  fun `resolveMediaUrl falls back to the layered config when the requestResolver throws`() =
+    runTest {
+      bm.config =
+        BrowserConfig(
+          requestResolver = { throw IllegalStateException("resolver failed") },
+          media = mediaConfig(baseUrl = "https://media.example.com"),
+        )
+      val resolved = bm.resolveMediaUrl("/stream/1", track(src = "/stream/1"))
+      assertEquals("https://media.example.com", resolved?.baseUrl)
+      assertEquals("/stream/1", resolved?.path)
+    }
+
+  @Test
+  fun `a throwing browseResolver also resolves the media URL without the request layer`() =
+    runTest {
+      bm.config =
+        BrowserConfig(
+          request = transformableConfig(baseUrl = "https://api.example.com"),
+          browseResolver = { throw IllegalStateException("browse resolver failed") },
+        )
+      val resolved = bm.resolveMediaUrl("/stream/1", track(src = "/stream/1"))
+      assertNull(resolved?.baseUrl)
+      assertEquals("/stream/1", resolved?.path)
+    }
+
+  @Test
   fun `resolveArtworkUrl gives no artwork when artwork resolveSync never answers`() =
     runTest(timeout = 5.seconds) {
       val silent = JsPromise<RequestConfig>()

@@ -394,7 +394,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     return try {
       runBlocking { browserManager.resolveMediaUrl(originalUrl, track) }
     } catch (e: Exception) {
-      Timber.e(e, "Failed to transform media URL: $originalUrl")
+      Timber.e(e, "Failed to resolve the media URL: $originalUrl")
       null
     }
   }

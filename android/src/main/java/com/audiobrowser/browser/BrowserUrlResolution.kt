@@ -27,7 +27,13 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String, track: Track): M
   val hasRequestLayer = config.request != null || config.requestResolver != null
   if (mediaConfig == null && !hasRequestLayer) return null
 
-  val requestConfig = resolvedRequestConfig()
+  val requestConfig =
+    try {
+      resolvedRequestConfig()
+    } catch (e: CallbackException) {
+      Timber.e(e, "Layers failed to resolve; resolving the media URL without the request layer")
+      null
+    }
   var base =
     RequestConfig(
       method = null,
