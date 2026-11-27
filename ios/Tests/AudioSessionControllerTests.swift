@@ -465,4 +465,25 @@ struct AudioSessionControllerTests {
     #expect(newPlayer.refusals == 0)
     #expect(oldPlayer.refusals == 0)
   }
+
+  @Test func aPlayerReplacedDuringTheActivationDoesNotGetItsFollowUp() async {
+    let session = FakeAudioSession()
+    let controller = makeController(session)
+    let oldPlayer = FakeSessionPlayer()
+    controller.player = oldPlayer
+    let followUps = SessionLog()
+    session.holdNextCall = true
+
+    controller.activate(for: oldPlayer) { followUps.entries.append("old") }
+    await eventually { session.isWaiting }
+    let newPlayer = FakeSessionPlayer()
+    newPlayer.releasable = false
+    controller.player = newPlayer
+    session.gate.signal()
+
+    await eventually { newPlayer.releaseChecks == 1 }
+    await outlastTheReleaseDelay(controller)
+    #expect(followUps.entries == [])
+    #expect(session.calls == ["activate"])
+  }
 }

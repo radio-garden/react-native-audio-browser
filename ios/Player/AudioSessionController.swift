@@ -41,7 +41,11 @@ extension AudioSessionController: AudioSessionControlling {}
 @MainActor
 final class AudioSessionController {
   weak var player: AudioSessionPlayer? {
-    didSet { if player !== oldValue { generation += 1 } }
+    didSet {
+      guard player !== oldValue else { return }
+      generation += 1
+      playerChanges += 1
+    }
   }
 
   let outputChanged = Emitter<Output>()
@@ -61,6 +65,8 @@ final class AudioSessionController {
   private var generation = 0
   /// Bumped by each interruption: a resume older than one is stale.
   private var interruptions = 0
+  /// Bumped by each change of player: an activation's follow-up older than one is the old player's.
+  private var playerChanges = 0
 
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
   /// thread. Serial, so a release and a quick re-activation keep their order.
@@ -79,8 +85,9 @@ final class AudioSessionController {
   }
 
   /// Activates the session and cancels a pending release, if `requester` is the player served.
-  /// `then` runs on the main actor once the session is active; a refusal is logged and reported to
-  /// the player instead, unless a later activation, interruption or change of player has
+  /// `then` runs on the main actor once the session is active, while `requester` is still served;
+  /// replaced meanwhile, it gets a release instead, judged when it fires. A refusal is logged and
+  /// reported to the player, unless a later activation, interruption or change of player has
   /// overtaken it.
   func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)? = nil) {
     guard requester === player else { return }
@@ -88,11 +95,16 @@ final class AudioSessionController {
     releaseWork = nil
     generation += 1
     let generation = generation
+    let playerChanges = playerChanges
     let setActive = setActive
     activationQueue.async {
       do {
         try setActive(true)
-        if let then { Task { @MainActor in then() } }
+        Task { @MainActor [weak self] in
+          guard let self else { return }
+          guard playerChanges == self.playerChanges else { return scheduleRelease() }
+          then?()
+        }
       } catch {
         let message = error.localizedDescription
         Task { @MainActor [weak self] in
@@ -152,7 +164,7 @@ final class AudioSessionController {
         guard let self else { return }
         // Another interruption began while the session activated: its own end resumes.
         if interruptions == self.interruptions { player?.handleInterruptionEnded(shouldResume: true) }
-        // A JS reload, or a resume dropped meanwhile, may have left nothing to hold the session.
+        // A resume dropped meanwhile may have left nothing to hold the session.
         scheduleRelease()
       }
     } else {
