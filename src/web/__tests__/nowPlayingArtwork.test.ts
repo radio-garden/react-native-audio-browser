@@ -172,6 +172,35 @@ describe('now-playing artwork on the OS media controls', () => {
     expect(sessionArtwork()).toBeUndefined()
   })
 
+  it('resolves the artwork when the browse layer fails to resolve', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    h.browser.configuration = {
+      requestResolver: () =>
+        Promise.resolve({ baseUrl: 'https://img.example.com' }),
+      browseResolver: () => Promise.reject(new Error('token refresh failed')),
+      artwork: {}
+    }
+
+    h.browser.load(relative)
+    await h.flush()
+
+    expect(sessionArtwork()).toBe('https://img.example.com/art/7.jpg')
+  })
+
+  it('resolves the artwork while the browse layer has yet to resolve', async () => {
+    h.browser.configuration = {
+      requestResolver: () =>
+        Promise.resolve({ baseUrl: 'https://img.example.com' }),
+      browseResolver: () => new Promise(() => {}),
+      artwork: {}
+    }
+
+    h.browser.load(relative)
+    await h.flush()
+
+    expect(sessionArtwork()).toBe('https://img.example.com/art/7.jpg')
+  })
+
   it("falls back to the track's artworkSource when its artwork resolves to nothing", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     h.browser.configuration = {

@@ -27,11 +27,6 @@ import {
   sectionContaining
 } from './sections'
 
-type ResolvedLayers = {
-  request?: TransformableRequestConfig
-  browse?: TransformableRequestConfig
-}
-
 /**
  * Manages browser navigation, route resolution, and content loading.
  * Coordinates between HTTP client, favorite manager, and error manager.
@@ -47,7 +42,12 @@ export class BrowserManager {
   // The request and browse layers: each resolver's result, else the static
   // layer, for the current content generation. The generation bumps on
   // config-set and on invalidateAllContent().
-  private layers = new GenerationMemo<ResolvedLayers>()
+  private requestLayer = new GenerationMemo<
+    TransformableRequestConfig | undefined
+  >()
+  private browseLayer = new GenerationMemo<
+    TransformableRequestConfig | undefined
+  >()
 
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
@@ -160,7 +160,7 @@ export class BrowserManager {
    */
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
-    this.layers.invalidate()
+    this.invalidateLayers()
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
@@ -218,7 +218,7 @@ export class BrowserManager {
    * to re-resolve it.
    */
   invalidateAllContent(): void {
-    this.layers.invalidate()
+    this.invalidateLayers()
     if (this._path) {
       void this.navigate(this._path)
     }
@@ -542,7 +542,10 @@ export class BrowserManager {
   async resolvedRequestConfig(): Promise<
     TransformableRequestConfig | undefined
   > {
-    return (await this.resolvedLayers()).request
+    return this.requestLayer.value(async () => {
+      const { requestResolver, request } = this._configuration
+      return requestResolver ? fromCallback(requestResolver) : request
+    })
   }
 
   /**
@@ -563,22 +566,17 @@ export class BrowserManager {
     )
   }
 
-  /**
-   * The request and browse layers of the current generation. A resolver runs
-   * once per generation, and again for a later caller when it outlasts
-   * {@link GenerationMemo}'s bound.
-   */
-  private resolvedLayers(): Promise<ResolvedLayers> {
-    return this.layers.value(async () => {
-      const cfg = this._configuration
-      const { requestResolver, browseResolver } = cfg
-      const request = requestResolver
-        ? await fromCallback(requestResolver)
-        : cfg.request
-      const browse = browseResolver
-        ? await fromCallback(browseResolver)
-        : cfg.browse
-      return { request, browse }
+  private invalidateLayers(): void {
+    this.requestLayer.invalidate()
+    this.browseLayer.invalidate()
+  }
+
+  private resolvedBrowseConfig(): Promise<
+    TransformableRequestConfig | undefined
+  > {
+    return this.browseLayer.value(async () => {
+      const { browseResolver, browse } = this._configuration
+      return browseResolver ? fromCallback(browseResolver) : browse
     })
   }
 
@@ -597,13 +595,14 @@ export class BrowserManager {
     path: string,
     params: Record<string, string>
   ): Promise<ResolvedTrack> {
-    const layers = await this.resolvedLayers()
+    const request = await this.resolvedRequestConfig()
+    const browse = await this.resolvedBrowseConfig()
     const merged = await RequestConfigBuilder.applyLayers(
       { path },
       [
-        layers.request,
+        request,
         // fall back to the route's kind config when no browse layer is configured
-        layers.browse ?? kindConfig,
+        browse ?? kindConfig,
         routeConfig
       ],
       params
@@ -624,7 +623,7 @@ export class BrowserManager {
     searchConfig: TransformableRequestConfig,
     queryParams: Record<string, string>
   ): Promise<Track[]> {
-    const { request } = await this.resolvedLayers()
+    const request = await this.resolvedRequestConfig()
     const merged = await RequestConfigBuilder.applyLayers(
       { path: searchConfig.path, query: queryParams },
       [request, searchConfig],
