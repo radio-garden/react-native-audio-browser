@@ -5,6 +5,9 @@
 @MainActor
 func withDeadline<T: Sendable>(
   _ timeout: Duration,
+  sleep: @escaping @Sendable (ContinuousClock.Instant) async throws -> Void = {
+    try await Task.sleep(until: $0, clock: .continuous)
+  },
   _ work: @escaping @MainActor (_ deadline: ContinuousClock.Instant) async -> T,
 ) async -> T? {
   let deadline = ContinuousClock.now + timeout
@@ -12,7 +15,7 @@ func withDeadline<T: Sendable>(
     let answer = DeadlineAnswer(continuation)
     let task = Task { await answer.settle(work(deadline)) }
     answer.timer = Task {
-      try? await Task.sleep(until: deadline, clock: .continuous)
+      try? await sleep(deadline)
       guard !Task.isCancelled else { return }
       task.cancel()
       answer.settle(nil)

@@ -20,8 +20,9 @@ private final class Rig {
     loop.updatePolicy(from: .second(RetryConfig(
       maxRetries: maxRetries.map(Double.init), maxRetryDurationMs: nil, firstConnectMaxRetryDurationMs: nil,
     )))
-    loop.onRetry = { [unowned self] _ in connect() }
-    loop.onError = { [unowned self] in
+    loop.onRetry = { [weak self] _ in self?.connect() }
+    loop.onError = { [weak self] in
+      guard let self else { return }
       errors.append((clock.nowMs, $0))
       current += 1
     }
@@ -51,8 +52,9 @@ private final class Rig {
   /// Runs `action` `afterMs` from now, unless the connection it belongs to has gone.
   func later(_ afterMs: Int, _ action: @escaping (RetryLoop) -> Void) {
     let connection = current
-    clock.at(clock.nowMs + afterMs) { [unowned self] in
-      if connection == current { action(loop) }
+    clock.at(clock.nowMs + afterMs) { [weak self] in
+      guard let self, connection == current else { return }
+      action(loop)
     }
   }
 

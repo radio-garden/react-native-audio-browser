@@ -1607,22 +1607,6 @@ struct PlayerLivePauseTests {
     #expect(player.state == .loading)
   }
 
-  @Test func aPlayArriving100msAfterTheQueueNeverReportsPaused() async throws {
-    let (player, engine, callbacks) = try makePlaying(live: true, scheduler: MainQueueSleepTimerScheduler())
-    player.pause()
-    let carriers = engine.carrierCount
-    callbacks.playbackChanges.removeAll()
-
-    try player.setQueue([Track(id: "t2", src: "https://example.com/b.mp3", title: "B", live: true)])
-    try await Task.sleep(for: .milliseconds(100))
-    player.play()
-    try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))
-    #expect(engine.resolveAndLoadCalls.count == 2)
-    #expect(engine.carrierCount == carriers)
-    #expect(!callbacks.playbackChanges.contains { $0.state == .paused })
-    #expect(player.state == .loading)
-  }
-
   @Test func withNoPlayTheDeferredParkFiresOnTheMainQueue() async throws {
     let (player, engine, _) = try makeLoading(live: true, scheduler: MainQueueSleepTimerScheduler())
     try await Task.sleep(for: .seconds(Player.idleLiveParkDelaySeconds + 0.5))

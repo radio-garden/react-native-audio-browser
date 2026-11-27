@@ -38,14 +38,14 @@ public enum PlaybackErrorContext {
 /// Milliseconds on a clock that does not jump, and sleeps on it.
 protocol RetryClock: Sendable {
   var nowMs: Int { get }
-  func sleep(ms: Int) async throws
+  nonisolated(nonsending) func sleep(ms: Int) async throws
 }
 
 /// Counts while the device sleeps, so a silence spans it.
 struct ContinuousRetryClock: RetryClock {
   private let origin = ContinuousClock.now
   var nowMs: Int { Int((ContinuousClock.now - origin) / .milliseconds(1)) }
-  func sleep(ms: Int) async throws { try await Task.sleep(for: .milliseconds(ms)) }
+  nonisolated(nonsending) func sleep(ms: Int) async throws { try await Task.sleep(for: .milliseconds(ms)) }
 }
 
 /// Reconnects failed loads, paced by `ReconnectPacer`, and gives up when `SilenceBudget`'s
@@ -101,7 +101,7 @@ final class RetryLoop {
   private(set) var stallTask: Task<Void, Never>?
 
   private let clock: any RetryClock
-  private let sleep: @Sendable (Int) async throws -> Void
+  private let sleep: nonisolated(nonsending) @Sendable (Int) async throws -> Void
 
   /// - Parameters:
   ///   - online: Connectivity when the loop is made; `onlineChanged` reports each change after.
@@ -109,7 +109,7 @@ final class RetryLoop {
   init(
     online: Bool = true,
     clock: any RetryClock = ContinuousRetryClock(),
-    sleep: (@Sendable (Int) async throws -> Void)? = nil,
+    sleep: (nonisolated(nonsending) @Sendable (Int) async throws -> Void)? = nil,
   ) {
     self.online = online
     budget = SilenceBudget(online: online)
