@@ -21,8 +21,9 @@ step:
 - The child at the stamped index still carries the tapped identity
   (directly, or in its image row) → that position pins the section and the
   exact copy.
-- It doesn't (the list shifted) → fall back to the first identity match —
-  the pre-stamp behavior.
+- It doesn't (the list shifted) → fall back to the first section holding an
+  enabled copy of the identity, else the first holding it at all — the
+  pre-stamp behavior, preferring an enabled copy.
 - The identity is gone from the page entirely → abort expansion,
   single-track fallback (unchanged from ADR 0006).
 
@@ -64,7 +65,7 @@ state), which degrade to the old behavior, once.
 - If the page was reordered between stamping and resumption, "which copy's
   section was tapped" is unrecoverable — that information isn't in the
   new list; no stamping scheme fixes it. Resolution degrades to the
-  first identity match.
+  first enabled identity match.
 - The car now-playing row indicator still matches by identity alone, so
   duplicate copies of the playing track all light up. Android Auto's
   indicator is mediaId-driven and the stable mediaId is context-free by
@@ -83,7 +84,8 @@ within-row residual described above (an image-row item sharing its row's
 position)._
 
 _The old image-row/run precedence survives only as the index-less fallback
-(first section containing the identity)._
+(first section holding an enabled copy of the identity, else the first
+holding it)._
 
 _Amended by ADR 0015: a `'path'`-queued section's child is stamped against
 the linked page without `__index`, and carries `__from` and `__fromIndex`,

@@ -21,7 +21,8 @@ It is decided when the page is stamped: each child's contextual path names `sect
 ## Consequences
 
 - **A tap can wait on a request.** The linked page is resolved at tap time. When it was browsed before, it comes from the cache.
-- **Identity alone finds the track.** The `__index` counts positions on the preview's page, not the linked one, so it is left out. A duplicate identity on the linked page queues from its first copy (ADR 0009's fallback).
+- **Identity alone finds the track.** The `__index` counts positions on the preview's page, not the linked one, so it is left out. A duplicate identity on the linked page queues from its first enabled copy (ADR 0009's fallback).
 - **The preview and the page can drift.** When the linked page no longer holds the tapped track, or it doesn't resolve, the tap queues the section's own children: its path names the page it sits on, and that page's section is expanded instead. The fallback needs no state, so it works on a resume in a new process too.
+- **A track the linked page disables plays nothing.** When the linked page holds the tapped identity only as disabled, the tap falls back to nothing: neither the preview's section nor the track alone. A resume of such a track still plays the stored track.
 - **A fallback queue's source is the page tapped on.** Its tracks are the preview's, so a later tap in the preview doesn't skip in place in them: it expands the linked page again, which queues the full list once that page loads.
 - **A `path`-queued section without a `path` queues itself.**

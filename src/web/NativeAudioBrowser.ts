@@ -51,7 +51,10 @@ import type {
 } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { getTrackIdentity } from '../utils/getTrackIdentity'
-import { BrowserManager } from './browser/BrowserManager'
+import {
+  BrowserManager,
+  DisabledOnLinkedPageError
+} from './browser/BrowserManager'
 import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
@@ -542,7 +545,7 @@ export class NativeAudioBrowser
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
-  private async navigateTrackAsync(track: Track): Promise<void> {
+  protected async navigateTrackAsync(track: Track): Promise<void> {
     try {
       // A disabled track is unavailable — it never plays, whichever surface
       // or stale resume path delivered the selection (Track.disabled; mirrors
@@ -583,6 +586,7 @@ export class NativeAudioBrowser
           throw new Error("Track must have either 'path' or 'src' property")
       }
     } catch (error) {
+      if (error instanceof DisabledOnLinkedPageError) return
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.navigationErrorManager.setNavigationError('unknown-error', message)
     }

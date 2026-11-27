@@ -16,6 +16,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.DisabledOnLinkedPageException
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
 import com.audiobrowser.browser.styleResolvedSections
@@ -1085,7 +1086,15 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
       val browserManager = player.awaitBrowser(FailedRequestKind.RESUME).browserManager
 
-      val expanded = path?.let { browserManager.expandQueueFromContextualPath(it) }
+      // A resume plays the stored track even when its linked page now disables it.
+      val expanded =
+        path?.let {
+          try {
+            browserManager.expandQueueFromContextualPath(it)
+          } catch (e: DisabledOnLinkedPageException) {
+            null
+          }
+        }
 
       if (expanded != null) {
         val (tracks, selectedIndex) = expanded

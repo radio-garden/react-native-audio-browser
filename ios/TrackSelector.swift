@@ -51,9 +51,10 @@ class TrackSelector {
 
   // MARK: - Selection
 
-  /// Resolves a selection: nothing for a disabled track; for a contextual path, a skip within
-  /// the current queue when it came from the same parent, else the parent expanded into a queue
-  /// (the track alone if expansion fails); a single track for a `src`; browse for a bare `path`.
+  /// Resolves a selection: nothing for a disabled track, or one its linked page disables; for a
+  /// contextual path, a skip within the current queue when it came from the same parent, else the
+  /// parent expanded into a queue (the track alone if expansion fails); a single track for a `src`;
+  /// browse for a bare `path`.
   /// A playback is first offered to the app's `handleTrackLoad`, which can intercept it.
   /// Of the playbacks still resolving, only the latest plays, even when the app intercepts it:
   /// an earlier one is `superseded`, and is not offered to the app once it is.
@@ -73,12 +74,13 @@ class TrackSelector {
     }
 
     let selection = beginSelection()
-    let playback: PlannedPlayback = if let contextualPath {
+    let playback: PlannedPlayback? = if let contextualPath {
       await contextualPlayback(contextualPath, track: track, player: player)
     } else {
       .single(track)
     }
     guard isLatest(selection) else { return .superseded }
+    guard let playback else { return .none }
 
     let event = TrackLoadEvent(
       track: track,
@@ -119,7 +121,7 @@ class TrackSelector {
     _ path: String,
     track: Track,
     player: some TrackSelectionPlayer,
-  ) async -> PlannedPlayback {
+  ) async -> PlannedPlayback? {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
@@ -151,6 +153,8 @@ class TrackSelector {
         queue: tracks, index: startIndex,
         intent: .setQueue(tracks: tracks, startIndex: startIndex, sourcePath: sourcePath),
       )
+    } catch is SectionScope.DisabledOnLinkedPage {
+      return nil
     } catch {
       logger.error("Error expanding queue: \(error.localizedDescription)")
       return .single(track)

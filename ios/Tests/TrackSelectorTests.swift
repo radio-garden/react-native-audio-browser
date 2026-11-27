@@ -348,6 +348,30 @@ struct LinkedFallbackTests {
     #expect(expanded == [linked])
   }
 
+  @Test func aLinkedPageThatDisablesTheTrackIsNotFallenBackFrom() async {
+    var expanded: [String] = []
+    await #expect(throws: SectionScope.DisabledOnLinkedPage.self) {
+      try await SectionScope.expanding(linked) { path in
+        expanded.append(path)
+        throw SectionScope.DisabledOnLinkedPage()
+      }
+    }
+    #expect(expanded == [linked])
+  }
+
+  @Test func aTrackItsLinkedPageDisables_playsNothing() async {
+    let (selector, browser, player) = makeSelector()
+    browser.expandQueueError = SectionScope.DisabledOnLinkedPage()
+
+    let result = await selector.select(track: Track(path: linked, src: "b"), player: player)
+
+    guard case .none = result else {
+      Issue.record("expected .none, got \(result)")
+      return
+    }
+    #expect(browser.trackLoadEvents.isEmpty)
+  }
+
   @Test func aTapInThePreviewAfterAFallbackQueuesTheLinkedPageAgain() async {
     let (selector, browser, player) = makeSelector()
     // The fallback queue: the preview's tracks, from /home.

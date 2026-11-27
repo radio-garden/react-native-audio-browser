@@ -40,15 +40,16 @@ export function flattenedChildren(page: ResolvedTrack): Track[] {
  * is a tie-breaker, never an identifier: when the child at that position
  * still carries the tapped identity, it pins which section (and which copy,
  * via `tappedOffset`) was tapped; when it doesn't (the list shifted),
- * resolution falls back to the first section containing the identity. A
- * stale index can therefore never select a different track — at worst a
- * different copy of the same one.
+ * resolution falls back to the first section holding an enabled copy, else
+ * the first holding any, with `onlyDisabled` set. A stale index can
+ * therefore never select a different track — at worst a different copy of
+ * the same one.
  */
 export function sectionContaining(
   sections: Section[],
   trackId: string,
   tappedIndex: number | undefined
-): { tracks: Track[]; tappedOffset?: number } | undefined {
+): { tracks: Track[]; tappedOffset?: number; onlyDisabled?: true } | undefined {
   if (tappedIndex !== undefined && tappedIndex >= 0) {
     let start = 0
     for (const section of sections) {
@@ -63,10 +64,14 @@ export function sectionContaining(
       start += section.children.length
     }
   }
-  for (const section of sections) {
-    if (section.children.some((track) => getTrackIdentity(track) === trackId)) {
-      return { tracks: section.children }
-    }
-  }
-  return undefined
+  const holding = sections.filter((section) =>
+    section.children.some((track) => getTrackIdentity(track) === trackId)
+  )
+  const enabled = holding.find((section) =>
+    section.children.some(
+      (track) => getTrackIdentity(track) === trackId && track.disabled !== true
+    )
+  )
+  if (enabled) return { tracks: enabled.children }
+  return holding[0] && { tracks: holding[0].children, onlyDisabled: true }
 }

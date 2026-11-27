@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -132,6 +133,60 @@ class SectionQueueTest {
       assertEquals(listOf("a", "b"), queue.map { it.src })
       assertEquals(1, index)
     }
+
+  @Test
+  fun `a path-queued preview refuses a track its linked page disables`() {
+    serve(
+      "/home" to arrayOf(preview(SectionQueue.PATH)),
+      "/recent" to
+        arrayOf(section(children = arrayOf(track(src = "a"), track(src = "b", disabled = true)))),
+    )
+
+    val tapped = runBlocking { browserManager.navigate("/home").flattenedChildren!![1] }
+
+    assertThrows(DisabledOnLinkedPageException::class.java) {
+      runBlocking { browserManager.expandQueueFromContextualPath(tapped.path!!) }
+    }
+  }
+
+  @Test
+  fun `a path-queued preview queues the linked page's section that holds the track enabled`() =
+    runBlocking {
+      serve(
+        "/home" to arrayOf(preview(SectionQueue.PATH)),
+        "/recent" to
+          arrayOf(
+            section(children = arrayOf(track(src = "b", disabled = true))),
+            section(children = arrayOf(track(src = "b"), track(src = "c"))),
+          ),
+      )
+
+      val tapped = browserManager.navigate("/home").flattenedChildren!![1]
+      val (queue, index) =
+        requireNotNull(browserManager.expandQueueFromContextualPath(tapped.path!!))
+
+      assertEquals(listOf("b", "c"), queue.map { it.src })
+      assertEquals(0, index)
+    }
+
+  @Test
+  fun `a stale stamp queues the section that holds the track enabled`() = runBlocking {
+    serve(
+      "/page" to
+        arrayOf(
+          section(children = arrayOf(track(src = "x", disabled = true))),
+          section(children = arrayOf(track(src = "x"), track(src = "y"))),
+        )
+    )
+
+    val (queue, index) =
+      requireNotNull(
+        browserManager.expandQueueFromContextualPath(BrowserPathHelper.build("/page", "x", 2))
+      )
+
+    assertEquals(listOf("x", "y"), queue.map { it.src })
+    assertEquals(0, index)
+  }
 
   @Test
   fun `a fallback leaves a later tap in the preview free to queue the linked page`() = runBlocking {

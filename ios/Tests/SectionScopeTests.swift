@@ -111,7 +111,7 @@ struct SectionScopeTests {
   // MARK: - Queue
 
   private func queue(_ sections: [Section], _ path: String, singleTrack: Bool = false) -> ([String?], Int)? {
-    SectionScope.queue(in: sections, path: path, singleTrack: singleTrack).map { ($0.tracks.map(\.src), $0.selectedIndex) }
+    (try? SectionScope.queue(in: sections, path: path, singleTrack: singleTrack))?.map { ($0.tracks.map(\.src), $0.selectedIndex) }
   }
 
   @Test func queuesThePlayableTracksOfTheTappedSection() {
@@ -123,6 +123,13 @@ struct SectionScopeTests {
     let result = queue(page, "/p?__trackId=b&__index=3")
     #expect(result?.0 == ["a", "b"])
     #expect(result?.1 == 1)
+  }
+
+  @Test func aStaleStampQueuesTheSectionHoldingTheTrackEnabled() {
+    let page = [section(nil, [Track(src: "x", disabled: true)]), section(nil, [track("x"), track("y")])]
+    let result = queue(page, "/p?__trackId=x&__index=2")
+    #expect(result?.0 == ["x", "y"])
+    #expect(result?.1 == 0)
   }
 
   @Test func thePinnedCopyIsTheSelectedOne() {

@@ -2,17 +2,22 @@ package com.audiobrowser
 
 import android.os.Looper
 import com.audiobrowser.TestFixtures.resolvedTrack
+import com.audiobrowser.TestFixtures.section
 import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.flattenedChildren
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
+import com.margelo.nitro.audiobrowser.SectionQueue
 import com.margelo.nitro.audiobrowser.Track
 import java.time.Duration
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -114,5 +119,38 @@ class NavigateTrackTest {
 
     assertEquals(listOf(track.src), player.tracks.map { it.src })
     assertTrue(player.playWhenReady)
+  }
+
+  @Test
+  fun `a track its linked page disables plays nothing and sets no navigation error`() {
+    val station = silentTrack()
+    browserManager.config =
+      BrowserConfig(
+        routes =
+          arrayOf(
+            staticRoute(
+              "/home",
+              resolvedTrack(
+                path = "/home",
+                sections =
+                  arrayOf(
+                    section(path = "/recent", children = arrayOf(station))
+                      .copy(queue = SectionQueue.PATH)
+                  ),
+              ),
+            ),
+            staticRoute(
+              "/recent",
+              resolvedTrack(path = "/recent", children = arrayOf(station.copy(disabled = true))),
+            ),
+          )
+      )
+    val tapped = runBlocking { browserManager.navigate("/home") }.flattenedChildren!![0]
+
+    navigate(tapped)
+
+    assertEquals(emptyList<Track>(), player.tracks.toList())
+    assertFalse(player.playWhenReady)
+    assertNull(browser.getNavigationError())
   }
 }

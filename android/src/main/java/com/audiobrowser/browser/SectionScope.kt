@@ -10,8 +10,15 @@ import com.margelo.nitro.audiobrowser.Track
  * (docs/adr/0006-queue-scope-is-the-tapped-section.md).
  */
 object SectionScope {
-  /** [tappedOffset] is the tapped child's index in [section], null when no index pinned it. */
-  data class Scoped(val section: Section, val tappedOffset: Int?)
+  /**
+   * [tappedOffset] is the tapped child's index in [section], null when no index pinned it.
+   * [onlyDisabled] is set when no index pinned it and the page holds the identity only disabled.
+   */
+  data class Scoped(
+    val section: Section,
+    val tappedOffset: Int?,
+    val onlyDisabled: Boolean = false,
+  )
 
   /**
    * The section of [sections] holding [trackId] (a track identity), or null when none does.
@@ -19,7 +26,8 @@ object SectionScope {
    * [tappedIndex] is the flat position stamped into the contextual path (children concatenated in
    * section order). It only breaks ties: when the child there still has [trackId], it pins that
    * section and copy; otherwise (the list shifted, or the index is out of range) the first section
-   * holding [trackId] is returned, unpinned. A stale index never selects a different track.
+   * holding an enabled copy of [trackId] is returned, unpinned, else the first holding any. A stale
+   * index never selects a different track.
    */
   fun scoped(sections: List<Section>, trackId: String, tappedIndex: Int? = null): Scoped? {
     if (tappedIndex != null && tappedIndex >= 0) {
@@ -35,12 +43,13 @@ object SectionScope {
         start += section.children.size
       }
     }
-    for (section in sections) {
-      if (section.children.any { it.identity == trackId }) {
-        return Scoped(section, null)
+    val holding = sections.filter { s -> s.children.any { it.identity == trackId } }
+    holding
+      .firstOrNull { s -> s.children.any { it.identity == trackId && it.disabled != true } }
+      ?.let {
+        return Scoped(it, null)
       }
-    }
-    return null
+    return holding.firstOrNull()?.let { Scoped(it, null, onlyDisabled = true) }
   }
 }
 
