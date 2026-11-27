@@ -1,3 +1,15 @@
+## [1.0.0-next.18](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.17...v1.0.0-next.18) (2026-11-27)
+
+### Bug Fixes
+
+* keep the playing track when its page moved it ([01c5b33](https://github.com/radio-garden/react-native-audio-browser/commit/01c5b335409157fc2d1ce5e4fb7ed32b0c7b44e8))
+* play nothing for a track its linked page disables ([72623cf](https://github.com/radio-garden/react-native-audio-browser/commit/72623cf531609a41694be5f98d43cafd21d24ed1))
+* **web:** resolve request-only work without the browse layer ([a695859](https://github.com/radio-garden/react-native-audio-browser/commit/a69585970eb2f9c15a54ed20c3cf3a36b3125d0e))
+
+### Documentation
+
+* say the refusal of a disabled linked track covers expansion only ([2369b6f](https://github.com/radio-garden/react-native-audio-browser/commit/2369b6f07532ac0b713df15b83665d8d69309190))
+
 ## [1.0.0-next.17](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.16...v1.0.0-next.17) (2026-11-27)
 
 ### Features
