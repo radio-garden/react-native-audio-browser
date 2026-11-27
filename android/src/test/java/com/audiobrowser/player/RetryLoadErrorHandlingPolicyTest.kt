@@ -152,9 +152,28 @@ class RetryLoadErrorHandlingPolicyTest {
   }
 
   @Test
-  fun `a retryable HTTP status (503) is recoverable`() {
-    assertEquals(1000L, policy(Sources.ADAPTIVE).getRetryDelayMsFor(errorInfo(httpError(503))))
-    assertEquals(listOf(true), failures)
+  fun `408, 429 and every 5xx are recoverable, as on iOS`() {
+    val statuses = listOf(408, 429, 500, 501, 502, 503, 504, 505, 507, 511, 599)
+    for (status in statuses) {
+      assertEquals(
+        "$status",
+        1000L,
+        policy(Sources.ADAPTIVE).getRetryDelayMsFor(errorInfo(httpError(status))),
+      )
+    }
+    assertEquals(statuses.map { true }, failures)
+  }
+
+  @Test
+  fun `other 4xx statuses are fatal`() {
+    for (status in listOf(400, 401, 403, 404, 410, 451)) {
+      assertEquals(
+        "$status",
+        C.TIME_UNSET,
+        policy(Sources.ADAPTIVE).getRetryDelayMsFor(errorInfo(httpError(status))),
+      )
+    }
+    assertEquals(emptyList<Boolean>(), failures)
   }
 
   @Test

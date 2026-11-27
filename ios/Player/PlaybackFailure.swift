@@ -78,9 +78,6 @@ enum PlaybackFailure {
 
   // MARK: - Retrying
 
-  /// Retried besides 500–599. Android shares 408/429 but retries only 500/502/503/504 of 5xx.
-  private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
-
   /// Failures a retry cannot fix. Every unplayable code but the temporary decoder shortage is
   /// here, so a failure reported as unplayable is never also retried. `AVError.unknown` stays out:
   /// it wraps opaque CoreMedia transport failures.
@@ -94,7 +91,7 @@ enum PlaybackFailure {
 
   private static func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool {
     if let status = httpStatusCode, !(200 ... 299).contains(status) {
-      return retryableHTTPStatusCodes.contains(status) || (500 ... 599).contains(status)
+      return status == 408 || status == 429 || (500 ... 599).contains(status)
     }
     guard let error else { return false }
     // AVFoundation routinely wraps the real cause (a URLError, a CoreMedia code) in an AVError.

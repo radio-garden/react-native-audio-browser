@@ -79,7 +79,7 @@ struct PlaybackFailureReportedErrorTests {
 @Suite("PlaybackFailure: retrying")
 struct PlaybackFailureRetryTests {
   /// The status, read off the error log, decides over the opaque CoreMedia error.
-  @Test(arguments: [408, 429, 500, 502, 503, 504])
+  @Test(arguments: [408, 429, 500, 501, 502, 503, 504, 505, 507, 511, 599])
   func aRetryableStatusRetries(status: Int) {
     #expect(retryable(NSError(domain: "CoreMediaErrorDomain", code: -12660), status: status))
   }
