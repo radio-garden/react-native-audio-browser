@@ -38,7 +38,12 @@ public extension HybridAudioBrowser {
       nowPlayingEnabled: options.autoUpdateNowPlayingMetadata ?? true,
       nowPlayingFormatter: options.nowPlayingMetadataFormatter,
     )
-    let newPlayer = Player(engine: newEngine, callbacks: self, retry: RetryLoop(online: networkMonitor.isOnline))
+    let newPlayer = Player(
+      engine: newEngine,
+      audioSession: AudioSessionController.shared,
+      callbacks: self,
+      retry: RetryLoop(online: networkMonitor.isOnline),
+    )
     if let retry = options.retry { newPlayer.retry.updatePolicy(from: retry) }
     newEngine.nowPlayingUpdater.source = newPlayer
     engine = newEngine

@@ -15,6 +15,7 @@ final class Player {
   // MARK: - Dependencies
 
   let engine: any PlayerEngine
+  private let audioSession: any AudioSessionControlling
   weak var callbacks: PlayerCallbacks?
 
   let queue = QueueManager()
@@ -260,6 +261,7 @@ final class Player {
   ///   - persistenceSaveInterval: How often the snapshot is saved while the play intent is active.
   init(
     engine: any PlayerEngine,
+    audioSession: any AudioSessionControlling,
     callbacks: PlayerCallbacks? = nil,
     retry: RetryLoop = RetryLoop(),
     sleepTimerScheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler(),
@@ -267,6 +269,7 @@ final class Player {
     persistenceSaveInterval: Duration = .seconds(5),
   ) {
     self.engine = engine
+    self.audioSession = audioSession
     self.callbacks = callbacks
     self.retry = retry
     self.scheduler = sleepTimerScheduler
@@ -366,14 +369,16 @@ final class Player {
     let old = published
     guard now != old else { return }
     published = now
-    if old.releasable, !now.releasable { engine.cancelAudioSessionRelease() }
+    if old.releasable, !now.releasable { audioSession.cancelRelease(for: self) }
     if now.playWhenReady != old.playWhenReady {
       callbacks?.playerDidChangePlayWhenReady(now.playWhenReady)
     }
     if now.playing != old.playing || now.buffering != old.buffering {
       callbacks?.playerDidChangePlayingState(playing)
       // Activated on output, not at setup: activating at launch interrupts other apps' audio.
-      if playing.playing || playing.buffering { engine.activateAudioSession() }
+      if playing.playing || playing.buffering {
+        audioSession.activate(for: self) { [weak self] in self?.engine.reactivateNowPlayingSession() }
+      }
       // A stall starting or recovering may leave the state as it was.
       engine.renderNowPlaying()
     }
@@ -388,7 +393,7 @@ final class Player {
     if now.playIntentActive != old.playIntentActive {
       persistence.playIntentDidChange(active: now.playIntentActive)
     }
-    if now.releasable, !old.releasable { engine.scheduleAudioSessionRelease() }
+    if now.releasable, !old.releasable { audioSession.scheduleRelease() }
   }
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
@@ -680,6 +685,13 @@ final class Player {
     } else if change.tracks {
       pushSkipAvailability()
     }
+  }
+
+  /// Ends this player for good: stops serving the audio session, then clears. Detached first, so
+  /// nothing the clear sets off reaches the session as the served player's.
+  func tearDown() {
+    audioSession.detach(self)
+    clear()
   }
 
   func clear() {

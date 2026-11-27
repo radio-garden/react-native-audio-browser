@@ -15,19 +15,38 @@ protocol AudioSessionPlayer: AnyObject {
 
 extension Player: AudioSessionPlayer {}
 
+/// The audio session as the `Player` drives it: `AudioSessionController.shared` in the app.
+@MainActor
+protocol AudioSessionControlling: AnyObject {
+  func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)?)
+  func cancelRelease(for requester: AudioSessionPlayer)
+  func scheduleRelease()
+  func detach(_ player: AudioSessionPlayer?)
+}
+
+extension AudioSessionController: AudioSessionControlling {}
+
 /// Owns the app's `AVAudioSession`: category, activation and release, and the interruption,
 /// route-change, media-services-reset and volume observers. The `AVAudioSession` calls and the
 /// observers are in `AudioSessionController+System.swift`, outside the SwiftPM test target.
 ///
 /// One per process, `shared`, as the session is: across a JS reload it outlives both instances,
-/// and serves whichever player the latest setup gave it.
+/// and serves whichever player the latest setup gave it. Activations and cancelled releases from
+/// any other player are ignored, so a replaced or detached player's late call cannot reach the
+/// session.
 ///
 /// The session is configured at setup but activated only when playback produces output:
 /// activating a non-mixable session interrupts other apps' audio, which must not happen at
 /// launch.
 @MainActor
 final class AudioSessionController {
-  weak var player: AudioSessionPlayer?
+  weak var player: AudioSessionPlayer? {
+    didSet {
+      guard player !== oldValue else { return }
+      generation += 1
+      playerChanges += 1
+    }
+  }
 
   let outputChanged = Emitter<Output>()
   let volumeChanged = Emitter<Double>()
@@ -41,10 +60,13 @@ final class AudioSessionController {
 
   private var releaseWork: DispatchWorkItem?
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioSession")
-  /// Bumped by each activation and each interruption: a refusal older than either is stale.
+  /// Bumped by each activation, each interruption and each change of player: a refusal older than
+  /// any of them is stale.
   private var generation = 0
   /// Bumped by each interruption: a resume older than one is stale.
   private var interruptions = 0
+  /// Bumped by each change of player: an activation's follow-up older than one is the old player's.
+  private var playerChanges = 0
 
   /// `setActive` blocks until the system has changed the session, long enough to stall the main
   /// thread. Serial, so a release and a quick re-activation keep their order.
@@ -62,17 +84,27 @@ final class AudioSessionController {
     await withCheckedContinuation { continuation in applyCategory { continuation.resume() } }
   }
 
-  /// Activates the session and cancels a pending release. `then` runs on the main actor once the
-  /// session is active; a refusal is logged and reported to the player instead.
-  func activate(then: (@MainActor @Sendable () -> Void)? = nil) {
-    cancelRelease()
+  /// Activates the session and cancels a pending release, if `requester` is the player served.
+  /// `then` runs on the main actor once the session is active, while `requester` is still served;
+  /// replaced meanwhile, it gets a release instead, judged when it fires. A refusal is logged and
+  /// reported to the player, unless a later activation, interruption or change of player has
+  /// overtaken it.
+  func activate(for requester: AudioSessionPlayer, then: (@MainActor @Sendable () -> Void)? = nil) {
+    guard requester === player else { return }
+    releaseWork?.cancel()
+    releaseWork = nil
     generation += 1
     let generation = generation
+    let playerChanges = playerChanges
     let setActive = setActive
     activationQueue.async {
       do {
         try setActive(true)
-        if let then { Task { @MainActor in then() } }
+        Task { @MainActor [weak self] in
+          guard let self else { return }
+          guard playerChanges == self.playerChanges else { return scheduleRelease() }
+          then?()
+        }
       } catch {
         let message = error.localizedDescription
         Task { @MainActor [weak self] in
@@ -86,6 +118,8 @@ final class AudioSessionController {
   }
 
   /// Releases the session after 3 s unless playback resumes, so other apps' audio can come back.
+  /// Takes no requester on purpose: a player's teardown schedules its release after it is
+  /// detached, and the release is judged against the player served when it fires.
   /// Debounced: iOS dislikes deactivating while audio trails off, and a quick stop and play
   /// should not thrash it.
   func scheduleRelease() {
@@ -109,7 +143,8 @@ final class AudioSessionController {
     if self.player === player { self.player = nil }
   }
 
-  func cancelRelease() {
+  func cancelRelease(for requester: AudioSessionPlayer) {
+    guard requester === player else { return }
     releaseWork?.cancel()
     releaseWork = nil
   }
@@ -123,13 +158,13 @@ final class AudioSessionController {
   func interruptionEnded(shouldResume: Bool) {
     // Reactivate only when a resume follows, and resume once active: activating while staying
     // paused would hold a non-mixable session with nothing to release it.
-    if shouldResume, player?.willResumeAfterInterruption == true {
+    if shouldResume, let resuming = player, resuming.willResumeAfterInterruption {
       let interruptions = interruptions
-      activate { [weak self] in
+      activate(for: resuming) { [weak self] in
         guard let self else { return }
         // Another interruption began while the session activated: its own end resumes.
         if interruptions == self.interruptions { player?.handleInterruptionEnded(shouldResume: true) }
-        // A JS reload, or a resume dropped meanwhile, may have left nothing to hold the session.
+        // A resume dropped meanwhile may have left nothing to hold the session.
         scheduleRelease()
       }
     } else {
