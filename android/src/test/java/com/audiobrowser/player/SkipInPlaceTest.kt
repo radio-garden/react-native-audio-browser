@@ -2,8 +2,8 @@ package com.audiobrowser.player
 
 import android.os.Looper
 import androidx.media3.common.C
-import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
@@ -221,6 +221,16 @@ class SkipInPlaceTest {
       listOf("transition ${MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_SEEK}"),
       engineEvents.filter { it.startsWith("transition") },
     )
+  }
+
+  @Test
+  fun `a controller's pick of another item in the queue keeps the shuffle order`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
+
+    assertEquals(0, player.exoPlayer.currentTimeline.getFirstWindowIndex(true))
   }
 
   @Test

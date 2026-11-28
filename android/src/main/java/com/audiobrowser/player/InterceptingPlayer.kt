@@ -256,7 +256,6 @@ internal class InterceptingPlayer(
       if (!wrappedPlayer.skipsInPlace(startIndex, state)) {
         wrappedPlayer.seekTo(startIndex, startPositionMs)
       }
-      leadShuffleOrder(startIndex, mediaItems.size)
       return
     }
     super.setMediaItems(mediaItems, startIndex, startPositionMs)

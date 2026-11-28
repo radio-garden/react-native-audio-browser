@@ -52,10 +52,10 @@ class HandleTrackLoadSeekTest {
   private val player = service.get().player
 
   /**
-   * Playlist changes since the handler's player calls ran, which change it too; null until they
-   * have.
+   * Playlist changes and seeks since the handler's player calls ran, which make them too; null
+   * until they have.
    */
-  private var setsAfterHandler: Int? = null
+  private var appliedAfterHandler: Int? = null
 
   @After
   fun destroy() {
@@ -69,7 +69,7 @@ class HandleTrackLoadSeekTest {
       val outer = JsPromise<Promise<Unit>>()
       Handler(Looper.getMainLooper()).post {
         onLoad(event)
-        setsAfterHandler = 0
+        appliedAfterHandler = 0
         inner.resolve(Unit)
         outer.resolve(inner.promise)
       }
@@ -113,14 +113,25 @@ class HandleTrackLoadSeekTest {
 
   /**
    * As a controller starts a track, at [positionMs] when given; without one media3 passes no index
-   * or position. Returns once media3 has set the items the callback returned, after the handler.
+   * or position. Returns once media3 has applied the items the callback returned, after the
+   * handler: set them, or sought within them when they are the queue the player holds.
    */
   private fun setFromController(track: Track, positionMs: Long? = null) {
     player.exoPlayer.addListener(
       object : MediaPlayer.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
           if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-            setsAfterHandler = setsAfterHandler?.plus(1)
+            appliedAfterHandler = appliedAfterHandler?.plus(1)
+          }
+        }
+
+        override fun onPositionDiscontinuity(
+          oldPosition: MediaPlayer.PositionInfo,
+          newPosition: MediaPlayer.PositionInfo,
+          reason: Int,
+        ) {
+          if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK) {
+            appliedAfterHandler = appliedAfterHandler?.plus(1)
           }
         }
       }
@@ -132,7 +143,7 @@ class HandleTrackLoadSeekTest {
     val item = TrackFactory.toMedia3(track)
     if (positionMs == null) future.get().setMediaItem(item)
     else future.get().setMediaItem(item, positionMs)
-    idleUntil("media3 to set the items") { (setsAfterHandler ?: 0) >= 1 }
+    idleUntil("media3 to apply the items") { (appliedAfterHandler ?: 0) >= 1 }
   }
 
   private fun idleUntil(what: String, condition: () -> Boolean) {
@@ -226,7 +237,7 @@ class HandleTrackLoadSeekTest {
   }
 
   @Test
-  fun `an ended track a handler leaves is set again at its start`() {
+  fun `an ended track a handler leaves plays again from its start`() {
     val track = silentTrack(Duration.ofMillis(500))
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters
