@@ -15,11 +15,14 @@ class ArtworkRoutesTest {
   @Test
   fun `route serves a data URL through the provider`() {
     val registry = BrowseArtworkRegistry()
-    val routes = ArtworkRoutes(registry, "app.artwork")
+    val routes = ArtworkRoutes(registry, "app")
 
     val routed = routes.route(dataUrl, null, isSvg = false, pinned = false)
 
-    assertEquals(ArtworkUris.contentUri("app.artwork", ArtworkUris.tokenFor(dataUrl)), routed)
+    assertEquals(
+      ArtworkUris.contentUri(ArtworkUris.authorityFor("app"), ArtworkUris.tokenFor(dataUrl)),
+      routed,
+    )
     assertEquals(dataUrl, routes.publicUrl(Uri.parse(routed)))
   }
 }

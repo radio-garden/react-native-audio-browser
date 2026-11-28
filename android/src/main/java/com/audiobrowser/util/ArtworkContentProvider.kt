@@ -40,7 +40,7 @@ class ArtworkContentProvider : ContentProvider() {
     val token = ArtworkUris.parseToken(uri) ?: return null
     val deps = CoilArtworkLoaderHolder.get() ?: return null
     val art: ResolvedArtwork = deps.registry.lookup(token) ?: return null
-    if (!ArtworkUris.isServable(Uri.parse(art.finalUrl))) return null
+    if (!ArtworkUris.isServable(Uri.parse(art.finalUrl), context!!.packageName)) return null
 
     val artworkDir = File(context!!.cacheDir, ARTWORK_SUBDIR)
     val file = File(artworkDir, "$token.png")
@@ -141,7 +141,7 @@ class ArtworkContentProvider : ContentProvider() {
         Timber.w(e, "Artwork resolution failed for token=$token; fetching it as registered")
         null
       } ?: return art
-    if (!ArtworkUris.isServable(Uri.parse(source.uri))) return art
+    if (!ArtworkUris.isServable(Uri.parse(source.uri), context!!.packageName)) return art
     // A URL resolved at size is its own source: a registered SVG may resolve to a raster.
     val isSvg =
       if (source.uri == art.finalUrl) art.isSvg else SvgArtworkRenderer.isSvgUrl(source.uri)

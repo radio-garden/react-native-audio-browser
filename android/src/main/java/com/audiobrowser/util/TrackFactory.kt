@@ -5,6 +5,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.audiobrowser.R
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.StyleDisplay
@@ -16,12 +17,6 @@ import com.margelo.nitro.audiobrowser.TrackStyle
  * `path` note in GLOSSARY.md.
  */
 object TrackFactory {
-  /**
-   * By name, not id: Android Automotive OS's car media app does not load the numeric-id form of an
-   * `android.resource://` URI. `res/raw/audio_browser_keep.xml` keeps it from resource shrinking.
-   */
-  private const val VIEW_MORE_ICON = "audio_browser_view_more"
-
   @Volatile var artworkRoutes: ArtworkRoutes? = null
 
   /**
@@ -107,26 +102,32 @@ object TrackFactory {
    * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
    * Android Auto draws as a broken image when it has no artwork. It carries [artwork] when the
    * provider can serve it, filling the tile in its own colours; else the library's arrow icon from
-   * [packageName]'s resources, which the car tints.
+   * [packageName]'s resources, which the car tints. Both go through [packageName]'s provider,
+   * registered in [registry], which draws the icon at the car's size hint; the car would draw a
+   * resource URI at its intrinsic size.
    */
   fun toNavigationMediaItem(
     section: Section,
     viewMoreTitle: String,
     artwork: String?,
+    registry: BrowseArtworkRegistry,
     packageName: String,
   ): MediaItem {
     val track = navigationTrack(section, viewMoreTitle)
-    val icon =
+    val url =
       if (section.style?.display == StyleDisplay.GRID) {
-        val url =
-          artwork?.takeIf { ArtworkUris.isServable(it.toUri()) }
-            ?: "android.resource://$packageName/drawable/$VIEW_MORE_ICON"
-        artworkRoutes?.route(url, null, SvgArtworkRenderer.isSvgUrl(url), pinned = false) ?: url
+        artwork?.takeIf { ArtworkUris.isServable(it.toUri(), packageName) }
+          ?: "android.resource://$packageName/${R.drawable.audio_browser_view_more}"
       } else {
         null
       }
+    val icon =
+      url?.let {
+        ArtworkRoutes(registry, packageName)
+          .route(it, null, SvgArtworkRenderer.isSvgUrl(it), pinned = false)
+      }
     val metadata =
-      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, icon))
+      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, url))
         .setArtworkUri(icon?.toUri())
         .build()
     return buildMediaItem(track, metadata)
@@ -147,20 +148,20 @@ object TrackFactory {
   }
 
   /**
-   * Routes [ArtworkUris.isServable] artwork through the `content://` provider, registered in
-   * [registry], so headers and SVG rendering apply in this process and no bytes cross the Binder.
-   * Other artwork (`android.resource://` icons, `file://`) passes through unchanged, so vector
-   * icons survive.
+   * Routes [ArtworkUris.isServable] artwork through [packageName]'s `content://` provider,
+   * registered in [registry], so headers and SVG rendering apply in this process and no bytes cross
+   * the Binder. Other artwork (another package's resources, resources by name, `file://`) passes
+   * through unchanged.
    */
   fun toBrowseMediaItem(
     track: Track,
     registry: BrowseArtworkRegistry,
-    authority: String,
+    packageName: String,
     section: Section? = null,
   ): MediaItem {
     val artwork =
       artworkUri(track)?.let {
-        ArtworkRoutes(registry, authority)
+        ArtworkRoutes(registry, packageName)
           .route(it, track.artworkSource?.headers, isSvg(track), pinned = false)
       }
     val metadata =

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import coil3.request.ImageRequest
+import com.audiobrowser.R
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 import com.margelo.nitro.audiobrowser.ImageSource
@@ -186,13 +187,27 @@ class ArtworkContentProviderTest {
   }
 
   @Test
-  fun `openFile returns null for a non-http registered url`() {
-    val token = ArtworkUris.tokenFor("android.resource://com.test/drawable/ic")
-    registry.register(
-      token,
-      ResolvedArtwork("android.resource://com.test/drawable/ic", null, false),
-    )
-    assertNull(provider.openFile(uri(token), "r"))
+  fun `openFile returns null for a registered url it would not serve`() {
+    val packageName = RuntimeEnvironment.getApplication().packageName
+    for (url in
+      listOf(
+        "file:///sdcard/a.png",
+        "android.resource://$packageName/drawable/ic",
+        "android.resource://com.other/2131230800",
+      )) {
+      val token = ArtworkUris.tokenFor(url)
+      registry.register(token, ResolvedArtwork(url, null, false))
+      assertNull(url, provider.openFile(uri(token), "r"))
+    }
+  }
+
+  @Test
+  fun `openFile serves the app's own resource by id`() {
+    val context = RuntimeEnvironment.getApplication()
+    val url = "android.resource://${context.packageName}/${R.drawable.audio_browser_view_more}"
+    val token = ArtworkUris.tokenFor(url)
+    registry.register(token, ResolvedArtwork(url, null, false))
+    assertNotNull(provider.openFile(uri(token), "r"))
   }
 
   @Test

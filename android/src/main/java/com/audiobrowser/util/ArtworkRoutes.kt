@@ -4,8 +4,10 @@ import android.net.Uri
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 
-/** Routes artwork URLs through the [ArtworkContentProvider] at [authority], via its [registry]. */
-class ArtworkRoutes(val registry: BrowseArtworkRegistry, val authority: String) {
+/** Routes artwork URLs through [packageName]'s [ArtworkContentProvider], via its [registry]. */
+class ArtworkRoutes(val registry: BrowseArtworkRegistry, private val packageName: String) {
+  val authority = ArtworkUris.authorityFor(packageName)
+
   /**
    * Registers an [ArtworkUris.isServable] [url] and returns the `content://` URI the provider
    * serves it at; any other URL comes back unchanged. [pinned] artwork survives
@@ -14,7 +16,7 @@ class ArtworkRoutes(val registry: BrowseArtworkRegistry, val authority: String) 
    */
   fun route(url: String, headers: Map<String, String>?, isSvg: Boolean, pinned: Boolean): String {
     val uri = Uri.parse(url)
-    if (!ArtworkUris.isServable(uri)) {
+    if (!ArtworkUris.isServable(uri, packageName)) {
       if (pinned && uri.authority == authority) {
         ArtworkUris.parseToken(uri)?.let { token ->
           registry.lookup(token)?.let { registry.pin(token, it) }

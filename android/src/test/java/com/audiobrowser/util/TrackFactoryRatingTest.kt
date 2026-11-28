@@ -67,7 +67,7 @@ class TrackFactoryRatingTest {
   private fun automotive(): BrowseArtworkRegistry =
     BrowseArtworkRegistry().also {
       Automotive.device = true
-      TrackFactory.artworkRoutes = ArtworkRoutes(it, "app.artwork")
+      TrackFactory.artworkRoutes = ArtworkRoutes(it, "app")
     }
 
   @Test
@@ -76,13 +76,13 @@ class TrackFactoryRatingTest {
     val item = TrackFactory.toMedia3(TestFixtures.track(artwork = "https://a/1.png"))
     val uri = item.mediaMetadata.artworkUri!!
     assertEquals("content", uri.scheme)
-    assertEquals("app.artwork", uri.authority)
+    assertEquals(ArtworkUris.authorityFor("app"), uri.authority)
     assertEquals("https://a/1.png", registry.lookup(ArtworkUris.parseToken(uri)!!)!!.finalUrl)
   }
 
   @Test
   fun `a phone keeps the http artwork`() {
-    TrackFactory.artworkRoutes = ArtworkRoutes(BrowseArtworkRegistry(), "app.artwork")
+    TrackFactory.artworkRoutes = ArtworkRoutes(BrowseArtworkRegistry(), "app")
     val item = TrackFactory.toMedia3(TestFixtures.track(artwork = "https://a/1.png"))
     assertEquals("https://a/1.png", item.mediaMetadata.artworkUri.toString())
   }
@@ -90,7 +90,7 @@ class TrackFactoryRatingTest {
   @Test
   fun `a phone serves data artwork through the provider, and maps it back to its URL`() {
     val registry = BrowseArtworkRegistry()
-    TrackFactory.artworkRoutes = ArtworkRoutes(registry, "app.artwork")
+    TrackFactory.artworkRoutes = ArtworkRoutes(registry, "app")
     val item = TrackFactory.toMedia3(TestFixtures.track(artwork = "data:image/png;base64,AAAA"))
     val uri = item.mediaMetadata.artworkUri!!
     assertEquals("content", uri.scheme)
@@ -99,11 +99,23 @@ class TrackFactoryRatingTest {
   }
 
   @Test
-  fun `Android Automotive OS keeps non-http artwork as it is`() {
+  fun `Android Automotive OS keeps artwork the provider would not serve as it is`() {
     automotive()
     assertEquals(
+      "android.resource://app/drawable/ic",
+      TrackFactory.sessionArtworkUri("android.resource://app/drawable/ic", null, isSvg = false),
+    )
+  }
+
+  @Test
+  fun `Android Automotive OS serves the app's own resource by id through the provider`() {
+    val registry = automotive()
+    val uri =
+      TrackFactory.sessionArtworkUri("android.resource://app/1", null, isSvg = false).toUri()
+    assertEquals(ArtworkUris.authorityFor("app"), uri.authority)
+    assertEquals(
       "android.resource://app/1",
-      TrackFactory.sessionArtworkUri("android.resource://app/1", null, isSvg = false),
+      registry.lookup(ArtworkUris.parseToken(uri)!!)!!.finalUrl,
     )
   }
 
@@ -121,14 +133,14 @@ class TrackFactoryRatingTest {
     val routes = TrackFactory.artworkRoutes!!
     assertEquals("https://a/1.png", routes.publicUrl("https://a/1.png".toUri()))
     assertEquals("content://other/art/x", routes.publicUrl("content://other/art/x".toUri()))
-    assertNull(routes.publicUrl("content://app.artwork/art/forgotten".toUri()))
+    assertNull(routes.publicUrl(ArtworkUris.contentUri(routes.authority, "forgotten").toUri()))
   }
 
   @Test
   fun `the session pins a browse item's provider URI it is handed back`() {
     val registry = automotive()
     val browseUri =
-      ArtworkRoutes(registry, "app.artwork").route("https://a/1.png", null, false, pinned = false)
+      ArtworkRoutes(registry, "app").route("https://a/1.png", null, false, pinned = false)
     assertEquals(browseUri, TrackFactory.sessionArtworkUri(browseUri, null, isSvg = false))
     registry.clear()
     assertEquals("https://a/1.png", TrackFactory.artworkRoutes!!.publicUrl(browseUri.toUri()))

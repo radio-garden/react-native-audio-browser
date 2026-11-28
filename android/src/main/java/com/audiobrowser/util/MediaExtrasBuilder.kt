@@ -53,8 +53,9 @@ object MediaExtrasBuilder {
     )
 
   /**
-   * Extras for a section's "view more" [navigation] row drawn with [icon]. The icon makes the row
-   * itself a category item, but not the page it opens, which holds the section's own items.
+   * Extras for a section's "view more" [navigation] row drawn with [icon], its URL before routing.
+   * The icon makes the row itself a category item, but not the page it opens, which holds the
+   * section's own items.
    */
   fun buildNavigation(navigation: Track, section: Section, icon: String?): Bundle =
     build(

@@ -40,7 +40,6 @@ import com.audiobrowser.remote.RemotePlayback
 import com.audiobrowser.remote.RemoteUrls
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
-import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.CoilBitmapLoader
@@ -288,8 +287,7 @@ internal constructor(
   init {
     Automotive.device = context.isAutomotive
     TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
-    TrackFactory.artworkRoutes =
-      ArtworkRoutes(browseArtworkRegistry, ArtworkUris.authorityFor(context.packageName))
+    TrackFactory.artworkRoutes = ArtworkRoutes(browseArtworkRegistry, context.packageName)
   }
 
   var coilBitmapLoader: CoilBitmapLoader?
