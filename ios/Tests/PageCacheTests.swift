@@ -300,7 +300,20 @@ struct PageCacheTests {
     }
   }
 
-  @Test func aCancelledRefetchLeavesThePageAsItWas() async throws {
+  @Test func aRevalidationWhileAFailedRefetchWaitsOutItsLifetimeFetchesNothing() async throws {
+    let harness = Harness()
+    try await harness.expiredPage("/a")
+    _ = try await harness.value("/a") { throw Unreachable() }
+    await harness.settle("/a")
+
+    harness.advance(30)
+    await harness.cache.revalidate("/a") {
+      Issue.record("refetched before a lifetime passed")
+      throw Unreachable()
+    }
+  }
+
+  @Test func aCancelledRefetchKeepsThePageAndRetriesALifetimeLater() async throws {
     let harness = Harness()
     try await harness.expiredPage("/a")
 
@@ -308,8 +321,30 @@ struct PageCacheTests {
     await harness.settle("/a")
     harness.advance(61)
 
-    #expect(harness.pushed == ["/a"])
+    #expect(harness.pushed == ["/a", "/a"])
     #expect(try await harness.value("/a") { throw Unreachable() } == "first")
+  }
+
+  @Test func aPageKeptAfterAFailedRefetchIsRefetchedNoSoonerThanALifetimeLater() async throws {
+    let harness = Harness()
+    try await harness.expiredPage("/a")
+    var fetches = 0
+    let failing: @MainActor () async throws -> Fetched<String> = {
+      fetches += 1
+      throw Unreachable()
+    }
+
+    _ = try await harness.value("/a", failing)
+    await harness.settle("/a")
+    harness.advance(59)
+    _ = try await harness.value("/a", failing)
+    await harness.drain()
+    #expect(fetches == 1)
+
+    harness.advance(2)
+    _ = try await harness.value("/a", failing)
+    await harness.settle("/a")
+    #expect(fetches == 2)
   }
 
   @Test(arguments: [true, false])

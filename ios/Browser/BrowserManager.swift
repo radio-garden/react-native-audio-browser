@@ -125,7 +125,7 @@ final class BrowserManager {
     self.path = path
     if bypassCache {
       // So a failed reload doesn't leave the stale page in the cache.
-      contentCache.remove(path)
+      contentCache.remove(BrowserPathHelper.stripTrackId(path))
     } else {
       content = nil
     }

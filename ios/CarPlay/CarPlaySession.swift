@@ -83,7 +83,10 @@ final class CarPlaySession {
         guard let content else { return }
         self?.refreshDisplayedTemplates(for: content.path, with: content)
       },
-      browserManager.pageExpired.subscribeOnMain { [weak self] _ in self?.refreshShownPageIfExpired() },
+      browserManager.pageExpired.subscribeOnMain { [weak self] path in
+        guard self?.shownListTemplate()?.contentPath == path else { return }
+        self?.refreshShownPageIfExpired()
+      },
       browserManager.pageRefreshed.subscribeOnMain { [weak self] in self?.pageRefreshed($0) },
       audioBrowser.networkMonitor.changed.subscribeOnMain { [weak self] isOnline in
         if isOnline { self?.refreshShownPageIfExpired() }
