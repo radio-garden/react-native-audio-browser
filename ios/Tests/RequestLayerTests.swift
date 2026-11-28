@@ -148,8 +148,12 @@ struct RequestLayerTests {
     requestLayer: nonisolated(nonsending)(Config) async throws -> Config = { $0 },
     resolve: nonisolated(nonsending)() async -> Config? = { nil },
     mediaLayer: nonisolated(nonsending)(Config) async throws -> Config = { $0 },
+    onSkip: (RequestLayer.MediaLayer, any Error) -> Void = { _, _ in },
   ) async throws -> Config {
-    try await RequestLayer.media(over: base, requestLayer: requestLayer, resolve: resolve, mediaLayer: mediaLayer)
+    try await RequestLayer.media(
+      over: base, requestLayer: requestLayer, resolve: resolve, mediaLayer: mediaLayer,
+      onSkip: onSkip,
+    )
   }
 
   @Test func theMediaLayerAppliesOverTheRequestLayerAndTheResolvedConfigOverBoth() async throws {
@@ -159,16 +163,19 @@ struct RequestLayerTests {
       resolve: { order.append("resolve"); return Config(userAgent: "resolved") },
       mediaLayer: { order.append("media"); return RequestLayer.applyStatic(Config(baseUrl: "https://cdn", userAgent: "media"), to: $0) },
     )
-    #expect(order == ["request", "resolve", "media"])
+    #expect(order == ["request", "media", "resolve"])
     #expect(result == Config(path: "/stream.mp3", baseUrl: "https://cdn", headers: ["A": "1"], userAgent: "resolved"))
   }
 
   @Test func aThrowingRequestLayerStillAppliesTheMediaLayerAndTheResolvedConfigToTheBase() async throws {
+    var skipped: [RequestLayer.MediaLayer] = []
     let result = try await media(
       requestLayer: { _ in throw LayerFailed() },
       resolve: { Config(userAgent: "resolved") },
       mediaLayer: { RequestLayer.applyStatic(Config(baseUrl: "https://cdn", headers: ["Auth": "t"]), to: $0) },
+      onSkip: { layer, _ in skipped.append(layer) },
     )
+    #expect(skipped == [.request])
     #expect(RequestLayer.buildUrl(result) == "https://cdn/stream.mp3")
     #expect(result.headers == ["Auth": "t"])
     #expect(result.userAgent == "resolved")
@@ -186,10 +193,24 @@ struct RequestLayerTests {
     #expect(!later)
   }
 
-  @Test func aThrowingMediaLayerIsNotSkipped() async {
-    await #expect(throws: LayerFailed.self) {
-      try await media(mediaLayer: { _ in throw LayerFailed() })
+  @Test func aThrowingMediaLayerFallsBackToTheRequestLayerAndStillAppliesTheResolvedConfig() async throws {
+    var skipped: [RequestLayer.MediaLayer] = []
+    let result = try await media(
+      requestLayer: { RequestLayer.merge($0, Config(baseUrl: "https://api", headers: ["Auth": "t"], userAgent: "shared")) },
+      resolve: { Config(query: ["sig": "s"]) },
+      mediaLayer: { _ in throw LayerFailed() },
+      onSkip: { layer, _ in skipped.append(layer) },
+    )
+    #expect(skipped == [.media])
+    #expect(result == Config(path: "/stream.mp3", baseUrl: "https://api", headers: ["Auth": "t"], query: ["sig": "s"], userAgent: "shared"))
+  }
+
+  @Test func aCancelledMediaLayerStaysACancellationAndRunsNoResolve() async {
+    var resolved = false
+    await #expect(throws: CancellationError.self) {
+      try await media(resolve: { resolved = true; return nil }, mediaLayer: { _ in throw CancellationError() })
     }
+    #expect(!resolved)
   }
 
   // MARK: - artwork

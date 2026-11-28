@@ -113,24 +113,37 @@ enum RequestLayer {
 
   // MARK: - Media
 
-  /// A media request, built in order: `requestLayer` over `base`, or `base` alone when it
-  /// throws anything but a cancellation; what `resolve` produces; `mediaLayer`; then the
-  /// resolved config over that.
+  /// A layer of a media request that `RequestLayer.media` skipped.
+  enum MediaLayer { case request, media }
+
+  /// A media request, built in order: `requestLayer` over `base`; `mediaLayer`; then what
+  /// `resolve` produces over that. A layer that throws anything but a
+  /// cancellation is skipped, leaving the config it was handed, and reported to `onSkip`.
   nonisolated(nonsending) static func media<C: RequestFields>(
     over base: C,
     requestLayer: nonisolated(nonsending)(C) async throws -> C,
     resolve: nonisolated(nonsending)() async -> C?,
     mediaLayer: nonisolated(nonsending)(C) async throws -> C,
+    onSkip: (MediaLayer, any Error) -> Void,
   ) async throws -> C {
-    let request: C
-    do {
-      request = try await requestLayer(base)
-    } catch where !(error is CancellationError) {
-      request = base
-    }
+    let request = try await skipping(.request, requestLayer, over: base, onSkip: onSkip)
+    let merged = try await skipping(.media, mediaLayer, over: request, onSkip: onSkip)
     let resolved = await resolve()
-    let merged = try await mediaLayer(request)
     return resolved.map { merge(merged, $0) } ?? merged
+  }
+
+  private nonisolated(nonsending) static func skipping<C>(
+    _ kind: MediaLayer,
+    _ layer: nonisolated(nonsending)(C) async throws -> C,
+    over input: C,
+    onSkip: (MediaLayer, any Error) -> Void,
+  ) async throws -> C {
+    do {
+      return try await layer(input)
+    } catch where !(error is CancellationError) {
+      onSkip(kind, error)
+      return input
+    }
   }
 
   // MARK: - Artwork
