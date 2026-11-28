@@ -15,7 +15,8 @@ final class PageCache<Value> {
   private struct Entry {
     let value: Value
     let lifetime: TimeInterval?
-    let expiresAt: Date?
+    /// On `now`'s clock.
+    let expiresAt: TimeInterval?
     let stamp: Int
     let failures: Int
     let cancelTimer: (() -> Void)?
@@ -27,13 +28,14 @@ final class PageCache<Value> {
   private(set) var generation = 0
   private var pathGenerations: [String: Int] = [:]
   private let entries: LRUCache<String, Entry>
-  private let now: @MainActor () -> Date
+  private let now: @MainActor () -> TimeInterval
   private let schedule: Schedule
   private var stamps = 0
 
   nonisolated init(
     maxSize: Int,
-    now: @escaping @MainActor () -> Date = Date.init,
+    // Seconds on a clock that runs through sleep and ignores changes to the wall clock.
+    now: @escaping @MainActor () -> TimeInterval = { TimeInterval(clock_gettime_nsec_np(CLOCK_MONOTONIC)) / 1e9 },
     schedule: @escaping Schedule = { delay, work in
       let task = Task { @MainActor in
         try? await Task.sleep(for: .seconds(delay))
@@ -48,32 +50,39 @@ final class PageCache<Value> {
   }
 
   /// The cached page at `path` while it is fresh and `useCache`, else what `fetch` gives, cached
-  /// for the lifetime it states. When `fetch` fails, a cached page is kept, expired, and pushed
-  /// again a lifetime later, up to `maxRetries` times; with `useCache` it is returned, stale, in
-  /// place of the error.
+  /// for the lifetime it states. When `fetch` fails for an expired page, the page is kept, expired,
+  /// and pushed again a lifetime later, up to `maxRetries` times; with `useCache` it is returned,
+  /// stale, in place of the error. A failed refetch of a fresh page changes nothing.
   func value(
     for path: String,
     useCache: Bool,
     fetch: () async throws -> Fetched<Value>,
   ) async throws -> Value {
     let cached = entries.get(path)
-    if useCache, let cached, cached.expiresAt.map({ $0 > now() }) ?? true {
+    if useCache, let cached, isFresh(cached) {
       return cached.value
     }
     let generation = generation(of: path)
     do {
       let fetched = try await fetch()
       if generation == self.generation(of: path) {
-        store(path, value: fetched.value, lifetime: fetched.lifetime, expiresAt: nil, failures: 0)
+        put(path, Entry(
+          value: fetched.value, lifetime: fetched.lifetime, expiresAt: fetched.lifetime.map { now() + $0 },
+          stamp: 0, failures: 0, cancelTimer: nil,
+        ))
       }
       return fetched.value
     } catch {
-      guard let cached, !(error is CancellationError || Task.isCancelled) else { throw error }
+      guard let cached, !isFresh(cached), !(error is CancellationError || Task.isCancelled) else { throw error }
       // A newer page stored meanwhile wins over the stale one this fetch replaced.
-      if entries.peek(path)?.stamp == cached.stamp {
-        store(path, value: cached.value, lifetime: cached.lifetime, expiresAt: cached.expiresAt, failures: cached.failures + 1)
+      let current = entries.peek(path)
+      if let current, current.stamp == cached.stamp {
+        put(path, Entry(
+          value: current.value, lifetime: current.lifetime, expiresAt: current.expiresAt,
+          stamp: 0, failures: current.failures + 1, cancelTimer: nil,
+        ))
       }
-      if useCache { return cached.value }
+      if useCache { return current?.value ?? cached.value }
       throw error
     }
   }
@@ -86,25 +95,29 @@ final class PageCache<Value> {
   func clear() {
     generation &+= 1
     pathGenerations.removeAll()
-    entries.removeAll().forEach { $0.cancelTimer?() }
+    entries.clear().forEach { $0.cancelTimer?() }
+  }
+
+  private func isFresh(_ entry: Entry) -> Bool {
+    entry.expiresAt.map { $0 > now() } ?? true
   }
 
   private func generation(of path: String) -> (Int, Int?) {
     (generation, pathGenerations[path])
   }
 
-  /// `expiresAt` nil: a lifetime from now. The page is pushed a lifetime from now unless it is past
-  /// `maxRetries` failures.
-  private func store(_ path: String, value: Value, lifetime: TimeInterval?, expiresAt: Date?, failures: Int) {
+  /// Stores `entry` under a new stamp, with a timer that pushes it a lifetime from now unless it is
+  /// past `maxRetries` failures.
+  private func put(_ path: String, _ entry: Entry) {
     stamps &+= 1
-    let cancelTimer = lifetime.flatMap { lifetime in
-      failures <= Self.maxRetries ? schedule(lifetime) { [weak self] in self?.expired.emit(path) } : nil
+    let cancelTimer = entry.lifetime.flatMap { lifetime in
+      entry.failures <= Self.maxRetries ? schedule(lifetime) { [weak self] in self?.expired.emit(path) } : nil
     }
-    let entry = Entry(
-      value: value, lifetime: lifetime, expiresAt: expiresAt ?? lifetime.map { now().addingTimeInterval($0) },
-      stamp: stamps, failures: failures, cancelTimer: cancelTimer,
+    let stored = Entry(
+      value: entry.value, lifetime: entry.lifetime, expiresAt: entry.expiresAt,
+      stamp: stamps, failures: entry.failures, cancelTimer: cancelTimer,
     )
-    for dropped in entries.set(path, value: entry) {
+    for dropped in entries.set(path, value: stored) {
       dropped.cancelTimer?()
     }
   }

@@ -43,13 +43,13 @@ final class LRUCache<Key: Hashable, Value> {
     return entries.removeValue(forKey: key)
   }
 
-  func clear() {
-    entries.removeAll()
-    order.removeAll()
-  }
-
-  func removeAll() -> [Value] {
-    defer { clear() }
+  /// Empties the cache and returns the values it held.
+  @discardableResult
+  func clear() -> [Value] {
+    defer {
+      entries.removeAll()
+      order.removeAll()
+    }
     return Array(entries.values)
   }
 

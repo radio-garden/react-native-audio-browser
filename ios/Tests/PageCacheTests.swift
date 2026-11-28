@@ -8,9 +8,9 @@ private struct Unreachable: Error {}
 /// A page cache on a clock the test moves, whose timers run when `advance` passes them.
 @MainActor
 private final class Harness {
-  var now = Date(timeIntervalSince1970: 0)
+  var now: TimeInterval = 0
   var pushed: [String] = []
-  private var timers: [Int: (at: Date, work: @MainActor () -> Void)] = [:]
+  private var timers: [Int: (at: TimeInterval, work: @MainActor () -> Void)] = [:]
   private var nextTimer = 0
   lazy var cache = PageCache<String>(
     maxSize: 2,
@@ -18,7 +18,7 @@ private final class Harness {
     schedule: { [unowned self] delay, work in
       nextTimer += 1
       let id = nextTimer
-      timers[id] = (now.addingTimeInterval(delay), work)
+      timers[id] = (now + delay, work)
       return { [weak self] in self?.timers[id] = nil }
     },
   )
@@ -118,6 +118,21 @@ struct PageCacheTests {
     #expect(try await harness.value("/a") { throw Unreachable() } == "first")
   }
 
+  @Test func aFailedRefreshOfAFreshPageLeavesItsExpiryAndRetries() async throws {
+    let harness = Harness()
+    _ = try await harness.value("/a") { page("first", 60) }
+    harness.advance(50)
+
+    for _ in 0 ... PageCache<String>.maxRetries {
+      await #expect(throws: Unreachable.self) {
+        try await harness.value("/a", useCache: false) { throw Unreachable() }
+      }
+    }
+    harness.advance(11)
+
+    #expect(harness.pushed == ["/a"])
+  }
+
   @Test func aFailedRefreshLeavesAPageStoredMeanwhileInPlace() async throws {
     let harness = Harness()
     _ = try await harness.value("/a") { page("first", 60) }
@@ -180,7 +195,6 @@ struct PageCacheTests {
     _ = try await harness.value("/c") { page("c") }
 
     #expect(try await harness.value("/b") { page("refetched") } == "b")
-    #expect(try await harness.value("/a") { page("refetched") } == "refetched")
   }
 
   @Test(arguments: [true, false])

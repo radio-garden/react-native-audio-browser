@@ -65,8 +65,8 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
-  /// `URLSession.shared` with no URL cache: the library keeps what it caches, and a URL cache would
-  /// answer a refresh with the body it is replacing.
+  /// A session on the default configuration with no URL cache: the library keeps what it caches,
+  /// and a URL cache would answer a refresh with the body it is replacing.
   static let uncachedSession: URLSession = {
     let configuration = URLSessionConfiguration.default
     configuration.urlCache = nil
