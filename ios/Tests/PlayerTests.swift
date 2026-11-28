@@ -1771,6 +1771,22 @@ struct SessionReleaseTests {
     #expect(eh.cancelReleaseRequesters.map(ObjectIdentifier.init) == [ObjectIdentifier(c)])
   }
 
+  @Test @MainActor
+  func trackQueuedUnderAHeldIntent_takesTheSessionBack() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    try startPlaying(c, eh)
+    c.pause()
+    c.clear()
+    c.play()
+    #expect(c.canReleaseAudioSession == true)
+    eh.cancelReleaseCount = 0
+
+    try loadTrack(c, id: "t2")
+
+    #expect(eh.cancelReleaseCount == 1)
+    #expect(c.canReleaseAudioSession == false)
+  }
+
   /// `.none` with a track loaded: a pause observed before the asset arrived.
   @Test @MainActor
   func clear_fromNoneWithATrack_requestsRelease() throws {
