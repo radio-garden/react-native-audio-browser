@@ -248,10 +248,17 @@ internal class InterceptingPlayer(
     }
 
   // Media3 sets here the queue of a track picked on an external surface and of playback
-  // resumption. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
+  // resumption. A pick in the queue the player holds skips to it, as Player.skipTo does, past the
+  // intercepted seekTo. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
-    val state = engineView(wrappedPlayer.playbackState)
-    if (wrappedPlayer.skipsInPlace(startIndex, state) && isCurrentQueue(mediaItems)) return
+    if (startIndex != C.INDEX_UNSET && isCurrentQueue(mediaItems)) {
+      val state = engineView(wrappedPlayer.playbackState)
+      if (!wrappedPlayer.skipsInPlace(startIndex, state)) {
+        wrappedPlayer.seekTo(startIndex, startPositionMs)
+      }
+      leadShuffleOrder(startIndex, mediaItems.size)
+      return
+    }
     super.setMediaItems(mediaItems, startIndex, startPositionMs)
     if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
   }

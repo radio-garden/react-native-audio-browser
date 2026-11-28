@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.MediaItem
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
@@ -209,6 +210,32 @@ class SkipInPlaceTest {
   }
 
   @Test
+  fun `a controller's pick of another item in the queue seeks to it`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(
+      listOf("transition ${MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_SEEK}"),
+      engineEvents.filter { it.startsWith("transition") },
+    )
+  }
+
+  @Test
+  fun `a controller's pick in the queue starts at the position it asks for`() {
+    playUntilReady(folder.silentWavUri(Duration.ofMinutes(1)))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 0, 30_000)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("seek" in engineEvents)
+    assertTrue(player.exoPlayer.currentPosition >= 30_000)
+  }
+
+  @Test
   fun `a controller's other queue at the playing live item's index replaces it`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
     val others =
@@ -240,6 +267,10 @@ class SkipInPlaceTest {
           reason: Int,
         ) {
           if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK) engineEvents += "seek"
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+          engineEvents += "transition $reason"
         }
       }
     )
