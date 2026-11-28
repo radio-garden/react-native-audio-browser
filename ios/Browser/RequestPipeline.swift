@@ -143,8 +143,8 @@ final class RequestPipeline {
   // MARK: - Media URL Resolution
 
   /// The media request for `originalUrl`, as `RequestLayer.media` builds it. `track` only feeds
-  /// `media.resolve`; its own `request` is not merged here. A failing request layer or media layer
-  /// leaves the URL as it is, with no headers.
+  /// `media.resolve`; its own `request` is not merged here. A failing media layer leaves the URL
+  /// as it is, with no headers.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
     do {
       let merged = try await RequestLayer.media(
