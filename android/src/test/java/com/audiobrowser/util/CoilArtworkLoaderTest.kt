@@ -8,6 +8,8 @@ import coil3.request.ImageRequest
 import coil3.size.Dimension
 import coil3.size.Size
 import coil3.svg.SvgDecoder
+import java.io.ByteArrayOutputStream
+import java.util.Base64
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -19,6 +21,52 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 class CoilArtworkLoaderTest {
+  private fun pngDataUrl(width: Int, height: Int): String {
+    val bytes =
+      ByteArrayOutputStream()
+        .also {
+          Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            .compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        .toByteArray()
+    return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes)
+  }
+
+  private fun realLoader(): CoilArtworkLoader {
+    val context = RuntimeEnvironment.getApplication()
+    return CoilArtworkLoader(context, ImageLoader.Builder(context).build())
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun `a picture smaller than the size hint loads at its own size`() = runTest {
+    val bmp = realLoader().load(pngDataUrl(300, 200), null, 512, false)
+
+    assertEquals(300, bmp.width)
+    assertEquals(200, bmp.height)
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun `a picture larger than the size hint loads within it, keeping its aspect ratio`() = runTest {
+    val bmp = realLoader().load(pngDataUrl(1000, 500), null, 512, false)
+
+    assertEquals(512, bmp.width)
+    assertEquals(256, bmp.height)
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun `a picture loaded at a larger hint is not served from memory at a smaller one`() = runTest {
+    val loader = realLoader()
+    val url = pngDataUrl(1000, 500)
+    loader.load(url, null, 512, false)
+
+    val bmp = loader.load(url, null, 256, false)
+
+    assertEquals(256, bmp.width)
+  }
+
   @Test
   fun `load applies size hint and headers to the request`() = runTest {
     val context = RuntimeEnvironment.getApplication()
