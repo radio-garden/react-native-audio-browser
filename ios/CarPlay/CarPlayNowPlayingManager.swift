@@ -47,16 +47,21 @@ final class CarPlayNowPlayingManager {
     audioBrowser.browserManager.config
   }
 
+  /// Up Next's rows were replaced.
+  private let sectionsChanged: () -> Void
+
   init(
     interfaceController: CPInterfaceController,
     audioBrowser: HybridAudioBrowser,
     listItem: @escaping (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem,
     navigate: @escaping (_ path: String, _ title: String) -> Void,
+    sectionsChanged: @escaping () -> Void,
   ) {
     self.interfaceController = interfaceController
     self.audioBrowser = audioBrowser
     self.listItem = listItem
     self.navigate = navigate
+    self.sectionsChanged = sectionsChanged
   }
 
   // MARK: - Lifecycle
@@ -308,6 +313,7 @@ final class CarPlayNowPlayingManager {
     guard built != builtUpNext else { return }
     builtUpNext = built
     upNextTemplate.updateSections([createUpNextSection(built)])
+    sectionsChanged()
   }
 
   fileprivate func handleUpNextButtonTapped() {

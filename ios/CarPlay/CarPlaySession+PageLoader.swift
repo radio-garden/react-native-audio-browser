@@ -61,6 +61,7 @@ extension CarPlaySession {
 
   func updateTemplate(_ template: CPListTemplate, with resolvedTrack: ResolvedTrack) {
     template.updateSections(listItemFactory.createSections(from: resolvedTrack))
+    artworkWakeups.post(.sectionsChanged)
     template.assistantCellConfiguration = resolvedTrack.carPlaySiriListButton.map { position in
       CPAssistantCellConfiguration(
         position: position == .top ? .top : .bottom, visibility: .always, assistantAction: .playMedia,
@@ -82,6 +83,7 @@ extension CarPlaySession {
       }
       template.setMessage(title, subtitle: formatted.message)
       template.updateSections([])
+      artworkWakeups.post(.sectionsChanged)
     } else {
       // A pushed template's empty view renders reliably only as its initial state, so it is
       // replaced. The message has no path, so no refresh reloads it: backing out and

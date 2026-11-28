@@ -60,11 +60,15 @@ extension CarPlaySession {
        tabBar.templates.count == templates.count
     {
       // An equal-count swap keeps the selected tab.
+      tabBar.delegate = tabBarDelegate
       tabBar.updateTemplates(templates)
+      artworkWakeups.post(.sectionsChanged)
     } else {
       let tabBar = CPTabBarTemplate(templates: templates)
       tabBar.delegate = tabBarDelegate
-      interfaceController.safeSetRoot(tabBar, animated: true)
+      interfaceController.safeSetRoot(tabBar, animated: true) { [weak self] _, _ in
+        self?.artworkWakeups.post(.sectionsChanged)
+      }
     }
 
     // Tabs load on first appearance. The first is already on screen, and a template swapped in
@@ -186,7 +190,7 @@ extension CarPlaySession {
     tabImageLoads.setObject(load, forKey: template)
     load.run(key: nil) { [imageLoader] in
       // Tab icons are 24 pt (CarPlay Developer Guide).
-      await imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))
+      await imageLoader.image(for: track, size: CGSize(width: 24, height: 24))
     } deliver: { [weak self, weak template] result in
       guard let self, let template, case let .success(image?) = result else { return }
       template.tabImage = image
@@ -220,8 +224,8 @@ final class TabBarDelegate: NSObject, CPTabBarTemplateDelegate {
 
   func tabBarTemplate(_: CPTabBarTemplate, didSelect selectedTemplate: CPTemplate) {
     MainActor.assumeIsolated {
-      guard let list = selectedTemplate as? CPListTemplate else { return }
-      session?.loadContentIfNeeded(for: list)
+      if let list = selectedTemplate as? CPListTemplate { session?.loadContentIfNeeded(for: list) }
+      session?.postArtworkShown(selectedTemplate)
     }
   }
 }

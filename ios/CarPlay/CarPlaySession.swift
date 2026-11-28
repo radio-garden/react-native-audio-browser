@@ -22,10 +22,14 @@ final class CarPlaySession {
     spawn: { [weak self] work in self?.spawn { _ in await work() } },
     onItemSelected: { [weak self] track, completion in self?.select(track, completion: completion) },
     onNavigate: { [weak self] path, title in self?.spawn { await $0.navigate(to: path, title: title) } },
+    retryWaits: { [weak self] row in self?.artworkRetryWaits(for: row) },
   )
   private(set) var nowPlaying: CarPlayNowPlayingManager!
 
   private var subscriptions: [Subscription] = []
+  /// What a retrying artwork load waits on: the network changing, sections being replaced, and
+  /// templates appearing.
+  let artworkWakeups = Wakeups<ArtworkWake<CPTemplate>>()
   private var tasks: [UUID: Task<Void, Never>] = [:]
   /// Each tab template's image load in flight, keyed weakly so a load keeps no template alive.
   let tabImageLoads = NSMapTable<CPTemplate, SupersedingTask<Never, UIImage>>.weakToStrongObjects()
@@ -72,6 +76,7 @@ final class CarPlaySession {
         self?.listItemFactory.createListItem(for: track, handler: handler) ?? CPListItem(text: track.title, detailText: nil)
       },
       navigate: { [weak self] path, title in self?.spawn { await $0.navigate(to: path, title: title) } },
+      sectionsChanged: { [weak self] in self?.artworkWakeups.post(.sectionsChanged) },
     )
   }
 
@@ -102,6 +107,7 @@ final class CarPlaySession {
       },
       audioBrowser.browseGate.changed.subscribeOnMain { [weak self] _ in self?.gateChanged() },
       audioBrowser.activeTrackChangedEmitter.subscribeOnMain { [weak self] _ in self?.updatePlayingIndicators() },
+      audioBrowser.networkMonitor.changed.subscribeOnMain { [weak self] _ in self?.artworkWakeups.post(.networkChanged) },
     ]
     nowPlaying.start()
     spawn { await $0.buildInitialInterface() }
@@ -113,6 +119,7 @@ final class CarPlaySession {
       task.cancel()
     }
     tasks = [:]
+    artworkWakeups.end()
     tabImageLoads.removeAllObjects()
     subscriptions = []
     nowPlaying.end()
@@ -150,6 +157,7 @@ final class CarPlaySession {
     // indicator, which may have changed while covered.
     guard template is CPListTemplate || template is CPTabBarTemplate else { return }
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
+    defer { postArtworkShown(template) }
     if rebuildTabsIfAtRoot() { return }
     updatePlayingIndicators()
     // Popping Now Playing reports the tab bar even with a list pushed above it.
