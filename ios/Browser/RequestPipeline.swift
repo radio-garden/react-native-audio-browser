@@ -148,15 +148,8 @@ final class RequestPipeline {
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
     do {
       let merged = try await RequestLayer.media(
-        over: RequestConfig.base(path: originalUrl),
-        requestLayer: { base in
-          do {
-            return try await self.applyLayer(self.resolvedLayers().request, to: base, params: [:])
-          } catch where !(error is CancellationError) {
-            self.logger.error("Media request layer failed: \(error.localizedDescription)")
-            throw error
-          }
-        },
+        over: .base(path: originalUrl),
+        requestLayer: { try await self.applyLayer(self.resolvedLayers().request, to: $0, params: [:]) },
         resolve: {
           do {
             return try await self.resolveMediaTrackConfig(track)
@@ -165,12 +158,11 @@ final class RequestPipeline {
             return nil
           }
         },
-        mediaLayer: { request in
-          do {
-            return try await self.applyLayer(self.config.media, to: request, params: nil)
-          } catch where !(error is CancellationError) {
-            self.logger.error("Media layer failed: \(error.localizedDescription)")
-            throw error
+        mediaLayer: { try await self.applyLayer(self.config.media, to: $0, params: nil) },
+        onSkip: { layer, error in
+          switch layer {
+          case .request: self.logger.error("Media request layer failed: \(error.localizedDescription)")
+          case .media: self.logger.error("Media layer failed: \(error.localizedDescription)")
           }
         },
       )
