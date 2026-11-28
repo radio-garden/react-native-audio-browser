@@ -2,7 +2,9 @@ package com.audiobrowser.player
 
 import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player as MediaPlayer
+import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
@@ -11,6 +13,8 @@ import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentMp3Bytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackRequest
 import java.io.IOException
 import java.net.ServerSocket
 import java.time.Duration
@@ -24,6 +28,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.Mockito.RETURNS_DEFAULTS
+import org.mockito.Mockito.mock
+import org.mockito.stubbing.Answer
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -199,13 +206,151 @@ class SkipInPlaceTest {
   }
 
   @Test
-  fun `a controller's pick of another item in the queue moves to it`() {
+  fun `a controller's pick of another item in the queue seeks to it`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(1, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(
+      listOf("transition ${MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_SEEK}"),
+      engineEvents.filter { it.startsWith("transition") },
+    )
+  }
+
+  @Test
+  fun `a controller's pick in the queue moves though the app consumes remote seeks`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+    player.setCallbacks(
+      mock(
+        Callbacks::class.java,
+        Answer { if (it.method.name == "handleRemoteSeek") true else RETURNS_DEFAULTS.answer(it) },
+      )
+    )
 
     val items = player.tracks.map { TrackFactory.toMedia3(it) }
     player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
 
     assertEquals(1, player.exoPlayer.currentMediaItemIndex)
+  }
+
+  @Test
+  fun `a controller's queue with new metadata for the playing live item updates it in place`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    watchEngine()
+    val renamed = player.tracks.map { it.copy(subtitle = "renamed") }
+
+    player.forwardingPlayer.setMediaItems(
+      renamed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals("renamed", player.currentTrack?.subtitle)
+    assertEquals(emptyList<String>(), engineEvents)
+  }
+
+  @Test
+  fun `a controller's queue with new metadata on every track tells the app once`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+    val queues = mutableListOf<List<String?>>()
+    player.setCallbacks(
+      mock(
+        Callbacks::class.java,
+        Answer {
+          if (it.method.name == "onPlaybackQueueChanged") {
+            queues += it.getArgument<Array<Track>>(0).map { track -> track.subtitle }
+          }
+          RETURNS_DEFAULTS.answer(it)
+        },
+      )
+    )
+    val renamed = player.tracks.map { it.copy(subtitle = "renamed") }
+
+    player.forwardingPlayer.setMediaItems(
+      renamed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(listOf(listOf("renamed", "renamed")), queues)
+  }
+
+  @Test
+  fun `a controller's queue with new request headers for the playing live item loads it again`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    watchEngine()
+    val request = TrackRequest(userAgent = "renewed", headers = null, query = null)
+    val renewed = player.tracks.map { it.copy(request = request) }
+
+    player.forwardingPlayer.setMediaItems(
+      renewed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("state ${MediaPlayer.STATE_BUFFERING}" in engineEvents)
+  }
+
+  @Test
+  fun `a controller's empty queue on an empty player leaves it empty`() {
+    goOnline(context)
+    player.setup(PlayerSetupOptions())
+
+    player.forwardingPlayer.setMediaItems(emptyList(), 0, C.TIME_UNSET)
+
+    assertEquals(0, player.exoPlayer.mediaItemCount)
+  }
+
+  @Test
+  fun `a controller's pick of another item in the queue keeps the shuffle order`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
+
+    assertEquals(0, player.exoPlayer.currentTimeline.getFirstWindowIndex(true))
+  }
+
+  @Test
+  fun `a controller's pick in the queue starts at the position it asks for`() {
+    playUntilReady(folder.silentWavUri(Duration.ofMinutes(1)))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 0, 30_000)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("seek" in engineEvents)
+    assertTrue(player.exoPlayer.currentPosition >= 30_000)
+  }
+
+  @Test
+  fun `a controller's queue with the same ids and a new src replaces the playing live item`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    val renewed =
+      listOf(
+        TestFixtures.track(title = "0", id = "0", src = "$src?renewed"),
+        TestFixtures.track(title = "1", id = "1", src = "https://s/1.mp3"),
+      )
+
+    player.forwardingPlayer.setMediaItems(
+      renewed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+
+    assertEquals("$src?renewed", player.currentTrack?.src)
   }
 
   @Test
@@ -241,11 +386,19 @@ class SkipInPlaceTest {
         ) {
           if (reason == MediaPlayer.DISCONTINUITY_REASON_SEEK) engineEvents += "seek"
         }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+          engineEvents += "transition $reason"
+        }
       }
     )
   }
 
-  private fun play(src: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
+  private fun play(
+    src: String,
+    retryPolicy: RetryPolicy = RetryPolicy.Default,
+    ids: List<String?> = listOf(null, null),
+  ) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.exoPlayer.trackSelectionParameters =
@@ -255,8 +408,8 @@ class SkipInPlaceTest {
         .build()
     player.setQueue(
       arrayOf(
-        TestFixtures.track(title = "0", src = src),
-        TestFixtures.track(title = "1", src = "https://s/1.mp3"),
+        TestFixtures.track(title = "0", id = ids[0], src = src),
+        TestFixtures.track(title = "1", id = ids[1], src = "https://s/1.mp3"),
       )
     )
     player.play()

@@ -758,6 +758,8 @@ internal constructor(
         masksPlaying = { retryMasksPlaying },
         unprepared = { restoredUnprepared },
         leadShuffleOrder = ::leadShuffleOrder,
+        skipTo = ::skipTo,
+        replaceTracks = ::replaceTracks,
         playPlayer = ::play,
         stopPlayer = ::stop,
       )
@@ -868,12 +870,16 @@ internal constructor(
     sessionPlayer.moveMediaItem(fromIndex, toIndex)
   }
 
-  /** @throws IllegalArgumentException if [index] is out of bounds. */
-  fun skipTo(index: Int) {
+  /**
+   * Skips to [index], at [positionMs] or its default position.
+   *
+   * @throws IllegalArgumentException if [index] is out of bounds.
+   */
+  fun skipTo(index: Int, positionMs: Long = C.TIME_UNSET) {
     validateIndex(index)
     playGeneration++
     if (sessionPlayer.skipsInPlace(index, retryView(sessionPlayer.playbackState))) return
-    sessionPlayer.seekTo(index, C.TIME_UNSET)
+    sessionPlayer.seekTo(index, positionMs)
     sessionPlayer.prepare()
   }
 
@@ -927,6 +933,23 @@ internal constructor(
     if (isCurrent) nowPlaying.forgetPublished()
     sessionPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
     if (isCurrent) nowPlaying.render()
+  }
+
+  /**
+   * Replaces the queue's tracks with [tracks], one for each of its items, in one replacement that
+   * keeps each stream playing.
+   */
+  private fun replaceTracks(tracks: List<Track>) {
+    val items =
+      tracks.mapIndexed { index, track ->
+        sessionPlayer.getMediaItemAt(index).takeIf { it.localConfiguration?.tag == track }
+          ?: TrackFactory.toMedia3(track)
+      }
+    val current = sessionPlayer.currentMediaItemIndex
+    val changesCurrent = items.getOrNull(current) !== sessionPlayer.getMediaItemAt(current)
+    if (changesCurrent) nowPlaying.forgetPublished()
+    sessionPlayer.replaceMediaItems(0, items.size, items)
+    if (changesCurrent) nowPlaying.render()
   }
 
   /**
