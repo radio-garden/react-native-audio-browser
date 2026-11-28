@@ -36,20 +36,42 @@ struct ArtworkLoadFailureTests {
     #expect(status(429).isRetryable)
   }
 
-  @Test func aURLThatCannotBeRequestedIsFinal() {
-    #expect(!ArtworkLoadFailure(URLError(.badURL)).isRetryable)
-    #expect(!ArtworkLoadFailure(URLError(.unsupportedURL)).isRetryable)
+  @Test func onlyAConnectionFailureIsRetriedOfTheURLErrors() {
+    #expect(urlError(.timedOut).isRetryable)
+    #expect(urlError(.networkConnectionLost).isRetryable)
+    #expect(urlError(.notConnectedToInternet).isRetryable)
+    for code: URLError.Code in [
+      .badURL, .unsupportedURL, .cancelled, .secureConnectionFailed, .serverCertificateUntrusted,
+      .fileDoesNotExist, .zeroByteResource, .cannotDecodeContentData, .badServerResponse,
+    ] {
+      #expect(!urlError(code).isRetryable, "\(code)")
+    }
   }
 
-  @Test func aServerErrorOrAConnectionFailureIsRetried() {
+  @Test func aServerErrorIsRetried() {
     #expect(status(500).isRetryable)
     #expect(status(503).isRetryable)
-    #expect(urlError(.networkConnectionLost).isRetryable)
-    #expect(ArtworkLoadFailure(URLError(.badServerResponse)).isRetryable)
   }
 
-  @Test func anImageThatDoesNotDecodeIsFinal() {
+  @Test func anyOtherFailureIsFinal() {
     #expect(!ArtworkLoadFailure(NSError(domain: "decode", code: 1)).isRetryable)
+    #expect(!ArtworkLoadFailure(KingfisherError.responseError(reason: .URLSessionError(error: NSError(domain: "x", code: 1)))).isRetryable)
+  }
+
+  @Test func aConnectionFailureIsToldApartFromAServerError() {
+    #expect(urlError(.notConnectedToInternet).isConnectionFailure)
+    #expect(!status(503).isConnectionFailure)
+  }
+
+  @Test func theDescriptionNeverCarriesTheURL() {
+    let url = URL(string: "https://example.com/u/123/a.jpg?token=secret")!
+    let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
+    let refused = ArtworkLoadFailure(KingfisherError.responseError(reason: .invalidHTTPStatusCode(response: response)))
+    let invalid = ArtworkLoadFailure(KingfisherError.requestError(reason: .invalidURL(request: URLRequest(url: url))))
+    for failure in [refused, invalid] {
+      #expect(!failure.description.contains("secret"))
+      #expect(!failure.description.contains("/u/123"))
+    }
   }
 
   @Test func theDescriptionNamesTheStatusOrTheURLErrorCode() {

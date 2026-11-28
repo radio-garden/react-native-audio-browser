@@ -75,9 +75,10 @@ enum ArtworkImageFetcher {
     }
     return result.mapError { error in
       let failure = ArtworkLoadFailure(error)
-      // A query may carry a token: the log shows the URL without it.
-      let shown = "\(url.host ?? "")\(url.path)".prefix(200)
-      logger.error("Failed to load artwork from \(shown, privacy: .public): \(failure.description, privacy: .public)")
+      // A path or query may carry a token or a user's id; only the host and the failure are public.
+      logger.error(
+        "Failed to load artwork from \(url.host ?? "", privacy: .public)\(url.path.prefix(200)): \(failure.description, privacy: .public)",
+      )
       return failure
     }
   }

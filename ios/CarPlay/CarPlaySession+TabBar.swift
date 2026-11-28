@@ -186,7 +186,7 @@ extension CarPlaySession {
     tabImageLoads.setObject(load, forKey: template)
     load.run(key: nil) { [imageLoader] in
       // Tab icons are 24 pt (CarPlay Developer Guide).
-      try? await imageLoader.artwork(for: track, size: CGSize(width: 24, height: 24))?.get()
+      await imageLoader.image(for: track, size: CGSize(width: 24, height: 24))
     } deliver: { [weak self, weak template] result in
       guard let self, let template, case let .success(image?) = result else { return }
       template.tabImage = image

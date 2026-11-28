@@ -37,6 +37,8 @@ final class CarPlayListItemFactory {
   private let onItemSelected: (Track, @escaping () -> Void) -> Void
   /// A tile section's header ("view all") was tapped.
   private let onNavigate: (_ path: String, _ title: String) -> Void
+  /// How a failed artwork load for a row waits to be retried; nil does not retry.
+  private let retryWaits: (_ row: AnyObject) -> ArtworkRetryWaits?
 
   init(
     imageLoader: CarPlayImageLoader,
@@ -45,6 +47,7 @@ final class CarPlayListItemFactory {
     spawn: @escaping (@escaping @MainActor () async -> Void) -> Void,
     onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
     onNavigate: @escaping (_ path: String, _ title: String) -> Void,
+    retryWaits: @escaping (_ row: AnyObject) -> ArtworkRetryWaits?,
   ) {
     self.imageLoader = imageLoader
     self.playingIndicatorLocation = playingIndicatorLocation
@@ -52,29 +55,22 @@ final class CarPlayListItemFactory {
     self.spawn = spawn
     self.onItemSelected = onItemSelected
     self.onNavigate = onNavigate
+    self.retryWaits = retryWaits
   }
 
-  private let failedLoads = FailedArtworkLoads()
-
-  /// Loads again each artwork whose retries ran out while its row is still on a template.
-  func retryFailedArtwork() {
-    failedLoads.retry()
-  }
-
-  /// Loads `track`'s artwork into `owner`, a row, retrying a failed fetch while the row lives.
+  /// Loads `track`'s artwork into `row` as each image is ready, retrying a failed fetch while the
+  /// row lives; `apply` gets nil when the load ends without an image.
   private func loadArtwork(
-    for track: Track, style: TrackStyle?, size: CGSize, owner: AnyObject, apply: @escaping @MainActor (UIImage?) -> Void,
+    for track: Track, style: TrackStyle?, size: CGSize, row: AnyObject, apply: @escaping @MainActor (UIImage?) -> Void,
   ) {
-    spawn { [weak self, weak owner, imageLoader] in
-      let result = await imageLoader.artwork(for: track, style: style, size: size, wanted: { owner != nil })
-      guard !Task.isCancelled, let owner else { return }
-      if case let .failure(failure) = result, let self {
-        failedLoads.add(failure, owner: owner) { [weak self, weak owner] in
-          guard let self, let owner else { return }
-          loadArtwork(for: track, style: style, size: size, owner: owner, apply: apply)
-        }
+    let waits = retryWaits(row)
+    spawn { [imageLoader] in
+      let applied = await imageLoader.loadArtwork(for: track, style: style, size: size, waits: waits) { image in
+        guard !Task.isCancelled else { return }
+        apply(image)
       }
-      apply(try? result?.get())
+      guard !Task.isCancelled, !applied else { return }
+      apply(nil)
     }
   }
 
@@ -182,7 +178,7 @@ final class CarPlayListItemFactory {
 
     if track.artwork != nil || track.artworkSource != nil {
       item.setImage(imageLoader.placeholderImage(size: CPListItem.maximumImageSize))
-      loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize, owner: item) { [weak item] image in
+      loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize, row: item) { [weak item] image in
         item?.setImage(image)
       }
     }
@@ -349,7 +345,7 @@ final class CarPlayListItemFactory {
         for: track,
         style: resolved,
         size: Self.tileImageSize(family: family, cardImage: resolved.cardImage),
-        owner: item,
+        row: item,
       ) { [weak item, applyImage] image in
         guard let item, let image else { return }
         if let applyImage {

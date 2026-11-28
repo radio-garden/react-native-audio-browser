@@ -101,7 +101,6 @@ let package = Package(
         "Util/HttpFreshness.swift",
         "Util/ArtworkLoadFailure.swift",
         "Util/ArtworkRetry.swift",
-        "Util/FailedArtworkLoads.swift",
         "Util/Wakeups.swift",
         "Util/ArtworkPair.swift",
         "Util/LocalArtwork.swift",
