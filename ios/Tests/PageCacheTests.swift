@@ -36,7 +36,7 @@ private final class Harness {
   private var nextTimer = 0
   lazy var cache = PageCache<String>(
     maxSize: 2,
-    isTransient: { $0 is Unreachable },
+    keepsStale: { $0 is Unreachable },
     now: { [unowned self] in now },
     schedule: { [unowned self] delay, work in
       nextTimer += 1
@@ -186,23 +186,48 @@ struct PageCacheTests {
 
   @Test func theAgeAPageArrivedWithShortensItsLifetime() async throws {
     let harness = Harness()
-    _ = try await harness.value("/a") { page("first", 60, age: 40) }
+    _ = try await harness.value("/a") { page("first", 60, age: 20) }
 
-    harness.advance(21)
+    harness.advance(39)
+    #expect(harness.pushed.isEmpty)
+    harness.advance(2)
 
     #expect(harness.pushed == ["/a"])
     #expect(harness.cache.isExpired("/a"))
   }
 
-  @Test func aPageWhoseAgeUsedUpItsLifetimeIsExpiredWithNoPush() async throws {
+  @Test func aPageWhoseAgeUsedUpItsLifetimeIsKeptForTheFloor() async throws {
     let harness = Harness()
     _ = try await harness.value("/a") { page("first", 60, age: 100) }
 
-    #expect(harness.cache.isExpired("/a"))
-    #expect(harness.pendingTimers == 0)
-    #expect(try await harness.value("/a") { page("second", 60) } == "first")
+    harness.advance(PageCache<String>.lifetimeFloor - 1)
+    #expect(!harness.cache.isExpired("/a"))
+    #expect(harness.pushed.isEmpty)
+    harness.advance(2)
+    #expect(harness.pushed == ["/a"])
+  }
+
+  @Test func aRefetchAnsweredAlreadyExpiredMakesOneRequestAndSetsATimerAtTheFloor() async throws {
+    let harness = Harness()
+    try await harness.expiredPage("/a")
+    var fetches = 0
+    let fetch: @MainActor () async throws -> Fetched<String> = {
+      fetches += 1
+      return page("second", 60, age: 90)
+    }
+
+    _ = try await harness.value("/a", fetch)
     await harness.settle("/a")
-    #expect(try await harness.value("/a") { page("third", 60) } == "second")
+    #expect(harness.refreshed == ["/a"])
+    #expect(try await harness.value("/a", fetch) == "second")
+    harness.pushed = []
+
+    #expect(fetches == 1)
+    #expect(harness.pendingTimers == 1)
+    harness.advance(PageCache<String>.lifetimeFloor - 1)
+    #expect(harness.pushed.isEmpty)
+    harness.advance(2)
+    #expect(harness.pushed == ["/a"])
   }
 
   @Test func isExpiredHoldsOnlyForACachedPageWhoseLifetimePassed() async throws {
@@ -230,19 +255,35 @@ struct PageCacheTests {
     #expect(try await harness.value("/a") { throw Unreachable() } == "first")
   }
 
-  @Test func aPageStopsBeingPushedAfterItsLastRetryFails() async throws {
+  @Test func aFailingRefetchIsRetriedALifetimeApartForAsLongAsItFails() async throws {
     let harness = Harness()
-    let retries = PageCache<String>.maxRetries
     try await harness.expiredPage("/a")
 
-    for _ in 0 ... retries {
+    for _ in 0 ..< 5 {
       _ = try await harness.value("/a") { throw Unreachable() }
       await harness.settle("/a")
       harness.advance(61)
     }
 
-    #expect(harness.pushed.count == 1 + retries)
-    #expect(harness.pendingTimers == 0)
+    #expect(harness.pushed.count == 6)
+  }
+
+  @Test func aPageEvictedDuringItsRefetchIsStoredAndRefreshed() async throws {
+    let harness = Harness()
+    try await harness.expiredPage("/a")
+    let gate = Gate()
+
+    _ = try await harness.value("/a") {
+      await gate.wait()
+      return page("second", 60)
+    }
+    _ = try await harness.value("/b") { page("b") }
+    _ = try await harness.value("/c") { page("c") }
+    gate.open()
+    await harness.drain()
+
+    #expect(harness.refreshed == ["/a"])
+    #expect(try await harness.value("/a") { page("third") } == "second")
   }
 
   @Test func aPageWhoseRefetchIsRefusedIsDropped() async throws {

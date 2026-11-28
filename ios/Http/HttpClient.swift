@@ -65,6 +65,14 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
+  /// Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which
+  /// is a 4xx other than 408 and 429, or a body that is not a page.
+  static func keepsStalePage(after error: any Error) -> Bool {
+    if error is UndecodableResponse { return false }
+    guard let error = error as? HttpException else { return true }
+    return error.code == 408 || error.code == 429 || !(400 ..< 500).contains(error.code)
+  }
+
   init(session: URLSession = .shared) {
     self.session = session
   }

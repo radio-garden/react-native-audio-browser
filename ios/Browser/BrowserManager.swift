@@ -17,10 +17,7 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
-  // A network error or a 5xx keeps a stale page; a 404 or an undecodable body drops it.
-  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20) { error in
-    error is URLError || (error as? HttpClient.HttpException).map { $0.code >= 500 } ?? false
-  }
+  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20, keepsStale: HttpClient.keepsStalePage(after:))
 
   /// Moves on every `clearContent`, so a search or tabs query that outlives one stores nothing.
   private var clearEpoch = 0

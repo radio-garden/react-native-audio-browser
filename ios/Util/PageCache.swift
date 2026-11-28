@@ -1,17 +1,18 @@
 import Foundation
 
-/// Browse pages by path, each kept for the lifetime its fetch states, or with none until evicted
-/// or removed. An expired page is served at once while one refetch per path runs behind it.
-/// `expired` emits a page's path when its lifetime passes; `refreshed` when a refetch replaced it.
+/// Browse pages by path, each kept for the lifetime its fetch states (at least `lifetimeFloor`), or
+/// with none until evicted or removed. An expired page is served at once while one refetch per path
+/// runs behind it. `expired` emits a page's path when its lifetime passes, and again a lifetime
+/// after each failed refetch; `refreshed` when a refetch stored a page.
 @MainActor
 final class PageCache<Value: Sendable> {
   /// Runs `work` after `delay` seconds unless the returned closure cancels it first.
   typealias Schedule = @MainActor (_ delay: TimeInterval, _ work: @escaping @MainActor () -> Void) -> () -> Void
   typealias Fetch = @MainActor () async throws -> Fetched<Value>
 
-  /// Failed refetches of an expired page pushed again a lifetime apart before it waits for a visit.
-  static var maxRetries: Int {
-    3
+  /// The shortest a page is kept, however stale its response arrived: no refetch loops.
+  static var lifetimeFloor: TimeInterval {
+    30
   }
 
   private struct Entry {
@@ -19,30 +20,30 @@ final class PageCache<Value: Sendable> {
     let lifetime: TimeInterval?
     /// On `now`'s clock.
     let expiresAt: TimeInterval?
-    let failures: Int
     let cancelTimer: (() -> Void)?
   }
 
   private struct Load {
     let id: Int
+    let refetch: Bool
     let task: Task<Value, Error>
   }
 
   let expired = Emitter<String>()
   let refreshed = Emitter<String>()
   private let entries: LRUCache<String, Entry>
-  private let isTransient: @Sendable (any Error) -> Bool
+  private let keepsStale: @Sendable (any Error) -> Bool
   private let now: @MainActor () -> TimeInterval
   private let schedule: Schedule
   /// The one fetch per path. Removing a path forgets its load, which then stores nothing.
   private var loads: [String: Load] = [:]
   private var lastLoad = 0
 
-  /// - Parameter isTransient: Whether a failed refetch keeps the stale page and retries; any other
-  ///   failure drops it.
+  /// - Parameter keepsStale: Whether a failed refetch keeps the stale page; any other failure
+  ///   drops it.
   nonisolated init(
     maxSize: Int,
-    isTransient: @escaping @Sendable (any Error) -> Bool,
+    keepsStale: @escaping @Sendable (any Error) -> Bool,
     // Seconds on a clock that runs through sleep and ignores changes to the wall clock.
     now: @escaping @MainActor () -> TimeInterval = { TimeInterval(clock_gettime_nsec_np(CLOCK_MONOTONIC)) / 1e9 },
     schedule: @escaping Schedule = { delay, work in
@@ -54,7 +55,7 @@ final class PageCache<Value: Sendable> {
     },
   ) {
     entries = LRUCache(maxSize: maxSize)
-    self.isTransient = isTransient
+    self.keepsStale = keepsStale
     self.now = now
     self.schedule = schedule
   }
@@ -63,10 +64,10 @@ final class PageCache<Value: Sendable> {
   /// shared with every caller asking meanwhile, and cached for the lifetime it states.
   func value(for path: String, fetch: @escaping Fetch) async throws -> Value {
     if let cached = entries.get(path) {
-      if !isFresh(cached) { _ = load(path, fetch) }
+      if !isFresh(cached) { _ = load(path, fetch, refetch: true) }
       return cached.value
     }
-    return try await load(path, fetch).value
+    return try await load(path, fetch, refetch: false).value
   }
 
   /// Refetches `path`'s expired page, or joins the refetch in flight, and returns once it settles.
@@ -75,7 +76,7 @@ final class PageCache<Value: Sendable> {
     if let load = loads[path] {
       _ = try? await load.task.value
     } else if let cached = entries.peek(path), !isFresh(cached) {
-      _ = try? await load(path, fetch).value
+      _ = try? await load(path, fetch, refetch: true).value
     }
   }
 
@@ -98,24 +99,26 @@ final class PageCache<Value: Sendable> {
     entry.expiresAt.map { $0 > now() } ?? true
   }
 
-  private func load(_ path: String, _ fetch: @escaping Fetch) -> Task<Value, Error> {
+  private func load(_ path: String, _ fetch: @escaping Fetch, refetch: Bool) -> Task<Value, Error> {
     if let load = loads[path] { return load.task }
     lastLoad += 1
     let id = lastLoad
     let task = Task { @MainActor [weak self] in
       do {
         let fetched = try await fetch()
-        self?.settle(path, id) { cache, cached in
-          let expiresAt = fetched.lifetime.map { cache.now() + $0 - fetched.age }
-          cache.put(path, fetched.value, lifetime: fetched.lifetime, expiresAt: expiresAt, failures: 0, pushIn: expiresAt.map { $0 - cache.now() })
-          if cached != nil { cache.refreshed.emit(path) }
+        self?.settle(path, id) { cache, _ in
+          let floor = Self.lifetimeFloor
+          let remaining = fetched.lifetime.map { max($0 - fetched.age, floor) }
+          let lifetime = fetched.lifetime.map { max($0, floor) }
+          cache.put(path, fetched.value, lifetime: lifetime, expiresAt: remaining.map { cache.now() + $0 }, pushIn: remaining)
+          if refetch { cache.refreshed.emit(path) }
         }
         return fetched.value
       } catch {
         self?.settle(path, id) { cache, cached in
           guard let cached, !(error is CancellationError) else { return }
-          if cache.isTransient(error) {
-            cache.put(path, cached.value, lifetime: cached.lifetime, expiresAt: cached.expiresAt, failures: cached.failures + 1, pushIn: cached.lifetime)
+          if cache.keepsStale(error) {
+            cache.put(path, cached.value, lifetime: cached.lifetime, expiresAt: cached.expiresAt, pushIn: cached.lifetime)
           } else {
             cache.entries.remove(path)?.cancelTimer?()
           }
@@ -123,7 +126,7 @@ final class PageCache<Value: Sendable> {
         throw error
       }
     }
-    loads[path] = Load(id: id, task: task)
+    loads[path] = Load(id: id, refetch: refetch, task: task)
     return task
   }
 
@@ -134,20 +137,10 @@ final class PageCache<Value: Sendable> {
     body(self, entries.peek(path))
   }
 
-  /// Stores the page with a timer that pushes it `pushIn` seconds from now, unless that is not
-  /// positive or the page is past `maxRetries` failures.
-  private func put(
-    _ path: String,
-    _ value: Value,
-    lifetime: TimeInterval?,
-    expiresAt: TimeInterval?,
-    failures: Int,
-    pushIn: TimeInterval?,
-  ) {
-    let cancelTimer = pushIn.flatMap { delay in
-      delay > 0 && failures <= Self.maxRetries ? schedule(delay) { [weak self] in self?.expired.emit(path) } : nil
-    }
-    let entry = Entry(value: value, lifetime: lifetime, expiresAt: expiresAt, failures: failures, cancelTimer: cancelTimer)
+  /// Stores the page with a timer that pushes it `pushIn` seconds from now, if any.
+  private func put(_ path: String, _ value: Value, lifetime: TimeInterval?, expiresAt: TimeInterval?, pushIn: TimeInterval?) {
+    let cancelTimer = pushIn.map { delay in schedule(delay) { [weak self] in self?.expired.emit(path) } }
+    let entry = Entry(value: value, lifetime: lifetime, expiresAt: expiresAt, cancelTimer: cancelTimer)
     for dropped in entries.set(path, value: entry) {
       dropped.cancelTimer?()
     }

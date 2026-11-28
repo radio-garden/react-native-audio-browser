@@ -57,4 +57,20 @@ struct HttpClientLifetimeTests {
     let policy = try await fetched([:]).value["cachePolicy"]
     #expect(policy == Int(URLRequest.CachePolicy.reloadRevalidatingCacheData.rawValue))
   }
+
+  @Test(arguments: [408, 429, 500, 503])
+  func aFailedRefetchAnsweredWithAStatusThatMayPassKeepsItsStalePage(code: Int) {
+    #expect(HttpClient.keepsStalePage(after: HttpClient.HttpException(code: code, responseBody: "")))
+  }
+
+  @Test(arguments: [400, 404, 410])
+  func aFailedRefetchTheServerRefusedDropsItsStalePage(code: Int) {
+    #expect(!HttpClient.keepsStalePage(after: HttpClient.HttpException(code: code, responseBody: "")))
+  }
+
+  @Test func aBodyThatIsNotAPageDropsTheStalePageAndAnyOtherFailureKeepsIt() {
+    #expect(!HttpClient.keepsStalePage(after: HttpClient.UndecodableResponse(code: 200, reason: "")))
+    #expect(HttpClient.keepsStalePage(after: URLError(.notConnectedToInternet)))
+    #expect(HttpClient.keepsStalePage(after: BrowserError.callbackError("transform threw")))
+  }
 }
