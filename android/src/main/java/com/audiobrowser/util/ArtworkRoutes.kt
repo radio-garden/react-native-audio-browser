@@ -5,25 +5,26 @@ import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 
 /** Routes artwork URLs through [packageName]'s [ArtworkContentProvider], via its [registry]. */
-class ArtworkRoutes(val registry: BrowseArtworkRegistry, private val packageName: String) {
+class ArtworkRoutes(val registry: BrowseArtworkRegistry, val packageName: String) {
   val authority = ArtworkUris.authorityFor(packageName)
 
   /**
    * Registers an [ArtworkUris.isServable] [url] and returns the `content://` URI the provider
-   * serves it at; any other URL comes back unchanged. [pinned] artwork survives
-   * [BrowseArtworkRegistry.clear]; pinning one of this provider's own URIs re-pins the artwork it
-   * already holds.
+   * serves it at; one of this provider's own URIs comes back as it is, and any other URL as null.
+   * [pinned] artwork survives [BrowseArtworkRegistry.clear]; pinning one of this provider's own
+   * URIs re-pins the artwork it already holds.
    */
-  fun route(url: String, headers: Map<String, String>?, isSvg: Boolean, pinned: Boolean): String {
+  fun route(url: String, headers: Map<String, String>?, isSvg: Boolean, pinned: Boolean): String? {
     val uri = Uri.parse(url)
-    if (!ArtworkUris.isServable(uri, packageName)) {
-      if (pinned && uri.authority == authority) {
+    if (uri.scheme == "content" && uri.authority == authority) {
+      if (pinned) {
         ArtworkUris.parseToken(uri)?.let { token ->
           registry.lookup(token)?.let { registry.pin(token, it) }
         }
       }
       return url
     }
+    if (!ArtworkUris.isServable(uri, packageName)) return null
     val token = ArtworkUris.tokenFor(url)
     val artwork = ResolvedArtwork(url, headers, isSvg)
     if (pinned) registry.pin(token, artwork) else registry.register(token, artwork)

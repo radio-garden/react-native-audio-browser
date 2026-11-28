@@ -140,7 +140,7 @@ class TrackFactoryRatingTest {
   fun `the session pins a browse item's provider URI it is handed back`() {
     val registry = automotive()
     val browseUri =
-      ArtworkRoutes(registry, "app").route("https://a/1.png", null, false, pinned = false)
+      ArtworkRoutes(registry, "app").route("https://a/1.png", null, false, pinned = false)!!
     assertEquals(browseUri, TrackFactory.sessionArtworkUri(browseUri, null, isSvg = false))
     registry.clear()
     assertEquals("https://a/1.png", TrackFactory.artworkRoutes!!.publicUrl(browseUri.toUri()))

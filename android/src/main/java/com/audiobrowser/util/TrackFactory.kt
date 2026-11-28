@@ -6,7 +6,6 @@ import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.R
-import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import com.margelo.nitro.audiobrowser.Track
@@ -28,7 +27,7 @@ object TrackFactory {
   fun sessionArtworkUri(url: String, headers: Map<String, String>?, isSvg: Boolean): String {
     val provider = artworkRoutes ?: return url
     if (!Automotive.device && !BrowserPathHelper.isDataUrl(url)) return url
-    return provider.route(url, headers, isSvg, pinned = true)
+    return provider.route(url, headers, isSvg, pinned = true) ?: url
   }
 
   @Volatile var favoriteEnabled = false
@@ -102,30 +101,27 @@ object TrackFactory {
    * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
    * Android Auto draws as a broken image when it has no artwork. It carries [artwork] when the
    * provider can serve it, filling the tile in its own colours; else the library's arrow icon from
-   * [packageName]'s resources, which the car tints. Both go through [packageName]'s provider,
-   * registered in [registry], which draws the icon at the car's size hint; the car would draw a
-   * resource URI at its intrinsic size.
+   * the app's resources, which the car tints. Both go through [routes], whose provider draws the
+   * icon at the car's size hint. Pinned, as a car may redraw a page it cached after the registry is
+   * cleared.
    */
   fun toNavigationMediaItem(
     section: Section,
     viewMoreTitle: String,
     artwork: String?,
-    registry: BrowseArtworkRegistry,
-    packageName: String,
+    routes: ArtworkRoutes,
   ): MediaItem {
     val track = navigationTrack(section, viewMoreTitle)
-    val url =
-      if (section.style?.display == StyleDisplay.GRID) {
-        artwork?.takeIf { ArtworkUris.isServable(it.toUri(), packageName) }
-          ?: "android.resource://$packageName/${R.drawable.audio_browser_view_more}"
-      } else {
-        null
+    var url: String? = null
+    var icon: String? = null
+    if (section.style?.display == StyleDisplay.GRID) {
+      url = artwork
+      icon = artwork?.let { routes.route(it, null, SvgArtworkRenderer.isSvgUrl(it), pinned = true) }
+      if (icon == null) {
+        url = "android.resource://${routes.packageName}/${R.drawable.audio_browser_view_more}"
+        icon = routes.route(url, null, isSvg = false, pinned = true)
       }
-    val icon =
-      url?.let {
-        ArtworkRoutes(registry, packageName)
-          .route(it, null, SvgArtworkRenderer.isSvgUrl(it), pinned = false)
-      }
+    }
     val metadata =
       metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, url))
         .setArtworkUri(icon?.toUri())
@@ -148,21 +144,14 @@ object TrackFactory {
   }
 
   /**
-   * Routes [ArtworkUris.isServable] artwork through [packageName]'s `content://` provider,
-   * registered in [registry], so headers and SVG rendering apply in this process and no bytes cross
-   * the Binder. Other artwork (another package's resources, resources by name, `file://`) passes
-   * through unchanged.
+   * Routes [ArtworkUris.isServable] artwork through the `content://` provider of [routes], so
+   * headers and SVG rendering apply in this process and no bytes cross the Binder. Other artwork
+   * (another package's resources, resources by name, `file://`) passes through unchanged.
    */
-  fun toBrowseMediaItem(
-    track: Track,
-    registry: BrowseArtworkRegistry,
-    packageName: String,
-    section: Section? = null,
-  ): MediaItem {
+  fun toBrowseMediaItem(track: Track, routes: ArtworkRoutes, section: Section? = null): MediaItem {
     val artwork =
       artworkUri(track)?.let {
-        ArtworkRoutes(registry, packageName)
-          .route(it, track.artworkSource?.headers, isSvg(track), pinned = false)
+        routes.route(it, track.artworkSource?.headers, isSvg(track), pinned = false) ?: it
       }
     val metadata =
       metadataBuilder(track, MediaExtrasBuilder.build(track, section))

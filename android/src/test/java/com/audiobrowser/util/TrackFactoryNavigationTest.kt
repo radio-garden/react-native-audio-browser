@@ -18,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 class TrackFactoryNavigationTest {
   private val track = TestFixtures.track()
   private val registry = BrowseArtworkRegistry()
+  private val routes = ArtworkRoutes(registry, "com.test")
   private val icon = "android.resource://com.test/${R.drawable.audio_browser_view_more}"
 
   private fun served(item: MediaItem): String {
@@ -38,13 +39,7 @@ class TrackFactoryNavigationTest {
   fun `a grid section's view more tile carries the bundled icon as a category tile`() {
     // A grid tile without artwork is drawn by Android Auto as a broken image.
     val item =
-      TrackFactory.toNavigationMediaItem(
-        section(StyleDisplay.GRID),
-        "View more",
-        null,
-        registry,
-        "com.test",
-      )
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
 
     assertEquals(icon, served(item))
     val extras = item.mediaMetadata.extras!!
@@ -61,13 +56,7 @@ class TrackFactoryNavigationTest {
   @Test
   fun `the icon does not make the page it opens a page of category tiles`() {
     val item =
-      TrackFactory.toNavigationMediaItem(
-        section(StyleDisplay.GRID),
-        "View more",
-        null,
-        registry,
-        "com.test",
-      )
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
 
     val extras = item.mediaMetadata.extras!!
     assertEquals(
@@ -83,13 +72,7 @@ class TrackFactoryNavigationTest {
   @Test
   fun `a list section's view more row stays a text row`() {
     val item =
-      TrackFactory.toNavigationMediaItem(
-        section(StyleDisplay.LIST),
-        "View more",
-        null,
-        registry,
-        "com.test",
-      )
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.LIST), "View more", null, routes)
 
     assertNull(item.mediaMetadata.artworkUri)
     assertEquals(
@@ -102,8 +85,7 @@ class TrackFactoryNavigationTest {
 
   @Test
   fun `an unstyled section's view more row stays a text row`() {
-    val item =
-      TrackFactory.toNavigationMediaItem(section(null), "View more", null, registry, "com.test")
+    val item = TrackFactory.toNavigationMediaItem(section(null), "View more", null, routes)
 
     assertNull(item.mediaMetadata.artworkUri)
     assertFalse(
@@ -115,14 +97,7 @@ class TrackFactoryNavigationTest {
 
   @Test
   fun `the row is titled by its section, which heads the page it opens, and subtitled by the configured title`() {
-    val item =
-      TrackFactory.toNavigationMediaItem(
-        section(StyleDisplay.GRID),
-        "More",
-        null,
-        registry,
-        "com.test",
-      )
+    val item = TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "More", null, routes)
 
     assertEquals("/popular", item.mediaId)
     assertEquals("Popular", item.mediaMetadata.title)
@@ -136,7 +111,7 @@ class TrackFactoryNavigationTest {
       val untitled =
         TestFixtures.section(arrayOf(track), title = title, path = "/popular", style = null)
 
-      val item = TrackFactory.toNavigationMediaItem(untitled, "More", null, registry, "com.test")
+      val item = TrackFactory.toNavigationMediaItem(untitled, "More", null, routes)
 
       assertEquals("More", item.mediaMetadata.title)
       assertNull(item.mediaMetadata.artist)
@@ -150,8 +125,7 @@ class TrackFactoryNavigationTest {
         section(StyleDisplay.GRID),
         "View more",
         "file:///sdcard/view-more.png",
-        registry,
-        "com.test",
+        routes,
       )
 
     assertEquals(icon, served(item))
@@ -164,10 +138,40 @@ class TrackFactoryNavigationTest {
         section(StyleDisplay.GRID),
         "View more",
         "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E",
-        registry,
-        "com.test",
+        routes,
       )
 
     assertEquals(icon, served(item))
+  }
+
+  @Test
+  fun `the tile's icon outlives a clear of the registry, as a car may redraw a cached page`() {
+    val item =
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
+
+    registry.clear()
+
+    assertEquals(icon, served(item))
+  }
+
+  @Test
+  fun `a view more artwork the provider serves fills the tile and outlives a clear of the registry`() {
+    val item =
+      TrackFactory.toNavigationMediaItem(
+        section(StyleDisplay.GRID),
+        "View more",
+        "https://cdn.example.com/more.png",
+        routes,
+      )
+
+    registry.clear()
+
+    assertEquals("https://cdn.example.com/more.png", served(item))
+    assertEquals(
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+      item.mediaMetadata.extras!!.getInt(
+        MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
+      ),
+    )
   }
 }

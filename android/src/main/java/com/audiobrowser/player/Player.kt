@@ -284,10 +284,12 @@ internal constructor(
   /** Maps the browse content provider's content:// tokens to artwork URLs. */
   val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
 
+  val artworkRoutes = ArtworkRoutes(browseArtworkRegistry, context.packageName)
+
   init {
     Automotive.device = context.isAutomotive
     TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
-    TrackFactory.artworkRoutes = ArtworkRoutes(browseArtworkRegistry, context.packageName)
+    TrackFactory.artworkRoutes = artworkRoutes
   }
 
   var coilBitmapLoader: CoilBitmapLoader?
