@@ -525,6 +525,7 @@ export interface NativeSetupPlayerOptions extends Pick<
   | 'repeatMode'
   | 'retry'
   | 'keepSessionAliveOnError'
+  | 'restore'
   | 'remoteOutputs'
 > {
   /** Android-specific configuration options for setup */
@@ -640,6 +641,23 @@ export type SetupPlayerOptions = Pick<
   keepSessionAliveOnError?: boolean
 
   /**
+   * Restores the last session at setup, paused, when the queue is empty: the persisted track
+   * current in the queue a tap on its contextual path queues now, else in the queue it was
+   * persisted with. A track gone from that page goes in at the top of its section. Nothing is
+   * loaded until a play: no stream opens, the audio session stays inactive (iOS), and no
+   * notification or foreground service starts (Android). When there is a session to restore,
+   * setup starts paused: it overrides `playWhenReady` and a `setPlayWhenReady(true)` called
+   * before setup. A play or pause sent after setup is the one the restored queue keeps, so a
+   * remote play on a cold start resumes it. A queue set since setup, or a
+   * `clearPersistedSession()` since, is left alone. A `repeatMode`, from setup or a
+   * `setRepeatMode` called before it, wins over the stored one.
+   *
+   * No-op on the web.
+   * @default false
+   */
+  restore?: boolean
+
+  /**
    * Offers remote speakers and TVs in the system Output Switcher (`openOutputPicker`), and
    * reports the selected one as the `Output`, with `type: 'remote'`, or `'cast'` for a Cast
    * device and `'sonos'` for a Sonos room. `{}` reports the selection only: the library keeps
@@ -736,6 +754,17 @@ function nonEmpty<K extends string, T extends object>(
   return Object.keys(value).length > 0
     ? ({ [key]: value } as { [P in K]?: T })
     : {}
+}
+
+/**
+ * Deletes the persisted session — the last track, its queue and position — so
+ * neither a `restore` at setup nor a system resume brings it back. The player
+ * and its queue are left as they are: the next save persists the track again,
+ * and its queue once the queue next changes. Call it where the app clears its
+ * listening history.
+ */
+export function clearPersistedSession(): void {
+  nativeBrowser.clearPersistedSession()
 }
 
 /**

@@ -167,6 +167,7 @@ export interface AudioBrowser extends HybridObject<{
 
   // MARK: player init and config
   setupPlayer(options: NativeSetupPlayerOptions): Promise<void>
+  clearPersistedSession(): void
   updateOptions(options: NativeUpdateOptions): void
   getOptions(): Options
 

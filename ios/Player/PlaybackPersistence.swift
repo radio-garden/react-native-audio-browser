@@ -7,7 +7,8 @@ final class PlaybackPersistence {
   static let standardDefaults = UserDefaults(suiteName: "com.audiobrowser.playback") ?? .standard
 
   private let defaults: UserDefaults
-  private let key = "playbackState.v1"
+  private static let key = "playbackState.v1"
+  private static let queueKey = "playbackQueue.v1"
   private let saveInterval: Duration
   private let snapshot: @MainActor () -> PersistedPlaybackState?
   private var periodicSave: Task<Void, Never>?
@@ -25,12 +26,32 @@ final class PlaybackPersistence {
 
   func save() {
     guard let state = snapshot(), let data = try? JSONEncoder().encode(state) else { return }
-    defaults.set(data, forKey: key)
+    defaults.set(data, forKey: Self.key)
   }
 
+  /// Writes the queue the snapshot's index points into; call when its tracks change.
+  func saveQueue(_ tracks: [Track]) {
+    guard let data = try? JSONEncoder().encode(tracks.map(JsonTrack.init(from:))) else { return }
+    defaults.set(data, forKey: Self.queueKey)
+  }
+
+  /// The saved session; a queue that won't decode loads as none, keeping the track.
   func load() -> PersistedPlaybackState? {
-    guard let data = defaults.data(forKey: key) else { return nil }
-    return try? JSONDecoder().decode(PersistedPlaybackState.self, from: data)
+    guard let data = defaults.data(forKey: Self.key),
+          var state = try? JSONDecoder().decode(PersistedPlaybackState.self, from: data)
+    else { return nil }
+    state.queue = defaults.data(forKey: Self.queueKey).flatMap { try? JSONDecoder().decode([JsonTrack].self, from: $0) }
+    return state
+  }
+
+  /// Moves on each `clear`, so a restore begun before one can tell it happened.
+  private(set) static var clearGeneration = 0
+
+  /// Deletes the saved session and its queue (`clearPersistedSession`).
+  static func clear(defaults: UserDefaults = standardDefaults) {
+    clearGeneration += 1
+    defaults.removeObject(forKey: key)
+    defaults.removeObject(forKey: queueKey)
   }
 
   /// Saves every `saveInterval` while `active`, and once when it turns false.
@@ -55,6 +76,7 @@ final class PlaybackPersistence {
   /// savePositionZero).
   static func snapshot(
     of track: Track,
+    at index: Int,
     state: PlaybackState,
     position: TimeInterval,
     repeatMode: RepeatMode,
@@ -67,6 +89,7 @@ final class PlaybackPersistence {
       repeatMode: repeatMode.stringValue,
       shuffleEnabled: shuffleEnabled,
       playbackSpeed: rate,
+      queueIndex: index,
     )
   }
 }

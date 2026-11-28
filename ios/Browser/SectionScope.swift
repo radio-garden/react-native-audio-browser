@@ -74,6 +74,62 @@ enum SectionScope {
 }
 
 extension SectionScope {
+  /// What a page gives a restore of one of its tracks.
+  enum RestoreQueue {
+    case queue(tracks: [Track], selectedIndex: Int)
+    /// The page holds the track only disabled: a Disabled track never plays.
+    case refused
+    /// The page gives no queue for it: the stored queue loads instead.
+    case unavailable
+  }
+
+  /// The queue a restore of the contextual `path`'s `track` loads: as `queue(in:path:)`, or, when
+  /// the identity is gone from the page and `insertGone`, `track` ahead of the playable tracks of
+  /// the section sharing most identities with `stored` (the queue it was persisted in), else the
+  /// one the stamped index falls in, clamped to the last, else the first.
+  static func restoreQueue(
+    in sections: [Section],
+    path: String,
+    track: Track,
+    stored: [Track],
+    insertGone: Bool,
+    singleTrack: Bool,
+  ) -> RestoreQueue {
+    guard let trackId = BrowserPathHelper.extractTrackId(path), !sections.isEmpty else { return .unavailable }
+    let copies = sections.flatMap(\.children).filter { $0.identity == trackId }
+    if copies.isEmpty {
+      guard insertGone else { return .unavailable }
+      let section = sharingMost(stored, in: sections)
+        ?? section(atFlatIndex: BrowserPathHelper.extractIndex(path), in: sections)
+        ?? sections[0]
+      return singleTrack
+        ? .queue(tracks: [track], selectedIndex: 0)
+        : .queue(tracks: [track] + section.children.filter(\.isPlayable), selectedIndex: 0)
+    }
+    if let queue = try? queue(in: sections, path: path, singleTrack: singleTrack) {
+      return .queue(tracks: queue.tracks, selectedIndex: queue.selectedIndex)
+    }
+    return copies.allSatisfy { $0.disabled == true } ? .refused : .unavailable
+  }
+
+  private static func sharingMost(_ stored: [Track], in sections: [Section]) -> Section? {
+    let identities = Set(stored.map(\.identity))
+    let shared = sections.map { section in (section, section.children.count { identities.contains($0.identity) }) }
+    guard let best = shared.max(by: { $0.1 < $1.1 }), best.1 > 0 else { return nil }
+    return best.0
+  }
+
+  private static func section(atFlatIndex index: Int?, in sections: [Section]) -> Section? {
+    guard var remaining = index, remaining >= 0 else { return nil }
+    for section in sections {
+      if remaining < section.children.count { return section }
+      remaining -= section.children.count
+    }
+    return sections.last
+  }
+}
+
+extension SectionScope {
   /// The queue a tap on the contextual `path` plays, as `expand` gives it for a path, and the page
   /// it came from. A `.path`-queued section's child that its linked page does not queue (the page
   /// fails, or no longer holds it) queues its own section on the page it was tapped on, which is

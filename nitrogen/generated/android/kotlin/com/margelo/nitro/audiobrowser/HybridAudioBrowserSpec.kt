@@ -861,6 +861,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun clearPersistedSession(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun updateOptions(options: NativeUpdateOptions): Unit
   
   @DoNotStrip

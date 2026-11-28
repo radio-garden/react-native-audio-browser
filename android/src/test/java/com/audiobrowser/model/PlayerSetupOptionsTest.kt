@@ -4,14 +4,17 @@ import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional
 import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlayerSetupOptionsTest {
   private fun setup(
     remoteOutputs: RemoteOutputsOptions? = null,
     nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
+    restore: Boolean? = null,
   ) =
     NativeSetupPlayerOptions(
       android = null,
@@ -23,6 +26,7 @@ class PlayerSetupOptionsTest {
       repeatMode = null,
       retry = null,
       keepSessionAliveOnError = null,
+      restore = restore,
       remoteOutputs = remoteOutputs,
     )
 
@@ -48,5 +52,17 @@ class PlayerSetupOptionsTest {
 
     options.update(setup())
     assertNull(options.nowPlayingMetadataFormatter)
+  }
+
+  @Test
+  fun `each setup decides the restore, which never rebuilds the engine`() {
+    val options = PlayerSetupOptions()
+
+    options.update(setup(restore = true))
+    assertTrue(options.restore)
+    assertEquals(PlayerSetupOptions().engineOptions(), options.engineOptions())
+
+    options.update(setup())
+    assertFalse(options.restore)
   }
 }

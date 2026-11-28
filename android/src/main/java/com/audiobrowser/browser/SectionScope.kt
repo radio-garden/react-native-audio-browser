@@ -1,6 +1,7 @@
 package com.audiobrowser.browser
 
 import com.audiobrowser.extension.identity
+import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
@@ -51,6 +52,105 @@ object SectionScope {
       }
     return holding.firstOrNull()?.let { Scoped(it, null, onlyDisabled = true) }
   }
+
+  /**
+   * The queue a tap on the contextual [path] plays: the tapped section's playable tracks, at the
+   * pinned copy, else the first enabled identity match; only that track when [singleTrack]. Null
+   * when the identity is gone from the page or the tapped track is not playable.
+   *
+   * @throws DisabledOnLinkedPageException when [path] is linked and the page holds the identity
+   *   only disabled
+   */
+  fun queue(sections: List<Section>, path: String, singleTrack: Boolean): Pair<Array<Track>, Int>? {
+    val trackId = BrowserPathHelper.extractTrackId(path) ?: return null
+    val scoped = scoped(sections, trackId, BrowserPathHelper.extractIndex(path)) ?: return null
+    if (scoped.onlyDisabled && BrowserPathHelper.extractOrigin(path) != null) {
+      throw DisabledOnLinkedPageException(trackId)
+    }
+    val children = scoped.section.children
+    val playable = children.filter { it.isPlayable }
+    val offset = scoped.tappedOffset
+    val selectedIndex =
+      if (offset != null && children[offset].isPlayable) {
+        children.take(offset + 1).count { it.isPlayable } - 1
+      } else {
+        playable.indexOfFirst { it.identity == trackId }.takeIf { it >= 0 } ?: return null
+      }
+    return if (singleTrack) Pair(arrayOf(playable[selectedIndex]), 0)
+    else Pair(playable.toTypedArray(), selectedIndex)
+  }
+
+  /**
+   * What a restore of the contextual [path]'s [track] loads from its page's [sections]: the queue
+   * [queue] gives; with [insertGone], when the identity is gone from the page, [track] ahead of the
+   * playable tracks of [restoreSection]. Refused when the page holds the identity only disabled,
+   * pinned or not; unavailable when the identity is gone and [insertGone] is off, or the page holds
+   * it enabled but would not queue it (no `src`).
+   *
+   * @param stored the identities of the stored queue [track] is current in, empty when none is
+   */
+  fun restoreQueue(
+    sections: List<Section>,
+    path: String,
+    track: Track,
+    stored: Set<String>,
+    insertGone: Boolean,
+    singleTrack: Boolean,
+  ): RestoreExpansion {
+    val trackId = BrowserPathHelper.extractTrackId(path)
+    if (trackId == null || sections.isEmpty()) return RestoreExpansion.Unavailable
+    val source = BrowserPathHelper.stripTrackId(path)
+    val copies = sections.flatMap { s -> s.children.filter { it.identity == trackId } }
+    if (copies.isEmpty()) {
+      if (!insertGone) return RestoreExpansion.Unavailable
+      val section = restoreSection(sections, BrowserPathHelper.extractIndex(path), stored)
+      val tracks =
+        if (singleTrack) arrayOf(track)
+        else arrayOf(track) + section.children.filter { it.isPlayable }
+      return RestoreExpansion.Queue(ExpandedQueue(tracks, 0, source))
+    }
+    val tapped =
+      try {
+        queue(sections, path, singleTrack)
+      } catch (_: DisabledOnLinkedPageException) {
+        null
+      }
+    if (tapped != null)
+      return RestoreExpansion.Queue(ExpandedQueue(tapped.first, tapped.second, source))
+    return if (copies.all { it.disabled == true }) RestoreExpansion.Refused
+    else RestoreExpansion.Unavailable
+  }
+
+  /**
+   * The section a track gone from the page goes into: the one sharing the most identities with
+   * [storedQueue], else the one the stamped [index] falls in, clamped to the last, else the first.
+   * The index only approximates: the page shifted when the track went.
+   */
+  private fun restoreSection(
+    sections: List<Section>,
+    index: Int?,
+    storedQueue: Set<String>,
+  ): Section {
+    sections
+      .map { section -> section to section.children.count { it.identity in storedQueue } }
+      .filter { (_, shared) -> shared > 0 }
+      .maxByOrNull { (_, shared) -> shared }
+      ?.let {
+        return it.first
+      }
+    if (index != null && index >= 0) {
+      var remaining = index
+      for (section in sections) {
+        if (remaining < section.children.size) return section
+        remaining -= section.children.size
+      }
+      return sections.last()
+    }
+    return sections.first()
+  }
+
+  private val Track.isPlayable: Boolean
+    get() = src != null && disabled != true
 }
 
 // Page shape helpers (ADR 0010)

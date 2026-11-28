@@ -83,6 +83,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func clearGate() throws -> Void
   func isCarConnected() throws -> Bool
   func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void>
+  func clearPersistedSession() throws -> Void
   func updateOptions(options: NativeUpdateOptions) throws -> Void
   func getOptions() throws -> Options
   func load(track: Track) throws -> Void

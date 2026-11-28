@@ -108,6 +108,78 @@ struct SectionScopeTests {
     #expect(ResolvedTrack(path: "/p", title: "P").normalizedSections == nil)
   }
 
+  // MARK: - Restore
+
+  private func restore(
+    _ sections: [Section], _ path: String, _ restored: Track, stored: [Track] = [], insertGone: Bool = true,
+  ) -> SectionScope.RestoreQueue {
+    SectionScope.restoreQueue(
+      in: sections, path: path, track: restored, stored: stored, insertGone: insertGone, singleTrack: false,
+    )
+  }
+
+  /// The case a restore gives, by name: the type is not `Equatable`, since the Nitro `Track` is not.
+  private func outcome(_ result: SectionScope.RestoreQueue) -> String {
+    switch result {
+    case .queue: "queue"
+    case .refused: "refused"
+    case .unavailable: "unavailable"
+    }
+  }
+
+  private func restoreQueue(
+    _ sections: [Section], _ path: String, _ restored: Track, stored: [Track] = [],
+  ) -> ([String?], Int)? {
+    guard case let .queue(tracks, selectedIndex) = restore(sections, path, restored, stored: stored) else { return nil }
+    return (tracks.map(\.src), selectedIndex)
+  }
+
+  @Test func aRestoreInsertsAGoneTrackIntoTheSectionSharingMostOfItsStoredQueue() {
+    // Tapped as [A: a0 a1 gone] [B: b0 b1]: its stamped index 2 is b0's on the page without it.
+    let page = [section("A", [track("a0"), track("a1")]), section("B", [track("b0"), track("b1")])]
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "gone", index: 2)
+    let stored = [track("a0"), track("a1"), track("gone")]
+    #expect(restoreQueue(page, path, track("gone"), stored: stored)?.0 == ["gone", "a0", "a1"])
+  }
+
+  @Test func aRestoreOfAGoneTrackThatWasLastOnThePageUsesTheLastSection() {
+    let page = [section("A", [track("a0")]), section("B", [track("b0"), track("b1")])]
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "gone", index: 3)
+    #expect(restoreQueue(page, path, track("gone"))?.0 == ["gone", "b0", "b1"])
+  }
+
+  @Test func aRestoreOfATrackThePageNowDisablesIsRefused() {
+    let page = [section("First", [track("a"), Track(id: "off", src: "off", disabled: true)])]
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "off", index: 1)
+    #expect(outcome(restore(page, path, track("off", id: "off"))) == "refused")
+  }
+
+  @Test func aRestoreOfATrackThePageHoldsEnabledButUnplayableFallsBack() {
+    let page = [section("First", [track("a"), Track(id: "nosrc", path: "/nosrc")])]
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "nosrc", index: 1)
+    #expect(outcome(restore(page, path, track("nosrc", id: "nosrc"))) == "unavailable")
+  }
+
+  @Test func aLinkedPageWithoutTheTrackLeavesItToTheOrigin() {
+    let page = [section("A", [track("a0")])]
+    let path = BrowserPathHelper.build(parentPath: "/linked", trackId: "gone", index: 0)
+    #expect(outcome(restore(page, path, track("gone"), insertGone: false)) == "unavailable")
+  }
+
+  @Test func aRestoreOfATrackStillOnThePageQueuesItAsATapWould() {
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "x", index: 1)
+    let restored = restoreQueue(sections, path, track("x"))
+    #expect(restored?.0 == ["dup", "x"])
+    #expect(restored?.1 == 1)
+  }
+
+  @Test func withoutAStoredQueueARestoreInsertsAGoneTrackIntoTheSectionItsIndexFallsIn() {
+    let path = BrowserPathHelper.build(parentPath: "/p", trackId: "gone", index: 3)
+    let restored = restoreQueue(sections, path, track("gone"))
+    #expect(restored?.0 == ["gone", "y", "dup", "z"])
+    #expect(restored?.1 == 0)
+  }
+
   // MARK: - Queue
 
   private func queue(_ sections: [Section], _ path: String, singleTrack: Bool = false) -> ([String?], Int)? {

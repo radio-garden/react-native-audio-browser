@@ -12,13 +12,24 @@ class SessionViewRulesTest {
     state: PlaybackState = PlaybackState.NONE,
     engineFailed: Boolean = false,
     keepAlive: Boolean = true,
-  ) = SessionView.playbackState(engineState, state, engineFailed, keepAlive)
+    unprepared: Boolean = false,
+  ) = SessionView.playbackState(engineState, state, engineFailed, keepAlive, unprepared)
 
   @Test
   fun `an idle engine with an error, in ERROR or in PAUSED reads ready while keep-alive is on`() {
     assertEquals(MediaPlayer.STATE_READY, view(state = PlaybackState.PLAYING, engineFailed = true))
     assertEquals(MediaPlayer.STATE_READY, view(state = PlaybackState.ERROR))
     assertEquals(MediaPlayer.STATE_READY, view(state = PlaybackState.PAUSED))
+  }
+
+  @Test
+  fun `an engine never prepared since its items were set reads idle, paused or not`() {
+    assertEquals(MediaPlayer.STATE_IDLE, view(state = PlaybackState.PAUSED, unprepared = true))
+    assertEquals(MediaPlayer.STATE_IDLE, view(state = PlaybackState.ERROR, unprepared = true))
+    assertEquals(
+      MediaPlayer.STATE_BUFFERING,
+      view(engineState = MediaPlayer.STATE_BUFFERING, unprepared = true),
+    )
   }
 
   @Test

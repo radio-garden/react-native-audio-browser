@@ -21,6 +21,7 @@ import com.audiobrowser.browser.ContentNotFoundException
 import com.audiobrowser.browser.DisabledOnLinkedPageException
 import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
+import com.audiobrowser.browser.RestoreExpansion
 import com.audiobrowser.browser.flattenedChildren
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
@@ -29,6 +30,8 @@ import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toQueueIndex
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.player.PlaybackRestore
+import com.audiobrowser.player.PlaybackStateStore
 import com.audiobrowser.player.Player
 import com.audiobrowser.player.RegistrationTimeouts
 import com.audiobrowser.util.BatteryOptimizationHelper
@@ -98,6 +101,7 @@ import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -853,7 +857,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       connectedService?.let {
         it.player.applyOptions(updateOptions)
         it.player.setup(setup)
-        applyPendingPlayerState(it.player)
+        applySetupState(it.player)
         return@promise
       }
 
@@ -907,6 +911,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     connectedService?.player?.let { it.playWhenReady = playWhenReady }
       ?: run { pendingPlayWhenReady = playWhenReady }
   }
+
+  // On main, with the setup that reads the session and the restore that checks the clear.
+  override fun clearPersistedSession() = runBlockingOnMain { PlaybackStateStore.clear(context) }
 
   override fun getPlayWhenReady(): Boolean = runBlockingOnMain {
     connectedService?.player?.playWhenReady ?: pendingPlayWhenReady ?: false
@@ -1205,7 +1212,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.setCallbacks(callbacks)
           player.applyOptions(updateOptions)
           player.setupForModule(setupOptions)
-          applyPendingPlayerState(player)
+          applySetupState(player)
           player.observeNetworkConnectivity(mainScope)
           player.browser = this@AudioBrowser
 
@@ -1220,6 +1227,34 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       connectionReady.complete(Unit)
     }
+  }
+
+  /**
+   * [applyPendingPlayerState], restoring the last session when the setup asks to and [player] has
+   * no queue. The restore overrides the staged intent and runs after setup returns, so setup never
+   * waits on its expansion.
+   */
+  private fun applySetupState(player: Player) {
+    val clearGeneration = PlaybackStateStore.clearGeneration
+    val session =
+      PlaybackRestore.sessionForSetup(player, setupOptions?.restore == true, pendingRepeatMode)
+    pendingPlayWhenReady = PlaybackRestore.setupIntent(pendingPlayWhenReady, session)
+    applyPendingPlayerState(player)
+    if (session == null) return
+    PlaybackRestore.start(
+      player,
+      session,
+      clearGeneration,
+      mainScope,
+      expand = { state ->
+        try {
+          PlaybackRestore.expand(state) { player.awaitBrowser(null).browserManager }
+        } catch (e: TimeoutException) {
+          RestoreExpansion.Unavailable
+        }
+      },
+      isCurrent = { connectedService?.player === player },
+    )
   }
 
   // Consumes what it applies, so a later re-setup does not replay stale state.

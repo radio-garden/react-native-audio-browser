@@ -879,6 +879,12 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline void clearPersistedSession() override {
+      auto __result = _swiftPart.clearPersistedSession();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void updateOptions(const NativeUpdateOptions& options) override {
       auto __result = _swiftPart.updateOptions(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {

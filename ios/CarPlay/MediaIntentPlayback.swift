@@ -31,13 +31,17 @@ enum MediaIntentPlayback {
         player.play()
       } else {
         guard let session = player.persistedSession() else { return false }
-        var expanded: (tracks: [Track], selectedIndex: Int)?
-        if let path = session.track.path {
-          expanded = await (try? browser.browserManager.expandQueueFromContextualPath(path))
-            .map { ($0.tracks, $0.selectedIndex) }
+        // A resume plays the stored queue when the page now refuses the track, as Android's does.
+        var expanded: (tracks: [Track], selectedIndex: Int, sourcePath: String)?
+        if let path = session.track.path,
+           case let .queue(tracks, selectedIndex, sourcePath) = await browser.browserManager.expandQueueForRestore(
+             path, track: session.track.toNitro(), stored: session.storedQueue?.tracks ?? [],
+           )
+        {
+          expanded = (tracks, selectedIndex, sourcePath)
         }
         guard let player = livePlayer(of: browser) else { return false }
-        player.resume(session, queue: expanded)
+        player.restore(session, queue: expanded, playWhenReady: true)
       }
       browser.showNowPlayingRequestedEmitter.emit(())
       return true

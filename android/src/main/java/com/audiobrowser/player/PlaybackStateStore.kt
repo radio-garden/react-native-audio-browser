@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.common.C
+import com.audiobrowser.extension.identity
 import com.audiobrowser.util.EMPTY_TRACK_STYLE
 import com.audiobrowser.util.artworkOf
 import com.audiobrowser.util.toArtworkRendering
@@ -16,21 +17,22 @@ import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Persists the current track, position and player settings so a media button (a Bluetooth play
- * press) can resume playback after process death. The settings properties write through on set;
- * track and position persist only through the save calls.
+ * Persists the current track, its queue, the position and player settings so a media button (a
+ * Bluetooth play press) or a restore at setup can bring the session back after process death. The
+ * settings properties write through on set; track and position persist only through the save calls.
  */
 class PlaybackStateStore(private val player: Player) {
-  private val prefs: SharedPreferences =
-    player.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+  private val prefs: SharedPreferences = prefs(player.context)
 
   /** [positionMs] is [C.TIME_UNSET] for a live track: Media3 starts it at the live edge. */
   data class PersistedState(
@@ -39,7 +41,20 @@ class PlaybackStateStore(private val player: Player) {
     val repeatMode: RepeatMode,
     val shuffleEnabled: Boolean,
     val playbackSpeed: Float,
-  )
+    /**
+     * The queue [track] was current in, at [queueIndex]; null in a save from before it was kept.
+     */
+    val queue: List<Track>? = null,
+    val queueIndex: Int? = null,
+  ) {
+    /** The stored queue and [track]'s index in it, when [track] is still the one there. */
+    val storedQueue: Pair<List<Track>, Int>?
+      get() {
+        val queue = queue ?: return null
+        val index = queueIndex?.takeIf { it in queue.indices } ?: return null
+        return if (queue[index].identity == track.identity) Pair(queue, index) else null
+      }
+  }
 
   var repeatMode: RepeatMode
     get() =
@@ -106,16 +121,33 @@ class PlaybackStateStore(private val player: Player) {
     }
   }
 
-  /** Saves the current track and its position; does nothing without a current track. */
+  /**
+   * Saves the current track, its index and its position; does nothing without a current track. The
+   * queue is [saveQueue]'s.
+   */
   fun save() {
     val track = player.currentTrack ?: return
+    val index = player.currentIndex ?: return
     val positionMs = player.restorablePositionMs
 
     prefs.edit {
       putLong(KEY_POSITION_MS, positionMs)
       putString(KEY_TRACK, trackToJson(track))
+      putInt(KEY_QUEUE_INDEX, index)
     }
     Timber.d("Saved playback state: title=${track.title}, positionMs=$positionMs")
+  }
+
+  /**
+   * Saves [tracks] as the queue, on a change of its tracks; an emptied queue keeps the last one.
+   */
+  fun saveQueue(tracks: Array<Track>) {
+    if (tracks.isEmpty()) return
+    val queue = JSONArray().apply { tracks.forEach { put(trackJson(it)) } }
+    prefs.edit {
+      putString(KEY_QUEUE, queue.toString())
+      player.currentIndex?.let { putInt(KEY_QUEUE_INDEX, it) }
+    }
   }
 
   fun savePositionZero() {
@@ -124,123 +156,157 @@ class PlaybackStateStore(private val player: Player) {
   }
 
   /**
-   * [get], then applies its repeat mode, shuffle and speed to the player, which emits option-change
-   * events. Main thread only. The caller sets up the queue from the returned track and position.
+   * Applies [state]'s repeat mode, shuffle and speed to the player, which emits option-change
+   * events. Main thread only. The caller sets up the queue.
    */
-  fun restore(): PersistedState? =
-    get()?.also { state ->
-      player.repeatMode = state.repeatMode
-      player.shuffleMode = state.shuffleEnabled
-      // ExoPlayer throws on a non-positive speed; a corrupted prefs file holding one would fail
-      // every resume for good, since the value stays persisted.
-      if (state.playbackSpeed > 0f) player.playbackSpeed = state.playbackSpeed
+  fun restore(state: PersistedState) {
+    player.repeatMode = state.repeatMode
+    player.shuffleMode = state.shuffleEnabled
+    // ExoPlayer throws on a non-positive speed; a corrupted prefs file holding one would fail
+    // every resume for good, since the value stays persisted.
+    if (state.playbackSpeed > 0f) player.playbackSpeed = state.playbackSpeed
 
-      Timber.d(
-        "Restored player settings: repeatMode=${state.repeatMode}, shuffle=${state.shuffleEnabled}, speed=${state.playbackSpeed}"
-      )
-    }
+    Timber.d(
+      "Restored player settings: repeatMode=${state.repeatMode}, shuffle=${state.shuffleEnabled}, speed=${state.playbackSpeed}"
+    )
+  }
 
   /** The persisted state, read without touching the player; null if none or it won't parse. */
   fun get(): PersistedState? {
     val trackJson = prefs.getString(KEY_TRACK, null) ?: return null
     val track = trackFromJson(trackJson) ?: return null
     val positionMs = prefs.getLong(KEY_POSITION_MS, 0)
+    val queue =
+      prefs.getString(KEY_QUEUE, null)?.let { json ->
+        runCatching {
+            val array = JSONArray(json)
+            (0 until array.length()).map { trackFromJson(array.getJSONObject(it)) }
+          }
+          .onFailure { e -> Timber.w(e, "Failed to parse the persisted queue") }
+          .getOrNull()
+      }
+    val queueIndex = if (prefs.contains(KEY_QUEUE_INDEX)) prefs.getInt(KEY_QUEUE_INDEX, 0) else null
 
-    return PersistedState(track, positionMs, repeatMode, shuffleEnabled, playbackSpeed)
+    return PersistedState(
+      track,
+      positionMs,
+      repeatMode,
+      shuffleEnabled,
+      playbackSpeed,
+      queue,
+      queueIndex,
+    )
   }
 
-  fun clear() {
-    prefs.edit { clear() }
-    Timber.d("Cleared playback state")
-  }
+  /** The persisted state a restore or a resumption may load: null when its track is disabled. */
+  fun session(): PersistedState? = get()?.takeUnless { it.track.disabled == true }
 
   companion object {
-    internal fun trackToJson(track: Track): String =
-      JSONObject()
-        .apply {
-          put("id", track.id)
-          put("path", track.path)
-          put("src", track.src)
-          put("title", track.title)
-          put("subtitle", track.subtitle)
-          put("artist", track.artist)
-          put("albumPath", track.albumPath)
-          put("album", track.album)
-          put("artwork", track.artwork?.url)
-          put("description", track.description)
-          put("genre", track.genre)
-          put("duration", track.duration)
-          // Persisted in its wire shape so a restored queue keeps its styling (ADR 0011).
-          put(
-            "style",
-            track.style?.let { style ->
-              JSONObject().apply {
-                put("display", style.display?.toWireString())
-                put("artworkRendering", style.artworkRendering?.toWireString())
-                put("imageShape", style.imageShape?.toWireString())
-                put("accessorySymbol", style.accessorySymbol)
-                put("cardTint", style.cardTint)
-                put("cardImage", style.cardImage?.toWireString())
-              }
-            },
-          )
-          put("disabled", track.disabled)
-          put("favorited", track.favorited)
-          put("live", track.live)
-          put("icyCharset", track.icyCharset)
-        }
-        .toString()
+    private val clears = AtomicInteger()
+
+    /** Moves on every [clear], process-wide, so a restore under way can tell it was cleared. */
+    val clearGeneration: Int
+      get() = clears.get()
+
+    private fun prefs(context: Context): SharedPreferences =
+      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** Deletes the persisted session (track, position, queue, index), keeping the settings. */
+    fun clear(context: Context) {
+      clears.incrementAndGet()
+      prefs(context).edit {
+        remove(KEY_TRACK)
+        remove(KEY_POSITION_MS)
+        remove(KEY_QUEUE)
+        remove(KEY_QUEUE_INDEX)
+      }
+      Timber.d("Cleared playback state")
+    }
+
+    internal fun trackToJson(track: Track): String = trackJson(track).toString()
+
+    private fun trackJson(track: Track): JSONObject =
+      JSONObject().apply {
+        put("id", track.id)
+        put("path", track.path)
+        put("src", track.src)
+        put("title", track.title)
+        put("subtitle", track.subtitle)
+        put("artist", track.artist)
+        put("albumPath", track.albumPath)
+        put("album", track.album)
+        put("artwork", track.artwork?.url)
+        put("description", track.description)
+        put("genre", track.genre)
+        put("duration", track.duration)
+        // Persisted in its wire shape so a restored queue keeps its styling (ADR 0011).
+        put(
+          "style",
+          track.style?.let { style ->
+            JSONObject().apply {
+              put("display", style.display?.toWireString())
+              put("artworkRendering", style.artworkRendering?.toWireString())
+              put("imageShape", style.imageShape?.toWireString())
+              put("accessorySymbol", style.accessorySymbol)
+              put("cardTint", style.cardTint)
+              put("cardImage", style.cardImage?.toWireString())
+            }
+          },
+        )
+        put("disabled", track.disabled)
+        put("favorited", track.favorited)
+        put("live", track.live)
+        put("icyCharset", track.icyCharset)
+      }
 
     internal fun trackFromJson(json: String): Track? =
-      runCatching {
-          val obj = JSONObject(json)
-          Track(
-            id = obj.optString("id").takeIf { it.isNotEmpty() },
-            path = obj.optString("path").takeIf { it.isNotEmpty() },
-            src = obj.optString("src").takeIf { it.isNotEmpty() },
-            title = obj.getString("title"),
-            subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
-            artist = obj.optString("artist").takeIf { it.isNotEmpty() },
-            albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
-            album = obj.optString("album").takeIf { it.isNotEmpty() },
-            artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
-            artworkSource = null, // Not persisted: re-derived on the next browse
-            description = obj.optString("description").takeIf { it.isNotEmpty() },
-            genre = obj.optString("genre").takeIf { it.isNotEmpty() },
-            duration =
-              if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration")
-              else null,
-            // optJSONObject, not getJSONObject: a snapshot from before the block model holds
-            // `style` as a string, and its track restores without a style (ADR 0011).
-            style =
-              obj
-                .optJSONObject("style")
-                ?.let { style ->
-                  TrackStyle(
-                    display = style.optString("display").toStyleDisplay(),
-                    artworkRendering = style.optString("artworkRendering").toArtworkRendering(),
-                    imageShape = style.optString("imageShape").toImageShape(),
-                    accessorySymbol = style.optString("accessorySymbol").takeIf { it.isNotEmpty() },
-                    cardTint = style.optString("cardTint").takeIf { it.isNotEmpty() },
-                    cardImage = style.optString("cardImage").toCardImage(),
-                  )
-                }
-                // An empty block means no style, as in the browse decoders on every platform.
-                ?.takeIf { it != EMPTY_TRACK_STYLE },
-            disabled =
-              if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled")
-              else null,
-            favorited =
-              if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
-              else null,
-            live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
-            icyCharset = obj.optString("icyCharset").takeIf { it.isNotEmpty() },
-            // Not persisted: resumption re-browses the contextual path, which supplies requests.
-            request = null,
-          )
-        }
+      runCatching { trackFromJson(JSONObject(json)) }
         .onFailure { e -> Timber.w(e, "Failed to parse persisted track JSON") }
         .getOrNull()
+
+    private fun trackFromJson(obj: JSONObject): Track =
+      Track(
+        id = obj.optString("id").takeIf { it.isNotEmpty() },
+        path = obj.optString("path").takeIf { it.isNotEmpty() },
+        src = obj.optString("src").takeIf { it.isNotEmpty() },
+        title = obj.getString("title"),
+        subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
+        artist = obj.optString("artist").takeIf { it.isNotEmpty() },
+        albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
+        album = obj.optString("album").takeIf { it.isNotEmpty() },
+        artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
+        artworkSource = null, // Not persisted: re-derived on the next browse
+        description = obj.optString("description").takeIf { it.isNotEmpty() },
+        genre = obj.optString("genre").takeIf { it.isNotEmpty() },
+        duration =
+          if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration") else null,
+        // optJSONObject, not getJSONObject: a snapshot from before the block model holds
+        // `style` as a string, and its track restores without a style (ADR 0011).
+        style =
+          obj
+            .optJSONObject("style")
+            ?.let { style ->
+              TrackStyle(
+                display = style.optString("display").toStyleDisplay(),
+                artworkRendering = style.optString("artworkRendering").toArtworkRendering(),
+                imageShape = style.optString("imageShape").toImageShape(),
+                accessorySymbol = style.optString("accessorySymbol").takeIf { it.isNotEmpty() },
+                cardTint = style.optString("cardTint").takeIf { it.isNotEmpty() },
+                cardImage = style.optString("cardImage").toCardImage(),
+              )
+            }
+            // An empty block means no style, as in the browse decoders on every platform.
+            ?.takeIf { it != EMPTY_TRACK_STYLE },
+        disabled =
+          if (obj.has("disabled") && !obj.isNull("disabled")) obj.getBoolean("disabled") else null,
+        favorited =
+          if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
+          else null,
+        live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
+        icyCharset = obj.optString("icyCharset").takeIf { it.isNotEmpty() },
+        // Not persisted: resumption re-browses the contextual path, which supplies requests.
+        request = null,
+      )
 
     private const val PREFS_NAME = "audio_browser_playback_state_v3"
     private const val KEY_POSITION_MS = "position_ms"
@@ -248,6 +314,8 @@ class PlaybackStateStore(private val player: Player) {
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
     private const val KEY_PLAYBACK_SPEED = "playback_speed"
     private const val KEY_TRACK = "track"
+    private const val KEY_QUEUE = "queue"
+    private const val KEY_QUEUE_INDEX = "queue_index"
     internal const val PERIODIC_SAVE_INTERVAL_MS = 5000L
   }
 }

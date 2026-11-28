@@ -142,6 +142,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("clearGate", &HybridAudioBrowserSpec::clearGate);
       prototype.registerHybridMethod("isCarConnected", &HybridAudioBrowserSpec::isCarConnected);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioBrowserSpec::setupPlayer);
+      prototype.registerHybridMethod("clearPersistedSession", &HybridAudioBrowserSpec::clearPersistedSession);
       prototype.registerHybridMethod("updateOptions", &HybridAudioBrowserSpec::updateOptions);
       prototype.registerHybridMethod("getOptions", &HybridAudioBrowserSpec::getOptions);
       prototype.registerHybridMethod("load", &HybridAudioBrowserSpec::load);

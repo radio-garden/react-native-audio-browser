@@ -47,13 +47,16 @@ data class NativeSetupPlayerOptions(
   val keepSessionAliveOnError: Boolean?,
   @DoNotStrip
   @Keep
+  val restore: Boolean?,
+  @DoNotStrip
+  @Keep
   val remoteOutputs: RemoteOutputsOptions?
 ) {
   /**
    * Create a new instance of NativeSetupPlayerOptions from Kotlin
    */
-  constructor(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: RemoteOutputsOptions?):
-         this(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter?.let { Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_java(it) }, playWhenReady, repeatMode, retry, keepSessionAliveOnError, remoteOutputs)
+  constructor(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, restore: Boolean?, remoteOutputs: RemoteOutputsOptions?):
+         this(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter?.let { Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_java(it) }, playWhenReady, repeatMode, retry, keepSessionAliveOnError, restore, remoteOutputs)
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -67,6 +70,7 @@ data class NativeSetupPlayerOptions(
       && Objects.deepEquals(this.repeatMode, other.repeatMode)
       && Objects.deepEquals(this.retry, other.retry)
       && Objects.deepEquals(this.keepSessionAliveOnError, other.keepSessionAliveOnError)
+      && Objects.deepEquals(this.restore, other.restore)
       && Objects.deepEquals(this.remoteOutputs, other.remoteOutputs)
   }
 
@@ -81,6 +85,7 @@ data class NativeSetupPlayerOptions(
       repeatMode,
       retry,
       keepSessionAliveOnError,
+      restore,
       remoteOutputs
     ).contentDeepHashCode()
   }
@@ -93,8 +98,8 @@ data class NativeSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, remoteOutputs: RemoteOutputsOptions?): NativeSetupPlayerOptions {
-      return NativeSetupPlayerOptions(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter, playWhenReady, repeatMode, retry, keepSessionAliveOnError, remoteOutputs)
+    private fun fromCpp(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?, playWhenReady: Boolean?, repeatMode: RepeatMode?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, restore: Boolean?, remoteOutputs: RemoteOutputsOptions?): NativeSetupPlayerOptions {
+      return NativeSetupPlayerOptions(android, ios, options, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter, playWhenReady, repeatMode, retry, keepSessionAliveOnError, restore, remoteOutputs)
     }
   }
 }

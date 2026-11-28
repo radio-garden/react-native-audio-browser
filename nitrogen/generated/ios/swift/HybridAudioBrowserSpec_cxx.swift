@@ -1628,6 +1628,17 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func clearPersistedSession() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clearPersistedSession()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func updateOptions(options: NativeUpdateOptions) -> bridge.Result_void_ {
     do {
       try self.__implementation.updateOptions(options: options)

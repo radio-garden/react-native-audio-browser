@@ -22,6 +22,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
+import com.audiobrowser.browser.ExpandedQueue
 import com.audiobrowser.browser.FavoriteChange
 import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
@@ -755,6 +756,7 @@ internal constructor(
         playerState = { playbackState },
         engineView = ::retryView,
         masksPlaying = { retryMasksPlaying },
+        unprepared = { restoredUnprepared },
         leadShuffleOrder = ::leadShuffleOrder,
         playPlayer = ::play,
         stopPlayer = ::stop,
@@ -875,18 +877,41 @@ internal constructor(
     sessionPlayer.prepare()
   }
 
+  /** With [prepare] false the engine stays idle: nothing loads until a play. */
   fun setQueue(
     tracks: Array<Track>,
     startIndex: Int = 0,
     startPositionMs: Long = 0,
     sourcePath: String? = null,
+    prepare: Boolean = true,
   ) {
     playGeneration++
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     sessionPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
     leadShuffleOrder(startIndex, mediaItems.size)
     queueSourcePath = sourcePath
-    sessionPlayer.prepare()
+    if (prepare) sessionPlayer.prepare()
+  }
+
+  /**
+   * Set by a paused restore's unprepared queue; the engine's first move out of idle clears it. See
+   * [SessionView].
+   */
+  internal var restoredUnprepared = false
+
+  /**
+   * Loads a persisted session: its settings, then its queue, [expanded] else the stored one else
+   * the track alone, keeping the play intent. Without the intent nothing loads until a play, and
+   * the session reads the player as idle.
+   */
+  internal fun restore(state: PlaybackStateStore.PersistedState, expanded: ExpandedQueue?) {
+    playbackStateStore.restore(state)
+    val queue = PlaybackRestore.queue(state, expanded)
+    val load = playWhenReady
+    // An emptied engine sits in ENDED, where setting items loads them without a prepare().
+    if (!load && sessionPlayer.playbackState != MediaPlayer.STATE_IDLE) stopEngine(sessionPlayer)
+    restoredUnprepared = !load
+    setQueue(queue.tracks, queue.startIndex, state.positionMs, queue.sourcePath, prepare = load)
   }
 
   /** Call after setting a queue of [count] tracks that starts on [startIndex]. */

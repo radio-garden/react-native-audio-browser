@@ -102,7 +102,7 @@ final class Player {
   ) { [unowned self] in
     currentTrack.map {
       PlaybackPersistence.snapshot(
-        of: $0, state: state, position: currentTime, repeatMode: repeatMode,
+        of: $0, at: queue.currentIndex, state: state, position: currentTime, repeatMode: repeatMode,
         shuffleEnabled: shuffleEnabled, rate: rate,
       )
     }
@@ -598,6 +598,7 @@ final class Player {
     startPositionMs: Double? = nil,
     playWhenReady: Bool? = nil,
     sourcePath: String? = nil,
+    loadingOnPlay: Bool = false,
   ) throws {
     try throwIfInvalid(newTracks)
     guard !newTracks.isEmpty else {
@@ -608,6 +609,7 @@ final class Player {
       afterQueueMutation(
         queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath),
         startingAt: startPositionMs.flatMap { $0 > 0 ? $0 / 1000 : nil },
+        loadingOnPlay: loadingOnPlay,
       )
     }
   }
@@ -695,10 +697,21 @@ final class Player {
 
   /// The one place a settled queue mutation is published: the new track list, then the
   /// current-track change, then next/previous availability.
-  private func afterQueueMutation(_ change: QueueChange, startingAt start: TimeInterval? = nil) {
-    if change.tracks { callbacks?.playerDidChangeQueue(queue.tracks) }
+  /// `loadingOnPlay`: a new current track without play intent loads on its play, as a parked load.
+  private func afterQueueMutation(
+    _ change: QueueChange, startingAt start: TimeInterval? = nil, loadingOnPlay: Bool = false,
+  ) {
+    if change.tracks {
+      // An emptied queue keeps the last one stored, as Android's does, for a restore after a reset.
+      if !queue.tracks.isEmpty {
+        persistence.saveQueue(queue.tracks)
+        // An edit around the current track moves its index without a track change.
+        persistence.save()
+      }
+      callbacks?.playerDidChangeQueue(queue.tracks)
+    }
     if change.currentTrack {
-      handleCurrentTrackChanged(startingAt: start)
+      handleCurrentTrackChanged(startingAt: start, loadingOnPlay: loadingOnPlay)
     } else if change.tracks {
       pushSkipAvailability()
     }
@@ -738,7 +751,7 @@ final class Player {
 
   /// Loads the new current track. `start` is held as the deferred seek, so the ready transition
   /// waits for it (no flash at 0) and the snapshot saved on the way records it.
-  func handleCurrentTrackChanged(startingAt start: TimeInterval? = nil) {
+  func handleCurrentTrackChanged(startingAt start: TimeInterval? = nil, loadingOnPlay: Bool = false) {
     defer { pushSkipAvailability() }
     sleepTimerManager.onTrackChanged()
 
@@ -765,7 +778,7 @@ final class Player {
       persistence.save()
 
       if let src = currentTrack.src {
-        connect(src: src, track: currentTrack)
+        connect(src: src, track: currentTrack, loadingOnPlay: loadingOnPlay)
       } else {
         logger.error("No src for track \(currentTrack.path ?? currentTrack.title)")
         engine.clearItem()
@@ -940,9 +953,10 @@ final class Player {
 
   private var connectionItemPrepared = false
 
-  private func connect(src: String, track: Track, shortStartBuffer: Bool = false) {
+  private func connect(src: String, track: Track, shortStartBuffer: Bool = false, loadingOnPlay: Bool = false) {
     resetPlayedSinceConnect()
     if track.live == true, !toPlay { return deferIdleLivePark() }
+    if loadingOnPlay, !toPlay { return parkForReloadOnPlay() }
     connectionItemPrepared = false
     retry.connectionStarted()
     engine.resolveAndLoad(src: src, track: track, shortStartBuffer: shortStartBuffer)
@@ -1243,25 +1257,36 @@ final class Player {
     return snapshot
   }
 
-  /// Plays a persisted session (a cold-start resume): its settings, then its queue — `expanded`,
-  /// the expansion of the track's contextual path, or the track alone.
-  func resume(_ snapshot: PersistedPlaybackState, queue expanded: (tracks: [Track], selectedIndex: Int)?) {
+  /// Loads a persisted session: its settings, then its queue — `expanded`, the expansion of the
+  /// track's contextual path, else the stored queue, else the track alone. `playWhenReady` true
+  /// plays it (a cold-start resume); nil keeps the intent, so a paused restore opens no stream.
+  /// `repeatMode`, when set, replaces the stored one.
+  func restore(
+    _ snapshot: PersistedPlaybackState,
+    queue expanded: (tracks: [Track], selectedIndex: Int, sourcePath: String)?,
+    playWhenReady: Bool?,
+    repeatMode explicitRepeatMode: RepeatMode? = nil,
+  ) {
     let track = snapshot.track.toNitro()
-    logger.info("resume: cold — restoring persisted track")
+    logger.info("restore: loading the persisted session")
     // Settings first: `setQueue` builds the shuffle order, and the mode events then precede the
     // queue change, as on Android.
-    repeatMode = RepeatMode(fromString: snapshot.repeatMode) ?? .off
+    repeatMode = explicitRepeatMode ?? RepeatMode(fromString: snapshot.repeatMode) ?? .off
     shuffleEnabled = snapshot.shuffleEnabled
     rate = snapshot.playbackSpeed
     let startMs = track.live == true ? nil : snapshot.positionMs
+    let stored = snapshot.storedQueue ?? ([track], 0)
     do {
-      if let expanded {
-        try setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
-      } else {
-        try setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
-      }
+      try setQueue(
+        expanded?.tracks ?? stored.tracks,
+        initialIndex: expanded?.selectedIndex ?? stored.selectedIndex,
+        startPositionMs: startMs,
+        playWhenReady: playWhenReady,
+        sourcePath: expanded?.sourcePath,
+        loadingOnPlay: true,
+      )
     } catch {
-      logger.error("resume: \(error)")
+      logger.error("restore: \(error)")
     }
   }
 

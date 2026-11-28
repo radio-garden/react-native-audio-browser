@@ -745,66 +745,68 @@ class BrowserManager(
     }
   }
 
-  private suspend fun expandScoped(contextualPath: String): Pair<Array<Track>, Int>? {
-    val trackId = BrowserPathHelper.extractTrackId(contextualPath) ?: return null
+  /**
+   * What a restore of the contextual [contextualPath]'s [track] loads, resolving each page once: a
+   * linked path's page as a tap queues it, then, when that gives nothing, the page it was tapped
+   * on, where a track gone from it goes in (see [SectionScope.restoreQueue]).
+   *
+   * @param stored the identities of the stored queue [track] is current in
+   */
+  suspend fun expandQueueForRestore(
+    contextualPath: String,
+    track: Track,
+    stored: Set<String>,
+  ): RestoreExpansion {
+    val origin =
+      BrowserPathHelper.extractOrigin(contextualPath)
+        ?: return restoreExpansion(contextualPath, track, stored, insertGone = true)
+    val linked = restoreExpansion(contextualPath, track, stored, insertGone = false)
+    if (linked != RestoreExpansion.Unavailable) return linked
+    return restoreExpansion(origin, track, stored, insertGone = true)
+  }
 
-    Timber.d("Expanding queue from contextual path: $contextualPath (trackId=$trackId)")
+  private suspend fun restoreExpansion(
+    contextualPath: String,
+    track: Track,
+    stored: Set<String>,
+    insertGone: Boolean,
+  ): RestoreExpansion {
+    val sections = pageSections(contextualPath) ?: return RestoreExpansion.Unavailable
+    return SectionScope.restoreQueue(
+      sections,
+      contextualPath,
+      track,
+      stored,
+      insertGone,
+      config.singleTrack,
+    )
+  }
+
+  /** The sections of a contextual path's page; null when it has none or fails to resolve. */
+  private suspend fun pageSections(contextualPath: String): List<Section>? =
+    try {
+      resolve(contextualPath, rekey = false).normalizedSections?.takeIf { it.isNotEmpty() }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      Timber.w(e, "Restore could not resolve $contextualPath")
+      null
+    }
+
+  private suspend fun expandScoped(contextualPath: String): Pair<Array<Track>, Int>? {
+    if (BrowserPathHelper.extractTrackId(contextualPath) == null) return null
+
+    Timber.d("Expanding queue from contextual path: $contextualPath")
 
     try {
-      val parentPath = BrowserPathHelper.stripTrackId(contextualPath)
-      val parentResolvedTrack = resolve(parentPath, rekey = false)
-      val sections = parentResolvedTrack.normalizedSections
-
+      val sections = resolve(contextualPath, rekey = false).normalizedSections
       if (sections.isNullOrEmpty()) {
         Timber.w("Parent has no children, cannot expand queue")
         return null
       }
-
-      // The stamped flat index pins which section and which copy was tapped; a stale index falls
-      // back to the first section holding an enabled copy. A vanished identity aborts: queueing the
-      // changed list
-      // would resume the wrong station.
-      val tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
-      val scoped = SectionScope.scoped(sections, trackId, tappedIndex) ?: return null
-      if (scoped.onlyDisabled && BrowserPathHelper.extractOrigin(contextualPath) != null) {
-        throw DisabledOnLinkedPageException(trackId)
-      }
-      val sectionTracks = scoped.section.children.toList()
-      val tappedOffset = scoped.tappedOffset
-
-      val playableTracks =
-        sectionTracks.filter { track -> track.src != null && track.disabled != true }
-
-      if (playableTracks.isEmpty()) {
-        Timber.w("Parent has no playable tracks, cannot expand queue")
-        return null
-      }
-
-      val selectedIndex =
-        if (
-          tappedOffset != null &&
-            sectionTracks[tappedOffset].src != null &&
-            sectionTracks[tappedOffset].disabled != true
-        ) {
-          sectionTracks.take(tappedOffset + 1).count { it.src != null && it.disabled != true } - 1
-        } else {
-          playableTracks.indexOfFirst { track -> track.identity == trackId }
-        }
-
-      if (selectedIndex < 0) {
-        Timber.w("Track with identity='$trackId' not found in playable children")
-        return null
-      }
-
-      if (config.singleTrack) {
-        Timber.d("singleTrack=true - returning single track at index $selectedIndex")
-        return Pair(arrayOf(playableTracks[selectedIndex]), 0)
-      }
-
-      Timber.d(
-        "singleTrack=false - returning ${playableTracks.size} playable tracks (from ${sectionTracks.size} in section), starting at index $selectedIndex"
-      )
-      return Pair(playableTracks.toTypedArray(), selectedIndex)
+      // A vanished identity gives no queue: queueing the changed list would resume the wrong
+      // station.
+      return SectionScope.queue(sections, contextualPath, config.singleTrack)
     } catch (e: CancellationException) {
       throw e
     } catch (e: DisabledOnLinkedPageException) {
@@ -1415,6 +1417,17 @@ data class BrowserConfig(
 
 /** A tap's queue, its start index, and the page it was expanded from. */
 data class ExpandedQueue(val tracks: Array<Track>, val startIndex: Int, val sourcePath: String)
+
+/** What a restore's expansion of a persisted track's contextual path gives. */
+sealed interface RestoreExpansion {
+  data class Queue(val queue: ExpandedQueue) : RestoreExpansion
+
+  /** The page now holds the track only disabled: it never plays. */
+  data object Refused : RestoreExpansion
+
+  /** No fresh queue (no contextual path, a failed page): the stored queue loads instead. */
+  data object Unavailable : RestoreExpansion
+}
 
 /** The page a linked path queues marks the tapped track disabled: the tap plays nothing. */
 class DisabledOnLinkedPageException(trackId: String) :

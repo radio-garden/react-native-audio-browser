@@ -181,6 +181,7 @@ namespace margelo::nitro::audiobrowser {
     void clearGate() override;
     bool isCarConnected() override;
     std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) override;
+    void clearPersistedSession() override;
     void updateOptions(const NativeUpdateOptions& options) override;
     Options getOptions() override;
     void load(const Track& track) override;
