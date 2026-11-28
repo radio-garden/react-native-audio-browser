@@ -1,3 +1,55 @@
+## [1.0.0-next.20](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.19...v1.0.0-next.20) (2026-11-28)
+
+### Features
+
+* **android:** expire a cached browse page at its response's max-age ([1ce963a](https://github.com/radio-garden/react-native-audio-browser/commit/1ce963a4866c133fd2012c5a3125f537784ec43a))
+* **ios:** add a bounded retry schedule for artwork loads ([c3c74dc](https://github.com/radio-garden/react-native-audio-browser/commit/c3c74dc420ca0d556cfd2bcd864a6b7efb30f1a5))
+* **ios:** add Wakeups and ArtworkPair ([b584ce2](https://github.com/radio-garden/react-native-audio-browser/commit/b584ce2df58227563ea66f4a3885fe105dd6c102))
+* **ios:** expire a cached browse page at its response's max-age ([5899d61](https://github.com/radio-garden/react-native-audio-browser/commit/5899d6160b220e7f2475e50d3c671b153d6db6fb))
+
+### Bug Fixes
+
+* **android:** expire a page whose Age used up its max-age, and stop page timers on dispose ([4b56d2d](https://github.com/radio-garden/react-native-audio-browser/commit/4b56d2d003e4c16e03f3a0cce851bb97df20e8c5))
+* **android:** keep every page at least 30 s, and run every load on the page scope ([bfff940](https://github.com/radio-garden/react-native-audio-browser/commit/bfff940c0eb231a06b71e6a37696b15bab4d78e2))
+* **android:** keep URL artwork smaller than the size hint at its own size ([99ccc52](https://github.com/radio-garden/react-native-audio-browser/commit/99ccc5291f08df146b0f8af71e2c59c3c76edd13))
+* **android:** let a retry's push start its refetch, and track Media3 visits per controller ([62c35c4](https://github.com/radio-garden/react-native-audio-browser/commit/62c35c434412a00500b78731c7ca7db083a079c1))
+* **android:** resolve the media URL when the request layer fails ([23c691b](https://github.com/radio-garden/react-native-audio-browser/commit/23c691b9305f5774cc2af9e8163c30e81ab0c098))
+* **android:** serve an expired page at once and refetch it once behind it ([a268bde](https://github.com/radio-garden/react-native-audio-browser/commit/a268bdefd65dcbfa16aefd439591999fca287aa0))
+* **android:** space a failed refetch's retries for visits too, and tell a visit from a re-query ([a4f1fc0](https://github.com/radio-garden/react-native-audio-browser/commit/a4f1fc0392ae2351c636086bb67b48b50179f55f))
+* **ios:** count a reconnect against the artwork retry schedule ([21c0f65](https://github.com/radio-garden/react-native-audio-browser/commit/21c0f65a8c07bd767431802cde93df6cd9212961))
+* **ios:** don't report a seek's buffering as a stall ([fb54d5d](https://github.com/radio-garden/react-native-audio-browser/commit/fb54d5dedba08f8977a38dc0f0911a5de0e2412c))
+* **ios:** drop a stale page that was removed during its failed refetch ([6a383c1](https://github.com/radio-garden/react-native-audio-browser/commit/6a383c1d6a126f65e946c2d5c9c90291a4f2a561))
+* **ios:** expire a page whose Age used up its max-age, and push only what the car shows ([6c7c8c2](https://github.com/radio-garden/react-native-audio-browser/commit/6c7c8c2546ff80e79ef441293373cc3977d3849c))
+* **ios:** keep every page at least 30 s, and retry a failing refetch while it fails ([089d17e](https://github.com/radio-garden/react-native-audio-browser/commit/089d17ebbb1ac85b10fe5573bebacea0545b0ca9))
+* **ios:** keep the media config when the request layer fails ([2343026](https://github.com/radio-garden/react-native-audio-browser/commit/23430269b65e14d38fdaeebdd39bb5fe550342b2))
+* **ios:** leave a fresh page's expiry alone when its refresh fails ([8401db9](https://github.com/radio-garden/react-native-audio-browser/commit/8401db9a757f92c7130c6a6bb82fa7f2d684524e))
+* **ios:** let a pause reach the outgoing player during a re-setup ([9399f0d](https://github.com/radio-garden/react-native-audio-browser/commit/9399f0d4b6a6853455f119a3b089cc20810a6eb7))
+* **ios:** let a retry's push start its refetch, and match CarPlay's shown page by its stripped path ([656087c](https://github.com/radio-garden/react-native-audio-browser/commit/656087c355fec3b30589d47124dce42012b5196e))
+* **ios:** log no cancelled artwork load, and no URL in a failure ([fcb5a77](https://github.com/radio-garden/react-native-audio-browser/commit/fcb5a77370c323db5f5f52d6010b6e9224783cbf))
+* **ios:** measure the stall grace from where playing was proven ([1870aed](https://github.com/radio-garden/react-native-audio-browser/commit/1870aed70fc5a464224745f38bce7c4671c07d52))
+* **ios:** refresh only a shown page, and only on a positive max-age ([e01c173](https://github.com/radio-garden/react-native-audio-browser/commit/e01c1735bf73d8b182ec1fef67d42a2644fe6c77))
+* **ios:** retry a failed CarPlay artwork load ([bc3e26c](https://github.com/radio-garden/react-native-audio-browser/commit/bc3e26c81ed082f8917a9fe80b2481bd60c21767))
+* **ios:** retry a row's artwork while a template lists it ([1a3e4e2](https://github.com/radio-garden/react-native-audio-browser/commit/1a3e4e27cbb366c31fcc944b1f14834ca0c773d5))
+* **ios:** retry CarPlay artwork in one loop that ends with its row ([80c40c4](https://github.com/radio-garden/react-native-audio-browser/commit/80c40c4f6411de3d2d035d66e9e42e8e7b93a8d4))
+* **ios:** say why an artwork load failed ([f140917](https://github.com/radio-garden/react-native-audio-browser/commit/f140917080028cfd7ecc1d1ea6e660d79a005aad))
+* **ios:** serve an expired page at once and refetch it once behind it ([3d62deb](https://github.com/radio-garden/react-native-audio-browser/commit/3d62debac51d4a8e62b2141413d6b92426cd94fe))
+* **ios:** space a failed refetch's retries for visits too ([2a78b38](https://github.com/radio-garden/react-native-audio-browser/commit/2a78b3884e06b159ce7bc1243825fc4d7693f3c0))
+* **ios:** stage setters sent during an un-awaited re-setup ([ce93c6a](https://github.com/radio-garden/react-native-audio-browser/commit/ce93c6a44b75a39e7d7b93f9016b293afb44d0aa))
+* leave the playing item as it plays on a skip to it on Android ([674f61c](https://github.com/radio-garden/react-native-audio-browser/commit/674f61c79ac74b4e19805f344be9def3a1f6c820))
+* leave the playing live item at its edge in place on a skip to it on iOS ([853ad27](https://github.com/radio-garden/react-native-audio-browser/commit/853ad2767d7f145f5e5d73d81de0529e7b767007))
+* skip in place on Android only for a live item at its edge, as iOS does ([356b5e6](https://github.com/radio-garden/react-native-audio-browser/commit/356b5e66f190989ac1e6f932b31e4aba2c1029b1))
+
+### Code Refactors
+
+* **ios:** build the media request in RequestLayer.media ([a2ae195](https://github.com/radio-garden/react-native-audio-browser/commit/a2ae1950a821efb02cdff7d833e202b2e50d9d71))
+* **ios:** give Fetched a file of its own ([56ef17b](https://github.com/radio-garden/react-native-audio-browser/commit/56ef17b9c1cc805495b1de540a2bd5bc962d7cd7))
+* **ios:** name the player's audio session hold as one latch step ([3eb7bfc](https://github.com/radio-garden/react-native-audio-browser/commit/3eb7bfcfcb49123de4e93aa055083603ce2564d9))
+
+### Documentation
+
+* **android:** drop the seek from where isStalled differs from iOS ([4c07cbc](https://github.com/radio-garden/react-native-audio-browser/commit/4c07cbc15f11f023f0b206cc7d7310758b16cfd0))
+* say Media3 reads a progressive ICY stream without a length as live ([6e915b5](https://github.com/radio-garden/react-native-audio-browser/commit/6e915b5ab22eb6093a0239757a68a600acd39763))
+
 ## [1.0.0-next.19](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.18...v1.0.0-next.19) (2026-11-28)
 
 ### Bug Fixes
