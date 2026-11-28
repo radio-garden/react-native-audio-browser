@@ -111,6 +111,28 @@ enum RequestLayer {
     return base.merging(override) { _, new in new }
   }
 
+  // MARK: - Media
+
+  /// A media request, built in order: `requestLayer` over `base`, or `base` alone when it
+  /// throws anything but a cancellation; what `resolve` produces; `mediaLayer`; then the
+  /// resolved config over that.
+  nonisolated(nonsending) static func media<C: RequestFields>(
+    over base: C,
+    requestLayer: nonisolated(nonsending)(C) async throws -> C,
+    resolve: nonisolated(nonsending)() async -> C?,
+    mediaLayer: nonisolated(nonsending)(C) async throws -> C,
+  ) async throws -> C {
+    let request: C
+    do {
+      request = try await requestLayer(base)
+    } catch where !(error is CancellationError) {
+      request = base
+    }
+    let resolved = await resolve()
+    let merged = try await mediaLayer(request)
+    return resolved.map { merge(merged, $0) } ?? merged
+  }
+
   // MARK: - Artwork
 
   /// An artwork request, built in order: `artwork` over `base`, path included; what `resolve`

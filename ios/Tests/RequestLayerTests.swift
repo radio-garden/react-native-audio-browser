@@ -139,6 +139,59 @@ struct RequestLayerTests {
     #expect(Config.base(path: "/a") == Config(path: "/a"))
   }
 
+  // MARK: - media
+
+  private struct LayerFailed: Error {}
+
+  private func media(
+    over base: Config = Config(path: "/stream.mp3"),
+    requestLayer: nonisolated(nonsending)(Config) async throws -> Config = { $0 },
+    resolve: nonisolated(nonsending)() async -> Config? = { nil },
+    mediaLayer: nonisolated(nonsending)(Config) async throws -> Config = { $0 },
+  ) async throws -> Config {
+    try await RequestLayer.media(over: base, requestLayer: requestLayer, resolve: resolve, mediaLayer: mediaLayer)
+  }
+
+  @Test func theMediaLayerAppliesOverTheRequestLayerAndTheResolvedConfigOverBoth() async throws {
+    var order: [String] = []
+    let result = try await media(
+      requestLayer: { order.append("request"); return RequestLayer.merge($0, Config(baseUrl: "https://api", headers: ["A": "1"])) },
+      resolve: { order.append("resolve"); return Config(userAgent: "resolved") },
+      mediaLayer: { order.append("media"); return RequestLayer.applyStatic(Config(baseUrl: "https://cdn", userAgent: "media"), to: $0) },
+    )
+    #expect(order == ["request", "resolve", "media"])
+    #expect(result == Config(path: "/stream.mp3", baseUrl: "https://cdn", headers: ["A": "1"], userAgent: "resolved"))
+  }
+
+  @Test func aThrowingRequestLayerStillAppliesTheMediaLayerAndTheResolvedConfigToTheBase() async throws {
+    let result = try await media(
+      requestLayer: { _ in throw LayerFailed() },
+      resolve: { Config(userAgent: "resolved") },
+      mediaLayer: { RequestLayer.applyStatic(Config(baseUrl: "https://cdn", headers: ["Auth": "t"]), to: $0) },
+    )
+    #expect(RequestLayer.buildUrl(result) == "https://cdn/stream.mp3")
+    #expect(result.headers == ["Auth": "t"])
+    #expect(result.userAgent == "resolved")
+  }
+
+  @Test func aCancelledRequestLayerStaysACancellationAndRunsNoLaterLayer() async {
+    var later = false
+    await #expect(throws: CancellationError.self) {
+      try await media(
+        requestLayer: { _ in throw CancellationError() },
+        resolve: { later = true; return nil },
+        mediaLayer: { later = true; return $0 },
+      )
+    }
+    #expect(!later)
+  }
+
+  @Test func aThrowingMediaLayerIsNotSkipped() async {
+    await #expect(throws: LayerFailed.self) {
+      try await media(mediaLayer: { _ in throw LayerFailed() })
+    }
+  }
+
   // MARK: - artwork
 
   private func artwork(
