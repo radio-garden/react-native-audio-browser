@@ -23,6 +23,7 @@ private func makePlaying(
 ) throws -> (Player, MockPlayerEngine, MockPlayerCallbacks) {
   let (player, engine, callbacks) = try makeLoading(live: live, scheduler: scheduler)
   player.setPlayWhenReady(true)
+  engine.isPlaybackLikelyToKeepUp = true
   engine.emit(.itemPrepared(likelyToKeepUp: true))
   player.transition(.avPlayerPlaying)
   return (player, engine, callbacks)
@@ -1207,6 +1208,166 @@ struct PlayerRecoveringTests {
     #expect(player.isStalled)
     // Within Player.stallGraceSeconds.
     engine.currentTime = 0.2
+    #expect(!player.isStalled)
+  }
+
+  @Test func aSeeksBufferingIsNoStall_bufferingAfterPlayingAgainIs() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 10
+    engine.isPlaybackLikelyToKeepUp = false
+    player.seek(to: 60)
+    engine.currentTime = 60
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+
+    engine.isPlaybackLikelyToKeepUp = true
+    player.transition(.avPlayerPlaying)
+    engine.currentTime = 61
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(player.isStalled)
+  }
+
+  @Test func playingOnAThinBufferIsNoPlaying() throws {
+    // As with ios.buffer: AVPlayer starts at once, whatever the buffer.
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    player.transition(.avPlayerPaused(hasAsset: true))
+    engine.isPlaybackLikelyToKeepUp = false
+    player.seek(to: 60)
+    player.play()
+    player.transition(.avPlayerPlaying)
+    engine.currentTime = 70
+    #expect(!player.isStalled)
+  }
+
+  @Test func aSeekLandingWhileAVPlayerWaitsIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isPlaying = false
+    player.seek(to: 60)
+    engine.currentTime = 60
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aRefillReportedFromBeforeASeekIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isPlaybackLikelyToKeepUp = false
+    engine.seekResult = nil
+    player.seek(to: 60)
+    engine.emit(.likelyToKeepUp(true))
+    engine.currentTime = 60
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aPlayingReportedFromBeforeASeekIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 10
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    engine.seekResult = nil
+    player.seek(to: 60)
+    engine.isPlaying = false
+    player.transition(.avPlayerPlaying)
+    engine.currentTime = 60
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aSeekThatPlaysOnWithoutBufferingKeepsTheNextStall() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isPlaybackLikelyToKeepUp = true
+    player.seek(to: 60)
+    engine.currentTime = 70
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(player.isStalled)
+  }
+
+  @Test func aBufferThatRefillsWhilePlayingAfterASeekKeepsTheNextStall() throws {
+    // As with ios.buffer: the state stays .playing while the buffer refills.
+    let (player, engine, _) = try makePlaying()
+    player.seek(to: 60)
+    engine.isPlaybackLikelyToKeepUp = true
+    engine.emit(.likelyToKeepUp(true))
+    engine.currentTime = 70
+    engine.isPlaybackLikelyToKeepUp = false
+    #expect(player.isStalled)
+  }
+
+  @Test func aSupersededSeeksCompletionIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isPlaybackLikelyToKeepUp = true
+    engine.seekResult = nil
+    player.seek(to: 30)
+    player.seek(to: 60)
+    engine.completeOldestSeek(true)
+    engine.currentTime = 60
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func anUnfinishedSeekIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.isPlaybackLikelyToKeepUp = true
+    engine.seekResult = nil
+    player.seek(to: 60)
+    engine.completeSeeks(false)
+    engine.currentTime = 60
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aSeekWhilePausedIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    player.transition(.avPlayerPaused(hasAsset: true))
+    engine.isPlaybackLikelyToKeepUp = true
+    player.seek(to: 60)
+    player.play()
+    engine.currentTime = 60
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aRefillWhileNotPlayingIsNoPlaying() throws {
+    let (player, engine, _) = try makePlaying()
+    player.pause()
+    player.transition(.avPlayerPaused(hasAsset: true))
+    player.seek(to: 60)
+    engine.isPlaybackLikelyToKeepUp = true
+    engine.emit(.likelyToKeepUp(true))
+    player.play()
+    engine.currentTime = 60
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
+  @Test func aSeekDuringAStallClearsTheStallLine() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 10
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    let renders = engine.nowPlayingRenderCount
+    engine.seekResult = nil
+    player.seek(to: 60)
+    #expect(!player.isStalled)
+    #expect(engine.nowPlayingRenderCount > renders)
+  }
+
+  @Test func aReconnectsBufferingIsNoStall() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 10
+    player.reloadResolving(startFromCurrentTime: true)
+    engine.emit(.itemPrepared(likelyToKeepUp: false))
+    player.transition(.avPlayerWaiting)
+    #expect(engine.hasItem)
     #expect(!player.isStalled)
   }
 }

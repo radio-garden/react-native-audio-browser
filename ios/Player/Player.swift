@@ -399,6 +399,7 @@ final class Player {
 
   private func applySideEffects(old: PlaybackState, new: PlaybackState) {
     if new == .playing {
+      markPlayedIfPlayingThrough()
       retry.playbackBecameAudible()
     } else if old == .playing {
       retry.playbackStoppedBeingAudible()
@@ -824,12 +825,17 @@ final class Player {
   /// without touching the new one's deferred seek.
   private func seekItem(to seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void) {
     let generation = deferredSeek.generation
+    resetPlayedSinceConnect()
+    seekCount += 1
+    let seek = seekCount
     retry.seekStarted()
     engine.seek(to: seconds) { [weak self] finished in
       guard let self, deferredSeek.generation == generation else {
         completion(false)
         return
       }
+      // A seek into the buffer may play on with no transition to .playing.
+      if finished, seek == seekCount { markPlayedIfPlayingThrough() }
       seekDidLand(finished: finished)
       if finished { saveSnapshotWhileNothingPlays() }
       completion(finished)
@@ -874,6 +880,7 @@ final class Player {
   private var connectionItemPrepared = false
 
   private func connect(src: String, track: Track, shortStartBuffer: Bool = false) {
+    resetPlayedSinceConnect()
     if track.live == true, !toPlay { return deferIdleLivePark() }
     connectionItemPrepared = false
     retry.connectionStarted()
@@ -1028,6 +1035,8 @@ final class Player {
       guard state != .error else { return }
       retry.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     case let .likelyToKeepUp(isLikely):
+      // With ios.buffer, AVPlayer stays .playing while it starves: no transition follows a refill.
+      markPlayedIfPlayingThrough()
       guard isLikely, engine.hasItem, !beginDeferredSeek() else { return }
       bufferBecameSufficient()
     case let .timeControlStatus(status, waitingForNoItem):
@@ -1126,16 +1135,32 @@ final class Player {
     retry.onlineChanged(isOnline)
   }
 
-  /// Time playback must have progressed before a buffer dip counts as a stall, so the initial
-  /// connect or a seek doesn't read as one.
+  /// Time playback must have progressed before a buffer dip counts as a stall.
   private static let stallGraceSeconds: TimeInterval = 0.5
 
-  /// Ongoing playback is waiting for data. Android counts only buffering after playback since
-  /// the last connect, so a seek, a track change or a reconnect that starts past the grace isn't a
-  /// stall there.
+  /// The position at which playback since the last connect was proven: nil until then.
+  private var playedSinceConnectFrom: TimeInterval?
+  private var seekCount = 0
+
+  /// Reads AVPlayer and its buffer live: an event may have been queued before a seek's reset.
+  private func markPlayedIfPlayingThrough() {
+    guard state == .playing, engine.isPlaying, engine.isPlaybackLikelyToKeepUp else { return }
+    playedSinceConnectFrom = engine.currentTime
+  }
+
+  /// Call where playback starts over: a seek, a track change, a load, a reconnect.
+  private func resetPlayedSinceConnect() {
+    let wasStalled = isStalled
+    playedSinceConnectFrom = nil
+    if wasStalled { engine.renderNowPlaying() }
+  }
+
+  /// Playback that had started since the last connect is waiting for data, as on Android: proven
+  /// by playing with a buffer likely to keep up.
   var isStalled: Bool {
-    guard engine.hasItem else { return false }
-    return engine.currentTime > Self.stallGraceSeconds && playWhenReady && !engine.isPlaybackLikelyToKeepUp
+    guard engine.hasItem, playedSinceConnectFrom != nil else { return false }
+    return engine.currentTime > Self.stallGraceSeconds && playWhenReady
+      && !engine.isPlaybackLikelyToKeepUp
   }
 
   // MARK: - Resume

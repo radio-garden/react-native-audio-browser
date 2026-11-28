@@ -54,6 +54,8 @@ func clampedVolume(_ level: Double) -> Float? {
   /// How far back a live item can seek from its live edge; nil for an on-demand item or none.
   var liveWindowSeconds: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
+  /// AVPlayer's own `timeControlStatus` is `.playing` now, ahead of the event that reports it.
+  var isPlaying: Bool { get }
   var isAirPlayRoute: Bool { get }
   /// 0–1.
   var volume: Float { get set }

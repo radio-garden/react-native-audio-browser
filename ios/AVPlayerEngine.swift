@@ -132,6 +132,8 @@ final class AVPlayerEngine: PlayerEngine {
     avPlayer.currentItem?.isPlaybackLikelyToKeepUp ?? false
   }
 
+  var isPlaying: Bool { avPlayer.timeControlStatus == .playing }
+
   var isAirPlayRoute: Bool {
     AVAudioSession.sharedInstance().currentRoute.outputs.contains { $0.portType == .airPlay }
   }

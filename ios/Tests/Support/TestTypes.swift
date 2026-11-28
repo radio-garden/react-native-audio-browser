@@ -50,6 +50,7 @@ final class MockPlayerEngine: PlayerEngine {
   var liveEdge: Double?
   var liveWindowSeconds: Double?
   var isPlaybackLikelyToKeepUp = false
+  var isPlaying = true
   var isAirPlayRoute = false
   var playerFailed = false
   var volume: Float = 1
@@ -138,6 +139,10 @@ final class MockPlayerEngine: PlayerEngine {
     for completion in pending {
       completion(finished)
     }
+  }
+
+  func completeOldestSeek(_ finished: Bool) {
+    seeksInFlight.removeFirst()(finished)
   }
 
   func applyTimePitchAlgorithm() { setTimePitchCallCount += 1 }
