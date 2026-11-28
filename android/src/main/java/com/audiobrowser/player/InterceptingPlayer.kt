@@ -46,6 +46,13 @@ internal object SessionView {
 }
 
 /**
+ * Whether a skip to [index] leaves the stream as it plays, [state] being the engine's as the retry
+ * view reads it: the current item, playing. A paused one still rejoins its live edge.
+ */
+internal fun MediaPlayer.skipsInPlace(index: Int, @MediaPlayer.State state: Int): Boolean =
+  index == currentMediaItemIndex && playWhenReady && state == MediaPlayer.STATE_READY
+
+/**
  * The player the MediaSession sees. Offers each transport command from an external surface (lock
  * screen, notification, Bluetooth, Android Auto) to the app's `handleRemote*` callback first: true
  * consumes it, anything else runs the default. Shows the session the [SessionView] of an idle
@@ -222,7 +229,13 @@ internal class InterceptingPlayer(
   // Media3 sets here the queue of a track picked on an external surface and of playback
   // resumption. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
+    val state = engineView(wrappedPlayer.playbackState)
+    if (wrappedPlayer.skipsInPlace(startIndex, state) && isCurrentQueue(mediaItems)) return
     super.setMediaItems(mediaItems, startIndex, startPositionMs)
     if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
   }
+
+  private fun isCurrentQueue(mediaItems: List<MediaItem>): Boolean =
+    mediaItems.size == mediaItemCount &&
+      mediaItems.withIndex().all { (i, item) -> item.mediaId == getMediaItemAt(i).mediaId }
 }

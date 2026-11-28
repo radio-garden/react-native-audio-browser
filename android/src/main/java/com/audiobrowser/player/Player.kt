@@ -538,8 +538,9 @@ internal constructor(
     private set
 
   /**
-   * Moves whenever the app replaces what plays: a new queue, a load, a skip or a clear. Not on an
-   * edit that leaves the playing item playing, such as adding up next or restamping a track.
+   * Moves whenever the app chooses what plays: a new queue, a load, a skip (in place too) or a
+   * clear. Not on an edit that leaves the playing item playing, such as adding up next or
+   * restamping a track.
    */
   @Volatile
   internal var playGeneration = 0
@@ -869,6 +870,7 @@ internal constructor(
   fun skipTo(index: Int) {
     validateIndex(index)
     playGeneration++
+    if (sessionPlayer.skipsInPlace(index, retryView(sessionPlayer.playbackState))) return
     sessionPlayer.seekTo(index, C.TIME_UNSET)
     sessionPlayer.prepare()
   }
