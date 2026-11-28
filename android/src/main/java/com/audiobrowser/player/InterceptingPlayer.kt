@@ -52,9 +52,9 @@ internal const val LIVE_EDGE_TOLERANCE_MS = 10_000L
 /**
  * Whether a skip to [index] leaves the stream as it plays, [state] being the engine's as the retry
  * view reads it: the current item, playing, live and at its live edge, where a stream without a
- * seekable window always is. iOS starts a skipped-to current item over at 0, where a live stream
- * can't go. Anything else seeks: an on-demand item starts over, a live one paused or behind its
- * edge rejoins it.
+ * seekable window always is. Anything else seeks: an on-demand item starts over, a live one paused
+ * or behind its edge rejoins it. iOS's `Player.skipTo` keeps the same rule; its `skipToCurrent`
+ * names where they differ.
  */
 internal fun MediaPlayer.skipsInPlace(index: Int, @MediaPlayer.State state: Int): Boolean {
   if (index != currentMediaItemIndex || !playWhenReady || state != MediaPlayer.STATE_READY) {

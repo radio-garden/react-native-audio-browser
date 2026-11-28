@@ -128,6 +128,12 @@ final class AVPlayerEngine: PlayerEngine {
     return seconds
   }
 
+  var offsetFromLive: Double? {
+    guard let item = avPlayer.currentItem, item.duration.isIndefinite else { return nil }
+    let seconds = item.recommendedTimeOffsetFromLive.seconds
+    return seconds.isFinite && seconds > 0 ? seconds : nil
+  }
+
   var isPlaybackLikelyToKeepUp: Bool {
     avPlayer.currentItem?.isPlaybackLikelyToKeepUp ?? false
   }

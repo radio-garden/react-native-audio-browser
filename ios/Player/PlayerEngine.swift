@@ -53,6 +53,9 @@ func clampedVolume(_ level: Double) -> Float? {
   var liveEdge: Double? { get }
   /// How far back a live item can seek from its live edge; nil for an on-demand item or none.
   var liveWindowSeconds: Double? { get }
+  /// How far behind the seekable window's end a live item plays at its live position; nil when
+  /// AVPlayer recommends none.
+  var offsetFromLive: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
   var isAirPlayRoute: Bool { get }
   /// 0–1.
