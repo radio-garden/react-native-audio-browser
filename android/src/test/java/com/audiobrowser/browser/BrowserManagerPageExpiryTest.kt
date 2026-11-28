@@ -2,8 +2,9 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.TestFixtures.transformableConfig
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -14,6 +15,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +27,7 @@ class BrowserManagerPageExpiryTest {
   private lateinit var server: MockWebServer
   private val requests = AtomicInteger()
   @Volatile private var cacheControl: List<String> = emptyList()
+  @Volatile private var status = 200
 
   @Before
   fun setup() {
@@ -33,7 +36,8 @@ class BrowserManagerPageExpiryTest {
       object : Dispatcher() {
         override fun dispatch(request: RecordedRequest): MockResponse {
           val count = requests.incrementAndGet()
-          val response = MockResponse().setBody("""{"path":"/page","title":"$count"}""")
+          val response =
+            MockResponse().setResponseCode(status).setBody("""{"path":"/page","title":"$count"}""")
           cacheControl.forEach { response.addHeader("Cache-Control", it) }
           return response
         }
@@ -47,13 +51,17 @@ class BrowserManagerPageExpiryTest {
   }
 
   private fun TestScope.browserManager(expired: MutableList<String>) =
-    BrowserManager(pageTimers = backgroundScope, now = { testScheduler.currentTime }).apply {
-      config =
-        BrowserConfig(
-          request = transformableConfig(baseUrl = server.url("/").toString().trimEnd('/'))
-        )
-      setOnPageExpired { expired += it }
-    }
+    BrowserManager(
+        pageContext = StandardTestDispatcher(testScheduler),
+        now = { testScheduler.currentTime },
+      )
+      .apply {
+        config =
+          BrowserConfig(
+            request = transformableConfig(baseUrl = server.url("/").toString().trimEnd('/'))
+          )
+        setOnPageExpired { expired += it }
+      }
 
   private fun TestScope.advance(ms: Long) {
     advanceTimeBy(ms)
@@ -61,16 +69,42 @@ class BrowserManagerPageExpiryTest {
   }
 
   @Test
-  fun `a page with a positive max-age expires and is refetched`() = runTest {
+  fun `a page with a positive max-age expires and is refetched behind the stale page`() = runTest {
     cacheControl = listOf("max-age=60")
     val expired = mutableListOf<String>()
+    val refreshed = CompletableDeferred<String>()
     val browserManager = browserManager(expired)
+    browserManager.setOnPageRefreshed { refreshed.complete(it) }
     browserManager.resolve("/page")
 
     advance(61_000)
 
     assertEquals(listOf("/page"), expired)
+    assertEquals("1", browserManager.resolve("/page").title)
+    assertEquals("/page", refreshed.await())
     assertEquals("2", browserManager.resolve("/page").title)
+  }
+
+  @Test
+  fun `a 5xx on refetch keeps the stale page, and a 404 drops it`() = runTest {
+    cacheControl = listOf("max-age=60")
+    val browserManager = browserManager(mutableListOf())
+    browserManager.resolve("/page")
+    advance(61_000)
+
+    status = 503
+    browserManager.refreshPage("/page")
+    assertEquals("1", browserManager.resolve("/page").title)
+    browserManager.refreshPage("/page")
+
+    status = 404
+    browserManager.refreshPage("/page")
+    try {
+      browserManager.resolve("/page")
+      fail("expected the dropped page to be fetched again")
+    } catch (e: HttpStatusException) {
+      assertEquals(404, e.statusCode)
+    }
   }
 
   @Test
@@ -84,7 +118,6 @@ class BrowserManagerPageExpiryTest {
     advance(61_000)
 
     assertEquals(emptyList<String>(), expired)
-    assertEquals(0, backgroundScope.coroutineContext[Job]!!.children.count { it.isActive })
   }
 
   @Test

@@ -2,8 +2,10 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.http.Fetched
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -17,9 +19,15 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class PageCacheTest {
+  /** A failure a refetch may survive, as a network error or a 5xx is. */
   private class Unreachable : Exception()
 
+  /** A failure that ends a page, as a 404 or an undecodable body does. */
+  private class NotFound : Exception()
+
   private val pushed = mutableListOf<String>()
+  private val refreshed = mutableListOf<String>()
+  private var online = true
 
   /** Time the device spent in deep sleep, which the clock counts and coroutine delays do not. */
   private var sleptMs = 0L
@@ -29,7 +37,10 @@ class PageCacheTest {
       maxSize = 2,
       scope = backgroundScope,
       now = { testScheduler.currentTime + sleptMs },
+      canRefetch = { online },
+      isTransient = { it is Unreachable },
       onExpired = { pushed += it },
+      onRefreshed = { refreshed += it },
     )
 
   private fun TestScope.advance(ms: Long) {
@@ -42,6 +53,12 @@ class PageCacheTest {
 
   private fun page(value: String, lifetimeMs: Long? = null, ageMs: Long = 0) =
     Fetched(value, lifetimeMs, ageMs)
+
+  /** [path] cached with a 60 s lifetime that has passed. */
+  private suspend fun TestScope.expiredPage(cache: PageCache<String>, path: String = "/a") {
+    cache.value(path) { page("first", 60_000) }
+    advance(61_000)
+  }
 
   private suspend inline fun <reified E : Throwable> assertThrows(block: suspend () -> Unit) {
     try {
@@ -64,16 +81,130 @@ class PageCacheTest {
   }
 
   @Test
-  fun anExpiredPageIsPushedThenRefetched() = runTest {
+  fun anExpiredPageIsPushedThenServedAtOnceAndRefetchedBehindIt() = runTest {
     val cache = cache()
     cache.value("/a") { page("first", 60_000) }
-
     advance(59_000)
-    assertEquals("first", cache.value("/a") { page("second", 60_000) })
-
+    assertEquals(emptyList<String>(), pushed)
     advance(2_000)
     assertEquals(listOf("/a"), pushed)
-    assertEquals("second", cache.value("/a") { page("second", 60_000) })
+
+    val gate = CompletableDeferred<Unit>()
+    assertEquals(
+      "first",
+      cache.value("/a") {
+        gate.await()
+        page("second", 60_000)
+      },
+    )
+    runCurrent()
+    assertEquals(emptyList<String>(), refreshed)
+
+    gate.complete(Unit)
+    runCurrent()
+    assertEquals(listOf("/a"), refreshed)
+    assertEquals("second", cache.value("/a") { page("third") })
+  }
+
+  @Test
+  fun everyVisitDuringARefetchSharesIt() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+    val gate = CompletableDeferred<Unit>()
+    var fetches = 0
+
+    repeat(3) {
+      cache.value("/a") {
+        fetches += 1
+        gate.await()
+        page("second", 60_000)
+      }
+    }
+    gate.complete(Unit)
+    runCurrent()
+
+    assertEquals(1, fetches)
+    assertEquals(listOf("/a"), refreshed)
+  }
+
+  @Test
+  fun firstVisitsMadeTogetherShareOneFetch() = runTest {
+    val cache = cache()
+    val gate = CompletableDeferred<Unit>()
+    var fetches = 0
+
+    val first = async {
+      cache.value("/a") {
+        fetches += 1
+        gate.await()
+        page("a")
+      }
+    }
+    runCurrent()
+    val second = async {
+      cache.value("/a") {
+        fetches += 1
+        page("b")
+      }
+    }
+    runCurrent()
+    gate.complete(Unit)
+
+    assertEquals("a", first.await())
+    assertEquals("a", second.await())
+    assertEquals(1, fetches)
+  }
+
+  @Test
+  fun refetchesRunOneAtATime() = runTest {
+    val cache = cache()
+    cache.value("/a") { page("a", 60_000) }
+    cache.value("/b") { page("b", 60_000) }
+    advance(61_000)
+    val gate = CompletableDeferred<Unit>()
+    val started = mutableListOf<String>()
+
+    cache.value("/a") {
+      started += "/a"
+      gate.await()
+      page("a2")
+    }
+    cache.value("/b") {
+      started += "/b"
+      page("b2")
+    }
+    runCurrent()
+    assertEquals(listOf("/a"), started)
+
+    gate.complete(Unit)
+    runCurrent()
+    assertEquals(listOf("/a", "/b"), started)
+  }
+
+  @Test
+  fun anExpiredPageVisitedOfflineIsServedWithNoRefetchAndNoRetry() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+    online = false
+    var fetches = 0
+
+    assertEquals(
+      "first",
+      cache.value("/a") {
+        fetches += 1
+        throw Unreachable()
+      },
+    )
+    advance(61_000)
+
+    assertEquals(0, fetches)
+    assertEquals(listOf("/a"), pushed)
+  }
+
+  @Test
+  fun aFirstFetchThatFailsThrows() = runTest {
+    val cache = cache()
+    assertThrows<Unreachable> { cache.value("/a") { throw Unreachable() } }
   }
 
   @Test
@@ -84,7 +215,6 @@ class PageCacheTest {
     advance(21_000)
 
     assertEquals(listOf("/a"), pushed)
-    assertEquals("second", cache.value("/a") { page("second") })
   }
 
   @Test
@@ -93,7 +223,9 @@ class PageCacheTest {
     cache.value("/a") { page("first", 60_000, ageMs = 100_000) }
 
     assertEquals(0, pendingTimers())
-    assertEquals("second", cache.value("/a") { page("second") })
+    assertEquals("first", cache.value("/a") { page("second") })
+    runCurrent()
+    assertEquals("second", cache.value("/a") { page("third") })
   }
 
   @Test
@@ -108,95 +240,102 @@ class PageCacheTest {
   }
 
   @Test
-  fun aFailedRefetchKeepsTheStalePageAndIsRetriedALifetimeLater() = runTest {
+  fun aRefetchThatFailsInTransitKeepsThePageUnrefreshedAndIsRetriedALifetimeLater() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
+    expiredPage(cache)
+
+    assertEquals("first", cache.value("/a") { throw Unreachable() })
+    runCurrent()
     advance(61_000)
 
-    val stale = cache.value("/a") { throw Unreachable() }
-    advance(61_000)
-
-    assertEquals("first", stale)
+    assertEquals(emptyList<String>(), refreshed)
     assertEquals(listOf("/a", "/a"), pushed)
   }
 
   @Test
   fun aPageStopsBeingPushedAfterItsLastRetryFails() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
-    advance(61_000)
+    expiredPage(cache)
 
     repeat(PageCache.MAX_RETRIES + 1) {
-      assertEquals("first", cache.value("/a") { throw Unreachable() })
+      cache.value("/a") { throw Unreachable() }
+      runCurrent()
       advance(61_000)
     }
 
     assertEquals(1 + PageCache.MAX_RETRIES, pushed.size)
     assertEquals(0, pendingTimers())
-    assertEquals("second", cache.value("/a") { page("second", 60_000) })
   }
 
   @Test
-  fun aVisitWhoseRefetchFailsAfterAnotherStoredAPageGetsThatPage() = runTest {
+  fun aPageWhoseRefetchIsRefusedIsDropped() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
+    expiredPage(cache)
+
+    assertEquals("first", cache.value("/a") { throw NotFound() })
+    runCurrent()
+
+    assertEquals(0, pendingTimers())
+    assertEquals(emptyList<String>(), refreshed)
+    assertThrows<NotFound> { cache.value("/a") { throw NotFound() } }
+  }
+
+  @Test
+  fun aCancelledRefetchLeavesThePageAsItWas() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+
+    cache.value("/a") { throw CancellationException() }
+    runCurrent()
     advance(61_000)
 
-    val failed =
-      cache.value("/a") {
-        cache.value("/a") { page("fresh", 60_000) }
-        throw Unreachable()
-      }
-    advance(59_000)
-
-    assertEquals("fresh", failed)
-    assertEquals("fresh", cache.value("/a") { throw Unreachable() })
     assertEquals(listOf("/a"), pushed)
+    assertEquals("first", cache.value("/a") { throw Unreachable() })
   }
 
   @Test
   fun aFailedRefetchKeepsAnUpdateMadeMeanwhile() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
-    advance(61_000)
+    expiredPage(cache)
 
-    val stale =
-      cache.value("/a") {
-        cache.update { "restamped" }
-        throw Unreachable()
-      }
+    cache.value("/a") {
+      cache.update { "restamped" }
+      throw Unreachable()
+    }
+    runCurrent()
 
-    assertEquals("restamped", stale)
     assertEquals("restamped", cache.value("/a") { throw Unreachable() })
   }
 
   @Test
-  fun aStalePageRemovedDuringAFailedRefetchIsNotReturned() = runTest {
+  fun aStalePageRemovedDuringAFailedRefetchIsNotKept() = runTest {
     for (clearingAll in listOf(true, false)) {
       val cache = cache()
-      cache.value("/a") { page("first", 60_000) }
-      advance(61_000)
+      expiredPage(cache)
 
-      assertThrows<Unreachable> {
-        cache.value("/a") {
-          if (clearingAll) cache.clear() else cache.remove("/a")
-          throw Unreachable()
-        }
+      cache.value("/a") {
+        if (clearingAll) cache.clear() else cache.remove("/a")
+        throw Unreachable()
       }
+      runCurrent()
+
+      assertEquals("new", cache.value("/a") { page("new") })
     }
   }
 
   @Test
-  fun aCancelledRefetchThrowsAndKeepsNoRetry() = runTest {
-    val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
-    advance(61_000)
+  fun aFetchThatOutlivesARemovalCachesNothing() = runTest {
+    for (clearingAll in listOf(true, false)) {
+      val cache = cache()
+      val old =
+        cache.value("/a") {
+          if (clearingAll) cache.clear() else cache.remove("/a")
+          page("old")
+        }
 
-    assertThrows<CancellationException> { cache.value("/a") { throw CancellationException() } }
-    advance(61_000)
-
-    assertEquals(listOf("/a"), pushed)
-    assertEquals(0, pendingTimers())
+      assertEquals("old", old)
+      assertEquals("new", cache.value("/a") { page("new") })
+    }
   }
 
   @Test
@@ -217,9 +356,9 @@ class PageCacheTest {
   @Test
   fun aReplacedPageIsPushedAtItsOwnExpiryOnly() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000) }
-    advance(61_000)
+    expiredPage(cache)
     cache.value("/a") { page("second", 60_000) }
+    runCurrent()
     pushed.clear()
 
     assertEquals(1, pendingTimers())
@@ -263,21 +402,5 @@ class PageCacheTest {
 
     assertEquals(listOf("/a"), pushed)
     assertEquals("restamped", cache.value("/a") { throw Unreachable() })
-  }
-
-  @Test
-  fun aFetchThatOutlivesARemovalCachesNothing() = runTest {
-    val cache = cache()
-    cache.value("/a") {
-      cache.remove("/a")
-      page("old")
-    }
-    cache.value("/b") {
-      cache.clear()
-      page("old")
-    }
-
-    assertEquals("new", cache.value("/a") { page("new") })
-    assertEquals("new", cache.value("/b") { page("new") })
   }
 }

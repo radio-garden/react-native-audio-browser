@@ -608,14 +608,18 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   }
 
   /**
-   * Tells controllers subscribed to [path] to re-query it, once its cached page expired. Android
-   * Auto stays subscribed to every level it visited until it disconnects, so this reaches pages it
-   * no longer shows too. Offline it does nothing: a reconnect re-queries every subscribed path.
+   * Whether a controller is subscribed to [path]. Android Auto stays subscribed to every level it
+   * visited until it disconnects, so this holds for pages it no longer shows too. Safe from any
+   * thread.
+   */
+  fun isSubscribed(path: String) = synchronized(this) { path in parentIdSubscriptions }
+
+  /**
+   * Tells controllers subscribed to [path] to re-query it, once a refetch replaced its cached page.
    * Safe from any thread.
    */
-  fun notifyPageExpired(path: String) {
-    if (!player.networkMonitor.isOnline.value) return
-    if (synchronized(this) { path in parentIdSubscriptions }) notifyContentChanged(path)
+  fun notifyPageRefreshed(path: String) {
+    if (isSubscribed(path)) notifyContentChanged(path)
   }
 
   /** Pairs with AudioBrowser.invalidateAllContent(), which clears the content cache first. */

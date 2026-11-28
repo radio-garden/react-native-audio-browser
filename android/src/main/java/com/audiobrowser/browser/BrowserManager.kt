@@ -37,12 +37,12 @@ import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -54,7 +54,7 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 class BrowserManager(
-  pageTimers: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+  pageContext: CoroutineContext = Dispatchers.Default,
   now: () -> Long = SystemClock::elapsedRealtime,
 ) {
   private val router = SimpleRouter()
@@ -69,6 +69,10 @@ class BrowserManager(
   private var onTabsChanged: ((Array<Track>) -> Unit)? = null
   private var onArtworkRegistriesCleared: (() -> Unit)? = null
   private var onPageExpired: ((String) -> Unit)? = null
+  private var onPageRefreshed: ((String) -> Unit)? = null
+
+  /** Whether an expired page may be refetched now; offline it is served as it is. */
+  @Volatile var isOnline: () -> Boolean = { true }
 
   private var path: String = "/"
     set(value) {
@@ -103,10 +107,18 @@ class BrowserManager(
   // Keyed by id, path and src (see cacheTrack), so one track takes up to three entries.
   private val trackCache = LruCache<String, Track>(3000)
 
-  private val pageTimers =
-    CoroutineScope(pageTimers.coroutineContext + SupervisorJob(pageTimers.coroutineContext[Job]))
+  private val pageScope = CoroutineScope(SupervisorJob() + pageContext)
   private val contentCache =
-    PageCache<ResolvedTrack>(20, this.pageTimers, now) { path -> onPageExpired?.invoke(path) }
+    PageCache<ResolvedTrack>(
+      maxSize = 20,
+      scope = pageScope,
+      now = now,
+      canRefetch = { isOnline() },
+      // A network error or a 5xx keeps a stale page; a 404 or an undecodable body drops it.
+      isTransient = { it is NetworkException || it is HttpStatusException && it.statusCode >= 500 },
+      onExpired = { path -> onPageExpired?.invoke(path) },
+      onRefreshed = { path -> onPageRefreshed?.invoke(path) },
+    )
 
   // Moves on every clearContentCache, so a search or tabs query that outlives one stores nothing;
   // separate from layerGeneration, which also moves on every path change. Car browses run on IO
@@ -1009,9 +1021,23 @@ class BrowserManager(
     onArtworkRegistriesCleared = callback
   }
 
-  /** Stops every page's expiry timer; nothing is pushed after. */
+  /** Stops every page fetch and expiry timer; nothing is pushed after. */
   fun dispose() {
-    pageTimers.cancel()
+    pageScope.cancel()
+  }
+
+  /**
+   * Refetches the page [path] resolves to when it has expired, and returns once that settles;
+   * [setOnPageRefreshed]'s callback tells when it replaced the page.
+   */
+  suspend fun refreshPage(path: String) {
+    val normalizedPath = BrowserPathHelper.stripTrackId(path)
+    contentCache.revalidate(normalizedPath) { resolveUncached(normalizedPath) }
+  }
+
+  /** Called with a cached page's path once a refetch replaced it. */
+  fun setOnPageRefreshed(callback: (String) -> Unit) {
+    onPageRefreshed = callback
   }
 
   /** Called with a cached page's path once the lifetime its response stated has passed. */

@@ -43,16 +43,10 @@ class HttpFreshnessTest {
   }
 
   @Test
-  fun anInvalidMaxAgeIsStale() {
-    listOf(
-        "max-age=soon",
-        "max-age=inf",
-        "max-age=1e999",
-        "max-age=-5",
-        "max-age=",
-        "max-age=soon, max-age=60",
-      )
-      .forEach { assertEquals(it, HttpFreshness.Revalidate, freshness("Cache-Control" to it)) }
+  fun anInvalidMaxAgeStatesNothing() {
+    listOf("max-age=soon", "max-age=inf", "max-age=1e999", "max-age=-5", "max-age=").forEach {
+      assertEquals(it, HttpFreshness.Unstated, freshness("Cache-Control" to it))
+    }
   }
 
   @Test
@@ -61,8 +55,9 @@ class HttpFreshnessTest {
   }
 
   @Test
-  fun theFirstOfDuplicateMaxAgesWins() {
-    assertEquals(maxAge(60), freshness("Cache-Control" to "max-age=60, max-age=600"))
+  fun theFirstValidOfDuplicateMaxAgesWins() {
+    listOf("max-age=soon, max-age=60", "max-age=60, max-age=soon", "max-age=60, max-age=600")
+      .forEach { assertEquals(it, maxAge(60), freshness("Cache-Control" to it)) }
   }
 
   @Test

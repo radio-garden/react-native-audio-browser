@@ -225,7 +225,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         connectedService?.player?.notifyTabsChanged()
       }
       setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
-      setOnPageExpired { path -> connectedService?.player?.notifyPageExpired(path) }
+      isOnline = { connectedService?.player?.networkMonitor?.isOnline?.value ?: true }
+      setOnPageExpired { path ->
+        if (connectedService?.player?.isSubscribed(path) == true) {
+          mainScope.launch { refreshPage(path) }
+        }
+      }
+      setOnPageRefreshed { path -> connectedService?.player?.notifyPageRefreshed(path) }
     }
 
   private val systemVolumeMonitor = SystemVolumeMonitor(context)

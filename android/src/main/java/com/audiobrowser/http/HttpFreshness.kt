@@ -2,13 +2,10 @@ package com.audiobrowser.http
 
 /** What a response's `Cache-Control` and `Age` headers say about reusing it. */
 sealed interface HttpFreshness {
-  /** No `max-age`, `no-cache` or `no-store`. */
+  /** No valid `max-age`, and no `no-cache` or `no-store`. */
   object Unstated : HttpFreshness
 
-  /**
-   * `no-cache`, `no-store`, or a `max-age` that is 0 or invalid: reuse only after asking again (RFC
-   * 9111 §4.2.1 treats an invalid one as stale).
-   */
+  /** `no-cache`, `no-store`, or `max-age=0`: reuse only after asking again. */
   object Revalidate : HttpFreshness
 
   /** A positive `max-age`, and the `Age` the response already had. */
@@ -29,8 +26,8 @@ sealed interface HttpFreshness {
         when {
           // `no-cache="field"` restricts reuse of that field only, not of the response.
           name == "no-cache" && value == null || name == "no-store" -> return Revalidate
-          // Of duplicates, the first.
-          name == "max-age" -> maxAge = maxAge ?: (value?.let(::deltaSeconds) ?: return Revalidate)
+          // Of duplicates, the first valid one.
+          name == "max-age" -> maxAge = maxAge ?: value?.let(::deltaSeconds)
         }
       }
       if (maxAge == null) return Unstated

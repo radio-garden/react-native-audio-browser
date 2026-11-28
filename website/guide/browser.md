@@ -546,9 +546,13 @@ The tree isn't static — content changes, languages switch, environments move. 
 
 `notifyContentChanged(path)` refreshes a single path in place — external controllers re-fetch just that page. `invalidateAllContent()` clears every cache and re-resolves all visible surfaces (and re-runs your [resolvers](#resolvers-values-that-change-rarely)) — this is what you call after a language or domain switch.
 
-A page can also expire. When a page fetched over HTTP comes with a positive `Cache-Control: max-age`, iOS and Android keep it that long (minus `Age`). Then CarPlay re-fetches it in place while it shows it, and Android Auto while it is subscribed to it, which it stays for every page it visited until it disconnects. Any other surface re-fetches it on its next visit.
+A page can also expire. When a page fetched over HTTP comes with a positive `Cache-Control: max-age`, iOS and Android keep it that long (minus `Age`).
 
-A failed re-fetch keeps the old page on screen. Any other response is cached until one of the tools above clears it. The web keeps no page cache.
+Then CarPlay re-fetches it in place while it shows it, and Android Auto while it is subscribed to it, which it stays for every page it visited until it disconnects. Any other surface re-fetches it on its next visit.
+
+A visit to an expired page gets it at once while it is re-fetched behind it. A re-fetch that fails on the network or with a 5xx keeps the old page; a 404 or a body that doesn't decode drops it.
+
+Any other response is cached until one of the tools above clears it. The web keeps no page cache.
 
 `configureBrowser` replaces everything wholesale and re-runs initial navigation: the in-app browser opens `path` (or the first tab) again. On web it opens the first tab only when `tabs` is an array, and `/` otherwise. CarPlay and Android Auto keep their place; if the tabs changed, CarPlay rebuilds its tab bar once the user is back at the root.
 
