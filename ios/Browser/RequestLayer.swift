@@ -116,8 +116,8 @@ enum RequestLayer {
   /// A layer of a media request that `RequestLayer.media` skipped.
   enum MediaLayer { case request, media }
 
-  /// A media request, built in order: `requestLayer` over `base`; what `resolve` produces;
-  /// `mediaLayer`; then the resolved config over that. A layer that throws anything but a
+  /// A media request, built in order: `requestLayer` over `base`; `mediaLayer`; then what
+  /// `resolve` produces over that. A layer that throws anything but a
   /// cancellation is skipped, leaving the config it was handed, and reported to `onSkip`.
   nonisolated(nonsending) static func media<C: RequestFields>(
     over base: C,
@@ -127,8 +127,8 @@ enum RequestLayer {
     onSkip: (MediaLayer, any Error) -> Void,
   ) async throws -> C {
     let request = try await skipping(.request, requestLayer, over: base, onSkip: onSkip)
-    let resolved = await resolve()
     let merged = try await skipping(.media, mediaLayer, over: request, onSkip: onSkip)
+    let resolved = await resolve()
     return resolved.map { merge(merged, $0) } ?? merged
   }
 

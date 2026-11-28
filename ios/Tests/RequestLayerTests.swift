@@ -163,7 +163,7 @@ struct RequestLayerTests {
       resolve: { order.append("resolve"); return Config(userAgent: "resolved") },
       mediaLayer: { order.append("media"); return RequestLayer.applyStatic(Config(baseUrl: "https://cdn", userAgent: "media"), to: $0) },
     )
-    #expect(order == ["request", "resolve", "media"])
+    #expect(order == ["request", "media", "resolve"])
     #expect(result == Config(path: "/stream.mp3", baseUrl: "https://cdn", headers: ["A": "1"], userAgent: "resolved"))
   }
 
@@ -205,10 +205,12 @@ struct RequestLayerTests {
     #expect(result == Config(path: "/stream.mp3", baseUrl: "https://api", headers: ["Auth": "t"], query: ["sig": "s"], userAgent: "shared"))
   }
 
-  @Test func aCancelledMediaLayerStaysACancellation() async {
+  @Test func aCancelledMediaLayerStaysACancellationAndRunsNoResolve() async {
+    var resolved = false
     await #expect(throws: CancellationError.self) {
-      try await media(mediaLayer: { _ in throw CancellationError() })
+      try await media(resolve: { resolved = true; return nil }, mediaLayer: { _ in throw CancellationError() })
     }
+    #expect(!resolved)
   }
 
   // MARK: - artwork
