@@ -33,8 +33,8 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     onPlaybackInterval()
   }
 
-  public func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
-    onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady: playWhenReady))
+  public func playerDidChangePlayWhenReady(_: Bool) {
+    stagedPlayerState.announce()
   }
 
   public func playerDidChangePlayingState(_ state: PlayingState) {
@@ -50,9 +50,8 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
     queueChangedEmitter.emit(tracks)
   }
 
-  public func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
-    onPlaybackRepeatModeChanged(event)
-    repeatModeChangedEmitter.emit(event)
+  public func playerDidChangeRepeatMode(_: RepeatModeChangedEvent) {
+    stagedPlayerState.announce()
   }
 
   public func playerDidChangeShuffleEnabled(_ enabled: Bool) {
@@ -87,19 +86,19 @@ extension HybridAudioBrowser: PlayerCallbacks, AVPlayerEngineCallbacks {
   }
 
   var remoteIsPlaying: Bool {
-    player?.remoteIsPlaying == true
+    stagedPlayerState.isPlaying()
   }
 
   public func remotePlay() {
-    dispatchRemote(handler: handleRemotePlay, report: onRemotePlay) { player?.play() }
+    dispatchRemote(handler: handleRemotePlay, report: onRemotePlay) { stagedPlayerState.setPlayWhenReady(true) }
   }
 
   public func remotePause() {
-    dispatchRemote(handler: handleRemotePause, report: onRemotePause) { player?.pause() }
+    dispatchRemote(handler: handleRemotePause, report: onRemotePause) { stagedPlayerState.setPlayWhenReady(false) }
   }
 
   public func remoteStop() {
-    dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { player?.stopFromRemote() }
+    dispatchRemote(handler: handleRemoteStop, report: onRemoteStop) { stagedPlayerState.stopFromRemote() }
   }
 
   public func remoteNext() {

@@ -593,7 +593,7 @@ export type SetupPlayerOptions = Pick<
    * `true` so the first queued track starts playing the moment it loads.
    *
    * Interleaves with `setPlayWhenReady` by strict last-write-wins, whether or not the
-   * player exists yet.
+   * player exists yet, and on iOS while a re-setup that nobody awaited is still waiting.
    *
    * @default false
    */
@@ -601,7 +601,8 @@ export type SetupPlayerOptions = Pick<
 
   /**
    * The initial repeat mode, applied natively as soon as the player exists. Interleaves with
-   * `setRepeatMode` by strict last-write-wins, whether or not the player exists yet.
+   * `setRepeatMode` by strict last-write-wins, whether or not the player exists yet, and on iOS
+   * while a re-setup that nobody awaited is still waiting.
    *
    * @default 'off'
    */
