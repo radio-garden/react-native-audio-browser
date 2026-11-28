@@ -120,6 +120,24 @@ class SkipInPlaceTest {
   }
 
   @Test
+  fun `a stream without a length reads as live and unseekable`() {
+    playUntilReady(streamWithoutLength())
+
+    assertTrue(player.isCurrentItemLive)
+    assertFalse(player.exoPlayer.isCurrentMediaItemSeekable)
+  }
+
+  @Test
+  fun `a seek to the live edge of a live stream the track doesn't declare live does nothing`() {
+    playUntilReady(streamWithoutLength())
+
+    player.seekToLiveEdge()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(emptyList<String>(), engineEvents)
+  }
+
+  @Test
   fun `a skip to the paused live item rejoins its live edge`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
     player.pause()

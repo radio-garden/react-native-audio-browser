@@ -1229,9 +1229,9 @@ internal constructor(
   }
 
   /**
-   * No-op unless the track declares `live`; ExoPlayer never marks progressive ICY radio live. A
-   * stream with a live window seeks to its edge; anything else reconnects, which for a non-seekable
-   * stream is the live edge.
+   * No-op unless the track declares `live`, the contract iOS keeps too, though Media3 also reads a
+   * progressive ICY stream without a length as live. A stream with a live window seeks to its edge;
+   * anything else reconnects, which for a non-seekable stream is the live edge.
    */
   fun seekToLiveEdge() {
     if (currentTrack?.live != true || liveStreamParked) return
