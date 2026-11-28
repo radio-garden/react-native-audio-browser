@@ -3,6 +3,7 @@ package com.audiobrowser.browser
 import com.audiobrowser.TestFixtures.transformableConfig
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -69,6 +70,31 @@ class BrowserManagerPageExpiryTest {
     advance(61_000)
 
     assertEquals(listOf("/page"), expired)
+    assertEquals("2", browserManager.resolve("/page").title)
+  }
+
+  @Test
+  fun `a disposed manager pushes no page`() = runTest {
+    cacheControl = listOf("max-age=60")
+    val expired = mutableListOf<String>()
+    val browserManager = browserManager(expired)
+    browserManager.resolve("/page")
+
+    browserManager.dispose()
+    advance(61_000)
+
+    assertEquals(emptyList<String>(), expired)
+    assertEquals(0, backgroundScope.coroutineContext[Job]!!.children.count { it.isActive })
+  }
+
+  @Test
+  fun `a refresh refetches a page that has not expired`() = runTest {
+    cacheControl = listOf("max-age=60")
+    val browserManager = browserManager(mutableListOf())
+    browserManager.navigate("/page")
+
+    browserManager.refresh()
+
     assertEquals("2", browserManager.resolve("/page").title)
   }
 

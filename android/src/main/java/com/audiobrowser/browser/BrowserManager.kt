@@ -42,9 +42,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -101,13 +103,17 @@ class BrowserManager(
   // Keyed by id, path and src (see cacheTrack), so one track takes up to three entries.
   private val trackCache = LruCache<String, Track>(3000)
 
-  // Its generation also guards the last search and the tabs, separate from layerGeneration, which
-  // also moves on every path change. Car browses run on IO threads and the clear on the JS thread:
-  // a search or tabs check and its write hold [cacheLock], as clearContentCache does around the
-  // clear; the pages themselves are guarded by the cache's own lock.
+  private val pageTimers =
+    CoroutineScope(pageTimers.coroutineContext + SupervisorJob(pageTimers.coroutineContext[Job]))
   private val contentCache =
-    PageCache<ResolvedTrack>(20, pageTimers, now) { path -> onPageExpired?.invoke(path) }
-  private var tabsGeneration = -1
+    PageCache<ResolvedTrack>(20, this.pageTimers, now) { path -> onPageExpired?.invoke(path) }
+
+  // Moves on every clearContentCache, so a search or tabs query that outlives one stores nothing;
+  // separate from layerGeneration, which also moves on every path change. Car browses run on IO
+  // threads and the clear on the JS thread: a search or tabs check and its write hold [cacheLock],
+  // as clearContentCache does around the clear.
+  @Volatile private var clearEpoch = 0
+  private var tabsEpoch = -1
   private val cacheLock = Any()
 
   // Query and results stored as one pair, so a concurrent reader never matches one query with
@@ -546,20 +552,15 @@ class BrowserManager(
    * false, a track the cache already holds keeps its entry, so `contextualPathFor` still names the
    * page it was browsed on.
    */
-  suspend fun resolve(
-    path: String,
-    useCache: Boolean = true,
-    rekey: Boolean = true,
-  ): ResolvedTrack {
-    Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
+  suspend fun resolve(path: String, rekey: Boolean = true): ResolvedTrack {
+    Timber.d("=== RESOLVE: path='$path' ===")
 
     val normalizedPath = BrowserPathHelper.stripTrackId(path)
     if (normalizedPath != path) {
       Timber.d("Stripped __trackId from contextual path: '$normalizedPath'")
     }
 
-    val resolvedTrack =
-      contentCache.value(normalizedPath, useCache) { resolveUncached(normalizedPath) }
+    val resolvedTrack = contentCache.value(normalizedPath) { resolveUncached(normalizedPath) }
     // Re-keyed on a cache hit too: contextualPathFor must see the most recently browsed container.
     cacheChildren(resolvedTrack, rekey)
 
@@ -583,6 +584,7 @@ class BrowserManager(
   fun clearContentCache() {
     synchronized(cacheLock) {
       contentCache.clear()
+      clearEpoch += 1
       lastSearch = null
     }
     layerGeneration += 1
@@ -836,7 +838,7 @@ class BrowserManager(
 
     try {
       contentCache.remove(currentPath)
-      val content = resolve(currentPath, useCache = false)
+      val content = resolve(currentPath)
 
       if (navigationId != currentNavigationId) return false
       this.content = content
@@ -916,7 +918,7 @@ class BrowserManager(
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
 
     val searchPath = BrowserPathHelper.createSearchPath(params.query)
-    val generation = contentCache.generation
+    val epoch = clearEpoch
 
     try {
       // Search results skip validateTrack, so one without a path or src is dropped here:
@@ -959,7 +961,7 @@ class BrowserManager(
         )
 
       synchronized(cacheLock) {
-        if (generation == contentCache.generation) lastSearch = params.query to searchResults
+        if (epoch == clearEpoch) lastSearch = params.query to searchResults
       }
 
       cacheChildren(searchResolvedTrack)
@@ -1007,6 +1009,11 @@ class BrowserManager(
     onArtworkRegistriesCleared = callback
   }
 
+  /** Stops every page's expiry timer; nothing is pushed after. */
+  fun dispose() {
+    pageTimers.cancel()
+  }
+
   /** Called with a cached page's path once the lifetime its response stated has passed. */
   fun setOnPageExpired(callback: (String) -> Unit) {
     onPageExpired = callback
@@ -1017,8 +1024,8 @@ class BrowserManager(
    * tabs stay until new ones resolve.
    */
   suspend fun queryTabs(): Array<Track> {
-    val generation = contentCache.generation
-    synchronized(cacheLock) { tabs.takeIf { tabsGeneration == generation } }
+    val epoch = clearEpoch
+    synchronized(cacheLock) { tabs.takeIf { tabsEpoch == epoch } }
       ?.let {
         return it
       }
@@ -1033,9 +1040,9 @@ class BrowserManager(
     }
 
     synchronized(cacheLock) {
-      if (generation == contentCache.generation) {
+      if (epoch == clearEpoch) {
         this.tabs = tabs
-        tabsGeneration = generation
+        tabsEpoch = epoch
       }
     }
     return tabs
@@ -1305,7 +1312,7 @@ class BrowserManager(
 
   /**
    * The body of [httpRequest]'s response decoded as [T], which [validate] may still refuse by
-   * throwing, with [HttpFreshness.positiveLifetimeMs] of the response.
+   * throwing, kept for the response's [HttpFreshness].
    *
    * @throws HttpStatusException for a non-2xx response, or a 2xx body that is not [expected]
    * @throws NetworkException when the request fails in transit; a request [HttpClient] refuses (an
@@ -1330,7 +1337,7 @@ class BrowserManager(
     return try {
       Fetched(
         json.decodeFromString<T>(httpResponse.body).also(validate),
-        HttpFreshness.positiveLifetimeMs(httpResponse.headers),
+        HttpFreshness.of(httpResponse.headers),
       )
     } catch (e: Exception) {
       throw HttpStatusException(

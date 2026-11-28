@@ -137,6 +137,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     carConnectionTarget.compareAndSet(onCarConnectedChanged, null)
 
     dropStaleJSCallbacks()
+    browserManager.dispose()
 
     handler.post {
       connectedService?.let { service ->

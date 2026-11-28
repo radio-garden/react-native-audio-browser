@@ -608,8 +608,10 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   }
 
   /**
-   * Tells controllers subscribed to [path] to re-query it, once its cached page expired. Offline it
-   * does nothing: a reconnect re-queries every subscribed path. Safe from any thread.
+   * Tells controllers subscribed to [path] to re-query it, once its cached page expired. Android
+   * Auto stays subscribed to every level it visited until it disconnects, so this reaches pages it
+   * no longer shows too. Offline it does nothing: a reconnect re-queries every subscribed path.
+   * Safe from any thread.
    */
   fun notifyPageExpired(path: String) {
     if (!player.networkMonitor.isOnline.value) return
