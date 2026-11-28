@@ -69,9 +69,13 @@ class CoilBitmapLoaderDecodeTest {
   }
 
   @Test
-  fun `a picture larger than the size hint is decoded downsampled`() = runTest {
-    assertEquals(512, decode(png(2048)).get().width)
-  }
+  fun `a picture larger than the size hint is decoded to fit it, keeping its aspect ratio`() =
+    runTest {
+      val bitmap = decode(png(3000, 1500)).get()
+
+      assertEquals(512, bitmap.width)
+      assertEquals(256, bitmap.height)
+    }
 
   @Test
   fun `a picture smaller than the size hint is decoded at its own size`() = runTest {

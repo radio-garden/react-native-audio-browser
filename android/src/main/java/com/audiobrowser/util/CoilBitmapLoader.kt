@@ -9,6 +9,7 @@ import androidx.media3.common.util.UnstableApi
 import coil3.ImageLoader
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.ImageSource
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.guava.future
@@ -84,22 +85,26 @@ class CoilBitmapLoader(
       }
     }
 
-  /** Decodes at the largest power-of-two subsample that keeps both sides at least [sizePixels]. */
+  /** Decodes to fit [sizePixels], aspect kept, never upscaled; null if [data] is no picture. */
   private fun decodeSampled(data: ByteArray, sizePixels: Int): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+    val longerSide = maxOf(bounds.outWidth, bounds.outHeight)
     var sampleSize = 1
-    while (
-      bounds.outWidth / (sampleSize * 2) >= sizePixels &&
-        bounds.outHeight / (sampleSize * 2) >= sizePixels
-    ) {
-      sampleSize *= 2
+    while (longerSide / (sampleSize * 2) >= sizePixels) sampleSize *= 2
+    val sampled =
+      BitmapFactory.decodeByteArray(
+        data,
+        0,
+        data.size,
+        BitmapFactory.Options().apply { inSampleSize = sampleSize },
+      ) ?: return null
+    val scale = sizePixels.toFloat() / maxOf(sampled.width, sampled.height)
+    if (scale >= 1f) return sampled
+    val width = (sampled.width * scale).roundToInt().coerceAtLeast(1)
+    val height = (sampled.height * scale).roundToInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(sampled, width, height, true).also {
+      if (it !== sampled) sampled.recycle()
     }
-    return BitmapFactory.decodeByteArray(
-      data,
-      0,
-      data.size,
-      BitmapFactory.Options().apply { inSampleSize = sampleSize },
-    )
   }
 }
