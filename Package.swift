@@ -97,6 +97,7 @@ let package = Package(
         "Util/JSPromiseRejection.swift",
         "Util/LRUCache.swift",
         "Util/PageCache.swift",
+        "Util/Fetched.swift",
         "Util/HttpFreshness.swift",
         "Util/LocalArtwork.swift",
         "Util/ArtworkProcessing.swift",
