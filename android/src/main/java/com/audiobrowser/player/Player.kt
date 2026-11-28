@@ -940,9 +940,9 @@ internal constructor(
   }
 
   /**
-   * Playback that had started waits for data. As iOS's `isStalled`, except that a seek's buffering
-   * isn't a stall, nor is waiting at an on-demand item's end for the next, which ExoPlayer reports
-   * before the transition.
+   * Playback that had started waits for data. As iOS's `isStalled`, except that waiting at an
+   * on-demand item's end for the next, which ExoPlayer reports before the transition, isn't a
+   * stall.
    */
   internal val isStalled: Boolean
     get() =

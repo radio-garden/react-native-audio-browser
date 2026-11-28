@@ -57,6 +57,8 @@ func clampedVolume(_ level: Double) -> Float? {
   /// AVPlayer recommends none.
   var offsetFromLive: Double? { get }
   var isPlaybackLikelyToKeepUp: Bool { get }
+  /// AVPlayer's own `timeControlStatus` is `.playing` now, ahead of the event that reports it.
+  var isPlaying: Bool { get }
   var isAirPlayRoute: Bool { get }
   /// 0–1.
   var volume: Float { get set }
