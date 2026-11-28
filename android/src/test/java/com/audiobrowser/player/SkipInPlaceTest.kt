@@ -246,6 +246,26 @@ class SkipInPlaceTest {
   }
 
   @Test
+  fun `a controller's queue with the same ids and a new src replaces the playing live item`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    val renewed =
+      listOf(
+        TestFixtures.track(title = "0", id = "0", src = "$src?renewed"),
+        TestFixtures.track(title = "1", id = "1", src = "https://s/1.mp3"),
+      )
+
+    player.forwardingPlayer.setMediaItems(
+      renewed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+
+    assertEquals("$src?renewed", player.currentTrack?.src)
+  }
+
+  @Test
   fun `a controller's other queue at the playing live item's index replaces it`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
     val others =
@@ -286,7 +306,11 @@ class SkipInPlaceTest {
     )
   }
 
-  private fun play(src: String, retryPolicy: RetryPolicy = RetryPolicy.Default) {
+  private fun play(
+    src: String,
+    retryPolicy: RetryPolicy = RetryPolicy.Default,
+    ids: List<String?> = listOf(null, null),
+  ) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.exoPlayer.trackSelectionParameters =
@@ -296,8 +320,8 @@ class SkipInPlaceTest {
         .build()
     player.setQueue(
       arrayOf(
-        TestFixtures.track(title = "0", src = src),
-        TestFixtures.track(title = "1", src = "https://s/1.mp3"),
+        TestFixtures.track(title = "0", id = ids[0], src = src),
+        TestFixtures.track(title = "1", id = ids[1], src = "https://s/1.mp3"),
       )
     )
     player.play()

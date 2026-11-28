@@ -262,7 +262,12 @@ internal class InterceptingPlayer(
     if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
   }
 
+  // The same ids can carry another src or metadata: only an equal Track at each position is the
+  // same queue.
   private fun isCurrentQueue(mediaItems: List<MediaItem>): Boolean =
     mediaItems.size == mediaItemCount &&
-      mediaItems.withIndex().all { (i, item) -> item.mediaId == getMediaItemAt(i).mediaId }
+      mediaItems.withIndex().all { (i, item) ->
+        val held = getMediaItemAt(i)
+        item.mediaId == held.mediaId && item.localConfiguration?.tag == held.localConfiguration?.tag
+      }
 }
