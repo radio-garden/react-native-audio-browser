@@ -17,9 +17,8 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
+  // Its `generation` also guards the last search and the tabs.
   private let contentCache = PageCache<ResolvedTrack>(maxSize: 20)
-  // Moves on `clearContent`, so a search or tabs query that outlives one keeps nothing.
-  private var contentGeneration = 0
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -169,7 +168,6 @@ final class BrowserManager {
   /// Clears the cached pages and the last search; a fetch in flight caches nothing.
   func clearContent() {
     contentCache.clear()
-    contentGeneration &+= 1
     lastSearchKey = nil
     lastSearchResults = nil
   }
@@ -202,10 +200,10 @@ final class BrowserManager {
       return makeSearchResult(query: query, results: results)
     }
 
-    let generation = contentGeneration
+    let generation = contentCache.generation
     let results = try await pages.search(params)
 
-    if generation == contentGeneration {
+    if generation == contentCache.generation {
       lastSearchKey = cacheKey
       lastSearchResults = results
     }
@@ -255,9 +253,9 @@ final class BrowserManager {
   // MARK: - Tabs
 
   func queryTabs() async throws -> [Track] {
-    let generation = contentGeneration
+    let generation = contentCache.generation
     let tabs = try await pages.tabs()
-    if generation == contentGeneration { self.tabs = tabs }
+    if generation == contentCache.generation { self.tabs = tabs }
     return tabs ?? []
   }
 

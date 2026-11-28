@@ -81,8 +81,10 @@ final class CarPlaySession {
         guard let content else { return }
         self?.refreshDisplayedTemplates(for: content.path, with: content)
       },
+      // A page not on screen refetches on its next visit instead.
       browserManager.pageExpired.subscribeOnMain { [weak self] path in
-        self?.spawn { await $0.refreshContent(for: path) }
+        guard let self, displayedListTemplates().contains(where: { $0.contentPath == path }) else { return }
+        spawn { await $0.refreshContent(for: path) }
       },
       audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.playerOptionsChanged() },
       audioBrowser.externalContentChangedEmitter.subscribeOnMain { [weak self] path in

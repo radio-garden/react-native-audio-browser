@@ -21,10 +21,10 @@ final class PageResolver {
   /// response states (nil for a callback or static page). A path no route matches is fetched
   /// through the request and browse layers, and throws `contentNotFound` when they set no base
   /// URL. The page carries `sections`, never `children` (ADR 0010).
-  func resolve(_ path: String) async throws -> (page: ResolvedTrack, lifetime: TimeInterval?) {
+  func resolve(_ path: String) async throws -> Fetched<ResolvedTrack> {
     let routeEntry = config.routes.flatMap { SimpleRouter.browseRoute(for: path, in: $0) }
 
-    let (resolvedTrack, lifetime) = if let (entry, routeMatch) = routeEntry {
+    let fetched = if let (entry, routeMatch) = routeEntry {
       try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
     } else {
       try await requests.fetchPage(
@@ -32,22 +32,23 @@ final class PageResolver {
       )
     }
 
+    let resolvedTrack = fetched.value
     if let sections = resolvedTrack.normalizedSections {
       // Before the sections transform, while each level is still attributable (ADR 0011).
       InertStyleDiagnostic.warn(path: path, pageStyle: resolvedTrack.style, sections: sections)
       let transformed = try await transformSections(
         sections, parentPath: path, routeEntry: routeEntry?.0,
       )
-      return (resolvedTrack.copying(sections: transformed, children: .some(nil)), lifetime)
+      return fetched.map { _ in resolvedTrack.copying(sections: transformed, children: .some(nil)) }
     }
 
-    return (resolvedTrack, lifetime)
+    return fetched
   }
 
   /// The `__tabs__` route's page, flattened. Nil when there is no such route.
   func tabs() async throws -> [Track]? {
     guard let tabsEntry = config.routes?.first(where: { $0.path == SimpleRouter.tabsRoutePath }) else { return nil }
-    let resolved = try await resolveRouteEntry(tabsEntry, path: SimpleRouter.tabsRoutePath, params: [:]).page
+    let resolved = try await resolveRouteEntry(tabsEntry, path: SimpleRouter.tabsRoutePath, params: [:]).value
     return resolved.flattenedChildren ?? []
   }
 
@@ -72,10 +73,10 @@ final class PageResolver {
     _ entry: NativeRouteEntry,
     path: String,
     params: [String: String],
-  ) async throws -> (page: ResolvedTrack, lifetime: TimeInterval?) {
+  ) async throws -> Fetched<ResolvedTrack> {
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      return try await (JSSources.browse(callback, callbackParam), nil)
+      return try await Fetched(value: JSSources.browse(callback, callbackParam), lifetime: nil)
     }
 
     if let browseConfig = entry.browseConfig {
@@ -85,7 +86,7 @@ final class PageResolver {
     }
 
     if let staticContent = entry.browseStatic {
-      return (staticContent, nil)
+      return Fetched(value: staticContent, lifetime: nil)
     }
 
     throw BrowserError.contentNotFound(path: path)

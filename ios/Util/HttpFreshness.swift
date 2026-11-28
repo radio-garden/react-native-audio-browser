@@ -24,7 +24,8 @@ enum HttpFreshness {
       case "no-cache" where value == nil, "no-store":
         return 0
       case "max-age":
-        maxAge = value.flatMap(deltaSeconds) ?? maxAge
+        // RFC 9111 §4.2.1: of duplicates, the first.
+        maxAge = maxAge ?? value.flatMap(deltaSeconds)
       default:
         break
       }

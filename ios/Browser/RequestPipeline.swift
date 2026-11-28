@@ -103,7 +103,7 @@ final class RequestPipeline {
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
-  ) async throws -> (page: ResolvedTrack, lifetime: TimeInterval?) {
+  ) async throws -> Fetched<ResolvedTrack> {
     let request = try await buildApiRequest(
       kind: \.browse, routeConfig, path: path, params: params,
     )
@@ -112,21 +112,19 @@ final class RequestPipeline {
     logger.debug("  path: \(path)")
     logger.debug("  url: \(request.url)")
 
-    let (result, lifetime): (JsonResolvedTrack, TimeInterval?)
-    if path == SimpleRouter.tabsRoutePath {
-      (result, lifetime) = try await httpClient.requestJsonWithLifetime(request, as: JsonResolvedTrack.self)
+    let fetched = if path == SimpleRouter.tabsRoutePath {
+      try await httpClient.requestJsonFetched(request, as: JsonResolvedTrack.self)
     } else {
-      let response = try await httpClient.requestJsonWithLifetime(request, as: JsonBrowsePage.self)
-      (result, lifetime) = (response.value.page, response.lifetime)
+      try await httpClient.requestJsonFetched(request, as: JsonBrowsePage.self).map(\.page)
     }
-    let nitroResult = result.toNitro(requestedPath: path)
+    let nitroResult = fetched.value.toNitro(requestedPath: path)
 
     logger.debug("Resolved: \(nitroResult.title)")
     if let sections = nitroResult.normalizedSections {
       logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
     }
 
-    return (nitroResult, lifetime)
+    return fetched.map { _ in nitroResult }
   }
 
   /// A search route's tracks, through the request layer and `searchConfig`. The search params

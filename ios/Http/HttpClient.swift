@@ -65,7 +65,15 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
-  init(session: URLSession = .shared) {
+  /// `URLSession.shared` with no URL cache: the library keeps what it caches, and a URL cache would
+  /// answer a refresh with the body it is replacing.
+  static let uncachedSession: URLSession = {
+    let configuration = URLSessionConfiguration.default
+    configuration.urlCache = nil
+    return URLSession(configuration: configuration)
+  }()
+
+  init(session: URLSession = HttpClient.uncachedSession) {
     self.session = session
   }
 
@@ -75,8 +83,6 @@ final class HttpClient: @unchecked Sendable {
 
     var urlRequest = URLRequest(url: url)
     urlRequest.timeoutInterval = Self.timeoutSeconds
-    // The library caches what it keeps; a URL cache would answer a refresh with the stale body.
-    urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
@@ -117,20 +123,20 @@ final class HttpClient: @unchecked Sendable {
   /// does not decode; any other status throws `HttpException`.
   /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
-    try await requestJsonWithLifetime(httpRequest, as: type).value
+    try await requestJsonFetched(httpRequest, as: type).value
   }
 
-  /// `requestJson`, with the lifetime the response states (`HttpFreshness`).
-  func requestJsonWithLifetime<T: Decodable>(
-    _ httpRequest: HttpRequest,
-    as type: T.Type,
-  ) async throws -> (value: T, lifetime: TimeInterval?) {
+  /// `requestJson`, with the lifetime the response states (`HttpFreshness`) when it is positive.
+  func requestJsonFetched<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> Fetched<T> {
     let (code, data, response) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {
       throw HttpException(code: code, responseBody: String(decoding: data, as: UTF8.self))
     }
     do {
-      return try (JSONDecoder().decode(type, from: data), HttpFreshness.lifetime(of: response))
+      return try Fetched(
+        value: JSONDecoder().decode(type, from: data),
+        lifetime: HttpFreshness.lifetime(of: response).flatMap { $0 > 0 ? $0 : nil },
+      )
     } catch {
       throw UndecodableResponse(code: code, reason: Self.reason(error))
     }
@@ -175,5 +181,15 @@ extension HttpClient {
     if !data.isEmpty {
       logger.debug("  Body: \(String(decoding: data.prefix(500), as: UTF8.self))\(data.count > 500 ? "..." : "")")
     }
+  }
+}
+
+/// A fetched value and the positive lifetime in seconds its response states, if any.
+struct Fetched<Value> {
+  let value: Value
+  let lifetime: TimeInterval?
+
+  func map<T>(_ transform: (Value) throws -> T) rethrows -> Fetched<T> {
+    try Fetched<T>(value: transform(value), lifetime: lifetime)
   }
 }

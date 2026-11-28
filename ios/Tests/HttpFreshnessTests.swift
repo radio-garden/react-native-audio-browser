@@ -57,6 +57,10 @@ struct HttpFreshnessTests {
     #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=" + String(repeating: "9", count: 400)])]) == 2_147_483_648)
   }
 
+  @Test func theFirstValidOfDuplicateMaxAgesWins() {
+    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=soon, max-age=60, max-age=600"])]) == 60)
+  }
+
   @Test func aBareEqualsSignIsSkipped() {
     #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=60,="])]) == 60)
   }
