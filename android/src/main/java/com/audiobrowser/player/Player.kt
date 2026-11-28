@@ -1720,6 +1720,12 @@ internal constructor(
     mediaSessionCallback.notifyContentChanged(path)
   }
 
+  fun isSubscribed(path: String) = mediaSessionCallback.isSubscribed(path)
+
+  fun notifyPageRefreshed(path: String) {
+    mediaSessionCallback.notifyPageRefreshed(path)
+  }
+
   fun invalidateAllContent() {
     mediaSessionCallback.invalidateAllContent()
   }

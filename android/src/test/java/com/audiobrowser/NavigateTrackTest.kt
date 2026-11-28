@@ -12,6 +12,7 @@ import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.SectionQueue
 import com.margelo.nitro.audiobrowser.Track
 import java.time.Duration
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -38,7 +39,7 @@ class NavigateTrackTest {
 
   private val service = buildService()
   private val player = service.get().player
-  private val browserManager = BrowserManager()
+  private val browserManager = BrowserManager(pageContext = Dispatchers.Unconfined)
 
   @After
   fun destroy() {

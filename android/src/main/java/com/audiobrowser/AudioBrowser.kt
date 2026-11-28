@@ -154,6 +154,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
       }
       connectedService = null
+      // After the player's browser is cleared: a browse in between would leave a load that never
+      // runs.
+      browserManager.dispose()
 
       // Dropping the reference disconnects nothing: the controller stays in the session's
       // connected list, holding a binder and a listener.
@@ -224,6 +227,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         connectedService?.player?.notifyTabsChanged()
       }
       setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
+      isOnline = { connectedService?.player?.networkMonitor?.isOnline?.value ?: true }
+      setOnPageExpired { path ->
+        if (connectedService?.player?.isSubscribed(path) == true) {
+          mainScope.launch { refreshPage(path) }
+        }
+      }
+      setOnPageRefreshed { path -> connectedService?.player?.notifyPageRefreshed(path) }
     }
 
   private val systemVolumeMonitor = SystemVolumeMonitor(context)

@@ -69,7 +69,7 @@ class ContentRefreshNavigationErrorTest {
   // navigation and reload paths read written in its place.
   private fun TestScope.browser(): AudioBrowser {
     val browser = mock(AudioBrowser::class.java, CALLS_REAL_METHODS)
-    val manager = BrowserManager()
+    val manager = BrowserManager(pageContext = StandardTestDispatcher(testScheduler))
     manager.config = BrowserConfig(routes = arrayOf(callbackRoute("/a"), callbackRoute("/b")))
     set(browser, "browserManager", manager)
     set(browser, "mainScope", CoroutineScope(StandardTestDispatcher(testScheduler)))

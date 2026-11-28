@@ -77,6 +77,11 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   // notifies: every access goes through synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
+  /** Controllers subscribed to a level whose visit, their next onGetChildren, is to come. */
+  private val pendingVisits = mutableSetOf<Pair<MediaSession.ControllerInfo, String>>()
+
+  /** The level each controller last visited unsubscribed, which its onSubscribe then follows. */
+  private val visitedUnsubscribed = mutableMapOf<MediaSession.ControllerInfo, String>()
   private val failedSearch = FailedSearchSlot()
   private val offlineSearches = OfflineSearchRegistry()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
@@ -143,6 +148,8 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     synchronized(this) {
       parentIdSubscriptions.values.forEach { it.remove(controller) }
       parentIdSubscriptions.entries.removeAll { (_, browsers) -> browsers.isEmpty() }
+      pendingVisits.removeAll { (browser, _) -> browser == controller }
+      visitedUnsubscribed.remove(controller)
     }
     super.onDisconnected(session, controller)
   }
@@ -249,9 +256,10 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     Timber.d(
       "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSpecialPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
+    val visit = isVisit(browser, parentId)
     return scope.future {
       try {
-          children(session, browser, parentId, page, pageSize, params)
+          children(session, browser, parentId, page, pageSize, params, visit)
         } catch (e: Exception) {
           if (e is CancellationException) throw e
           Timber.e(e, "Browse of $parentId failed before it could be served")
@@ -279,6 +287,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     page: Int,
     pageSize: Int,
     params: MediaLibraryService.LibraryParams?,
+    visit: Boolean,
   ): LibraryResult<ImmutableList<MediaItem>> {
     val audioBrowser =
       player.awaitBrowser(FailedRequestKind.BROWSE).also {
@@ -345,7 +354,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
           }
           toFlatMediaItems(tabs.take(4))
         } else {
-          val resolvedTrack = browserManager.resolve(parentId)
+          // A re-query leaves each track keyed to the list it was last visited in, which a tap's
+          // queue expands from.
+          val resolvedTrack = browserManager.resolve(parentId, rekey = visit)
           // Section styles arrive page-folded (ADR 0011).
           val sections =
             resolvedTrack.styleResolvedSections()
@@ -563,7 +574,10 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.d("onSubscribe: ${browser.packageName}, parentId = $parentId")
 
-    synchronized(this) { parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser) }
+    synchronized(this) {
+      parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser)
+      if (visitedUnsubscribed.remove(browser) != parentId) pendingVisits.add(browser to parentId)
+    }
 
     // Not super: its onSubscribe validates the parent through onGetItem, a full resolve whose
     // result the legacy stub discards. Kept from it: Media3 browsers are told to fetch; legacy
@@ -583,6 +597,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
     synchronized(this) {
       parentIdSubscriptions[parentId]?.remove(browser)
+      pendingVisits.remove(browser to parentId)
       if (parentIdSubscriptions[parentId]?.isEmpty() == true) {
         parentIdSubscriptions.remove(parentId)
       }
@@ -606,6 +621,39 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     val session = mediaLibrarySession ?: return
     scope.launch(Dispatchers.Main) { session.notifyChildrenChanged(path, Int.MAX_VALUE, null) }
   }
+
+  /**
+   * Whether a controller is subscribed to [path]. Android Auto stays subscribed to every level it
+   * visited until it disconnects, so this holds for pages it no longer shows too. Safe from any
+   * thread.
+   */
+  fun isSubscribed(path: String) = synchronized(this) { path in parentIdSubscriptions }
+
+  /**
+   * Tells controllers subscribed to [path] to re-query it, once a refetch replaced its cached page.
+   * Safe from any thread.
+   */
+  fun notifyPageRefreshed(path: String) {
+    if (isSubscribed(path)) notifyContentChanged(path)
+  }
+
+  /**
+   * Whether [browser]'s onGetChildren for [parentId] is a visit rather than a re-query of a level
+   * it is subscribed to. Android Auto visits with onGetChildren then onSubscribe, and unsubscribes
+   * a level before entering it again; a Media3 controller subscribes first, and its next
+   * onGetChildren is the visit.
+   */
+  private fun isVisit(browser: MediaSession.ControllerInfo, parentId: String) =
+    synchronized(this) {
+      when {
+        pendingVisits.remove(browser to parentId) -> true
+        parentIdSubscriptions[parentId]?.contains(browser) == true -> false
+        else -> {
+          visitedUnsubscribed[browser] = parentId
+          true
+        }
+      }
+    }
 
   /** Pairs with AudioBrowser.invalidateAllContent(), which clears the content cache first. */
   fun invalidateAllContent() {

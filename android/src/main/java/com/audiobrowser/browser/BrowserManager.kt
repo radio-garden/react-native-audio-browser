@@ -1,11 +1,14 @@
 package com.audiobrowser.browser
 
+import android.os.SystemClock
 import android.util.LruCache
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
 import com.audiobrowser.extension.identity
+import com.audiobrowser.http.Fetched
 import com.audiobrowser.http.HttpClient
+import com.audiobrowser.http.HttpFreshness
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.FALLBACK_TIMEOUT
@@ -34,6 +37,7 @@ import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -42,13 +46,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import timber.log.Timber
 
-class BrowserManager {
+class BrowserManager(
+  pageContext: CoroutineContext = Dispatchers.Default,
+  now: () -> Long = SystemClock::elapsedRealtime,
+) {
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -60,6 +68,11 @@ class BrowserManager {
   private var onContentChanged: ((ResolvedTrack?) -> Unit)? = null
   private var onTabsChanged: ((Array<Track>) -> Unit)? = null
   private var onArtworkRegistriesCleared: (() -> Unit)? = null
+  private var onPageExpired: ((String) -> Unit)? = null
+  private var onPageRefreshed: ((String) -> Unit)? = null
+
+  /** Whether an expired page may be refetched now; offline it is served as it is. */
+  @Volatile var isOnline: () -> Boolean = { true }
 
   private var path: String = "/"
     set(value) {
@@ -94,15 +107,24 @@ class BrowserManager {
   // Keyed by id, path and src (see cacheTrack), so one track takes up to three entries.
   private val trackCache = LruCache<String, Track>(3000)
 
-  private val contentCache = LruCache<String, ResolvedTrack>(20)
+  private val pageScope = CoroutineScope(SupervisorJob() + pageContext)
+  private val contentCache =
+    PageCache<ResolvedTrack>(
+      maxSize = 20,
+      scope = pageScope,
+      now = now,
+      canRefetch = { isOnline() },
+      keepsStale = ::keepsStalePage,
+      onExpired = { path -> onPageExpired?.invoke(path) },
+      onRefreshed = { path -> onPageRefreshed?.invoke(path) },
+    )
 
-  // Moves on clearContentCache, so a fetch that outlives one caches nothing; [pageGenerations]
-  // does the same for one path, and is cleared only together with a move of this. Separate from
-  // layerGeneration, which also moves on every path change. Car browses run on IO threads and
-  // the clear on the JS thread: each check and its write hold [cacheLock].
-  @Volatile private var contentGeneration = 0
-  private val pageGenerations = HashMap<String, Int>()
-  private var tabsGeneration = -1
+  // Moves on every clearContentCache, so a search or tabs query that outlives one stores nothing;
+  // separate from layerGeneration, which also moves on every path change. Car browses run on IO
+  // threads and the clear on the JS thread: a search or tabs check and its write hold [cacheLock],
+  // as clearContentCache does around the clear.
+  @Volatile private var clearEpoch = 0
+  private var tabsEpoch = -1
   private val cacheLock = Any()
 
   // Query and results stored as one pair, so a concurrent reader never matches one query with
@@ -194,9 +216,7 @@ class BrowserManager {
     content?.let { change.restamp(it) }?.let { content = it }
     // A cache hit re-keys the track cache from the cached page, so the page must follow too.
     synchronized(cacheLock) {
-      contentCache.snapshot().forEach { (path, page) ->
-        change.restamp(page) { change.restampStamped(it) }?.let { contentCache.put(path, it) }
-      }
+      contentCache.update { page -> change.restamp(page) { change.restampStamped(it) } }
     }
     // Search results reach the track cache without a page in the content cache.
     change.identities.forEach { identity ->
@@ -543,38 +563,16 @@ class BrowserManager {
    * false, a track the cache already holds keeps its entry, so `contextualPathFor` still names the
    * page it was browsed on.
    */
-  suspend fun resolve(
-    path: String,
-    useCache: Boolean = true,
-    rekey: Boolean = true,
-  ): ResolvedTrack {
-    Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
+  suspend fun resolve(path: String, rekey: Boolean = true): ResolvedTrack {
+    Timber.d("=== RESOLVE: path='$path' ===")
 
     val normalizedPath = BrowserPathHelper.stripTrackId(path)
     if (normalizedPath != path) {
       Timber.d("Stripped __trackId from contextual path: '$normalizedPath'")
     }
 
-    if (useCache) {
-      contentCache.get(normalizedPath)?.let { cached ->
-        Timber.d("Content cache HIT for path='$normalizedPath'")
-        // Re-key the track cache on a hit too: contextualPathFor must see the most recently
-        // browsed container.
-        cacheChildren(cached, rekey)
-        return hydrateChildren(cached)
-      }
-      Timber.d("Content cache MISS for path='$normalizedPath'")
-    }
-
-    val generation = synchronized(cacheLock) { pageGeneration(normalizedPath) }
-    val resolvedTrack = resolveUncached(normalizedPath)
-
-    synchronized(cacheLock) {
-      if (generation == pageGeneration(normalizedPath)) {
-        contentCache.put(normalizedPath, resolvedTrack)
-      }
-    }
-
+    val resolvedTrack = contentCache.value(normalizedPath) { resolveUncached(normalizedPath) }
+    // Re-keyed on a cache hit too: contextualPathFor must see the most recently browsed container.
     cacheChildren(resolvedTrack, rekey)
 
     return hydrateChildren(resolvedTrack)
@@ -585,14 +583,9 @@ class BrowserManager {
     require(!BrowserPathHelper.isContextual(path)) {
       "invalidateContentCache() expects a container path, not a contextual path: $path"
     }
-    synchronized(cacheLock) {
-      pageGenerations[path] = (pageGenerations[path] ?: 0) + 1
-      contentCache.remove(path)
-    }
+    contentCache.remove(path)
     Timber.d("Invalidated content cache for path='$path'")
   }
-
-  private fun pageGeneration(path: String) = contentGeneration to pageGenerations[path]
 
   /**
    * Clears every cached page and the last search, which nothing else evicts, and re-resolves the
@@ -601,9 +594,8 @@ class BrowserManager {
    */
   fun clearContentCache() {
     synchronized(cacheLock) {
-      contentGeneration += 1
-      pageGenerations.clear()
-      contentCache.evictAll()
+      contentCache.clear()
+      clearEpoch += 1
       lastSearch = null
     }
     layerGeneration += 1
@@ -612,24 +604,25 @@ class BrowserManager {
     Timber.d("Cleared all content cache")
   }
 
-  private suspend fun resolveUncached(path: String): ResolvedTrack {
+  private suspend fun resolveUncached(path: String): Fetched<ResolvedTrack> {
     // With no route matched, the implicit default fetches the path via the request + browse config.
     val match = config.routes?.let { findBestRouteMatch(path, it) }
 
-    val resolvedTrack: ResolvedTrack
+    val fetched: Fetched<ResolvedTrack>
     val effectiveArtworkConfig: ArtworkRequestConfig?
     if (match != null) {
       val (routeEntry, routeParams) = match
       Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
-      resolvedTrack = resolveRouteEntry(routeEntry, path, routeParams)
+      fetched = resolveRouteEntry(routeEntry, path, routeParams)
       effectiveArtworkConfig = routeEntry.artwork ?: config.artwork
     } else {
       Timber.d("No route matched for path: $path — using implicit default")
-      resolvedTrack = executeApiRequest(null, path, mapOf("path" to path))
+      fetched = executeApiRequest(null, path, mapOf("path" to path))
       effectiveArtworkConfig = config.artwork
     }
 
-    val sections = resolvedTrack.normalizedSections ?: return resolvedTrack
+    val resolvedTrack = fetched.value
+    val sections = resolvedTrack.normalizedSections ?: return fetched
     // Before the sections are folded, while each level is still attributable.
     InertStyleDiagnostic.warn(path, resolvedTrack.style, sections)
     // The contextual index is the flat page position: children in section order (ADR 0009).
@@ -686,7 +679,7 @@ class BrowserManager {
         }
     }
 
-    return resolvedTrack.copy(sections = transformedSections.toTypedArray(), children = null)
+    return fetched.map { it.copy(sections = transformedSections.toTypedArray(), children = null) }
   }
 
   private suspend fun transformArtworkUrl(
@@ -855,8 +848,8 @@ class BrowserManager {
     Timber.d("Refreshing content for path: $currentPath")
 
     try {
-      contentCache.remove(currentPath)
-      val content = resolve(currentPath, useCache = false)
+      contentCache.remove(BrowserPathHelper.stripTrackId(currentPath))
+      val content = resolve(currentPath)
 
       if (navigationId != currentNavigationId) return false
       this.content = content
@@ -936,7 +929,7 @@ class BrowserManager {
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
 
     val searchPath = BrowserPathHelper.createSearchPath(params.query)
-    val generation = contentGeneration
+    val epoch = clearEpoch
 
     try {
       // Search results skip validateTrack, so one without a path or src is dropped here:
@@ -979,7 +972,7 @@ class BrowserManager {
         )
 
       synchronized(cacheLock) {
-        if (generation == contentGeneration) lastSearch = params.query to searchResults
+        if (epoch == clearEpoch) lastSearch = params.query to searchResults
       }
 
       cacheChildren(searchResolvedTrack)
@@ -1027,13 +1020,37 @@ class BrowserManager {
     onArtworkRegistriesCleared = callback
   }
 
+  /** Stops every page fetch and expiry timer; nothing is pushed after. */
+  fun dispose() {
+    pageScope.cancel()
+  }
+
+  /**
+   * Refetches the page [path] resolves to when it has expired, and returns once that settles;
+   * [setOnPageRefreshed]'s callback tells when it replaced the page.
+   */
+  suspend fun refreshPage(path: String) {
+    val normalizedPath = BrowserPathHelper.stripTrackId(path)
+    contentCache.revalidate(normalizedPath) { resolveUncached(normalizedPath) }
+  }
+
+  /** Called with a cached page's path once a refetch replaced it. */
+  fun setOnPageRefreshed(callback: (String) -> Unit) {
+    onPageRefreshed = callback
+  }
+
+  /** Called with a cached page's path once the lifetime its response stated has passed. */
+  fun setOnPageExpired(callback: (String) -> Unit) {
+    onPageExpired = callback
+  }
+
   /**
    * Resolves the tabs once per [clearContentCache]; later calls return that result. The previous
    * tabs stay until new ones resolve.
    */
   suspend fun queryTabs(): Array<Track> {
-    val generation = contentGeneration
-    synchronized(cacheLock) { tabs.takeIf { tabsGeneration == generation } }
+    val epoch = clearEpoch
+    synchronized(cacheLock) { tabs.takeIf { tabsEpoch == epoch } }
       ?.let {
         return it
       }
@@ -1048,9 +1065,9 @@ class BrowserManager {
     }
 
     synchronized(cacheLock) {
-      if (generation == contentGeneration) {
+      if (epoch == clearEpoch) {
         this.tabs = tabs
-        tabsGeneration = generation
+        tabsEpoch = epoch
       }
     }
     return tabs
@@ -1091,28 +1108,30 @@ class BrowserManager {
     entry: NativeRouteEntry,
     path: String,
     routeParams: Map<String, String>,
-  ): ResolvedTrack {
+  ): Fetched<ResolvedTrack> {
     entry.browseCallback?.let { callback ->
       Timber.d("Resolving route via callback")
       val param = BrowserSourceCallbackParam(path, routeParams)
       // Nitro flattens `(ResolvedTrack | BrowseError) | Promise<BrowseResult>` into three arms.
-      return fromCallback {
-        callback
-          .invoke(param)
-          .awaitCancellable()
-          .match(
-            first = { resolvedTrack -> resolvedTrack },
-            second = { browseError -> throw CallbackException(browseError.error) },
-            third = { promise ->
-              promise
-                .awaitJsPromise()
-                .match(
-                  first = { resolvedTrack -> resolvedTrack },
-                  second = { browseError -> throw CallbackException(browseError.error) },
-                )
-            },
-          )
-      }
+      return Fetched(
+        fromCallback {
+          callback
+            .invoke(param)
+            .awaitCancellable()
+            .match(
+              first = { resolvedTrack -> resolvedTrack },
+              second = { browseError -> throw CallbackException(browseError.error) },
+              third = { promise ->
+                promise
+                  .awaitJsPromise()
+                  .match(
+                    first = { resolvedTrack -> resolvedTrack },
+                    second = { browseError -> throw CallbackException(browseError.error) },
+                  )
+              },
+            )
+        }
+      )
     }
 
     entry.browseConfig?.let { apiConfig ->
@@ -1122,7 +1141,7 @@ class BrowserManager {
 
     entry.browseStatic?.let { staticTrack ->
       Timber.d("Resolving route via static track")
-      return staticTrack
+      return Fetched(staticTrack)
     }
 
     throw ContentNotFoundException(path)
@@ -1161,7 +1180,7 @@ class BrowserManager {
     }
 
     Timber.d("Resolving tabs via route entry")
-    val resolvedTrack = resolveRouteEntry(tabsEntry, TABS_ROUTE_PATH, emptyMap())
+    val resolvedTrack = resolveRouteEntry(tabsEntry, TABS_ROUTE_PATH, emptyMap()).value
 
     return resolvedTrack.flattenedChildren?.toTypedArray() ?: emptyArray()
   }
@@ -1266,19 +1285,19 @@ class BrowserManager {
     apiConfig: TransformableRequestConfig?,
     path: String,
     routeParams: Map<String, String>,
-  ): ResolvedTrack {
+  ): Fetched<ResolvedTrack> {
     return withContext(Dispatchers.IO) {
       ensureLayersResolved()
       // apiConfig is null for the implicit default.
       val httpRequest = buildApiRequest(resolvedBrowseLayer, apiConfig, path, routeParams)
-      val jsonResolvedTrack =
+      val fetched =
         fetchJson<JsonResolvedTrack>(httpRequest, "a page") {
           // A browse page needs its title (BrowserSource); the tabs page does not.
           if (it.title == null && path != TABS_ROUTE_PATH) {
             throw SerializationException("Field 'title' is required for a browse page")
           }
         }
-      jsonResolvedTrack.toNitro(requestedPath = path)
+      fetched.map { it.toNitro(requestedPath = path) }
     }
   }
 
@@ -1309,13 +1328,16 @@ class BrowserManager {
           initialQuery = searchQueryParams,
         )
       // A bare Track array, unlike browse's page object.
-      fetchJson<List<JsonTrack>>(httpRequest, "a track list").map { it.toNitro() }.toTypedArray()
+      fetchJson<List<JsonTrack>>(httpRequest, "a track list")
+        .value
+        .map { it.toNitro() }
+        .toTypedArray()
     }
   }
 
   /**
    * The body of [httpRequest]'s response decoded as [T], which [validate] may still refuse by
-   * throwing.
+   * throwing, kept for the response's [HttpFreshness].
    *
    * @throws HttpStatusException for a non-2xx response, or a 2xx body that is not [expected]
    * @throws NetworkException when the request fails in transit; a request [HttpClient] refuses (an
@@ -1325,7 +1347,7 @@ class BrowserManager {
     httpRequest: HttpClient.HttpRequest,
     expected: String,
     validate: (T) -> Unit = {},
-  ): T {
+  ): Fetched<T> {
     val httpResponse =
       httpClient.request(httpRequest).getOrElse { exception ->
         if (exception !is IOException) throw exception
@@ -1338,7 +1360,10 @@ class BrowserManager {
       throw HttpStatusException(httpResponse.code, "Server returned ${httpResponse.code}")
     }
     return try {
-      json.decodeFromString<T>(httpResponse.body).also(validate)
+      Fetched(
+        json.decodeFromString<T>(httpResponse.body).also(validate),
+        HttpFreshness.of(httpResponse.headers),
+      )
     } catch (e: Exception) {
       throw HttpStatusException(
         httpResponse.code,
@@ -1394,3 +1419,13 @@ data class ExpandedQueue(val tracks: Array<Track>, val startIndex: Int, val sour
 /** The page a linked path queues marks the tapped track disabled: the tap plays nothing. */
 class DisabledOnLinkedPageException(trackId: String) :
   IllegalStateException("Refusing playback of a track its linked page disables: $trackId")
+
+/**
+ * Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which is
+ * a 4xx other than 408 and 429, or a 2xx whose body is not a page.
+ */
+internal fun keepsStalePage(e: Exception): Boolean {
+  if (e !is HttpStatusException) return true
+  val code = e.statusCode
+  return code == 408 || code == 429 || code !in 200..299 && code !in 400..499
+}
