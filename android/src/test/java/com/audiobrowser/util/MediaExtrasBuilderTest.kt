@@ -47,6 +47,17 @@ class MediaExtrasBuilderTest {
   }
 
   @Test
+  fun `a track's resource artwork in a grid section stamps the category grid item hint`() {
+    val icon = TestFixtures.browseTrack(artwork = "android.resource://com.test/drawable/ic")
+    val section = TestFixtures.section(arrayOf(icon), style = sectionStyle(StyleDisplay.GRID))
+    val extras = MediaExtrasBuilder.build(icon, section)
+    assertEquals(
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      extras.getInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM),
+    )
+  }
+
+  @Test
   fun `list section display stamps the list item hint`() {
     val section = TestFixtures.section(arrayOf(track), style = sectionStyle(StyleDisplay.LIST))
     val extras = MediaExtrasBuilder.build(track, section)

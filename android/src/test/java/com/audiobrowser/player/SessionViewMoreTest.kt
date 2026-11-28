@@ -5,6 +5,7 @@ import androidx.media.utils.MediaConstants
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
+import com.audiobrowser.R
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.TestFixtures.sectionStyle
 import com.audiobrowser.browser.BrowserConfig
@@ -93,16 +94,19 @@ class SessionViewMoreTest {
   }
 
   @Test
-  fun `a grid section's view more tile is served with the icon`() {
+  fun `a grid section's view more tile is served with the icon through the artwork provider`() {
     val viewMore = browse("/home").last()
 
     assertEquals("/popular", viewMore.mediaId)
+    val uri = viewMore.mediaMetadata.artworkUri!!
+    assertEquals(ArtworkUris.authorityFor(service.packageName), uri.authority)
+    val served = player.browseArtworkRegistry.lookup(ArtworkUris.parseToken(uri)!!)!!
     assertEquals(
-      "android.resource://${service.packageName}/drawable/audio_browser_view_more",
-      viewMore.mediaMetadata.artworkUri.toString(),
+      "android.resource://${service.packageName}/${R.drawable.audio_browser_view_more}",
+      served.finalUrl,
     )
     assertEquals(
-      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
       viewMore.mediaMetadata.extras!!.getInt(
         MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
       ),
@@ -110,7 +114,7 @@ class SessionViewMoreTest {
   }
 
   @Test
-  fun `a configured view more artwork is served through the artwork provider as a full tile`() {
+  fun `a configured view more artwork is served through the artwork provider as a grid tile`() {
     val artwork =
       "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
     val viewMore = browse("/home", viewMoreArtwork = artwork).last()

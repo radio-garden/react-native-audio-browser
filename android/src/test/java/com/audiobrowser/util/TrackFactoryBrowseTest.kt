@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class TrackFactoryBrowseTest {
-  private val authority = ArtworkUris.authorityFor("com.test")
+  private val packageName = "com.test"
 
   @Test
   fun `http artwork is wrapped in a content uri and registered`() {
@@ -27,7 +27,7 @@ class TrackFactoryBrowseTest {
             body = null,
           )
       )
-    val item = TrackFactory.toBrowseMediaItem(track, reg, authority)
+    val item = TrackFactory.toBrowseMediaItem(track, ArtworkRoutes(reg, packageName))
 
     val artUri = Uri.parse(item.mediaMetadata.artworkUri.toString())
     assertEquals("content", artUri.scheme)
@@ -44,7 +44,22 @@ class TrackFactoryBrowseTest {
     val reg = BrowseArtworkRegistry()
     val resUri = "android.resource://com.test/drawable/ic_folder"
     val track = TestFixtures.browseTrack(artwork = resUri, artworkSource = null)
-    val item = TrackFactory.toBrowseMediaItem(track, reg, authority)
+    val item = TrackFactory.toBrowseMediaItem(track, ArtworkRoutes(reg, packageName))
     assertEquals(resUri, item.mediaMetadata.artworkUri.toString())
+  }
+
+  @Test
+  fun `the app's own resource by id is served through the provider`() {
+    val reg = BrowseArtworkRegistry()
+    val resUri = "android.resource://com.test/2131230800"
+    val track = TestFixtures.browseTrack(artwork = resUri, artworkSource = null)
+
+    val artUri =
+      TrackFactory.toBrowseMediaItem(track, ArtworkRoutes(reg, packageName))
+        .mediaMetadata
+        .artworkUri!!
+
+    assertEquals(ArtworkUris.authorityFor(packageName), artUri.authority)
+    assertEquals(resUri, reg.lookup(ArtworkUris.parseToken(artUri)!!)!!.finalUrl)
   }
 }

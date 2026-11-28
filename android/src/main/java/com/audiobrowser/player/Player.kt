@@ -41,7 +41,6 @@ import com.audiobrowser.remote.RemotePlayback
 import com.audiobrowser.remote.RemoteUrls
 import com.audiobrowser.sonos.SonosRemote
 import com.audiobrowser.util.ArtworkRoutes
-import com.audiobrowser.util.ArtworkUris
 import com.audiobrowser.util.Automotive
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.CoilBitmapLoader
@@ -286,11 +285,12 @@ internal constructor(
   /** Maps the browse content provider's content:// tokens to artwork URLs. */
   val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
 
+  val artworkRoutes = ArtworkRoutes(browseArtworkRegistry, context.packageName)
+
   init {
     Automotive.device = context.isAutomotive
     TrackFactory.favoriteEnabled = options.capabilities.favoriteEnabled
-    TrackFactory.artworkRoutes =
-      ArtworkRoutes(browseArtworkRegistry, ArtworkUris.authorityFor(context.packageName))
+    TrackFactory.artworkRoutes = artworkRoutes
   }
 
   var coilBitmapLoader: CoilBitmapLoader?

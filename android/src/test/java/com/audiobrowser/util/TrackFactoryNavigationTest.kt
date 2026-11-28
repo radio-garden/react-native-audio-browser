@@ -1,8 +1,11 @@
 package com.audiobrowser.util
 
 import androidx.media.utils.MediaConstants
+import androidx.media3.common.MediaItem
+import com.audiobrowser.R
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.TestFixtures.sectionStyle
+import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.StyleDisplay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,6 +17,15 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class TrackFactoryNavigationTest {
   private val track = TestFixtures.track()
+  private val registry = BrowseArtworkRegistry()
+  private val routes = ArtworkRoutes(registry, "com.test")
+  private val icon = "android.resource://com.test/${R.drawable.audio_browser_view_more}"
+
+  private fun served(item: MediaItem): String {
+    val uri = item.mediaMetadata.artworkUri!!
+    assertEquals(ArtworkUris.authorityFor("com.test"), uri.authority)
+    return registry.lookup(ArtworkUris.parseToken(uri)!!)!!.finalUrl
+  }
 
   private fun section(display: StyleDisplay?) =
     TestFixtures.section(
@@ -24,16 +36,15 @@ class TrackFactoryNavigationTest {
     )
 
   @Test
-  fun `a grid section's view more tile carries the bundled icon as a category tile`() {
+  fun `a grid section's view more tile carries the bundled icon as a plain grid tile`() {
     // A grid tile without artwork is drawn by Android Auto as a broken image.
     val item =
-      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, "com.test")
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
 
-    val artwork = item.mediaMetadata.artworkUri.toString()
-    assertEquals("android.resource://com.test/drawable/audio_browser_view_more", artwork)
+    assertEquals(icon, served(item))
     val extras = item.mediaMetadata.extras!!
     assertEquals(
-      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
       extras.getInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM),
     )
     assertEquals(
@@ -43,9 +54,9 @@ class TrackFactoryNavigationTest {
   }
 
   @Test
-  fun `the icon does not make the page it opens a page of category tiles`() {
+  fun `the view more row promises the section's display for the page it opens`() {
     val item =
-      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, "com.test")
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
 
     val extras = item.mediaMetadata.extras!!
     assertEquals(
@@ -61,7 +72,7 @@ class TrackFactoryNavigationTest {
   @Test
   fun `a list section's view more row stays a text row`() {
     val item =
-      TrackFactory.toNavigationMediaItem(section(StyleDisplay.LIST), "View more", null, "com.test")
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.LIST), "View more", null, routes)
 
     assertNull(item.mediaMetadata.artworkUri)
     assertEquals(
@@ -74,7 +85,7 @@ class TrackFactoryNavigationTest {
 
   @Test
   fun `an unstyled section's view more row stays a text row`() {
-    val item = TrackFactory.toNavigationMediaItem(section(null), "View more", null, "com.test")
+    val item = TrackFactory.toNavigationMediaItem(section(null), "View more", null, routes)
 
     assertNull(item.mediaMetadata.artworkUri)
     assertFalse(
@@ -86,8 +97,7 @@ class TrackFactoryNavigationTest {
 
   @Test
   fun `the row is titled by its section, which heads the page it opens, and subtitled by the configured title`() {
-    val item =
-      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "More", null, "com.test")
+    val item = TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "More", null, routes)
 
     assertEquals("/popular", item.mediaId)
     assertEquals("Popular", item.mediaMetadata.title)
@@ -101,7 +111,7 @@ class TrackFactoryNavigationTest {
       val untitled =
         TestFixtures.section(arrayOf(track), title = title, path = "/popular", style = null)
 
-      val item = TrackFactory.toNavigationMediaItem(untitled, "More", null, "com.test")
+      val item = TrackFactory.toNavigationMediaItem(untitled, "More", null, routes)
 
       assertEquals("More", item.mediaMetadata.title)
       assertNull(item.mediaMetadata.artist)
@@ -115,13 +125,10 @@ class TrackFactoryNavigationTest {
         section(StyleDisplay.GRID),
         "View more",
         "file:///sdcard/view-more.png",
-        "com.test",
+        routes,
       )
 
-    assertEquals(
-      "android.resource://com.test/drawable/audio_browser_view_more",
-      item.mediaMetadata.artworkUri.toString(),
-    )
+    assertEquals(icon, served(item))
   }
 
   @Test
@@ -131,12 +138,40 @@ class TrackFactoryNavigationTest {
         section(StyleDisplay.GRID),
         "View more",
         "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E",
-        "com.test",
+        routes,
       )
 
+    assertEquals(icon, served(item))
+  }
+
+  @Test
+  fun `the tile's icon outlives a clear of the registry, as a car may redraw a cached page`() {
+    val item =
+      TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
+
+    registry.clear()
+
+    assertEquals(icon, served(item))
+  }
+
+  @Test
+  fun `a view more artwork the provider serves is a grid tile that outlives a clear of the registry`() {
+    val item =
+      TrackFactory.toNavigationMediaItem(
+        section(StyleDisplay.GRID),
+        "View more",
+        "https://cdn.example.com/more.png",
+        routes,
+      )
+
+    registry.clear()
+
+    assertEquals("https://cdn.example.com/more.png", served(item))
     assertEquals(
-      "android.resource://com.test/drawable/audio_browser_view_more",
-      item.mediaMetadata.artworkUri.toString(),
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+      item.mediaMetadata.extras!!.getInt(
+        MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
+      ),
     )
   }
 }

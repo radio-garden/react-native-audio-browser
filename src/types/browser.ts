@@ -1023,11 +1023,10 @@ export type BrowserConfiguration = {
   /**
    * Artwork for the "view more" tile of a `grid` section: an `http(s)` URL or a
    * base64 `data:` URL, SVG included. The library's artwork provider serves it
-   * to the car, fetched as given (the `artwork` request config does not apply),
-   * and it fills the tile in its own colours.
+   * to the car, fetched as given (the `artwork` request config does not apply).
    *
-   * Unset, or any other URL, and the tile draws the library's arrow icon
-   * (`audio_browser_view_more`), which the car tints to its theme. See
+   * Unset, or any other URL, and the tile draws the library's white arrow icon
+   * (`audio_browser_view_more`). The car tints neither. See
    * [Android Auto](https://audiobrowser.dev/guide/android-auto).
    *
    * @platform android

@@ -426,12 +426,11 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
    * whole section.
    */
   private suspend fun toMediaItems(sections: List<Section>): List<MediaItem> {
-    val registry = player.browseArtworkRegistry
-    val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
+    val routes = player.artworkRoutes
     return sections.flatMap { section ->
       // Android Auto has no disabled affordance, so a disabled track hides.
       val children = section.children.filter { it.disabled != true }
-      val items = children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
+      val items = children.map { TrackFactory.toBrowseMediaItem(it, routes, section) }
       // A lone "view more" row under a header is a dead end.
       if (section.path == null || children.isEmpty()) return@flatMap items
       // Free after the first row: the browser is already up, and viewMoreTitle is memoized per
@@ -442,7 +441,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
           section,
           browserManager.viewMoreTitle(),
           browserManager.config.viewMoreArtwork,
-          player.context.packageName,
+          routes,
         )
     }
   }
@@ -536,13 +535,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
     // Cache first: resolve() strips __trackId from a contextual mediaId and would answer with the
     // parent container's metadata.
-    val browseAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
     val track = browserManager.trackFor(mediaId)
     if (track != null) {
-      return LibraryResult.ofItem(
-        TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, browseAuthority),
-        null,
-      )
+      return LibraryResult.ofItem(TrackFactory.toBrowseMediaItem(track, player.artworkRoutes), null)
     }
     if (browserManager.answersOnlyByFindTrack(mediaId))
       return LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
@@ -552,11 +547,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
       // The same conversion as the cached path, so the item's tag is a Track, as fromMedia3
       // expects.
       LibraryResult.ofItem(
-        TrackFactory.toBrowseMediaItem(
-          resolvedTrack.toTrack(),
-          player.browseArtworkRegistry,
-          browseAuthority,
-        ),
+        TrackFactory.toBrowseMediaItem(resolvedTrack.toTrack(), player.artworkRoutes),
         null,
       )
     } catch (e: Exception) {

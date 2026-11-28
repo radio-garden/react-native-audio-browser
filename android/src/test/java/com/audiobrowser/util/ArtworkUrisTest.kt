@@ -34,10 +34,20 @@ class ArtworkUrisTest {
   }
 
   @Test
-  fun `isServable takes http(s) and base64 data URLs only`() {
-    assertTrue(ArtworkUris.isServable(Uri.parse("https://cdn.example.com/a.png")))
-    assertTrue(ArtworkUris.isServable(Uri.parse("data:image/svg+xml;base64,PHN2Zy8+")))
-    assertFalse(ArtworkUris.isServable(Uri.parse("data:image/svg+xml,%3Csvg%2F%3E")))
-    assertFalse(ArtworkUris.isServable(Uri.parse("file:///sdcard/a.png")))
+  fun `isServable takes http(s) and base64 data URLs`() {
+    assertTrue(servable("https://cdn.example.com/a.png"))
+    assertTrue(servable("data:image/svg+xml;base64,PHN2Zy8+"))
+    assertFalse(servable("data:image/svg+xml,%3Csvg%2F%3E"))
+    assertFalse(servable("file:///sdcard/a.png"))
   }
+
+  @Test
+  fun `isServable takes the app's own resources by id, the one form Coil loads`() {
+    assertTrue(servable("android.resource://com.myapp/2131230800"))
+    assertFalse(servable("android.resource://com.other/2131230800"))
+    assertFalse(servable("android.resource://com.myapp/drawable/icon"))
+    assertFalse(servable("android.resource://com.myapp/"))
+  }
+
+  private fun servable(url: String) = ArtworkUris.isServable(Uri.parse(url), "com.myapp")
 }

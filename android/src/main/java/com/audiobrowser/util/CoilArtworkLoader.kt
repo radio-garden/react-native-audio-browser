@@ -18,8 +18,8 @@ class CoilArtworkLoader(
 ) {
   /**
    * Fetches and decodes [finalUrl] to fit within [sizeHintPixels] (or the default). A smaller
-   * raster picture keeps its own size; an SVG is drawn at the hint. [isSvg] forces the SVG decoder,
-   * because a transformed URL may have lost its `.svg` suffix.
+   * raster picture keeps its own size; an SVG or a vector drawable is drawn at the hint. [isSvg]
+   * forces the SVG decoder, because a transformed URL may have lost its `.svg` suffix.
    *
    * @throws IllegalStateException when the response yields no image.
    */

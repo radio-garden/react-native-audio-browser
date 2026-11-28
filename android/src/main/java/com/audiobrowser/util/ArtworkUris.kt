@@ -12,14 +12,17 @@ object ArtworkUris {
   fun authorityFor(packageName: String): String = "$packageName.$AUTHORITY_SUFFIX"
 
   /**
-   * Whether the provider serves artwork at [uri]: http(s), or a base64 `data:` URL decoded in this
-   * process. Coil reads no other `data:` form.
+   * Whether the provider serves artwork at [uri]: http(s), a base64 `data:` URL decoded in this
+   * process, or a resource of [packageName] by id, `android.resource://<packageName>/<id>`. Coil
+   * reads no other `data:` form, and no resource by name.
    */
-  fun isServable(uri: Uri): Boolean =
+  fun isServable(uri: Uri, packageName: String): Boolean =
     when (uri.scheme?.lowercase()) {
       "http",
       "https" -> true
       "data" -> uri.schemeSpecificPart.contains(";base64,", ignoreCase = true)
+      "android.resource" ->
+        uri.authority == packageName && uri.pathSegments.singleOrNull()?.toIntOrNull() != null
       else -> false
     }
 

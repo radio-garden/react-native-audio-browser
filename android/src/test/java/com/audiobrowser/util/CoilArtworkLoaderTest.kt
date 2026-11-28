@@ -8,6 +8,7 @@ import coil3.request.ImageRequest
 import coil3.size.Dimension
 import coil3.size.Size
 import coil3.svg.SvgDecoder
+import com.audiobrowser.R
 import java.io.ByteArrayOutputStream
 import java.util.Base64
 import kotlinx.coroutines.test.runTest
@@ -135,5 +136,17 @@ class CoilArtworkLoaderTest {
       )
 
     assertEquals(Color.RED, bmp.getPixel(8, 8))
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun `a vector drawable by resource id is drawn at the size hint, not its own size`() = runTest {
+    val context = RuntimeEnvironment.getApplication()
+    val url = "android.resource://${context.packageName}/${R.drawable.audio_browser_view_more}"
+
+    val bmp = realLoader().load(url, null, 256, false)
+
+    assertEquals(256, bmp.width)
+    assertEquals(256, bmp.height)
   }
 }
