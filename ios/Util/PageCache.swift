@@ -66,21 +66,18 @@ final class PageCache<Value> {
     do {
       let fetched = try await fetch()
       if generation == self.generation(of: path) {
-        put(path, Entry(
-          value: fetched.value, lifetime: fetched.lifetime, expiresAt: fetched.lifetime.map { now() + $0 },
-          stamp: 0, failures: 0, cancelTimer: nil,
-        ))
+        put(path, fetched.value, lifetime: fetched.lifetime, expiresAt: fetched.lifetime.map { now() + $0 }, failures: 0)
       }
       return fetched.value
     } catch {
-      guard let cached, !isFresh(cached), !(error is CancellationError || Task.isCancelled) else { throw error }
+      // A page removed or cleared meanwhile is gone, stale fallback included.
+      guard let cached, !isFresh(cached), generation == self.generation(of: path),
+            !(error is CancellationError || Task.isCancelled)
+      else { throw error }
       // A newer page stored meanwhile wins over the stale one this fetch replaced.
       let current = entries.peek(path)
       if let current, current.stamp == cached.stamp {
-        put(path, Entry(
-          value: current.value, lifetime: current.lifetime, expiresAt: current.expiresAt,
-          stamp: 0, failures: current.failures + 1, cancelTimer: nil,
-        ))
+        put(path, current.value, lifetime: current.lifetime, expiresAt: current.expiresAt, failures: current.failures + 1)
       }
       if useCache { return current?.value ?? cached.value }
       throw error
@@ -106,18 +103,17 @@ final class PageCache<Value> {
     (generation, pathGenerations[path])
   }
 
-  /// Stores `entry` under a new stamp, with a timer that pushes it a lifetime from now unless it is
+  /// Stores the page under a new stamp, with a timer that pushes it a lifetime from now unless it is
   /// past `maxRetries` failures.
-  private func put(_ path: String, _ entry: Entry) {
+  private func put(_ path: String, _ value: Value, lifetime: TimeInterval?, expiresAt: TimeInterval?, failures: Int) {
     stamps &+= 1
-    let cancelTimer = entry.lifetime.flatMap { lifetime in
-      entry.failures <= Self.maxRetries ? schedule(lifetime) { [weak self] in self?.expired.emit(path) } : nil
+    let cancelTimer = lifetime.flatMap { lifetime in
+      failures <= Self.maxRetries ? schedule(lifetime) { [weak self] in self?.expired.emit(path) } : nil
     }
-    let stored = Entry(
-      value: entry.value, lifetime: entry.lifetime, expiresAt: entry.expiresAt,
-      stamp: stamps, failures: entry.failures, cancelTimer: cancelTimer,
+    let entry = Entry(
+      value: value, lifetime: lifetime, expiresAt: expiresAt, stamp: stamps, failures: failures, cancelTimer: cancelTimer,
     )
-    for dropped in entries.set(path, value: stored) {
+    for dropped in entries.set(path, value: entry) {
       dropped.cancelTimer?()
     }
   }

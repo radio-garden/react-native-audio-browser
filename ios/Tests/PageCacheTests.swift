@@ -118,7 +118,7 @@ struct PageCacheTests {
     #expect(try await harness.value("/a") { throw Unreachable() } == "first")
   }
 
-  @Test func aFailedRefreshOfAFreshPageLeavesItsExpiryAndRetries() async throws {
+  @Test func aFailedRefreshOfAFreshPageLeavesItsExpiry() async throws {
     let harness = Harness()
     _ = try await harness.value("/a") { page("first", 60) }
     harness.advance(50)
@@ -148,6 +148,20 @@ struct PageCacheTests {
 
     #expect(try await harness.value("/a") { throw Unreachable() } == "fresh")
     #expect(harness.pushed == ["/a"])
+  }
+
+  @Test(arguments: [true, false])
+  func aStalePageRemovedDuringAFailedRefetchIsNotReturned(clearingAll: Bool) async throws {
+    let harness = Harness()
+    _ = try await harness.value("/a") { page("first", 60) }
+    harness.advance(61)
+
+    await #expect(throws: Unreachable.self) {
+      try await harness.value("/a") {
+        if clearingAll { harness.cache.clear() } else { harness.cache.remove("/a") }
+        throw Unreachable()
+      }
+    }
   }
 
   @Test(arguments: [true, false])

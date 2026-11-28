@@ -11,6 +11,12 @@ enum HttpFreshness {
     responses.compactMap(lifetime(of:)).min() ?? defaultLifetime
   }
 
+  /// The lifetime `response` states when it is positive: what a browse page is kept for. Nil for
+  /// none, 0, `no-cache` or `no-store`, which keep a page with no expiry.
+  static func positiveLifetime(of response: HTTPURLResponse) -> TimeInterval? {
+    lifetime(of: response).flatMap { $0 > 0 ? $0 : nil }
+  }
+
   /// The lifetime `response` states, or nil when it states none.
   static func lifetime(of response: HTTPURLResponse) -> TimeInterval? {
     guard let cacheControl = response.value(forHTTPHeaderField: "Cache-Control") else { return nil }

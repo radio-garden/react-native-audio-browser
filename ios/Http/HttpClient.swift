@@ -126,7 +126,7 @@ final class HttpClient: @unchecked Sendable {
     try await requestJsonFetched(httpRequest, as: type).value
   }
 
-  /// `requestJson`, with the lifetime the response states (`HttpFreshness`) when it is positive.
+  /// `requestJson`, with `HttpFreshness.positiveLifetime` of the response.
   func requestJsonFetched<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> Fetched<T> {
     let (code, data, response) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {
@@ -135,7 +135,7 @@ final class HttpClient: @unchecked Sendable {
     do {
       return try Fetched(
         value: JSONDecoder().decode(type, from: data),
-        lifetime: HttpFreshness.lifetime(of: response).flatMap { $0 > 0 ? $0 : nil },
+        lifetime: HttpFreshness.positiveLifetime(of: response),
       )
     } catch {
       throw UndecodableResponse(code: code, reason: Self.reason(error))
