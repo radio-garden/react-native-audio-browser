@@ -104,11 +104,34 @@ struct ArtworkRetryTests {
     #expect(script.waits == sleeps(ArtworkRetry.delaysMs.prefix(1)))
   }
 
-  @Test func reconnectingDoesNotUseUpAWaitOfTheSchedule() async throws {
+  @Test func aReconnectUsesUpAWaitOfTheSchedule() async throws {
     let script = Script([.failure(Self.connectionFailure), .failure(Self.serverError), .success("image")])
     script.offline = true
     #expect(try await script.run().get() == "image")
-    #expect(script.waits == ["online"] + sleeps(ArtworkRetry.delaysMs.prefix(1)))
+    #expect(script.waits == ["online"] + sleeps(ArtworkRetry.delaysMs.dropFirst().prefix(1)))
+  }
+
+  @Test func aNetworkThatKeepsDroppingSpendsTheScheduleThenWaitsForAVisit() async {
+    let script = Script([.failure(Self.connectionFailure)])
+    var waits = script.retryWaits
+    waits.online = {
+      script.waits.append("online")
+      return true
+    }
+    waits.shown = {
+      script.waits.append("shown")
+      throw CancellationError()
+    }
+    _ = await ArtworkRetry.load(waits: waits) { script.attempt() }
+    #expect(script.waits == Array(repeating: "online", count: ArtworkRetry.delaysMs.count + 1) + ["shown"])
+    #expect(script.attempts == ArtworkRetry.delaysMs.count + 1)
+  }
+
+  @Test func eachFailedAttemptIsReported() async {
+    let script = Script([.failure(Self.serverError), .failure(Self.notFound)])
+    var reported: [ArtworkLoadFailure] = []
+    _ = await ArtworkRetry.load(waits: script.retryWaits, onFailure: { reported.append($0) }) { script.attempt() }
+    #expect(reported == [Self.serverError, Self.notFound])
   }
 
   @Test func onceTheScheduleIsSpentTheNextVisitStartsItOver() async throws {

@@ -14,24 +14,27 @@ struct ArtworkRetryWaits {
 enum ArtworkRetry {
   static let delaysMs = [2_000, 4_000, 8_000, 16_000, 30_000]
 
-  /// `attempt`'s result, retried while its failure is retryable and the image is wanted: at once
-  /// when a connection failure finds the device offline and it comes back online, otherwise after
-  /// each of `delaysMs`, and once they are spent, when the row is next shown, which starts them
-  /// over. A wait that throws ends the retries; nil `waits` attempts once.
+  /// `attempt`'s result, retried while its failure is retryable and the image is wanted: after
+  /// each of `delaysMs`, or at once when a connection failure found the device offline and it is
+  /// back online, which uses up one of them; once they are spent, when the row is next shown,
+  /// which starts them over. A wait that throws ends the retries; nil
+  /// `waits` attempts once. `onFailure` hears each failed attempt.
   @MainActor
   static func load<Value>(
     waits: ArtworkRetryWaits?,
+    onFailure: @MainActor (ArtworkLoadFailure) -> Void = { _ in },
     attempt: @MainActor () async -> Result<Value, ArtworkLoadFailure>,
   ) async -> Result<Value, ArtworkLoadFailure> {
     var result = await attempt()
+    if case let .failure(failure) = result { onFailure(failure) }
     guard let waits else { return result }
     var delays = delaysMs[...]
     while case let .failure(failure) = result, failure.isRetryable, waits.wanted() {
       do {
         let reconnected = failure.isConnectionFailure ? try await waits.online() : false
-        if !reconnected, let delayMs = delays.popFirst() {
-          try await waits.sleep(delayMs)
-        } else if !reconnected {
+        if let delayMs = delays.popFirst() {
+          if !reconnected { try await waits.sleep(delayMs) }
+        } else {
           try await waits.shown()
           delays = delaysMs[...]
         }
@@ -40,6 +43,7 @@ enum ArtworkRetry {
       }
       guard waits.wanted() else { break }
       result = await attempt()
+      if case let .failure(failure) = result { onFailure(failure) }
     }
     return result
   }
