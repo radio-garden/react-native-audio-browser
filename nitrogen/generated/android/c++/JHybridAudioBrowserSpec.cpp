@@ -1603,6 +1603,10 @@ namespace margelo::nitro::audiobrowser {
       return __promise;
     }();
   }
+  void JHybridAudioBrowserSpec::clearPersistedSession() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearPersistedSession");
+    method(_javaPart);
+  }
   void JHybridAudioBrowserSpec::updateOptions(const NativeUpdateOptions& options) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeUpdateOptions> /* options */)>("updateOptions");
     method(_javaPart, JNativeUpdateOptions::fromCpp(options));

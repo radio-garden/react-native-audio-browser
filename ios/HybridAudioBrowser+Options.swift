@@ -12,7 +12,11 @@ public extension HybridAudioBrowser {
     // Opened on the calling thread, not in the turn, so a setter called after this one stages for
     // its player.
     onMainActor {
-      stagedPlayerState.setupStarted(repeatMode: options.repeatMode, playWhenReady: options.playWhenReady)
+      let session = options.restore == true ? PlaybackPersistence(snapshot: { nil }).load() : nil
+      stagedPlayerState.setupStarted(
+        repeatMode: options.repeatMode,
+        playWhenReady: PlaybackRestore.setupIntent(requested: options.playWhenReady, session: session),
+      )
     }
     // Claimed here, on the calling thread: the last call sets the category last and builds the
     // player last.
@@ -71,7 +75,42 @@ public extension HybridAudioBrowser {
     // The stored options outlive the player, so a re-setup applies them to the new one.
     applyOptions()
     playerAndConfiguredBrowser.check()
+    // Read again here, with the generation in restore(_:into:): a clear since setup started leaves none.
+    if options.restore == true, let session = newPlayer.persistedSession() {
+      restore(session, into: newPlayer, repeatMode: stagedPlayerState.stagedRepeatMode)
+    }
     return newPlayer
+  }
+
+  /// Not awaited by setup, which would otherwise wait on the expansion's network request.
+  @MainActor
+  private func restore(_ session: PersistedPlaybackState, into player: Player, repeatMode: RepeatMode?) {
+    let version = player.queueVersion
+    let generation = PlaybackPersistence.clearGeneration
+    Task { @MainActor [weak self] in
+      await PlaybackRestore.run(
+        player,
+        session: session,
+        since: version,
+        repeatMode: repeatMode,
+        expand: { [weak self] path, track, stored in
+          // As Siri's resume does: a browser configured after setup still expands the path.
+          guard await playerAndConfiguredBrowser.wait(timeout: .seconds(10)) != nil, let self else {
+            return .unavailable
+          }
+          return await browserManager.expandQueueForRestore(path, track: track, stored: stored)
+        },
+        isCurrent: { [weak self] in
+          guard let self else { return false }
+          return HybridAudioBrowser.shared === self && self.player === player
+        },
+        cleared: { PlaybackPersistence.clearGeneration != generation },
+      )
+    }
+  }
+
+  func clearPersistedSession() throws {
+    onMainActor { PlaybackPersistence.clear() }
   }
 
   func updateOptions(options: NativeUpdateOptions) {

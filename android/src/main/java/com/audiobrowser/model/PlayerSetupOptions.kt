@@ -69,20 +69,22 @@ data class PlayerSetupOptions(
   @Transient var autoUpdateNowPlayingMetadata: Boolean = true,
   @Transient var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
   @Transient var remoteOutputs: RemoteOutputsOptions? = null,
+  @Transient var restore: Boolean = false,
 ) {
   val automaticBuffer: Boolean
     get() = rebufferBuffer == null
 
   /**
-   * A copy that equals another's when both build the same engine: without the now-playing options
-   * and the remote outputs, which apply without a rebuild. A formatter is a new object on every
-   * setup call, so leaving it in would rebuild every time.
+   * A copy that equals another's when both build the same engine: without the now-playing options,
+   * the remote outputs and the restore, which apply without a rebuild. A formatter is a new object
+   * on every setup call, so leaving it in would rebuild every time.
    */
   fun engineOptions() =
     copy(
       autoUpdateNowPlayingMetadata = true,
       nowPlayingMetadataFormatter = null,
       remoteOutputs = null,
+      restore = false,
     )
 
   fun update(options: NativeSetupPlayerOptions) {
@@ -141,8 +143,10 @@ data class PlayerSetupOptions(
 
     options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
     options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
-    // Unlike the fields above, an absent value removes the formatter and turns remote outputs off.
+    // Unlike the fields above, an absent value removes the formatter, turns remote outputs off and
+    // restores nothing.
     nowPlayingMetadataFormatter = options.nowPlayingMetadataFormatter
     remoteOutputs = options.remoteOutputs
+    restore = options.restore == true
   }
 }

@@ -249,6 +249,12 @@ On iOS and Android, three layers sit above it, highest first: a transient flash 
 
 _Avoid_: Lockscreen info, Notification info, Media metadata.
 
+### Restore
+
+Loading the persisted session as the **Queue** when the Player is set up with `restore`, paused and unprepared: the Active Track it was persisted with, current in the queue its **Contextual Path** expands to now, else in the queue it was persisted with. Nothing loads until a play. A Resume plays a persisted session instead, on a system request (Siri, a Bluetooth play, a head unit).
+
+_Avoid_: Resume (which plays), rehydrate.
+
 ### Remote Output
 
 A device other than the phone that plays the **Active Track** on Android: a Cast receiver or a Sonos room, chosen in the system's output switcher. It plays one item at a time; the Player keeps the **Queue** and sends it the next item when one ends. See ADR 0013.

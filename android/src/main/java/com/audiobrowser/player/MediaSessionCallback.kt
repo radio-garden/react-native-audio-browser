@@ -16,7 +16,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.BrowserManager
-import com.audiobrowser.browser.DisabledOnLinkedPageException
+import com.audiobrowser.browser.RestoreExpansion
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.normalizedSections
 import com.audiobrowser.browser.styleResolvedSections
@@ -1102,20 +1102,14 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
     return scope.future {
       // A pure read: restore() applies repeat/shuffle/speed to the live player and emits events to
-      // JS, so it waits for actual resumption.
+      // JS, so it waits for actual resumption. A track disabled since it was saved is no session:
+      // failing the future refuses it without touching the player.
       val state =
-        player.playbackStateStore.get()
+        player.playbackStateStore.session()
           ?: run {
-            Timber.w("No persisted playback state found")
+            Timber.w("No persisted playback state to resume")
             throw IllegalStateException("No playback state to resume")
           }
-
-      // A track disabled since it was saved never plays; failing the future refuses it without
-      // touching the player.
-      if (state.track.disabled == true) {
-        Timber.w("Refusing resumption of disabled track: ${state.track.title}")
-        throw IllegalStateException("Persisted track is disabled")
-      }
 
       // Before the restore and the expansion: both touch the live player or the network.
       if (!isForPlayback) {
@@ -1127,44 +1121,23 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
         )
       }
 
-      withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
+      withContext(Dispatchers.Main) { player.playbackStateStore.restore(state) }
 
-      val path = state.track.path
-      Timber.d("Resuming from path=$path, positionMs=${state.positionMs}")
-
+      Timber.d("Resuming from path=${state.track.path}, positionMs=${state.positionMs}")
       val browserManager = player.awaitBrowser(FailedRequestKind.RESUME).browserManager
-
-      // A resume plays the stored track even when its linked page now disables it.
+      // A resume plays the stored track even when its page now disables it.
       val expanded =
-        path?.let {
-          try {
-            browserManager.expandQueueFromContextualPath(it)
-          } catch (e: DisabledOnLinkedPageException) {
-            null
-          }
-        }
-
-      if (expanded != null) {
-        val (tracks, selectedIndex) = expanded
-        Timber.d(
-          "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
-        )
-
-        withContext(Dispatchers.Main) { player.queueSourcePath = expanded.sourcePath }
-
-        MediaSession.MediaItemsWithStartPosition(
-          ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),
-          selectedIndex,
-          state.positionMs,
-        )
-      } else {
-        Timber.d("Queue expansion failed, using stored track: ${state.track.title}")
-        MediaSession.MediaItemsWithStartPosition(
-          ImmutableList.of(TrackFactory.toMedia3(state.track)),
-          0,
-          state.positionMs,
-        )
-      }
+        (PlaybackRestore.expand(state) { browserManager } as? RestoreExpansion.Queue)?.queue
+      val queue = PlaybackRestore.queue(state, expanded)
+      queue.sourcePath?.let { withContext(Dispatchers.Main) { player.queueSourcePath = it } }
+      Timber.d(
+        "Resuming ${queue.tracks.size} tracks at index ${queue.startIndex} at ${state.positionMs}ms"
+      )
+      MediaSession.MediaItemsWithStartPosition(
+        ImmutableList.copyOf(TrackFactory.toMedia3(queue.tracks)),
+        queue.startIndex,
+        state.positionMs,
+      )
     }
   }
 }

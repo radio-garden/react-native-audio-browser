@@ -194,6 +194,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     lastEngineState = engineState
     if (left) {
       connectionEnded = false
+      player.restoredUnprepared = false
       player.resetPlayedSinceConnect()
     }
     val loop = player.retryLoop
@@ -356,6 +357,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   override fun onTimelineChanged(timeline: Timeline, reason: Int) {
     val tracks = player.changedQueueTracks() ?: return
     player.callbacks?.onPlaybackQueueChanged(tracks)
+    player.playbackStateStore.saveQueue(tracks)
     // Replacing the current item with one of the same URL updates it in place, without a
     // transition, so a changed `live` arrives only here.
     player.updateLiveState(player.currentTrack?.live == true)

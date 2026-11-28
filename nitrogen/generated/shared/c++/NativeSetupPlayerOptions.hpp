@@ -74,11 +74,12 @@ namespace margelo::nitro::audiobrowser {
     std::optional<RepeatMode> repeatMode     SWIFT_PRIVATE;
     std::optional<std::variant<bool, RetryConfig>> retry     SWIFT_PRIVATE;
     std::optional<bool> keepSessionAliveOnError     SWIFT_PRIVATE;
+    std::optional<bool> restore     SWIFT_PRIVATE;
     std::optional<RemoteOutputsOptions> remoteOutputs     SWIFT_PRIVATE;
 
   public:
     NativeSetupPlayerOptions() = default;
-    explicit NativeSetupPlayerOptions(std::optional<NativeAndroidSetupOptions> android, std::optional<NativeIOSSetupOptions> ios, std::optional<NativeUpdateOptions> options, std::optional<bool> autoUpdateNowPlayingMetadata, std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> nowPlayingMetadataFormatter, std::optional<bool> playWhenReady, std::optional<RepeatMode> repeatMode, std::optional<std::variant<bool, RetryConfig>> retry, std::optional<bool> keepSessionAliveOnError, std::optional<RemoteOutputsOptions> remoteOutputs): android(android), ios(ios), options(options), autoUpdateNowPlayingMetadata(autoUpdateNowPlayingMetadata), nowPlayingMetadataFormatter(nowPlayingMetadataFormatter), playWhenReady(playWhenReady), repeatMode(repeatMode), retry(retry), keepSessionAliveOnError(keepSessionAliveOnError), remoteOutputs(remoteOutputs) {}
+    explicit NativeSetupPlayerOptions(std::optional<NativeAndroidSetupOptions> android, std::optional<NativeIOSSetupOptions> ios, std::optional<NativeUpdateOptions> options, std::optional<bool> autoUpdateNowPlayingMetadata, std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> nowPlayingMetadataFormatter, std::optional<bool> playWhenReady, std::optional<RepeatMode> repeatMode, std::optional<std::variant<bool, RetryConfig>> retry, std::optional<bool> keepSessionAliveOnError, std::optional<bool> restore, std::optional<RemoteOutputsOptions> remoteOutputs): android(android), ios(ios), options(options), autoUpdateNowPlayingMetadata(autoUpdateNowPlayingMetadata), nowPlayingMetadataFormatter(nowPlayingMetadataFormatter), playWhenReady(playWhenReady), repeatMode(repeatMode), retry(retry), keepSessionAliveOnError(keepSessionAliveOnError), restore(restore), remoteOutputs(remoteOutputs) {}
 
   public:
     // NativeSetupPlayerOptions is not equatable because these properties are not equatable: nowPlayingMetadataFormatter
@@ -103,6 +104,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<margelo::nitro::audiobrowser::RepeatMode>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode"))),
         JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retry"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "restore"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteOutputsOptions>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "remoteOutputs")))
       );
     }
@@ -117,6 +119,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "repeatMode"), JSIConverter<std::optional<margelo::nitro::audiobrowser::RepeatMode>>::toJSI(runtime, arg.repeatMode));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "retry"), JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::toJSI(runtime, arg.retry));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.keepSessionAliveOnError));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "restore"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.restore));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "remoteOutputs"), JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteOutputsOptions>>::toJSI(runtime, arg.remoteOutputs));
       return obj;
     }
@@ -137,6 +140,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::RepeatMode>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode")))) return false;
       if (!JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retry")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "restore")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteOutputsOptions>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "remoteOutputs")))) return false;
       return true;
     }

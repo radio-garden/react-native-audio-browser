@@ -1750,12 +1750,13 @@ struct PlayerReviewRegressionTests {
     let saved = PersistedPlaybackState(
       track: JsonTrack(from: Track(id: "t1", src: "https://example.com/a.mp3", title: "A")),
       positionMs: 30000, repeatMode: "queue", shuffleEnabled: false, playbackSpeed: 1.5,
+      queue: nil, queueIndex: nil,
     )
     PlaybackPersistence(defaults: defaults) { saved }.save()
 
     let player = makePlayer()
     let session = try #require(player.persistedSession())
-    player.resume(session, queue: nil)
+    player.restore(session, queue: nil, playWhenReady: true)
     #expect(player.currentTrack?.id == "t1")
     #expect(player.deferredSeek.target == 30)
     #expect(player.repeatMode == .queue)
@@ -1769,6 +1770,7 @@ struct PlayerReviewRegressionTests {
     let saved = PersistedPlaybackState(
       track: JsonTrack(from: Track(id: "t1", src: "https://example.com/a.mp3", title: "A", disabled: true)),
       positionMs: nil, repeatMode: "off", shuffleEnabled: false, playbackSpeed: 1,
+      queue: nil, queueIndex: nil,
     )
     PlaybackPersistence(defaults: defaults) { saved }.save()
     #expect(makePlayer().persistedSession() == nil)

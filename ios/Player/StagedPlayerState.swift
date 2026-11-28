@@ -7,7 +7,7 @@ final class StagedPlayerState {
   private let onRepeatModeChanged: (RepeatMode) -> Void
   private let onPlayWhenReadyChanged: (Bool) -> Void
   private var setupsInFlight = 0
-  private var stagedRepeatMode: RepeatMode?
+  private(set) var stagedRepeatMode: RepeatMode?
   private var stagedPlayWhenReady: Bool?
   private var heardRepeatMode = RepeatMode.off
   private var heardPlayWhenReady = false

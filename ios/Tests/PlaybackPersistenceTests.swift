@@ -27,6 +27,7 @@ struct PlaybackPersistenceTests {
   private func state(positionMs: Double? = nil) -> PersistedPlaybackState {
     PersistedPlaybackState(
       track: sampleTrack(), positionMs: positionMs, repeatMode: "off", shuffleEnabled: false, playbackSpeed: 1.0,
+      queueIndex: 0,
     )
   }
 
@@ -72,23 +73,79 @@ struct PlaybackPersistenceTests {
 
   @Test func aSnapshotOfALiveStreamKeepsNoPosition() {
     let snapshot = PlaybackPersistence.snapshot(
-      of: Track(src: "s", live: true), state: .playing, position: 12, repeatMode: .off, shuffleEnabled: false,
-      rate: 1,
+      of: Track(src: "s", live: true), at: 0, state: .playing, position: 12,
+      repeatMode: .off, shuffleEnabled: false, rate: 1,
     )
     #expect(snapshot.positionMs == nil)
   }
 
   @Test func aSnapshotOfAnEndedTrackResumesFromTheStart() {
     let ended = PlaybackPersistence.snapshot(
-      of: Track(src: "s"), state: .ended, position: 300, repeatMode: .off, shuffleEnabled: false, rate: 1,
+      of: Track(src: "s"), at: 0, state: .ended, position: 300, repeatMode: .off, shuffleEnabled: false, rate: 1,
     )
     let paused = PlaybackPersistence.snapshot(
-      of: Track(src: "s"), state: .paused, position: 12.5, repeatMode: .track, shuffleEnabled: true, rate: 1.5,
+      of: Track(src: "s"), at: 0, state: .paused, position: 12.5, repeatMode: .track, shuffleEnabled: true, rate: 1.5,
     )
     #expect(ended.positionMs == 0)
     #expect(paused.positionMs == 12500)
     #expect(paused.repeatMode == RepeatMode.track.stringValue)
     #expect(paused.shuffleEnabled)
     #expect(paused.playbackSpeed == 1.5)
+  }
+
+  @Test func aSnapshotKeepsTheCurrentIndex() {
+    let queue = [Track(id: "a", src: "a"), Track(id: "b", src: "b"), Track(id: "c", src: "c")]
+    let snapshot = PlaybackPersistence.snapshot(
+      of: queue[1], at: 1, state: .paused, position: 0, repeatMode: .queue, shuffleEnabled: false, rate: 1,
+    )
+    #expect(snapshot.queueIndex == 1)
+  }
+
+  @Test func aSaveFromBeforeTheQueueWasKeptStillLoads() throws {
+    let defaults = freshDefaults()
+    var saved = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(state())) as? [String: Any])
+    saved["queueIndex"] = nil
+    try defaults.set(JSONSerialization.data(withJSONObject: saved), forKey: "playbackState.v1")
+    let loaded = try #require(PlaybackPersistence(defaults: defaults) { nil }.load())
+    #expect(loaded.track.id == "abc")
+    #expect(loaded.storedQueue == nil)
+  }
+
+  @Test func theQueueIsWrittenOnlyWhenItChanges() {
+    let defaults = freshDefaults()
+    let persistence = PlaybackPersistence(defaults: defaults) { state() }
+    persistence.saveQueue([Track(id: "abc", src: "/listen/abc/channel.mp3")])
+    let written = defaults.data(forKey: "playbackQueue.v1")
+
+    persistence.save()
+    persistence.save()
+
+    #expect(written != nil)
+    #expect(defaults.data(forKey: "playbackQueue.v1") == written)
+    #expect(persistence.load()?.queue?.map(\.id) == ["abc"])
+  }
+
+  @Test func aMalformedQueueLoadsAsNoneAndKeepsTheTrack() {
+    let defaults = freshDefaults()
+    let persistence = PlaybackPersistence(defaults: defaults) { state() }
+    persistence.save()
+    defaults.set(Data(#"[{"id": 7}]"#.utf8), forKey: "playbackQueue.v1")
+
+    let loaded = persistence.load()
+
+    #expect(loaded?.track.id == "abc")
+    #expect(loaded?.queue == nil)
+  }
+
+  @Test func aClearForgetsTheSessionAndItsQueue() {
+    let defaults = freshDefaults()
+    let persistence = PlaybackPersistence(defaults: defaults) { state() }
+    persistence.save()
+    persistence.saveQueue([Track(id: "abc", src: "/listen/abc/channel.mp3")])
+
+    PlaybackPersistence.clear(defaults: defaults)
+
+    #expect(persistence.load() == nil)
+    #expect(defaults.data(forKey: "playbackQueue.v1") == nil)
   }
 }

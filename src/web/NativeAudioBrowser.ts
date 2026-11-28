@@ -630,6 +630,10 @@ export class NativeAudioBrowser
   }
 
   // MARK: Player init and config
+  clearPersistedSession(): void {
+    // The web persists no session.
+  }
+
   async setupPlayer(options: NativeSetupPlayerOptions): Promise<void> {
     await super.setupPlayer(options)
     // Apply the launch options and initial state bundled in setup — same

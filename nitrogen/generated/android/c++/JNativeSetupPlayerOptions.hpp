@@ -143,6 +143,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JVariant_Boolean_RetryConfig> retry = this->getFieldValue(fieldRetry);
       static const auto fieldKeepSessionAliveOnError = clazz->getField<jni::JBoolean>("keepSessionAliveOnError");
       jni::local_ref<jni::JBoolean> keepSessionAliveOnError = this->getFieldValue(fieldKeepSessionAliveOnError);
+      static const auto fieldRestore = clazz->getField<jni::JBoolean>("restore");
+      jni::local_ref<jni::JBoolean> restore = this->getFieldValue(fieldRestore);
       static const auto fieldRemoteOutputs = clazz->getField<JRemoteOutputsOptions>("remoteOutputs");
       jni::local_ref<JRemoteOutputsOptions> remoteOutputs = this->getFieldValue(fieldRemoteOutputs);
       return NativeSetupPlayerOptions(
@@ -163,6 +165,7 @@ namespace margelo::nitro::audiobrowser {
         repeatMode != nullptr ? std::make_optional(repeatMode->toCpp()) : std::nullopt,
         retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt,
         keepSessionAliveOnError != nullptr ? std::make_optional(static_cast<bool>(keepSessionAliveOnError->value())) : std::nullopt,
+        restore != nullptr ? std::make_optional(static_cast<bool>(restore->value())) : std::nullopt,
         remoteOutputs != nullptr ? std::make_optional(remoteOutputs->toCpp()) : std::nullopt
       );
     }
@@ -173,7 +176,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeSetupPlayerOptions::javaobject> fromCpp(const NativeSetupPlayerOptions& value) {
-      using JSignature = JNativeSetupPlayerOptions(jni::alias_ref<JNativeAndroidSetupOptions>, jni::alias_ref<JNativeIOSSetupOptions>, jni::alias_ref<JNativeUpdateOptions>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRepeatMode>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRemoteOutputsOptions>);
+      using JSignature = JNativeSetupPlayerOptions(jni::alias_ref<JNativeAndroidSetupOptions>, jni::alias_ref<JNativeIOSSetupOptions>, jni::alias_ref<JNativeUpdateOptions>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRepeatMode>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRemoteOutputsOptions>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -187,6 +190,7 @@ namespace margelo::nitro::audiobrowser {
         value.repeatMode.has_value() ? JRepeatMode::fromCpp(value.repeatMode.value()) : nullptr,
         value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr,
         value.keepSessionAliveOnError.has_value() ? jni::JBoolean::valueOf(value.keepSessionAliveOnError.value()) : nullptr,
+        value.restore.has_value() ? jni::JBoolean::valueOf(value.restore.value()) : nullptr,
         value.remoteOutputs.has_value() ? JRemoteOutputsOptions::fromCpp(value.remoteOutputs.value()) : nullptr
       );
     }

@@ -60,6 +60,7 @@ let package = Package(
         "CarPlay/MediaIntentCriteria.swift",
         "Player/PersistedPlaybackState.swift",
         "Player/PlaybackPersistence.swift",
+        "Player/PlaybackRestore.swift",
         "Model/NitroTypeStubs.swift",
         "PlaybackEvent.swift",
         "TrackSelector.swift",

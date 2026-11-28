@@ -312,6 +312,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void clearGate() = 0;
       virtual bool isCarConnected() = 0;
       virtual std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) = 0;
+      virtual void clearPersistedSession() = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
       virtual Options getOptions() = 0;
       virtual void load(const Track& track) = 0;

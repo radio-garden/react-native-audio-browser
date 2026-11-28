@@ -285,6 +285,32 @@ final class BrowserManager {
     try await SectionScope.expanding(path) { try await self.expandScoped($0) }
   }
 
+  /// The queue a restore of the contextual `path`'s `track` loads (`SectionScope.restoreQueue`),
+  /// with `stored`, the queue it was persisted in. Resolves each page once: a linked path's linked
+  /// page, then, when it gives no queue, its origin.
+  func expandQueueForRestore(_ path: String, track: Track, stored: [Track]) async -> RestoreExpansion {
+    guard let origin = BrowserPathHelper.extractOrigin(path) else {
+      return await restoreExpansion(path, track: track, stored: stored, insertGone: true)
+    }
+    let linked = await restoreExpansion(path, track: track, stored: stored, insertGone: false)
+    guard case .unavailable = linked else { return linked }
+    return await restoreExpansion(origin, track: track, stored: stored, insertGone: true)
+  }
+
+  private func restoreExpansion(_ path: String, track: Track, stored: [Track], insertGone: Bool) async
+    -> RestoreExpansion
+  {
+    let page = BrowserPathHelper.stripTrackId(path)
+    guard let sections = try? await resolve(page).normalizedSections else { return .unavailable }
+    switch SectionScope.restoreQueue(
+      in: sections, path: path, track: track, stored: stored, insertGone: insertGone, singleTrack: config.singleTrack,
+    ) {
+    case let .queue(tracks, selectedIndex): return .queue(tracks: tracks, selectedIndex: selectedIndex, sourcePath: page)
+    case .refused: return .refused
+    case .unavailable: return .unavailable
+    }
+  }
+
   private func expandScoped(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
     let resolved = try await resolve(BrowserPathHelper.stripTrackId(path))

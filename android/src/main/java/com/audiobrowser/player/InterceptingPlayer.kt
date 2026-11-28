@@ -15,10 +15,12 @@ import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 
 /**
  * What the platform session reads of an idle engine. Android Auto takes STATE_IDLE for "nothing
- * playing": it closes the now-playing screen and its next/previous buttons with it. So an ended
- * queue reads ended, as on an ended engine (a rebuild carries an ended engine idle), and with
- * `keepAlive` a terminal error (the engine's, or ERROR once a rebuild dropped it) and a pause that
- * cancelled a retry (PAUSED) read as paused and ready.
+ * playing": it closes the now-playing screen and its next/previous buttons with it. An engine never
+ * prepared since its items were set (a paused restore) reads idle whatever the state, so Media3
+ * posts no notification and starts no foreground service for it. Otherwise an ended queue reads
+ * ended, as on an ended engine (a rebuild carries an ended engine idle), and with `keepAlive` a
+ * terminal error (the engine's, or ERROR once a rebuild dropped it) and a pause that cancelled a
+ * retry (PAUSED) read as paused and ready.
  */
 internal object SessionView {
   private val PARKED_STATES = setOf(PlaybackState.PAUSED, PlaybackState.ERROR)
@@ -29,9 +31,11 @@ internal object SessionView {
     state: PlaybackState,
     engineFailed: Boolean,
     keepAlive: Boolean,
+    unprepared: Boolean,
   ): Int =
     when {
       engineState != MediaPlayer.STATE_IDLE -> engineState
+      unprepared -> engineState
       state == PlaybackState.ENDED -> MediaPlayer.STATE_ENDED
       !keepAlive -> engineState
       state in PARKED_STATES -> MediaPlayer.STATE_READY
@@ -81,6 +85,8 @@ internal class InterceptingPlayer(
   private val engineView: (Int) -> Int,
   /** Whether the engine's playing is a blip the retry loop hides. */
   private val masksPlaying: () -> Boolean,
+  /** Whether the engine has not been prepared since a paused restore set its items. */
+  private val unprepared: () -> Boolean,
   /** Leads the engine's shuffle order with a start index, given the queue's size. */
   private val leadShuffleOrder: (startIndex: Int, count: Int) -> Unit,
   private val playPlayer: () -> Unit,
@@ -119,6 +125,7 @@ internal class InterceptingPlayer(
         old,
         engineFailed,
         keepSessionAliveOnError,
+        unprepared(),
       )
     if (view != was) engineListeners.toList().forEach { it.onPlaybackStateChanged(view) }
     refreshViews()
@@ -142,6 +149,7 @@ internal class InterceptingPlayer(
       playerState(),
       engineFailed,
       keepSessionAliveOnError,
+      unprepared(),
     )
 
   override fun getPlayWhenReady(): Boolean =
