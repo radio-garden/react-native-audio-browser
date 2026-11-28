@@ -538,8 +538,9 @@ internal constructor(
     private set
 
   /**
-   * Moves whenever the app replaces what plays: a new queue, a load, a skip or a clear. Not on an
-   * edit that leaves the playing item playing, such as adding up next or restamping a track.
+   * Moves whenever the app chooses what plays: a new queue, a load, a skip (in place too) or a
+   * clear. Not on an edit that leaves the playing item playing, such as adding up next or
+   * restamping a track.
    */
   @Volatile
   internal var playGeneration = 0
@@ -869,6 +870,7 @@ internal constructor(
   fun skipTo(index: Int) {
     validateIndex(index)
     playGeneration++
+    if (sessionPlayer.skipsInPlace(index, retryView(sessionPlayer.playbackState))) return
     sessionPlayer.seekTo(index, C.TIME_UNSET)
     sessionPlayer.prepare()
   }
@@ -1227,9 +1229,9 @@ internal constructor(
   }
 
   /**
-   * No-op unless the track declares `live`; ExoPlayer never marks progressive ICY radio live. A
-   * stream with a live window seeks to its edge; anything else reconnects, which for a non-seekable
-   * stream is the live edge.
+   * No-op unless the track declares `live`, the contract iOS keeps too, though Media3 also reads a
+   * progressive ICY stream without a length as live. A stream with a live window seeks to its edge;
+   * anything else reconnects, which for a non-seekable stream is the live edge.
    */
   fun seekToLiveEdge() {
     if (currentTrack?.live != true || liveStreamParked) return

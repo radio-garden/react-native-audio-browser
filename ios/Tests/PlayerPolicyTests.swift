@@ -238,6 +238,171 @@ struct PlayerSeekingTests {
     #expect(engine.seekCalls.isEmpty)
     #expect(engine.resolveAndLoadCalls.count == 2)
   }
+
+  @Test func aSkipToThePlayingLiveItemAtItsEdgeLeavesItWhereItIs() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = 120
+    engine.currentTime = 118
+    let loadsBefore = engine.resolveAndLoadCalls.count
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == loadsBefore)
+  }
+
+  @Test func aSkipToThePlayingLiveItemWithoutAWindowLeavesItWhereItIs() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = nil
+    let loadsBefore = engine.resolveAndLoadCalls.count
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == loadsBefore)
+  }
+
+  @Test func aSkipToTheLiveItemBehindItsEdgeRejoinsIt() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = 120
+    engine.currentTime = 60
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls == [120])
+  }
+
+  @Test func aSkipToTheLoadingLiveItemReadsNoPositionFromTheItemBefore() throws {
+    let (player, engine, _) = try makeLoading(live: true)
+    player.setPlayWhenReady(true)
+    // The outgoing on-demand item, still in the engine until the live one is prepared.
+    engine.hasItem = true
+    engine.liveEdge = 300
+    engine.currentTime = 30
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+    #expect(player.deferredSeek.target == nil)
+  }
+
+  @Test func aSkipToAPlayingLiveItemTheTrackDoesNotDeclareLeavesItWhereItIs() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.liveWindowSeconds = 600
+    engine.liveEdge = 120
+    engine.currentTime = 118
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aSkipToTheLiveItemPlayingHeldBackFromTheWindowsEndLeavesItWhereItIs() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = 120
+    engine.offsetFromLive = 25
+    engine.currentTime = 95
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aSkipToTheLiveItemTheToleranceBehindItsLivePositionRejoinsTheEdge() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveEdge = 120
+    engine.offsetFromLive = 25
+    engine.currentTime = 85
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls == [120])
+  }
+
+  @Test func aSkipToThePausedLiveItemAtItsEdgeRejoinsIt() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.liveWindowSeconds = 600
+    engine.liveEdge = 120
+    engine.currentTime = 118
+    player.pause()
+
+    try player.skipTo(0)
+
+    #expect(engine.seekCalls == [120])
+  }
+
+  @Test func aSkipToTheLoadingLiveItemDropsASeekMadeDuringTheLoad() throws {
+    let (player, engine, _) = try makeLoading(live: true)
+    player.setPlayWhenReady(true)
+    player.seek(to: 30)
+    #expect(player.deferredSeek.target == 30)
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(player.deferredSeek.target == nil)
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aSkipToTheLoadingLiveItemLetsASeekInFlightLandAndBecomeReady() throws {
+    let (player, engine, _) = try makeLoading(live: true)
+    player.setPlayWhenReady(true)
+    player.seek(to: 30)
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(engine.seekCalls == [30])
+
+    try player.skipTo(0, playWhenReady: true)
+    engine.completeSeeks(true)
+
+    #expect(player.state != .loading)
+  }
+
+  @Test func aSkipToTheReadyLiveItemAtItsEdgeLeavesItWhereItIs() throws {
+    let (player, engine, _) = try makeLoading(live: true)
+    player.setPlayWhenReady(true)
+    engine.hasItem = true
+    engine.emit(.itemPrepared(likelyToKeepUp: true))
+    #expect(player.state == .ready)
+    engine.liveEdge = 120
+    engine.currentTime = 118
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+  }
+
+  @Test func aSkipToTheBufferingLiveItemAtItsEdgeRejoinsIt() throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    player.transition(.avPlayerWaiting)
+    #expect(player.state == .buffering)
+    engine.liveEdge = 120
+    engine.currentTime = 118
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls == [120])
+  }
+
+  @Test func aSkipAfterTheLiveItemsEndJoinsItsReconnect() async throws {
+    let (player, engine, _) = try makePlaying(live: true)
+    engine.emit(.playedToEnd)
+    await player.retry.pendingTask?.value
+    #expect(player.state == .loading)
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls.isEmpty)
+    #expect(engine.resolveAndLoadCalls.count == 2)
+  }
+
+  @Test func aSkipToThePlayingOnDemandItemStartsItOver() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 60
+
+    try player.skipTo(0, playWhenReady: true)
+
+    #expect(engine.seekCalls == [0])
+  }
 }
 
 @Suite("Player - engine events")

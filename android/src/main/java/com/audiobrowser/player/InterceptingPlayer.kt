@@ -5,6 +5,7 @@ import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.PlaybackState
@@ -43,6 +44,25 @@ internal object SessionView {
   /** An idle engine read as anything else isn't loading, so it can't be about to play. */
   fun playWhenReady(raw: Boolean, engineState: Int, view: Int): Boolean =
     raw && (engineState != MediaPlayer.STATE_IDLE || view == MediaPlayer.STATE_IDLE)
+}
+
+/** How far behind its default position a live item still plays at its live edge. */
+internal const val LIVE_EDGE_TOLERANCE_MS = 10_000L
+
+/**
+ * Whether a skip to [index] leaves the stream as it plays, [state] being the engine's as the retry
+ * view reads it: the current item, playing, live and at its live edge, where a stream without a
+ * seekable window always is. Anything else seeks: an on-demand item starts over, a live one paused
+ * or behind its edge rejoins it. iOS's `Player.skipTo` keeps the same rule; its `skipToCurrent`
+ * names where they differ.
+ */
+internal fun MediaPlayer.skipsInPlace(index: Int, @MediaPlayer.State state: Int): Boolean {
+  if (index != currentMediaItemIndex || !playWhenReady || state != MediaPlayer.STATE_READY) {
+    return false
+  }
+  val window = currentTimeline.getWindow(index, Timeline.Window())
+  return window.isLive &&
+    (!window.isSeekable || window.defaultPositionMs - currentPosition < LIVE_EDGE_TOLERANCE_MS)
 }
 
 /**
@@ -222,7 +242,13 @@ internal class InterceptingPlayer(
   // Media3 sets here the queue of a track picked on an external surface and of playback
   // resumption. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
+    val state = engineView(wrappedPlayer.playbackState)
+    if (wrappedPlayer.skipsInPlace(startIndex, state) && isCurrentQueue(mediaItems)) return
     super.setMediaItems(mediaItems, startIndex, startPositionMs)
     if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
   }
+
+  private fun isCurrentQueue(mediaItems: List<MediaItem>): Boolean =
+    mediaItems.size == mediaItemCount &&
+      mediaItems.withIndex().all { (i, item) -> item.mediaId == getMediaItemAt(i).mediaId }
 }

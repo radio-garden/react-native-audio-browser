@@ -66,6 +66,11 @@ struct DeferredSeek {
     }
   }
 
+  /// Drops a pending target; one in flight lands as issued, and still gates ready.
+  mutating func dropPending() {
+    if case .pending = state { state = .idle }
+  }
+
   mutating func reset() {
     state = .idle
     generation += 1

@@ -650,15 +650,33 @@ final class Player {
 
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
     try handlePlayWhenReady(playWhenReady) {
-      if index == queue.currentIndex, state == .error {
-        // A skip starts the track over: not where it failed, nor at a seek made since.
-        deferredSeek.reset()
-        reloadResolving(startFromCurrentTime: false)
-      } else if index == queue.currentIndex {
-        seek(to: 0)
-      } else {
+      guard index == queue.currentIndex else {
         try queue.skipTo(index)
         handleCurrentTrackChanged()
+        return
+      }
+      switch Self.skipToCurrent(
+        state: state,
+        playWhenReady: self.playWhenReady,
+        declaredLive: currentTrack?.live == true,
+        positionIsCurrent: enginePositionIsCurrent,
+        hasLiveWindow: engine.liveWindowSeconds != nil,
+        currentTime: engine.currentTime,
+        liveEdge: engine.liveEdge,
+        offsetFromLive: engine.offsetFromLive,
+      ) {
+      case .stay:
+        break
+      case .rejoin:
+        rejoinLiveEdge()
+      case .joinAtEdge:
+        deferredSeek.dropPending()
+      case .restart:
+        seek(to: 0)
+      case .reload:
+        // Not where it failed, nor at a seek made since.
+        deferredSeek.reset()
+        reloadResolving(startFromCurrentTime: false)
       }
     }
   }
@@ -808,16 +826,62 @@ final class Player {
     }
   }
 
-  /// Jumps to the live edge: the end of the seekable window when there is one; without one
-  /// (ICY), or in .error, whose item's window is stale, it reconnects. No-op for a track that
-  /// isn't live, or a parked one, whose next play reconnects at the edge.
+  /// Jumps to the live edge of a track that declares `live`; see ``rejoinLiveEdge()``.
   func seekToLiveEdge() {
-    guard currentTrack?.live == true, engine.hasItem, !liveStreamClosed else { return }
+    guard currentTrack?.live == true else { return }
+    rejoinLiveEdge()
+  }
+
+  /// The end of the seekable window when there is one; without one (ICY), or in .error, whose
+  /// item's window is stale, it reconnects. No-op for a parked stream, whose next play reconnects
+  /// at the edge.
+  private func rejoinLiveEdge() {
+    guard engine.hasItem, !liveStreamClosed else { return }
     if let edge = engine.liveEdge, state != .error {
       seek(to: edge)
     } else {
       reloadResolving(startFromCurrentTime: false)
     }
+  }
+
+  /// What a skip to the current item does.
+  enum CurrentItemSkip: Equatable {
+    /// Leaves it as it plays.
+    case stay
+    /// Goes to its live edge; see ``rejoinLiveEdge()``.
+    case rejoin
+    /// Lets it load to its live edge, dropping a seek made meanwhile.
+    case joinAtEdge
+    /// Starts it over at 0.
+    case restart
+    /// Loads it again from the start.
+    case reload
+  }
+
+  /// A live item, one that declares `live` or, once loaded, has a seekable live window, stays while
+  /// it plays within `liveEdgeToleranceSeconds` of its live position, `offsetFromLive` behind the
+  /// window's end, or anywhere without a window. Android's `skipsInPlace` keeps the same rule,
+  /// measured from Media3's default position, except that here a parked live stream waits for its
+  /// next play to reconnect, a rejoin seeks to the window's end, an undeclared item reads as live
+  /// only once loaded, and an undeclared progressive stream without a length (ICY) starts over:
+  /// Media3 reads it as live, but nothing here tells it from an on-demand file without one.
+  nonisolated static func skipToCurrent(
+    state: PlaybackState,
+    playWhenReady: Bool,
+    declaredLive: Bool,
+    positionIsCurrent: Bool,
+    hasLiveWindow: Bool,
+    currentTime: Double,
+    liveEdge: Double?,
+    offsetFromLive: Double?,
+  ) -> CurrentItemSkip {
+    if state == .error { return .reload }
+    guard declaredLive || positionIsCurrent && hasLiveWindow else { return .restart }
+    guard positionIsCurrent else { return .joinAtEdge }
+    guard playWhenReady, state == .playing || state == .ready else { return .rejoin }
+    guard let liveEdge else { return .stay }
+    let behind = liveEdge - (offsetFromLive ?? 0) - currentTime
+    return behind < liveEdgeToleranceSeconds ? .stay : .rejoin
   }
 
   /// A completion arriving after a track change belongs to the old item, and reports false
@@ -1129,6 +1193,8 @@ final class Player {
   /// Time playback must have progressed before a buffer dip counts as a stall, so the initial
   /// connect or a seek doesn't read as one.
   private static let stallGraceSeconds: TimeInterval = 0.5
+  /// How far behind its live position a live item still plays at its live edge.
+  private nonisolated static let liveEdgeToleranceSeconds: TimeInterval = 10
 
   /// Ongoing playback is waiting for data. Android counts only buffering after playback since
   /// the last connect, so a seek, a track change or a reconnect that starts past the grace isn't a
