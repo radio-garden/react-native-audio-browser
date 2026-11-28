@@ -6,11 +6,14 @@ import Kingfisher
 struct ArtworkLoadFailure: Error, Equatable, CustomStringConvertible {
   let status: Int?
   let urlErrorCode: URLError.Code?
+  /// The load was cancelled, not refused: nothing went wrong.
+  let isCancellation: Bool
   private let detail: String
 
-  init(status: Int? = nil, urlErrorCode: URLError.Code? = nil, detail: String = "") {
+  init(status: Int? = nil, urlErrorCode: URLError.Code? = nil, isCancellation: Bool = false, detail: String = "") {
     self.status = status
     self.urlErrorCode = urlErrorCode
+    self.isCancellation = isCancellation || urlErrorCode == .cancelled
     self.detail = detail
   }
 
@@ -19,9 +22,13 @@ struct ArtworkLoadFailure: Error, Equatable, CustomStringConvertible {
     case let KingfisherError.responseError(reason: .invalidHTTPStatusCode(response)):
       self.init(status: response.statusCode)
     case let KingfisherError.responseError(reason: .URLSessionError(underlying as URLError)):
-      self.init(urlErrorCode: underlying.code, detail: underlying.localizedDescription)
+      self.init(urlErrorCode: underlying.code)
     case let error as URLError:
-      self.init(urlErrorCode: error.code, detail: error.localizedDescription)
+      self.init(urlErrorCode: error.code)
+    case is CancellationError:
+      self.init(isCancellation: true)
+    case let error as KingfisherError where error.isTaskCancelled:
+      self.init(isCancellation: true, detail: "Kingfisher error \(error.errorCode)")
     case let error as KingfisherError:
       self.init(detail: "Kingfisher error \(error.errorCode)")
     default:

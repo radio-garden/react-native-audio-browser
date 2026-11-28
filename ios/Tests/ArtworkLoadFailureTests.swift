@@ -68,10 +68,19 @@ struct ArtworkLoadFailureTests {
     let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
     let refused = ArtworkLoadFailure(KingfisherError.responseError(reason: .invalidHTTPStatusCode(response: response)))
     let invalid = ArtworkLoadFailure(KingfisherError.requestError(reason: .invalidURL(request: URLRequest(url: url))))
-    for failure in [refused, invalid] {
+    var failing = URLError(.timedOut, userInfo: [NSURLErrorFailingURLErrorKey: url, NSURLErrorFailingURLStringErrorKey: url.absoluteString])
+    failing = URLError(failing.code, userInfo: failing.userInfo.merging([NSLocalizedDescriptionKey: "timed out at \(url)"]) { $1 })
+    let timedOut = ArtworkLoadFailure(KingfisherError.responseError(reason: .URLSessionError(error: failing)))
+    for failure in [refused, invalid, timedOut, ArtworkLoadFailure(failing)] {
       #expect(!failure.description.contains("secret"))
       #expect(!failure.description.contains("/u/123"))
     }
+  }
+
+  @Test func aCancelledLoadIsToldApart() {
+    #expect(ArtworkLoadFailure(CancellationError()).isCancellation)
+    #expect(ArtworkLoadFailure(URLError(.cancelled)).isCancellation)
+    #expect(!status(503).isCancellation)
   }
 
   @Test func theDescriptionNamesTheStatusOrTheURLErrorCode() {

@@ -26,8 +26,8 @@ enum ArtworkImageFetcher {
     try? await load(from: source, slot: slot, onCanvas: onCanvas, waitsForConnectivity: waitsForConnectivity).get()
   }
 
-  /// `fetchImage`'s image, or why it could not be loaded; each failed fetch is logged once, an
-  /// unparseable URI not at all.
+  /// `fetchImage`'s image, or why it could not be loaded; each failed fetch is logged once, a
+  /// cancelled one or an unparseable URI not at all.
   @MainActor
   static func load(
     from source: ImageSource,
@@ -75,6 +75,7 @@ enum ArtworkImageFetcher {
     }
     return result.mapError { error in
       let failure = ArtworkLoadFailure(error)
+      guard !failure.isCancellation else { return failure }
       // A path or query may carry a token or a user's id; only the host and the failure are public.
       logger.error(
         "Failed to load artwork from \(url.host ?? "", privacy: .public)\(url.path.prefix(200)): \(failure.description, privacy: .public)",
