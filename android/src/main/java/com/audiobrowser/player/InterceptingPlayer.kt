@@ -5,6 +5,7 @@ import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.PlaybackState
@@ -45,12 +46,24 @@ internal object SessionView {
     raw && (engineState != MediaPlayer.STATE_IDLE || view == MediaPlayer.STATE_IDLE)
 }
 
+/** How far behind its default position a live item still plays at its live edge. */
+internal const val LIVE_EDGE_TOLERANCE_MS = 10_000L
+
 /**
  * Whether a skip to [index] leaves the stream as it plays, [state] being the engine's as the retry
- * view reads it: the current item, playing. A paused one still rejoins its live edge.
+ * view reads it: the current item, playing, live and at its live edge, where a stream without a
+ * seekable window always is. iOS starts a skipped-to current item over at 0, where a live stream
+ * can't go. Anything else seeks: an on-demand item starts over, a live one paused or behind its
+ * edge rejoins it.
  */
-internal fun MediaPlayer.skipsInPlace(index: Int, @MediaPlayer.State state: Int): Boolean =
-  index == currentMediaItemIndex && playWhenReady && state == MediaPlayer.STATE_READY
+internal fun MediaPlayer.skipsInPlace(index: Int, @MediaPlayer.State state: Int): Boolean {
+  if (index != currentMediaItemIndex || !playWhenReady || state != MediaPlayer.STATE_READY) {
+    return false
+  }
+  val window = currentTimeline.getWindow(index, Timeline.Window())
+  return window.isLive &&
+    (!window.isSeekable || window.defaultPositionMs - currentPosition < LIVE_EDGE_TOLERANCE_MS)
+}
 
 /**
  * The player the MediaSession sees. Offers each transport command from an external surface (lock

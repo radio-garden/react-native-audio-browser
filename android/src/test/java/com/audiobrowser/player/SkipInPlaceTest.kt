@@ -9,6 +9,7 @@ import com.audiobrowser.liveHlsUri
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentMp3Bytes
+import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import java.io.IOException
 import java.net.ServerSocket
@@ -29,7 +30,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 
-/** A skip to the playing item, from the app or a controller's pick of it. */
+/** A skip to the playing item, from the app or a controller's pick of it, as iOS does it. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class SkipInPlaceTest {
@@ -99,6 +100,19 @@ class SkipInPlaceTest {
   }
 
   @Test
+  fun `a skip to the playing live item behind its edge rejoins it`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+    player.exoPlayer.seekTo(0)
+    idleUntil("ready behind the edge") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    engineEvents.clear()
+
+    player.skipTo(0)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("seek" in engineEvents)
+  }
+
+  @Test
   fun `a playing live item given a buffering state doesn't skip in place`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
 
@@ -128,6 +142,19 @@ class SkipInPlaceTest {
     shadowOf(Looper.getMainLooper()).idle()
 
     assertTrue("state ${MediaPlayer.STATE_BUFFERING}" in engineEvents)
+  }
+
+  @Test
+  fun `a skip to the playing on-demand item starts it over`() {
+    playUntilReady(folder.silentWavUri(Duration.ofMinutes(1)))
+    player.exoPlayer.seekTo(30_000)
+    idleUntil("ready at 30 s") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    assertTrue(player.exoPlayer.currentPosition >= 30_000)
+
+    player.skipTo(0)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue(player.exoPlayer.currentPosition < 1_000)
   }
 
   @Test
