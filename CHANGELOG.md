@@ -1,3 +1,18 @@
+## [1.0.0-next.21](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.20...v1.0.0-next.21) (2026-11-28)
+
+### Features
+
+* restore the last session at setup, paused ([0690223](https://github.com/radio-garden/react-native-audio-browser/commit/06902233a181abbfb549c3f04e05ae9a3623ae14))
+
+### Bug Fixes
+
+* **ios:** keep the request layer when the media transform throws ([dda030f](https://github.com/radio-garden/react-native-audio-browser/commit/dda030f288eea09f9bdf01a6ae9d48eedd8ed221))
+* **ios:** run media.resolve after the media transform, as Android and web do ([d114e6c](https://github.com/radio-garden/react-native-audio-browser/commit/d114e6c5e70fcaa682c599c79e858d9080fd69ad))
+
+### Code Refactors
+
+* **ios:** skip a failing media request layer in one place ([feebdee](https://github.com/radio-garden/react-native-audio-browser/commit/feebdee37a2a0b3bedead70ba011be133441e2e8))
+
 ## [1.0.0-next.20](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.19...v1.0.0-next.20) (2026-11-28)
 
 ### Features
