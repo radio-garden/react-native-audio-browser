@@ -141,6 +141,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      # Robolectric fetches each SDK's android-all jar from Maven Central while the tests run, into
+      # ~/.m2 rather than Gradle's cache, and a rate-limited fetch fails every test of that SDK.
+      # The newest cache is restored, and saved again under what it holds once that changes.
+      - name: Restore Robolectric SDKs
+        id: robolectric-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: ${{ runner.os }}-robolectric-restore-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-robolectric-
+
+      # An access time of 0 marks each restored jar as unread until the tests read it.
+      - name: Mark Robolectric SDKs unread
+        run: |
+          dir=~/.m2/repository/org/robolectric
+          if [ -d "$dir" ]; then find "$dir" -type f -exec touch -a -d @0 {} +; fi
+
       # ktfmt's version is pinned by the Gradle plugin in android/build.gradle,
       # so this needs no separate install.
       - name: Format
@@ -148,8 +166,44 @@ jobs:
         run: ./gradlew :react-native-audio-browser:formatCheck --no-daemon --build-cache
 
       - name: Test
+        id: test
         working-directory: apps/example-native/android
         run: ./gradlew :react-native-audio-browser:testDebugUnitTest --no-daemon --build-cache
+
+      # After passing tests, a jar they did not read belongs to an SDK or Robolectric version no
+      # test uses any more. After failing ones, every jar stays, and the cache is saved anyway so
+      # the next run does not fetch the jars again. Nothing is pruned where reading a file leaves
+      # its access time alone, nor when no jar was read.
+      - name: Prune Robolectric SDKs
+        id: robolectric
+        if: always() && steps.test.outcome != 'skipped'
+        run: |
+          dir=~/.m2/repository/org/robolectric
+          [ -d "$dir" ] || exit 0
+          probe=$(mktemp -p "$dir")
+          echo probe > "$probe"
+          touch -a -d @0 "$probe"
+          cat "$probe" > /dev/null
+          probed=$(stat -c %X "$probe")
+          rm "$probe"
+          unread=$(find "$dir" -name '*.jar' -atime +1000 -printf '%h\n')
+          read=$(find "$dir" -name '*.jar' -not -atime +1000 | head -1)
+          if [ "${{ steps.test.outcome }}" = success ] && [ "$probed" != 0 ] && [ -n "$read" ] && [ -n "$unread" ]; then
+            echo "unread, pruned:"
+            echo "$unread"
+            echo "$unread" | xargs -d '\n' rm -r
+          fi
+          jars=$(cd "$dir" && find . -name '*.jar' -printf '%P %s\n' | sort)
+          echo "$jars"
+          if [ -n "$jars" ]; then echo "key=$(echo "$jars" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"; fi
+
+      # A run id ends each key, so a jar set saved before can be saved again as the newest cache.
+      - name: Save Robolectric SDKs
+        if: always() && steps.robolectric.outputs.key != '' && !startsWith(steps.robolectric-cache.outputs.cache-matched-key, format('{0}-robolectric-{1}-', runner.os, steps.robolectric.outputs.key))
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: ${{ runner.os }}-robolectric-${{ steps.robolectric.outputs.key }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       # The example app builds with Cast; this compiles the library the way an app without it does.
       - name: Compile without Cast
