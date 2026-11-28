@@ -678,8 +678,8 @@ export class NativeAudioBrowser
     // Caught, because unlike those three this one cannot fail the load: a
     // resolver hiccup — a token refresh timing out — would otherwise take down
     // a track whose `src` is already absolute and public and needed no layer at
-    // all. Native degrades the same way, `getMediaRequestConfig` returning null
-    // and the original URL playing on.
+    // all. Android degrades the same way, resolving the media config without
+    // the request layer.
     let request: TransformableRequestConfig | undefined
     try {
       request = await this.browserManager.resolvedRequestConfig()
