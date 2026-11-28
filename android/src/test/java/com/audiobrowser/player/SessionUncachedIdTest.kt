@@ -11,6 +11,7 @@ import com.audiobrowser.AudioBrowser
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.flattenedChildren
 import com.audiobrowser.buildService
 import com.audiobrowser.session
 import com.google.common.util.concurrent.ListenableFuture
@@ -20,6 +21,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -368,6 +370,36 @@ class SessionUncachedIdTest {
   @Test
   fun `an up-next add while a car's play is finding its track does not drop it`() {
     assertCarPlaySurvives { player.add(station("next")) }
+  }
+
+  @Test
+  fun `a new queue from the app while a car's pick in the queue's list waits drops the pick`() {
+    val list = arrayOf(station("a"), station("b"))
+    val page =
+      TestFixtures.resolvedTrack(
+        path = "/list",
+        sections = arrayOf(TestFixtures.section(children = list)),
+      )
+    browserWith(
+      ready = false,
+      routes = arrayOf(TestFixtures.staticRoute("/list", page)),
+      findTrack = null,
+    )
+    val browsed =
+      runBlocking { browserManager.navigate("/list") }.flattenedChildren!!.toTypedArray()
+    player.setQueue(browsed, sourcePath = "/list")
+    shadowOf(Looper.getMainLooper()).idle()
+
+    val carPick = requestPlay("b")
+    player.setQueue(browsed, sourcePath = "/list")
+    player.notifyBrowserConfigurationReady()
+    repeat(250) {
+      if (carPick.isDone) return@repeat
+      shadowOf(Looper.getMainLooper()).idle()
+      Thread.sleep(20)
+    }
+
+    assertThrows(CancellationException::class.java) { carPick.get(0, TimeUnit.SECONDS) }
   }
 
   /** A car play of an unbrowsed id plays, though [meanwhile] edits the queue during its find. */
