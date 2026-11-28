@@ -152,6 +152,7 @@ final class CarPlaySession {
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
     if rebuildTabsIfAtRoot() { return }
     updatePlayingIndicators()
+    listItemFactory.retryFailedArtwork()
     // Popping Now Playing reports the tab bar even with a list pushed above it.
     if let list = shownListTemplate() { loadContentIfNeeded(for: list) }
   }

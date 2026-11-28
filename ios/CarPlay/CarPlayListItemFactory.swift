@@ -54,13 +54,27 @@ final class CarPlayListItemFactory {
     self.onNavigate = onNavigate
   }
 
+  private let failedLoads = FailedArtworkLoads()
+
+  /// Loads again each artwork whose retries ran out while its row is still on a template.
+  func retryFailedArtwork() {
+    failedLoads.retry()
+  }
+
+  /// Loads `track`'s artwork into `owner`, a row, retrying a failed fetch while the row lives.
   private func loadArtwork(
-    for track: Track, style: TrackStyle?, size: CGSize, apply: @escaping @MainActor (UIImage?) -> Void,
+    for track: Track, style: TrackStyle?, size: CGSize, owner: AnyObject, apply: @escaping @MainActor (UIImage?) -> Void,
   ) {
-    spawn { [imageLoader] in
-      let image = await imageLoader.artwork(for: track, style: style, size: size)
-      guard !Task.isCancelled else { return }
-      apply(image)
+    spawn { [weak self, weak owner, imageLoader] in
+      let result = await imageLoader.artwork(for: track, style: style, size: size, wanted: { owner != nil })
+      guard !Task.isCancelled, let owner else { return }
+      if case let .failure(failure) = result, let self {
+        failedLoads.add(failure, owner: owner) { [weak self, weak owner] in
+          guard let self, let owner else { return }
+          loadArtwork(for: track, style: style, size: size, owner: owner, apply: apply)
+        }
+      }
+      apply(try? result?.get())
     }
   }
 
@@ -168,7 +182,7 @@ final class CarPlayListItemFactory {
 
     if track.artwork != nil || track.artworkSource != nil {
       item.setImage(imageLoader.placeholderImage(size: CPListItem.maximumImageSize))
-      loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize) { [weak item] image in
+      loadArtwork(for: track, style: style, size: CPListItem.maximumImageSize, owner: item) { [weak item] image in
         item?.setImage(image)
       }
     }
@@ -335,6 +349,7 @@ final class CarPlayListItemFactory {
         for: track,
         style: resolved,
         size: Self.tileImageSize(family: family, cardImage: resolved.cardImage),
+        owner: item,
       ) { [weak item, applyImage] image in
         guard let item, let image else { return }
         if let applyImage {

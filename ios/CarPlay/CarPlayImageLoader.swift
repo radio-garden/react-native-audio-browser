@@ -57,14 +57,18 @@ final class CarPlayImageLoader {
   // MARK: - Artwork Loading
 
   /// A track's artwork at `size` points, through the artwork resolve transform when one is
-  /// configured; nil when it has none or the load fails.
+  /// configured, or why its load failed; nil when it has none.
   /// - Parameter style: the track's resolved style; nil uses the track's own, for places with
   ///   no section to inherit from (tabs, Up Next).
-  func artwork(for track: Track, style: TrackStyle? = nil, size: CGSize) async -> UIImage? {
+  /// - Parameter wanted: Whether the image is still wanted. Given, a failed fetch waits for a
+  ///   connection and is retried (`ArtworkRetry`) while it holds; nil fetches once.
+  func artwork(
+    for track: Track, style: TrackStyle? = nil, size: CGSize, wanted: (@MainActor () -> Bool)? = nil,
+  ) async -> Result<UIImage, ArtworkLoadFailure>? {
     if let variants = track.artwork?.variants {
       // Each variant runs the whole single-URL path (route config, headers, SVG, the resolve
       // transform), so the pair cannot drift from it.
-      return await artwork(for: track, style: style, variants: variants, size: size)
+      return await artwork(for: track, style: style, variants: variants, size: size, wanted: wanted)
     }
 
     let artwork = track.artwork?.url
@@ -86,11 +90,16 @@ final class CarPlayImageLoader {
 
     switch action {
     case let .sfSymbol(artwork, width, height):
-      return sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height))
+      return sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height)).map { .success($0) }
     case let .fetch(uri, headers, shouldTint):
-      let image = await fetchImage(uri: uri, headers: headers, size: size)
-      guard let image, shouldTint else { return image }
-      return tinted(image)
+      let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
+      // A canvas of exactly `size` at the car's scale (CPListItem.h: "size them to the display
+      // scale of the car screen"), whatever size the source arrives at.
+      let slot = (size, carTraitCollection.displayScale)
+      let result = await ArtworkRetry.load(wanted: wanted ?? { false }) {
+        await ArtworkImageFetcher.load(from: source, slot: slot, onCanvas: true, waitsForConnectivity: wanted != nil)
+      }
+      return shouldTint ? result.map(tinted) : result
     case .none:
       return nil
     }
@@ -100,19 +109,22 @@ final class CarPlayImageLoader {
 
   /// Both images of an `ArtworkVariants` pair as one adaptive image, which CarPlay re-resolves
   /// in place when the appearance changes. When one half fails, the other is used alone.
-  private func artwork(for track: Track, style: TrackStyle?, variants: ArtworkVariants, size: CGSize) async -> UIImage? {
-    async let light = artwork(for: track.copying(artwork: .some(.first(variants.light))), style: style, size: size)
-    async let dark = artwork(for: track.copying(artwork: .some(.first(variants.dark))), style: style, size: size)
-    let (lightImage, darkImage) = await (light, dark)
-    guard let lightImage, let darkImage else { return lightImage ?? darkImage }
-    return .adaptive(light: lightImage, dark: darkImage, for: carTraitCollection)
-  }
-
-  /// The image on a canvas of exactly `size` points at the car's display scale (CPListItem.h:
-  /// "size them to the display scale of the car screen"), whatever size the source arrives at.
-  private func fetchImage(uri: String, headers: [String: String]?, size: CGSize) async -> UIImage? {
-    let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    return await ArtworkImageFetcher.fetchImage(from: source, slot: (size, carTraitCollection.displayScale), onCanvas: true)
+  private func artwork(
+    for track: Track, style: TrackStyle?, variants: ArtworkVariants, size: CGSize, wanted: (@MainActor () -> Bool)?,
+  ) async -> Result<UIImage, ArtworkLoadFailure>? {
+    async let light = artwork(for: track.copying(artwork: .some(.first(variants.light))), style: style, size: size, wanted: wanted)
+    async let dark = artwork(for: track.copying(artwork: .some(.first(variants.dark))), style: style, size: size, wanted: wanted)
+    let (lightResult, darkResult) = await (light, dark)
+    switch (lightResult, darkResult) {
+    case let (.success(lightImage)?, .success(darkImage)?):
+      return .success(.adaptive(light: lightImage, dark: darkImage, for: carTraitCollection))
+    case (.success?, _):
+      return lightResult
+    case (_, .success?):
+      return darkResult
+    default:
+      return lightResult ?? darkResult
+    }
   }
 
   private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {

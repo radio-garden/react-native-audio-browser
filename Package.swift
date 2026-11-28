@@ -101,6 +101,7 @@ let package = Package(
         "Util/HttpFreshness.swift",
         "Util/ArtworkLoadFailure.swift",
         "Util/ArtworkRetry.swift",
+        "Util/FailedArtworkLoads.swift",
         "Util/LocalArtwork.swift",
         "Util/ArtworkProcessing.swift",
         "Util/SVGProcessor.swift",
