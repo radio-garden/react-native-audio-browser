@@ -16,6 +16,7 @@ import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentWavBytes
@@ -381,7 +382,7 @@ class PlayerRetryTest {
 
   @Test
   fun `a load failing while paused stays paused and the next play reloads`() {
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     val wav = silentWavBytes(Duration.ofMinutes(1))
     val sent = CountDownLatch(1)
     val drop = CountDownLatch(1)
@@ -530,7 +531,7 @@ class PlayerRetryTest {
   /** Plays from a server that ends each connection unanswered, until the loop holds the engine. */
   private fun holdIdleEngine(): AtomicInteger {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     servers += server
     val connections = AtomicInteger()
     thread(isDaemon = true) {
@@ -566,7 +567,7 @@ class PlayerRetryTest {
   @Test
   fun `a skip while the loop holds the idle engine connects the next track`() {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     val paths = CopyOnWriteArrayList<String>()
     // Reads each request line and ends the connection unanswered.
     thread(isDaemon = true) {
@@ -630,7 +631,7 @@ class PlayerRetryTest {
   @Test
   fun `an engine error that arrives after a pause cancelled its reconnect is not terminal`() {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     servers += server
     val connections = AtomicInteger()
     // Ends the first connection unanswered, then holds each reconnect open without an answer.

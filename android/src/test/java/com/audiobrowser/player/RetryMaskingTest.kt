@@ -12,13 +12,13 @@ import androidx.media3.session.legacyState
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.IOException
-import java.net.ServerSocket
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -63,7 +63,7 @@ class RetryMaskingTest {
     player.exoPlayer.release()
   }
 
-  private val server = ServerSocket(0)
+  private val server = loopbackServerSocket()
   private val connections = AtomicInteger()
 
   init {

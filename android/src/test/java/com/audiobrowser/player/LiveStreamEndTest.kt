@@ -23,11 +23,11 @@ import androidx.media3.exoplayer.trackselection.FixedTrackSelection
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.audiobrowser.TestFixtures.track
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentWavBytes
 import com.audiobrowser.util.TrackFactory
 import java.io.IOException
-import java.net.ServerSocket
 import java.time.Duration
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -58,7 +58,7 @@ import org.robolectric.shadows.ShadowSystemClock
 class LiveStreamEndTest {
 
   private val context = RuntimeEnvironment.getApplication()
-  private var server = ServerSocket(0)
+  private var server = loopbackServerSocket()
   private val requests = AtomicInteger()
   private val played = AtomicInteger()
   private val startNs = System.nanoTime()
@@ -247,7 +247,7 @@ class LiveStreamEndTest {
   private fun assertFailsAtOnce(contentType: String?, body: String) {
     requests.set(0)
     server.close()
-    server = ServerSocket(0)
+    server = loopbackServerSocket()
     serve(framesFor = { 0 }, contentType = contentType, body = { body.toByteArray() })
 
     val outcome = play(live = true, RetryPolicy.Infinite())

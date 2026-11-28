@@ -1,6 +1,6 @@
 package com.audiobrowser.tls
 
-import java.net.InetAddress
+import com.audiobrowser.loopbackServerSocket
 import java.net.ServerSocket
 import java.security.cert.X509Certificate
 import java.util.concurrent.CountDownLatch
@@ -36,7 +36,7 @@ class CachingCertificateFetcherCallSiteTest {
     handled: AtomicInteger = AtomicInteger(),
     firstRequest: AtomicReference<String> = AtomicReference(),
   ): Int {
-    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val socket = loopbackServerSocket()
     server = socket
     thread(isDaemon = true) {
       while (!socket.isClosed) {
@@ -99,7 +99,7 @@ class CachingCertificateFetcherCallSiteTest {
   fun `an oversized response is abandoned rather than read to EOF`() {
     // An empty result alone proves nothing: 64 MiB crosses loopback in milliseconds and fails to
     // parse either way. The client must stop reading, which shows as the server's write failing.
-    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val socket = loopbackServerSocket()
     server = socket
     val written = AtomicInteger()
     val finished = CountDownLatch(1)
@@ -178,7 +178,7 @@ class CachingCertificateFetcherCallSiteTest {
   fun `a drip-feeding server is cut off by the chase deadline, not only the per-fetch caps`() {
     // A byte every 100 ms stays inside the read timeout, and the per-fetch read budget would allow
     // 10 s: only the chase's 1 s budget cutting the fetch itself keeps this under 8 s.
-    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val socket = loopbackServerSocket()
     server = socket
     thread(isDaemon = true) {
       runCatching {
@@ -213,7 +213,7 @@ class CachingCertificateFetcherCallSiteTest {
   fun `the chase deadline spans redirect hops, not just fetch starts`() {
     // Each hop stalls 1 s, inside every per-operation timeout, then redirects to itself; without
     // the deadline the fetch walks all 5 redirects, about 6 s.
-    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val socket = loopbackServerSocket()
     server = socket
     thread(isDaemon = true) {
       while (!socket.isClosed) {
@@ -247,7 +247,7 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test(timeout = 30_000)
   fun `a server that accepts and never answers is bounded by the read timeout`() {
-    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val socket = loopbackServerSocket()
     server = socket
     val accepted = CountDownLatch(1)
     thread(isDaemon = true) {

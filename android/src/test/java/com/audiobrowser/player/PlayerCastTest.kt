@@ -5,6 +5,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.remote.FakeReceiver
@@ -14,7 +15,6 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteOutputsOptions
-import java.net.ServerSocket
 import java.net.UnknownHostException
 import java.time.Duration
 import kotlin.coroutines.EmptyCoroutineContext
@@ -54,7 +54,7 @@ class PlayerCastTest {
   private val callbacks = mock(Callbacks::class.java)
 
   /** Takes the phone's connection and answers nothing: the phone's loads neither play nor fail. */
-  private val silent = ServerSocket(0)
+  private val silent = loopbackServerSocket()
 
   @Before
   fun cast() {

@@ -6,6 +6,7 @@ import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentMp3Bytes
@@ -53,7 +54,7 @@ class SkipInPlaceTest {
 
   /** An ICY-like stream: a minute of MP3 sent without a length, the connection held open. */
   private fun streamWithoutLength(): String {
-    val server = ServerSocket(0).also { server = it }
+    val server = loopbackServerSocket().also { server = it }
     thread(isDaemon = true) {
       while (!server.isClosed) {
         val socket =
