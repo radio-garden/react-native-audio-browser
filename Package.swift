@@ -103,6 +103,8 @@ let package = Package(
         "Util/ArtworkRetry.swift",
         "Util/Wakeups.swift",
         "Util/ArtworkPair.swift",
+        "Util/ArtworkRowWaits.swift",
+        "Util/ArtworkSlotLoader.swift",
         "Util/LocalArtwork.swift",
         "Util/ArtworkProcessing.swift",
         "Util/SVGProcessor.swift",

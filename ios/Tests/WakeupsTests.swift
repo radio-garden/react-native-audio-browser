@@ -98,13 +98,6 @@ struct WakeupsTests {
     await #expect(throws: CancellationError.self) { try await waiting.value }
   }
 
-  @Test func aWaitForARowGivesUpOnceTheRowIsGoneAndResumesOnceReady() {
-    final class Row {}
-    #expect(Wakeups<Int>.Verdict.waiting(for: nil, ready: true) == .giveUp)
-    #expect(Wakeups<Int>.Verdict.waiting(for: Row(), ready: false) == .keepWaiting)
-    #expect(Wakeups<Int>.Verdict.waiting(for: Row(), ready: true) == .resume)
-  }
-
   @Test func endingResumesEveryWaitWithAThrow() async {
     let wakeups = Wakeups<Int>()
     let first = Task { @MainActor in try await wakeups.wait { _ in .keepWaiting } }

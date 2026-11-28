@@ -64,11 +64,3 @@ final class Wakeups<Event> {
     waiters.removeValue(forKey: id)?.continuation.resume(throwing: error)
   }
 }
-
-extension Wakeups.Verdict {
-  /// Gives up once `row` is gone, else resumes once `ready`.
-  static func waiting(for row: AnyObject?, ready: Bool) -> Self {
-    guard row != nil else { return .giveUp }
-    return ready ? .resume : .keepWaiting
-  }
-}

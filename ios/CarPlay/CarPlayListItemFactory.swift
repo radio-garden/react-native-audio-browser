@@ -58,8 +58,8 @@ final class CarPlayListItemFactory {
     self.retryWaits = retryWaits
   }
 
-  /// Loads `track`'s artwork into `row` as each image is ready, retrying a failed fetch while the
-  /// row lives; `apply` gets nil when the load ends without an image.
+  /// Loads `track`'s artwork into `row`, retrying a failed load while the row is wanted
+  /// (`ArtworkRowWaits`); `apply` gets nil when the load ends without an image.
   private func loadArtwork(
     for track: Track, style: TrackStyle?, size: CGSize, row: AnyObject, apply: @escaping @MainActor (UIImage?) -> Void,
   ) {

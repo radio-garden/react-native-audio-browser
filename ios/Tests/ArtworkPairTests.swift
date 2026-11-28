@@ -8,14 +8,33 @@ struct ArtworkPairTests {
     ArtworkPair { light, dark in "\(light)+\(dark)" }
   }
 
-  @Test func theFirstHalfToArriveIsShownAlone() {
+  @Test func aHalfIsNotShownWhileTheOtherIsLoading() {
     var pair = pair()
-    #expect(pair.receive(dark: "dark") == "dark")
+    #expect(pair.light("light") == nil)
   }
 
-  @Test func bothHalvesAreShownTogetherOnceTheSecondArrives() {
+  @Test func bothHalvesAreShownTogetherOnceBothArrive() {
     var pair = pair()
-    _ = pair.receive(light: "light")
-    #expect(pair.receive(dark: "dark") == "light+dark")
+    _ = pair.light("light")
+    #expect(pair.dark("dark") == "light+dark")
+  }
+
+  @Test func aHalfIsShownAloneOnceTheOtherFailed() {
+    var pair = pair()
+    #expect(pair.dark(nil) == nil)
+    #expect(pair.light("light") == "light")
+  }
+
+  @Test func aHalfThatFailedFirstIsShownAloneWhenTheOtherFails() {
+    var pair = pair()
+    _ = pair.light("light")
+    #expect(pair.dark(nil) == "light")
+  }
+
+  @Test func aHalfThatLoadsAfterFailingJoinsTheOther() {
+    var pair = pair()
+    _ = pair.light("light")
+    _ = pair.dark(nil)
+    #expect(pair.dark("dark") == "light+dark")
   }
 }
