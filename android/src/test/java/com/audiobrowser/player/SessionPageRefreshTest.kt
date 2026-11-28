@@ -37,6 +37,17 @@ class SessionPageRefreshTest {
       Bundle.EMPTY,
       false,
     )
+  private val phone =
+    MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+      "phone",
+      0,
+      0,
+      1_005_000,
+      3,
+      false,
+      Bundle.EMPTY,
+      false,
+    )
   private val browserManager = BrowserManager()
 
   @Before
@@ -90,9 +101,13 @@ class SessionPageRefreshTest {
     callback.onSubscribe(service.session, car, path, null)
   }
 
+  private fun subscribe(path: String, browser: MediaSession.ControllerInfo = phone) {
+    callback.onSubscribe(service.session, browser, path, null)
+  }
+
   /** What a notifyChildrenChanged brings from Android Auto: onGetChildren alone. */
-  private fun requery(path: String) {
-    callback.onGetChildren(service.session, car, path, 0, 100, null).get(5, TimeUnit.SECONDS)
+  private fun requery(path: String, browser: MediaSession.ControllerInfo = car) {
+    callback.onGetChildren(service.session, browser, path, 0, 100, null).get(5, TimeUnit.SECONDS)
   }
 
   private fun source() =
@@ -118,5 +133,41 @@ class SessionPageRefreshTest {
     visit("/home")
 
     assertEquals("/home", source())
+  }
+
+  @Test
+  fun `a Media3 controller's first browse after it subscribes is a visit`() {
+    visit("/favorites")
+
+    subscribe("/home")
+    requery("/home", phone)
+
+    assertEquals("/home", source())
+  }
+
+  @Test
+  fun `a Media3 controller that browsed a level before subscribing takes its next browse as a re-query`() {
+    requery("/home", phone)
+    subscribe("/home")
+    visit("/favorites")
+
+    player.notifyPageRefreshed("/home")
+    requery("/home", phone)
+
+    assertEquals("/favorites", source())
+  }
+
+  @Test
+  fun `a visit a controller still owed when it disconnected is forgotten`() {
+    subscribe("/home")
+    callback.onDisconnected(service.session, phone)
+    requery("/home", phone)
+    subscribe("/home")
+    visit("/favorites")
+
+    player.notifyPageRefreshed("/home")
+    requery("/home", phone)
+
+    assertEquals("/favorites", source())
   }
 }

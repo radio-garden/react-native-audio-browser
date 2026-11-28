@@ -375,7 +375,9 @@ class PageCacheTest {
     advance(61_000)
 
     assertEquals(listOf("/a", "/a"), pushed)
-    assertEquals("first", cache.value("/a") { throw Unreachable() })
+    assertEquals("first", cache.value("/a") { page("second", 60_000) })
+    runCurrent()
+    assertEquals("second", cache.value("/a") { throw Unreachable() })
   }
 
   @Test

@@ -77,8 +77,11 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   // notifies: every access goes through synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
-  /** Media3 controllers subscribed to a level whose visit, their next onGetChildren, is to come. */
+  /** Controllers subscribed to a level whose visit, their next onGetChildren, is to come. */
   private val pendingVisits = mutableSetOf<Pair<MediaSession.ControllerInfo, String>>()
+
+  /** The level each controller last visited unsubscribed, which its onSubscribe then follows. */
+  private val visitedUnsubscribed = mutableMapOf<MediaSession.ControllerInfo, String>()
   private val failedSearch = FailedSearchSlot()
   private val offlineSearches = OfflineSearchRegistry()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
@@ -145,6 +148,8 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     synchronized(this) {
       parentIdSubscriptions.values.forEach { it.remove(controller) }
       parentIdSubscriptions.entries.removeAll { (_, browsers) -> browsers.isEmpty() }
+      pendingVisits.removeAll { (browser, _) -> browser == controller }
+      visitedUnsubscribed.remove(controller)
     }
     super.onDisconnected(session, controller)
   }
@@ -571,9 +576,7 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
     synchronized(this) {
       parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser)
-      if (browser.controllerVersion != MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION) {
-        pendingVisits.add(browser to parentId)
-      }
+      if (visitedUnsubscribed.remove(browser) != parentId) pendingVisits.add(browser to parentId)
     }
 
     // Not super: its onSubscribe validates the parent through onGetItem, a full resolve whose
@@ -636,14 +639,20 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
 
   /**
    * Whether [browser]'s onGetChildren for [parentId] is a visit rather than a re-query of a level
-   * it is subscribed to. Android Auto sends a visit as onGetChildren then onSubscribe, and
-   * unsubscribes a level before entering it again; a Media3 controller subscribes first, and its
-   * next onGetChildren is the visit.
+   * it is subscribed to. Android Auto visits with onGetChildren then onSubscribe, and unsubscribes
+   * a level before entering it again; a Media3 controller subscribes first, and its next
+   * onGetChildren is the visit.
    */
   private fun isVisit(browser: MediaSession.ControllerInfo, parentId: String) =
     synchronized(this) {
-      pendingVisits.remove(browser to parentId) ||
-        parentIdSubscriptions[parentId]?.contains(browser) != true
+      when {
+        pendingVisits.remove(browser to parentId) -> true
+        parentIdSubscriptions[parentId]?.contains(browser) == true -> false
+        else -> {
+          visitedUnsubscribed[browser] = parentId
+          true
+        }
+      }
     }
 
   /** Pairs with AudioBrowser.invalidateAllContent(), which clears the content cache first. */

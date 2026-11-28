@@ -174,8 +174,14 @@ class PageCache<V : Any>(
             val cached = entries.get(path)
             if (cached != null && e is Exception) {
               if (e is CancellationException || keepsStale(e)) {
-                val retryInMs = cached.lifetimeMs
-                store(path, cached.value, cached.lifetimeMs, cached.expiresAt, retryInMs, retryInMs)
+                store(
+                  path,
+                  cached.value,
+                  cached.lifetimeMs,
+                  cached.expiresAt,
+                  cached.lifetimeMs,
+                  true,
+                )
               } else {
                 entries.remove(path)
               }
@@ -192,8 +198,8 @@ class PageCache<V : Any>(
   }
 
   /**
-   * Under [lock]. Stores the page with a timer that pushes it [pushInMs] from now, if any, and no
-   * refetch before [retryInMs] from now.
+   * Under [lock]. Stores the page with a timer that pushes it [pushInMs] from now, if any; with
+   * [retryAtPush], no refetch starts before that push.
    */
   private fun store(
     path: String,
@@ -201,7 +207,7 @@ class PageCache<V : Any>(
     lifetimeMs: Long?,
     expiresAt: Long?,
     pushInMs: Long?,
-    retryInMs: Long? = null,
+    retryAtPush: Boolean = false,
   ) {
     val due = pushInMs?.let { now() + it }
     val timer =
@@ -213,7 +219,7 @@ class PageCache<V : Any>(
           if (synchronized(lock) { entries.snapshot()[path]?.timer === timer }) onExpired(path)
         }
       }
-    entries.put(path, Entry(value, lifetimeMs, expiresAt, timer, retryInMs?.let { now() + it }))
+    entries.put(path, Entry(value, lifetimeMs, expiresAt, timer, due.takeIf { retryAtPush }))
   }
 
   /** A queued refetch whose path was removed or cleared before its turn. */
