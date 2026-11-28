@@ -62,7 +62,9 @@ extension CarPlaySession {
       // An equal-count swap keeps the selected tab.
       tabBar.updateTemplates(templates)
     } else {
-      interfaceController.safeSetRoot(CPTabBarTemplate(templates: templates), animated: true)
+      let tabBar = CPTabBarTemplate(templates: templates)
+      tabBar.delegate = tabBarDelegate
+      interfaceController.safeSetRoot(tabBar, animated: true)
     }
 
     // Tabs load on first appearance. The first is already on screen, and a template swapped in
@@ -205,5 +207,21 @@ extension CarPlaySession {
     let formatted = await audioBrowser.browserManager.formatted(error, path: "/")
     guard isCurrent(build) else { return }
     interfaceController.safeSetRoot(CPListTemplate.message(formatted.title, subtitle: formatted.message), animated: true)
+  }
+}
+
+/// Loads or refetches a tab's list when it is selected, which need not report it appearing.
+final class TabBarDelegate: NSObject, CPTabBarTemplateDelegate {
+  private weak var session: CarPlaySession?
+
+  init(session: CarPlaySession) {
+    self.session = session
+  }
+
+  func tabBarTemplate(_: CPTabBarTemplate, didSelect selectedTemplate: CPTemplate) {
+    MainActor.assumeIsolated {
+      guard let list = selectedTemplate as? CPListTemplate else { return }
+      session?.loadContentIfNeeded(for: list)
+    }
   }
 }

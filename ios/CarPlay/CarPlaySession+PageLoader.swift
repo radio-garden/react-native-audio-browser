@@ -3,14 +3,14 @@ import NitroModules
 
 extension CarPlaySession {
   /// Loads a content template's page when it first appears, the moment CarPlay applies updates
-  /// (an update made straight after a push is dropped), and refreshes it in place when its
-  /// cached page has expired.
+  /// (an update made straight after a push is dropped), and refetches it behind the page shown
+  /// when it has expired.
   func loadContentIfNeeded(for template: CPListTemplate) {
     guard let path = template.contentPath else { return }
     if template.sections.isEmpty {
       spawn { await $0.loadContent(for: path, into: template) }
     } else if audioBrowser.browserManager.isPageExpired(path) {
-      spawn { await $0.refreshContent(for: path) }
+      spawn { await $0.audioBrowser.browserManager.refreshPage(path) }
     }
   }
 

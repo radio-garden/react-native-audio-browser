@@ -38,6 +38,8 @@ final class CarPlaySession {
   /// Templates with a load in flight, so a re-appearing one does not start another.
   var loadingTemplates: Set<ObjectIdentifier> = []
 
+  private(set) lazy var tabBarDelegate = TabBarDelegate(session: self)
+
   /// Rebuilding the tab bar tears down the pushed stack, so a tab change waits for the root.
   var needsTabRebuild = false
 
@@ -82,6 +84,7 @@ final class CarPlaySession {
         self?.refreshDisplayedTemplates(for: content.path, with: content)
       },
       browserManager.pageExpired.subscribeOnMain { [weak self] _ in self?.refreshShownPageIfExpired() },
+      browserManager.pageRefreshed.subscribeOnMain { [weak self] in self?.pageRefreshed($0) },
       audioBrowser.networkMonitor.changed.subscribeOnMain { [weak self] isOnline in
         if isOnline { self?.refreshShownPageIfExpired() }
       },
@@ -146,8 +149,8 @@ final class CarPlaySession {
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
     if rebuildTabsIfAtRoot() { return }
     updatePlayingIndicators()
-    let list = (template as? CPListTemplate) ?? ((template as? CPTabBarTemplate)?.selectedTemplate as? CPListTemplate)
-    if let list { loadContentIfNeeded(for: list) }
+    // Popping Now Playing reports the tab bar even with a list pushed above it.
+    if let list = shownListTemplate() { loadContentIfNeeded(for: list) }
   }
 
   func templateDidDisappear(_ template: CPTemplate) {

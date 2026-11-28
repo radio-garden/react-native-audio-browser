@@ -17,7 +17,11 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
-  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20)
+  // A network error or a 5xx keeps a stale page; a 404 or an undecodable body drops it.
+  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20) { error in
+    error is URLError || (error as? HttpClient.HttpException).map { $0.code >= 500 } ?? false
+  }
+
   /// Moves on every `clearContent`, so a search or tabs query that outlives one stores nothing.
   private var clearEpoch = 0
 
@@ -78,6 +82,7 @@ final class BrowserManager {
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
   var pageExpired: Emitter<String> { contentCache.expired }
+  var pageRefreshed: Emitter<String> { contentCache.refreshed }
   var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
@@ -142,10 +147,17 @@ final class BrowserManager {
   func resolve(_ path: String) async throws -> ResolvedTrack {
     let normalizedPath = BrowserPathHelper.stripTrackId(path)
 
-    let resolvedTrack = try await contentCache.value(for: normalizedPath) {
+    let resolvedTrack = try await contentCache.value(for: normalizedPath) { [pages] in
       try await pages.resolve(normalizedPath)
     }
     return favorites.hydrate(resolvedTrack)
+  }
+
+  /// Refetches the page `path` resolves to when it has expired, and returns once that settles;
+  /// `pageRefreshed` tells when it replaced the page.
+  func refreshPage(_ path: String) async {
+    let normalizedPath = BrowserPathHelper.stripTrackId(path)
+    await contentCache.revalidate(normalizedPath) { [pages] in try await pages.resolve(normalizedPath) }
   }
 
   /// Whether the page `path` resolves to is cached and its lifetime has passed.

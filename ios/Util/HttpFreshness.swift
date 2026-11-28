@@ -2,10 +2,9 @@ import Foundation
 
 /// What a response's `Cache-Control` and `Age` say about reusing it.
 enum HttpFreshness: Equatable {
-  /// No `max-age`, `no-cache` or `no-store`.
+  /// No valid `max-age`, and no `no-cache` or `no-store`.
   case unstated
-  /// `no-cache`, `no-store`, or a `max-age` that is 0 or invalid: reuse only after asking again
-  /// (RFC 9111 §4.2.1 treats an invalid one as stale).
+  /// `no-cache`, `no-store`, or `max-age=0`: reuse only after asking again.
   case revalidate
   /// A positive `max-age` in seconds, and the `Age` the response already had.
   case maxAge(TimeInterval, age: TimeInterval)
@@ -36,12 +35,8 @@ enum HttpFreshness: Equatable {
         self = .revalidate
         return
       case "max-age":
-        guard let seconds = value.flatMap(Self.deltaSeconds) else {
-          self = .revalidate
-          return
-        }
-        // Of duplicates, the first.
-        maxAge = maxAge ?? seconds
+        // Of duplicates, the first valid one.
+        maxAge = maxAge ?? value.flatMap(Self.deltaSeconds)
       default:
         break
       }

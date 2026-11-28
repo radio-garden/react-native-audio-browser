@@ -14,13 +14,22 @@ extension CarPlaySession {
     }
   }
 
-  /// Refreshes the list the car shows when its page has expired; the rest refresh on their next
-  /// visit. Offline, it waits for the connection.
+  /// Refetches the page of the list the car shows when it has expired; the rest refetch on their
+  /// next visit. Offline, it waits for the connection.
   func refreshShownPageIfExpired() {
     guard audioBrowser.networkMonitor.isOnline, let path = shownListTemplate()?.contentPath,
           audioBrowser.browserManager.isPageExpired(path)
     else { return }
-    spawn { await $0.refreshContent(for: path) }
+    spawn { await $0.audioBrowser.browserManager.refreshPage(path) }
+  }
+
+  /// Repaints the displayed templates showing `path` with the page a refetch stored.
+  func pageRefreshed(_ path: String) {
+    guard displayedListTemplates().contains(where: { $0.contentPath == path }) else { return }
+    spawn { session in
+      guard let page = try? await session.audioBrowser.browserManager.resolve(path), !Task.isCancelled else { return }
+      session.refreshDisplayedTemplates(for: path, with: page)
+    }
   }
 
   func refreshDisplayedTemplates(for path: String, with content: ResolvedTrack) {

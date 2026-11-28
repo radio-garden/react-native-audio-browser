@@ -75,6 +75,9 @@ final class HttpClient: @unchecked Sendable {
 
     var urlRequest = URLRequest(url: url)
     urlRequest.timeoutInterval = Self.timeoutSeconds
+    // URLCache answers a fresh entry with the Age it was stored with, which would restart a page's
+    // lifetime; revalidating still lets a 304 reuse its body.
+    urlRequest.cachePolicy = .reloadRevalidatingCacheData
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }

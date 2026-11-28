@@ -2,7 +2,8 @@
 import Foundation
 import Testing
 
-/// Answers every request with `{}` and, as headers, the query items it carries.
+/// Answers every request with its cache policy in the body and, as headers, the query items it
+/// carries.
 private final class HeaderEchoProtocol: URLProtocol {
   override class func canInit(with _: URLRequest) -> Bool {
     true
@@ -18,7 +19,7 @@ private final class HeaderEchoProtocol: URLProtocol {
       .reduce(into: [String: String]()) { $0[$1.name] = $1.value }
     let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!
     client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-    client?.urlProtocol(self, didLoad: Data("{}".utf8))
+    client?.urlProtocol(self, didLoad: Data(#"{"cachePolicy":\#(request.cachePolicy.rawValue)}"#.utf8))
     client?.urlProtocolDidFinishLoading(self)
   }
 
@@ -50,5 +51,10 @@ struct HttpClientLifetimeTests {
   @Test(arguments: [nil, "no-store", "no-cache", "max-age=0", "max-age=0, private, must-revalidate", "max-age=soon"])
   func anyOtherResponseHasNoLifetime(cacheControl: String?) async throws {
     #expect(try await fetched(cacheControl.map { ["Cache-Control": $0] } ?? [:]).lifetime == nil)
+  }
+
+  @Test func aPageIsRequestedRevalidatingWhatTheUrlCacheHolds() async throws {
+    let policy = try await fetched([:]).value["cachePolicy"]
+    #expect(policy == Int(URLRequest.CachePolicy.reloadRevalidatingCacheData.rawValue))
   }
 }
