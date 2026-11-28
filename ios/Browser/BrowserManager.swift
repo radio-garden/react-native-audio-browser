@@ -17,11 +17,9 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
-  private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
-  // Moves on `clearContent`, so a fetch that outlives one caches nothing; `pageGenerations` does
-  // the same for one path, and is cleared only together with a move of this.
+  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20)
+  // Moves on `clearContent`, so a search or tabs query that outlives one keeps nothing.
   private var contentGeneration = 0
-  private var pageGenerations: [String: Int] = [:]
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -79,6 +77,7 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
+  var pageExpired: Emitter<String> { contentCache.expired }
   var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
@@ -143,17 +142,9 @@ final class BrowserManager {
   func resolve(_ path: String, useCache: Bool = true) async throws -> ResolvedTrack {
     let normalizedPath = BrowserPathHelper.stripTrackId(path)
 
-    if useCache, let cached = contentCache.get(normalizedPath) {
-      return favorites.hydrate(cached)
+    let resolvedTrack = try await contentCache.value(for: normalizedPath, useCache: useCache) {
+      try await pages.resolve(normalizedPath)
     }
-
-    let generation = pageGeneration(normalizedPath)
-    let resolvedTrack = try await pages.resolve(normalizedPath)
-
-    if generation == pageGeneration(normalizedPath) {
-      contentCache.set(normalizedPath, value: resolvedTrack)
-    }
-
     return favorites.hydrate(resolvedTrack)
   }
 
@@ -164,12 +155,7 @@ final class BrowserManager {
         "invalidateContentCache() expects a container path, not a contextual path: \(path)",
       )
     }
-    pageGenerations[path, default: 0] += 1
     contentCache.remove(path)
-  }
-
-  private func pageGeneration(_ path: String) -> (Int, Int?) {
-    (contentGeneration, pageGenerations[path])
   }
 
   /// Clears every cache and the resolved request layers, then re-queries the tabs; a failed
@@ -184,7 +170,6 @@ final class BrowserManager {
   func clearContent() {
     contentCache.clear()
     contentGeneration &+= 1
-    pageGenerations.removeAll()
     lastSearchKey = nil
     lastSearchResults = nil
   }

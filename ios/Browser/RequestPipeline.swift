@@ -103,7 +103,7 @@ final class RequestPipeline {
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
-  ) async throws -> ResolvedTrack {
+  ) async throws -> (page: ResolvedTrack, lifetime: TimeInterval?) {
     let request = try await buildApiRequest(
       kind: \.browse, routeConfig, path: path, params: params,
     )
@@ -112,10 +112,12 @@ final class RequestPipeline {
     logger.debug("  path: \(path)")
     logger.debug("  url: \(request.url)")
 
-    let result = if path == SimpleRouter.tabsRoutePath {
-      try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
+    let (result, lifetime): (JsonResolvedTrack, TimeInterval?)
+    if path == SimpleRouter.tabsRoutePath {
+      (result, lifetime) = try await httpClient.requestJsonWithLifetime(request, as: JsonResolvedTrack.self)
     } else {
-      try await httpClient.requestJson(request, as: JsonBrowsePage.self).page
+      let response = try await httpClient.requestJsonWithLifetime(request, as: JsonBrowsePage.self)
+      (result, lifetime) = (response.value.page, response.lifetime)
     }
     let nitroResult = result.toNitro(requestedPath: path)
 
@@ -124,7 +126,7 @@ final class RequestPipeline {
       logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
     }
 
-    return nitroResult
+    return (nitroResult, lifetime)
   }
 
   /// A search route's tracks, through the request layer and `searchConfig`. The search params

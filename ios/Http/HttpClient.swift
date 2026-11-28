@@ -69,12 +69,14 @@ final class HttpClient: @unchecked Sendable {
     self.session = session
   }
 
-  /// Sends `httpRequest` and returns the status code and body, whatever the status.
-  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
+  /// Sends `httpRequest` and returns the status code, body and response, whatever the status.
+  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data, response: HTTPURLResponse) {
     guard let url = URL(string: httpRequest.url) else { throw HttpClientError.invalidUrl(httpRequest.url) }
 
     var urlRequest = URLRequest(url: url)
     urlRequest.timeoutInterval = Self.timeoutSeconds
+    // The library caches what it keeps; a URL cache would answer a refresh with the stale body.
+    urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
@@ -104,7 +106,7 @@ final class HttpClient: @unchecked Sendable {
       let (data, response) = try await session.data(for: urlRequest)
       guard let response = response as? HTTPURLResponse else { throw HttpClientError.notHttp }
       logResponse(code: response.statusCode, data: data, url: httpRequest.url)
-      return (response.statusCode, data)
+      return (response.statusCode, data, response)
     } catch {
       logger.error("✗ Error for \(httpRequest.url): \(error.localizedDescription)")
       throw error
@@ -115,12 +117,20 @@ final class HttpClient: @unchecked Sendable {
   /// does not decode; any other status throws `HttpException`.
   /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
-    let (code, data) = try await request(httpRequest)
+    try await requestJsonWithLifetime(httpRequest, as: type).value
+  }
+
+  /// `requestJson`, with the lifetime the response states (`HttpFreshness`).
+  func requestJsonWithLifetime<T: Decodable>(
+    _ httpRequest: HttpRequest,
+    as type: T.Type,
+  ) async throws -> (value: T, lifetime: TimeInterval?) {
+    let (code, data, response) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {
       throw HttpException(code: code, responseBody: String(decoding: data, as: UTF8.self))
     }
     do {
-      return try JSONDecoder().decode(type, from: data)
+      return try (JSONDecoder().decode(type, from: data), HttpFreshness.lifetime(of: response))
     } catch {
       throw UndecodableResponse(code: code, reason: Self.reason(error))
     }

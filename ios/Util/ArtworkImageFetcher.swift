@@ -125,7 +125,7 @@ enum ArtworkImageFetcher {
       // `.none` also covers an image re-processed from the cached original; only metrics mark a download.
       if let freshnessKey, result.cacheType == .none, let metrics = result.metrics {
         let responses = metrics.rawMetrics.transactionMetrics.compactMap { $0.response as? HTTPURLResponse }
-        await freshness.record(freshnessKey, lifetime: ArtworkFreshness.lifetime(of: responses))
+        await freshness.record(freshnessKey, lifetime: HttpFreshness.lifetime(of: responses))
       }
       return .success(result.image)
     } catch {

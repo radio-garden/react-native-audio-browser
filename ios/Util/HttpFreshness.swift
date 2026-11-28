@@ -1,6 +1,6 @@
 import Foundation
 
-enum ArtworkFreshness {
+enum HttpFreshness {
   /// Used when no response states a lifetime; matches Kingfisher's default disk expiry.
   static let defaultLifetime: TimeInterval = 7 * 24 * 60 * 60
 
@@ -11,7 +11,8 @@ enum ArtworkFreshness {
     responses.compactMap(lifetime(of:)).min() ?? defaultLifetime
   }
 
-  private static func lifetime(of response: HTTPURLResponse) -> TimeInterval? {
+  /// The lifetime `response` states, or nil when it states none.
+  static func lifetime(of response: HTTPURLResponse) -> TimeInterval? {
     guard let cacheControl = response.value(forHTTPHeaderField: "Cache-Control") else { return nil }
     var maxAge: TimeInterval?
     for directive in cacheControl.split(separator: ",") {
