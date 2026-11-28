@@ -21,22 +21,36 @@ final class LRUCache<Key: Hashable, Value> {
     return value
   }
 
-  func set(_ key: Key, value: Value) {
-    entries[key] = value
+  /// The value at `key`, leaving its recency as it is.
+  func peek(_ key: Key) -> Value? {
+    entries[key]
+  }
+
+  /// Returns the values it drops: the one `key` held and the evicted one.
+  @discardableResult
+  func set(_ key: Key, value: Value) -> [Value] {
+    var dropped = entries.updateValue(value, forKey: key).map { [$0] } ?? []
     touch(key)
-    if order.count > maxSize {
-      entries.removeValue(forKey: order.removeFirst())
+    if order.count > maxSize, let evicted = entries.removeValue(forKey: order.removeFirst()) {
+      dropped.append(evicted)
     }
+    return dropped
   }
 
-  func remove(_ key: Key) {
-    entries.removeValue(forKey: key)
+  @discardableResult
+  func remove(_ key: Key) -> Value? {
     order.removeAll { $0 == key }
+    return entries.removeValue(forKey: key)
   }
 
-  func clear() {
-    entries.removeAll()
-    order.removeAll()
+  /// Empties the cache and returns the values it held.
+  @discardableResult
+  func clear() -> [Value] {
+    defer {
+      entries.removeAll()
+      order.removeAll()
+    }
+    return Array(entries.values)
   }
 
   private func touch(_ key: Key) {

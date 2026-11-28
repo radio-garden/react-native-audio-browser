@@ -17,11 +17,10 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
-  private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
-  // Moves on `clearContent`, so a fetch that outlives one caches nothing; `pageGenerations` does
-  // the same for one path, and is cleared only together with a move of this.
-  private var contentGeneration = 0
-  private var pageGenerations: [String: Int] = [:]
+  private let contentCache = PageCache<ResolvedTrack>(maxSize: 20, keepsStale: HttpClient.keepsStalePage(after:))
+
+  /// Moves on every `clearContent`, so a search or tabs query that outlives one stores nothing.
+  private var clearEpoch = 0
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -79,6 +78,8 @@ final class BrowserManager {
   let contentChanged = Emitter<ResolvedTrack?>()
   let tabsChanged = Emitter<[Track]>()
   let configChanged = Emitter<BrowserConfig>()
+  var pageExpired: Emitter<String> { contentCache.expired }
+  var pageRefreshed: Emitter<String> { contentCache.refreshed }
   var favoritesChanged: Emitter<Void> { favorites.changed }
 
   /// Runs the app's `handleTrackLoad` and awaits both promise layers (a JS callback returning
@@ -124,12 +125,12 @@ final class BrowserManager {
     self.path = path
     if bypassCache {
       // So a failed reload doesn't leave the stale page in the cache.
-      contentCache.remove(path)
+      contentCache.remove(BrowserPathHelper.stripTrackId(path))
     } else {
       content = nil
     }
     do {
-      let resolved = try await resolve(path, useCache: !bypassCache)
+      let resolved = try await resolve(path)
       guard navigationId == currentNavigationId else { return false }
       content = resolved
       return true
@@ -140,21 +141,25 @@ final class BrowserManager {
   }
 
   /// Contextual paths resolve their parent page. Favorites are hydrated on every call.
-  func resolve(_ path: String, useCache: Bool = true) async throws -> ResolvedTrack {
+  func resolve(_ path: String) async throws -> ResolvedTrack {
     let normalizedPath = BrowserPathHelper.stripTrackId(path)
 
-    if useCache, let cached = contentCache.get(normalizedPath) {
-      return favorites.hydrate(cached)
+    let resolvedTrack = try await contentCache.value(for: normalizedPath) { [pages] in
+      try await pages.resolve(normalizedPath)
     }
-
-    let generation = pageGeneration(normalizedPath)
-    let resolvedTrack = try await pages.resolve(normalizedPath)
-
-    if generation == pageGeneration(normalizedPath) {
-      contentCache.set(normalizedPath, value: resolvedTrack)
-    }
-
     return favorites.hydrate(resolvedTrack)
+  }
+
+  /// Refetches the page `path` resolves to when it has expired, and returns once that settles;
+  /// `pageRefreshed` tells when it replaced the page.
+  func refreshPage(_ path: String) async {
+    let normalizedPath = BrowserPathHelper.stripTrackId(path)
+    await contentCache.revalidate(normalizedPath) { [pages] in try await pages.resolve(normalizedPath) }
+  }
+
+  /// Whether the page `path` resolves to is cached and its lifetime has passed.
+  func isPageExpired(_ path: String) -> Bool {
+    contentCache.isExpired(BrowserPathHelper.stripTrackId(path))
   }
 
   /// Throws on a contextual path, which never names a cache entry (Android requires the same).
@@ -164,12 +169,7 @@ final class BrowserManager {
         "invalidateContentCache() expects a container path, not a contextual path: \(path)",
       )
     }
-    pageGenerations[path, default: 0] += 1
     contentCache.remove(path)
-  }
-
-  private func pageGeneration(_ path: String) -> (Int, Int?) {
-    (contentGeneration, pageGenerations[path])
   }
 
   /// Clears every cache and the resolved request layers, then re-queries the tabs; a failed
@@ -183,8 +183,7 @@ final class BrowserManager {
   /// Clears the cached pages and the last search; a fetch in flight caches nothing.
   func clearContent() {
     contentCache.clear()
-    contentGeneration &+= 1
-    pageGenerations.removeAll()
+    clearEpoch += 1
     lastSearchKey = nil
     lastSearchResults = nil
   }
@@ -217,10 +216,10 @@ final class BrowserManager {
       return makeSearchResult(query: query, results: results)
     }
 
-    let generation = contentGeneration
+    let epoch = clearEpoch
     let results = try await pages.search(params)
 
-    if generation == contentGeneration {
+    if epoch == clearEpoch {
       lastSearchKey = cacheKey
       lastSearchResults = results
     }
@@ -270,9 +269,9 @@ final class BrowserManager {
   // MARK: - Tabs
 
   func queryTabs() async throws -> [Track] {
-    let generation = contentGeneration
+    let epoch = clearEpoch
     let tabs = try await pages.tabs()
-    if generation == contentGeneration { self.tabs = tabs }
+    if epoch == clearEpoch { self.tabs = tabs }
     return tabs ?? []
   }
 
@@ -288,7 +287,7 @@ final class BrowserManager {
 
   private func expandScoped(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
-    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
+    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path))
     guard let sections = resolved.normalizedSections else { return nil }
     return try SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
   }

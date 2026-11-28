@@ -3,10 +3,15 @@ import NitroModules
 
 extension CarPlaySession {
   /// Loads a content template's page when it first appears, the moment CarPlay applies updates
-  /// (an update made straight after a push is dropped).
+  /// (an update made straight after a push is dropped), and refetches it behind the page shown
+  /// when it has expired.
   func loadContentIfNeeded(for template: CPListTemplate) {
-    guard let path = template.contentPath, template.sections.isEmpty else { return }
-    spawn { await $0.loadContent(for: path, into: template) }
+    guard let path = template.contentPath else { return }
+    if template.sections.isEmpty {
+      spawn { await $0.loadContent(for: path, into: template) }
+    } else if audioBrowser.browserManager.isPageExpired(path) {
+      spawn { await $0.audioBrowser.browserManager.refreshPage(path) }
+    }
   }
 
   /// Resolves `path` into a loading template, showing a centered message when the page is
@@ -28,7 +33,7 @@ extension CarPlaySession {
     }
     let outcome: Result<ResolvedTrack, Error>
     do {
-      outcome = try await .success(audioBrowser.browserManager.resolve(path, useCache: true))
+      outcome = try await .success(audioBrowser.browserManager.resolve(path))
     } catch {
       outcome = .failure(error)
     }

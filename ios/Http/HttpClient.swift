@@ -65,16 +65,27 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
+  /// Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which
+  /// is a 4xx other than 408 and 429, or a body that is not a page.
+  static func keepsStalePage(after error: any Error) -> Bool {
+    if error is UndecodableResponse { return false }
+    guard let error = error as? HttpException else { return true }
+    return error.code == 408 || error.code == 429 || !(400 ..< 500).contains(error.code)
+  }
+
   init(session: URLSession = .shared) {
     self.session = session
   }
 
-  /// Sends `httpRequest` and returns the status code and body, whatever the status.
-  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data) {
+  /// Sends `httpRequest` and returns the status code, body and response, whatever the status.
+  private func request(_ httpRequest: HttpRequest) async throws -> (code: Int, data: Data, response: HTTPURLResponse) {
     guard let url = URL(string: httpRequest.url) else { throw HttpClientError.invalidUrl(httpRequest.url) }
 
     var urlRequest = URLRequest(url: url)
     urlRequest.timeoutInterval = Self.timeoutSeconds
+    // URLCache answers a fresh entry with the Age it was stored with, which would restart a page's
+    // lifetime; revalidating still lets a 304 reuse its body.
+    urlRequest.cachePolicy = .reloadRevalidatingCacheData
     httpRequest.headers?.forEach { name, value in
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
@@ -104,7 +115,7 @@ final class HttpClient: @unchecked Sendable {
       let (data, response) = try await session.data(for: urlRequest)
       guard let response = response as? HTTPURLResponse else { throw HttpClientError.notHttp }
       logResponse(code: response.statusCode, data: data, url: httpRequest.url)
-      return (response.statusCode, data)
+      return (response.statusCode, data, response)
     } catch {
       logger.error("✗ Error for \(httpRequest.url): \(error.localizedDescription)")
       throw error
@@ -115,12 +126,17 @@ final class HttpClient: @unchecked Sendable {
   /// does not decode; any other status throws `HttpException`.
   /// A GET sends no body; HEAD and OPTIONS throw `HttpClientError.unsupportedMethod`.
   func requestJson<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> T {
-    let (code, data) = try await request(httpRequest)
+    try await requestJsonFetched(httpRequest, as: type).value
+  }
+
+  /// `requestJson`, kept for the response's `HttpFreshness`.
+  func requestJsonFetched<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> Fetched<T> {
+    let (code, data, response) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {
       throw HttpException(code: code, responseBody: String(decoding: data, as: UTF8.self))
     }
     do {
-      return try JSONDecoder().decode(type, from: data)
+      return try Fetched(value: JSONDecoder().decode(type, from: data), freshness: HttpFreshness(response))
     } catch {
       throw UndecodableResponse(code: code, reason: Self.reason(error))
     }

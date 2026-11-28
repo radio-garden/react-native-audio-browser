@@ -38,6 +38,8 @@ final class CarPlaySession {
   /// Templates with a load in flight, so a re-appearing one does not start another.
   var loadingTemplates: Set<ObjectIdentifier> = []
 
+  private(set) lazy var tabBarDelegate = TabBarDelegate(session: self)
+
   /// Rebuilding the tab bar tears down the pushed stack, so a tab change waits for the root.
   var needsTabRebuild = false
 
@@ -80,6 +82,14 @@ final class CarPlaySession {
       browserManager.contentChanged.subscribeOnMain { [weak self] content in
         guard let content else { return }
         self?.refreshDisplayedTemplates(for: content.path, with: content)
+      },
+      browserManager.pageExpired.subscribeOnMain { [weak self] path in
+        guard self?.shownListTemplate()?.contentPath.map(BrowserPathHelper.stripTrackId) == path else { return }
+        self?.refreshShownPageIfExpired()
+      },
+      browserManager.pageRefreshed.subscribeOnMain { [weak self] in self?.pageRefreshed($0) },
+      audioBrowser.networkMonitor.changed.subscribeOnMain { [weak self] isOnline in
+        if isOnline { self?.refreshShownPageIfExpired() }
       },
       audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.playerOptionsChanged() },
       audioBrowser.externalContentChangedEmitter.subscribeOnMain { [weak self] path in
@@ -142,7 +152,8 @@ final class CarPlaySession {
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
     if rebuildTabsIfAtRoot() { return }
     updatePlayingIndicators()
-    if let list = template as? CPListTemplate { loadContentIfNeeded(for: list) }
+    // Popping Now Playing reports the tab bar even with a list pushed above it.
+    if let list = shownListTemplate() { loadContentIfNeeded(for: list) }
   }
 
   func templateDidDisappear(_ template: CPTemplate) {
@@ -185,6 +196,13 @@ final class CarPlaySession {
         }
       }
     }
+  }
+
+  /// The list the car shows: the top of the pushed stack, else the selected tab; nil while
+  /// another template, such as Now Playing, covers it.
+  func shownListTemplate() -> CPListTemplate? {
+    let top = interfaceController.topTemplate
+    return (top as? CPListTemplate) ?? ((top as? CPTabBarTemplate)?.selectedTemplate as? CPListTemplate)
   }
 
   /// The list templates on screen or one tap away: the tab roots, then the pushed stack.
