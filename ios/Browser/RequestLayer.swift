@@ -113,9 +113,9 @@ enum RequestLayer {
 
   // MARK: - Media
 
-  /// A media request, built in order: `requestLayer` over `base`, or `base` alone when it
-  /// throws anything but a cancellation; what `resolve` produces; `mediaLayer`; then the
-  /// resolved config over that.
+  /// A media request, built in order: `requestLayer` over `base`; what `resolve` produces;
+  /// `mediaLayer`; then the resolved config over that. A layer that throws anything but a
+  /// cancellation is skipped, leaving the config it was handed.
   nonisolated(nonsending) static func media<C: RequestFields>(
     over base: C,
     requestLayer: nonisolated(nonsending)(C) async throws -> C,
@@ -129,7 +129,12 @@ enum RequestLayer {
       request = base
     }
     let resolved = await resolve()
-    let merged = try await mediaLayer(request)
+    let merged: C
+    do {
+      merged = try await mediaLayer(request)
+    } catch where !(error is CancellationError) {
+      merged = request
+    }
     return resolved.map { merge(merged, $0) } ?? merged
   }
 

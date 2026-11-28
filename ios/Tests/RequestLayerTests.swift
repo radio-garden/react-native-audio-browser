@@ -186,9 +186,18 @@ struct RequestLayerTests {
     #expect(!later)
   }
 
-  @Test func aThrowingMediaLayerIsNotSkipped() async {
-    await #expect(throws: LayerFailed.self) {
-      try await media(mediaLayer: { _ in throw LayerFailed() })
+  @Test func aThrowingMediaLayerFallsBackToTheRequestLayerAndStillAppliesTheResolvedConfig() async throws {
+    let result = try await media(
+      requestLayer: { RequestLayer.merge($0, Config(baseUrl: "https://api", headers: ["Auth": "t"], userAgent: "shared")) },
+      resolve: { Config(query: ["sig": "s"]) },
+      mediaLayer: { _ in throw LayerFailed() },
+    )
+    #expect(result == Config(path: "/stream.mp3", baseUrl: "https://api", headers: ["Auth": "t"], query: ["sig": "s"], userAgent: "shared"))
+  }
+
+  @Test func aCancelledMediaLayerStaysACancellation() async {
+    await #expect(throws: CancellationError.self) {
+      try await media(mediaLayer: { _ in throw CancellationError() })
     }
   }
 

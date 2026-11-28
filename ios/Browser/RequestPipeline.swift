@@ -143,12 +143,12 @@ final class RequestPipeline {
   // MARK: - Media URL Resolution
 
   /// The media request for `originalUrl`, as `RequestLayer.media` builds it. `track` only feeds
-  /// `media.resolve`; its own `request` is not merged here. A failing media layer leaves the URL
-  /// as it is, with no headers.
+  /// `media.resolve`; its own `request` is not merged here. On cancellation, the URL as it is,
+  /// with no headers.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
     do {
       let merged = try await RequestLayer.media(
-        over: .base(path: originalUrl),
+        over: RequestConfig.base(path: originalUrl),
         requestLayer: { base in
           do {
             return try await self.applyLayer(self.resolvedLayers().request, to: base, params: [:])
@@ -165,15 +165,19 @@ final class RequestPipeline {
             return nil
           }
         },
-        mediaLayer: { try await self.applyLayer(self.config.media, to: $0, params: nil) },
+        mediaLayer: { request in
+          do {
+            return try await self.applyLayer(self.config.media, to: request, params: nil)
+          } catch where !(error is CancellationError) {
+            self.logger.error("Media layer failed: \(error.localizedDescription)")
+            throw error
+          }
+        },
       )
       let finalUrl = RequestLayer.buildUrl(merged)
       logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
-    } catch is CancellationError {
-      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     } catch {
-      logger.error("Media layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
   }
