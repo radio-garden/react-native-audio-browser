@@ -1,6 +1,5 @@
 package com.audiobrowser.player
 
-import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -89,6 +88,8 @@ internal class InterceptingPlayer(
   private val unprepared: () -> Boolean,
   /** Leads the engine's shuffle order with a start index, given the queue's size. */
   private val leadShuffleOrder: (startIndex: Int, count: Int) -> Unit,
+  /** The app's own skip, past the intercepted seeks. */
+  private val skipTo: (index: Int, positionMs: Long) -> Unit,
   private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
@@ -248,26 +249,23 @@ internal class InterceptingPlayer(
     }
 
   // Media3 sets here the queue of a track picked on an external surface and of playback
-  // resumption. A pick in the queue the player holds skips to it, as Player.skipTo does, past the
-  // intercepted seekTo. An unset start index is skipped: shuffleOrderLedBy would clamp it to 0.
+  // resumption. A pick in the queue the player holds is a skip.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
-    if (startIndex != C.INDEX_UNSET && isCurrentQueue(mediaItems)) {
-      val state = engineView(wrappedPlayer.playbackState)
-      if (!wrappedPlayer.skipsInPlace(startIndex, state)) {
-        wrappedPlayer.seekTo(startIndex, startPositionMs)
-      }
+    if (!holds(mediaItems)) {
+      super.setMediaItems(mediaItems, startIndex, startPositionMs)
+      leadShuffleOrder(startIndex, mediaItems.size)
       return
     }
-    super.setMediaItems(mediaItems, startIndex, startPositionMs)
-    if (startIndex != C.INDEX_UNSET) leadShuffleOrder(startIndex, mediaItems.size)
+    skipTo(startIndex, startPositionMs)
   }
 
   // The same ids can carry another src or metadata: only an equal Track at each position is the
   // same queue.
-  private fun isCurrentQueue(mediaItems: List<MediaItem>): Boolean =
-    mediaItems.size == mediaItemCount &&
-      mediaItems.withIndex().all { (i, item) ->
-        val held = getMediaItemAt(i)
+  private fun holds(mediaItems: List<MediaItem>): Boolean =
+    mediaItems.isNotEmpty() &&
+      mediaItems.size == mediaItemCount &&
+      mediaItems.withIndex().all { (index, item) ->
+        val held = getMediaItemAt(index)
         item.mediaId == held.mediaId && item.localConfiguration?.tag == held.localConfiguration?.tag
       }
 }

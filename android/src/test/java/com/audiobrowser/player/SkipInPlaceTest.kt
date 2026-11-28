@@ -4,6 +4,7 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player as MediaPlayer
+import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
@@ -25,6 +26,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.Mockito.RETURNS_DEFAULTS
+import org.mockito.Mockito.mock
+import org.mockito.stubbing.Answer
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -200,8 +204,29 @@ class SkipInPlaceTest {
   }
 
   @Test
-  fun `a controller's pick of another item in the queue moves to it`() {
+  fun `a controller's pick of another item in the queue seeks to it`() {
     playUntilReady(folder.liveHlsUri(segments = 6))
+
+    val items = player.tracks.map { TrackFactory.toMedia3(it) }
+    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(1, player.exoPlayer.currentMediaItemIndex)
+    assertEquals(
+      listOf("transition ${MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_SEEK}"),
+      engineEvents.filter { it.startsWith("transition") },
+    )
+  }
+
+  @Test
+  fun `a controller's pick in the queue moves though the app consumes remote seeks`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+    player.setCallbacks(
+      mock(
+        Callbacks::class.java,
+        Answer { if (it.method.name == "handleRemoteSeek") true else RETURNS_DEFAULTS.answer(it) },
+      )
+    )
 
     val items = player.tracks.map { TrackFactory.toMedia3(it) }
     player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
@@ -210,17 +235,13 @@ class SkipInPlaceTest {
   }
 
   @Test
-  fun `a controller's pick of another item in the queue seeks to it`() {
-    playUntilReady(folder.liveHlsUri(segments = 6))
+  fun `a controller's empty queue on an empty player leaves it empty`() {
+    goOnline(context)
+    player.setup(PlayerSetupOptions())
 
-    val items = player.tracks.map { TrackFactory.toMedia3(it) }
-    player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
-    shadowOf(Looper.getMainLooper()).idle()
+    player.forwardingPlayer.setMediaItems(emptyList(), 0, C.TIME_UNSET)
 
-    assertEquals(
-      listOf("transition ${MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_SEEK}"),
-      engineEvents.filter { it.startsWith("transition") },
-    )
+    assertEquals(0, player.exoPlayer.mediaItemCount)
   }
 
   @Test

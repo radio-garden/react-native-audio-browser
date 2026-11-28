@@ -237,7 +237,7 @@ class HandleTrackLoadSeekTest {
   }
 
   @Test
-  fun `an ended track a handler leaves plays again from its start`() {
+  fun `an ended track a handler leaves goes back to its start`() {
     val track = silentTrack(Duration.ofMillis(500))
     player.exoPlayer.trackSelectionParameters =
       player.exoPlayer.trackSelectionParameters

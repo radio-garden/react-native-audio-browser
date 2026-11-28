@@ -758,6 +758,7 @@ internal constructor(
         masksPlaying = { retryMasksPlaying },
         unprepared = { restoredUnprepared },
         leadShuffleOrder = ::leadShuffleOrder,
+        skipTo = ::skipTo,
         playPlayer = ::play,
         stopPlayer = ::stop,
       )
@@ -868,12 +869,16 @@ internal constructor(
     sessionPlayer.moveMediaItem(fromIndex, toIndex)
   }
 
-  /** @throws IllegalArgumentException if [index] is out of bounds. */
-  fun skipTo(index: Int) {
+  /**
+   * Skips to [index], at [positionMs] or its default position.
+   *
+   * @throws IllegalArgumentException if [index] is out of bounds.
+   */
+  fun skipTo(index: Int, positionMs: Long = C.TIME_UNSET) {
     validateIndex(index)
     playGeneration++
     if (sessionPlayer.skipsInPlace(index, retryView(sessionPlayer.playbackState))) return
-    sessionPlayer.seekTo(index, C.TIME_UNSET)
+    sessionPlayer.seekTo(index, positionMs)
     sessionPlayer.prepare()
   }
 
