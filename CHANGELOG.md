@@ -1,3 +1,9 @@
+## [1.0.0-next.19](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.18...v1.0.0-next.19) (2026-11-28)
+
+### Bug Fixes
+
+* **android:** decode embedded artwork to fit within the size hint ([fb80bdb](https://github.com/radio-garden/react-native-audio-browser/commit/fb80bdb8eed922ecea584990e5ac6662a43676ff))
+
 ## [1.0.0-next.18](https://github.com/radio-garden/react-native-audio-browser/compare/v1.0.0-next.17...v1.0.0-next.18) (2026-11-27)
 
 ### Bug Fixes
