@@ -1135,7 +1135,8 @@ final class Player {
     retry.onlineChanged(isOnline)
   }
 
-  /// Time playback must have progressed before a buffer dip counts as a stall.
+  /// How far playback must progress past where it was proven before a buffer dip counts as a
+  /// stall: AVPlayer can flip between playing and waiting as playback starts. Android has no grace.
   private static let stallGraceSeconds: TimeInterval = 0.5
 
   /// The position at which playback since the last connect was proven: nil until then.
@@ -1158,8 +1159,8 @@ final class Player {
   /// Playback that had started since the last connect is waiting for data, as on Android: proven
   /// by playing with a buffer likely to keep up.
   var isStalled: Bool {
-    guard engine.hasItem, playedSinceConnectFrom != nil else { return false }
-    return engine.currentTime > Self.stallGraceSeconds && playWhenReady
+    guard engine.hasItem, let from = playedSinceConnectFrom else { return false }
+    return engine.currentTime > from + Self.stallGraceSeconds && playWhenReady
       && !engine.isPlaybackLikelyToKeepUp
   }
 

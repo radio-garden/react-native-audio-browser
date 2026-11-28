@@ -1228,6 +1228,22 @@ struct PlayerRecoveringTests {
     #expect(player.isStalled)
   }
 
+  @Test func aFlipToWaitingRightAfterPlayingIsNoStall() throws {
+    let (player, engine, _) = try makePlaying()
+    engine.currentTime = 10
+    engine.isPlaybackLikelyToKeepUp = false
+    player.seek(to: 60)
+    engine.currentTime = 60
+    player.transition(.avPlayerWaiting)
+    engine.isPlaybackLikelyToKeepUp = true
+    player.transition(.avPlayerPlaying)
+    // Within Player.stallGraceSeconds of where playing began.
+    engine.currentTime = 60.2
+    engine.isPlaybackLikelyToKeepUp = false
+    player.transition(.avPlayerWaiting)
+    #expect(!player.isStalled)
+  }
+
   @Test func playingOnAThinBufferIsNoPlaying() throws {
     // As with ios.buffer: AVPlayer starts at once, whatever the buffer.
     let (player, engine, _) = try makePlaying()
