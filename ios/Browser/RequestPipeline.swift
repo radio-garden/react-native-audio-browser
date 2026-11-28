@@ -142,35 +142,38 @@ final class RequestPipeline {
 
   // MARK: - Media URL Resolution
 
-  /// The media request for `originalUrl`: the request layer, the media layer, then what
-  /// `media.resolve(track)` produces over them. `track` only feeds `resolve`; its own `request`
-  /// is not merged here. A failing layer
+  /// The media request for `originalUrl`, as `RequestLayer.media` builds it. `track` only feeds
+  /// `media.resolve`; its own `request` is not merged here. A failing request layer or media layer
   /// leaves the URL as it is, with no headers.
   func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
-    let base: RequestConfig
     do {
-      base = try await applyLayer(resolvedLayers().request, to: .base(path: originalUrl), params: [:])
-    } catch {
-      logger.error("Media request layer failed: \(error.localizedDescription)")
-      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
-    }
-
-    let resolveLayer: RequestConfig?
-    do {
-      resolveLayer = try await resolveMediaTrackConfig(track)
-    } catch {
-      logger.error("Media resolve callback failed: \(error.localizedDescription)")
-      resolveLayer = nil
-    }
-
-    do {
-      var merged = try await applyLayer(config.media, to: base, params: nil)
-      if let resolveLayer { merged = RequestLayer.merge(merged, resolveLayer) }
+      let merged = try await RequestLayer.media(
+        over: .base(path: originalUrl),
+        requestLayer: { base in
+          do {
+            return try await self.applyLayer(self.resolvedLayers().request, to: base, params: [:])
+          } catch where !(error is CancellationError) {
+            self.logger.error("Media request layer failed: \(error.localizedDescription)")
+            throw error
+          }
+        },
+        resolve: {
+          do {
+            return try await self.resolveMediaTrackConfig(track)
+          } catch {
+            self.logger.error("Media resolve callback failed: \(error.localizedDescription)")
+            return nil
+          }
+        },
+        mediaLayer: { try await self.applyLayer(self.config.media, to: $0, params: nil) },
+      )
       let finalUrl = RequestLayer.buildUrl(merged)
       logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(url: finalUrl, headers: merged.headers, userAgent: merged.userAgent)
+    } catch is CancellationError {
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     } catch {
-      logger.error("Media transform failed: \(error.localizedDescription)")
+      logger.error("Media layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
   }
