@@ -99,6 +99,7 @@ let package = Package(
         "Util/PageCache.swift",
         "Util/Fetched.swift",
         "Util/HttpFreshness.swift",
+        "Util/ArtworkLoadFailure.swift",
         "Util/LocalArtwork.swift",
         "Util/ArtworkProcessing.swift",
         "Util/SVGProcessor.swift",

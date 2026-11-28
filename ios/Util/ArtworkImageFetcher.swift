@@ -8,8 +8,8 @@ import UIKit
 enum ArtworkImageFetcher {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "ArtworkImageFetcher")
 
-  /// Returns nil when the image cannot be loaded, logging a failed fetch (not an unparseable URI). A stale image whose refetch fails
-  /// falls back to the cached copy.
+  /// Returns nil when the image cannot be loaded; `load` says why. A stale image whose refetch
+  /// fails falls back to the cached copy.
   /// - Parameter slot: The size in points at `scale` that an image at an `.svg` path rasterizes
   ///   to fit.
   /// - Parameter onCanvas: Draws the image onto a canvas of exactly `slot` (`SlotCanvasProcessor`);
@@ -23,7 +23,19 @@ enum ArtworkImageFetcher {
     onCanvas: Bool,
     waitsForConnectivity: Bool = false,
   ) async -> UIImage? {
-    guard let url = URL(string: source.uri) else { return nil }
+    try? await load(from: source, slot: slot, onCanvas: onCanvas, waitsForConnectivity: waitsForConnectivity).get()
+  }
+
+  /// `fetchImage`'s image, or why it could not be loaded; each failed fetch is logged once, an
+  /// unparseable URI not at all.
+  @MainActor
+  static func load(
+    from source: ImageSource,
+    slot: (size: CGSize, scale: CGFloat),
+    onCanvas: Bool,
+    waitsForConnectivity: Bool = false,
+  ) async -> Result<UIImage, ArtworkLoadFailure> {
+    guard let url = URL(string: source.uri) else { return .failure(ArtworkLoadFailure(urlErrorCode: .badURL)) }
 
     var options: KingfisherOptionsInfo = []
     if let headers = source.headers, !headers.isEmpty {
@@ -61,12 +73,12 @@ enum ArtworkImageFetcher {
     } else {
       await fetch(url, options: options, processor: processor, waitsForConnectivity: waitsForConnectivity)
     }
-    switch result {
-    case let .success(image):
-      return image
-    case let .failure(error):
-      logger.error("Failed to load artwork from \(source.uri.prefix(200)): \(error.localizedDescription)")
-      return nil
+    return result.mapError { error in
+      let failure = ArtworkLoadFailure(error)
+      // A query may carry a token: the log shows the URL without it.
+      let shown = "\(url.host ?? "")\(url.path)".prefix(200)
+      logger.error("Failed to load artwork from \(shown, privacy: .public): \(failure.description, privacy: .public)")
+      return failure
     }
   }
 
