@@ -123,8 +123,7 @@ final class PageCache<Value: Sendable> {
         self?.settle(path, id) { cache, cached in
           guard let cached else { return }
           if error is CancellationError || cache.keepsStale(error) {
-            let retryIn = cached.lifetime
-            cache.put(path, cached.value, lifetime: cached.lifetime, expiresAt: cached.expiresAt, pushIn: retryIn, retryIn: retryIn)
+            cache.put(path, cached.value, lifetime: cached.lifetime, expiresAt: cached.expiresAt, pushIn: cached.lifetime, retryAtPush: true)
           } else {
             cache.entries.remove(path)?.cancelTimer?()
           }
@@ -143,18 +142,19 @@ final class PageCache<Value: Sendable> {
     body(self, entries.peek(path))
   }
 
-  /// Stores the page with a timer that pushes it `pushIn` seconds from now, if any, and no refetch
-  /// before `retryIn` seconds from now.
+  /// Stores the page with a timer that pushes it `pushIn` seconds from now, if any; with
+  /// `retryAtPush`, no refetch starts before that push.
   private func put(
     _ path: String,
     _ value: Value,
     lifetime: TimeInterval?,
     expiresAt: TimeInterval?,
     pushIn: TimeInterval?,
-    retryIn: TimeInterval? = nil,
+    retryAtPush: Bool = false,
   ) {
+    // Read before scheduling, so the push never comes before the retry is due.
+    let retryAt = retryAtPush ? pushIn.map { now() + $0 } : nil
     let cancelTimer = pushIn.map { delay in schedule(delay) { [weak self] in self?.expired.emit(path) } }
-    let retryAt = retryIn.map { now() + $0 }
     let entry = Entry(value: value, lifetime: lifetime, expiresAt: expiresAt, cancelTimer: cancelTimer, retryAt: retryAt)
     for dropped in entries.set(path, value: entry) {
       dropped.cancelTimer?()

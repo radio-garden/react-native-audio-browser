@@ -322,7 +322,9 @@ struct PageCacheTests {
     harness.advance(61)
 
     #expect(harness.pushed == ["/a", "/a"])
-    #expect(try await harness.value("/a") { throw Unreachable() } == "first")
+    #expect(try await harness.value("/a") { page("second", 60) } == "first")
+    await harness.settle("/a")
+    #expect(try await harness.value("/a") { throw Unreachable() } == "second")
   }
 
   @Test func aPageKeptAfterAFailedRefetchIsRefetchedNoSoonerThanALifetimeLater() async throws {

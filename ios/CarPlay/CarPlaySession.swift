@@ -84,7 +84,7 @@ final class CarPlaySession {
         self?.refreshDisplayedTemplates(for: content.path, with: content)
       },
       browserManager.pageExpired.subscribeOnMain { [weak self] path in
-        guard self?.shownListTemplate()?.contentPath == path else { return }
+        guard self?.shownListTemplate()?.contentPath.map(BrowserPathHelper.stripTrackId) == path else { return }
         self?.refreshShownPageIfExpired()
       },
       browserManager.pageRefreshed.subscribeOnMain { [weak self] in self?.pageRefreshed($0) },
