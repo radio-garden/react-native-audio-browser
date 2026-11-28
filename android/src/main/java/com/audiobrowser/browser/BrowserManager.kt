@@ -848,7 +848,7 @@ class BrowserManager(
     Timber.d("Refreshing content for path: $currentPath")
 
     try {
-      contentCache.remove(currentPath)
+      contentCache.remove(BrowserPathHelper.stripTrackId(currentPath))
       val content = resolve(currentPath)
 
       if (navigationId != currentNavigationId) return false
@@ -1377,16 +1377,6 @@ class BrowserManager(
 class ContentNotFoundException(val path: String) : Exception("Content not found")
 
 /** A non-2xx response, or a 2xx response whose body does not parse. */
-/**
- * Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which is
- * a 4xx other than 408 and 429, or a 2xx whose body is not a page.
- */
-internal fun keepsStalePage(e: Exception): Boolean {
-  if (e !is HttpStatusException) return true
-  val code = e.statusCode
-  return code == 408 || code == 429 || code !in 200..299 && code !in 400..499
-}
-
 class HttpStatusException(val statusCode: Int, message: String, cause: Throwable? = null) :
   Exception(message, cause)
 
@@ -1429,3 +1419,13 @@ data class ExpandedQueue(val tracks: Array<Track>, val startIndex: Int, val sour
 /** The page a linked path queues marks the tapped track disabled: the tap plays nothing. */
 class DisabledOnLinkedPageException(trackId: String) :
   IllegalStateException("Refusing playback of a track its linked page disables: $trackId")
+
+/**
+ * Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which is
+ * a 4xx other than 408 and 429, or a 2xx whose body is not a page.
+ */
+internal fun keepsStalePage(e: Exception): Boolean {
+  if (e !is HttpStatusException) return true
+  val code = e.statusCode
+  return code == 408 || code == 429 || code !in 200..299 && code !in 400..499
+}

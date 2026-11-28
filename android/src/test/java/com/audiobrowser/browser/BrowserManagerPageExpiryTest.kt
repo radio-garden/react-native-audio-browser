@@ -1,6 +1,7 @@
 package com.audiobrowser.browser
 
 import com.audiobrowser.TestFixtures.transformableConfig
+import com.audiobrowser.util.BrowserPathHelper
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -166,6 +167,17 @@ class BrowserManagerPageExpiryTest {
     cacheControl = listOf("max-age=60")
     val browserManager = browserManager(mutableListOf())
     browserManager.navigate("/page")
+
+    browserManager.refresh()
+
+    assertEquals("2", browserManager.resolve("/page").title)
+  }
+
+  @Test
+  fun `a refresh from a contextual path refetches its page`() = runTest {
+    val browserManager = browserManager(mutableListOf())
+    browserManager.navigate("/page")
+    browserManager.navigate(BrowserPathHelper.build("/page", "track"))
 
     browserManager.refresh()
 

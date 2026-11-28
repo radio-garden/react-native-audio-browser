@@ -36,6 +36,8 @@ class PageCache<V : Any>(
     val lifetimeMs: Long?,
     val expiresAt: Long?,
     val timer: Job?,
+    /** After a failed refetch, when the next may start; on [now]'s clock. */
+    val retryAt: Long? = null,
   )
 
   private class Load<V>(val refetch: Boolean) {
@@ -64,7 +66,7 @@ class PageCache<V : Any>(
       synchronized(lock) {
         val cached = entries.get(path)
         if (cached != null) {
-          if (!isFresh(cached) && canRefetch()) load(path, fetch, refetch = true)
+          if (isDue(cached) && canRefetch()) load(path, fetch, refetch = true)
           return cached.value
         }
         load(path, fetch, refetch = false)
@@ -82,7 +84,7 @@ class PageCache<V : Any>(
         loads[path]
           ?: entries
             .get(path)
-            ?.takeIf { !isFresh(it) && canRefetch() }
+            ?.takeIf { isDue(it) && canRefetch() }
             ?.let { load(path, fetch, refetch = true) }
       }
     try {
@@ -118,6 +120,8 @@ class PageCache<V : Any>(
 
   private fun isFresh(entry: Entry<V>) = (entry.expiresAt ?: Long.MAX_VALUE) > now()
 
+  private fun isDue(entry: Entry<V>) = !isFresh(entry) && (entry.retryAt ?: Long.MIN_VALUE) <= now()
+
   /**
    * Under [lock]. The path's load, started on [scope] unless one runs; once [scope] is cancelled it
    * fails at once.
@@ -141,7 +145,11 @@ class PageCache<V : Any>(
         }
         settle(path, load, result)
       }
-      .invokeOnCompletion { cause -> cause?.let { load.result.completeExceptionally(it) } }
+      .invokeOnCompletion { cause ->
+        if (cause == null) return@invokeOnCompletion
+        synchronized(lock) { if (loads[path] === load) loads.remove(path) }
+        load.result.completeExceptionally(cause)
+      }
     return load
   }
 
@@ -164,9 +172,10 @@ class PageCache<V : Any>(
           },
           onFailure = { e ->
             val cached = entries.get(path)
-            if (cached != null && e is Exception && e !is CancellationException) {
-              if (keepsStale(e)) {
-                store(path, cached.value, cached.lifetimeMs, cached.expiresAt, cached.lifetimeMs)
+            if (cached != null && e is Exception) {
+              if (e is CancellationException || keepsStale(e)) {
+                val retryInMs = cached.lifetimeMs
+                store(path, cached.value, cached.lifetimeMs, cached.expiresAt, retryInMs, retryInMs)
               } else {
                 entries.remove(path)
               }
@@ -182,8 +191,18 @@ class PageCache<V : Any>(
     if (refreshed) onRefreshed(path)
   }
 
-  /** Under [lock]. Stores the page with a timer that pushes it [pushInMs] from now, if any. */
-  private fun store(path: String, value: V, lifetimeMs: Long?, expiresAt: Long?, pushInMs: Long?) {
+  /**
+   * Under [lock]. Stores the page with a timer that pushes it [pushInMs] from now, if any, and no
+   * refetch before [retryInMs] from now.
+   */
+  private fun store(
+    path: String,
+    value: V,
+    lifetimeMs: Long?,
+    expiresAt: Long?,
+    pushInMs: Long?,
+    retryInMs: Long? = null,
+  ) {
     val due = pushInMs?.let { now() + it }
     val timer =
       due?.let {
@@ -194,7 +213,7 @@ class PageCache<V : Any>(
           if (synchronized(lock) { entries.snapshot()[path]?.timer === timer }) onExpired(path)
         }
       }
-    entries.put(path, Entry(value, lifetimeMs, expiresAt, timer))
+    entries.put(path, Entry(value, lifetimeMs, expiresAt, timer, retryInMs?.let { now() + it }))
   }
 
   /** A queued refetch whose path was removed or cleared before its turn. */

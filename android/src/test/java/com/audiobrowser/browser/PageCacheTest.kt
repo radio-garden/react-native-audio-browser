@@ -366,7 +366,7 @@ class PageCacheTest {
   }
 
   @Test
-  fun aCancelledRefetchLeavesThePageAsItWas() = runTest {
+  fun aCancelledRefetchKeepsThePageAndRetriesALifetimeLater() = runTest {
     val cache = cache()
     expiredPage(cache)
 
@@ -374,8 +374,31 @@ class PageCacheTest {
     runCurrent()
     advance(61_000)
 
-    assertEquals(listOf("/a"), pushed)
+    assertEquals(listOf("/a", "/a"), pushed)
     assertEquals("first", cache.value("/a") { throw Unreachable() })
+  }
+
+  @Test
+  fun aPageKeptAfterAFailedRefetchIsRefetchedNoSoonerThanALifetimeLater() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+    var fetches = 0
+    val failing = suspend {
+      fetches += 1
+      throw Unreachable()
+    }
+
+    cache.value("/a", failing)
+    runCurrent()
+    advance(59_000)
+    cache.value("/a", failing)
+    runCurrent()
+    assertEquals(1, fetches)
+
+    advance(2_000)
+    cache.value("/a", failing)
+    runCurrent()
+    assertEquals(2, fetches)
   }
 
   @Test

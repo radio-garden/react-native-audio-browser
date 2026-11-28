@@ -80,9 +80,18 @@ class SessionPageRefreshTest {
     controller.destroy()
   }
 
-  private fun browse(path: String) {
-    val callback = player.getMediaSessionCallback()
+  private val callback
+    get() = player.getMediaSessionCallback()
+
+  /** A visit as Android Auto sends it: unsubscribed, onGetChildren, then onSubscribe. */
+  private fun visit(path: String) {
+    callback.onUnsubscribe(service.session, car, path)
+    requery(path)
     callback.onSubscribe(service.session, car, path, null)
+  }
+
+  /** What a notifyChildrenChanged brings from Android Auto: onGetChildren alone. */
+  private fun requery(path: String) {
     callback.onGetChildren(service.session, car, path, 0, 100, null).get(5, TimeUnit.SECONDS)
   }
 
@@ -91,21 +100,22 @@ class SessionPageRefreshTest {
 
   @Test
   fun `a level re-queried after its page was refreshed keeps each station's source page`() {
-    browse("/home")
-    browse("/favorites")
+    visit("/home")
+    visit("/favorites")
 
     player.notifyPageRefreshed("/home")
-    browse("/home")
+    requery("/home")
 
     assertEquals("/favorites", source())
   }
 
   @Test
-  fun `a level browsed again moves each station's source page to it`() {
-    browse("/home")
-    browse("/favorites")
+  fun `a level visited again moves each station's source page to it, refreshed or not`() {
+    visit("/home")
+    visit("/favorites")
 
-    browse("/home")
+    player.notifyPageRefreshed("/home")
+    visit("/home")
 
     assertEquals("/home", source())
   }

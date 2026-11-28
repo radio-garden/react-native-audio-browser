@@ -137,7 +137,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     carConnectionTarget.compareAndSet(onCarConnectedChanged, null)
 
     dropStaleJSCallbacks()
-    browserManager.dispose()
 
     handler.post {
       connectedService?.let { service ->
@@ -155,6 +154,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
       }
       connectedService = null
+      // After the player's browser is cleared: a browse in between would leave a load that never
+      // runs.
+      browserManager.dispose()
 
       // Dropping the reference disconnects nothing: the controller stays in the session's
       // connected list, holding a binder and a listener.
