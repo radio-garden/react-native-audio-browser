@@ -54,6 +54,7 @@ class HttpClient {
     val userAgent: String = DEFAULT_USER_AGENT,
   )
 
+  /** [headers] joins the lines of a repeated field with ", ", as RFC 9110 §5.3 combines them. */
   data class HttpResponse(val code: Int, val body: String, val headers: Map<String, String>) {
     val isSuccessful: Boolean
       get() = code in 200..299
@@ -107,7 +108,8 @@ class HttpClient {
         val response = client.newCall(request).execute()
 
         val responseBody = response.body?.string() ?: ""
-        val responseHeaders = response.headers.toMap()
+        val responseHeaders =
+          response.headers.names().associateWith { response.headers.values(it).joinToString(", ") }
 
         Result.success(
           HttpResponse(code = response.code, body = responseBody, headers = responseHeaders)

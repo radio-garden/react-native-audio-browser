@@ -1718,6 +1718,10 @@ internal constructor(
     mediaSessionCallback.notifyContentChanged(path)
   }
 
+  fun notifyPageExpired(path: String) {
+    mediaSessionCallback.notifyPageExpired(path)
+  }
+
   fun invalidateAllContent() {
     mediaSessionCallback.invalidateAllContent()
   }

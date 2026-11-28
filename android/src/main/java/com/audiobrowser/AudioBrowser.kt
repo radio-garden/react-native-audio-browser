@@ -224,6 +224,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         connectedService?.player?.notifyTabsChanged()
       }
       setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
+      setOnPageExpired { path -> connectedService?.player?.notifyPageExpired(path) }
     }
 
   private val systemVolumeMonitor = SystemVolumeMonitor(context)

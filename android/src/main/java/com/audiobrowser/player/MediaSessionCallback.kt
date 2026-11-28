@@ -607,6 +607,15 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
     scope.launch(Dispatchers.Main) { session.notifyChildrenChanged(path, Int.MAX_VALUE, null) }
   }
 
+  /**
+   * Tells controllers subscribed to [path] to re-query it, once its cached page expired. Offline it
+   * does nothing: a reconnect re-queries every subscribed path. Safe from any thread.
+   */
+  fun notifyPageExpired(path: String) {
+    if (!player.networkMonitor.isOnline.value) return
+    if (synchronized(this) { path in parentIdSubscriptions }) notifyContentChanged(path)
+  }
+
   /** Pairs with AudioBrowser.invalidateAllContent(), which clears the content cache first. */
   fun invalidateAllContent() {
     Timber.d("Invalidating all content - notifying all subscribed paths")
