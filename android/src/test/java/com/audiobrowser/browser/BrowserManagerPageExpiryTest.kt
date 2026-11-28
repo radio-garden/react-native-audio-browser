@@ -15,7 +15,6 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +27,7 @@ class BrowserManagerPageExpiryTest {
   private val requests = AtomicInteger()
   @Volatile private var cacheControl: List<String> = emptyList()
   @Volatile private var status = 200
+  @Volatile private var age: String? = null
 
   @Before
   fun setup() {
@@ -39,6 +39,7 @@ class BrowserManagerPageExpiryTest {
           val response =
             MockResponse().setResponseCode(status).setBody("""{"path":"/page","title":"$count"}""")
           cacheControl.forEach { response.addHeader("Cache-Control", it) }
+          age?.let { response.addHeader("Age", it) }
           return response
         }
       }
@@ -86,25 +87,65 @@ class BrowserManagerPageExpiryTest {
   }
 
   @Test
-  fun `a 5xx on refetch keeps the stale page, and a 404 drops it`() = runTest {
+  fun `an undecodable body or a request-layer error is judged as such`() {
+    assertEquals(false, keepsStalePage(HttpStatusException(200, "not a page")))
+    assertEquals(true, keepsStalePage(NetworkException("offline")))
+    assertEquals(true, keepsStalePage(IllegalStateException("transform threw")))
+  }
+
+  @Test
+  fun `a refetch answered already expired makes one request and is kept for the floor`() = runTest {
+    cacheControl = listOf("max-age=60")
+    age = "90"
+    val refreshed = CompletableDeferred<String>()
+    val browserManager = browserManager(mutableListOf())
+    browserManager.setOnPageRefreshed { refreshed.complete(it) }
+    browserManager.resolve("/page")
+    advance(PageCache.LIFETIME_FLOOR_MS + 1_000)
+
+    assertEquals("1", browserManager.resolve("/page").title)
+    refreshed.await()
+    assertEquals("2", browserManager.resolve("/page").title)
+    assertEquals("2", browserManager.resolve("/page").title)
+
+    assertEquals(2, requests.get())
+  }
+
+  @Test
+  fun `a failed refetch keeps the stale page unless the server refused it`() = runTest {
+    cacheControl = listOf("max-age=60")
+    for ((code, kept) in
+      listOf(
+        408 to true,
+        429 to true,
+        500 to true,
+        503 to true,
+        400 to false,
+        404 to false,
+        410 to false,
+      )) {
+      status = 200
+      val browserManager = browserManager(mutableListOf())
+      val title = browserManager.resolve("/page").title
+      advance(61_000)
+
+      status = code
+      browserManager.refreshPage("/page")
+
+      val after = runCatching { browserManager.resolve("/page").title }.getOrNull()
+      assertEquals("$code", if (kept) title else null, after)
+    }
+  }
+
+  @Test
+  fun `a refresh after dispose returns at once`() = runTest {
     cacheControl = listOf("max-age=60")
     val browserManager = browserManager(mutableListOf())
     browserManager.resolve("/page")
     advance(61_000)
 
-    status = 503
+    browserManager.dispose()
     browserManager.refreshPage("/page")
-    assertEquals("1", browserManager.resolve("/page").title)
-    browserManager.refreshPage("/page")
-
-    status = 404
-    browserManager.refreshPage("/page")
-    try {
-      browserManager.resolve("/page")
-      fail("expected the dropped page to be fetched again")
-    } catch (e: HttpStatusException) {
-      assertEquals(404, e.statusCode)
-    }
   }
 
   @Test

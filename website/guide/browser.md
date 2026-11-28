@@ -550,7 +550,9 @@ A page can also expire. When a page fetched over HTTP comes with a positive `Cac
 
 Then CarPlay re-fetches it in place while it shows it, and Android Auto while it is subscribed to it, which it stays for every page it visited until it disconnects. Any other surface re-fetches it on its next visit.
 
-A visit to an expired page gets it at once while it is re-fetched behind it. A re-fetch that fails on the network or with a 5xx keeps the old page; a 404 or a body that doesn't decode drops it.
+However stale it arrives, a page is kept at least 30 seconds. A visit to an expired page gets it at once while it is re-fetched behind it.
+
+A re-fetch that fails keeps the old page and is tried again a lifetime later. Only a refusal drops it: a 4xx other than 408 and 429, or a body that doesn't decode.
 
 Any other response is cached until one of the tools above clears it. The web keeps no page cache.
 

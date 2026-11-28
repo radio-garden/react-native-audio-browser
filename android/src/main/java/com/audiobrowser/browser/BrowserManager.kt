@@ -114,8 +114,7 @@ class BrowserManager(
       scope = pageScope,
       now = now,
       canRefetch = { isOnline() },
-      // A network error or a 5xx keeps a stale page; a 404 or an undecodable body drops it.
-      isTransient = { it is NetworkException || it is HttpStatusException && it.statusCode >= 500 },
+      keepsStale = ::keepsStalePage,
       onExpired = { path -> onPageExpired?.invoke(path) },
       onRefreshed = { path -> onPageRefreshed?.invoke(path) },
     )
@@ -1378,6 +1377,16 @@ class BrowserManager(
 class ContentNotFoundException(val path: String) : Exception("Content not found")
 
 /** A non-2xx response, or a 2xx response whose body does not parse. */
+/**
+ * Whether a failed refetch leaves its stale page cached: anything but a definite refusal, which is
+ * a 4xx other than 408 and 429, or a 2xx whose body is not a page.
+ */
+internal fun keepsStalePage(e: Exception): Boolean {
+  if (e !is HttpStatusException) return true
+  val code = e.statusCode
+  return code == 408 || code == 429 || code !in 200..299 && code !in 400..499
+}
+
 class HttpStatusException(val statusCode: Int, message: String, cause: Throwable? = null) :
   Exception(message, cause)
 

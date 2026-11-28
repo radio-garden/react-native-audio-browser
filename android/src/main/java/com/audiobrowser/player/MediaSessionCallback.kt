@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
@@ -48,6 +49,7 @@ import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Future
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicReference
@@ -60,6 +62,9 @@ import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+
+/** How long after a refetch's notify a level's serve counts as the re-query it asked for. */
+private const val REQUERY_WINDOW_MS = 10_000L
 
 /**
  * Everything the MediaLibrarySession serves except transport, which reaches the player through
@@ -77,6 +82,8 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
   // notifies: every access goes through synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
+  /** When [notifyPageRefreshed] asked controllers to re-query each path. */
+  private val refreshedAt = ConcurrentHashMap<String, Long>()
   private val failedSearch = FailedSearchSlot()
   private val offlineSearches = OfflineSearchRegistry()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
@@ -345,7 +352,13 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
           }
           toFlatMediaItems(tabs.take(4))
         } else {
-          val resolvedTrack = browserManager.resolve(parentId)
+          // A re-query that notifyPageRefreshed asked for is no visit: it leaves each track keyed
+          // to the list it was last browsed in, which a tap's queue expands from.
+          val requeried =
+            refreshedAt.remove(parentId)?.let {
+              SystemClock.elapsedRealtime() - it < REQUERY_WINDOW_MS
+            } == true
+          val resolvedTrack = browserManager.resolve(parentId, rekey = !requeried)
           // Section styles arrive page-folded (ADR 0011).
           val sections =
             resolvedTrack.styleResolvedSections()
@@ -619,7 +632,9 @@ class MediaSessionCallback(private val player: Player, searchAvailable: Boolean)
    * Safe from any thread.
    */
   fun notifyPageRefreshed(path: String) {
-    if (isSubscribed(path)) notifyContentChanged(path)
+    if (!isSubscribed(path)) return
+    refreshedAt[path] = SystemClock.elapsedRealtime()
+    notifyContentChanged(path)
   }
 
   /** Pairs with AudioBrowser.invalidateAllContent(), which clears the content cache first. */

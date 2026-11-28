@@ -3,9 +3,11 @@ package com.audiobrowser.browser
 import com.audiobrowser.http.Fetched
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -32,13 +34,13 @@ class PageCacheTest {
   /** Time the device spent in deep sleep, which the clock counts and coroutine delays do not. */
   private var sleptMs = 0L
 
-  private fun TestScope.cache() =
+  private fun TestScope.cache(scope: CoroutineScope = backgroundScope) =
     PageCache<String>(
       maxSize = 2,
-      scope = backgroundScope,
+      scope = scope,
       now = { testScheduler.currentTime + sleptMs },
       canRefetch = { online },
-      isTransient = { it is Unreachable },
+      keepsStale = { it is Unreachable },
       onExpired = { pushed += it },
       onRefreshed = { refreshed += it },
     )
@@ -210,22 +212,50 @@ class PageCacheTest {
   @Test
   fun theAgeAPageArrivedWithShortensItsLifetime() = runTest {
     val cache = cache()
-    cache.value("/a") { page("first", 60_000, ageMs = 40_000) }
+    cache.value("/a") { page("first", 60_000, ageMs = 20_000) }
 
-    advance(21_000)
+    advance(39_000)
+    assertEquals(emptyList<String>(), pushed)
+    advance(2_000)
 
     assertEquals(listOf("/a"), pushed)
   }
 
   @Test
-  fun aPageWhoseAgeUsedUpItsLifetimeIsExpiredWithNoPush() = runTest {
+  fun aPageWhoseAgeUsedUpItsLifetimeIsKeptForTheFloor() = runTest {
     val cache = cache()
     cache.value("/a") { page("first", 60_000, ageMs = 100_000) }
 
-    assertEquals(0, pendingTimers())
+    advance(PageCache.LIFETIME_FLOOR_MS - 1_000)
     assertEquals("first", cache.value("/a") { page("second") })
+    assertEquals(emptyList<String>(), pushed)
+    advance(2_000)
+    assertEquals(listOf("/a"), pushed)
+  }
+
+  @Test
+  fun aRefetchAnsweredAlreadyExpiredMakesOneRequestAndSetsATimerAtTheFloor() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+    var fetches = 0
+    val fetch = suspend {
+      fetches += 1
+      page("second", 60_000, ageMs = 90_000)
+    }
+
+    cache.value("/a", fetch)
     runCurrent()
-    assertEquals("second", cache.value("/a") { page("third") })
+    assertEquals(listOf("/a"), refreshed)
+    assertEquals("second", cache.value("/a", fetch))
+    runCurrent()
+    pushed.clear()
+
+    assertEquals(1, fetches)
+    assertEquals(1, pendingTimers())
+    advance(PageCache.LIFETIME_FLOOR_MS - 1_000)
+    assertEquals(emptyList<String>(), pushed)
+    advance(2_000)
+    assertEquals(listOf("/a"), pushed)
   }
 
   @Test
@@ -253,18 +283,73 @@ class PageCacheTest {
   }
 
   @Test
-  fun aPageStopsBeingPushedAfterItsLastRetryFails() = runTest {
+  fun aFailingRefetchIsRetriedALifetimeApartForAsLongAsItFails() = runTest {
     val cache = cache()
     expiredPage(cache)
 
-    repeat(PageCache.MAX_RETRIES + 1) {
+    repeat(5) {
       cache.value("/a") { throw Unreachable() }
       runCurrent()
       advance(61_000)
     }
 
-    assertEquals(1 + PageCache.MAX_RETRIES, pushed.size)
-    assertEquals(0, pendingTimers())
+    assertEquals(6, pushed.size)
+  }
+
+  @Test
+  fun aPageEvictedDuringItsRefetchIsStoredAndRefreshed() = runTest {
+    val cache = cache()
+    expiredPage(cache)
+    val gate = CompletableDeferred<Unit>()
+
+    cache.value("/a") {
+      gate.await()
+      page("second", 60_000)
+    }
+    cache.value("/b") { page("b") }
+    cache.value("/c") { page("c") }
+    gate.complete(Unit)
+    runCurrent()
+
+    assertEquals(listOf("/a"), refreshed)
+    assertEquals("second", cache.value("/a") { page("third") })
+  }
+
+  @Test
+  fun aQueuedRefetchOfARemovedPageNeverFetches() = runTest {
+    val cache = cache()
+    cache.value("/a") { page("a", 60_000) }
+    cache.value("/b") { page("b", 60_000) }
+    advance(61_000)
+    val gate = CompletableDeferred<Unit>()
+    var fetchedB = false
+
+    cache.value("/a") {
+      gate.await()
+      page("a2")
+    }
+    cache.value("/b") {
+      fetchedB = true
+      page("b2")
+    }
+    runCurrent()
+    cache.remove("/b")
+    gate.complete(Unit)
+    runCurrent()
+
+    assertEquals(false, fetchedB)
+  }
+
+  @Test
+  fun aCacheWhoseScopeIsCancelledStartsNoLoad() = runTest {
+    val scope = CoroutineScope(backgroundScope.coroutineContext + Job())
+    val cache = cache(scope)
+    cache.value("/a") { page("first", 60_000) }
+    advance(61_000)
+    scope.cancel()
+
+    cache.revalidate("/a") { page("second") }
+    assertThrows<CancellationException> { cache.value("/b") { page("b") } }
   }
 
   @Test
