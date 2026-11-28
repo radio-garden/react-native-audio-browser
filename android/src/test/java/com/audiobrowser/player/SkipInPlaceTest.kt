@@ -13,6 +13,8 @@ import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentMp3Bytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackRequest
 import java.io.IOException
 import java.net.ServerSocket
 import java.time.Duration
@@ -232,6 +234,71 @@ class SkipInPlaceTest {
     player.forwardingPlayer.setMediaItems(items, 1, C.TIME_UNSET)
 
     assertEquals(1, player.exoPlayer.currentMediaItemIndex)
+  }
+
+  @Test
+  fun `a controller's queue with new metadata for the playing live item updates it in place`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    watchEngine()
+    val renamed = player.tracks.map { it.copy(subtitle = "renamed") }
+
+    player.forwardingPlayer.setMediaItems(
+      renamed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals("renamed", player.currentTrack?.subtitle)
+    assertEquals(emptyList<String>(), engineEvents)
+  }
+
+  @Test
+  fun `a controller's queue with new metadata on every track tells the app once`() {
+    playUntilReady(folder.liveHlsUri(segments = 6))
+    val queues = mutableListOf<List<String?>>()
+    player.setCallbacks(
+      mock(
+        Callbacks::class.java,
+        Answer {
+          if (it.method.name == "onPlaybackQueueChanged") {
+            queues += it.getArgument<Array<Track>>(0).map { track -> track.subtitle }
+          }
+          RETURNS_DEFAULTS.answer(it)
+        },
+      )
+    )
+    val renamed = player.tracks.map { it.copy(subtitle = "renamed") }
+
+    player.forwardingPlayer.setMediaItems(
+      renamed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertEquals(listOf(listOf("renamed", "renamed")), queues)
+  }
+
+  @Test
+  fun `a controller's queue with new request headers for the playing live item loads it again`() {
+    val src = folder.liveHlsUri(segments = 6)
+    play(src, ids = listOf("0", "1"))
+    idleUntil("ready") { player.exoPlayer.playbackState == MediaPlayer.STATE_READY }
+    watchEngine()
+    val request = TrackRequest(userAgent = "renewed", headers = null, query = null)
+    val renewed = player.tracks.map { it.copy(request = request) }
+
+    player.forwardingPlayer.setMediaItems(
+      renewed.map { TrackFactory.toMedia3(it) },
+      0,
+      C.TIME_UNSET,
+    )
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertTrue("state ${MediaPlayer.STATE_BUFFERING}" in engineEvents)
   }
 
   @Test

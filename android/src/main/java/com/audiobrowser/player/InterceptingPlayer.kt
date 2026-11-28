@@ -7,10 +7,12 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.Timeline
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import com.margelo.nitro.audiobrowser.Track
 
 /**
  * What the platform session reads of an idle engine. Android Auto takes STATE_IDLE for "nothing
@@ -90,6 +92,8 @@ internal class InterceptingPlayer(
   private val leadShuffleOrder: (startIndex: Int, count: Int) -> Unit,
   /** The app's own skip, past the intercepted seeks. */
   private val skipTo: (index: Int, positionMs: Long) -> Unit,
+  /** Replaces each track of the queue with the one at its index, in place. */
+  private val replaceTracks: (tracks: List<Track>) -> Unit,
   private val playPlayer: () -> Unit,
   private val stopPlayer: () -> Unit,
 ) : ForwardingPlayer(player) {
@@ -249,23 +253,46 @@ internal class InterceptingPlayer(
     }
 
   // Media3 sets here the queue of a track picked on an external surface and of playback
-  // resumption. A pick in the queue the player holds is a skip.
+  // resumption. A pick in the queue the player holds is a skip, and new metadata on its tracks
+  // replaces theirs in place.
   override fun setMediaItems(mediaItems: List<MediaItem>, startIndex: Int, startPositionMs: Long) {
-    if (!holds(mediaItems)) {
+    val tracks = mediaItems.map { it.localConfiguration?.tag as? Track }
+    if (!holds(tracks)) {
       super.setMediaItems(mediaItems, startIndex, startPositionMs)
       leadShuffleOrder(startIndex, mediaItems.size)
       return
     }
+    val held = (0 until mediaItemCount).map { TrackFactory.fromMedia3(getMediaItemAt(it)) }
+    if (tracks != held) replaceTracks(tracks.requireNoNulls())
     skipTo(startIndex, startPositionMs)
   }
 
-  // The same ids can carry another src or metadata: only an equal Track at each position is the
-  // same queue.
-  private fun holds(mediaItems: List<MediaItem>): Boolean =
-    mediaItems.isNotEmpty() &&
-      mediaItems.size == mediaItemCount &&
-      mediaItems.withIndex().all { (index, item) ->
-        val held = getMediaItemAt(index)
-        item.mediaId == held.mediaId && item.localConfiguration?.tag == held.localConfiguration?.tag
+  private fun holds(tracks: List<Track?>): Boolean =
+    tracks.isNotEmpty() &&
+      tracks.size == mediaItemCount &&
+      tracks.withIndex().all { (index, track) ->
+        val held = getMediaItemAt(index).localConfiguration?.tag as? Track
+        track != null && held != null && track.loading() == held.loading()
       }
 }
+
+/**
+ * The fields of a track a media source reads, all but what a car shows: a source keeps the Track it
+ * was built from, and the app's media resolver reads all of it.
+ */
+private fun Track.loading(): Track =
+  copy(
+    path = null,
+    artwork = null,
+    artworkSource = null,
+    title = "",
+    subtitle = null,
+    artist = null,
+    albumPath = null,
+    album = null,
+    description = null,
+    genre = null,
+    duration = null,
+    style = null,
+    favorited = null,
+  )
