@@ -48,30 +48,26 @@ object MediaExtrasBuilder {
       groupTitle = section?.title,
       itemDisplay = section?.style?.display,
       promisedDisplay = if (track.src == null) track.style?.display else null,
-      itemArtwork = track.artwork?.url,
-      promisedArtwork = track.artwork?.url,
+      artwork = track.artwork?.url,
     )
 
   /**
-   * Extras for a section's "view more" [navigation] row drawn with [icon], its URL before routing.
-   * The icon makes the row itself a category item, but not the page it opens, which holds the
-   * section's own items.
+   * Extras for a section's "view more" [navigation] row. It is never a category item, whatever it
+   * is drawn with: Android Auto draws a category item's artwork small and scales it up.
    */
-  fun buildNavigation(navigation: Track, section: Section, icon: String?): Bundle =
+  fun buildNavigation(navigation: Track, section: Section): Bundle =
     build(
       groupTitle = section.title,
       itemDisplay = section.style?.display,
       promisedDisplay = navigation.style?.display,
-      itemArtwork = icon,
-      promisedArtwork = null,
+      artwork = null,
     )
 
   private fun build(
     groupTitle: String?,
     itemDisplay: StyleDisplay?,
     promisedDisplay: StyleDisplay?,
-    itemArtwork: String?,
-    promisedArtwork: String?,
+    artwork: String?,
   ): Bundle =
     Bundle().apply {
       groupTitle?.let {
@@ -80,11 +76,11 @@ object MediaExtrasBuilder {
       itemDisplay?.let {
         putInt(
           MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM,
-          it.toContentStyleValue(itemArtwork),
+          it.toContentStyleValue(artwork),
         )
       }
       promisedDisplay?.let {
-        val styleValue = it.toContentStyleValue(promisedArtwork)
+        val styleValue = it.toContentStyleValue(artwork)
         putInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_BROWSABLE, styleValue)
         putInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, styleValue)
       }

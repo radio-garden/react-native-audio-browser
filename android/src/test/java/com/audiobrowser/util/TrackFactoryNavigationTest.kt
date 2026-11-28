@@ -36,7 +36,7 @@ class TrackFactoryNavigationTest {
     )
 
   @Test
-  fun `a grid section's view more tile carries the bundled icon as a category tile`() {
+  fun `a grid section's view more tile carries the bundled icon as a plain grid tile`() {
     // A grid tile without artwork is drawn by Android Auto as a broken image.
     val item =
       TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
@@ -44,7 +44,7 @@ class TrackFactoryNavigationTest {
     assertEquals(icon, served(item))
     val extras = item.mediaMetadata.extras!!
     assertEquals(
-      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
       extras.getInt(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM),
     )
     assertEquals(
@@ -54,7 +54,7 @@ class TrackFactoryNavigationTest {
   }
 
   @Test
-  fun `the icon does not make the page it opens a page of category tiles`() {
+  fun `the view more row promises the section's display for the page it opens`() {
     val item =
       TrackFactory.toNavigationMediaItem(section(StyleDisplay.GRID), "View more", null, routes)
 
@@ -155,7 +155,7 @@ class TrackFactoryNavigationTest {
   }
 
   @Test
-  fun `a view more artwork the provider serves fills the tile and outlives a clear of the registry`() {
+  fun `a view more artwork the provider serves is a grid tile that outlives a clear of the registry`() {
     val item =
       TrackFactory.toNavigationMediaItem(
         section(StyleDisplay.GRID),

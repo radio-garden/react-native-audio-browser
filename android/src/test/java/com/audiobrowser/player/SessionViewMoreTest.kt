@@ -106,7 +106,7 @@ class SessionViewMoreTest {
       served.finalUrl,
     )
     assertEquals(
-      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_GRID_ITEM,
+      MediaConstants.DESCRIPTION_EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
       viewMore.mediaMetadata.extras!!.getInt(
         MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
       ),
@@ -114,7 +114,7 @@ class SessionViewMoreTest {
   }
 
   @Test
-  fun `a configured view more artwork is served through the artwork provider as a full tile`() {
+  fun `a configured view more artwork is served through the artwork provider as a grid tile`() {
     val artwork =
       "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
     val viewMore = browse("/home", viewMoreArtwork = artwork).last()

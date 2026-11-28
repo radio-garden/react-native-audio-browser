@@ -100,10 +100,9 @@ object TrackFactory {
   /**
    * A section's "view more" row (see [navigationTrack]). In a grid section it is a tile, which
    * Android Auto draws as a broken image when it has no artwork. It carries [artwork] when the
-   * provider can serve it, filling the tile in its own colours; else the library's arrow icon from
-   * the app's resources, which the car tints. Both go through [routes], whose provider draws the
-   * icon at the car's size hint. Pinned, as a car may redraw a page it cached after the registry is
-   * cleared.
+   * provider can serve it; else the library's arrow icon from the app's resources. Both go through
+   * [routes], whose provider draws them at the car's size hint. Pinned, as a car may redraw a page
+   * it cached after the registry is cleared.
    */
   fun toNavigationMediaItem(
     section: Section,
@@ -112,18 +111,20 @@ object TrackFactory {
     routes: ArtworkRoutes,
   ): MediaItem {
     val track = navigationTrack(section, viewMoreTitle)
-    var url: String? = null
-    var icon: String? = null
-    if (section.style?.display == StyleDisplay.GRID) {
-      url = artwork
-      icon = artwork?.let { routes.route(it, null, SvgArtworkRenderer.isSvgUrl(it), pinned = true) }
-      if (icon == null) {
-        url = "android.resource://${routes.packageName}/${R.drawable.audio_browser_view_more}"
-        icon = routes.route(url, null, isSvg = false, pinned = true)
+    val icon =
+      if (section.style?.display == StyleDisplay.GRID) {
+        artwork?.let { routes.route(it, null, SvgArtworkRenderer.isSvgUrl(it), pinned = true) }
+          ?: routes.route(
+            "android.resource://${routes.packageName}/${R.drawable.audio_browser_view_more}",
+            null,
+            isSvg = false,
+            pinned = true,
+          )
+      } else {
+        null
       }
-    }
     val metadata =
-      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section, url))
+      metadataBuilder(track, MediaExtrasBuilder.buildNavigation(track, section))
         .setArtworkUri(icon?.toUri())
         .build()
     return buildMediaItem(track, metadata)
