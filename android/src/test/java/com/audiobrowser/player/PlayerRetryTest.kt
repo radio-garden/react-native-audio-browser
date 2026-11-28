@@ -19,6 +19,7 @@ import com.audiobrowser.liveHlsUri
 import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentWavBytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
@@ -244,7 +245,7 @@ class PlayerRetryTest {
 
   /** Pauses with a retry pending and runs past every backoff it would have taken. */
   private fun pauseDuringRetry(vararg next: String, pause: () -> Unit) {
-    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Infinite())
+    play(refusedUrl(), *next, retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
 
     pause()
@@ -438,7 +439,7 @@ class PlayerRetryTest {
     connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
     // A closed port: the load fails at once, the retry is pending, and the next failure is
     // terminal.
-    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Limited(maxRetries = 1))
+    play(refusedUrl(), retryPolicy = RetryPolicy.Limited(maxRetries = 1))
     player.observeNetworkConnectivity(scope)
     idleUntil("the retry gave up") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
@@ -467,7 +468,7 @@ class PlayerRetryTest {
   fun `the wake mode's lock is held while the loop keeps the idle engine, and let go on pause`() {
     goOnline(context)
     play(
-      "https://127.0.0.1:9/stream",
+      refusedUrl(),
       retryPolicy = RetryPolicy.Infinite(),
       wakeMode = AndroidPlayerWakeMode.NETWORK,
     )
@@ -598,7 +599,7 @@ class PlayerRetryTest {
   @Test
   fun `an engine error that arrives after a stop is not terminal`() {
     goOnline(context)
-    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Infinite())
+    play(refusedUrl(), retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
     player.stop()
     shadowOf(Looper.getMainLooper()).idle()
@@ -803,7 +804,7 @@ class PlayerRetryTest {
 
   /** A closed port: the load fails at once, and with no retries the failure is terminal. */
   private fun failTerminally(vararg next: String) {
-    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Limited(maxRetries = 0))
+    play(refusedUrl(), *next, retryPolicy = RetryPolicy.Limited(maxRetries = 0))
     idleUntil("a terminal error") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
       player.playbackState == PlaybackState.ERROR

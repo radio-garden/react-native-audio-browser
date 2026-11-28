@@ -9,6 +9,7 @@ import com.audiobrowser.liveHlsUri
 import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentMp3Bytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
@@ -153,7 +154,7 @@ class SkipInPlaceTest {
 
   @Test
   fun `a skip to the failed item loads it again`() {
-    play("https://127.0.0.1:9/stream", RetryPolicy.Limited(maxRetries = 0))
+    play(refusedUrl(), RetryPolicy.Limited(maxRetries = 0))
     idleUntil("the load to fail") { player.exoPlayer.playerError != null }
     watchEngine()
 

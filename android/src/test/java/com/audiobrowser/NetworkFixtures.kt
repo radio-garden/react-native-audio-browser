@@ -32,3 +32,6 @@ fun goOnline(context: Context) {
  * connections; Linux refuses that bind unless both sockets set SO_REUSEPORT.
  */
 fun loopbackServerSocket() = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+
+/** A URL on a port of 127.0.0.1 this left free, so its connections are refused. */
+fun refusedUrl() = "https://127.0.0.1:${loopbackServerSocket().use { it.localPort }}/stream"

@@ -15,6 +15,7 @@ import com.audiobrowser.goOnline
 import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentWavBytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
@@ -197,11 +198,7 @@ class SessionViewTest {
     idleUntil("a terminal error") { player.playbackState == PlaybackState.ERROR }
   }
 
-  private fun play(
-    retryPolicy: RetryPolicy,
-    src: String = "https://127.0.0.1:9/stream",
-    live: Boolean? = null,
-  ) {
+  private fun play(retryPolicy: RetryPolicy, src: String = refusedUrl(), live: Boolean? = null) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)
