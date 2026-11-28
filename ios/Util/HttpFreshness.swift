@@ -1,25 +1,30 @@
 import Foundation
 
-enum HttpFreshness {
+/// What a response's `Cache-Control` and `Age` say about reusing it.
+enum HttpFreshness: Equatable {
+  /// No `max-age`, `no-cache` or `no-store`.
+  case unstated
+  /// `no-cache`, `no-store`, or a `max-age` that is 0 or invalid: reuse only after asking again
+  /// (RFC 9111 §4.2.1 treats an invalid one as stale).
+  case revalidate
+  /// A positive `max-age` in seconds, and the `Age` the response already had.
+  case maxAge(TimeInterval, age: TimeInterval)
+
   /// Used when no response states a lifetime; matches Kingfisher's default disk expiry.
   static let defaultLifetime: TimeInterval = 7 * 24 * 60 * 60
 
-  /// The shortest lifetime stated across `responses` (every redirect and the final response):
-  /// `max-age` minus `Age`, or 0 for `no-cache` or `no-store`. Responses that state none are
-  /// ignored; `defaultLifetime` when none states one.
+  /// The shortest time across `responses` (every redirect and the final response) that they may
+  /// still be reused: `max-age` minus `Age`, or 0 to revalidate. Responses that state nothing are
+  /// ignored; `defaultLifetime` when none states anything.
   static func lifetime(of responses: [HTTPURLResponse]) -> TimeInterval {
-    responses.compactMap(lifetime(of:)).min() ?? defaultLifetime
+    responses.compactMap { HttpFreshness($0).remaining }.min() ?? defaultLifetime
   }
 
-  /// The lifetime `response` states when it is positive: what a browse page is kept for. Nil for
-  /// none, 0, `no-cache` or `no-store`, which keep a page with no expiry.
-  static func positiveLifetime(of response: HTTPURLResponse) -> TimeInterval? {
-    lifetime(of: response).flatMap { $0 > 0 ? $0 : nil }
-  }
-
-  /// The lifetime `response` states, or nil when it states none.
-  static func lifetime(of response: HTTPURLResponse) -> TimeInterval? {
-    guard let cacheControl = response.value(forHTTPHeaderField: "Cache-Control") else { return nil }
+  init(_ response: HTTPURLResponse) {
+    guard let cacheControl = response.value(forHTTPHeaderField: "Cache-Control") else {
+      self = .unstated
+      return
+    }
     var maxAge: TimeInterval?
     for directive in cacheControl.split(separator: ",") {
       let parts = directive.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
@@ -28,17 +33,41 @@ enum HttpFreshness {
       switch name {
       // `no-cache="field"` restricts reuse of that field only, not of the response.
       case "no-cache" where value == nil, "no-store":
-        return 0
+        self = .revalidate
+        return
       case "max-age":
-        // Of duplicates, the first valid one (RFC 9111 §4.2.1 allows the first, or stale).
-        maxAge = maxAge ?? value.flatMap(deltaSeconds)
+        guard let seconds = value.flatMap(Self.deltaSeconds) else {
+          self = .revalidate
+          return
+        }
+        // Of duplicates, the first.
+        maxAge = maxAge ?? seconds
       default:
         break
       }
     }
-    guard let maxAge else { return nil }
-    let age = response.value(forHTTPHeaderField: "Age").flatMap(deltaSeconds) ?? 0
-    return max(0, maxAge - age)
+    guard let maxAge else {
+      self = .unstated
+      return
+    }
+    guard maxAge > 0 else {
+      self = .revalidate
+      return
+    }
+    // Of repeated Age lines, joined with ", ", the first.
+    let age = response.value(forHTTPHeaderField: "Age")
+      .flatMap { $0.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } }
+      .flatMap(Self.deltaSeconds) ?? 0
+    self = .maxAge(maxAge, age: age)
+  }
+
+  /// Seconds the response may still be reused; nil when it states nothing.
+  var remaining: TimeInterval? {
+    switch self {
+    case .unstated: nil
+    case .revalidate: 0
+    case let .maxAge(maxAge, age): max(0, maxAge - age)
+    }
   }
 
   /// RFC 9111 delta-seconds: digits only (so `inf` or `1e999` are rejected), capped at 2^31.

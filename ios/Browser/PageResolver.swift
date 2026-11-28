@@ -39,7 +39,7 @@ final class PageResolver {
       let transformed = try await transformSections(
         sections, parentPath: path, routeEntry: routeEntry?.0,
       )
-      return Fetched(value: resolvedTrack.copying(sections: transformed, children: .some(nil)), lifetime: fetched.lifetime)
+      return fetched.map { $0.copying(sections: transformed, children: .some(nil)) }
     }
 
     return fetched

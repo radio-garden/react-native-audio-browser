@@ -65,15 +65,7 @@ final class HttpClient: @unchecked Sendable {
     }
   }
 
-  /// A session on the default configuration with no URL cache: the library keeps what it caches,
-  /// and a URL cache would answer a refresh with the body it is replacing.
-  static let uncachedSession: URLSession = {
-    let configuration = URLSessionConfiguration.default
-    configuration.urlCache = nil
-    return URLSession(configuration: configuration)
-  }()
-
-  init(session: URLSession = HttpClient.uncachedSession) {
+  init(session: URLSession = .shared) {
     self.session = session
   }
 
@@ -126,17 +118,14 @@ final class HttpClient: @unchecked Sendable {
     try await requestJsonFetched(httpRequest, as: type).value
   }
 
-  /// `requestJson`, with `HttpFreshness.positiveLifetime` of the response.
+  /// `requestJson`, kept for the response's `HttpFreshness`.
   func requestJsonFetched<T: Decodable>(_ httpRequest: HttpRequest, as type: T.Type) async throws -> Fetched<T> {
     let (code, data, response) = try await request(httpRequest)
     guard (200 ..< 300).contains(code) else {
       throw HttpException(code: code, responseBody: String(decoding: data, as: UTF8.self))
     }
     do {
-      return try Fetched(
-        value: JSONDecoder().decode(type, from: data),
-        lifetime: HttpFreshness.positiveLifetime(of: response),
-      )
+      return try Fetched(value: JSONDecoder().decode(type, from: data), freshness: HttpFreshness(response))
     } catch {
       throw UndecodableResponse(code: code, reason: Self.reason(error))
     }

@@ -44,21 +44,26 @@ struct HttpFreshnessTests {
     #expect(HttpFreshness.lifetime(of: [response(["cache-control": " MAX-AGE = \"120\" "])]) == 120)
   }
 
-  @Test func anUnreadableMaxAgeStatesNothing() {
-    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=soon"])]) == HttpFreshness.defaultLifetime)
-  }
-
-  @Test(arguments: ["max-age=inf", "max-age=1e999", "max-age=-5", "max-age="])
-  func onlyDigitsStateAMaxAge(_ cacheControl: String) {
-    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": cacheControl])]) == HttpFreshness.defaultLifetime)
+  @Test(arguments: ["max-age=soon", "max-age=inf", "max-age=1e999", "max-age=-5", "max-age=", "max-age=soon, max-age=60"])
+  func anInvalidMaxAgeIsStale(_ cacheControl: String) {
+    #expect(HttpFreshness(response(["Cache-Control": cacheControl])) == .revalidate)
+    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": cacheControl])]) == 0)
   }
 
   @Test func aMaxAgeBeyond2To31IsCapped() {
     #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=" + String(repeating: "9", count: 400)])]) == 2_147_483_648)
   }
 
-  @Test func theFirstValidOfDuplicateMaxAgesWins() {
-    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=soon, max-age=60, max-age=600"])]) == 60)
+  @Test func theFirstOfDuplicateMaxAgesWins() {
+    #expect(HttpFreshness.lifetime(of: [response(["Cache-Control": "max-age=60, max-age=600"])]) == 60)
+  }
+
+  @Test func eachFreshnessIsNamed() {
+    #expect(HttpFreshness(response()) == .unstated)
+    #expect(HttpFreshness(response(["Cache-Control": "public"])) == .unstated)
+    #expect(HttpFreshness(response(["Cache-Control": "max-age=0"])) == .revalidate)
+    #expect(HttpFreshness(response(["Cache-Control": "no-store"])) == .revalidate)
+    #expect(HttpFreshness(response(["Cache-Control": "max-age=60", "Age": "100"])) == .maxAge(60, age: 100))
   }
 
   @Test func aBareEqualsSignIsSkipped() {

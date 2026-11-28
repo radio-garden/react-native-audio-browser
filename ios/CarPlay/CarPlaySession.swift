@@ -81,10 +81,9 @@ final class CarPlaySession {
         guard let content else { return }
         self?.refreshDisplayedTemplates(for: content.path, with: content)
       },
-      // A page not on screen refetches on its next visit instead.
-      browserManager.pageExpired.subscribeOnMain { [weak self] path in
-        guard let self, displayedListTemplates().contains(where: { $0.contentPath == path }) else { return }
-        spawn { await $0.refreshContent(for: path) }
+      browserManager.pageExpired.subscribeOnMain { [weak self] _ in self?.refreshShownPageIfExpired() },
+      audioBrowser.networkMonitor.changed.subscribeOnMain { [weak self] isOnline in
+        if isOnline { self?.refreshShownPageIfExpired() }
       },
       audioBrowser.playerOptionsChangedEmitter.subscribeOnMain { [weak self] in self?.playerOptionsChanged() },
       audioBrowser.externalContentChangedEmitter.subscribeOnMain { [weak self] path in
@@ -147,7 +146,8 @@ final class CarPlaySession {
     if let path = template.carPlayInfo?.path { navigatingPaths.remove(path) }
     if rebuildTabsIfAtRoot() { return }
     updatePlayingIndicators()
-    if let list = template as? CPListTemplate { loadContentIfNeeded(for: list) }
+    let list = (template as? CPListTemplate) ?? ((template as? CPTabBarTemplate)?.selectedTemplate as? CPListTemplate)
+    if let list { loadContentIfNeeded(for: list) }
   }
 
   func templateDidDisappear(_ template: CPTemplate) {
@@ -190,6 +190,13 @@ final class CarPlaySession {
         }
       }
     }
+  }
+
+  /// The list the car shows: the top of the pushed stack, else the selected tab; nil while
+  /// another template, such as Now Playing, covers it.
+  func shownListTemplate() -> CPListTemplate? {
+    let top = interfaceController.topTemplate
+    return (top as? CPListTemplate) ?? ((top as? CPTabBarTemplate)?.selectedTemplate as? CPListTemplate)
   }
 
   /// The list templates on screen or one tap away: the tab roots, then the pushed stack.

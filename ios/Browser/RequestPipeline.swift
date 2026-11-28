@@ -124,7 +124,7 @@ final class RequestPipeline {
       logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
     }
 
-    return Fetched(value: nitroResult, lifetime: fetched.lifetime)
+    return fetched.map { _ in nitroResult }
   }
 
   /// A search route's tracks, through the request layer and `searchConfig`. The search params

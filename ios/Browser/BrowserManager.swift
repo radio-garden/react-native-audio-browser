@@ -17,8 +17,9 @@ final class BrowserManager {
   private let pages: PageResolver
 
   // Entries are unhydrated; `resolve` hydrates favorites on the way out.
-  // Its `generation` also guards the last search and the tabs.
   private let contentCache = PageCache<ResolvedTrack>(maxSize: 20)
+  /// Moves on every `clearContent`, so a search or tabs query that outlives one stores nothing.
+  private var clearEpoch = 0
 
   // Raw results, never hydrated ones: `FavoriteSet.hydrate` skips a track whose `favorited` is
   // already set, so a hydrated slot would keep the favorites of the first search.
@@ -127,7 +128,7 @@ final class BrowserManager {
       content = nil
     }
     do {
-      let resolved = try await resolve(path, useCache: !bypassCache)
+      let resolved = try await resolve(path)
       guard navigationId == currentNavigationId else { return false }
       content = resolved
       return true
@@ -138,13 +139,18 @@ final class BrowserManager {
   }
 
   /// Contextual paths resolve their parent page. Favorites are hydrated on every call.
-  func resolve(_ path: String, useCache: Bool = true) async throws -> ResolvedTrack {
+  func resolve(_ path: String) async throws -> ResolvedTrack {
     let normalizedPath = BrowserPathHelper.stripTrackId(path)
 
-    let resolvedTrack = try await contentCache.value(for: normalizedPath, useCache: useCache) {
+    let resolvedTrack = try await contentCache.value(for: normalizedPath) {
       try await pages.resolve(normalizedPath)
     }
     return favorites.hydrate(resolvedTrack)
+  }
+
+  /// Whether the page `path` resolves to is cached and its lifetime has passed.
+  func isPageExpired(_ path: String) -> Bool {
+    contentCache.isExpired(BrowserPathHelper.stripTrackId(path))
   }
 
   /// Throws on a contextual path, which never names a cache entry (Android requires the same).
@@ -168,6 +174,7 @@ final class BrowserManager {
   /// Clears the cached pages and the last search; a fetch in flight caches nothing.
   func clearContent() {
     contentCache.clear()
+    clearEpoch += 1
     lastSearchKey = nil
     lastSearchResults = nil
   }
@@ -200,10 +207,10 @@ final class BrowserManager {
       return makeSearchResult(query: query, results: results)
     }
 
-    let generation = contentCache.generation
+    let epoch = clearEpoch
     let results = try await pages.search(params)
 
-    if generation == contentCache.generation {
+    if epoch == clearEpoch {
       lastSearchKey = cacheKey
       lastSearchResults = results
     }
@@ -253,9 +260,9 @@ final class BrowserManager {
   // MARK: - Tabs
 
   func queryTabs() async throws -> [Track] {
-    let generation = contentCache.generation
+    let epoch = clearEpoch
     let tabs = try await pages.tabs()
-    if generation == contentCache.generation { self.tabs = tabs }
+    if epoch == clearEpoch { self.tabs = tabs }
     return tabs ?? []
   }
 
@@ -271,7 +278,7 @@ final class BrowserManager {
 
   private func expandScoped(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
     guard BrowserPathHelper.extractTrackId(path) != nil else { return nil }
-    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path), useCache: true)
+    let resolved = try await resolve(BrowserPathHelper.stripTrackId(path))
     guard let sections = resolved.normalizedSections else { return nil }
     return try SectionScope.queue(in: sections, path: path, singleTrack: config.singleTrack)
   }
