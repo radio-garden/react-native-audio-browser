@@ -12,14 +12,15 @@ import androidx.media3.session.legacyState
 import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentWavBytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.io.IOException
-import java.net.ServerSocket
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -139,7 +140,7 @@ class SessionViewTest {
 
   @Test
   fun `a reconnect attempt's events tell the session nothing it was already told`() {
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     val connections = AtomicInteger()
     val drop = CountDownLatch(1)
     // Serves five seconds of a stream until the drop, then ends each connection unanswered.
@@ -197,11 +198,7 @@ class SessionViewTest {
     idleUntil("a terminal error") { player.playbackState == PlaybackState.ERROR }
   }
 
-  private fun play(
-    retryPolicy: RetryPolicy,
-    src: String = "https://127.0.0.1:9/stream",
-    live: Boolean? = null,
-  ) {
+  private fun play(retryPolicy: RetryPolicy, src: String = refusedUrl(), live: Boolean? = null) {
     goOnline(context)
     player.setup(PlayerSetupOptions(retryPolicy = retryPolicy))
     player.setCallbacks(callbacks)

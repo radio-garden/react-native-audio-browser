@@ -16,8 +16,10 @@ import com.audiobrowser.Callbacks
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentWavBytes
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
@@ -243,7 +245,7 @@ class PlayerRetryTest {
 
   /** Pauses with a retry pending and runs past every backoff it would have taken. */
   private fun pauseDuringRetry(vararg next: String, pause: () -> Unit) {
-    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Infinite())
+    play(refusedUrl(), *next, retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
 
     pause()
@@ -381,7 +383,7 @@ class PlayerRetryTest {
 
   @Test
   fun `a load failing while paused stays paused and the next play reloads`() {
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     val wav = silentWavBytes(Duration.ofMinutes(1))
     val sent = CountDownLatch(1)
     val drop = CountDownLatch(1)
@@ -437,7 +439,7 @@ class PlayerRetryTest {
     connectivity.networkCallbacks.forEach { it.onAvailable(wifi) }
     // A closed port: the load fails at once, the retry is pending, and the next failure is
     // terminal.
-    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Limited(maxRetries = 1))
+    play(refusedUrl(), retryPolicy = RetryPolicy.Limited(maxRetries = 1))
     player.observeNetworkConnectivity(scope)
     idleUntil("the retry gave up") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
@@ -466,7 +468,7 @@ class PlayerRetryTest {
   fun `the wake mode's lock is held while the loop keeps the idle engine, and let go on pause`() {
     goOnline(context)
     play(
-      "https://127.0.0.1:9/stream",
+      refusedUrl(),
       retryPolicy = RetryPolicy.Infinite(),
       wakeMode = AndroidPlayerWakeMode.NETWORK,
     )
@@ -530,7 +532,7 @@ class PlayerRetryTest {
   /** Plays from a server that ends each connection unanswered, until the loop holds the engine. */
   private fun holdIdleEngine(): AtomicInteger {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     servers += server
     val connections = AtomicInteger()
     thread(isDaemon = true) {
@@ -566,7 +568,7 @@ class PlayerRetryTest {
   @Test
   fun `a skip while the loop holds the idle engine connects the next track`() {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     val paths = CopyOnWriteArrayList<String>()
     // Reads each request line and ends the connection unanswered.
     thread(isDaemon = true) {
@@ -597,7 +599,7 @@ class PlayerRetryTest {
   @Test
   fun `an engine error that arrives after a stop is not terminal`() {
     goOnline(context)
-    play("https://127.0.0.1:9/stream", retryPolicy = RetryPolicy.Infinite())
+    play(refusedUrl(), retryPolicy = RetryPolicy.Infinite())
     awaitRetry("a pending retry")
     player.stop()
     shadowOf(Looper.getMainLooper()).idle()
@@ -630,7 +632,7 @@ class PlayerRetryTest {
   @Test
   fun `an engine error that arrives after a pause cancelled its reconnect is not terminal`() {
     goOnline(context)
-    val server = ServerSocket(0)
+    val server = loopbackServerSocket()
     servers += server
     val connections = AtomicInteger()
     // Ends the first connection unanswered, then holds each reconnect open without an answer.
@@ -802,7 +804,7 @@ class PlayerRetryTest {
 
   /** A closed port: the load fails at once, and with no retries the failure is terminal. */
   private fun failTerminally(vararg next: String) {
-    play("https://127.0.0.1:9/stream", *next, retryPolicy = RetryPolicy.Limited(maxRetries = 0))
+    play(refusedUrl(), *next, retryPolicy = RetryPolicy.Limited(maxRetries = 0))
     idleUntil("a terminal error") {
       ShadowSystemClock.advanceBy(Duration.ofSeconds(1))
       player.playbackState == PlaybackState.ERROR

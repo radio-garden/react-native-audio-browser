@@ -9,6 +9,7 @@ import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
+import com.audiobrowser.refusedUrl
 import com.audiobrowser.silentWavUri
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.Playback
@@ -90,7 +91,7 @@ class SessionPlayTest {
 
   @Test
   fun `setPlayWhenReady(true) after a cancelled retry reloads`() {
-    load("https://127.0.0.1:9/stream", RetryPolicy.Infinite())
+    load(refusedUrl(), RetryPolicy.Infinite())
     player.play()
     idleUntil("a pending retry") { player.playbackError?.retrying == true }
     player.pause()
@@ -119,7 +120,7 @@ class SessionPlayTest {
 
   @Test
   fun `a setup's raised intent over a terminal error loads nothing`() {
-    load("https://127.0.0.1:9/stream", RetryPolicy.Limited(maxRetries = 0))
+    load(refusedUrl(), RetryPolicy.Limited(maxRetries = 0))
     val beforePlay = states().size
     player.play()
     idleUntil("the play's load to fail") { PlaybackState.ERROR in states().drop(beforePlay) }
@@ -137,7 +138,7 @@ class SessionPlayTest {
 
   @Test
   fun `a setup's raised intent over a cancelled retry loads nothing`() {
-    load("https://127.0.0.1:9/stream", RetryPolicy.Infinite())
+    load(refusedUrl(), RetryPolicy.Infinite())
     player.play()
     idleUntil("a pending retry") { player.playbackError?.retrying == true }
     player.pause()

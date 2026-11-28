@@ -8,6 +8,7 @@ import androidx.media3.common.util.StuckPlayerException
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.goOnline
 import com.audiobrowser.liveHlsUri
+import com.audiobrowser.loopbackServerSocket
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.RetryPolicy
 import com.audiobrowser.silentWavUri
@@ -19,7 +20,6 @@ import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.StallReason
 import java.io.File
-import java.net.ServerSocket
 import java.net.URI
 import java.time.Duration
 import org.junit.After
@@ -109,7 +109,7 @@ class PlayerStallTest {
 
   @Test
   fun `the end of an item, waiting on the next, is not a stall`() {
-    ServerSocket(0).use { silent ->
+    loopbackServerSocket().use { silent ->
       val renders = mutableListOf<Triple<Int?, PlaybackState, StallReason?>>()
       onFormat = { renders.add(Triple(player.currentIndex, player.playbackState, it.stalled)) }
       play(
